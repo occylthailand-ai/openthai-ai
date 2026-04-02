@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenThai AI — ตัวอย่างคอนเทนต์</title>
+
+    <!-- Social Meta Tags -->
+    <meta property="og:title" content="OpenThai AI — สร้างคอนเทนต์ TikTok ด้วย AI สัญชาติไทย">
+    <meta property="og:description" content="AI สร้างสคริปต์ TikTok, แคปชั่น, แฮชแท็ก สำหรับสินค้าไทย OTOP — ใน 30 วินาที!">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://openthai-ai.vercel.app">
+
+    <!-- LINE -->
+    <meta property="og:image" content="https://openthai-ai.vercel.app/og-image.png">
+
+    <!-- Twitter/X -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="OpenThai AI — สร้างคอนเทนต์ TikTok ด้วย AI">
+    <meta name="twitter:description" content="AI สัญชาติไทย สร้างสคริปต์ + แคปชั่น + แฮชแท็ก ใน 30 วินาที!">
+
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #FF6B35;
+            --secondary: #4ECDC4;
+            --dark: #1A1A2E;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Noto Sans Thai', sans-serif; background: #f5f5f5; color: var(--dark); }
+
+        .header {
+            background: linear-gradient(135deg, #FF6B35, #FF8E53);
+            color: white; text-align: center; padding: 3rem 1rem;
+        }
+        .header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+        .header p { opacity: 0.9; font-size: 1.1rem; }
+
+        .container { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+
+        .content-card {
+            background: white; border-radius: 20px; padding: 2rem;
+            margin-bottom: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .product-badge {
+            display: inline-block; background: var(--primary); color: white;
+            padding: 0.3rem 1rem; border-radius: 20px; font-size: 0.85rem; margin-bottom: 1rem;
+        }
+        .content-card h2 { font-size: 1.5rem; margin-bottom: 1rem; }
+
+        .script-section { background: #f8f8f8; border-radius: 12px; padding: 1.5rem; margin: 1rem 0; }
+        .script-label { font-weight: 600; color: var(--primary); margin-bottom: 0.3rem; font-size: 0.9rem; }
+        .script-text { line-height: 1.8; }
+
+        .caption-box {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; border-radius: 12px; padding: 1.5rem; margin: 1rem 0;
+        }
+        .hashtags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
+        .hashtag {
+            background: #e8f4f8; color: #2980b9; padding: 0.3rem 0.8rem;
+            border-radius: 20px; font-size: 0.85rem;
+        }
+
+        .score-box {
+            display: flex; align-items: center; gap: 1rem;
+            background: #f0fff4; border-radius: 12px; padding: 1rem; margin: 1rem 0;
+        }
+        .score-number {
+            font-size: 2rem; font-weight: 700; color: var(--secondary);
+        }
+        .why-works {
+            background: #fffbeb; border-left: 4px solid #f59e0b;
+            padding: 1rem; border-radius: 0 12px 12px 0; margin: 1rem 0;
+        }
+        .why-works strong { color: #d97706; }
+
+        .cta-section {
+            text-align: center; padding: 3rem 1rem;
+            background: linear-gradient(135deg, #4ECDC4, #44A08D);
+            border-radius: 20px; margin: 2rem 0; color: white;
+        }
+        .cta-btn {
+            display: inline-block; background: white; color: var(--secondary);
+            padding: 1rem 2.5rem; border-radius: 50px; font-size: 1.1rem;
+            font-weight: 600; text-decoration: none; margin-top: 1rem;
+            transition: transform 0.3s;
+        }
+        .cta-btn:hover { transform: translateY(-3px); }
+
+        .share-buttons { text-align: center; margin: 2rem 0; }
+        .share-buttons h3 { margin-bottom: 1rem; }
+        .share-btn {
+            display: inline-block; padding: 0.8rem 1.5rem; border-radius: 10px;
+            color: white; text-decoration: none; margin: 0.3rem;
+            font-weight: 500; font-size: 0.95rem;
+        }
+        .share-line { background: #06C755; }
+        .share-fb { background: #1877F2; }
+        .share-tiktok { background: #000; }
+        .share-x { background: #1DA1F2; }
+        .share-copy { background: #666; cursor: pointer; border: none; color: white; font-family: inherit; font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 OpenThai AI — ตัวอย่างคอนเทนต์</h1>
+        <p>AI สร้างสคริปต์ TikTok ให้คุณใน 30 วินาที!</p>
+    </div>
+
+    <div class="container">
+        <!-- Content 1: ผ้าไหม -->
+        <div class="content-card">
+            <span class="product-badge">🧵 ผ้าไหมมัดหมี่ สุรินทร์</span>
+            <h2>Hook แบบ Story</h2>
+
+            <div class="script-section">
+                <div class="script-label">🎬 HOOK (3 วินาที)</div>
+                <div class="script-text">ผ้าผืนนี้ใช้เวลาทอ 45 วัน... แต่คนซื้อจ่ายแค่ไม่กี่พัน 😢</div>
+            </div>
+            <div class="script-section">
+                <div class="script-label">📖 STORY (20 วินาที)</div>
+                <div class="script-text">ป้าสมศรี ช่างทอผ้าไหมมัดหมี่ สุรินทร์ ตื่นตี 5 ทุกวัน นั่งทอจนค่ำ ลายโบราณที่เห็นนี้ สืบทอดมา 3 ชั่วอายุคน เส้นไหมแต่ละเส้นมัดด้วยมือ ย้อมสีธรรมชาติจากครั่ง ทุกผืนไม่ซ้ำกัน เพราะมันคือศิลปะ ไม่ใช่ของโรงงาน</div>
+            </div>
+            <div class="script-section">
+                <div class="script-label">📢 CTA (7 วินาที)</div>
+                <div class="script-text">กดลิงก์ในไบโอ สั่งตรงจากช่างทอ ส่งฟรีทั่วไทย! 🇹🇭</div>
+            </div>
+
+            <div class="caption-box">
+                <strong>Caption:</strong><br>
+                ผ้าไหมมัดหมี่แท้จากสุรินทร์ ทอมือทุกเส้น ลายโบราณ 3 ชั่วอายุคน สวยจนต้องสั่ง! 🧵✨
+            </div>
+
+            <div class="hashtags">
+                <span class="hashtag">#ผ้าไหมมัดหมี่</span>
+                <span class="hashtag">#สุรินทร์</span>
+                <span class="hashtag">#OTOPไทย</span>
+                <span class="hashtag">#ผ้าไทย</span>
+                <span class="hashtag">#ทอมือ</span>
+                <span class="hashtag">#HandmadeThailand</span>
+                <span class="hashtag">#ผ้าไหมแท้</span>
+                <span class="hashtag">#ภูมิปัญญาไทย</span>
+                <span class="hashtag">#ThaiSilk</span>
+                <span class="hashtag">#TikTokShop</span>
+            </div>
+
+            <div class="score-box">
+                <div class="score-number">8.5/10</div>
+                <div>AI Critic Score — ผ่านมาตรฐาน ✅</div>
+            </div>
+
+            <div class="why-works">
+                <strong>💡 ทำไมถึงเวิร์ค:</strong> Hook แบบ Story ใช้ตัวเลข '45 วัน' สร้าง contrast กับราคา ทำให้คนหยุดดู เพราะเกิดความรู้สึกว่า 'ไม่ยุติธรรม' และอยากรู้ต่อ
+            </div>
+        </div>
+
+        <!-- Content 2: กาแฟ -->
+        <div class="content-card">
+            <span class="product-badge">☕ กาแฟดอยช้าง</span>
+            <h2>Hook แบบ Question</h2>
+
+            <div class="script-section">
+                <div class="script-label">🎬 HOOK (3 วินาที)</div>
+                <div class="script-text">กาแฟที่แพงที่สุดในไทย ปลูกบนดอยสูง 1,200 เมตร... รสชาติมันต่างจริงไหม? ☕</div>
+            </div>
+            <div class="script-section">
+                <div class="script-label">📖 STORY (20 วินาที)</div>
+                <div class="script-text">กาแฟดอยช้าง เชียงราย ปลูกโดยชาวเขาที่เปลี่ยนจากปลูกฝิ่นมาปลูกกาแฟ ระดับความสูง 1,200 เมตร อากาศเย็น ทำให้เมล็ดสุกช้า รสชาติจึงเข้มข้น มี fruity notes ที่หาจากที่อื่นไม่ได้ คั่วกลาง กลิ่นหอมมาก</div>
+            </div>
+            <div class="script-section">
+                <div class="script-label">📢 CTA (7 วินาที)</div>
+                <div class="script-text">ลองสั่งซองแรก ลดเหลือ 199 บาท กดลิงก์เลย! ☕🔥</div>
+            </div>
+
+            <div class="caption-box">
+                <strong>Caption:</strong><br>
+                กาแฟดอยช้าง เชียงราย จากดอยสูง 1,200 เมตร รสชาติที่คอกาแฟต้องลอง ☕🏔️ เปลี่ยนชีวิตชาวเขา เปลี่ยนรสชาติกาแฟไทย
+            </div>
+
+            <div class="hashtags">
+                <span class="hashtag">#กาแฟดอยช้าง</span>
+                <span class="hashtag">#DoiChaangCoffee</span>
+                <span class="hashtag">#กาแฟไทย</span>
+                <span class="hashtag">#เชียงราย</span>
+                <span class="hashtag">#ThaiCoffee</span>
+                <span class="hashtag">#SpecialtyCoffee</span>
+                <span class="hashtag">#OTOPไทย</span>
+                <span class="hashtag">#คอกาแฟ</span>
+                <span class="hashtag">#CoffeeLover</span>
+                <span class="hashtag">#TikTokShop</span>
+            </div>
+
+            <div class="score-box">
+                <div class="score-number">9.0/10</div>
+                <div>AI Critic Score — คุณภาพสูง ✅</div>
+            </div>
+
+            <div class="why-works">
+                <strong>💡 ทำไมถึงเวิร์ค:</strong> Hook แบบ Question ใช้คำว่า 'แพงที่สุด' + 'ต่างจริงไหม?' กระตุ้นความอยากรู้ Story เล่าที่มาจากฝิ่นสู่กาแฟ สร้าง emotional connection
+            </div>
+        </div>
+
+        <!-- Content 3: Labubu -->
+        <div class="content-card">
+            <span class="product-badge">🧸 Pop Mart Labubu</span>
+            <h2>Hook แบบ Contrast</h2>
+
+            <div class="script-section">
+                <div class="script-label">🎬 HOOK (3 วินาที)</div>
+                <div class="script-text">ซื้อมา 390 บาท... ขายต่อ 15,000! Labubu ตัวไหนที่ราคาพุ่ง? 🤯</div>
+            </div>
+            <div class="script-section">
+                <div class="script-label">📖 STORY (20 วินาที)</div>
+                <div class="script-text">Labubu by Pop Mart กลายเป็นของสะสมที่ร้อนแรงที่สุดในปี 2026 ลิซ่า BLACKPINK ก็สะสม ตัว Secret ที่โอกาสได้แค่ 1 ใน 144 ราคาพุ่งจาก 390 เป็น 15,000+ ถ้าจะเริ่มสะสม ต้องรู้ว่าตัวไหน rare ตัวไหน common</div>
+            </div>
+            <div class="script-section">
+                <div class="script-label">📢 CTA (7 วินาที)</div>
+                <div class="script-text">กดติดตาม! จะบอกทุกอาทิตย์ว่าตัวไหนมาใหม่ ตัวไหนราคาขึ้น! 🔔</div>
+            </div>
+
+            <div class="caption-box">
+                <strong>Caption:</strong><br>
+                Labubu Pop Mart ตัวไหนราคาพุ่ง? ซื้อ 390 ขาย 15,000! 🤯 มือใหม่ต้องดู สะสมยังไงให้คุ้ม 💰
+            </div>
+
+            <div class="hashtags">
+                <span class="hashtag">#Labubu</span>
+                <span class="hashtag">#PopMart</span>
+                <span class="hashtag">#BlindBox</span>
+                <span class="hashtag">#ของสะสม</span>
+                <span class="hashtag">#LabubuThailand</span>
+                <span class="hashtag">#PopMartThailand</span>
+                <span class="hashtag">#ToyCollector</span>
+                <span class="hashtag">#SecretFigure</span>
+                <span class="hashtag">#ลาบูบู้</span>
+                <span class="hashtag">#TikTokShop</span>
+            </div>
+
+            <div class="score-box">
+                <div class="score-number">9.5/10</div>
+                <div>AI Critic Score — คุณภาพยอดเยี่ยม ✅</div>
+            </div>
+
+            <div class="why-works">
+                <strong>💡 ทำไมถึงเวิร์ค:</strong> Hook แบบ Contrast ใช้ตัวเลข 390 vs 15,000 สร้าง shock value ทำให้คนหยุดสครอลทันที เพราะอยากรู้ว่าตัวไหน
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-section">
+            <h2>อยากได้คอนเทนต์แบบนี้ให้สินค้าของคุณ?</h2>
+            <p>ลงทะเบียน Early Access ฟรี! รับสิทธิ์ใช้งาน 30 วัน</p>
+            <a href="https://openthai-ai.vercel.app#waitlist" class="cta-btn">ลงทะเบียนฟรี →</a>
+        </div>
+
+        <!-- Share Buttons -->
+        <div class="share-buttons">
+            <h3>แชร์ให้เพื่อน</h3>
+            <a href="https://social-plugins.line.me/lineit/share?url=https://openthai-ai.vercel.app/share.html" target="_blank" class="share-btn share-line">LINE</a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=https://openthai-ai.vercel.app/share.html" target="_blank" class="share-btn share-fb">Facebook</a>
+            <a href="https://twitter.com/intent/tweet?text=AI%20%E0%B8%AA%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%87%E0%B8%84%E0%B8%AD%E0%B8%99%E0%B9%80%E0%B8%97%E0%B8%99%E0%B8%95%E0%B9%8C%20TikTok%20%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%AA%E0%B8%B4%E0%B8%99%E0%B8%84%E0%B9%89%E0%B8%B2%E0%B9%84%E0%B8%97%E0%B8%A2%20%F0%9F%87%B9%F0%9F%87%AD&url=https://openthai-ai.vercel.app/share.html" target="_blank" class="share-btn share-x">X / Twitter</a>
+            <button class="share-btn share-copy" onclick="navigator.clipboard.writeText('https://openthai-ai.vercel.app/share.html');this.textContent='Copied!';">Copy Link</button>
+        </div>
+    </div>
+</body>
+</html>
