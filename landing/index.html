@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenThai AI — สร้างคอนเทนต์ TikTok ด้วย AI</title>
+    <meta name="description" content="เครื่องมือ AI สร้างสคริปต์ TikTok, แคปชั่น, แฮชแท็ก สำหรับสินค้าไทย OTOP และสินค้าทั่วโลก">
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇹🇭</text></svg>">
+    
+    <style>
+        :root {
+            --primary: #FF6B35;
+            --primary-dark: #E55A2B;
+            --secondary: #4ECDC4;
+            --dark: #1A1A2E;
+            --light: #F7F7F7;
+            --gradient: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
+            --gradient-secondary: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Noto Sans Thai', sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .nav-links a {
+            margin-left: 2rem;
+            text-decoration: none;
+            color: var(--dark);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+        
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gradient);
+            padding: 6rem 2rem 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        }
+        
+        .hero-content {
+            max-width: 800px;
+            text-align: center;
+            color: white;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .hero h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .hero p {
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
+        
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        /* CTA Button */
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: var(--primary);
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.3);
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 5rem 2rem;
+            background: white;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--dark);
+        }
+        
+        .features-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+        
+        .feature-card {
+            background: var(--light);
+            padding: 2rem;
+            border-radius: 20px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+        
+        .feature-card p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        /* How It Works */
+        .how-it-works {
+            padding: 5rem 2rem;
+            background: var(--dark);
+            color: white;
+        }
+        
+        .steps {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+        
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: var(--gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+        
+        .step-content h3 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .step-content p {
+            opacity: 0.8;
+        }
+        
+        /* Pricing */
+        .pricing {
+            padding: 5rem 2rem;
+            background: white;
+        }
+        
+        .pricing-grid {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+        
+        .pricing-card {
+            background: var(--light);
+            padding: 2rem;
+            border-radius: 20px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .pricing-card.popular {
+            border-color: var(--primary);
+            transform: scale(1.05);
+        }
+        
+        .pricing-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .price {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .price span {
+            font-size: 1rem;
+            color: #666;
+        }
+        
+        .pricing-features {
+            list-style: none;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+        
+        .pricing-features li {
+            padding: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+        
+        .pricing-features li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: var(--secondary);
+            font-weight: bold;
+        }
+        
+        /* Waitlist Form */
+        .waitlist {
+            padding: 5rem 2rem;
+            background: var(--gradient-secondary);
+            color: white;
+        }
+        
+        .waitlist-container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .waitlist h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .waitlist p {
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        
+        .waitlist-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .form-row input {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .waitlist-form input,
+        .waitlist-form select {
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+        
+        .waitlist-form input:focus,
+        .waitlist-form select:focus {
+            outline: 3px solid var(--primary);
+        }
+        
+        /* PDPA Consent */
+        .pdpa-consent {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            text-align: left;
+            margin: 1rem 0;
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 10px;
+        }
+        
+        .pdpa-consent input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+        
+        .pdpa-consent label {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .pdpa-consent a {
+            color: white;
+            text-decoration: underline;
+        }
+        
+        .submit-btn {
+            background: white;
+            color: var(--secondary);
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.2);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Success Message */
+        .success-message {
+            display: none;
+            background: white;
+            color: var(--dark);
+            padding: 2rem;
+            border-radius: 20px;
+            text-align: center;
+        }
+        
+        .success-message.show {
+            display: block;
+        }
+        
+        .success-message h3 {
+            color: var(--secondary);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* Footer */
+        footer {
+            background: var(--dark);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+        
+        .footer-links {
+            margin-bottom: 1rem;
+        }
+        
+        .footer-links a {
+            color: white;
+            margin: 0 1rem;
+            text-decoration: none;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+        
+        .footer-links a:hover {
+            opacity: 1;
+        }
+        
+        .copyright {
+            opacity: 0.6;
+            font-size: 0.9rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .hero-stats {
+                gap: 1.5rem;
+            }
+            
+            .step {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .pricing-card.popular {
+                transform: none;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+        }
+        
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">🇹🇭 OpenThai AI</div>
+            <div class="nav-links">
+                <a href="#features">ฟีเจอร์</a>
+                <a href="#how-it-works">วิธีใช้งาน</a>
+                <a href="#pricing">ราคา</a>
+                <a href="#waitlist">ลงทะเบียน</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>🚀 สร้างคอนเทนต์ TikTok<br>ด้วย AI สัญชาติไทย</h1>
+            <p>เครื่องมือ AI ช่วยสร้างสคริปต์ แคปชั่น แฮชแท็ก<br>สำหรับสินค้า OTOP และสินค้าทั่วโลก — ใน 30 วินาที!</p>
+            
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-number">300+</div>
+                    <div class="stat-label">สินค้าใน Database</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">รูปแบบ Hook</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">35</div>
+                    <div class="stat-label">ประเทศครอบคลุม</div>
+                </div>
+            </div>
+            
+            <a href="#waitlist" class="cta-button">ลงทะเบียน Early Access ฟรี →</a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <h2 class="section-title">✨ ฟีเจอร์เด่น</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🎬</div>
+                <h3>สคริปต์ 30 วินาที</h3>
+                <p>Hook 3 วิ + Story 20 วิ + CTA 7 วิ พร้อมใช้งานทันที</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📝</div>
+                <h3>แคปชั่น + แฮชแท็ก</h3>
+                <p>แคปชั่นดึงดูด + 10 แฮชแท็กที่เหมาะกับสินค้า</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🏆</div>
+                <h3>5 รูปแบบ Hook</h3>
+                <p>Story / Process / Contrast / Question / Transformation</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌏</div>
+                <h3>รองรับสินค้าทั่วโลก</h3>
+                <p>OTOP + สินค้าไทย + จีน + Global 35 ประเทศ</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🧠</div>
+                <h3>AI Critic ให้คะแนน</h3>
+                <p>ระบบ AI ตรวจสอบคุณภาพอัตโนมัติ ≥ 7/10</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <h3>อธิบายเหตุผล</h3>
+                <p>บอกว่าทำไม Hook นี้ถึงเวิร์ค เรียนรู้ได้ทุกครั้ง</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works" id="how-it-works">
+        <h2 class="section-title" style="color: white;">🔧 วิธีใช้งาน</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>เลือกสินค้า</h3>
+                    <p>พิมพ์ชื่อสินค้าหรือเลือกจาก Database 300+ รายการ</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>เลือกรูปแบบ Hook</h3>
+                    <p>Story / Process / Contrast / Question / Transformation</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>AI สร้างคอนเทนต์</h3>
+                    <p>รอ 10-30 วินาที ได้สคริปต์ + แคปชั่น + แฮชแท็ก</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Copy ไปใช้งาน</h3>
+                    <p>นำไปถ่าย TikTok ได้เลย พร้อมเรียนรู้จากคำอธิบาย</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="pricing" id="pricing">
+        <h2 class="section-title">💰 แพ็กเกจราคา</h2>
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <h3>Free</h3>
+                <div class="price">฿0 <span>/เดือน</span></div>
+                <ul class="pricing-features">
+                    <li>3 คอนเทนต์ / วัน</li>
+                    <li>สินค้า OTOP เท่านั้น</li>
+                    <li>Hook แบบ Random</li>
+                    <li>ไม่มี AI Critic Score</li>
+                </ul>
+                <a href="#waitlist" class="cta-button" style="background: var(--light); color: var(--dark);">เริ่มใช้ฟรี</a>
+            </div>
+            <div class="pricing-card popular">
+                <h3>⭐ Pro</h3>
+                <div class="price">฿149 <span>/เดือน</span></div>
+                <ul class="pricing-features">
+                    <li>ไม่จำกัดคอนเทนต์</li>
+                    <li>สินค้าทุกประเภท</li>
+                    <li>เลือก Hook ได้เอง</li>
+                    <li>AI Critic Score</li>
+                    <li>อธิบายเหตุผล</li>
+                </ul>
+                <a href="#waitlist" class="cta-button">ลงทะเบียน</a>
+            </div>
+            <div class="pricing-card">
+                <h3>Business</h3>
+                <div class="price">฿299 <span>/เดือน</span></div>
+                <ul class="pricing-features">
+                    <li>ทุกอย่างใน Pro</li>
+                    <li>API Access</li>
+                    <li>Team 5 คน</li>
+                    <li>Priority Support</li>
+                    <li>Custom Training</li>
+                </ul>
+                <a href="#waitlist" class="cta-button" style="background: var(--dark); color: white;">ติดต่อเรา</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Waitlist Form -->
+    <section class="waitlist" id="waitlist">
+        <div class="waitlist-container">
+            <h2>🎉 ลงทะเบียน Early Access</h2>
+            <p>รับสิทธิ์ใช้งานฟรี 30 วัน + ส่วนลด 50% สำหรับ 100 คนแรก!</p>
+            
+            <form class="waitlist-form" id="waitlistForm">
+                <div class="form-row">
+                    <input type="text" name="name" placeholder="ชื่อ-นามสกุล" required>
+                    <input type="email" name="email" placeholder="อีเมล" required>
+                </div>
+                <div class="form-row">
+                    <input type="tel" name="phone" placeholder="เบอร์โทร (LINE)" required>
+                    <select name="role" required>
+                        <option value="">— คุณคือ —</option>
+                        <option value="creator">TikTok Creator</option>
+                        <option value="otop">ผู้ผลิต OTOP</option>
+                        <option value="reseller">Reseller / Agent</option>
+                        <option value="crossborder">Cross-border Seller</option>
+                        <option value="agency">Agency / NGO</option>
+                        <option value="other">อื่นๆ</option>
+                    </select>
+                </div>
+                
+                <!-- PDPA Consent -->
+                <div class="pdpa-consent">
+                    <input type="checkbox" id="pdpaConsent" name="pdpa" required>
+                    <label for="pdpaConsent">
+                        ข้าพเจ้ายินยอมให้ OpenThai AI เก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคล
+                        ตาม <a href="privacy.html" target="_blank">นโยบายความเป็นส่วนตัว</a> 
+                        เพื่อการให้บริการ การติดต่อสื่อสาร และการปรับปรุงผลิตภัณฑ์ 
+                        ตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)
+                    </label>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    ลงทะเบียนรับสิทธิ์ →
+                </button>
+            </form>
+            
+            <div class="success-message" id="successMessage">
+                <h3>✅ ลงทะเบียนสำเร็จ!</h3>
+                <p>ขอบคุณที่สนใจ OpenThai AI<br>เราจะติดต่อกลับภายใน 24 ชั่วโมง</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-links">
+            <a href="privacy.html">นโยบายความเป็นส่วนตัว</a>
+            <a href="terms.html">ข้อกำหนดการใช้งาน</a>
+            <a href="mailto:contact@openthai-ai.com">ติดต่อเรา</a>
+        </div>
+        <p class="copyright">© 2026 OpenThai AI — Made with ❤️ in Thailand</p>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+
+        // Form submission
+        const form = document.getElementById('waitlistForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const successMessage = document.getElementById('successMessage');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Check PDPA consent
+            const pdpaChecked = document.getElementById('pdpaConsent').checked;
+            if (!pdpaChecked) {
+                alert('กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนลงทะเบียน');
+                return;
+            }
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span> กำลังส่ง...';
+            
+            // Collect form data
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            data.timestamp = new Date().toISOString();
+            data.source = 'landing_page';
+            
+            try {
+                // Send to Google Apps Script
+                const response = await fetch('YOUR_GOOGLE_APPS_SCRIPT_URL', {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                // Show success message
+                form.style.display = 'none';
+                successMessage.classList.add('show');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'ลงทะเบียนรับสิทธิ์ →';
+            }
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', function() {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 100) {
+                nav.style.boxShadow = '0 4px 30px rgba(0,0,0,0.15)';
+            } else {
+                nav.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
+            }
+        });
+    </script>
+</body>
+</html>

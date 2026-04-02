@@ -1,0 +1,210 @@
+{
+  "name": "OpenThai AI Content Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openthai-ai",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "openthai-ai-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// S7: Context Compression — สร้าง Context Card 5 fields\nconst input = $input.first().json;\n\nconst contextCard = {\n  product_name: input.product_name || '',\n  category: input.category || 'otop',\n  key_features: input.features || [],\n  target_audience: input.audience || 'คนไทยทั่วไป',\n  unique_selling_point: input.usp || '',\n  hook_preference: input.hook_type || 'auto'\n};\n\n// Compress to ~150 chars for efficient context\nconst compressed = `${contextCard.product_name}|${contextCard.category}|${contextCard.target_audience}|${contextCard.hook_preference}`;\n\nreturn {\n  contextCard,\n  compressed,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "context-card",
+      "name": "S7: Context Card",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/YOUR_SHEET_ID/values/Products!A:Z",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {}
+      },
+      "id": "knowledge-base",
+      "name": "S8: Knowledge Base",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 400],
+      "notes": "เปลี่ยน YOUR_SHEET_ID เป็น Google Sheet ID ของคุณ"
+    },
+    {
+      "parameters": {
+        "jsCode": "// S1+S3+S5: Prompt Assembly\n// รวม RCCF Prompt + Master Prompt + Category System Prompt\n\nconst context = $('S7: Context Card').first().json;\nconst knowledge = $('S8: Knowledge Base').first().json;\n\n// S5: Category-specific system prompts\nconst systemPrompts = {\n  food: 'คุณเป็นผู้เชี่ยวชาญสร้างคอนเทนต์ TikTok สำหรับอาหารไทย เน้น: รสชาติ, สูตรโบราณ, วัตถุดิบท้องถิ่น',\n  craft: 'คุณเป็นผู้เชี่ยวชาญสร้างคอนเทนต์ TikTok สำหรับหัตถกรรม เน้น: ฝีมือช่าง, ภูมิปัญญา, กระบวนการผลิต',\n  herb: 'คุณเป็นผู้เชี่ยวชาญสร้างคอนเทนต์ TikTok สำหรับสมุนไพร เน้น: สรรพคุณ, วิธีใช้, ผลลัพธ์',\n  textile: 'คุณเป็นผู้เชี่ยวชาญสร้างคอนเทนต์ TikTok สำหรับผ้าทอ เน้น: ลวดลาย, กระบวนการย้อม, heritage',\n  global: 'คุณเป็นผู้เชี่ยวชาญสร้างคอนเทนต์ TikTok สำหรับสินค้าทั่วไป เน้น: ความคุ้มค่า, ฟีเจอร์เด่น, เทรนด์'\n};\n\nconst category = context.contextCard?.category || 'global';\nconst systemPrompt = systemPrompts[category] || systemPrompts.global;\n\n// S3: Master Prompt\nconst masterPrompt = `\n【OUTPUT FORMAT】\nสร้างคอนเทนต์ TikTok 30 วินาที:\n1. Hook (3 วิ): ดึงความสนใจทันที\n2. Story (20 วิ): เนื้อหาหลัก\n3. CTA (7 วิ): Call to Action\n\nพร้อม Caption + 10 Hashtags\n\nตอบเป็น JSON เท่านั้น:\n{\n  \"script\": {\"hook\": \"...\", \"story\": \"...\", \"cta\": \"...\"},\n  \"caption\": \"...\",\n  \"hashtags\": [\"...\"],\n  \"hook_type\": \"...\",\n  \"why_it_works\": \"...\"\n}\n`;\n\n// S1: RCCF Prompt (Role, Context, Constraint, Format)\nconst userPrompt = `\n【สินค้า】${context.contextCard?.product_name}\n【หมวดหมู่】${category}\n【กลุ่มเป้าหมาย】${context.contextCard?.target_audience}\n【Hook ที่ต้องการ】${context.contextCard?.hook_preference}\n\n${masterPrompt}\n`;\n\nreturn {\n  systemPrompt,\n  userPrompt,\n  context: context.contextCard,\n  iteration: 1\n};"
+      },
+      "id": "prompt-assembly",
+      "name": "S1+S3+S5: Prompt Assembly",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-5-20251001\",\n  \"max_tokens\": 2000,\n  \"system\": \"{{ $json.systemPrompt }}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.userPrompt }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-generate",
+      "name": "Claude Generate",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [950, 300],
+      "notes": "ตั้งค่า HTTP Header Auth: x-api-key = YOUR_ANTHROPIC_API_KEY"
+    },
+    {
+      "parameters": {
+        "jsCode": "// S6: AI Critic — ให้คะแนนและ feedback\nconst response = $input.first().json;\nconst content = JSON.parse(response.content[0].text);\n\n// คำนวณคะแนนตามเกณฑ์\nfunction calculateScore(content) {\n  let score = 0;\n  \n  // Hook strength (30%)\n  const hookLength = content.script?.hook?.length || 0;\n  if (hookLength > 20 && hookLength < 100) score += 3;\n  \n  // Story flow (25%)\n  const storyLength = content.script?.story?.length || 0;\n  if (storyLength > 100 && storyLength < 500) score += 2.5;\n  \n  // CTA clarity (20%)\n  const ctaLength = content.script?.cta?.length || 0;\n  if (ctaLength > 20 && ctaLength < 100) score += 2;\n  \n  // Hashtags (15%)\n  const hashtagCount = content.hashtags?.length || 0;\n  if (hashtagCount >= 8) score += 1.5;\n  \n  // Format compliance (10%)\n  if (content.hook_type && content.why_it_works) score += 1;\n  \n  return Math.min(10, score);\n}\n\nconst criticScore = calculateScore(content);\n\nreturn {\n  content,\n  criticScore,\n  passed: criticScore >= 7,\n  feedback: criticScore >= 7 \n    ? 'คอนเทนต์ผ่านมาตรฐาน' \n    : 'ต้องปรับปรุง: ' + (criticScore < 5 ? 'Hook อ่อน' : 'เพิ่ม detail'),\n  iteration: $('S1+S3+S5: Prompt Assembly').first().json.iteration\n};"
+      },
+      "id": "ai-critic",
+      "name": "S6: AI Critic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.passed }}",
+              "value2": true
+            }
+          ],
+          "number": [
+            {
+              "value1": "={{ $json.iteration }}",
+              "operation": "smaller",
+              "value2": 4
+            }
+          ]
+        },
+        "combineOperation": "any"
+      },
+      "id": "if-gate",
+      "name": "IF: Score ≥ 7 or Max 3x",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1400, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// S2: Taste Check — ตรวจสอบกับ reference library\nconst input = $input.first().json;\nconst content = input.content;\n\n// ตัวอย่าง taste check (ในจริงจะเทียบกับ reference lib)\nconst tasteChecks = {\n  hasEmoji: /[\\u{1F300}-\\u{1F9FF}]/u.test(content.caption || ''),\n  hashtagCount: (content.hashtags?.length || 0) >= 8,\n  hookNotGeneric: !['รู้ไหม', 'เคยเห็น'].some(w => content.script?.hook?.includes(w)),\n  ctaHasAction: ['กด', 'follow', 'ลอง', 'ซื้อ', 'สั่ง'].some(w => \n    (content.script?.cta || '').toLowerCase().includes(w)\n  )\n};\n\nconst tasteScore = Object.values(tasteChecks).filter(Boolean).length * 2.5;\n\nreturn {\n  ...input,\n  tasteScore,\n  tasteChecks\n};"
+      },
+      "id": "taste-check",
+      "name": "S2: Taste Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// S9: Learning Layer — อธิบาย why it works\nconst input = $input.first().json;\n\nconst learning = {\n  hook_type: input.content.hook_type || 'auto',\n  why_it_works: input.content.why_it_works || 'Hook นี้ใช้ได้เพราะดึงความสนใจทันที',\n  next_try: `ลองใช้ Hook แบบ ${['story', 'process', 'contrast', 'question', 'transformation'].filter(h => h !== input.content.hook_type)[0]} สำหรับสินค้านี้`\n};\n\nreturn {\n  content: input.content,\n  quality: {\n    critic_score: input.criticScore,\n    taste_score: input.tasteScore,\n    iterations: input.iteration\n  },\n  learning\n};"
+      },
+      "id": "learning-layer",
+      "name": "S9: Learning Layer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "response",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2000, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retry loop — เพิ่ม iteration และ retry\nconst input = $input.first().json;\n\nreturn {\n  ...input,\n  iteration: input.iteration + 1,\n  retry: true\n};"
+      },
+      "id": "retry-loop",
+      "name": "Retry Loop",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          { "node": "S7: Context Card", "type": "main", "index": 0 },
+          { "node": "S8: Knowledge Base", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "S7: Context Card": {
+      "main": [
+        [{ "node": "S1+S3+S5: Prompt Assembly", "type": "main", "index": 0 }]
+      ]
+    },
+    "S8: Knowledge Base": {
+      "main": [
+        [{ "node": "S1+S3+S5: Prompt Assembly", "type": "main", "index": 0 }]
+      ]
+    },
+    "S1+S3+S5: Prompt Assembly": {
+      "main": [
+        [{ "node": "Claude Generate", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude Generate": {
+      "main": [
+        [{ "node": "S6: AI Critic", "type": "main", "index": 0 }]
+      ]
+    },
+    "S6: AI Critic": {
+      "main": [
+        [{ "node": "IF: Score ≥ 7 or Max 3x", "type": "main", "index": 0 }]
+      ]
+    },
+    "IF: Score ≥ 7 or Max 3x": {
+      "main": [
+        [{ "node": "S2: Taste Check", "type": "main", "index": 0 }],
+        [{ "node": "Retry Loop", "type": "main", "index": 0 }]
+      ]
+    },
+    "S2: Taste Check": {
+      "main": [
+        [{ "node": "S9: Learning Layer", "type": "main", "index": 0 }]
+      ]
+    },
+    "S9: Learning Layer": {
+      "main": [
+        [{ "node": "Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Retry Loop": {
+      "main": [
+        [{ "node": "S1+S3+S5: Prompt Assembly", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": ["openthai-ai", "tiktok", "content-generation"],
+  "triggerCount": 0,
+  "updatedAt": "2026-04-01T00:00:00.000Z",
+  "versionId": "1.0.0"
+}
