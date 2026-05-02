@@ -6,6 +6,8 @@
     <title>AI Generator — OpenThai AI</title>
     <meta name="description" content="สร้างคอนเทนต์ TikTok ด้วย AI ใน 30 วินาที สำหรับสินค้าไทย OTOP">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/config.js"></script>
     <style>
         :root {
             --primary: #FF6B35;
@@ -37,9 +39,29 @@
             top: 0;
             z-index: 100;
         }
-        .logo { font-size: 1.3rem; font-weight: 700; color: var(--primary); text-decoration: none; }
+        .logo { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; }
+        .logo img { height: 32px; }
+        .logo span { font-size: 1.2rem; font-weight: 700; color: var(--primary); }
         .nav-back { color: var(--dark); text-decoration: none; font-size: 0.9rem; opacity: 0.7; }
         .nav-back:hover { opacity: 1; }
+        .nav-user {
+            display: flex; align-items: center; gap: 0.6rem;
+            font-size: 0.82rem;
+        }
+        .user-badge {
+            background: var(--gradient); color: white;
+            padding: 0.25rem 0.7rem; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 600;
+        }
+        .user-badge.free { background: #eee; color: #888; }
+        .nav-login-btn {
+            color: var(--primary); font-weight: 600;
+            text-decoration: none; font-size: 0.82rem;
+            border: 1.5px solid var(--primary);
+            padding: 0.25rem 0.75rem; border-radius: 20px;
+            transition: all 0.2s;
+        }
+        .nav-login-btn:hover { background: var(--primary); color: white; }
 
         /* Layout */
         .page-wrapper {
@@ -524,8 +546,14 @@
 <body>
 
 <nav>
-    <a href="index.html" class="logo">🇹🇭 OpenThai AI</a>
-    <a href="index.html" class="nav-back">← กลับหน้าหลัก</a>
+    <a href="index.html" class="logo">
+        <img src="images/logo.png" alt="OpenThai AI" onerror="this.style.display='none'">
+        <span>OpenThai AI</span>
+    </a>
+    <a href="index.html" class="nav-back">← หน้าหลัก</a>
+    <div class="nav-user" id="navUser" style="margin-left:auto;">
+        <a href="login.html" class="nav-login-btn" id="navLoginBtn">เข้าสู่ระบบ</a>
+    </div>
 </nav>
 
 <div class="page-wrapper">
@@ -786,7 +814,7 @@
                 <div class="plan-feat">/เดือน • API + Team</div>
             </div>
         </div>
-        <a href="index.html#waitlist" class="modal-waitlist-btn">ลงทะเบียนเพื่ออัปเกรด →</a>
+        <a href="login.html?plan=pro&next=payment.html?plan=pro" class="modal-waitlist-btn">อัปเกรด Pro ฿149/เดือน →</a>
         <button class="modal-close-btn" onclick="closeUpgrade()">ยกเลิก รอพรุ่งนี้ใช้ต่อฟรี</button>
     </div>
 </div>
@@ -796,6 +824,62 @@
     const API_URL = '/api';
     let selectedHook = 'auto';
     let selectedRole = '';
+
+    // ==================== AUTH + PLAN CHECK ====================
+    let isPro = false;
+    let currentUser = null;
+
+    async function initAuth() {
+        try {
+            const sb = window.supabase?.createClient(
+                OPENTHAI_CONFIG.supabase.url,
+                OPENTHAI_CONFIG.supabase.anonKey
+            );
+            if (!sb) return;
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) return;
+
+            currentUser = session.user;
+            const name = currentUser.user_metadata?.name || currentUser.email.split('@')[0];
+
+            // Check subscription via API
+            const res = await fetch('/api/subscription', {
+                headers: { 'Authorization': 'Bearer ' + session.access_token }
+            });
+            if (res.ok) {
+                const sub = await res.json();
+                isPro = sub.plan === 'pro' || sub.plan === 'business';
+            }
+
+            // Update nav
+            const navUser = document.getElementById('navUser');
+            navUser.innerHTML = `
+                <span style="font-size:0.82rem;color:#555;">${name}</span>
+                <span class="user-badge${isPro ? '' : ' free'}">${isPro ? '⭐ Pro' : 'Free'}</span>
+                <a href="#" onclick="doLogout()" style="font-size:0.78rem;color:#aaa;text-decoration:none;">ออกจากระบบ</a>
+            `;
+
+            // Pro users: hide quota bar, enable all categories
+            if (isPro) {
+                document.getElementById('quotaBar').style.display = 'none';
+            }
+
+        } catch(e) { /* Supabase not configured or offline */ }
+    }
+
+    async function doLogout() {
+        try {
+            const sb = window.supabase?.createClient(
+                OPENTHAI_CONFIG.supabase.url,
+                OPENTHAI_CONFIG.supabase.anonKey
+            );
+            await sb?.auth.signOut();
+        } catch(e) {}
+        localStorage.removeItem('ot_user');
+        location.reload();
+    }
+
+    initAuth();
 
     // ==================== QUOTA SYSTEM ====================
     const FREE_LIMIT = 3;
@@ -885,11 +969,13 @@
             return;
         }
 
-        // Quota check
-        const q = getQuota();
-        if (q.used >= FREE_LIMIT) {
-            showUpgrade();
-            return;
+        // Quota check (skip for Pro/Business)
+        if (!isPro) {
+            const q = getQuota();
+            if (q.used >= FREE_LIMIT) {
+                showUpgrade();
+                return;
+            }
         }
 
         const btn = document.getElementById('generateBtn');
@@ -935,11 +1021,13 @@
             if (!res.ok) throw new Error(`API Error: ${res.status}`);
             const data = await res.json();
             renderResult(data);
-            // นับโควต้า
-            const q2 = getQuota();
-            q2.used += 1;
-            saveQuota(q2);
-            renderQuotaBar();
+            // นับโควต้า (เฉพาะ Free users)
+            if (!isPro) {
+                const q2 = getQuota();
+                q2.used += 1;
+                saveQuota(q2);
+                renderQuotaBar();
+            }
         } catch(err) {
             alert(`เกิดข้อผิดพลาด: ${err.message}\n\nกรุณาลองใหม่อีกครั้ง`);
             document.getElementById('resultPlaceholder').style.display = 'flex';

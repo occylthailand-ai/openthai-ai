@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ — OpenThai AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --primary-dark: #E55A2B;
+      --dark: #1A1A2E;
+      --light: #F7F7F7;
+      --gradient: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans Thai', sans-serif;
+      background: var(--light);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+    .logo a {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .logo p { font-size: 0.85rem; color: #888; margin-top: 0.25rem; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: var(--light);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 1.75rem;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 0.6rem;
+      border: none;
+      border-radius: 9px;
+      background: none;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #888;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: white;
+      color: var(--dark);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    /* Forms */
+    .form-panel { display: none; }
+    .form-panel.active { display: block; }
+
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.82rem; font-weight: 600; color: #555; margin-bottom: 0.35rem; }
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 2px solid #e8e8e8;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      background: white;
+    }
+    input:focus { outline: none; border-color: var(--primary); }
+
+    .submit-btn {
+      width: 100%;
+      padding: 0.9rem;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.3s;
+      margin-top: 0.5rem;
+    }
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,107,53,0.35); }
+    .submit-btn:disabled { opacity: 0.6; transform: none; cursor: not-allowed; }
+
+    .divider {
+      text-align: center;
+      color: #ccc;
+      font-size: 0.8rem;
+      margin: 1rem 0;
+      position: relative;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 40%;
+      height: 1px;
+      background: #eee;
+    }
+    .divider::before { left: 0; }
+    .divider::after { right: 0; }
+
+    /* Message */
+    .msg {
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .msg.error { background: #fef2f2; color: #c0392b; border: 1px solid #fcc; display: block; }
+    .msg.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; display: block; }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 1.25rem;
+      font-size: 0.82rem;
+      color: #aaa;
+      text-decoration: none;
+    }
+    .back-link:hover { color: var(--primary); }
+
+    /* Plan badge for register */
+    .plan-badge {
+      background: linear-gradient(135deg, #fff5f1, #ffe8dc);
+      border: 1px solid #FFD4C2;
+      border-radius: 10px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.82rem;
+      color: var(--primary);
+      margin-bottom: 1rem;
+      display: none;
+    }
+    .plan-badge.show { display: flex; align-items: center; gap: 0.5rem; }
+
+    /* Loading spinner */
+    .spinner-inline {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <a href="index.html">🇹🇭 OpenThai AI</a>
+    <p>เข้าสู่ระบบเพื่อใช้งาน AI Generator</p>
+  </div>
+
+  <div id="msgBox" class="msg"></div>
+  <div id="planBadge" class="plan-badge">🎯 <span id="planBadgeText"></span></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('login')">เข้าสู่ระบบ</button>
+    <button class="tab-btn" onclick="switchTab('register')">สมัครสมาชิก</button>
+  </div>
+
+  <!-- Login Form -->
+  <div class="form-panel active" id="loginPanel">
+    <div class="form-group">
+      <label>อีเมล</label>
+      <input type="email" id="loginEmail" placeholder="your@email.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>รหัสผ่าน</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="submit-btn" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
+  </div>
+
+  <!-- Register Form -->
+  <div class="form-panel" id="registerPanel">
+    <div class="form-group">
+      <label>ชื่อ-นามสกุล</label>
+      <input type="text" id="regName" placeholder="เช่น สมชาย ใจดี">
+    </div>
+    <div class="form-group">
+      <label>อีเมล</label>
+      <input type="email" id="regEmail" placeholder="your@email.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>รหัสผ่าน</label>
+      <input type="password" id="regPassword" placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label>เบอร์โทร / LINE ID</label>
+      <input type="text" id="regPhone" placeholder="0812345678">
+    </div>
+    <button class="submit-btn" id="registerBtn" onclick="doRegister()">สมัครสมาชิกฟรี</button>
+  </div>
+
+  <a href="generator.html" class="back-link">← กลับไปใช้งาน AI (ฟรี 3 ครั้ง/วัน)</a>
+</div>
+
+<script>
+// ==================== SUPABASE INIT ====================
+let supabase = null;
+try {
+  supabase = window.supabase.createClient(
+    OPENTHAI_CONFIG.supabase.url,
+    OPENTHAI_CONFIG.supabase.anonKey
+  );
+} catch(e) {
+  console.warn('Supabase not configured:', e.message);
+}
+
+// ==================== REDIRECT IF ALREADY LOGGED IN ====================
+(async () => {
+  if (!supabase) return;
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    const next = new URLSearchParams(location.search).get('next') || 'generator.html';
+    location.href = next;
+  }
+})();
+
+// Show plan badge if coming from upgrade flow
+const planParam = new URLSearchParams(location.search).get('plan');
+if (planParam) {
+  const badge = document.getElementById('planBadge');
+  const cfg = OPENTHAI_CONFIG.plans[planParam];
+  if (cfg) {
+    document.getElementById('planBadgeText').textContent =
+      `สมัครแล้วไปชำระเงิน ${cfg.label} ฿${cfg.price}/เดือน`;
+    badge.classList.add('show');
+    switchTab('register');
+  }
+}
+
+// ==================== UI HELPERS ====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) =>
+    b.classList.toggle('active', (i === 0) === (tab === 'login'))
+  );
+  document.getElementById('loginPanel').classList.toggle('active', tab === 'login');
+  document.getElementById('registerPanel').classList.toggle('active', tab === 'register');
+  clearMsg();
+}
+
+function showMsg(text, type) {
+  const el = document.getElementById('msgBox');
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+
+function clearMsg() {
+  const el = document.getElementById('msgBox');
+  el.className = 'msg';
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? '<span class="spinner-inline"></span>กำลังดำเนินการ...'
+    : btn.id === 'loginBtn' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิกฟรี';
+}
+
+// ==================== LOGIN ====================
+async function doLogin() {
+  if (!supabase) return showMsg('กรุณาตั้งค่า Supabase ใน config.js ก่อน', 'error');
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) return showMsg('กรุณากรอกอีเมลและรหัสผ่าน', 'error');
+
+  setLoading('loginBtn', true);
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  setLoading('loginBtn', false);
+
+  if (error) return showMsg(
+    error.message.includes('Invalid') ? 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' : error.message,
+    'error'
+  );
+
+  // Save profile to localStorage for quick access
+  localStorage.setItem('ot_user', JSON.stringify({
+    id: data.user.id,
+    email: data.user.email,
+    name: data.user.user_metadata?.name || email.split('@')[0]
+  }));
+
+  // Redirect
+  const next = new URLSearchParams(location.search).get('next') || 'generator.html';
+  showMsg('เข้าสู่ระบบสำเร็จ กำลังพาไป...', 'success');
+  setTimeout(() => { location.href = next; }, 800);
+}
+
+// ==================== REGISTER ====================
+async function doRegister() {
+  if (!supabase) return showMsg('กรุณาตั้งค่า Supabase ใน config.js ก่อน', 'error');
+  const name     = document.getElementById('regName').value.trim();
+  const email    = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const phone    = document.getElementById('regPhone').value.trim();
+
+  if (!name || !email || !password) return showMsg('กรุณากรอกข้อมูลให้ครบ', 'error');
+  if (password.length < 8) return showMsg('รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร', 'error');
+
+  setLoading('registerBtn', true);
+  const { data, error } = await supabase.auth.signUp({
+    email, password,
+    options: { data: { name, phone } }
+  });
+  setLoading('registerBtn', false);
+
+  if (error) return showMsg(
+    error.message.includes('already registered') ? 'อีเมลนี้มีบัญชีอยู่แล้ว กรุณาเข้าสู่ระบบ' : error.message,
+    'error'
+  );
+
+  // Save to localStorage
+  localStorage.setItem('ot_user', JSON.stringify({ id: data.user.id, email, name }));
+
+  // If coming from upgrade flow → go to payment
+  if (planParam) {
+    showMsg('สมัครสมาชิกสำเร็จ! กำลังพาไปชำระเงิน...', 'success');
+    setTimeout(() => { location.href = `payment.html?plan=${planParam}`; }, 1000);
+  } else {
+    showMsg('สมัครสมาชิกสำเร็จ! ตรวจสอบอีเมลเพื่อยืนยัน', 'success');
+    setTimeout(() => { location.href = 'generator.html'; }, 1500);
+  }
+}
+
+// Enter key support
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const active = document.querySelector('.form-panel.active');
+  if (active.id === 'loginPanel') doLogin();
+  else doRegister();
+});
+</script>
+</body>
+</html>

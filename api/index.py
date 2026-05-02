@@ -344,6 +344,18 @@ async def register_partner(partner: PartnerRegister):
         "next_step": "รอ email ยืนยันจาก team@openthai-ai.com"
     }
 
+@app.get("/api/subscription")
+async def get_subscription(authorization: str = None):
+    """
+    ตรวจสอบ subscription plan ของ user
+    ใช้ Supabase JWT จาก Authorization header
+    TODO: query Supabase subscriptions table
+    """
+    from fastapi import Request
+    # MVP: return free plan (Supabase integration pending)
+    # เมื่อตั้งค่า Supabase เสร็จ ให้ query table subscriptions
+    return {"plan": "free", "status": "active"}
+
 @app.get("/api/hook-types")
 @app.get("/hook-types")
 async def get_hook_types():

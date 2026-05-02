@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ชำระเงิน — OpenThai AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="js/config.js"></script>
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --dark: #1A1A2E;
+      --light: #F7F7F7;
+      --success: #2ECC71;
+      --gradient: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans Thai', sans-serif;
+      background: var(--light);
+      min-height: 100vh;
+    }
+
+    nav {
+      background: white;
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+    .nav-logo img { height: 36px; }
+    .nav-logo span { font-size: 1.2rem; font-weight: 700; color: var(--primary); }
+    .nav-back { margin-left: auto; font-size: 0.85rem; color: #888; text-decoration: none; }
+    .nav-back:hover { color: var(--primary); }
+
+    .page { max-width: 860px; margin: 2rem auto; padding: 0 1.5rem; }
+
+    .plan-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    @media(max-width: 560px) { .plan-selector { grid-template-columns: 1fr; } }
+
+    .plan-card {
+      background: white;
+      border: 2.5px solid #eee;
+      border-radius: 18px;
+      padding: 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .plan-card.selected { border-color: var(--primary); background: #fff5f1; }
+    .plan-card .plan-name { font-size: 1rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .plan-card .plan-price { font-size: 2rem; font-weight: 700; color: var(--primary); }
+    .plan-card .plan-price span { font-size: 0.9rem; color: #888; font-weight: 400; }
+    .plan-card ul { list-style: none; margin-top: 0.75rem; text-align: left; }
+    .plan-card li { font-size: 0.82rem; color: #555; padding: 0.2rem 0; }
+    .plan-card li::before { content: '✓ '; color: var(--success); font-weight: 700; }
+    .popular-badge {
+      background: var(--gradient);
+      color: white;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      margin-left: 0.4rem;
+    }
+
+    .payment-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media(max-width: 640px) { .payment-panel { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: white;
+      border-radius: 20px;
+      padding: 1.75rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .panel-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      color: var(--dark);
+    }
+
+    /* QR Code */
+    .qr-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .qr-canvas-wrap {
+      background: white;
+      border: 2px solid #eee;
+      border-radius: 16px;
+      padding: 1rem;
+      display: inline-block;
+    }
+    .qr-amount {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .qr-name { font-size: 0.85rem; color: #888; }
+    .qr-steps {
+      background: #f8f8f8;
+      border-radius: 12px;
+      padding: 1rem;
+      margin-top: 0.75rem;
+      width: 100%;
+    }
+    .qr-steps p { font-size: 0.8rem; color: #666; margin-bottom: 0.4rem; line-height: 1.5; }
+    .qr-steps strong { color: var(--dark); }
+
+    /* Notify Form */
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.82rem; font-weight: 600; color: #555; margin-bottom: 0.35rem; }
+    input, textarea, select {
+      width: 100%;
+      padding: 0.7rem 0.9rem;
+      border: 2px solid #e8e8e8;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); }
+
+    .file-input-wrap {
+      border: 2px dashed #e8e8e8;
+      border-radius: 10px;
+      padding: 1.25rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      position: relative;
+    }
+    .file-input-wrap:hover { border-color: var(--primary); }
+    .file-input-wrap input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .file-label { font-size: 0.85rem; color: #888; }
+    .file-label strong { color: var(--primary); }
+    #filePreview { max-width: 100%; border-radius: 8px; margin-top: 0.75rem; display: none; }
+
+    .notify-btn {
+      width: 100%;
+      padding: 0.9rem;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.3s;
+      margin-top: 0.25rem;
+    }
+    .notify-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,107,53,0.35); }
+    .notify-btn:disabled { opacity: 0.6; transform: none; cursor: not-allowed; }
+
+    /* Success State */
+    .success-panel {
+      display: none;
+      text-align: center;
+      padding: 2rem;
+    }
+    .success-panel.show { display: block; }
+    .success-icon { font-size: 4rem; margin-bottom: 1rem; }
+    .success-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .success-desc { color: #666; font-size: 0.9rem; line-height: 1.7; margin-bottom: 1.5rem; }
+    .success-ref {
+      background: #f8f8f8;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 1.5rem;
+    }
+    .success-ref strong { color: var(--dark); }
+    .go-btn {
+      display: inline-block;
+      background: var(--gradient);
+      color: white;
+      padding: 0.85rem 2rem;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .msg { padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.85rem; margin-bottom: 1rem; display: none; }
+    .msg.error { background: #fef2f2; color: #c0392b; border: 1px solid #fcc; display: block; }
+    .msg.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; display: block; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="images/logo.png" alt="OpenThai AI" onerror="this.style.display='none';this.nextElementSibling.textContent='🇹🇭 OpenThai AI'">
+    <span></span>
+  </a>
+  <a href="generator.html" class="nav-back">← กลับ AI Generator</a>
+</nav>
+
+<div class="page">
+
+  <!-- Plan Selector -->
+  <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:1rem;color:var(--dark);">
+    เลือกแพ็กเกจ
+  </h2>
+  <div class="plan-selector">
+    <div class="plan-card selected" id="planPro" onclick="selectPlan('pro')">
+      <div class="plan-name">⭐ Pro <span class="popular-badge">ยอดนิยม</span></div>
+      <div class="plan-price">฿149 <span>/เดือน</span></div>
+      <ul>
+        <li>ไม่จำกัดคอนเทนต์</li>
+        <li>สินค้าทุกประเภท</li>
+        <li>เลือก Hook ได้เอง</li>
+        <li>AI Critic Score</li>
+        <li>อธิบายเหตุผล Hook</li>
+      </ul>
+    </div>
+    <div class="plan-card" id="planBusiness" onclick="selectPlan('business')">
+      <div class="plan-name">Business</div>
+      <div class="plan-price">฿299 <span>/เดือน</span></div>
+      <ul>
+        <li>ทุกอย่างใน Pro</li>
+        <li>API Access</li>
+        <li>Team 5 คน</li>
+        <li>Priority Support</li>
+        <li>Custom Training</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Payment Panel -->
+  <div class="payment-panel" id="paymentPanel">
+
+    <!-- Left: QR Code -->
+    <div class="panel">
+      <div class="panel-title">📱 สแกน PromptPay</div>
+      <div class="qr-wrap">
+        <div class="qr-canvas-wrap">
+          <canvas id="qrCanvas"></canvas>
+        </div>
+        <div class="qr-amount" id="qrAmount">฿149</div>
+        <div class="qr-name" id="qrName">OpenThai AI</div>
+        <div class="qr-steps">
+          <p><strong>1.</strong> เปิดแอปธนาคาร → สแกน QR</p>
+          <p><strong>2.</strong> ตรวจสอบชื่อ "<strong id="qrNameConfirm">OpenThai AI</strong>"</p>
+          <p><strong>3.</strong> ใส่จำนวนเงิน <strong id="qrAmountConfirm">149</strong> บาท</p>
+          <p><strong>4.</strong> จ่าย → แคปหน้าจอสลิป → แจ้งด้านขวา</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Notify Form -->
+    <div class="panel">
+      <div class="panel-title">📨 แจ้งชำระเงิน</div>
+      <div id="notifyMsg" class="msg"></div>
+
+      <div class="form-group">
+        <label>ชื่อ-นามสกุล <span style="color:var(--primary)">*</span></label>
+        <input type="text" id="notifyName" placeholder="ชื่อบัญชีที่โอน">
+      </div>
+      <div class="form-group">
+        <label>เบอร์โทร / LINE ID <span style="color:var(--primary)">*</span></label>
+        <input type="text" id="notifyPhone" placeholder="0812345678">
+      </div>
+      <div class="form-group">
+        <label>อีเมล <span style="color:var(--primary)">*</span></label>
+        <input type="email" id="notifyEmail" placeholder="your@email.com">
+      </div>
+      <div class="form-group">
+        <label>แนบสลิปการโอน</label>
+        <div class="file-input-wrap">
+          <input type="file" id="slipFile" accept="image/*" onchange="previewSlip(this)">
+          <div class="file-label">📎 <strong>คลิกหรือลากไฟล์มาวาง</strong><br>JPG, PNG ไม่เกิน 5MB</div>
+          <img id="filePreview" alt="สลิป">
+        </div>
+      </div>
+
+      <button class="notify-btn" id="notifyBtn" onclick="submitNotify()">
+        ✅ แจ้งชำระเงินแล้ว →
+      </button>
+
+      <p style="margin-top:0.75rem;font-size:0.78rem;color:#aaa;text-align:center;">
+        ทีมงานจะ activate ภายใน 30 นาที (08:00–22:00 น.)
+      </p>
+    </div>
+  </div>
+
+  <!-- Success State (shown after submit) -->
+  <div class="panel success-panel" id="successPanel">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">แจ้งชำระเงินสำเร็จ!</div>
+    <div class="success-desc">
+      ทีมงานได้รับข้อมูลแล้ว<br>
+      จะ activate บัญชีของคุณภายใน <strong>30 นาที</strong><br>
+      (เวลาทำการ 08:00–22:00 น. ทุกวัน)
+    </div>
+    <div class="success-ref">
+      หมายเลขอ้างอิง: <strong id="refNumber"></strong><br>
+      ถ้าเกิน 1 ชั่วโมงแล้วยังไม่ได้รับ LINE: <strong>@openthaiai</strong>
+    </div>
+    <a href="generator.html" class="go-btn">🚀 ไปใช้ AI Generator →</a>
+  </div>
+
+</div>
+
+<script>
+// ==================== INIT ====================
+let selectedPlan = 'pro';
+
+// Read plan from URL param
+const urlPlan = new URLSearchParams(location.search).get('plan');
+if (urlPlan === 'business') selectPlan('business');
+else generateQR('pro');
+
+function selectPlan(plan) {
+  selectedPlan = plan;
+  document.getElementById('planPro').classList.toggle('selected', plan === 'pro');
+  document.getElementById('planBusiness').classList.toggle('selected', plan === 'business');
+  generateQR(plan);
+}
+
+// ==================== QR GENERATOR ====================
+function generateQR(plan) {
+  const cfg = OPENTHAI_CONFIG.plans[plan];
+  const promptpay = OPENTHAI_CONFIG.promptpay;
+  const amount = cfg.price;
+
+  document.getElementById('qrAmount').textContent = `฿${amount}`;
+  document.getElementById('qrAmountConfirm').textContent = amount;
+  document.getElementById('qrName').textContent = promptpay.name;
+  document.getElementById('qrNameConfirm').textContent = promptpay.name;
+
+  // Generate PromptPay EMVCo payload
+  const payload = buildPromptPayPayload(promptpay.number, amount);
+
+  QRCode.toCanvas(document.getElementById('qrCanvas'), payload, {
+    width: 200,
+    margin: 1,
+    color: { dark: '#1A1A2E', light: '#FFFFFF' }
+  }, err => { if (err) console.error(err); });
+}
+
+// ==================== PROMPTPAY EMVCo PAYLOAD ====================
+function buildPromptPayPayload(target, amount) {
+  const isPhone = /^\d{10}$/.test(target.replace(/-/g, ''));
+  const isNationalId = /^\d{13}$/.test(target.replace(/-/g, ''));
+
+  let targetClean = target.replace(/-/g, '');
+  if (isPhone) {
+    // Convert Thai phone to international format
+    targetClean = '0066' + targetClean.slice(1);
+  }
+
+  const aid = isNationalId
+    ? '0013A000000677010111'
+    : '0013A000000677010112';
+  const mobile = tlv('01', targetClean);
+  const merchantInfo = tlv('29', tlv('00', aid) + tlv('01', mobile));
+  const amountStr = amount.toFixed(2);
+  const body =
+    tlv('00', '01') +
+    tlv('01', '12') +
+    merchantInfo +
+    tlv('53', '764') +
+    tlv('54', amountStr) +
+    tlv('58', 'TH') +
+    tlv('62', tlv('07', 'PromptPay'));
+
+  return body + tlv('63', crc16('6304' + body).toString(16).toUpperCase().padStart(4, '0'));
+}
+
+function tlv(tag, value) {
+  const len = value.length.toString().padStart(2, '0');
+  return tag + len + value;
+}
+
+function crc16(data) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < data.length; i++) {
+    crc ^= data.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+    }
+  }
+  return crc & 0xFFFF;
+}
+
+// ==================== FILE PREVIEW ====================
+function previewSlip(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('filePreview');
+    img.src = e.target.result;
+    img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ==================== SUBMIT ====================
+async function submitNotify() {
+  const name  = document.getElementById('notifyName').value.trim();
+  const phone = document.getElementById('notifyPhone').value.trim();
+  const email = document.getElementById('notifyEmail').value.trim();
+
+  if (!name || !phone || !email) {
+    showMsg('กรุณากรอกข้อมูลให้ครบ', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('notifyBtn');
+  btn.disabled = true;
+  btn.textContent = 'กำลังส่ง...';
+
+  // Generate reference number
+  const refNo = 'OTP-' + Date.now().toString(36).toUpperCase();
+
+  // Save to localStorage (สำหรับ UI)
+  localStorage.setItem('ot_pending_payment', JSON.stringify({
+    ref: refNo, plan: selectedPlan, email, phone, name,
+    timestamp: new Date().toISOString()
+  }));
+
+  // Submit to Google Sheets (existing Apps Script)
+  try {
+    await fetch('https://script.google.com/macros/s/AKfycbxxUkC-hJcDANcyL6md7x_AjodJJihHrbKvIQgaQWyRxrWQm_awjtGLLt0RJvg7KIhPSQ/exec', {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'payment_notify',
+        ref: refNo,
+        plan: selectedPlan,
+        amount: OPENTHAI_CONFIG.plans[selectedPlan].price,
+        name, phone, email,
+        timestamp: new Date().toISOString()
+      })
+    });
+  } catch(e) { /* no-cors always throws, ignore */ }
+
+  // Show success
+  document.getElementById('paymentPanel').style.display = 'none';
+  document.getElementById('planSelectorSection') && (document.getElementById('planSelectorSection').style.display = 'none');
+  document.getElementById('refNumber').textContent = refNo;
+  document.getElementById('successPanel').classList.add('show');
+  window.scrollTo(0, 0);
+}
+
+function showMsg(text, type) {
+  const el = document.getElementById('notifyMsg');
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+</script>
+</body>
+</html>
