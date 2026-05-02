@@ -659,6 +659,64 @@ async def admin_users(authorization: Optional[str] = Header(default=None)):
         })
     return result
 
+class PaymentNotify(BaseModel):
+    ref_number: str
+    plan: str
+    amount: int
+    name: str
+    phone: str
+    email: str
+
+@app.post("/api/payment/notify")
+async def payment_notify(
+    body: PaymentNotify,
+    authorization: Optional[str] = Header(default=None)
+):
+    """บันทึกการแจ้งชำระเงินลง Supabase payment_notifications"""
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        return {"ok": True, "note": "supabase_not_configured"}
+
+    # ดึง user_id จาก JWT (optional — ถ้าไม่มี session ก็ยังบันทึกได้)
+    user_id = None
+    if authorization and authorization.startswith("Bearer "):
+        user_id = await get_supabase_user(authorization)
+
+    row = {
+        "ref_number": body.ref_number,
+        "plan":       body.plan,
+        "amount":     body.amount,
+        "name":       body.name,
+        "phone":      body.phone,
+        "email":      body.email,
+        "status":     "pending",
+    }
+    if user_id:
+        row["user_id"] = user_id
+
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                f"{url}/rest/v1/payment_notifications",
+                headers={
+                    "Authorization": f"Bearer {key}",
+                    "apikey": key,
+                    "Content-Type": "application/json",
+                    "Prefer": "return=minimal"
+                },
+                json=row,
+                timeout=8.0
+            )
+            if res.status_code not in (200, 201, 204):
+                raise HTTPException(status_code=500, detail=f"DB error: {res.text}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"ok": True, "ref_number": body.ref_number}
+
 @app.get("/api/hook-types")
 @app.get("/hook-types")
 async def get_hook_types():

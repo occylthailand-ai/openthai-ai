@@ -445,22 +445,41 @@ async function submitNotify() {
     timestamp: new Date().toISOString()
   }));
 
-  // Submit to Google Sheets (existing Apps Script)
+  // Get auth token if logged in
+  let authHeader = {};
   try {
-    await fetch('https://script.google.com/macros/s/AKfycbxxUkC-hJcDANcyL6md7x_AjodJJihHrbKvIQgaQWyRxrWQm_awjtGLLt0RJvg7KIhPSQ/exec', {
+    const sb = window.supabase?.createClient(
+      OPENTHAI_CONFIG.supabase.url,
+      OPENTHAI_CONFIG.supabase.anonKey
+    );
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.access_token) {
+      authHeader = { 'Authorization': 'Bearer ' + session.access_token };
+    }
+  } catch(e) {}
+
+  // Save to Supabase via backend (primary)
+  try {
+    const res = await fetch('/api/payment/notify', {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeader },
       body: JSON.stringify({
-        type: 'payment_notify',
-        ref: refNo,
+        ref_number: refNo,
         plan: selectedPlan,
         amount: OPENTHAI_CONFIG.plans[selectedPlan].price,
-        name, phone, email,
-        timestamp: new Date().toISOString()
+        name, phone, email
       })
     });
-  } catch(e) { /* no-cors always throws, ignore */ }
+    if (!res.ok) throw new Error(await res.text());
+  } catch(e) {
+    // Fallback: Google Sheets (no-cors)
+    fetch('https://script.google.com/macros/s/AKfycbxxUkC-hJcDANcyL6md7x_AjodJJihHrbKvIQgaQWyRxrWQm_awjtGLLt0RJvg7KIhPSQ/exec', {
+      method: 'POST', mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'payment_notify', ref: refNo, plan: selectedPlan,
+        amount: OPENTHAI_CONFIG.plans[selectedPlan].price, name, phone, email })
+    }).catch(() => {});
+  }
 
   // Show success
   document.getElementById('paymentPanel').style.display = 'none';

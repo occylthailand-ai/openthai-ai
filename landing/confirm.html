@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ยืนยันบัญชี — OpenThai AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <style>
+    :root { --primary: #FF6B35; --dark: #1A1A2E; --light: #F7F7F7; --gradient: linear-gradient(135deg,#FF6B35,#FF8E53); }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Noto Sans Thai', sans-serif;
+      background: var(--light);
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: white; border-radius: 24px;
+      padding: 3rem 2rem; width: 100%; max-width: 420px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .icon { font-size: 4rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--dark); }
+    p { color: #888; font-size: 0.9rem; line-height: 1.7; margin-bottom: 1.5rem; }
+    .btn {
+      display: inline-block;
+      background: var(--gradient); color: white;
+      padding: 0.85rem 2rem; border-radius: 12px;
+      text-decoration: none; font-weight: 700; font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,107,53,0.35); }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid #eee; border-top-color: var(--primary);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* New password form */
+    .form-group { margin-bottom: 1rem; text-align: left; }
+    label { display: block; font-size: 0.82rem; font-weight: 600; color: #555; margin-bottom: 0.35rem; }
+    input {
+      width: 100%; padding: 0.75rem 1rem;
+      border: 2px solid #e8e8e8; border-radius: 10px;
+      font-size: 0.95rem; font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    input:focus { outline: none; border-color: var(--primary); }
+    .submit-btn {
+      width: 100%; padding: 0.9rem;
+      background: var(--gradient); color: white;
+      border: none; border-radius: 12px;
+      font-size: 1rem; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: all 0.3s; margin-top: 0.25rem;
+    }
+    .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,107,53,0.35); }
+    .submit-btn:disabled { opacity: 0.6; transform: none; cursor: not-allowed; }
+    .msg { padding: 0.75rem 1rem; border-radius: 10px; font-size: 0.85rem; margin-bottom: 1rem; }
+    .msg.error { background: #fef2f2; color: #c0392b; border: 1px solid #fcc; }
+    .msg.success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+  </style>
+</head>
+<body>
+<div class="card" id="card">
+  <div class="spinner"></div>
+  <p>กำลังยืนยัน...</p>
+</div>
+
+<script>
+(async () => {
+  const sb = window.supabase?.createClient(
+    OPENTHAI_CONFIG.supabase.url,
+    OPENTHAI_CONFIG.supabase.anonKey
+  );
+
+  // Parse hash fragment: #access_token=xxx&type=signup|recovery
+  const hash = Object.fromEntries(
+    location.hash.replace('#','').split('&').map(p => p.split('='))
+  );
+  const type        = hash.type || new URLSearchParams(location.search).get('type');
+  const accessToken = hash.access_token;
+  const refreshToken = hash.refresh_token;
+
+  const card = document.getElementById('card');
+
+  // ——— Email confirmation (signup) ———
+  if (type === 'signup' || (!type && accessToken)) {
+    try {
+      if (sb && accessToken) {
+        await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || '' });
+      }
+      card.innerHTML = `
+        <div class="icon">✅</div>
+        <h1>ยืนยันอีเมลสำเร็จ!</h1>
+        <p>บัญชีของคุณพร้อมใช้งานแล้ว<br>กดปุ่มด้านล่างเพื่อเริ่มสร้างคอนเทนต์</p>
+        <a href="generator.html" class="btn">🚀 เริ่มใช้ AI Generator</a>
+      `;
+    } catch(e) {
+      card.innerHTML = `
+        <div class="icon">❌</div>
+        <h1>ลิงก์หมดอายุ</h1>
+        <p>ลิงก์ยืนยันอีเมลหมดอายุแล้ว<br>กรุณาสมัครใหม่หรือขอลิงก์อีกครั้ง</p>
+        <a href="login.html" class="btn">กลับหน้า Login</a>
+      `;
+    }
+    return;
+  }
+
+  // ——— Password reset (recovery) ———
+  if (type === 'recovery') {
+    if (sb && accessToken) {
+      try {
+        await sb.auth.setSession({ access_token: accessToken, refresh_token: refreshToken || '' });
+      } catch(e) {}
+    }
+    card.innerHTML = `
+      <div class="icon">🔑</div>
+      <h1>ตั้งรหัสผ่านใหม่</h1>
+      <div id="resetMsg"></div>
+      <div class="form-group">
+        <label>รหัสผ่านใหม่</label>
+        <input type="password" id="newPass" placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>ยืนยันรหัสผ่าน</label>
+        <input type="password" id="confirmPass" placeholder="พิมพ์รหัสผ่านอีกครั้ง" autocomplete="new-password">
+      </div>
+      <button class="submit-btn" id="resetBtn" onclick="doReset()">บันทึกรหัสผ่านใหม่</button>
+    `;
+    return;
+  }
+
+  // ——— Unknown / no token ———
+  card.innerHTML = `
+    <div class="icon">🤔</div>
+    <h1>ลิงก์ไม่ถูกต้อง</h1>
+    <p>ลิงก์นี้ไม่ถูกต้องหรือหมดอายุแล้ว</p>
+    <a href="index.html" class="btn">กลับหน้าแรก</a>
+  `;
+})();
+
+async function doReset() {
+  const sb = window.supabase?.createClient(
+    OPENTHAI_CONFIG.supabase.url,
+    OPENTHAI_CONFIG.supabase.anonKey
+  );
+  const pass    = document.getElementById('newPass').value;
+  const confirm = document.getElementById('confirmPass').value;
+  const msgEl   = document.getElementById('resetMsg');
+  const btn     = document.getElementById('resetBtn');
+
+  if (pass.length < 8) {
+    msgEl.innerHTML = '<div class="msg error">รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร</div>';
+    return;
+  }
+  if (pass !== confirm) {
+    msgEl.innerHTML = '<div class="msg error">รหัสผ่านไม่ตรงกัน</div>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'กำลังบันทึก...';
+
+  const { error } = await sb.auth.updateUser({ password: pass });
+  if (error) {
+    msgEl.innerHTML = `<div class="msg error">${error.message}</div>`;
+    btn.disabled = false;
+    btn.textContent = 'บันทึกรหัสผ่านใหม่';
+    return;
+  }
+
+  msgEl.innerHTML = '<div class="msg success">เปลี่ยนรหัสผ่านสำเร็จ! กำลังพาไป...</div>';
+  setTimeout(() => { location.href = 'generator.html'; }, 1500);
+}
+</script>
+</body>
+</html>

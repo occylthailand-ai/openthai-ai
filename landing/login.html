@@ -202,6 +202,22 @@
       <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
     </div>
     <button class="submit-btn" id="loginBtn" onclick="doLogin()">เข้าสู่ระบบ</button>
+    <p style="text-align:center;margin-top:0.75rem;">
+      <a href="#" onclick="showForgot()" style="font-size:0.82rem;color:#aaa;text-decoration:none;">ลืมรหัสผ่าน?</a>
+    </p>
+  </div>
+
+  <!-- Forgot Password Form -->
+  <div class="form-panel" id="forgotPanel">
+    <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">ใส่อีเมลที่ลงทะเบียนไว้ เราจะส่งลิงก์รีเซ็ตรหัสผ่านให้</p>
+    <div class="form-group">
+      <label>อีเมล</label>
+      <input type="email" id="forgotEmail" placeholder="your@email.com" autocomplete="email">
+    </div>
+    <button class="submit-btn" id="forgotBtn" onclick="doForgot()">ส่งลิงก์รีเซ็ตรหัสผ่าน</button>
+    <p style="text-align:center;margin-top:0.75rem;">
+      <a href="#" onclick="showLogin()" style="font-size:0.82rem;color:#aaa;text-decoration:none;">← กลับเข้าสู่ระบบ</a>
+    </p>
   </div>
 
   <!-- Register Form -->
@@ -357,12 +373,49 @@ async function doRegister() {
   }
 }
 
+// ==================== FORGOT PASSWORD ====================
+function showForgot() {
+  document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('forgotPanel').classList.add('active');
+  document.querySelector('.tabs').style.display = 'none';
+  clearMsg();
+}
+
+function showLogin() {
+  document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('loginPanel').classList.add('active');
+  document.querySelector('.tabs').style.display = 'flex';
+  clearMsg();
+}
+
+async function doForgot() {
+  if (!supabase) return showMsg('กรุณาตั้งค่า Supabase ใน config.js ก่อน', 'error');
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) return showMsg('กรุณากรอกอีเมล', 'error');
+
+  const btn = document.getElementById('forgotBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-inline"></span>กำลังส่ง...';
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: location.origin + '/confirm.html?type=recovery'
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'ส่งลิงก์รีเซ็ตรหัสผ่าน';
+
+  if (error) return showMsg(error.message, 'error');
+  showMsg('ส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลแล้ว ตรวจสอบ inbox ของคุณ', 'success');
+}
+
 // Enter key support
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   const active = document.querySelector('.form-panel.active');
+  if (!active) return;
   if (active.id === 'loginPanel') doLogin();
-  else doRegister();
+  else if (active.id === 'registerPanel') doRegister();
+  else if (active.id === 'forgotPanel') doForgot();
 });
 </script>
 </body>
