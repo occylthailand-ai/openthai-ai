@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Generator — OpenThai AI</title>
+    <meta name="description" content="สร้างคอนเทนต์ TikTok ด้วย AI ใน 30 วินาที สำหรับสินค้าไทย OTOP">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF6B35;
+            --primary-dark: #E55A2B;
+            --secondary: #4ECDC4;
+            --dark: #1A1A2E;
+            --light: #F7F7F7;
+            --success: #2ECC71;
+            --warning: #F39C12;
+            --gradient: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans Thai', sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            min-height: 100vh;
+        }
+
+        /* Nav */
+        nav {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo { font-size: 1.3rem; font-weight: 700; color: var(--primary); text-decoration: none; }
+        .nav-back { color: var(--dark); text-decoration: none; font-size: 0.9rem; opacity: 0.7; }
+        .nav-back:hover { opacity: 1; }
+
+        /* Layout */
+        .page-wrapper {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+        @media (max-width: 768px) {
+            .page-wrapper { grid-template-columns: 1fr; }
+        }
+
+        /* Panel */
+        .panel {
+            background: white;
+            border-radius: 20px;
+            padding: 1.75rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        }
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .panel-title .badge {
+            font-size: 0.7rem;
+            background: var(--gradient);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        /* Form Elements */
+        .form-group { margin-bottom: 1rem; }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            color: #555;
+        }
+        label .required { color: var(--primary); }
+        input[type="text"], input[type="email"], select, textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e8e8e8;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+            background: white;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        textarea { resize: vertical; min-height: 70px; }
+
+        /* Hook Type Selector */
+        .hook-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+        .hook-option {
+            padding: 0.6rem 0.4rem;
+            border: 2px solid #e8e8e8;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .hook-option:hover { border-color: var(--primary); background: #fff5f1; }
+        .hook-option.active { border-color: var(--primary); background: var(--primary); color: white; }
+        .hook-option .emoji { display: block; font-size: 1.3rem; margin-bottom: 0.2rem; }
+
+        /* Empathy Section */
+        .empathy-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, #fff5f1, #fff);
+            border: 2px solid #FFD4C2;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+        }
+        .empathy-toggle:hover { border-color: var(--primary); }
+        .empathy-toggle .toggle-icon { font-size: 1.4rem; }
+        .empathy-toggle .toggle-text { flex: 1; }
+        .empathy-toggle .toggle-text strong { display: block; font-size: 0.9rem; }
+        .empathy-toggle .toggle-text span { font-size: 0.78rem; color: #888; }
+        .empathy-toggle .arrow { transition: transform 0.3s; font-size: 0.8rem; color: #999; }
+        .empathy-toggle.open .arrow { transform: rotate(180deg); }
+
+        .empathy-fields {
+            display: none;
+            border: 2px solid #FFD4C2;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #fffaf8;
+        }
+        .empathy-fields.show { display: block; }
+        .empathy-hint {
+            font-size: 0.78rem;
+            color: #FF6B35;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        /* Generate Button */
+        .generate-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-family: inherit;
+        }
+        .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,107,53,0.4); }
+        .generate-btn:disabled { opacity: 0.6; transform: none; cursor: not-allowed; }
+
+        /* Result Panel */
+        .result-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            color: #ccc;
+            text-align: center;
+            gap: 1rem;
+        }
+        .result-placeholder .big-icon { font-size: 4rem; }
+        .result-placeholder p { font-size: 0.9rem; }
+
+        /* Content Output */
+        .content-output { display: none; }
+        .content-output.show { display: block; }
+
+        .score-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: #f8f8f8;
+            border-radius: 10px;
+            margin-bottom: 1.25rem;
+        }
+        .score-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--success);
+            line-height: 1;
+        }
+        .score-detail { flex: 1; }
+        .score-detail .label { font-size: 0.75rem; color: #888; }
+        .score-detail .iters { font-size: 0.8rem; color: #aaa; }
+
+        .content-block {
+            margin-bottom: 1.25rem;
+        }
+        .content-block .block-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #aaa;
+            margin-bottom: 0.4rem;
+        }
+        .script-card {
+            background: #f9f9f9;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .script-row {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid #eee;
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 0.75rem;
+            align-items: start;
+        }
+        .script-row:last-child { border-bottom: none; }
+        .script-tag {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            text-align: center;
+            margin-top: 2px;
+        }
+        .tag-hook { background: #FFE8E0; color: var(--primary); }
+        .tag-story { background: #E8F4FD; color: #2980B9; }
+        .tag-cta { background: #E8FDF0; color: #27AE60; }
+        .script-text { font-size: 0.9rem; line-height: 1.6; }
+
+        .caption-box {
+            background: #f9f9f9;
+            padding: 0.85rem 1rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+        .hashtags-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .hashtag {
+            background: linear-gradient(135deg, #E8F4FD, #D6EEF8);
+            color: #2980B9;
+            padding: 0.3rem 0.7rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .why-box {
+            background: linear-gradient(135deg, #fff9e6, #fffdf5);
+            border: 1px solid #F5E6A3;
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #7D6608;
+        }
+
+        /* Copy Buttons */
+        .copy-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+        }
+        .copy-btn {
+            flex: 1;
+            padding: 0.7rem;
+            border: 2px solid var(--primary);
+            background: white;
+            color: var(--primary);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+        .copy-btn:hover { background: var(--primary); color: white; }
+        .copy-btn.copied { background: var(--success); border-color: var(--success); color: white; }
+
+        /* Partner Section */
+        .partner-banner {
+            margin-top: 2rem;
+            background: linear-gradient(135deg, #1A1A2E, #2D2D5E);
+            border-radius: 20px;
+            padding: 1.75rem;
+            color: white;
+            grid-column: 1 / -1;
+        }
+        .partner-banner h2 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+        .partner-banner p { opacity: 0.8; font-size: 0.9rem; margin-bottom: 1.25rem; }
+        .partner-roles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .role-card {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .role-card:hover { background: rgba(255,255,255,0.15); border-color: var(--primary); }
+        .role-card.selected { background: rgba(255,107,53,0.2); border-color: var(--primary); }
+        .role-card .role-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .role-card .role-name { font-weight: 600; font-size: 0.95rem; }
+        .role-card .role-desc { font-size: 0.78rem; opacity: 0.7; margin-top: 0.25rem; }
+
+        .partner-form { display: none; }
+        .partner-form.show { display: block; }
+        .partner-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        @media (max-width: 600px) { .partner-grid { grid-template-columns: 1fr; } }
+        .partner-form input, .partner-form select {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+            font-family: inherit;
+            width: 100%;
+        }
+        .partner-form input::placeholder { color: rgba(255,255,255,0.4); }
+        .partner-form input:focus, .partner-form select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .partner-form select option { background: #1A1A2E; }
+        .partner-submit {
+            background: var(--gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.9rem 2rem;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            margin-top: 0.5rem;
+        }
+        .partner-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,107,53,0.4); }
+        .partner-success {
+            display: none;
+            background: rgba(46,204,113,0.15);
+            border: 1px solid rgba(46,204,113,0.4);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+        .partner-success.show { display: block; }
+        .partner-success h3 { color: #2ECC71; margin-bottom: 0.5rem; }
+
+        /* Loading */
+        .loading-overlay {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            gap: 1rem;
+        }
+        .loading-overlay.show { display: flex; }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 4px solid #FFE8E0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-steps { text-align: center; }
+        .loading-steps p { font-size: 0.9rem; color: #888; }
+        .loading-steps .current-step { color: var(--primary); font-weight: 600; }
+
+        /* API Status dot (ซ่อนใน production) */
+        .api-dot { display: none; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="index.html" class="logo">🇹🇭 OpenThai AI</a>
+    <a href="index.html" class="nav-back">← กลับหน้าหลัก</a>
+</nav>
+
+<div class="page-wrapper">
+    <!-- LEFT: Input Panel -->
+    <div>
+        <!-- Product Info -->
+        <div class="panel">
+            <div class="panel-title">📦 ข้อมูลสินค้า <span class="badge">STEP 1</span></div>
+
+            <div class="form-group">
+                <label>ชื่อสินค้า <span class="required">*</span></label>
+                <input type="text" id="productName" placeholder="เช่น: ผ้าไหมมัดหมี่อุบลราชธานี, น้ำพริกกุ้งเสียบ">
+            </div>
+
+            <div class="form-group">
+                <label>หมวดหมู่ <span class="required">*</span></label>
+                <select id="productCategory" onchange="loadEmpathyQuestions()">
+                    <option value="">— เลือกหมวดหมู่ —</option>
+                    <option value="otop">สินค้า OTOP (หนึ่งตำบลหนึ่งผลิตภัณฑ์)</option>
+                    <option value="food">อาหารและเครื่องดื่มไทย</option>
+                    <option value="herb">สมุนไพร & ความงาม</option>
+                    <option value="craft">หัตถกรรม & ของใช้</option>
+                    <option value="textile">ผ้าและสิ่งทอ</option>
+                    <option value="global">สินค้านำเข้า (จีน, Global)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>รายละเอียดสินค้า</label>
+                <textarea id="productDesc" placeholder="บรรยายสินค้าโดยย่อ เช่น: ทำจากไหมธรรมชาติ 100% ย้อมสีด้วยครามธรรมชาติ ทอมือโดยช่างฝีมือชุมชน"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>กลุ่มเป้าหมาย</label>
+                <input type="text" id="targetAudience" value="คนไทยทั่วไป" placeholder="เช่น: แม่บ้านอายุ 30-45, คนรักสุขภาพ, นักช้อปออนไลน์">
+            </div>
+
+            <!-- Hook Type -->
+            <div class="form-group">
+                <label>รูปแบบ Hook <span class="badge" style="font-size:0.7rem;background:linear-gradient(135deg,#4ECDC4,#44A08D);color:white;padding:0.15rem 0.5rem;border-radius:10px;margin-left:0.3rem;">STEP 2</span></label>
+                <div class="hook-grid">
+                    <div class="hook-option active" data-hook="auto" onclick="selectHook(this)">
+                        <span class="emoji">🤖</span>Auto
+                    </div>
+                    <div class="hook-option" data-hook="story" onclick="selectHook(this)">
+                        <span class="emoji">📖</span>Story
+                    </div>
+                    <div class="hook-option" data-hook="process" onclick="selectHook(this)">
+                        <span class="emoji">🎬</span>Process
+                    </div>
+                    <div class="hook-option" data-hook="contrast" onclick="selectHook(this)">
+                        <span class="emoji">⚡</span>Contrast
+                    </div>
+                    <div class="hook-option" data-hook="question" onclick="selectHook(this)">
+                        <span class="emoji">❓</span>Question
+                    </div>
+                    <div class="hook-option" data-hook="transformation" onclick="selectHook(this)">
+                        <span class="emoji">✨</span>Transform
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empathy Toggle -->
+            <div class="empathy-toggle" onclick="toggleEmpathy()" id="empathyToggle">
+                <span class="toggle-icon">💚</span>
+                <div class="toggle-text">
+                    <strong>เพิ่ม Empathy Context</strong>
+                    <span>บอกเรื่องราวจริง → AI สร้าง content authentic มากขึ้น</span>
+                </div>
+                <span class="arrow">▼</span>
+            </div>
+
+            <div class="empathy-fields" id="empathyFields">
+                <div class="empathy-hint">💡 ยิ่งบอกรายละเอียดมาก ยิ่งได้ content ที่จริงใจและ viral กว่า</div>
+                <div class="form-group">
+                    <label id="q1Label">ลูกค้ามีปัญหาอะไรที่สินค้านี้ช่วยได้?</label>
+                    <textarea id="customerPainPoint" rows="2" placeholder="เช่น: หาของแท้ OTOP ยาก, ของในห้างราคาแพง, ไม่รู้จะซื้อของฝากอะไร"></textarea>
+                </div>
+                <div class="form-group">
+                    <label id="q2Label">เรื่องราวของผู้ขาย / ที่มาของสินค้า</label>
+                    <textarea id="sellerStory" rows="2" placeholder="เช่น: ครอบครัวทอผ้ามา 3 ชั่วคน, แม่สอนสูตรนี้ก่อนเสียชีวิต"></textarea>
+                </div>
+                <div class="form-group">
+                    <label id="q3Label">สิ่งที่ทำให้สินค้านี้แตกต่าง</label>
+                    <textarea id="uniqueValue" rows="2" placeholder="เช่น: ไม่ใส่สารกันบูด, วัตถุดิบจากท้องถิ่น, ทำมือทุกชิ้น"></textarea>
+                </div>
+                <div class="form-group">
+                    <label id="q4Label">จุดร่วมระหว่างสินค้ากับผู้ชม</label>
+                    <textarea id="commonGround" rows="2" placeholder="เช่น: คนดูชอบสนับสนุนของไทย, ชอบความ handmade, รักวัฒนธรรมท้องถิ่น"></textarea>
+                </div>
+            </div>
+
+            <button class="generate-btn" id="generateBtn" onclick="generateContent()">
+                <span>🚀</span> สร้างคอนเทนต์ TikTok
+            </button>
+        </div>
+    </div>
+
+    <!-- RIGHT: Result Panel -->
+    <div>
+        <div class="panel" style="min-height: 500px; position: sticky; top: 80px;">
+            <div class="panel-title">✨ คอนเทนต์ที่สร้างได้ <span class="badge" style="background:linear-gradient(135deg,#2ECC71,#1ABC9C);">RESULT</span></div>
+
+            <!-- Placeholder -->
+            <div class="result-placeholder" id="resultPlaceholder">
+                <div class="big-icon">🎬</div>
+                <p>กรอกข้อมูลสินค้าแล้วกด<br><strong>"สร้างคอนเทนต์ TikTok"</strong><br>AI จะสร้างให้ใน 10-30 วินาที</p>
+            </div>
+
+            <!-- Loading -->
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+                <div class="loading-steps">
+                    <p class="current-step" id="loadingStep">กำลังวิเคราะห์สินค้า...</p>
+                    <p>AI กำลังสร้างคอนเทนต์ที่ดีที่สุดสำหรับคุณ</p>
+                </div>
+            </div>
+
+            <!-- Output -->
+            <div class="content-output" id="contentOutput">
+
+                <!-- Score -->
+                <div class="score-bar">
+                    <div class="score-number" id="scoreNumber">8.5</div>
+                    <div class="score-detail">
+                        <div class="label">AI Critic Score / 10</div>
+                        <div class="iters" id="iterInfo">ปรับแต่ง 1 รอบ</div>
+                    </div>
+                    <div style="font-size:1.5rem;" id="scoreEmoji">⭐</div>
+                </div>
+
+                <!-- Script -->
+                <div class="content-block">
+                    <div class="block-label">📜 สคริปต์ 30 วินาที</div>
+                    <div class="script-card">
+                        <div class="script-row">
+                            <div><span class="script-tag tag-hook">Hook 3วิ</span></div>
+                            <div class="script-text" id="scriptHook">—</div>
+                        </div>
+                        <div class="script-row">
+                            <div><span class="script-tag tag-story">Story 20วิ</span></div>
+                            <div class="script-text" id="scriptStory">—</div>
+                        </div>
+                        <div class="script-row">
+                            <div><span class="script-tag tag-cta">CTA 7วิ</span></div>
+                            <div class="script-text" id="scriptCta">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Caption -->
+                <div class="content-block">
+                    <div class="block-label">📝 แคปชั่น</div>
+                    <div class="caption-box" id="captionBox">—</div>
+                </div>
+
+                <!-- Hashtags -->
+                <div class="content-block">
+                    <div class="block-label">🏷️ แฮชแท็ก</div>
+                    <div class="hashtags-wrap" id="hashtagsWrap"></div>
+                </div>
+
+                <!-- Why It Works -->
+                <div class="content-block">
+                    <div class="block-label">🧠 ทำไม Hook นี้ถึงเวิร์ค</div>
+                    <div class="why-box" id="whyBox">—</div>
+                </div>
+
+                <!-- Copy Actions -->
+                <div class="copy-actions">
+                    <button class="copy-btn" onclick="copyScript()">📋 Copy Script</button>
+                    <button class="copy-btn" onclick="copyCaption()">📋 Copy Caption</button>
+                    <button class="copy-btn" onclick="copyAll()">📋 Copy ทั้งหมด</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Partner Hub Banner -->
+    <div class="partner-banner">
+        <h2>🤝 เข้าร่วม OpenThai Partner Hub</h2>
+        <p>เชื่อมต่อผู้ผลิต OTOP กับ TikTok Creator สร้างรายได้ร่วมกัน — Win-Win ทุกฝ่าย</p>
+
+        <div class="partner-roles">
+            <div class="role-card" onclick="selectRole(this, 'otop_producer')">
+                <div class="role-icon">🏭</div>
+                <div class="role-name">ผู้ผลิต OTOP / SME</div>
+                <div class="role-desc">มีสินค้า ต้องการ Creator ช่วยขาย</div>
+            </div>
+            <div class="role-card" onclick="selectRole(this, 'creator')">
+                <div class="role-icon">🎥</div>
+                <div class="role-name">TikTok Creator</div>
+                <div class="role-desc">ต้องการสินค้าดีๆ มา Review + รับ commission</div>
+            </div>
+            <div class="role-card" onclick="selectRole(this, 'reseller')">
+                <div class="role-icon">🛒</div>
+                <div class="role-name">Reseller / Agent</div>
+                <div class="role-desc">ต้องการเป็นตัวแทนจำหน่าย OTOP online</div>
+            </div>
+            <div class="role-card" onclick="selectRole(this, 'agency')">
+                <div class="role-icon">🏢</div>
+                <div class="role-name">Agency / NGO / ภาครัฐ</div>
+                <div class="role-desc">ต้องการเครื่องมือช่วย OTOP ในพื้นที่</div>
+            </div>
+        </div>
+
+        <div class="partner-form" id="partnerForm">
+            <div class="partner-grid">
+                <input type="text" id="partnerName" placeholder="ชื่อ-นามสกุล *">
+                <input type="text" id="partnerBusiness" placeholder="ชื่อธุรกิจ / ชุมชน">
+            </div>
+            <div class="partner-grid">
+                <input type="tel" id="partnerPhone" placeholder="เบอร์โทร / LINE ID *">
+                <input type="email" id="partnerEmail" placeholder="อีเมล *">
+            </div>
+            <div class="partner-grid">
+                <input type="text" id="partnerProvince" placeholder="จังหวัด">
+                <input type="text" id="partnerSocial" placeholder="TikTok / IG / Facebook URL">
+            </div>
+            <button class="partner-submit" onclick="registerPartner()">
+                ✅ สมัครเป็น Partner ฟรี →
+            </button>
+        </div>
+
+        <div class="partner-success" id="partnerSuccess">
+            <h3>🎉 ยินดีต้อนรับสู่ OpenThai Partner Hub!</h3>
+            <p id="partnerSuccessMsg">ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมง</p>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // ==================== CONFIG ====================
+    const API_URL = '/api';
+    let selectedHook = 'auto';
+    let selectedRole = '';
+
+    // ==================== HOOK SELECTION ====================
+    function selectHook(el) {
+        document.querySelectorAll('.hook-option').forEach(o => o.classList.remove('active'));
+        el.classList.add('active');
+        selectedHook = el.dataset.hook;
+    }
+
+    // ==================== EMPATHY TOGGLE ====================
+    function toggleEmpathy() {
+        const toggle = document.getElementById('empathyToggle');
+        const fields = document.getElementById('empathyFields');
+        toggle.classList.toggle('open');
+        fields.classList.toggle('show');
+    }
+
+    // ==================== LOAD EMPATHY QUESTIONS ====================
+    async function loadEmpathyQuestions() {
+        const category = document.getElementById('productCategory').value;
+        if (!category) return;
+        try {
+            const res = await fetch(`${API_URL}/empathy-questions/${category}`);
+            if (!res.ok) return;
+            const q = await res.json();
+            document.getElementById('q1Label').textContent = q.customer_pain_point || 'ลูกค้ามีปัญหาอะไร?';
+            document.getElementById('q2Label').textContent = q.seller_story || 'เรื่องราวผู้ขาย';
+            document.getElementById('q3Label').textContent = q.unique_value || 'สิ่งที่แตกต่าง';
+            document.getElementById('q4Label').textContent = q.common_ground || 'จุดร่วมกับผู้ชม';
+        } catch(e) {}
+    }
+
+    // ==================== GENERATE CONTENT ====================
+    async function generateContent() {
+        const name = document.getElementById('productName').value.trim();
+        const category = document.getElementById('productCategory').value;
+        if (!name || !category) {
+            alert('กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่ก่อน');
+            return;
+        }
+
+        const btn = document.getElementById('generateBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="loading-dots">กำลังสร้าง...</span>';
+
+        document.getElementById('resultPlaceholder').style.display = 'none';
+        document.getElementById('contentOutput').classList.remove('show');
+        document.getElementById('loadingOverlay').classList.add('show');
+
+        // Loading step messages
+        const steps = [
+            'กำลังวิเคราะห์สินค้า...',
+            'กำลัง Generate คอนเทนต์...',
+            'AI Critic กำลังตรวจสอบคุณภาพ...',
+            'ปรับแต่งให้ดีที่สุด...'
+        ];
+        let stepIdx = 0;
+        const stepEl = document.getElementById('loadingStep');
+        const stepInterval = setInterval(() => {
+            stepEl.textContent = steps[stepIdx % steps.length];
+            stepIdx++;
+        }, 2000);
+
+        const payload = {
+            product_name: name,
+            product_category: category,
+            product_description: document.getElementById('productDesc').value,
+            target_audience: document.getElementById('targetAudience').value || 'คนไทยทั่วไป',
+            hook_type: selectedHook,
+            customer_pain_point: document.getElementById('customerPainPoint').value,
+            seller_story: document.getElementById('sellerStory').value,
+            unique_value: document.getElementById('uniqueValue').value,
+            common_ground: document.getElementById('commonGround').value
+        };
+
+        try {
+            const res = await fetch(`${API_URL}/generate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) throw new Error(`API Error: ${res.status}`);
+            const data = await res.json();
+            renderResult(data);
+        } catch(err) {
+            alert(`เกิดข้อผิดพลาด: ${err.message}\n\nกรุณาลองใหม่อีกครั้ง`);
+            document.getElementById('resultPlaceholder').style.display = 'flex';
+        } finally {
+            clearInterval(stepInterval);
+            document.getElementById('loadingOverlay').classList.remove('show');
+            btn.disabled = false;
+            btn.innerHTML = '<span>🚀</span> สร้างคอนเทนต์ TikTok';
+        }
+    }
+
+    // ==================== RENDER RESULT ====================
+    function renderResult(data) {
+        const score = data.quality?.critic_score || 0;
+        document.getElementById('scoreNumber').textContent = score.toFixed(1);
+        document.getElementById('iterInfo').textContent = `ปรับแต่ง ${data.quality?.iterations || 1} รอบ`;
+        document.getElementById('scoreEmoji').textContent = score >= 8 ? '🏆' : score >= 6 ? '⭐' : '📈';
+
+        document.getElementById('scriptHook').textContent = data.script?.hook || '—';
+        document.getElementById('scriptStory').textContent = data.script?.story || '—';
+        document.getElementById('scriptCta').textContent = data.script?.cta || '—';
+        document.getElementById('captionBox').textContent = data.caption || '—';
+
+        const hashWrap = document.getElementById('hashtagsWrap');
+        hashWrap.innerHTML = '';
+        (data.hashtags || []).forEach(tag => {
+            const span = document.createElement('span');
+            span.className = 'hashtag';
+            span.textContent = tag.startsWith('#') ? tag : '#' + tag;
+            hashWrap.appendChild(span);
+        });
+
+        document.getElementById('whyBox').textContent = data.learning?.why_it_works || '—';
+        document.getElementById('contentOutput').classList.add('show');
+    }
+
+    // ==================== COPY FUNCTIONS ====================
+    async function copyText(text, btn) {
+        await navigator.clipboard.writeText(text);
+        const orig = btn.innerHTML;
+        btn.classList.add('copied');
+        btn.innerHTML = '✅ Copied!';
+        setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = orig; }, 2000);
+    }
+
+    function copyScript() {
+        const hook = document.getElementById('scriptHook').textContent;
+        const story = document.getElementById('scriptStory').textContent;
+        const cta = document.getElementById('scriptCta').textContent;
+        const text = `[Hook - 3 วิ]\n${hook}\n\n[Story - 20 วิ]\n${story}\n\n[CTA - 7 วิ]\n${cta}`;
+        copyText(text, event.target.closest('.copy-btn'));
+    }
+
+    function copyCaption() {
+        const caption = document.getElementById('captionBox').textContent;
+        const hashtags = Array.from(document.querySelectorAll('.hashtag')).map(h => h.textContent).join(' ');
+        copyText(`${caption}\n\n${hashtags}`, event.target.closest('.copy-btn'));
+    }
+
+    function copyAll() {
+        const hook = document.getElementById('scriptHook').textContent;
+        const story = document.getElementById('scriptStory').textContent;
+        const cta = document.getElementById('scriptCta').textContent;
+        const caption = document.getElementById('captionBox').textContent;
+        const hashtags = Array.from(document.querySelectorAll('.hashtag')).map(h => h.textContent).join(' ');
+        const why = document.getElementById('whyBox').textContent;
+        const text = `🎬 SCRIPT TikTok\n═══════════════\n[Hook 3วิ] ${hook}\n[Story 20วิ] ${story}\n[CTA 7วิ] ${cta}\n\n📝 CAPTION\n═══════════════\n${caption}\n\n🏷️ HASHTAGS\n${hashtags}\n\n🧠 ทำไม Hook นี้เวิร์ค\n${why}\n\n— สร้างโดย OpenThai AI`;
+        copyText(text, event.target.closest('.copy-btn'));
+    }
+
+    // ==================== PARTNER HUB ====================
+    function selectRole(el, role) {
+        document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedRole = role;
+        document.getElementById('partnerForm').classList.add('show');
+    }
+
+    async function registerPartner() {
+        const name = document.getElementById('partnerName').value.trim();
+        const phone = document.getElementById('partnerPhone').value.trim();
+        const email = document.getElementById('partnerEmail').value.trim();
+        if (!name || !phone || !email || !selectedRole) {
+            alert('กรุณากรอกชื่อ, เบอร์โทร, อีเมล และเลือกบทบาทก่อน');
+            return;
+        }
+
+        const payload = {
+            name,
+            business_name: document.getElementById('partnerBusiness').value,
+            phone,
+            email,
+            role: selectedRole,
+            province: document.getElementById('partnerProvince').value,
+            social_url: document.getElementById('partnerSocial').value
+        };
+
+        try {
+            const res = await fetch(`${API_URL}/partner/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            document.getElementById('partnerForm').classList.remove('show');
+            document.getElementById('partnerSuccess').classList.add('show');
+            document.getElementById('partnerSuccessMsg').textContent =
+                `Partner ID: ${data.partner_id} — ${data.message}`;
+        } catch(e) {
+            alert('เกิดข้อผิดพลาด กรุณาลองใหม่');
+        }
+    }
+</script>
+</body>
+</html>
