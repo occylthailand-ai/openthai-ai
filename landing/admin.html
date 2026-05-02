@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — OpenThai AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --dark: #1A1A2E;
+      --light: #F7F7F7;
+      --success: #2ECC71;
+      --danger: #E74C3C;
+      --gradient: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Noto Sans Thai', sans-serif; background: var(--light); color: var(--dark); }
+
+    nav {
+      background: var(--dark); padding: 0.9rem 2rem;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+    .nav-logo img { height: 32px; }
+    .nav-logo span { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+    .admin-badge {
+      background: var(--danger); color: white;
+      font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.6rem;
+      border-radius: 20px; margin-left: 0.25rem;
+    }
+    .nav-right { margin-left: auto; display: flex; gap: 1rem; align-items: center; }
+    .nav-right a { color: rgba(255,255,255,0.7); font-size: 0.85rem; text-decoration: none; }
+    .nav-right a:hover { color: white; }
+
+    .page { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
+
+    /* Stat cards */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 1rem; margin-bottom: 1.75rem; }
+    .stat-card {
+      background: white; border-radius: 16px; padding: 1.25rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+    }
+    .stat-card .num { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .stat-card .lbl { font-size: 0.78rem; color: #aaa; margin-top: 0.3rem; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+    .tab-btn {
+      padding: 0.55rem 1.25rem; border-radius: 10px; border: 2px solid #eee;
+      background: white; font-family: inherit; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; color: #888; transition: all 0.2s;
+    }
+    .tab-btn.active { border-color: var(--primary); color: var(--primary); background: #fff5f1; }
+
+    /* Table */
+    .table-wrap { background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    thead { background: #f8f8f8; }
+    th { padding: 0.85rem 1rem; text-align: left; font-size: 0.75rem; font-weight: 700;
+         text-transform: uppercase; letter-spacing: 0.04em; color: #aaa; }
+    td { padding: 0.9rem 1rem; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+
+    .badge {
+      display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px;
+      font-size: 0.72rem; font-weight: 700;
+    }
+    .badge-pending  { background: #FFF3CD; color: #856404; }
+    .badge-approved { background: #D1FAE5; color: #065F46; }
+    .badge-rejected { background: #FEE2E2; color: #991B1B; }
+    .badge-pro      { background: linear-gradient(135deg,#FF6B35,#FF8E53); color: white; }
+    .badge-business { background: linear-gradient(135deg,#1A1A2E,#2D2D5E); color: white; }
+    .badge-free     { background: #eee; color: #888; }
+
+    .act-btn {
+      padding: 0.35rem 0.85rem; border-radius: 8px; border: none;
+      font-family: inherit; font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-approve { background: var(--success); color: white; }
+    .btn-approve:hover { background: #27AE60; }
+    .btn-reject  { background: #eee; color: #666; margin-left: 0.4rem; }
+    .btn-reject:hover { background: var(--danger); color: white; }
+    .btn-loading { opacity: 0.6; cursor: not-allowed; }
+
+    /* Users table */
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gradient); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 700; flex-shrink: 0;
+    }
+    .user-info { display: flex; align-items: center; gap: 0.65rem; }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 1.5rem; right: 1.5rem;
+      background: var(--dark); color: white; padding: 0.85rem 1.25rem;
+      border-radius: 12px; font-size: 0.88rem; font-weight: 500;
+      transform: translateY(80px); opacity: 0;
+      transition: all 0.3s; z-index: 999;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: var(--success); }
+    .toast.error   { background: var(--danger); }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 3rem; color: #ccc; }
+    .empty .icon { font-size: 3rem; margin-bottom: 0.75rem; }
+
+    /* Loading */
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #eee; border-top-color: var(--primary);
+      border-radius: 50%; animation: spin 0.7s linear infinite; margin: 2rem auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      table { display: block; overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="images/logo.png" alt="OpenThai AI" onerror="this.style.display='none'">
+    <span>OpenThai AI <span class="admin-badge">ADMIN</span></span>
+  </a>
+  <div class="nav-right">
+    <a href="generator.html">🚀 Generator</a>
+    <a href="dashboard.html">📊 Dashboard</a>
+    <a href="#" onclick="doLogout()" style="color:#FF6B35;">ออกจากระบบ</a>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- Stats -->
+  <div class="stats" id="statsRow">
+    <div class="stat-card"><div class="num" id="stTotal">—</div><div class="lbl">ผู้ใช้ทั้งหมด</div></div>
+    <div class="stat-card"><div class="num" id="stPro" style="color:var(--primary)">—</div><div class="lbl">Pro / Business</div></div>
+    <div class="stat-card"><div class="num" id="stPending" style="color:#F39C12">—</div><div class="lbl">รอ Activate</div></div>
+    <div class="stat-card"><div class="num" id="stRevenue" style="color:var(--success)">—</div><div class="lbl">รายได้รวม (฿)</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('payments')">💳 แจ้งชำระรอ Activate</button>
+    <button class="tab-btn" onclick="switchTab('users')">👥 ผู้ใช้ทั้งหมด</button>
+  </div>
+
+  <!-- Payments Tab -->
+  <div id="tabPayments">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>วันที่</th>
+            <th>ชื่อ</th>
+            <th>อีเมล / LINE</th>
+            <th>แพ็กเกจ</th>
+            <th>ยอด</th>
+            <th>Ref</th>
+            <th>สถานะ</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="paymentsBody">
+          <tr><td colspan="8"><div class="spinner"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Users Tab -->
+  <div id="tabUsers" style="display:none">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ผู้ใช้</th>
+            <th>อีเมล</th>
+            <th>แพ็กเกจ</th>
+            <th>สมัครเมื่อ</th>
+            <th>หมดอายุ</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody">
+          <tr><td colspan="5"><div class="spinner"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let sbAdmin = null;
+let adminToken = null;
+
+// ==================== INIT ====================
+(async () => {
+  const sb = window.supabase.createClient(
+    OPENTHAI_CONFIG.supabase.url,
+    OPENTHAI_CONFIG.supabase.anonKey
+  );
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = 'login.html?next=admin.html'; return; }
+
+  adminToken = session.access_token;
+
+  // Check admin via backend
+  const res = await fetch('/api/admin/check', {
+    headers: { 'Authorization': 'Bearer ' + adminToken }
+  });
+  if (!res.ok || !(await res.json()).is_admin) {
+    document.querySelector('.page').innerHTML = `
+      <div style="text-align:center;padding:4rem;color:#888;">
+        <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
+        <p>คุณไม่มีสิทธิ์เข้าถึงหน้านี้</p>
+        <a href="dashboard.html" style="color:var(--primary);font-size:0.9rem;margin-top:0.75rem;display:block;">← กลับ Dashboard</a>
+      </div>`;
+    return;
+  }
+
+  sbAdmin = sb;
+  loadStats();
+  loadPayments();
+})();
+
+// ==================== TABS ====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) =>
+    b.classList.toggle('active', (i===0)===(tab==='payments'))
+  );
+  document.getElementById('tabPayments').style.display = tab === 'payments' ? '' : 'none';
+  document.getElementById('tabUsers').style.display    = tab === 'users'    ? '' : 'none';
+  if (tab === 'users') loadUsers();
+}
+
+// ==================== STATS ====================
+async function loadStats() {
+  const res = await fetch('/api/admin/stats', {
+    headers: { 'Authorization': 'Bearer ' + adminToken }
+  });
+  if (!res.ok) return;
+  const d = await res.json();
+  document.getElementById('stTotal').textContent   = d.total_users   ?? '—';
+  document.getElementById('stPro').textContent     = d.paid_users    ?? '—';
+  document.getElementById('stPending').textContent = d.pending_count ?? '—';
+  document.getElementById('stRevenue').textContent = d.total_revenue != null
+    ? d.total_revenue.toLocaleString() : '—';
+}
+
+// ==================== PAYMENTS ====================
+async function loadPayments() {
+  const res = await fetch('/api/admin/payments?status=pending', {
+    headers: { 'Authorization': 'Bearer ' + adminToken }
+  });
+  const tbody = document.getElementById('paymentsBody');
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="8" class="empty"><div class="icon">⚠️</div><p>โหลดข้อมูลไม่ได้</p></td></tr>`; return; }
+  const rows = await res.json();
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="icon">✅</div><p>ไม่มีรายการรอ Activate</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr id="row-${r.id}">
+      <td style="white-space:nowrap;font-size:0.8rem;color:#888;">${fmtDate(r.created_at)}</td>
+      <td><strong>${esc(r.name || '—')}</strong></td>
+      <td style="font-size:0.82rem;">${esc(r.email || '—')}<br><span style="color:#aaa;">${esc(r.phone || '—')}</span></td>
+      <td><span class="badge badge-${r.plan}">${r.plan}</span></td>
+      <td style="font-weight:700;color:var(--success);">฿${r.amount || '—'}</td>
+      <td style="font-family:monospace;font-size:0.78rem;">${esc(r.ref_number)}</td>
+      <td><span class="badge badge-${r.status}">${r.status}</span></td>
+      <td style="white-space:nowrap;">
+        <button class="act-btn btn-approve" onclick="activateSub('${r.id}','${r.ref_number}','${r.plan}')">✅ Activate</button>
+        <button class="act-btn btn-reject"  onclick="rejectSub('${r.id}','${r.ref_number}')">✗ Reject</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function activateSub(id, ref, plan) {
+  if (!confirm(`Activate ${plan} สำหรับ ref: ${ref}?`)) return;
+  setRowLoading(id, true);
+  const res = await fetch('/api/admin/activate', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ref_number: ref, plan })
+  });
+  const data = await res.json();
+  if (res.ok && data.ok) {
+    document.getElementById(`row-${id}`)?.remove();
+    showToast('✅ Activate สำเร็จแล้ว!', 'success');
+    loadStats();
+  } else {
+    setRowLoading(id, false);
+    showToast('❌ ' + (data.detail || 'เกิดข้อผิดพลาด'), 'error');
+  }
+}
+
+async function rejectSub(id, ref) {
+  if (!confirm(`Reject ref: ${ref}?`)) return;
+  setRowLoading(id, true);
+  const res = await fetch('/api/admin/reject', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + adminToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ref_number: ref })
+  });
+  if (res.ok) {
+    document.getElementById(`row-${id}`)?.remove();
+    showToast('Rejected', 'success');
+    loadStats();
+  } else {
+    setRowLoading(id, false);
+    showToast('เกิดข้อผิดพลาด', 'error');
+  }
+}
+
+function setRowLoading(id, loading) {
+  const row = document.getElementById(`row-${id}`);
+  if (!row) return;
+  row.querySelectorAll('.act-btn').forEach(b => {
+    b.disabled = loading;
+    b.classList.toggle('btn-loading', loading);
+  });
+}
+
+// ==================== USERS ====================
+async function loadUsers() {
+  const res = await fetch('/api/admin/users', {
+    headers: { 'Authorization': 'Bearer ' + adminToken }
+  });
+  const tbody = document.getElementById('usersBody');
+  if (!res.ok) { tbody.innerHTML = `<tr><td colspan="5">โหลดไม่ได้</td></tr>`; return; }
+  const rows = await res.json();
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="icon">👤</div><p>ยังไม่มีผู้ใช้</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>
+        <div class="user-info">
+          <div class="user-avatar">${(r.name||r.email||'?')[0].toUpperCase()}</div>
+          <span>${esc(r.name || '—')}</span>
+        </div>
+      </td>
+      <td style="font-size:0.85rem;color:#555;">${esc(r.email)}</td>
+      <td><span class="badge badge-${r.plan||'free'}">${r.plan||'free'}</span></td>
+      <td style="font-size:0.8rem;color:#888;">${fmtDate(r.created_at)}</td>
+      <td style="font-size:0.8rem;color:#888;">${r.expires_at ? fmtDate(r.expires_at) : '—'}</td>
+    </tr>`).join('');
+}
+
+// ==================== HELPERS ====================
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('th-TH', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+async function doLogout() {
+  const sb = window.supabase.createClient(OPENTHAI_CONFIG.supabase.url, OPENTHAI_CONFIG.supabase.anonKey);
+  await sb.auth.signOut();
+  location.href = 'index.html';
+}
+</script>
+</body>
+</html>

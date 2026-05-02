@@ -413,6 +413,252 @@ async def get_subscription(authorization: Optional[str] = Header(default=None)):
     except Exception as e:
         return {"plan": "free", "status": "active", "error": str(e)}
 
+# ================== ADMIN HELPERS ==================
+
+async def get_supabase_user(authorization: Optional[str]) -> Optional[str]:
+    """Extract user_id from Supabase JWT. Returns user_id or None."""
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not supabase_url or not supabase_key or not authorization:
+        return None
+    if not authorization.startswith("Bearer "):
+        return None
+    token = authorization.split(" ", 1)[1]
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                f"{supabase_url}/auth/v1/user",
+                headers={"Authorization": f"Bearer {token}", "apikey": supabase_key},
+                timeout=5.0
+            )
+            if res.status_code == 200:
+                return res.json().get("id")
+    except Exception:
+        pass
+    return None
+
+async def is_admin(authorization: Optional[str]) -> bool:
+    """Check if the user is admin via ADMIN_EMAILS env var."""
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
+    admin_emails = os.environ.get("ADMIN_EMAILS", "occylthailand@gmail.com")
+    if not supabase_url or not supabase_key or not authorization:
+        return False
+    if not authorization.startswith("Bearer "):
+        return False
+    token = authorization.split(" ", 1)[1]
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                f"{supabase_url}/auth/v1/user",
+                headers={"Authorization": f"Bearer {token}", "apikey": supabase_key},
+                timeout=5.0
+            )
+            if res.status_code == 200:
+                email = res.json().get("email", "")
+                return email in [e.strip() for e in admin_emails.split(",")]
+    except Exception:
+        pass
+    return False
+
+async def supabase_query(path: str, params: dict = None) -> Optional[list]:
+    """Query Supabase REST API with service key."""
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        return None
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.get(
+                f"{url}/rest/v1/{path}",
+                headers={"Authorization": f"Bearer {key}", "apikey": key},
+                params=params,
+                timeout=8.0
+            )
+            return res.json() if res.status_code == 200 else None
+    except Exception:
+        return None
+
+async def supabase_rpc(func: str, params: dict) -> Optional[dict]:
+    """Call a Supabase RPC function."""
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        return None
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                f"{url}/rest/v1/rpc/{func}",
+                headers={"Authorization": f"Bearer {key}", "apikey": key,
+                         "Content-Type": "application/json"},
+                json=params,
+                timeout=8.0
+            )
+            return {"result": res.text, "status": res.status_code}
+    except Exception as e:
+        return {"error": str(e)}
+
+async def supabase_patch(table: str, filters: dict, data: dict) -> bool:
+    """PATCH rows in a Supabase table."""
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        return False
+    try:
+        params = {k: f"eq.{v}" for k, v in filters.items()}
+        async with httpx.AsyncClient() as client:
+            res = await client.patch(
+                f"{url}/rest/v1/{table}",
+                headers={"Authorization": f"Bearer {key}", "apikey": key,
+                         "Content-Type": "application/json",
+                         "Prefer": "return=minimal"},
+                params=params,
+                json=data,
+                timeout=8.0
+            )
+            return res.status_code in (200, 204)
+    except Exception:
+        return False
+
+# ================== ADMIN ENDPOINTS ==================
+
+@app.get("/api/admin/check")
+async def admin_check(authorization: Optional[str] = Header(default=None)):
+    return {"is_admin": await is_admin(authorization)}
+
+@app.get("/api/admin/stats")
+async def admin_stats(authorization: Optional[str] = Header(default=None)):
+    if not await is_admin(authorization):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    payments = await supabase_query("payment_notifications", {"select": "status,amount"}) or []
+    subs      = await supabase_query("subscriptions",
+                                     {"select": "plan,status",
+                                      "plan": "neq.free"}) or []
+    profiles  = await supabase_query("profiles", {"select": "id"}) or []
+
+    pending  = sum(1 for p in payments if p.get("status") == "pending")
+    paid     = sum(1 for p in payments if p.get("status") == "approved")
+    revenue  = sum(p.get("amount", 0) or 0 for p in payments
+                   if p.get("status") == "approved")
+
+    return {
+        "total_users":   len(profiles),
+        "paid_users":    len([s for s in subs if s.get("plan") != "free"]),
+        "pending_count": pending,
+        "total_revenue": revenue
+    }
+
+@app.get("/api/admin/payments")
+async def admin_payments(
+    status: Optional[str] = "pending",
+    authorization: Optional[str] = Header(default=None)
+):
+    if not await is_admin(authorization):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    params = {"select": "id,ref_number,plan,amount,name,phone,email,status,created_at",
+              "order": "created_at.desc", "limit": "100"}
+    if status and status != "all":
+        params["status"] = f"eq.{status}"
+
+    rows = await supabase_query("payment_notifications", params)
+    return rows or []
+
+class ActivateRequest(BaseModel):
+    ref_number: str
+    plan: str = "pro"
+    months: int = 1
+
+@app.post("/api/admin/activate")
+async def admin_activate(
+    req: ActivateRequest,
+    authorization: Optional[str] = Header(default=None)
+):
+    if not await is_admin(authorization):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    result = await supabase_rpc("activate_subscription", {
+        "p_ref_number": req.ref_number,
+        "p_plan":       req.plan,
+        "p_months":     req.months
+    })
+    if not result or "error" in result:
+        raise HTTPException(status_code=500, detail=result.get("error", "RPC failed"))
+    if "ERROR" in str(result.get("result", "")):
+        raise HTTPException(status_code=400, detail=result["result"])
+
+    return {"ok": True, "result": result.get("result")}
+
+class RejectRequest(BaseModel):
+    ref_number: str
+
+@app.post("/api/admin/reject")
+async def admin_reject(
+    req: RejectRequest,
+    authorization: Optional[str] = Header(default=None)
+):
+    if not await is_admin(authorization):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    ok = await supabase_patch(
+        "payment_notifications",
+        {"ref_number": req.ref_number},
+        {"status": "rejected", "reviewed_at": datetime.now().isoformat()}
+    )
+    if not ok:
+        raise HTTPException(status_code=500, detail="Update failed")
+    return {"ok": True}
+
+@app.get("/api/admin/users")
+async def admin_users(authorization: Optional[str] = Header(default=None)):
+    if not await is_admin(authorization):
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    profiles = await supabase_query(
+        "profiles",
+        {"select": "id,name,created_at", "order": "created_at.desc", "limit": "200"}
+    ) or []
+    subs = await supabase_query(
+        "subscriptions",
+        {"select": "user_id,plan,status,expires_at"}
+    ) or []
+
+    sub_map = {s["user_id"]: s for s in subs}
+
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    email_map = {}
+    if url and key:
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.get(
+                    f"{url}/auth/v1/admin/users",
+                    headers={"Authorization": f"Bearer {key}", "apikey": key},
+                    params={"per_page": 200},
+                    timeout=8.0
+                )
+                if res.status_code == 200:
+                    for u in res.json().get("users", []):
+                        email_map[u["id"]] = u.get("email", "")
+        except Exception:
+            pass
+
+    result = []
+    for p in profiles:
+        uid = p["id"]
+        sub = sub_map.get(uid, {})
+        result.append({
+            "id":         uid,
+            "name":       p.get("name") or "",
+            "email":      email_map.get(uid, ""),
+            "plan":       sub.get("plan", "free"),
+            "status":     sub.get("status", "active"),
+            "expires_at": sub.get("expires_at"),
+            "created_at": p.get("created_at")
+        })
+    return result
+
 @app.get("/api/hook-types")
 @app.get("/hook-types")
 async def get_hook_types():

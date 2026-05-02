@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — OpenThai AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --dark: #1A1A2E;
+      --light: #F7F7F7;
+      --success: #2ECC71;
+      --warning: #F39C12;
+      --gradient: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Noto Sans Thai', sans-serif; background: var(--light); color: var(--dark); }
+
+    /* Nav */
+    nav {
+      background: white;
+      padding: 0.9rem 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+      display: flex; align-items: center; gap: 1rem;
+      position: sticky; top: 0; z-index: 100;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+    .nav-logo img { height: 34px; }
+    .nav-logo span { font-size: 1.15rem; font-weight: 700; color: var(--primary); }
+    .nav-right { margin-left: auto; display: flex; align-items: center; gap: 1rem; }
+    .nav-right a { font-size: 0.85rem; color: #666; text-decoration: none; }
+    .nav-right a:hover { color: var(--primary); }
+    .nav-right a.active { color: var(--primary); font-weight: 600; }
+
+    /* Layout */
+    .page { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
+
+    .greeting { margin-bottom: 1.75rem; }
+    .greeting h1 { font-size: 1.5rem; font-weight: 700; }
+    .greeting p { color: #888; font-size: 0.9rem; margin-top: 0.25rem; }
+
+    /* Cards grid */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+
+    .card {
+      background: white; border-radius: 20px;
+      padding: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    .card-label { font-size: 0.78rem; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .card-value { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .card-sub { font-size: 0.82rem; color: #888; margin-top: 0.35rem; }
+
+    /* Plan card */
+    .plan-card {
+      background: white; border-radius: 20px;
+      padding: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      margin-bottom: 1.5rem;
+      display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+    }
+    .plan-icon { font-size: 2.5rem; flex-shrink: 0; }
+    .plan-info { flex: 1; }
+    .plan-info h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .plan-info p { font-size: 0.85rem; color: #888; }
+    .plan-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem; border-radius: 20px;
+      font-size: 0.8rem; font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .badge-free { background: #eee; color: #888; }
+    .badge-pro { background: linear-gradient(135deg,#FF6B35,#FF8E53); color: white; }
+    .badge-business { background: linear-gradient(135deg,#1A1A2E,#2D2D5E); color: white; }
+    .upgrade-btn {
+      background: var(--gradient); color: white;
+      padding: 0.65rem 1.5rem; border-radius: 12px;
+      text-decoration: none; font-weight: 700; font-size: 0.9rem;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .upgrade-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,107,53,0.35); }
+
+    /* Usage bar */
+    .usage-bar-wrap { margin: 0.6rem 0 0; }
+    .usage-bar-bg { background: #f0f0f0; border-radius: 20px; height: 8px; overflow: hidden; }
+    .usage-bar-fill { height: 100%; border-radius: 20px; background: var(--gradient); transition: width 0.5s ease; }
+
+    /* Account section */
+    .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: var(--dark); }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.8rem 0; border-bottom: 1px solid #f5f5f5;
+      font-size: 0.9rem;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: #888; }
+    .info-value { font-weight: 500; }
+
+    /* Logout */
+    .logout-btn {
+      display: inline-block; margin-top: 1.25rem;
+      padding: 0.6rem 1.5rem; border: 2px solid #eee;
+      border-radius: 10px; color: #888; font-size: 0.85rem;
+      cursor: pointer; background: white; font-family: inherit;
+      transition: all 0.2s;
+    }
+    .logout-btn:hover { border-color: #ccc; color: var(--dark); }
+
+    /* Loading */
+    .loading { text-align: center; padding: 4rem; color: #ccc; font-size: 0.9rem; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid #eee; border-top-color: var(--primary);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="images/logo.png" alt="OpenThai AI" onerror="this.style.display='none'">
+    <span>OpenThai AI</span>
+  </a>
+  <div class="nav-right">
+    <a href="generator.html">🚀 AI Generator</a>
+    <a href="dashboard.html" class="active">📊 Dashboard</a>
+  </div>
+</nav>
+
+<div class="page" id="pageContent">
+  <div class="loading">
+    <div class="spinner"></div>
+    กำลังโหลดข้อมูล...
+  </div>
+</div>
+
+<script>
+const sb = window.supabase.createClient(
+  OPENTHAI_CONFIG.supabase.url,
+  OPENTHAI_CONFIG.supabase.anonKey
+);
+
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    location.href = 'login.html?next=dashboard.html';
+    return;
+  }
+
+  const user = session.user;
+  const name = user.user_metadata?.name || user.email.split('@')[0];
+
+  // ดึง subscription
+  let plan = 'free', expiresAt = null, paidAt = null;
+  try {
+    const res = await fetch('/api/subscription', {
+      headers: { 'Authorization': 'Bearer ' + session.access_token }
+    });
+    if (res.ok) {
+      const sub = await res.json();
+      plan = sub.plan || 'free';
+    }
+  } catch(e) {}
+
+  // ดึง quota วันนี้
+  const quotaKey = 'openthai_quota';
+  const today = new Date().toDateString();
+  const raw = localStorage.getItem(quotaKey);
+  let usedToday = 0;
+  if (raw) {
+    const q = JSON.parse(raw);
+    if (q.date === today) usedToday = q.used || 0;
+  }
+  const freeLimit = OPENTHAI_CONFIG.freeLimit;
+  const usagePct = plan === 'free' ? Math.min(100, (usedToday / freeLimit) * 100) : 0;
+
+  const planLabel = { free: 'Free', pro: '⭐ Pro', business: '🏢 Business' };
+  const planBadgeClass = { free: 'badge-free', pro: 'badge-pro', business: 'badge-business' };
+
+  document.getElementById('pageContent').innerHTML = `
+    <div class="greeting">
+      <h1>สวัสดีครับ, ${name} 👋</h1>
+      <p>ยินดีต้อนรับสู่ OpenThai AI Dashboard</p>
+    </div>
+
+    <!-- Plan Card -->
+    <div class="plan-card">
+      <div class="plan-icon">${plan === 'free' ? '🎯' : plan === 'pro' ? '⭐' : '🏢'}</div>
+      <div class="plan-info">
+        <span class="plan-badge ${planBadgeClass[plan]}">${planLabel[plan]}</span>
+        <h3>${plan === 'free' ? 'แพ็กเกจฟรี' : plan === 'pro' ? 'Pro — ไม่จำกัดการใช้งาน' : 'Business — API + Team'}</h3>
+        <p>${plan === 'free'
+          ? `ใช้ได้ ${freeLimit} ครั้ง/วัน • อัปเกรดเพื่อใช้งานไม่จำกัด`
+          : 'ใช้งานได้ไม่จำกัด • AI Critic Score • ทุกหมวดหมู่'
+        }</p>
+      </div>
+      ${plan === 'free' ? `<a href="payment.html?plan=pro" class="upgrade-btn">⬆️ อัปเกรด Pro ฿149</a>` : ''}
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">วันนี้ใช้ไปแล้ว</div>
+        <div class="card-value" style="color:var(--primary)">${plan === 'free' ? usedToday : '∞'}</div>
+        <div class="card-sub">${plan === 'free' ? `จาก ${freeLimit} ครั้ง/วัน` : 'ไม่จำกัดสำหรับ Pro'}</div>
+        ${plan === 'free' ? `
+        <div class="usage-bar-wrap">
+          <div class="usage-bar-bg">
+            <div class="usage-bar-fill" style="width:${usagePct}%"></div>
+          </div>
+        </div>` : ''}
+      </div>
+      <div class="card">
+        <div class="card-label">แพ็กเกจปัจจุบัน</div>
+        <div class="card-value" style="font-size:1.5rem">${planLabel[plan]}</div>
+        <div class="card-sub">${plan === 'free' ? 'ฟรีตลอดชีพ' : 'ชำระรายเดือน'}</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Hook Types</div>
+        <div class="card-value">5</div>
+        <div class="card-sub">Story · Process · Contrast · Question · Transform</div>
+      </div>
+    </div>
+
+    <!-- Account Info -->
+    <div class="card">
+      <div class="section-title">👤 ข้อมูลบัญชี</div>
+      <div class="info-row">
+        <span class="info-label">อีเมล</span>
+        <span class="info-value">${user.email}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">ชื่อ</span>
+        <span class="info-value">${name}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">สมาชิกตั้งแต่</span>
+        <span class="info-value">${new Date(user.created_at).toLocaleDateString('th-TH', {year:'numeric',month:'long',day:'numeric'})}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">แพ็กเกจ</span>
+        <span class="info-value">${planLabel[plan]}</span>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">ออกจากระบบ</button>
+    </div>
+  `;
+})();
+
+async function doLogout() {
+  await sb.auth.signOut();
+  localStorage.removeItem('ot_user');
+  location.href = 'index.html';
+}
+</script>
+</body>
+</html>
