@@ -163,6 +163,104 @@
             gap: 0.4rem;
         }
 
+        /* Quota Counter */
+        .quota-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.6rem 0.9rem;
+            background: #f9f9f9;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+            font-size: 0.82rem;
+        }
+        .quota-dots { display: flex; gap: 5px; }
+        .quota-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: var(--primary);
+            transition: background 0.3s;
+        }
+        .quota-dot.used { background: #ddd; }
+        .quota-label { color: #888; }
+        .quota-upgrade {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 0.78rem;
+        }
+
+        /* Upgrade Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-box {
+            background: white;
+            border-radius: 24px;
+            padding: 2rem;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            animation: popIn 0.25s ease;
+        }
+        @keyframes popIn {
+            from { transform: scale(0.85); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
+        }
+        .modal-icon { font-size: 3.5rem; margin-bottom: 0.75rem; }
+        .modal-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .modal-desc { color: #666; font-size: 0.92rem; margin-bottom: 1.5rem; line-height: 1.6; }
+        .modal-plans {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        .modal-plan {
+            border: 2px solid #eee;
+            border-radius: 14px;
+            padding: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-plan.hot { border-color: var(--primary); background: #fff5f1; }
+        .modal-plan .plan-price { font-size: 1.3rem; font-weight: 700; color: var(--primary); }
+        .modal-plan .plan-name { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .modal-plan .plan-feat { font-size: 0.75rem; color: #888; }
+        .modal-waitlist-btn {
+            display: block;
+            width: 100%;
+            padding: 0.85rem;
+            background: var(--gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            text-decoration: none;
+            margin-bottom: 0.6rem;
+        }
+        .modal-close-btn {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .modal-close-btn:hover { color: #555; }
+
         /* Generate Button */
         .generate-btn {
             width: 100%;
@@ -520,6 +618,15 @@
                 </div>
             </div>
 
+            <!-- Quota Bar -->
+            <div class="quota-bar" id="quotaBar">
+                <div style="display:flex;align-items:center;gap:0.6rem;">
+                    <div class="quota-dots" id="quotaDots"></div>
+                    <span class="quota-label" id="quotaLabel">ใช้ได้ 3 ครั้งวันนี้</span>
+                </div>
+                <a href="#waitlist" class="quota-upgrade" onclick="showUpgrade();return false;">อัปเกรด ฟรี →</a>
+            </div>
+
             <button class="generate-btn" id="generateBtn" onclick="generateContent()">
                 <span>🚀</span> สร้างคอนเทนต์ TikTok
             </button>
@@ -661,11 +768,83 @@
 
 </div>
 
+<!-- Upgrade Modal -->
+<div class="modal-overlay" id="upgradeModal">
+    <div class="modal-box">
+        <div class="modal-icon">🎯</div>
+        <div class="modal-title">หมดโควต้าวันนี้แล้ว!</div>
+        <div class="modal-desc">คุณใช้ครบ 3 ครั้งแล้ววันนี้<br>อัปเกรดเพื่อสร้างคอนเทนต์ <strong>ไม่จำกัด</strong> พร้อม AI Critic Score</div>
+        <div class="modal-plans">
+            <div class="modal-plan hot">
+                <div class="plan-name">⭐ Pro</div>
+                <div class="plan-price">฿149</div>
+                <div class="plan-feat">/เดือน • ไม่จำกัด</div>
+            </div>
+            <div class="modal-plan">
+                <div class="plan-name">Business</div>
+                <div class="plan-price">฿299</div>
+                <div class="plan-feat">/เดือน • API + Team</div>
+            </div>
+        </div>
+        <a href="index.html#waitlist" class="modal-waitlist-btn">ลงทะเบียนเพื่ออัปเกรด →</a>
+        <button class="modal-close-btn" onclick="closeUpgrade()">ยกเลิก รอพรุ่งนี้ใช้ต่อฟรี</button>
+    </div>
+</div>
+
 <script>
     // ==================== CONFIG ====================
     const API_URL = '/api';
     let selectedHook = 'auto';
     let selectedRole = '';
+
+    // ==================== QUOTA SYSTEM ====================
+    const FREE_LIMIT = 3;
+    const QUOTA_KEY = 'openthai_quota';
+
+    function getQuota() {
+        const today = new Date().toDateString();
+        const raw = localStorage.getItem(QUOTA_KEY);
+        if (!raw) return { date: today, used: 0 };
+        const q = JSON.parse(raw);
+        if (q.date !== today) return { date: today, used: 0 };
+        return q;
+    }
+
+    function saveQuota(q) {
+        localStorage.setItem(QUOTA_KEY, JSON.stringify(q));
+    }
+
+    function renderQuotaBar() {
+        const q = getQuota();
+        const remaining = Math.max(0, FREE_LIMIT - q.used);
+        const dots = document.getElementById('quotaDots');
+        const label = document.getElementById('quotaLabel');
+        dots.innerHTML = '';
+        for (let i = 0; i < FREE_LIMIT; i++) {
+            const d = document.createElement('div');
+            d.className = 'quota-dot' + (i >= remaining ? ' used' : '');
+            dots.appendChild(d);
+        }
+        label.textContent = remaining > 0
+            ? `ใช้ได้อีก ${remaining} ครั้งวันนี้`
+            : 'หมดโควต้าวันนี้แล้ว';
+        label.style.color = remaining === 0 ? 'var(--primary)' : '#888';
+    }
+
+    function showUpgrade() {
+        document.getElementById('upgradeModal').classList.add('show');
+    }
+
+    function closeUpgrade() {
+        document.getElementById('upgradeModal').classList.remove('show');
+    }
+
+    // ปิด modal เมื่อคลิกนอก box
+    document.getElementById('upgradeModal').addEventListener('click', function(e) {
+        if (e.target === this) closeUpgrade();
+    });
+
+    renderQuotaBar();
 
     // ==================== HOOK SELECTION ====================
     function selectHook(el) {
@@ -703,6 +882,13 @@
         const category = document.getElementById('productCategory').value;
         if (!name || !category) {
             alert('กรุณากรอกชื่อสินค้าและเลือกหมวดหมู่ก่อน');
+            return;
+        }
+
+        // Quota check
+        const q = getQuota();
+        if (q.used >= FREE_LIMIT) {
+            showUpgrade();
             return;
         }
 
@@ -749,6 +935,11 @@
             if (!res.ok) throw new Error(`API Error: ${res.status}`);
             const data = await res.json();
             renderResult(data);
+            // นับโควต้า
+            const q2 = getQuota();
+            q2.used += 1;
+            saveQuota(q2);
+            renderQuotaBar();
         } catch(err) {
             alert(`เกิดข้อผิดพลาด: ${err.message}\n\nกรุณาลองใหม่อีกครั้ง`);
             document.getElementById('resultPlaceholder').style.display = 'flex';
