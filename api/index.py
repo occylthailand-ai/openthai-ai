@@ -3,13 +3,14 @@ OpenThai AI Backend — FastAPI + Claude API (Vercel Serverless)
 สร้างคอนเทนต์ TikTok อัตโนมัติสำหรับสินค้าไทยและสินค้าทั่วโลก
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import anthropic
 import os
 import json
+import httpx
 from datetime import datetime
 
 app = FastAPI(
@@ -345,16 +346,72 @@ async def register_partner(partner: PartnerRegister):
     }
 
 @app.get("/api/subscription")
-async def get_subscription(authorization: str = None):
-    """
-    ตรวจสอบ subscription plan ของ user
-    ใช้ Supabase JWT จาก Authorization header
-    TODO: query Supabase subscriptions table
-    """
-    from fastapi import Request
-    # MVP: return free plan (Supabase integration pending)
-    # เมื่อตั้งค่า Supabase เสร็จ ให้ query table subscriptions
-    return {"plan": "free", "status": "active"}
+async def get_subscription(authorization: Optional[str] = Header(default=None)):
+    """ตรวจสอบ plan ของ user จาก Supabase JWT"""
+    supabase_url = os.environ.get("SUPABASE_URL")
+    supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")  # service role key (server-side only)
+
+    if not supabase_url or not supabase_key:
+        return {"plan": "free", "status": "active", "note": "supabase_not_configured"}
+
+    if not authorization or not authorization.startswith("Bearer "):
+        return {"plan": "free", "status": "active"}
+
+    token = authorization.split(" ", 1)[1]
+
+    try:
+        # ใช้ Supabase REST API ตรวจสอบ user และ subscription
+        async with httpx.AsyncClient() as client:
+            # 1. ดึงข้อมูล user จาก token
+            user_res = await client.get(
+                f"{supabase_url}/auth/v1/user",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "apikey": supabase_key
+                },
+                timeout=5.0
+            )
+            if user_res.status_code != 200:
+                return {"plan": "free", "status": "active"}
+
+            user_id = user_res.json().get("id")
+            if not user_id:
+                return {"plan": "free", "status": "active"}
+
+            # 2. ดึง subscription ของ user
+            sub_res = await client.get(
+                f"{supabase_url}/rest/v1/subscriptions",
+                headers={
+                    "Authorization": f"Bearer {supabase_key}",
+                    "apikey": supabase_key
+                },
+                params={
+                    "user_id": f"eq.{user_id}",
+                    "status": "eq.active",
+                    "select": "plan,status,expires_at"
+                },
+                timeout=5.0
+            )
+            if sub_res.status_code != 200:
+                return {"plan": "free", "status": "active"}
+
+            subs = sub_res.json()
+            if not subs:
+                return {"plan": "free", "status": "active"}
+
+            sub = subs[0]
+
+            # เช็ค expiry
+            if sub.get("expires_at"):
+                from datetime import timezone
+                expires = datetime.fromisoformat(sub["expires_at"].replace("Z", "+00:00"))
+                if expires < datetime.now(timezone.utc):
+                    return {"plan": "free", "status": "expired"}
+
+            return {"plan": sub.get("plan", "free"), "status": sub.get("status", "active")}
+
+    except Exception as e:
+        return {"plan": "free", "status": "active", "error": str(e)}
 
 @app.get("/api/hook-types")
 @app.get("/hook-types")
