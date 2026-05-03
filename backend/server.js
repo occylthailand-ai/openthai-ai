@@ -186,8 +186,28 @@ async function sendAffiliateWelcome(to, name, refCode, refLink) {
   }
 }
 
+// ─── Affiliate JSON File DB ───────────────────────────────────────────────────
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+
+const AFF_FILE = new URL('./data/affiliates.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
+
+function loadAffiliates() {
+  try {
+    if (existsSync(AFF_FILE)) return JSON.parse(readFileSync(AFF_FILE, 'utf8'));
+  } catch (_) {}
+  return [];
+}
+
+function saveAffiliates(data) {
+  try {
+    const dir = AFF_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) { import('fs').then(({ mkdirSync }) => mkdirSync(dir, { recursive: true })); }
+    writeFileSync(AFF_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) { console.error('Save affiliates error:', e.message); }
+}
+
 // ─── POST /api/affiliate/apply — รับสมัคร Affiliate ──────────────────────────
-const affiliates = []; // in-memory store (เปลี่ยนเป็น DB ได้ทีหลัง)
+const affiliates = loadAffiliates(); // persistent JSON file store
 
 app.post('/api/affiliate/apply', (req, res) => {
   try {
@@ -217,6 +237,7 @@ app.post('/api/affiliate/apply', (req, res) => {
     };
 
     affiliates.push(record);
+    saveAffiliates(affiliates); // บันทึกลงไฟล์ถาวร
     console.log(`✅ Affiliate สมัครใหม่: ${name} (${email}) — Ref: ${record.ref_code}`);
 
     // ส่ง welcome email อัตโนมัติ (async — ไม่บล็อก response)
