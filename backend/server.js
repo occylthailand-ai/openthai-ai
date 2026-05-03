@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { readFileSync } from 'fs';
 import nodemailer from 'nodemailer';
@@ -16,9 +17,31 @@ import {
 
 const app = express();
 const PORT = process.env.PORT || 8000;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 app.use(cors({ origin: true, credentials: true })); // allow all origins (file://, localhost, Vercel)
-app.use(express.json());
+app.use(express.json({ limit: '50kb' })); // จำกัดขนาด request body ป้องกัน DoS
+
+// ─── Rate Limiters ────────────────────────────────────────────────────────────
+const generateLimiter = rateLimit({
+  windowMs: 60 * 1000,        // 1 นาที
+  max: 10,                    // สูงสุด 10 req/min ต่อ IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'ส่งคำขอบ่อยเกินไป กรุณารอ 1 นาทีแล้วลองใหม่' },
+});
+
+const affiliateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 นาที
+  max: 5,                     // สมัคร affiliate 5 ครั้ง/15 นาที ต่อ IP
+  message: { error: 'ส่งคำขอสมัครบ่อยเกินไป กรุณารอแล้วลองใหม่' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 นาที
+  max: 20,                    // login 20 ครั้ง/15 นาที ต่อ IP
+  message: { error: 'พยายาม login บ่อยเกินไป กรุณารอ 15 นาที' },
+});
 
 // ─── Gemini client (ฟรี 100% ที่ aistudio.google.com) ───────────────────────
 const gemini = process.env.GEMINI_API_KEY
@@ -85,12 +108,18 @@ function buildPrompt(form) {
 }
 
 // ─── POST /api/generate ───────────────────────────────────────────────────────
-app.post('/api/generate', async (req, res) => {
+app.post('/api/generate', generateLimiter, async (req, res) => {
   const form = req.body;
 
   if (!form?.product?.trim()) {
     return res.status(400).json({ error: 'product is required' });
   }
+
+  // Basic input sanitization — ตัดอักขระอันตราย
+  const sanitize = (s) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').slice(0, 500) : '');
+  form.product  = sanitize(form.product);
+  form.audience = sanitize(form.audience);
+  form.price    = sanitize(form.price);
 
   // ถ้าไม่มี Gemini key ใช้ mock
   if (!gemini) {
@@ -187,7 +216,7 @@ async function sendAffiliateWelcome(to, name, refCode, refLink) {
 }
 
 // ─── Affiliate JSON File DB ───────────────────────────────────────────────────
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 
 const AFF_FILE = new URL('./data/affiliates.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
 
@@ -201,7 +230,7 @@ function loadAffiliates() {
 function saveAffiliates(data) {
   try {
     const dir = AFF_FILE.replace(/[/\\][^/\\]+$/, '');
-    if (!existsSync(dir)) { import('fs').then(({ mkdirSync }) => mkdirSync(dir, { recursive: true })); }
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true }); // sync — ไม่ใช้ dynamic import
     writeFileSync(AFF_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (e) { console.error('Save affiliates error:', e.message); }
 }
@@ -209,7 +238,7 @@ function saveAffiliates(data) {
 // ─── POST /api/affiliate/apply — รับสมัคร Affiliate ──────────────────────────
 const affiliates = loadAffiliates(); // persistent JSON file store
 
-app.post('/api/affiliate/apply', (req, res) => {
+app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
   try {
     const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link } = req.body;
     if (!name || !email) return res.status(400).json({ success: false, message: 'ต้องการชื่อและอีเมล' });
@@ -276,9 +305,20 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
   });
 });
 
-// ─── GET /api/affiliate/list — list ทั้งหมด (admin only ในอนาคต) ─────────────
+// ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
 app.get('/api/affiliate/list', (req, res) => {
-  res.json({ success: true, count: affiliates.length, data: affiliates });
+  const key = req.headers['x-admin-key'] || req.query.key;
+  const adminKey = process.env.ADMIN_KEY || 'openthai-admin-2026';
+  if (key !== adminKey) {
+    return res.status(401).json({ success: false, message: 'Unauthorized — ต้องการ Admin Key' });
+  }
+  // ซ่อน sensitive fields ก่อนส่ง
+  const safeData = affiliates.map(({ email, phone, ...rest }) => ({
+    ...rest,
+    email: email ? email.replace(/(.{2}).+(@.+)/, '$1***$2') : '',
+    phone: phone ? phone.replace(/(\d{3})\d+(\d{2})/, '$1****$2') : '',
+  }));
+  res.json({ success: true, count: affiliates.length, data: safeData });
 });
 
 // ─── Health check ─────────────────────────────────────────────────────────────
@@ -305,7 +345,7 @@ app.get('/logistics', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ─── POST /api/auth/login — Email + Password ──────────────────────────────────
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password)
     return res.status(400).json({ error: 'username และ password จำเป็นต้องมี' });

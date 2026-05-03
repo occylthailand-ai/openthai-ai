@@ -12,7 +12,11 @@ import LandingPage from './pages/LandingPage';
 import PricingPage from './pages/PricingPage';
 import AdminPage from './pages/AdminPage';
 import NotFoundPage from './pages/NotFoundPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import PDPABanner from './components/PDPABanner';
+import ErrorBoundary from './components/ErrorBoundary';
+import { ToastProvider } from './components/ToastContext';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -41,36 +45,42 @@ function App() {
   if (!authChecked) return null;
 
   return (
-    <Router>
-      <Routes>
-        <Route 
-          path="/login" 
-          element={!isAuthenticated ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/dashboard" />} 
-        />
-        <Route 
-          path="/dashboard" 
-          element={isAuthenticated ? <DashboardPage onLogout={handleLogout} /> : <Navigate to="/login" />} 
-        />
-        <Route
-          path="/tiktok"
-          element={isAuthenticated ? <TikTokFeedPage /> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/facebook"
-          element={isAuthenticated ? <FacebookFeedPage /> : <Navigate to="/login" />}
-        />
-        <Route path="/ai-generator" element={isAuthenticated ? <AIGeneratorPage /> : <Navigate to="/login" />} />
-        <Route path="/ai-tools" element={isAuthenticated ? <AIToolsHub /> : <Navigate to="/login" />} />
-        {/* Public pages — ไม่ต้อง login */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/pricing" element={<PricingPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/affiliate" element={<AffiliatePage />} />
-        <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-      <PDPABanner />
-    </Router>
+    <ErrorBoundary>
+      <ToastProvider>
+        <Router>
+          <Routes>
+            <Route
+              path="/login"
+              element={!isAuthenticated ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/dashboard" />}
+            />
+            <Route
+              path="/dashboard"
+              element={isAuthenticated ? <DashboardPage onLogout={handleLogout} /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/tiktok"
+              element={isAuthenticated ? <TikTokFeedPage /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/facebook"
+              element={isAuthenticated ? <FacebookFeedPage /> : <Navigate to="/login" />}
+            />
+            <Route path="/ai-generator" element={isAuthenticated ? <AIGeneratorPage /> : <Navigate to="/login" />} />
+            <Route path="/ai-tools" element={isAuthenticated ? <AIToolsHub /> : <Navigate to="/login" />} />
+            {/* Public pages — ไม่ต้อง login */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/affiliate" element={<AffiliatePage />} />
+            <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+          <PDPABanner />
+        </Router>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 

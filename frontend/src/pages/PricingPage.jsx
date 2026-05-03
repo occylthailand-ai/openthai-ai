@@ -212,6 +212,18 @@ export default function PricingPage() {
           <button onClick={() => navigate('/affiliate')} style={{ ...primaryBtn }}>🤝 สมัคร Affiliate ฟรี →</button>
         </div>
       </section>
+
+      {/* FOOTER LEGAL */}
+      <footer style={{ textAlign: 'center', padding: '0 5% 40px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 24 }}>
+        <p style={{ color: '#334155', fontSize: 12, margin: '0 0 8px' }}>
+          © 2026 OpenThai AI — สงวนลิขสิทธิ์
+        </p>
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button onClick={() => navigate('/privacy')} style={{ background: 'none', border: 'none', color: '#475569', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>นโยบายความเป็นส่วนตัว</button>
+          <button onClick={() => navigate('/terms')} style={{ background: 'none', border: 'none', color: '#475569', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>ข้อกำหนดการใช้งาน</button>
+          <button onClick={() => navigate('/affiliate')} style={{ background: 'none', border: 'none', color: '#475569', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>Affiliate Program</button>
+        </div>
+      </footer>
     </div>
   );
 }
