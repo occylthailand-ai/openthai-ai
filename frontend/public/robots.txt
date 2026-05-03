@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /affiliate
+Allow: /affiliate/dashboard
+Disallow: /dashboard
+Disallow: /ai-generator
+Disallow: /ai-tools
+Disallow: /tiktok
+Disallow: /facebook
+Disallow: /login
+Disallow: /api/
+
+Sitemap: https://www.openthai-ai.com/sitemap.xml
