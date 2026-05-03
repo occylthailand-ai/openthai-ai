@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogoEmblem } from '../components/Logo';
+import { useToast } from '../components/ToastContext';
 
 // ── Smart API router: n8n webhook → backend /api/generate → mock ─────────────
 const N8N_WEBHOOK = 'http://localhost:5678/webhook/openthai-generate';
@@ -61,6 +62,7 @@ const ScoreRing = ({ score }) => {
 
 const AIGeneratorPage = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [form, setForm] = useState({
     product: '', category: 'OTOP', style: 'sales',
     platform: 'TikTok', lang: 'ภาษาไทย', price: '', audience: 'ทั่วไป',
@@ -70,6 +72,8 @@ const AIGeneratorPage = () => {
   const [copied, setCopied] = useState('');
   const [history, setHistory] = useState([]);
 
+  useEffect(() => { document.title = 'AI Content Generator — OpenThai AI'; }, []);
+
   const handleGenerate = async () => {
     if (!form.product.trim()) return;
     setLoading(true);
@@ -78,13 +82,21 @@ const AIGeneratorPage = () => {
       const data = await generateContent(form);
       setResult(data);
       setHistory(prev => [{ product: form.product, platform: form.platform, score: data.criticScore, ts: new Date() }, ...prev.slice(0, 4)]);
+      const score = parseFloat(data.criticScore);
+      toast.success(`✨ สร้างสำเร็จ! AI Critic Score: ${data.criticScore}/10${score >= 9 ? ' 🔥 ยอดเยี่ยม!' : score >= 7 ? ' 👍 ดีมาก!' : ''}`);
+    } catch (err) {
+      toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }
   };
 
   const copy = (text, key) => {
-    navigator.clipboard.writeText(text);
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success('📋 คัดลอกแล้ว!');
+    }).catch(() => {
+      toast.error('ไม่สามารถคัดลอกได้ กรุณาเลือกข้อความเอง');
+    });
     setCopied(key);
     setTimeout(() => setCopied(''), 2000);
   };

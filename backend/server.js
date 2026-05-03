@@ -321,6 +321,68 @@ app.get('/api/affiliate/list', (req, res) => {
   res.json({ success: true, count: affiliates.length, data: safeData });
 });
 
+// ─── Waitlist / Email Capture (from Landing Page) ────────────────────────────
+const WAITLIST_FILE = new URL('./data/waitlist.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
+
+function loadWaitlist() {
+  try { if (existsSync(WAITLIST_FILE)) return JSON.parse(readFileSync(WAITLIST_FILE, 'utf8')); } catch (_) {}
+  return [];
+}
+function saveWaitlist(data) {
+  try {
+    const dir = WAITLIST_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(WAITLIST_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) { console.error('Save waitlist error:', e.message); }
+}
+
+const waitlist = loadWaitlist();
+
+const waitlistLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 ชั่วโมง
+  max: 3,                    // กรอกอีเมล 3 ครั้ง/ชั่วโมง ต่อ IP
+  message: { success: false, message: 'ส่งคำขอบ่อยเกินไป กรุณารอแล้วลองใหม่' },
+});
+
+app.post('/api/waitlist', waitlistLimiter, (req, res) => {
+  try {
+    const { email, source } = req.body || {};
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ success: false, message: 'อีเมลไม่ถูกต้อง' });
+    }
+
+    const sanitizedEmail = email.toLowerCase().trim().slice(0, 254);
+
+    if (waitlist.find((w) => w.email === sanitizedEmail)) {
+      return res.json({ success: true, message: 'ลงทะเบียนไว้แล้ว! เราจะแจ้งเตือนคุณเร็วๆ นี้ 🎉' });
+    }
+
+    const record = {
+      email: sanitizedEmail,
+      source: source || 'landing',
+      joined_at: new Date().toISOString(),
+    };
+    waitlist.push(record);
+    saveWaitlist(waitlist);
+    console.log(`📧 Waitlist: ${sanitizedEmail} (${source || 'landing'}) — total: ${waitlist.length}`);
+
+    // ส่ง confirmation email (async)
+    if (mailer) {
+      mailer.sendMail({
+        from: `"OpenThai AI" <${process.env.SMTP_USER}>`,
+        to: sanitizedEmail,
+        subject: '🎉 ยืนยันการลงทะเบียน OpenThai AI',
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:500px;margin:0 auto;border-radius:16px;overflow:hidden;"><div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:28px;text-align:center;"><h1 style="margin:0;font-size:22px;">🎉 ยินดีต้อนรับ!</h1></div><div style="padding:24px;"><p style="font-size:14px;color:#cbd5e1;">ขอบคุณที่สนใจ <strong>OpenThai AI</strong> เราจะแจ้งเตือนคุณทันทีที่มีสิทธิพิเศษ</p><div style="text-align:center;margin:20px 0;"><a href="https://www.openthai-ai.com" style="background:linear-gradient(135deg,#fe2c55,#6366f1);color:#fff;text-decoration:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;">🚀 ลองใช้ฟรีตอนนี้เลย</a></div></div></div>`,
+      }).catch(console.error);
+    }
+
+    res.json({ success: true, message: 'ลงทะเบียนสำเร็จ! 🎉 เราจะแจ้งเตือนคุณทันที' });
+  } catch (err) {
+    console.error('Waitlist error:', err);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่' });
+  }
+});
+
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
