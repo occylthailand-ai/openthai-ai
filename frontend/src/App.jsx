@@ -11,6 +11,8 @@ import AffiliateDashboard from './pages/AffiliateDashboard';
 import LandingPage from './pages/LandingPage';
 import PricingPage from './pages/PricingPage';
 import AdminPage from './pages/AdminPage';
+import NotFoundPage from './pages/NotFoundPage';
+import PDPABanner from './components/PDPABanner';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -65,8 +67,9 @@ function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/affiliate" element={<AffiliatePage />} />
         <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      <PDPABanner />
     </Router>
   );
 }
