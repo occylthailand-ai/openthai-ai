@@ -8,6 +8,8 @@ import AIGeneratorPage from './pages/AIGeneratorPage';
 import AIToolsHub from './pages/AIToolsHub';
 import AffiliatePage from './pages/AffiliatePage';
 import AffiliateDashboard from './pages/AffiliateDashboard';
+import LandingPage from './pages/LandingPage';
+import PricingPage from './pages/PricingPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -56,10 +58,12 @@ function App() {
         />
         <Route path="/ai-generator" element={isAuthenticated ? <AIGeneratorPage /> : <Navigate to="/login" />} />
         <Route path="/ai-tools" element={isAuthenticated ? <AIToolsHub /> : <Navigate to="/login" />} />
-        {/* Affiliate — เข้าได้โดยไม่ต้อง login */}
+        {/* Public pages — ไม่ต้อง login */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="/affiliate" element={<AffiliatePage />} />
         <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} />} />
       </Routes>
     </Router>
   );
