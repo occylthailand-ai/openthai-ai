@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://www.openthai-ai.com/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <lastmod>2026-05-03</lastmod>
+  </url>
+  <url>
+    <loc>https://www.openthai-ai.com/pricing</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-05-03</lastmod>
+  </url>
+  <url>
+    <loc>https://www.openthai-ai.com/affiliate</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-05-03</lastmod>
+  </url>
+  <url>
+    <loc>https://www.openthai-ai.com/affiliate/dashboard</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2026-05-03</lastmod>
+  </url>
+</urlset>

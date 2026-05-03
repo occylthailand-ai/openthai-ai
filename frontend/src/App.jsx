@@ -10,6 +10,7 @@ import AffiliatePage from './pages/AffiliatePage';
 import AffiliateDashboard from './pages/AffiliateDashboard';
 import LandingPage from './pages/LandingPage';
 import PricingPage from './pages/PricingPage';
+import AdminPage from './pages/AdminPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -61,6 +62,7 @@ function App() {
         {/* Public pages — ไม่ต้อง login */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="/affiliate" element={<AffiliatePage />} />
         <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
         <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} />} />
