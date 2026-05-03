@@ -17,6 +17,7 @@ import TermsPage from './pages/TermsPage';
 import PDPABanner from './components/PDPABanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -48,6 +49,7 @@ function App() {
     <ErrorBoundary>
       <ToastProvider>
         <Router>
+          <ScrollToTop />
           <Routes>
             <Route
               path="/login"

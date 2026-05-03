@@ -1,6 +1,6 @@
-'use client';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/ToastContext';
 
 // ── Tier config ─────────────────────────────────────────────────────────────
 const TIERS = [
@@ -70,6 +70,7 @@ function useCopy() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AffiliatePage() {
+  const toast = useToast();
   const navigate = useNavigate();
   const { copied, copy } = useCopy();
 
@@ -92,24 +93,33 @@ export default function AffiliatePage() {
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.email) { setError('กรุณากรอกชื่อและอีเมล'); return; }
+    if (!form.name || !form.email) {
+      setError('กรุณากรอกชื่อและอีเมล');
+      toast.error('กรุณากรอกชื่อและอีเมลก่อนสมัคร');
+      return;
+    }
     setLoading(true); setError('');
     try {
       const code = genRefCode(form.name);
-      const link = `https://openthai-ai.vercel.app/?ref=${code}`;
-      // attempt real API, fallback to local success
+      const link = `https://www.openthai-ai.com/?ref=${code}`;
       try {
-        await fetch('/api/affiliate/apply', {
+        const res = await fetch('/api/affiliate/apply', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...form, ref_code: code, ref_link: link }),
         });
+        const data = await res.json();
+        if (!res.ok && res.status === 409) {
+          toast.warn('อีเมลนี้สมัครไว้แล้ว กรุณาเช็ค Dashboard');
+        }
       } catch (_) { /* offline – still show success */ }
       setRefCode(code);
       setRefLink(link);
       setStep('success');
+      toast.success(`🎉 สมัคร Affiliate สำเร็จ! Ref Code: ${code}`);
     } catch (err) {
       setError('เกิดข้อผิดพลาด กรุณาลองใหม่');
+      toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่');
     } finally {
       setLoading(false);
     }

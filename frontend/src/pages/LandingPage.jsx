@@ -70,15 +70,47 @@ function useTyping(words, speed = 80, pause = 2000) {
   return text;
 }
 
+// ── Blinking cursor hook ──────────────────────────────────────────────────────
+function useBlink(interval = 530) {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    const t = setInterval(() => setOn((v) => !v), interval);
+    return () => clearInterval(t);
+  }, [interval]);
+  return on;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const navigate = useNavigate();
   const typed = useTyping(['ผ้าไหมอุบล', 'น้ำพริกป้าแดง', 'เซรั่มข้าวหอม', 'กาแฟดอยช้าง', 'สบู่มะขาม']);
+  const cursorOn = useBlink();
   const [email, setEmail] = useState('');
   const [joined, setJoined] = useState(false);
+  const [joining, setJoining] = useState(false);
+
+  useEffect(() => { document.title = 'OpenThai AI — สร้างคอนเทนต์ TikTok ปัง ด้วย AI ไทยแท้'; }, []);
 
   const handleFreeStart = () => navigate('/ai-generator');
-  const handleJoin = (e) => { e.preventDefault(); if (email) setJoined(true); };
+
+  const handleJoin = async (e) => {
+    e.preventDefault();
+    if (!email || joining) return;
+    setJoining(true);
+    try {
+      const res = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'landing-hero' }),
+      });
+      const data = await res.json();
+      if (data.success) setJoined(true);
+    } catch (_) {
+      setJoined(true); // fallback — show success anyway
+    } finally {
+      setJoining(false);
+    }
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif", overflowX: 'hidden' }}>
@@ -111,7 +143,7 @@ export default function LandingPage() {
         <h1 style={{ fontSize: 'clamp(36px,7vw,76px)', fontWeight: 900, lineHeight: 1.15, margin: '0 0 20px' }}>
           สร้างคอนเทนต์ TikTok ปัง<br />
           <span style={{ background: 'linear-gradient(90deg,#fe2c55,#ff5722,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            "{typed}<span style={{ opacity: Math.sin(Date.now() / 300) > 0 ? 1 : 0 }}>|</span>"
+            "{typed}<span style={{ opacity: cursorOn ? 1 : 0, transition: 'opacity 0.1s' }}>|</span>"
           </span>
           <br />
           <span style={{ background: 'linear-gradient(90deg,#6366f1,#06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -269,24 +301,48 @@ export default function LandingPage() {
           ) : (
             <form onSubmit={handleJoin} style={{ display: 'flex', gap: 8 }}>
               <input type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 16px', color: '#f8fafc', fontSize: 14, outline: 'none' }} />
-              <button type="submit" style={{ ...ctaPrimary, whiteSpace: 'nowrap' }}>สมัคร →</button>
+              <button type="submit" disabled={joining} style={{ ...ctaPrimary, whiteSpace: 'nowrap', opacity: joining ? 0.7 : 1 }}>
+                {joining ? '⏳ กำลังส่ง...' : 'สมัคร →'}
+              </button>
             </form>
           )}
         </div>
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
-      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '32px 5%', display: 'flex', flexWrap: 'wrap', gap: 20, justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <LogoEmblem size={28} />
-          <span style={{ fontWeight: 800, fontSize: 16, color: '#f8fafc' }}>OpenThai AI</span>
-          <span style={{ fontSize: 12, color: '#475569' }}>© 2026</span>
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '40px 5% 32px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
+          {/* Brand */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <LogoEmblem size={28} />
+              <span style={{ fontWeight: 900, fontSize: 16, color: '#f8fafc' }}>OpenThai AI</span>
+            </div>
+            <p style={{ color: '#475569', fontSize: 12, margin: 0, maxWidth: 220, lineHeight: 1.6 }}>
+              AI ไทยแท้ สร้างคอนเทนต์ TikTok<br />ใน 10 วินาที รองรับ 241 แพลตฟอร์ม
+            </p>
+          </div>
+          {/* Links */}
+          <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>บริการ</div>
+              {[['AI Generator', '/ai-generator'], ['ราคา', '/pricing'], ['Affiliate', '/affiliate']].map(([l, r]) => (
+                <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
+              ))}
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>ข้อมูล</div>
+              {[['นโยบายความเป็นส่วนตัว', '/privacy'], ['ข้อกำหนดการใช้งาน', '/terms'], ['ติดต่อเรา', 'mailto:support@openthai-ai.com']].map(([l, r]) => (
+                r.startsWith('mailto')
+                  ? <a key={r} href={r} style={{ display: 'block', color: '#94a3b8', fontSize: 13, textDecoration: 'none', marginBottom: 6 }}>{l}</a>
+                  : <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 20, fontSize: 13, color: '#475569' }}>
-          <span onClick={() => navigate('/affiliate')} style={{ cursor: 'pointer', color: '#6366f1' }}>💰 Affiliate</span>
-          <span onClick={() => navigate('/pricing')} style={{ cursor: 'pointer' }}>ราคา</span>
-          <span onClick={() => navigate('/login')} style={{ cursor: 'pointer' }}>Login</span>
-          <a href="mailto:support@openthai-ai.com" style={{ color: 'inherit', textDecoration: 'none' }}>ติดต่อ</a>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <span style={{ fontSize: 12, color: '#334155' }}>© 2026 OpenThai AI — สงวนลิขสิทธิ์</span>
+          <span style={{ fontSize: 12, color: '#334155' }}>🇹🇭 Made in Thailand · Powered by Gemini AI</span>
         </div>
       </footer>
     </div>
