@@ -6,3 +6,13 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+
+.vercel
+
+# Runtime data — ป้องกัน commit ข้อมูลผู้ใช้/log โดยไม่ตั้งใจ
+backend/data/affiliates.json
+backend/data/agents.json
+backend/data/system_log.json
+backend/data/agent_checkpoint.json
+backend/data/waitlist.json
+# หมายเหตุ: backend/data/system_charter.json ไม่ include ตรงนี้ — commit ได้ (static config)
