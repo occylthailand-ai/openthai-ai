@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
+import { apiUrl } from '../apiBase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PLATFORMS  = ['TikTok','Facebook','Instagram Reels','YouTube Shorts','LINE'];
@@ -58,26 +59,26 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
 
   const handleCreate = async () => {
     if (!form.name||!form.product){toast.error('กรุณาใส่ชื่อ Agent และสินค้า');return;}
-    const res = await fetch('/api/agent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)});
+    const res = await fetch(apiUrl('/api/agent'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)});
     const d = await res.json();
     if(d.success){toast.success(`🤖 สร้าง Agent "${form.name}" แล้ว`);setShowForm(false);setForm(EMPTY_FORM);onRefresh();}
     else toast.error(d.message||'สร้างไม่สำเร็จ');
   };
   const handleRun = async (id,name) => {
     setRunning(id);toast.info(`⚡ กำลังรัน Agent "${name}"...`);
-    const res = await fetch(`/api/agent/${id}/run`,{method:'POST'});
+    const res = await fetch(apiUrl(`/api/agent/${id}/run`),{method:'POST'});
     const d = await res.json();
     setRunning('');
     if(d.success){toast.success(`✅ Agent "${name}" — Score: ${d.data?.criticScore}`);onRefresh();}
     else toast.error('Agent ทำงานไม่สำเร็จ');
   };
   const handleToggle = async (id,active) => {
-    await fetch(`/api/agent/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:!active})});
+    await fetch(apiUrl(`/api/agent/${id}`),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:!active})});
     onRefresh();toast.info(!active?'▶️ เปิด Agent แล้ว':'⏸ หยุด Agent แล้ว');
   };
   const handleDelete = async (id,name) => {
     if(!confirm(`ลบ Agent "${name}" ใช่ไหม?`))return;
-    await fetch(`/api/agent/${id}`,{method:'DELETE'});
+    await fetch(apiUrl(`/api/agent/${id}`),{method:'DELETE'});
     toast.warn(`🗑 ลบ Agent "${name}" แล้ว`);onRefresh();
   };
 
@@ -158,6 +159,11 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
                 </div>
               </div>
               {agent.lastRun&&<div style={{marginTop:8,fontSize:11,color:'#475569'}}>รันล่าสุด: {fmtTime(agent.lastRun)}</div>}
+              {agent.lastError&&(
+                <div style={{marginTop:8,fontSize:11,color:'#fecaca',background:'rgba(239,68,68,0.12)',padding:'8px 10px',borderRadius:8,border:'1px solid rgba(239,68,68,0.25)'}}>
+                  ⚠️ ข้อผิดพลาดล่าสุด: {agent.lastError}
+                </div>
+              )}
               {agent.results?.length>0&&(
                 <div style={{marginTop:10}}>
                   <button onClick={()=>setExpandedId(expandedId===agent.id?null:agent.id)}
@@ -265,7 +271,7 @@ function TabSkills({ toast }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/system/skills-gap')
+    fetch(apiUrl('/api/system/skills-gap'))
       .then(r=>r.json())
       .then(d=>{setData(d);setLoading(false);})
       .catch(()=>setLoading(false));
@@ -297,6 +303,48 @@ function TabSkills({ toast }) {
         <span style={{color:'#a5b4fc',fontSize:13,fontWeight:700}}>🇹🇭 Thai Advantage: </span>
         <span style={{color:'#cbd5e1',fontSize:13}}>{data.thai_advantage}</span>
       </div>
+
+      {data.industry_ai_pulse && (
+        <div style={glass}>
+          <div style={{fontWeight:800,fontSize:14,marginBottom:6}}>🛰 กระแส AI ในอุตสาหกรรม vs โปรแกรมเรา</div>
+          <div style={{fontSize:12,color:'#64748b',marginBottom:14}}>เปรียบเทียบแนวผู้นำตลาดกับฟีเจอร์ OpenThai AI — ช่องว่างและวิธีบริหารจัดการ</div>
+          <div style={{display:'grid',gap:12}}>
+            {data.industry_ai_pulse.map((row, i) => (
+              <div key={i} style={{background:'rgba(255,255,255,0.02)',borderRadius:12,padding:'12px 14px',border:'1px solid rgba(255,255,255,0.06)'}}>
+                <div style={{fontSize:13,fontWeight:800,color:'#a5b4fc',marginBottom:8}}>{row.trend}</div>
+                <div style={{display:'grid',gap:6,fontSize:12,lineHeight:1.55}}>
+                  <div><span style={{color:'#64748b'}}>ผู้นำทำ: </span><span style={{color:'#cbd5e1'}}>{row.leaders_do}</span></div>
+                  <div><span style={{color:'#64748b'}}>ของเรา: </span><span style={{color:'#cbd5e1'}}>{row.our_product}</span></div>
+                  <div><span style={{color:'#64748b'}}>ช่องว่าง: </span><span style={{color:'#fda4af'}}>{row.gap}</span></div>
+                  <div><span style={{color:'#64748b'}}>แนวทางบริหาร: </span><span style={{color:'#86efac'}}>{row.manage}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.autonomous_ops && (
+        <div style={{...glass,border:'1px solid rgba(16,185,129,0.2)',background:'rgba(16,185,129,0.03)'}}>
+          <div style={{fontWeight:800,fontSize:14,marginBottom:6,color:'#6ee7b7'}}>⚡ {data.autonomous_ops.headline}</div>
+          <ul style={{margin:'10px 0 0',paddingLeft:18,color:'#cbd5e1',fontSize:13,lineHeight:1.7}}>
+            {data.autonomous_ops.items?.map((it, i) => (
+              <li key={i} style={{marginBottom:8}}><strong style={{color:'#f8fafc'}}>{it.title}</strong> — {it.desc}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {data.durability && (
+        <div style={{...glass,border:'1px solid rgba(99,102,241,0.2)',background:'rgba(99,102,241,0.04)'}}>
+          <div style={{fontWeight:800,fontSize:14,marginBottom:6,color:'#a5b4fc'}}>🧱 {data.durability.headline}</div>
+          <ul style={{margin:'10px 0 0',paddingLeft:18,color:'#cbd5e1',fontSize:13,lineHeight:1.7}}>
+            {data.durability.items?.map((it, i) => (
+              <li key={i} style={{marginBottom:8}}><strong style={{color:'#f8fafc'}}>{it.title}</strong> — {it.desc}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Our 9 Skills */}
       <div style={glass}>
@@ -343,7 +391,7 @@ function TabSkills({ toast }) {
 
       {/* Missing skills */}
       <div style={glass}>
-        <div style={{fontWeight:800,fontSize:14,marginBottom:16}}>🔴 Skills ที่ยังขาด — Roadmap</div>
+        <div style={{fontWeight:800,fontSize:14,marginBottom:16}}>🔴 Skills ที่ยังขาด — Roadmap + วิธีจัดการ</div>
         <div style={{display:'grid',gap:10}}>
           {data.missing_skills.map((s,i)=>(
             <div key={i} style={{background:'rgba(255,255,255,0.02)',borderRadius:12,padding:'13px 16px',border:'1px solid rgba(255,255,255,0.06)'}}>
@@ -355,6 +403,12 @@ function TabSkills({ toast }) {
                 <span>⏱ {s.effort}</span>
                 <span style={{color:'#10b981'}}>📈 {s.impact}</span>
               </div>
+              {(s.management || s.automation_now) && (
+                <div style={{fontSize:12,color:'#94a3b8',lineHeight:1.55,marginBottom:8}}>
+                  {s.management && <div style={{marginBottom:4}}><span style={{color:'#64748b'}}>บริหารจัดการ: </span>{s.management}</div>}
+                  {s.automation_now && <div><span style={{color:'#64748b'}}>ทำอัตโนมัติได้แล้ววันนี้: </span><span style={{color:'#a5b4fc'}}>{s.automation_now}</span></div>}
+                </div>
+              )}
               <div style={{display:'flex',alignItems:'center',gap:8}}>
                 <span style={{fontSize:11,color:'#64748b',flexShrink:0}}>Progress:</span>
                 <ScoreBar value={s.progress} color='#f59e0b' height={5} />
@@ -380,8 +434,8 @@ function TabMonitor({ toast }) {
   const load = useCallback(async () => {
     try {
       const [m, w] = await Promise.all([
-        fetch('/api/system/metrics').then(r=>r.json()),
-        fetch('/api/system/watchdog').then(r=>r.json()),
+        fetch(apiUrl('/api/system/metrics')).then(r=>r.json()),
+        fetch(apiUrl('/api/system/watchdog')).then(r=>r.json()),
       ]);
       setMetrics(m); setWatchdog(w);
     } catch (_) {}
@@ -397,7 +451,7 @@ function TabMonitor({ toast }) {
     setDiagLoading(true);
     toast.info('🔬 AI กำลังวิเคราะห์ระบบ...');
     try {
-      const d = await fetch('/api/system/diagnose',{method:'POST'}).then(r=>r.json());
+      const d = await fetch(apiUrl('/api/system/diagnose'),{method:'POST'}).then(r=>r.json());
       setDiagnosis(d);
       toast.success(`✅ วิเคราะห์เสร็จ: ${d.status} (${d.health_score}/100)`);
     } catch(e){ toast.error('วิเคราะห์ไม่สำเร็จ'); }
@@ -408,7 +462,7 @@ function TabMonitor({ toast }) {
     setHealing(true);
     toast.info('🔧 กำลัง Auto-Heal...');
     try {
-      const d = await fetch('/api/system/auto-heal',{method:'POST'}).then(r=>r.json());
+      const d = await fetch(apiUrl('/api/system/auto-heal'),{method:'POST'}).then(r=>r.json());
       if(d.success){ toast.success(`✅ Auto-Heal สำเร็จ! Healed: ${d.stats?.healed||0} agents`); load(); }
       else toast.error('Auto-Heal ไม่สำเร็จ');
     } catch(e){ toast.error('เกิดข้อผิดพลาด'); }
@@ -444,6 +498,18 @@ function TabMonitor({ toast }) {
         </div>
       )}
 
+      {metrics?.agent_checkpoint && (
+        <div style={{...glass,border:'1px solid rgba(245,158,11,0.35)',background:'rgba(245,158,11,0.06)'}}>
+          <div style={{fontWeight:800,fontSize:13,marginBottom:8,color:'#fcd34d'}}>💾 Checkpoint — งานที่กำลังดำเนินการ (กันข้อมูลค้างสูญหาย)</div>
+          <div style={{fontSize:12,color:'#cbd5e1',lineHeight:1.6}}>
+            <strong style={{color:'#f8fafc'}}>{metrics.agent_checkpoint.agentName}</strong> · {metrics.agent_checkpoint.product}
+            <div style={{marginTop:4}}>สถานะ: <code style={{color:'#94a3b8',fontSize:11}}>{metrics.agent_checkpoint.phase}</code></div>
+            {metrics.agent_checkpoint.detail && <div style={{marginTop:6,color:'#f87171',fontSize:11}}>{metrics.agent_checkpoint.detail}</div>}
+            <div style={{fontSize:10,color:'#64748b',marginTop:6}}>บันทึก: {fmtTime(metrics.agent_checkpoint.ts)}</div>
+          </div>
+        </div>
+      )}
+
       {/* Services status */}
       <div style={glass}>
         <div style={{fontWeight:800,fontSize:14,marginBottom:14}}>🌐 Services Status</div>
@@ -452,11 +518,11 @@ function TabMonitor({ toast }) {
             {name:'AI Content Gen',    ok:true,  detail:'Claude/Gemini/Mock'},
             {name:'Agent Scheduler',   ok:true,  detail:'Cron every hour'},
             {name:'Watchdog (30 min)', ok:true,  detail:`Healed: ${watchdog?.healed||0}`},
-            {name:'News RAG',          ok:true,  detail:'RSS + AI fallback'},
+            {name:'News RAG',          ok:true,  detail:'RSS + AI · refresh ทุก 4 ชม.'},
             {name:'Competitor AI',     ok:true,  detail:'On-demand'},
-            {name:'LINE OA',           ok:!!watchdog,  detail:watchdog?'Ready':'No token'},
-            {name:'ElevenLabs TTS',    ok:false, detail:'API key needed'},
-            {name:'Auto-Heal',         ok:true,  detail:'Active 24/7'},
+            {name:'LINE OA',           ok:true,  detail:'ตั้ง token ใน .env'},
+            {name:'ElevenLabs TTS',    ok:true,  detail:'ตั้ง key ใน .env'},
+            {name:'Log + Checkpoint',  ok:true,  detail:'system_log + agent_checkpoint'},
           ].map((s,i)=>(
             <div key={i} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.02)',padding:'10px 12px',borderRadius:10}}>
               <PulseDot active={s.ok} color={s.ok?'#10b981':'#475569'} />
@@ -572,7 +638,7 @@ function TabLogs({ toast }) {
 
   const load = useCallback(async () => {
     try {
-      const url = `/api/system/logs?limit=200${filter!=='all'?`&level=${filter}`:''}`;
+      const url = apiUrl(`/api/system/logs?limit=200${filter!=='all'?`&level=${filter}`:''}`);
       const d = await fetch(url).then(r=>r.json());
       setLogs(d.data||[]); setTotal(d.total||0);
     } catch (_) {}
@@ -641,11 +707,11 @@ export default function AgentPage() {
   useEffect(() => {
     document.title = 'AI Agent — OpenThai AI';
     loadAgents();
-    fetch('/api/line/status').then(r=>r.json()).then(setLine).catch(()=>{});
+    fetch(apiUrl('/api/line/status')).then(r=>r.json()).then(setLine).catch(()=>{});
   }, []);
 
   const loadAgents = () =>
-    fetch('/api/agent').then(r=>r.json())
+    fetch(apiUrl('/api/agent')).then(r=>r.json())
       .then(d=>{setAgents(d.data||[]);setLoading(false);})
       .catch(()=>setLoading(false));
 

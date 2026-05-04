@@ -4,7 +4,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from '@anthropic-ai/sdk';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import nodemailer from 'nodemailer';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -20,7 +20,7 @@ import {
 
 const app = express();
 const PORT = process.env.PORT || 8000;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 app.use(cors({ origin: true, credentials: true })); // allow all origins (file://, localhost, Vercel)
 app.use(express.json({ limit: '50kb' })); // default limit
@@ -607,6 +607,7 @@ app.post('/api/generate-ab', generateLimiter, async (req, res) => {
 //  AI AGENT SCHEDULER
 // ═══════════════════════════════════════════════════════════════════════════════
 const AGENT_FILE = new URL('./data/agents.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
+const CHECKPOINT_FILE = new URL('./data/agent_checkpoint.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
 
 function loadAgents() {
   try { if (existsSync(AGENT_FILE)) return JSON.parse(readFileSync(AGENT_FILE, 'utf8')); } catch (_) {}
@@ -622,10 +623,36 @@ function saveAgents(data) {
 
 const agents = loadAgents();
 
+// ── Agent run checkpoint (ก่อน/หลังรัน — ลดความเสียหายเมื่อ process หยุดกะทันหัน) ──
+function writeAgentCheckpoint(agent, phase, detail = null) {
+  try {
+    const dir = CHECKPOINT_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const payload = {
+      ts: new Date().toISOString(),
+      agentId: agent.id,
+      agentName: agent.name,
+      product: agent.product,
+      phase,
+      ...(detail ? { detail: String(detail).slice(0, 2000) } : {}),
+    };
+    writeFileSync(CHECKPOINT_FILE, JSON.stringify(payload, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[checkpoint]', e.message);
+  }
+}
+
+function clearAgentCheckpoint() {
+  try {
+    if (existsSync(CHECKPOINT_FILE)) unlinkSync(CHECKPOINT_FILE);
+  } catch (_) {}
+}
+
 // ── Run a single agent ────────────────────────────────────────────────────────
 async function runAgent(agent) {
   console.log(`[Agent] 🤖 Running agent "${agent.name}" — ${agent.product}`);
   try {
+    writeAgentCheckpoint(agent, 'generating');
     const result = await smartGenerate({
       product: agent.product, category: agent.category, platform: agent.platform,
       style: agent.style, lang: agent.lang || 'ภาษาไทย',
@@ -633,8 +660,10 @@ async function runAgent(agent) {
     });
     const entry = { ts: new Date().toISOString(), ...result };
     agent.lastRun = new Date().toISOString();
+    agent.lastError = null;
     agent.results = [entry, ...(agent.results || []).slice(0, 9)]; // keep 10 results
     saveAgents(agents);
+    clearAgentCheckpoint();
 
     // ส่ง LINE ถ้าตั้งค่าไว้
     if (agent.lineEnabled && agent.lineUserId && process.env.LINE_CHANNEL_TOKEN) {
@@ -645,6 +674,10 @@ async function runAgent(agent) {
     return entry;
   } catch (err) {
     console.error(`[Agent] ❌ Failed: ${err.message}`);
+    writeAgentCheckpoint(agent, 'error', err.message);
+    agent.lastError = String(err.message || err).slice(0, 500);
+    try { saveAgents(agents); } catch (_) {}
+    try { addLog('error', 'Agent', `รัน Agent "${agent.name}" ไม่สำเร็จ: ${err.message}`); } catch (_) {}
     return null;
   }
 }
@@ -990,6 +1023,12 @@ async function runWatchdog() {
 
 // ทุก 30 นาที
 cron.schedule('*/30 * * * *', async () => { await runWatchdog(); });
+// รีเฟรชแหล่งข่าว RAG อัตโนมัติ (เคลียร์แคชทุก 4 ชม. — เชื่อมโลกข้อมูลใหม่โดยไม่ต้องรอผู้ใช้)
+cron.schedule('0 */4 * * *', () => {
+  newsCache.data = null;
+  newsCache.ts = 0;
+  addLog('info', 'Scheduler', '📰 News RAG cache cleared — คำขอถัดไปดึงหัวข้อสด');
+});
 // Log startup
 addLog('info', 'System', `🚀 OpenThai AI backend started — AI:${anthropic?'Claude':gemini?'Gemini':'Mock'}`);
 
@@ -999,6 +1038,10 @@ app.get('/api/system/metrics', (req, res) => {
   const allScores  = agents.flatMap(a => (a.results || []).map(r => parseFloat(r.criticScore) || 0)).filter(Boolean);
   const avgScore   = allScores.length ? (allScores.reduce((s, x) => s + x, 0) / allScores.length) : 0;
   const mem        = process.memoryUsage();
+  let agent_checkpoint = null;
+  try {
+    if (existsSync(CHECKPOINT_FILE)) agent_checkpoint = JSON.parse(readFileSync(CHECKPOINT_FILE, 'utf8'));
+  } catch (_) {}
   res.json({
     uptime_sec:    Math.floor(process.uptime()),
     uptime_human:  (() => { const s = Math.floor(process.uptime()); const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); return `${h}h ${m}m`; })(),
@@ -1015,6 +1058,7 @@ app.get('/api/system/metrics', (req, res) => {
     watchdog:      watchdogStats,
     memory_mb:     (mem.heapUsed / 1048576).toFixed(1),
     memory_total:  (mem.heapTotal / 1048576).toFixed(1),
+    agent_checkpoint,
     ts:            new Date().toISOString(),
   });
 });
@@ -1030,7 +1074,7 @@ app.get('/api/system/logs', (req, res) => {
   res.json({ success: true, total: sysLogs.length, data: filtered.slice(0, limit) });
 });
 
-// ── 3. GET /api/system/skills-gap ────────────────────────────────────────────
+// ── 3. GET /api/system/skills-gap — เปรียบเทียบกระแส AI + ช่องว่าง + วิธีบริหาร + ระบบอัตโนมัติ ──
 app.get('/api/system/skills-gap', (req, res) => {
   res.json({
     our_skills: [
@@ -1055,12 +1099,37 @@ app.get('/api/system/skills-gap', (req, res) => {
       { name:'Voice/TTS Thai',      ours:60, industry:90, leader:'Industry ⚡'   },
       { name:'Competitor Analytics',ours:72, industry:85, leader:'Industry ⚡'   },
     ],
+    industry_ai_pulse: [
+      { trend:'Agentic workflows & tool-use', leaders_do:'AI เรียก API / รันงานซ้ำได้เองแบบ chain', our_product:'Agent + Cron + Watchdog + LINE push', gap:'ยังไม่มี autonomous browser / shop post', manage:'ขยาย tool-calling ทีละบริการ · คุมด้วย rate limit + log' },
+      { trend:'RAG & fresh web context', leaders_do:'ดึงความรู้แบบ real-time จากเอกสาร/เว็บ', our_product:'News RAG (RSS+AI) · Competitor analyze', gap:'ยังไม่มี vector DB / crawl ส่วนตัวของร้าน', manage:'เฟส 2: อัปโหลด PDF/Sheet เป็น knowledge base ต่อร้าน' },
+      { trend:'Multimodal (วิดีโอ/เสียง end-to-end)', leaders_do:'สร้างคลิป/พากย์จาก prompt เดียว', our_product:'TTS (ElevenLabs) · วิเคราะห์ภาพ', gap:'ยังไม่มี video compose / avatar', manage:'ผูก provider วิดีโอหรือ template CapCut batch ภายหลัง' },
+      { trend:'Self-healing & SRE AI', leaders_do:'ตรวจสุขภาพระบบ + remediate', our_product:'Watchdog 30 นาที · Auto-heal · Diagnose · Event log', gap:'ยังไม่มี distributed tracing', manage:'ใช้ log + metrics ปัจจุบันเป็นแหล่งความจริง · เพิ่ม alert channel ตาม priority' },
+    ],
+    autonomous_ops: {
+      headline:'ดำเนินการแก้ไขและอัปเดตโดยไม่ต้องรอผู้ใช้แจ้งบั๊ก',
+      items: [
+        { title:'Watchdog + Auto-heal', desc:'ทุก 30 นาที ตรวจ Agent ค้าง/ยังไม่เคยรัน — รัน heal อัตโนมัติและบันทึก log' },
+        { title:'Agent scheduler', desc:'รันตามเวลา (รายชั่วโมง/รายวัน/รายสัปดาห์) ส่ง LINE เมื่อตั้งค่า token' },
+        { title:'Self-diagnosis', desc:'กดวิเคราะห์จาก Monitor หรือใช้กฎเมื่อไม่มี AI key — สรุป health_score + คำแนะนำ' },
+        { title:'News RAG refresh', desc:'เคลียร์แคชข่าวทุก 4 ชม. — ดึงเทรนด์ใหม่โดยอัตโนมัติเมื่อมีการเรียก API' },
+        { title:'Checkpoint ก่อนรัน Agent', desc:'เขียน agent_checkpoint.json ก่อน generate — ถ้า process ขัดข้องยังรู้ว่างานไหนค้างอยู่' },
+      ],
+    },
+    durability: {
+      headline:'บันทึกก่อนเสมอ — ลดความเสียหายของข้อมูลที่กำลังดำเนินการ',
+      items: [
+        { title:'Event log ถาวร', desc:'system_log.json — ทุกเหตุการณ์สำคัญเขียนลงดิสก์ทันที (ไม่ถือแค่ในหน่วยความจำ)' },
+        { title:'agents.json', desc:'ผลลัพธ์ Agent / lastRun / lastError บันทึกหลังแต่ละรัน' },
+        { title:'Checkpoint', desc:'ไฟล์ agent_checkpoint.json ระหว่างรัน — ล้างเมื่อสำเร็จ' },
+        { title:'Process errors', desc:'uncaughtException / unhandledRejection บันทึกลง log ก่อนตรวจสอบต่อ' },
+      ],
+    },
     missing_skills: [
-      { name:'Video Auto-generate',     priority:'🔴 สูงมาก', effort:'3-6 เดือน', impact:'+40% engagement',   progress:8  },
-      { name:'TikTok Analytics API',    priority:'🔴 สูง',    effort:'1-2 เดือน', impact:'+35% optimization', progress:20 },
-      { name:'Thai STT (Voice→Text)',   priority:'🟡 กลาง',   effort:'2-3 เดือน', impact:'+30% UX',           progress:5  },
-      { name:'Shopee/Lazada Auto-post', priority:'🟡 กลาง',   effort:'2-3 เดือน', impact:'+25% sales',        progress:15 },
-      { name:'Sentiment Analysis',      priority:'🟢 ต่ำ',    effort:'1 เดือน',   impact:'+20% support',      progress:30 },
+      { name:'Video Auto-generate',     priority:'🔴 สูงมาก', effort:'3-6 เดือน', impact:'+40% engagement',   progress:8,  management:'เลือกพาร์ทเนอร์วิดีโอ 1 ราย + MVP จาก template ก่อน', automation_now:'TTS + สคริปต์จาก AI Generator' },
+      { name:'TikTok Analytics API',    priority:'🔴 สูง',    effort:'1-2 เดือน', impact:'+35% optimization', progress:20, management:'OAuth แอป + เก็บ metrics รายวันใน DB', automation_now:'Competitor tab + คะแนน Critic' },
+      { name:'Thai STT (Voice→Text)',   priority:'🟡 กลาง',   effort:'2-3 เดือน', impact:'+30% UX',           progress:5,  management:'ใช้ cloud STT ไทย + เก็บ transcript ในแบรนด์เมมโมรี', automation_now:'พิมพ์ brief แทนเสียง' },
+      { name:'Shopee/Lazada Auto-post', priority:'🟡 กลาง',   effort:'2-3 เดือน', impact:'+25% sales',        progress:15, management:'เริ่มจาก export แคปชั่น CSV ก่อน API เต็ม', automation_now:'สร้างแคปชั่น/แฮชแท็กจากหน้า Generator' },
+      { name:'Sentiment Analysis',      priority:'🟢 ต่ำ',    effort:'1 เดือน',   impact:'+20% support',      progress:30, management:'รุ่น classifier ไทยบน inbox/LINE', automation_now:'Log + Diagnose จับ error pattern' },
     ],
     overall_score:    82,
     industry_average: 76,
@@ -1161,6 +1230,7 @@ app.get('/api/health', (req, res) => {
     memory_mb:     (process.memoryUsage().heapUsed / 1048576).toFixed(1),
     services: {
       news_rag:           '✅ Active',
+      news_rag_refresh:   '✅ Auto cache clear every 4h',
       competitor_analysis:'✅ Active',
       tts:                process.env.ELEVENLABS_API_KEY ? '✅ Active' : '⚠️ No API Key',
       line_oa:            process.env.LINE_CHANNEL_TOKEN ? '✅ Active' : '⚠️ No Token',
@@ -1168,6 +1238,7 @@ app.get('/api/health', (req, res) => {
       agent_cron:         '✅ Active (every hour)',
       watchdog:           '✅ Active',
       diagnostics:        '✅ Active',
+      persistence:        '✅ system_log + agents.json + agent_checkpoint',
     },
   });
 });
@@ -1306,6 +1377,17 @@ async function startServer() {
     console.log('   ใส่บรรทัดนี้ใน backend/.env และเก็บไว้ในที่ปลอดภัย!\n');
     console.log(`   RECOVERY_CODES=${codes.join(',')}\n`);
   }
+
+  process.on('uncaughtException', (err) => {
+    try { addLog('error', 'Process', `uncaughtException: ${err.message}`, err.stack?.slice(0, 4000)); } catch (_) {}
+    console.error('[uncaughtException]', err);
+  });
+  process.on('unhandledRejection', (reason) => {
+    const msg = reason instanceof Error ? reason.message : String(reason);
+    const detail = reason instanceof Error ? reason.stack?.slice(0, 4000) : undefined;
+    try { addLog('error', 'Process', `unhandledRejection: ${msg}`, detail); } catch (_) {}
+    console.error('[unhandledRejection]', reason);
+  });
 
   app.listen(PORT, () => {
     console.log(`\n🚀 OpenThai AI Backend running on http://localhost:${PORT}`);
