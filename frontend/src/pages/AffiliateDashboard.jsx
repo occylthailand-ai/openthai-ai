@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/ToastContext';
 
 // ── Fake data generator for demo ─────────────────────────────────────────────
 function makeDemoData(refCode) {
@@ -41,10 +42,12 @@ const STATUS_STYLE = {
   pending: { bg: 'rgba(245,158,11,0.15)', color: '#fcd34d', label: '⏳ รอ' },
 };
 
-function useCopy() {
+function useCopy(toast) {
   const [copied, setCopied] = useState('');
   const copy = (text, key) => {
-    navigator.clipboard.writeText(text).catch(() => {});
+    navigator.clipboard.writeText(text)
+      .then(() => toast?.success('📋 คัดลอกแล้ว!'))
+      .catch(() => toast?.error('คัดลอกไม่สำเร็จ'));
     setCopied(key);
     setTimeout(() => setCopied(''), 2000);
   };
@@ -54,7 +57,10 @@ function useCopy() {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AffiliateDashboard() {
   const navigate = useNavigate();
-  const { copied, copy } = useCopy();
+  const toast = useToast();
+  const { copied, copy } = useCopy(toast);
+
+  useEffect(() => { document.title = 'Affiliate Dashboard — OpenThai AI'; }, []);
 
   // รับ ref_code จาก URL param ?ref=XXXXX
   const params = new URLSearchParams(window.location.search);
@@ -72,7 +78,7 @@ export default function AffiliateDashboard() {
   }, []);
 
   const loadDashboard = async (code) => {
-    if (!code.trim()) { setError('กรุณากรอก Ref Code'); return; }
+    if (!code.trim()) { setError('กรุณากรอก Ref Code'); toast.warn('กรุณากรอก Ref Code'); return; }
     setLoading(true); setError('');
     try {
       const res = await fetch(`/api/affiliate/stats/${code.trim().toUpperCase()}`);

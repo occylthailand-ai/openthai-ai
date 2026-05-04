@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Section = ({ title, children }) => (
@@ -12,6 +12,7 @@ const Section = ({ title, children }) => (
 
 export default function PrivacyPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'นโยบายความเป็นส่วนตัว — OpenThai AI'; }, []);
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif", padding: '0 0 80px' }}>
       {/* Header */}
