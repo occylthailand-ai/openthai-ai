@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Section = ({ num, title, children }) => (
@@ -13,6 +13,7 @@ const Section = ({ num, title, children }) => (
 
 export default function TermsPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'ข้อกำหนดการใช้งาน — OpenThai AI'; }, []);
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif", padding: '0 0 80px' }}>
       {/* Header */}

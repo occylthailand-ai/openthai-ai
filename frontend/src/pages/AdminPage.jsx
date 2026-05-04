@@ -45,6 +45,8 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [data] = useState(MOCK);
 
+  useEffect(() => { document.title = 'Admin Panel — OpenThai AI'; }, []);
+
   const handleLogin = (e) => {
     e.preventDefault();
     if (pw === ADMIN_KEY) { sessionStorage.setItem('admin_ok', '1'); setAuthed(true); }

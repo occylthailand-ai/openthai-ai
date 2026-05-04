@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const PLANS = [
@@ -55,12 +55,13 @@ const FAQ_ITEMS = [
 ];
 
 // ── PromptPay QR section ──────────────────────────────────────────────────────
-const PROMPTPAY_NUMBER = '0812345678'; // placeholder — เปลี่ยนเป็นเลขจริง
+const PROMPTPAY_NUMBER = '0972560801';
 
 export default function PricingPage() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState('pro');
   const [showPay, setShowPay] = useState(false);
+  useEffect(() => { document.title = 'แผนราคา — OpenThai AI'; }, []);
   const [payStep, setPayStep] = useState('select'); // select | qr | confirm
   const [openFaq, setOpenFaq] = useState(null);
 
