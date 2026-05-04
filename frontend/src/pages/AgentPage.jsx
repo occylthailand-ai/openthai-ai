@@ -24,6 +24,59 @@ const labelSt = {display:'block',fontSize:11,fontWeight:700,color:'#94a3b8',marg
 
 const EMPTY_FORM = {name:'',product:'',category:'OTOP',platform:'TikTok',style:'sales',lang:'ภาษาไทย',audience:'ทั่วไป',price:'',schedule:'daily',hour:18,weekDay:1,lineEnabled:false,lineUserId:''};
 
+// ─── Permanent system charter (backend/data/system_charter.json) ─────────────
+function CharterStrip() {
+  const [c, setC]         = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    fetch(apiUrl('/api/system/charter'))
+      .then((r) => r.json())
+      .then((d) => { if (d.success && d.data) setC(d.data); })
+      .catch(() => {});
+  }, []);
+  if (!c) return null;
+  return (
+    <div style={{ padding: '0 5% 14px', maxWidth: 960, margin: '0 auto' }}>
+      <div style={{ ...glass, border: '1px solid rgba(99,102,241,0.28)', background: 'rgba(99,102,241,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#a5b4fc' }}>📜 {c.title}</div>
+            <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>นโยบายถาวร · v{c.version}{c.effective ? ` · มีผล ${c.effective}` : ''}</div>
+          </div>
+          <button type="button" onClick={() => setCollapsed(!collapsed)}
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '6px 12px', color: '#94a3b8', cursor: 'pointer', fontSize: 11, flexShrink: 0 }}>
+            {collapsed ? '▼ แสดง' : '▲ ย่อ'}
+          </button>
+        </div>
+        {!collapsed && (
+          <>
+            {c.summary && (
+              <div style={{ fontSize: 12, color: '#cbd5e1', marginTop: 12, lineHeight: 1.6 }}>{c.summary}</div>
+            )}
+            {c.pillars?.length > 0 && (
+              <ul style={{ margin: '12px 0 0', paddingLeft: 18, fontSize: 12, color: '#94a3b8', lineHeight: 1.65 }}>
+                {c.pillars.map((p) => (
+                  <li key={p.id} style={{ marginBottom: 8 }}>
+                    <strong style={{ color: '#e2e8f0' }}>{p.title}</strong> — {p.text}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {c.technical_hooks?.length > 0 && (
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>เชื่อมเทคนิคในระบบ</div>
+                {c.technical_hooks.map((h, i) => (
+                  <div key={i} style={{ fontSize: 10, color: '#64748b', fontFamily: 'ui-monospace,monospace', marginBottom: 3 }}>{h}</div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Helper ───────────────────────────────────────────────────────────────────
 function fmtTime(iso) {
   if (!iso) return '—';
@@ -283,13 +336,21 @@ function TabSkills({ toast }) {
   return (
     <div style={{display:'grid',gap:20}}>
 
+      {data.charter && (
+        <div style={{ ...glass, padding: '10px 14px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.18)' }}>
+          <span style={{ fontSize: 11, color: '#64748b' }}>สอดคล้องนโยบายถาวร </span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc' }}>v{data.charter.version}</span>
+          <span style={{ fontSize: 11, color: '#64748b' }}> — รายละเอียดเต็มอยู่แถบด้านบนทุกแท็บ</span>
+        </div>
+      )}
+
       {/* Overall score */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:10}}>
         {[
           {label:'Overall Score',val:`${data.overall_score}/100`,color:'#6366f1',icon:'🏆'},
           {label:'Industry Avg',val:`${data.industry_average}/100`,color:'#64748b',icon:'📊'},
           {label:'AI Engine',val:data.ts?'Active':'—',color:'#10b981',icon:'🤖'},
-          {label:'Thai Advantage',val:'TOP',color:'#f59e0b',icon:'🇹🇭'},
+          {label:'Thai Advantage',val:`+${Math.max(0, (data.overall_score ?? 0) - (data.industry_average ?? 0))} vs avg`,color:'#f59e0b',icon:'🇹🇭'},
         ].map((s,i)=>(
           <div key={i} style={{...glass,padding:'14px 16px',textAlign:'center'}}>
             <div style={{fontSize:24,marginBottom:6}}>{s.icon}</div>
@@ -423,9 +484,10 @@ function TabSkills({ toast }) {
 }
 
 // ─── Tab: System Monitor ──────────────────────────────────────────────────────
-function TabMonitor({ toast }) {
+function TabMonitor({ toast, lineStatus }) {
   const [metrics, setMetrics]     = useState(null);
   const [watchdog, setWatchdog]   = useState(null);
+  const [health, setHealth]       = useState(null);
   const [diagnosis, setDiagnosis] = useState(null);
   const [diagLoading, setDiagLoading] = useState(false);
   const [healing, setHealing]     = useState(false);
@@ -433,11 +495,14 @@ function TabMonitor({ toast }) {
 
   const load = useCallback(async () => {
     try {
-      const [m, w] = await Promise.all([
-        fetch(apiUrl('/api/system/metrics')).then(r=>r.json()),
-        fetch(apiUrl('/api/system/watchdog')).then(r=>r.json()),
+      const [m, w, h] = await Promise.all([
+        fetch(apiUrl('/api/system/metrics')).then((r) => r.json()),
+        fetch(apiUrl('/api/system/watchdog')).then((r) => r.json()),
+        fetch(apiUrl('/api/health')).then((r) => r.json()).catch(() => null),
       ]);
-      setMetrics(m); setWatchdog(w);
+      setMetrics(m);
+      setWatchdog(w);
+      setHealth(h);
     } catch (_) {}
   }, []);
 
@@ -463,7 +528,7 @@ function TabMonitor({ toast }) {
     toast.info('🔧 กำลัง Auto-Heal...');
     try {
       const d = await fetch(apiUrl('/api/system/auto-heal'),{method:'POST'}).then(r=>r.json());
-      if(d.success){ toast.success(`✅ Auto-Heal สำเร็จ! Healed: ${d.stats?.healed||0} agents`); load(); }
+      if(d.success){ toast.success(`✅ Auto-Heal สำเร็จ! รอบนี้รันใหม่ ${d.healed_this_run ?? 0} agent · สะสม ${d.stats?.healed ?? 0} ครั้ง`); load(); }
       else toast.error('Auto-Heal ไม่สำเร็จ');
     } catch(e){ toast.error('เกิดข้อผิดพลาด'); }
     setHealing(false);
@@ -510,19 +575,32 @@ function TabMonitor({ toast }) {
         </div>
       )}
 
-      {/* Services status */}
+      {/* Services status — รอ metrics เพื่อไม่แสดง AI=OK ผิดก่อนโหลด */}
+      {metrics && (
       <div style={glass}>
         <div style={{fontWeight:800,fontSize:14,marginBottom:14}}>🌐 Services Status</div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:8}}>
           {[
-            {name:'AI Content Gen',    ok:true,  detail:'Claude/Gemini/Mock'},
-            {name:'Agent Scheduler',   ok:true,  detail:'Cron every hour'},
-            {name:'Watchdog (30 min)', ok:true,  detail:`Healed: ${watchdog?.healed||0}`},
-            {name:'News RAG',          ok:true,  detail:'RSS + AI · refresh ทุก 4 ชม.'},
-            {name:'Competitor AI',     ok:true,  detail:'On-demand'},
-            {name:'LINE OA',           ok:true,  detail:'ตั้ง token ใน .env'},
-            {name:'ElevenLabs TTS',    ok:true,  detail:'ตั้ง key ใน .env'},
-            {name:'Log + Checkpoint',  ok:true,  detail:'system_log + agent_checkpoint'},
+            {
+              name: 'AI Content Gen',
+              ok: metrics.ai_engine !== 'mock',
+              detail: metrics.ai_engine === 'mock' ? 'ตั้ง ANTHROPIC_API_KEY หรือ GEMINI_API_KEY' : `Engine: ${metrics.ai_engine}`,
+            },
+            { name:'Agent Scheduler', ok:true, detail:'Cron ทุกชั่วโมง :05' },
+            { name:'Watchdog (30 นาที)', ok:true, detail:`สะสม heal ${watchdog?.healed ?? 0} ครั้ง` },
+            { name:'News RAG', ok:true, detail:'RSS + AI · เคลียร์แคชทุก 4 ชม.' },
+            { name:'Competitor AI', ok:true, detail:'เรียกเมื่อใช้งาน' },
+            {
+              name: 'LINE OA',
+              ok: !!(health?.line_oa ?? lineStatus?.connected),
+              detail: (health?.line_oa ?? lineStatus?.connected) ? 'LINE_CHANNEL_TOKEN พร้อม' : 'ยังไม่ตั้ง LINE_CHANNEL_TOKEN',
+            },
+            {
+              name: 'ElevenLabs TTS',
+              ok: !!health?.elevenlabs,
+              detail: health?.elevenlabs ? 'ELEVENLABS_API_KEY พร้อม' : 'ยังไม่ตั้ง ELEVENLABS_API_KEY',
+            },
+            { name:'Log + Checkpoint', ok:true, detail:'system_log.json + agent_checkpoint.json' },
           ].map((s,i)=>(
             <div key={i} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.02)',padding:'10px 12px',borderRadius:10}}>
               <PulseDot active={s.ok} color={s.ok?'#10b981':'#475569'} />
@@ -534,6 +612,7 @@ function TabMonitor({ toast }) {
           ))}
         </div>
       </div>
+      )}
 
       {/* Watchdog status */}
       {watchdog && (
@@ -750,12 +829,14 @@ export default function AgentPage() {
         ))}
       </div>
 
+      <CharterStrip />
+
       {/* Tab Content */}
       <div style={{maxWidth:960,margin:'0 auto',padding:'28px 5% 0'}}>
         <div className="tab-content">
           {tab==='agents'  && <TabAgents agents={agents} lineStatus={lineStatus} loading={loading} onRefresh={loadAgents} toast={toast} />}
           {tab==='skills'  && <TabSkills toast={toast} />}
-          {tab==='monitor' && <TabMonitor toast={toast} />}
+          {tab==='monitor' && <TabMonitor toast={toast} lineStatus={lineStatus} />}
           {tab==='logs'    && <TabLogs toast={toast} />}
         </div>
       </div>

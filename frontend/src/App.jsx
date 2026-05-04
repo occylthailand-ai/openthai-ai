@@ -23,6 +23,7 @@ import PDPABanner from './components/PDPABanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
 import ScrollToTop from './components/ScrollToTop';
+import { apiUrl } from './apiBase';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -33,7 +34,7 @@ function App() {
     const token = localStorage.getItem('auth_token');
     if (!token) { setAuthChecked(true); return; }
 
-    fetch('/api/auth/verify', { headers: { Authorization: `Bearer ${token}` } })
+    fetch(apiUrl('/api/auth/verify'), { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(data => { setIsAuthenticated(data.valid === true); })
       .catch(() => { setIsAuthenticated(false); })

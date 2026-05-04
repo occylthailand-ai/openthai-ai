@@ -2,15 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogoEmblem } from '../components/Logo';
 import { useToast } from '../components/ToastContext';
+import { apiUrl } from '../apiBase';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const N8N_WEBHOOK    = 'http://localhost:5678/webhook/openthai-generate';
-const BACKEND_API    = '/api/generate';
-const AB_API         = '/api/generate-ab';
-const ANALYZE_API    = '/api/analyze-image';
-const COMPETITOR_API = '/api/competitor-analyze';
-const NEWS_API       = '/api/news-rag';
-const TTS_API        = '/api/tts';
+const BACKEND_API    = () => apiUrl('/api/generate');
+const AB_API         = () => apiUrl('/api/generate-ab');
+const ANALYZE_API    = () => apiUrl('/api/analyze-image');
+const COMPETITOR_API = () => apiUrl('/api/competitor-analyze');
+const NEWS_API       = () => apiUrl('/api/news-rag');
+const TTS_API        = () => apiUrl('/api/tts');
 const HISTORY_KEY    = 'openthai_history';
 const BRAND_KEY      = 'openthai_brand';
 
@@ -35,13 +36,13 @@ async function generateContent(form) {
     const r = await fetch(N8N_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form), signal: AbortSignal.timeout(8000) });
     if (r.ok) { const d = await r.json(); if (d.hook) return d; }
   } catch (_) {}
-  const res = await fetch(BACKEND_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+  const res = await fetch(BACKEND_API(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json();
 }
 
 async function generateAB(form) {
-  const res = await fetch(AB_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+  const res = await fetch(AB_API(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
   if (!res.ok) throw new Error(`AB API error ${res.status}`);
   return res.json();
 }
@@ -61,7 +62,7 @@ async function speak(text) {
   ttsActive = true;
   // 1️⃣ ลอง ElevenLabs API ก่อน
   try {
-    const res = await fetch(TTS_API, {
+    const res = await fetch(TTS_API(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: text.slice(0, 500) }),
@@ -189,7 +190,7 @@ function CompetitorTab({ toast, onUseIdea }) {
     if (!form.niche.trim()) { toast.error('กรุณาใส่ niche / หมวดสินค้า'); return; }
     setLoading(true); setResult(null);
     try {
-      const d = await fetch(COMPETITOR_API, {
+      const d = await fetch(COMPETITOR_API(), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       }).then(r => r.json());
@@ -321,7 +322,7 @@ function NewsRagTab({ toast, onIdeaSelect }) {
   const load = async (showToast = false) => {
     if (showToast) setRefreshing(true); else setLoading(true);
     try {
-      const d = await fetch(NEWS_API).then(r => r.json());
+      const d = await fetch(NEWS_API()).then(r => r.json());
       setData(d);
       if (showToast) toast.success('✅ โหลดข่าวล่าสุดแล้ว!');
     } catch (_) { toast.error('โหลด News ไม่สำเร็จ'); }
@@ -497,7 +498,7 @@ const AIGeneratorPage = () => {
       setImgLoading(true);
       try {
         const base64 = dataUrl.split(',')[1];
-        const res = await fetch(ANALYZE_API, {
+        const res = await fetch(ANALYZE_API(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ base64, mimeType: file.type }),
