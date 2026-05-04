@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
+import { apiUrl } from '../apiBase';
 
 export default function TrendingPage() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ export default function TrendingPage() {
 
   useEffect(() => {
     document.title = '🔥 Trending Now — OpenThai AI';
-    fetch('/api/trending')
+    fetch(apiUrl('/api/trending'))
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })
       .catch(() => setLoading(false));
@@ -42,7 +43,7 @@ export default function TrendingPage() {
             {data ? `อัพเดต: ${new Date(data.ts).toLocaleTimeString('th-TH')} · แหล่ง: ${data.source === 'gemini' ? 'AI Generated' : 'Curated'}` : 'กำลังโหลด...'}
           </div>
         </div>
-        <button onClick={() => { setLoading(true); fetch('/api/trending?bust=' + Date.now()).then(r => r.json()).then(d => { setData(d); setLoading(false); }); }}
+        <button onClick={() => { setLoading(true); fetch(apiUrl('/api/trending?bust=' + Date.now())).then(r => r.json()).then(d => { setData(d); setLoading(false); }); }}
           style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '7px 14px', color: '#a5b4fc', cursor: 'pointer', fontSize: 13 }}>
           🔄 รีเฟรช
         </button>

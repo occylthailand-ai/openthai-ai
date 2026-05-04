@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
+import { apiUrl } from '../apiBase';
 
 // ── Fake data generator for demo ─────────────────────────────────────────────
 function makeDemoData(refCode) {
@@ -81,7 +82,7 @@ export default function AffiliateDashboard() {
     if (!code.trim()) { setError('กรุณากรอก Ref Code'); toast.warn('กรุณากรอก Ref Code'); return; }
     setLoading(true); setError('');
     try {
-      const res = await fetch(`/api/affiliate/stats/${code.trim().toUpperCase()}`);
+      const res = await fetch(apiUrl(`/api/affiliate/stats/${code.trim().toUpperCase()}`));
       const json = await res.json();
       if (json.success) {
         setData({ ...json.data, ...makeDemoData(code.trim().toUpperCase()) });

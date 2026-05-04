@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogoEmblem } from '../components/Logo';
+import { apiUrl } from '../apiBase';
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 const FEATURES = [
@@ -98,7 +99,7 @@ export default function LandingPage() {
     if (!email || joining) return;
     setJoining(true);
     try {
-      const res = await fetch('/api/waitlist', {
+      const res = await fetch(apiUrl('/api/waitlist'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, source: 'landing-hero' }),

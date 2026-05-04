@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
+import { apiUrl } from '../apiBase';
 
 const SUBJECTS = [
   'สอบถามเกี่ยวกับบริการ',
@@ -31,7 +32,7 @@ export default function ContactPage() {
     }
     setLoading(true);
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch(apiUrl('/api/contact'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
