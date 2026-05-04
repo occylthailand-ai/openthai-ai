@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
+import { apiUrl } from '../apiBase';
 
 // ── Tier config ─────────────────────────────────────────────────────────────
 const TIERS = [
@@ -103,7 +104,7 @@ export default function AffiliatePage() {
       const code = genRefCode(form.name);
       const link = `https://www.openthai-ai.com/?ref=${code}`;
       try {
-        const res = await fetch('/api/affiliate/apply', {
+        const res = await fetch(apiUrl('/api/affiliate/apply'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...form, ref_code: code, ref_link: link }),
