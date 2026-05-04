@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "title": "นโยบายระบบถาวร — OpenThai AI Operations Charter",
+  "effective": "2026-05-04",
+  "summary": "ตรวจความไม่เข้ากันและข้อบกพร่องให้สมบูรณ์ · เปรียบเทียบกระแส AI กับสกิลที่ขาด · แก้ไขอัตโนมัติไม่รอผู้ใช้แจ้ง · อัปเดตข้อมูลโลก 24/7 · บันทึกก่อนพังเพื่อกันข้อมูลค้างเสียหาย",
+  "pillars": [
+    {
+      "id": "integrity",
+      "title": "ความสมบูรณ์และความเข้ากัน",
+      "text": "หากมีส่วนไม่เข้ากัน ข้อบกพร่อง หรือชำรุด ให้แก้ไขทันทีจนสมบูรณ์ ไม่ปล่อยให้ค้างเป็น technical debt โดยไม่จำเป็น"
+    },
+    {
+      "id": "skills_radar",
+      "title": "Skills gap ตามความก้าวหน้า AI",
+      "text": "นำความก้าวหน้าของ AI ในปัจจุบันมาเปรียบเทียบกับโปรแกรมของเรา ระบุสกิลที่ยังขาด แนวทางจัดการ และลำดับความสำคัญอย่างสม่ำเสมอ"
+    },
+    {
+      "id": "autonomous_remedy",
+      "title": "แก้ไขทันทีโดยไม่รอผู้ใช้แจ้ง",
+      "text": "บริหารจัดการดำเนินการแก้ไขปัญหาทันทีเมื่อตรวจพบข้อบกพร่อง ไม่ต้องรอผู้ใช้งานแจ้งความบกพร่องเข้ามา — ใช้ Watchdog, Auto-heal, Self-diagnosis, Event log และ checkpoint เป็นหลักฐานการทำงาน"
+    },
+    {
+      "id": "world_connect",
+      "title": "เชื่อมต่อโลก — อัปเดตอัตโนมัติ 24/7",
+      "text": "ให้ระบบดึงและรีเฟรชข้อมูลจากแหล่งภายนอก (เช่น News RAG, health, metrics) ตามรอบที่กำหนด ตลอด 24 ชั่วโมงทุกวัน เพื่อลดภาระผู้ใช้ในการกดรีเฟรชเอง"
+    },
+    {
+      "id": "durability",
+      "title": "ก่อนพัง — บันทึกก่อนเสมอ",
+      "text": "หากระบบพังหรือมีความเสี่ยง ให้บันทึกข้อมูลและสถานะงานที่กำลังดำเนินการทันที (event log, agent checkpoint, agents state, process-level error hooks) เพื่อไม่ให้ข้อมูลที่กำลังดำเนินการอยู่ชำรุดเสียหาย"
+    }
+  ],
+  "technical_hooks": [
+    "GET /api/system/skills-gap — เปรียบเทียบอุตสาหกรรม + ช่องว่าง + วิธีบริหาร",
+    "GET /api/system/metrics — checkpoint งานค้าง",
+    "Watchdog 30 นาที + Auto-heal + Agent cron",
+    "News RAG cache refresh ทุก 4 ชั่วโมง",
+    "system_log.json + agent_checkpoint.json + uncaughtException / unhandledRejection logging"
+  ]
+}
