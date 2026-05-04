@@ -1,0 +1,38 @@
+# ── Large binary files & installers ──────────────────────────────────────────
+*.exe
+*.msi
+*.zip
+*.tar.gz
+*.tar.xz
+*.jfif
+*.pdf
+*.docx
+*.xlsx
+*.rtf
+*.lnk
+
+# ── Dev tools & temp ──────────────────────────────────────────────────────────
+.history/
+.snapshots/
+.vscode/
+.claude/
+node_modules/
+*.code-workspace
+
+# ── Build outputs (Vercel builds fresh) ───────────────────────────────────────
+frontend/dist/
+
+# Runtime data — ไม่ upload (เกิดที่ server) ยกเว้น system_charter.json ซึ่งเป็น static config
+backend/data/affiliates.json
+backend/data/agents.json
+backend/data/system_log.json
+backend/data/agent_checkpoint.json
+backend/data/waitlist.json
+# backend/data/system_charter.json → DEPLOY ได้ (permanent policy config)
+
+# ── Misc large files ──────────────────────────────────────────────────────────
+all-platform-files/
+oracleJdk-25/
+outputs/
+*.jdk
+*.jre
