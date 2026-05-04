@@ -12,6 +12,14 @@ import cron from 'node-cron';
 import https from 'https';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// ── Vercel serverless detection ──────────────────────────────────────────────
+const IS_VERCEL = !!process.env.VERCEL;
+
+// บน Vercel: ไฟล์ static อ่านได้จาก repo, ไฟล์ writable ต้องใช้ /tmp
+// Local: ทุกอย่างอยู่ใน backend/data/
+const STATIC_DATA_DIR = join(__dirname, 'data');
+const WRITE_DATA_DIR  = IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR;
 import {
   signToken, verifyToken, requireAuth,
   getAdminUsers, checkPassword, checkOverrideKey,
@@ -266,7 +274,7 @@ async function sendAffiliateWelcome(to, name, refCode, refLink) {
 
 // ─── Affiliate JSON File DB ───────────────────────────────────────────────────
 
-const AFF_FILE = new URL('./data/affiliates.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
+const AFF_FILE = join(WRITE_DATA_DIR, 'affiliates.json');
 
 function loadAffiliates() {
   try {
@@ -414,7 +422,7 @@ app.post('/api/contact', contactLimiter, (req, res) => {
 });
 
 // ─── Waitlist / Email Capture (from Landing Page) ────────────────────────────
-const WAITLIST_FILE = new URL('./data/waitlist.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
+const WAITLIST_FILE = join(WRITE_DATA_DIR, 'waitlist.json');
 
 function loadWaitlist() {
   try { if (existsSync(WAITLIST_FILE)) return JSON.parse(readFileSync(WAITLIST_FILE, 'utf8')); } catch (_) {}
@@ -606,9 +614,9 @@ app.post('/api/generate-ab', generateLimiter, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  AI AGENT SCHEDULER
 // ═══════════════════════════════════════════════════════════════════════════════
-const AGENT_FILE = new URL('./data/agents.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
-const CHECKPOINT_FILE = new URL('./data/agent_checkpoint.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
-const CHARTER_FILE    = new URL('./data/system_charter.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
+const AGENT_FILE      = join(WRITE_DATA_DIR,  'agents.json');
+const CHECKPOINT_FILE = join(WRITE_DATA_DIR,  'agent_checkpoint.json');
+const CHARTER_FILE    = join(STATIC_DATA_DIR, 'system_charter.json'); // read-only static config
 
 /** นโยบายถาวร — อ่านจาก backend/data/system_charter.json (แก้ไฟล์ได้โดยไม่ต้องรีสตาร์ท) */
 function getSystemCharter() {
@@ -990,7 +998,7 @@ app.post('/api/competitor-analyze', competitorLimiter, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // ── Persistent System Event Log ───────────────────────────────────────────────
-const LOG_FILE  = new URL('./data/system_log.json', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1');
+const LOG_FILE  = join(WRITE_DATA_DIR, 'system_log.json');
 const MAX_LOGS  = 500;
 
 function loadSysLogs() {
@@ -1063,14 +1071,15 @@ async function runWatchdog() {
   return healed;
 }
 
-// ทุก 30 นาที
-cron.schedule('*/30 * * * *', async () => { await runWatchdog(); });
-// รีเฟรชแหล่งข่าว RAG อัตโนมัติ (เคลียร์แคชทุก 4 ชม. — เชื่อมโลกข้อมูลใหม่โดยไม่ต้องรอผู้ใช้)
-cron.schedule('0 */4 * * *', () => {
-  newsCache.data = null;
-  newsCache.ts = 0;
-  addLog('info', 'Scheduler', '📰 News RAG cache cleared — คำขอถัดไปดึงหัวข้อสด');
-});
+// Cron jobs รันเฉพาะ local — บน Vercel ใช้ Vercel Cron Jobs แทน (ใน vercel.json)
+if (!IS_VERCEL) {
+  cron.schedule('*/30 * * * *', async () => { await runWatchdog(); });
+  cron.schedule('0 */4 * * *', () => {
+    newsCache.data = null;
+    newsCache.ts = 0;
+    addLog('info', 'Scheduler', '📰 News RAG cache cleared — คำขอถัดไปดึงหัวข้อสด');
+  });
+}
 // Log startup
 addLog('info', 'System', `🚀 OpenThai AI backend started — AI:${anthropic?'Claude':gemini?'Gemini':'Mock'}`);
 (() => { const c = getSystemCharter(); addLog('info', 'Charter', `📜 นโยบายถาวร v${c.version} — ${c.title}`); })();
@@ -1197,6 +1206,14 @@ app.post('/api/system/auto-heal', async (req, res) => {
     addLog('error', 'AutoHeal', err.message);
     res.status(500).json({ success: false, message: err.message });
   }
+});
+
+// ── 4b. GET /api/system/news-rag-clear — Vercel Cron trigger (ทุก 4 ชม.) ─────
+app.get('/api/system/news-rag-clear', (req, res) => {
+  newsCache.data = null;
+  newsCache.ts   = 0;
+  addLog('info', 'Scheduler', '📰 News RAG cache cleared via cron — ข้อมูลสด');
+  res.json({ success: true, message: 'News RAG cache cleared', ts: new Date().toISOString() });
 });
 
 // ── 5. GET /api/system/watchdog ───────────────────────────────────────────────
@@ -1418,6 +1435,18 @@ app.post('/api/auth/recovery-codes/generate', (req, res) => {
 //  STARTUP
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ── Process-level error protection (local dev + Vercel both) ─────────────────
+process.on('uncaughtException', (err) => {
+  try { addLog('error', 'Process', `uncaughtException: ${err.message}`, err.stack?.slice(0, 4000)); } catch (_) {}
+  console.error('[uncaughtException]', err);
+});
+process.on('unhandledRejection', (reason) => {
+  const msg = reason instanceof Error ? reason.message : String(reason);
+  const detail = reason instanceof Error ? reason.stack?.slice(0, 4000) : undefined;
+  try { addLog('error', 'Process', `unhandledRejection: ${msg}`, detail); } catch (_) {}
+  console.error('[unhandledRejection]', reason);
+});
+
 async function startServer() {
   // Warm up admin users (hashes passwords on first run)
   await getAdminUsers();
@@ -1430,17 +1459,6 @@ async function startServer() {
     console.log(`   RECOVERY_CODES=${codes.join(',')}\n`);
   }
 
-  process.on('uncaughtException', (err) => {
-    try { addLog('error', 'Process', `uncaughtException: ${err.message}`, err.stack?.slice(0, 4000)); } catch (_) {}
-    console.error('[uncaughtException]', err);
-  });
-  process.on('unhandledRejection', (reason) => {
-    const msg = reason instanceof Error ? reason.message : String(reason);
-    const detail = reason instanceof Error ? reason.stack?.slice(0, 4000) : undefined;
-    try { addLog('error', 'Process', `unhandledRejection: ${msg}`, detail); } catch (_) {}
-    console.error('[unhandledRejection]', reason);
-  });
-
   app.listen(PORT, () => {
     console.log(`\n🚀 OpenThai AI Backend running on http://localhost:${PORT}`);
     console.log(`   AI Primary  : ${anthropic ? '✅ Claude Haiku 4.5' : '⚠️  ใส่ ANTHROPIC_API_KEY ใน .env'}`);
@@ -1448,8 +1466,19 @@ async function startServer() {
     console.log(`   AI Mode     : ${anthropic ? 'Claude' : gemini ? 'Gemini' : '⚠️  Mock (ไม่มี API key)'}`);
     console.log(`   Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? '✅ Configured' : '⚠️  Not configured'}`);
     console.log(`   Recovery    : ${process.env.RECOVERY_CODES ? '✅ Codes set' : '⚠️  No codes in .env'}`);
+    console.log(`   IS_VERCEL   : ${IS_VERCEL ? '✅ Serverless mode' : '⚠️  Local mode'}`);
     console.log(`   Health      : http://localhost:${PORT}/api/health\n`);
   });
 }
 
-startServer();
+// ── Export app สำหรับ Vercel Serverless (api/index.js import ไปใช้) ──────────
+export { app };
+
+// ── Local: start HTTP server — Vercel จัดการ HTTP เองผ่าน api/index.js ───────
+if (!IS_VERCEL) {
+  // getAdminUsers() warm-up + listen
+  startServer();
+} else {
+  // Vercel: warm-up admin users ตอน cold start (ไม่ต้อง listen)
+  getAdminUsers().catch(() => {});
+}
