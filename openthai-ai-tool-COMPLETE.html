@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenThai AI - TikTok Content Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Noto Sans Thai', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #1e1b4b 0%, #581c87 50%, #831843 100%); }
+        .glass { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+        .gradient-btn { background: linear-gradient(90deg, #ec4899 0%, #8b5cf6 100%); }
+        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .typing::after { content: '|'; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Header -->
+    <header class="glass border-b border-white/10">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 gradient-btn rounded-xl flex items-center justify-center">
+                    <span class="text-xl">🚀</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white">OpenThai AI</h1>
+                    <p class="text-xs text-gray-400">TikTok Content Generator</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="http://localhost:8000/logistics" class="hidden sm:inline text-xs px-3 py-2 bg-white/10 border border-white/20 text-gray-300 rounded-lg hover:bg-white/20 transition">
+                    🚚 Logistics
+                </a>
+                <span id="usageCounter" class="text-sm text-gray-300">Free: 3/3 เหลือ</span>
+                <button onclick="showUpgrade()" class="px-4 py-2 gradient-btn text-white rounded-lg text-sm font-medium hover:opacity-90 transition">
+                    อัพเกรด Pro ฿149
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Input Form -->
+            <div class="glass rounded-2xl p-6 border border-white/20">
+                <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <span>📝</span> กรอกข้อมูลสินค้า
+                </h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">ชื่อสินค้า *</label>
+                        <input type="text" id="productName" placeholder="เช่น ผ้าไหมมัดหมี่, iPhone 15"
+                            class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">หมวดหมู่</label>
+                        <select id="category" class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-pink-500">
+                            <option value="food" class="bg-gray-800">🍜 อาหาร/เครื่องดื่ม</option>
+                            <option value="textile" class="bg-gray-800">🧵 ผ้า/สิ่งทอ</option>
+                            <option value="general" class="bg-gray-800" selected>📦 ทั่วไป</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">ราคา (บาท)</label>
+                            <input type="number" id="price" placeholder="0"
+                                class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-pink-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">ภูมิภาค</label>
+                            <select id="region" class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-pink-500">
+                                <option value="Thailand" class="bg-gray-800">🇹🇭 ไทย</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">จุดขาย/จุดเด่น</label>
+                        <input type="text" id="usp" placeholder="เช่น ทอมือ 100%, ส่งฟรี"
+                            class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    </div>
+                    <button onclick="generateContent()" id="generateBtn"
+                        class="w-full py-4 gradient-btn text-white rounded-xl font-bold text-lg hover:opacity-90 transition flex items-center justify-center gap-2">
+                        <span>✨</span> สร้าง TikTok Content
+                    </button>
+                    <div id="errorMsg" class="hidden p-4 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Result Section -->
+            <div class="glass rounded-2xl p-6 border border-white/20">
+                <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <span>🎬</span> TikTok Content
+                </h2>
+                <div id="emptyState" class="text-center py-16 text-gray-400">
+                    <div class="text-6xl mb-4">🎥</div>
+                    <p>กรอกข้อมูลแล้วกด "สร้าง TikTok Content"</p>
+                </div>
+                <div id="loadingState" class="hidden text-center py-16">
+                    <div class="text-6xl mb-4 pulse">🤖</div>
+                    <p class="text-white typing">AI กำลังสร้าง Content</p>
+                </div>
+                <div id="resultContent" class="hidden space-y-6">
+                    <div class="bg-black/30 rounded-xl p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-white">📜 Script (30 วินาที)</h3>
+                            <button onclick="copyScript()" class="text-xs px-3 py-1 bg-white/10 rounded-lg text-gray-300 hover:bg-white/20">📋 Copy</button>
+                        </div>
+                        <div class="space-y-3 text-sm">
+                            <div class="bg-pink-500/20 p-3 rounded-lg">
+                                <span class="text-pink-400 font-medium">🎯 Hook:</span>
+                                <p id="hookText" class="text-white mt-1"></p>
+                            </div>
+                            <div class="bg-violet-500/20 p-3 rounded-lg">
+                                <span class="text-violet-400 font-medium">📖 Story:</span>
+                                <p id="storyText" class="text-white mt-1"></p>
+                            </div>
+                            <div class="bg-amber-500/20 p-3 rounded-lg">
+                                <span class="text-amber-400 font-medium">📢 CTA:</span>
+                                <p id="ctaText" class="text-white mt-1"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-black/30 rounded-xl p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-white">💬 Caption</h3>
+                            <button onclick="copyCaption()" class="text-xs px-3 py-1 bg-white/10 rounded-lg text-gray-300 hover:bg-white/20">📋 Copy</button>
+                        </div>
+                        <p id="captionText" class="text-gray-200 text-sm"></p>
+                    </div>
+                    <div class="bg-black/30 rounded-xl p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-white">#️⃣ Hashtags</h3>
+                            <button onclick="copyHashtags()" class="text-xs px-3 py-1 bg-white/10 rounded-lg text-gray-300 hover:bg-white/20">📋 Copy</button>
+                        </div>
+                        <div id="hashtagsContainer" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const BACKEND_URL = 'http://localhost:8000';
+        let selectedHook = 'Story';
+
+        function selectHook(hook) {
+            selectedHook = hook;
+        }
+
+        async function generateContent() {
+            const productName = document.getElementById('productName').value.trim();
+            if (!productName) {
+                showError('กรุณากรอกชื่อสินค้า');
+                return;
+            }
+
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultContent').classList.add('hidden');
+            document.getElementById('loadingState').classList.remove('hidden');
+            document.getElementById('errorMsg').classList.add('hidden');
+
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        product: productName,
+                        category: document.getElementById('category').value,
+                        platform: 'TikTok',
+                        price: document.getElementById('price').value,
+                        audience: document.getElementById('usp').value || 'ทั่วไป'
+                    })
+                });
+                
+                if (!res.ok) throw new Error(`Server error ${res.status}`);
+                const data = await res.json();
+
+                document.getElementById('hookText').textContent = data.hook || '';
+                document.getElementById('storyText').textContent = (data.script || []).slice(0, -1).join('\n');
+                document.getElementById('ctaText').textContent = (data.script || [])[(data.script || []).length - 1] || '';
+                document.getElementById('captionText').textContent = data.caption || '';
+
+                const hashtagsContainer = document.getElementById('hashtagsContainer');
+                const hashtags = data.hashtags || [];
+                hashtagsContainer.innerHTML = hashtags.map(tag => 
+                    `<span class="px-3 py-1 bg-blue-500/30 text-blue-300 rounded-full text-sm">${tag}</span>`
+                ).join('');
+
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('resultContent').classList.remove('hidden');
+            } catch (e) {
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+                showError(`เชื่อมต่อ Backend ไม่ได้: ${e.message}`);
+            }
+        }
+
+        function copyScript() {
+            const text = `${document.getElementById('hookText').textContent}\n\n${document.getElementById('storyText').textContent}\n\n${document.getElementById('ctaText').textContent}`;
+            navigator.clipboard.writeText(text);
+            alert('คัดลอก Script แล้ว!');
+        }
+
+        function copyCaption() {
+            navigator.clipboard.writeText(document.getElementById('captionText').textContent);
+            alert('คัดลอก Caption แล้ว!');
+        }
+
+        function copyHashtags() {
+            const hashtags = Array.from(document.querySelectorAll('#hashtagsContainer span')).map(el => el.textContent).join(' ');
+            navigator.clipboard.writeText(hashtags);
+            alert('คัดลอก Hashtags แล้ว!');
+        }
+
+        function showError(msg) {
+            const errorEl = document.getElementById('errorMsg');
+            errorEl.textContent = msg;
+            errorEl.classList.remove('hidden');
+        }
+
+        function showUpgrade() {
+            alert('ติดต่อเรา: occylthailand@gmail.com หรือ LINE: @openthaiAI');
+        }
+    </script>
+</body>
+</html>
