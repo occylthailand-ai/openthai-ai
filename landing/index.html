@@ -60,7 +60,9 @@
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--primary);
+            display: flex; align-items: center; gap: 0.5rem;
         }
+        .logo img { height: 36px; }
         
         .nav-links a {
             margin-left: 2rem;
@@ -515,15 +517,19 @@
     <!-- Navigation -->
     <nav>
         <div class="nav-container">
-            <a href="index.html" style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;">
-                <img src="images/logo.png" alt="OpenThai AI" style="height:36px;" onerror="this.style.display='none'">
-                <span class="logo">OpenThai AI</span>
+            <a href="index.html" style="text-decoration:none;">
+                <div class="logo">
+                    <img src="images/logo.png" alt="OpenThai AI" onerror="this.style.display='none'">
+                    <span>OpenThai AI</span>
+                </div>
             </a>
             <div class="nav-links">
                 <a href="#features">ฟีเจอร์</a>
                 <a href="#how-it-works">วิธีใช้งาน</a>
                 <a href="#pricing">ราคา</a>
                 <a href="#partner-hub">Partner Hub</a>
+                <a href="platform.html" style="color:#666;">🗂️ Platform v3</a>
+                <a href="blockchain.html" style="color:#F7C948; font-weight:600;">⛓️ OTAChain</a>
                 <a href="generator.html" style="background: var(--gradient); color: white; padding: 0.4rem 1.2rem; border-radius: 20px;">🚀 ลองใช้ AI</a>
             </div>
         </div>
@@ -642,6 +648,7 @@
                 <a href="generator.html" class="cta-button" style="background: var(--light); color: var(--dark);">เริ่มใช้ฟรี →</a>
             </div>
             <div class="pricing-card popular">
+                <div style="background:var(--gradient);color:white;font-size:0.72rem;font-weight:700;padding:0.25rem 0.75rem;border-radius:20px;display:inline-block;margin-bottom:0.75rem;">ยอดนิยม</div>
                 <h3>⭐ Pro</h3>
                 <div class="price">฿149 <span>/เดือน</span></div>
                 <ul class="pricing-features">
@@ -651,7 +658,7 @@
                     <li>AI Critic Score</li>
                     <li>อธิบายเหตุผล</li>
                 </ul>
-                <a href="#waitlist" class="cta-button">ลงทะเบียน</a>
+                <a href="login.html?plan=pro&next=payment.html?plan=pro" class="cta-button">อัปเกรด Pro →</a>
             </div>
             <div class="pricing-card">
                 <h3>Business</h3>
@@ -663,7 +670,7 @@
                     <li>Priority Support</li>
                     <li>Custom Training</li>
                 </ul>
-                <a href="#waitlist" class="cta-button" style="background: var(--dark); color: white;">ติดต่อเรา</a>
+                <a href="login.html?plan=business&next=payment.html?plan=business" class="cta-button" style="background: var(--dark); color: white;">อัปเกรด Business →</a>
             </div>
         </div>
     </section>
@@ -701,6 +708,122 @@
                 เข้าร่วม Partner Hub ฟรี →
             </a>
             <p style="margin-top:1rem; opacity:0.5; font-size:0.85rem;">มีพาร์ทเนอร์แล้ว 47 ราย | เปิด Beta เดือนพฤษภาคม 2026</p>
+        </div>
+    </section>
+
+    <!-- ⛓️ BLOCKCHAIN FINTECH SECTION -->
+    <section id="blockchain" style="padding:5rem 2rem; background:linear-gradient(135deg,#0D0D1A 0%,#1A1A2E 100%); color:white; overflow:hidden; position:relative;">
+      <!-- BG glow -->
+      <div style="position:absolute;top:-100px;left:-100px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,.12),transparent 70%);pointer-events:none;"></div>
+      <div style="position:absolute;bottom:-100px;right:-100px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(247,201,72,.08),transparent 70%);pointer-events:none;"></div>
+
+      <div style="max-width:1100px;margin:0 auto;position:relative;">
+        <!-- Badge -->
+        <div style="text-align:center;margin-bottom:1rem;">
+          <span style="display:inline-flex;align-items:center;gap:.5rem;background:rgba(247,201,72,.1);border:1px solid rgba(247,201,72,.3);border-radius:20px;padding:.4rem 1.1rem;font-size:.82rem;font-weight:700;color:#F7C948;">⛓️ NEW — OpenThai Chain · Blockchain Fintech</span>
+        </div>
+        <h2 class="section-title" style="color:white; text-align:center;">💎 สร้างคอนเทนต์ → รับ OTA Token</h2>
+        <p style="text-align:center;color:rgba(255,255,255,.6);max-width:580px;margin:-.5rem auto 3rem;font-size:1rem;line-height:1.7;">ระบบ Blockchain Fintech ครบวงจร — ยิ่งสร้างคอนเทนต์ดี ยิ่งรับ Token เยอะ Stake รับ APY 24%, Mint NFT, รับ Affiliate อัตโนมัติผ่าน Smart Contract</p>
+
+        <!-- 4 feature cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.25rem;margin-bottom:3rem;">
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:1.75rem;transition:.3s;" onmouseover="this.style.borderColor='rgba(255,107,53,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">
+            <div style="font-size:2.5rem;margin-bottom:.75rem;">🪙</div>
+            <h3 style="margin-bottom:.4rem;font-size:1rem;">OTA Token</h3>
+            <p style="font-size:.85rem;color:rgba(255,255,255,.5);line-height:1.6;">Token หลักบน BNB Chain — ใช้จ่าย, Stake ปลดล็อก Pro, Vote DAO</p>
+            <div style="margin-top:.75rem;font-size:.8rem;color:#F7C948;font-weight:700;">฿1.85 / OTA · ▲ +12.4%</div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:1.75rem;transition:.3s;" onmouseover="this.style.borderColor='rgba(0,230,118,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">
+            <div style="font-size:2.5rem;margin-bottom:.75rem;">✍️</div>
+            <h3 style="margin-bottom:.4rem;font-size:1rem;">Earn-to-Create</h3>
+            <p style="font-size:.85rem;color:rgba(255,255,255,.5);line-height:1.6;">สร้างคอนเทนต์ 1 ชิ้น = +5 OTA, คุณภาพสูง = +15 OTA, Viral = +25 OTA</p>
+            <div style="margin-top:.75rem;font-size:.8rem;color:#00E676;font-weight:700;">รับอัตโนมัติ · ไม่มีขั้นต่ำ</div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:1.75rem;transition:.3s;" onmouseover="this.style.borderColor='rgba(124,77,255,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">
+            <div style="font-size:2.5rem;margin-bottom:.75rem;">🔒</div>
+            <h3 style="margin-bottom:.4rem;font-size:1rem;">DeFi Staking</h3>
+            <p style="font-size:.85rem;color:rgba(255,255,255,.5);line-height:1.6;">Lock OTA → APY สูงสุด 24% + ปลดล็อก Pro/Business โดยไม่จ่ายรายเดือน</p>
+            <div style="margin-top:.75rem;font-size:.8rem;color:#B39DFF;font-weight:700;">APY 8-24% · 4 Tier</div>
+          </div>
+          <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:1.75rem;transition:.3s;" onmouseover="this.style.borderColor='rgba(247,201,72,.4)'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">
+            <div style="font-size:2.5rem;margin-bottom:.75rem;">🤝</div>
+            <h3 style="margin-bottom:.4rem;font-size:1rem;">Smart Contract Affiliate</h3>
+            <p style="font-size:.85rem;color:rgba(255,255,255,.5);line-height:1.6;">Commission จ่ายอัตโนมัติ On-Chain ≤3 วินาที ไม่ต้องรอ ไม่มีตัวกลาง</p>
+            <div style="margin-top:.75rem;font-size:.8rem;color:#F7C948;font-weight:700;">8% OTOP · 20% Subscription</div>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:1.5rem 2rem;margin-bottom:2.5rem;">
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem;font-weight:800;color:#F7C948;">100M</div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:.2rem;">OTA Total Supply</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,.08);"></div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem;font-weight:800;color:#00E676;">24%</div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:.2rem;">Gold Tier APY</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,.08);"></div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem;font-weight:800;color:#B39DFF;">1,247</div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:.2rem;">NFT Minted</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,.08);"></div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem;font-weight:800;color:#fff;">฿2.4M</div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:.2rem;">Affiliate Paid On-Chain</div>
+          </div>
+          <div style="width:1px;background:rgba(255,255,255,.08);"></div>
+          <div style="text-align:center;">
+            <div style="font-size:1.5rem;font-weight:800;color:#FF8E53;">BSC</div>
+            <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-top:.2rem;">BNB Smart Chain</div>
+          </div>
+        </div>
+
+        <!-- CTA buttons -->
+        <div style="text-align:center;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+          <a href="blockchain.html" style="display:inline-flex;align-items:center;gap:.5rem;background:linear-gradient(135deg,#FF6B35,#FF8E53,#F7C948);color:white;padding:.9rem 2rem;border-radius:14px;text-decoration:none;font-weight:700;font-size:1rem;box-shadow:0 4px 20px rgba(255,107,53,.4);transition:.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+            ⛓️ OpenThai Chain Hub →
+          </a>
+          <a href="wallet.html" style="display:inline-flex;align-items:center;gap:.5rem;background:transparent;color:white;border:1px solid rgba(255,255,255,.25);padding:.9rem 2rem;border-radius:14px;text-decoration:none;font-weight:600;font-size:1rem;transition:.2s;" onmouseover="this.style.borderColor='rgba(255,255,255,.6)'" onmouseout="this.style.borderColor='rgba(255,255,255,.25)'">
+            💎 เปิด Wallet
+          </a>
+          <a href="nft.html" style="display:inline-flex;align-items:center;gap:.5rem;background:rgba(124,77,255,.15);color:#B39DFF;border:1px solid rgba(124,77,255,.35);padding:.9rem 2rem;border-radius:14px;text-decoration:none;font-weight:600;font-size:1rem;transition:.2s;">
+            🖼️ NFT Market
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section style="padding:5rem 2rem; background:var(--light);">
+        <h2 class="section-title">💬 เสียงจากผู้ใช้จริง</h2>
+        <div style="max-width:1000px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;">
+            <div style="background:white;border-radius:20px;padding:1.75rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                <div style="font-size:1.25rem;margin-bottom:1rem;">⭐⭐⭐⭐⭐</div>
+                <p style="color:#444;font-size:0.9rem;line-height:1.7;margin-bottom:1rem;">"ก่อนหน้านี้นั่งคิด script ทีนึงใช้เวลา 2 ชั่วโมง ตอนนี้ 30 วินาที ได้ content ที่ดีกว่าด้วย ยอดวิวเพิ่มขึ้น 3 เท่า"</p>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <div style="width:40px;height:40px;background:var(--gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;flex-shrink:0;">น</div>
+                    <div><div style="font-weight:600;font-size:0.85rem;">นภา ร.</div><div style="font-size:0.78rem;color:#888;">TikTok Creator • สมุนไพรไทย</div></div>
+                </div>
+            </div>
+            <div style="background:white;border-radius:20px;padding:1.75rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                <div style="font-size:1.25rem;margin-bottom:1rem;">⭐⭐⭐⭐⭐</div>
+                <p style="color:#444;font-size:0.9rem;line-height:1.7;margin-bottom:1rem;">"ขายผ้าทอมืออยู่ใน TikTok มา 2 ปี แต่ไม่รู้จะพูดยังไงให้คนซื้อ OpenThai AI ช่วยได้มาก ยอดขายเพิ่มขึ้นเดือนแรกเลย"</p>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#4ECDC4,#44A08D);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;flex-shrink:0;">ส</div>
+                    <div><div style="font-weight:600;font-size:0.85rem;">สมใจ ก.</div><div style="font-size:0.78rem;color:#888;">ผู้ผลิต OTOP • ผ้าทอมือ จ.น่าน</div></div>
+                </div>
+            </div>
+            <div style="background:white;border-radius:20px;padding:1.75rem;box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                <div style="font-size:1.25rem;margin-bottom:1rem;">⭐⭐⭐⭐⭐</div>
+                <p style="color:#444;font-size:0.9rem;line-height:1.7;margin-bottom:1rem;">"ขายของจากจีนอยู่ เห็นว่ารองรับสินค้า Global ด้วยก็ลอง Hook ที่ได้มา viral จริงๆ ใช้คืนแรกยอด 50k วิว"</p>
+                <div style="display:flex;align-items:center;gap:0.75rem;">
+                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#1A1A2E,#2D2D5E);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;flex-shrink:0;">ป</div>
+                    <div><div style="font-weight:600;font-size:0.85rem;">ปิยะ ล.</div><div style="font-size:0.78rem;color:#888;">Cross-border Seller • สินค้าจีน</div></div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -754,9 +877,14 @@
     <!-- Footer -->
     <footer>
         <div class="footer-links">
+            <a href="generator.html">🚀 AI Generator</a>
+            <a href="blockchain.html">⛓️ OTAChain</a>
+            <a href="wallet.html">💎 Wallet</a>
+            <a href="nft.html">🖼️ NFT</a>
+            <a href="login.html">เข้าสู่ระบบ</a>
             <a href="privacy.html">นโยบายความเป็นส่วนตัว</a>
             <a href="terms.html">ข้อกำหนดการใช้งาน</a>
-            <a href="mailto:contact@openthai-ai.com">ติดต่อเรา</a>
+            <a href="mailto:occylthailand@gmail.com">ติดต่อเรา</a>
         </div>
         <p class="copyright">© 2026 OpenThai AI — Made with ❤️ in Thailand</p>
     </footer>

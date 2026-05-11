@@ -581,6 +581,50 @@
                 </select>
             </div>
 
+            <!-- ✅ NEW: Platform Selector -->
+            <div class="form-group">
+                <label>Platform เป้าหมาย <span style="background:linear-gradient(135deg,#7C4DFF,#2979FF);color:white;font-size:0.68rem;font-weight:700;padding:0.15rem 0.5rem;border-radius:10px;margin-left:0.3rem;">NEW v2.0</span></label>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;margin-top:0.4rem;" id="platformGrid">
+                    <div class="hook-option active" data-platform="tiktok" onclick="selectPlatform(this)" style="font-size:0.78rem;padding:0.5rem 0.3rem;">
+                        <span class="emoji">🎵</span>TikTok
+                    </div>
+                    <div class="hook-option" data-platform="xiaohongshu" onclick="selectPlatform(this)" style="font-size:0.78rem;padding:0.5rem 0.3rem;">
+                        <span class="emoji">🌸</span>小红书
+                    </div>
+                    <div class="hook-option" data-platform="shopee" onclick="selectPlatform(this)" style="font-size:0.78rem;padding:0.5rem 0.3rem;">
+                        <span class="emoji">🛒</span>Shopee
+                    </div>
+                    <div class="hook-option" data-platform="taobao" onclick="selectPlatform(this)" style="font-size:0.78rem;padding:0.5rem 0.3rem;">
+                        <span class="emoji">📦</span>Taobao
+                    </div>
+                    <div class="hook-option" data-platform="temu" onclick="selectPlatform(this)" style="font-size:0.78rem;padding:0.5rem 0.3rem;">
+                        <span class="emoji">💰</span>TEMU
+                    </div>
+                    <div class="hook-option" data-platform="all" onclick="selectPlatform(this)" style="font-size:0.78rem;padding:0.5rem 0.3rem;background:linear-gradient(135deg,rgba(255,107,53,0.1),rgba(247,201,72,0.1));border-color:#FF8E53;">
+                        <span class="emoji">🌐</span>ทุก Platform
+                    </div>
+                </div>
+            </div>
+
+            <!-- ✅ NEW: Language Selector -->
+            <div class="form-group">
+                <label>ภาษาที่ต้องการ</label>
+                <div style="display:flex;gap:0.5rem;margin-top:0.4rem;flex-wrap:wrap;" id="langGrid">
+                    <div class="hook-option active" data-lang="th" onclick="selectLang(this)" style="flex:1;font-size:0.8rem;min-width:60px;">
+                        <span class="emoji">🇹🇭</span>ไทย
+                    </div>
+                    <div class="hook-option" data-lang="zh" onclick="selectLang(this)" style="flex:1;font-size:0.8rem;min-width:60px;">
+                        <span class="emoji">🇨🇳</span>中文
+                    </div>
+                    <div class="hook-option" data-lang="en" onclick="selectLang(this)" style="flex:1;font-size:0.8rem;min-width:60px;">
+                        <span class="emoji">🇬🇧</span>English
+                    </div>
+                    <div class="hook-option" data-lang="all" onclick="selectLang(this)" style="flex:1;font-size:0.8rem;min-width:60px;">
+                        <span class="emoji">🌐</span>ทั้ง 3 ภาษา
+                    </div>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>รายละเอียดสินค้า</label>
                 <textarea id="productDesc" placeholder="บรรยายสินค้าโดยย่อ เช่น: ทำจากไหมธรรมชาติ 100% ย้อมสีด้วยครามธรรมชาติ ทอมือโดยช่างฝีมือชุมชน"></textarea>
@@ -731,11 +775,27 @@
                     <div class="why-box" id="whyBox">—</div>
                 </div>
 
+                <!-- ✅ NEW: Quality Feedback -->
+                <div id="qualityFeedback" style="display:none;padding:0.75rem 1rem;background:linear-gradient(135deg,#fff5f1,#fff);border:1.5px solid #FFD4C2;border-radius:12px;font-size:0.85rem;color:#666;line-height:1.5;margin-bottom:1rem;"></div>
+
+                <!-- ✅ NEW: Multi-Language Output -->
+                <div id="multiLangBox" style="display:none;padding:1rem;background:white;border-radius:14px;border:2px solid #e8e8e8;margin-bottom:1rem;"></div>
+
+                <!-- ✅ NEW: OTA Earn Box -->
+                <div id="otaEarnBox" style="display:none;padding:0.85rem 1rem;background:linear-gradient(135deg,rgba(255,107,53,.08),rgba(247,201,72,.06));border:1.5px solid rgba(247,201,72,.3);border-radius:12px;margin-bottom:1rem;display:flex;align-items:center;gap:0.75rem;">
+                    <span style="font-size:1.5rem;">🪙</span>
+                    <div>
+                        <div style="font-weight:700;font-size:0.88rem;color:#FF6B35;">+5 OTA Token ได้รับแล้ว!</div>
+                        <div style="font-size:0.75rem;color:#888;">จาก Earn-to-Create · <a href="wallet.html" style="color:#FF6B35;">ดู Wallet →</a></div>
+                    </div>
+                </div>
+
                 <!-- Copy Actions -->
                 <div class="copy-actions">
                     <button class="copy-btn" onclick="copyScript()">📋 Copy Script</button>
                     <button class="copy-btn" onclick="copyCaption()">📋 Copy Caption</button>
                     <button class="copy-btn" onclick="copyAll()">📋 Copy ทั้งหมด</button>
+                    <a href="nft.html" style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.5rem 1rem;background:linear-gradient(135deg,#7C4DFF,#2979FF);color:white;border-radius:10px;font-size:0.82rem;font-weight:700;text-decoration:none;">🖼️ Mint NFT</a>
                 </div>
 
             </div>
@@ -820,10 +880,46 @@
 </div>
 
 <script>
-    // ==================== CONFIG ====================
-    const API_URL = '/api';
+    // ==================== CONFIG v2.0 ====================
+    // ✅ API URL: ใช้ /api (Vercel serverless) หรือ backend local
+    const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:8000'   // local FastAPI
+        : '/api';                   // Vercel serverless
     let selectedHook = 'auto';
+    let selectedPlatform = 'tiktok';
+    let selectedLang = 'th';
     let selectedRole = '';
+    let lastGeneratedData = null; // เก็บ data สำหรับ copy + OTA
+
+    // ✅ OTA Token earned this session
+    let otaEarned = 0;
+    function showOTAToast(amount, reason) {
+        otaEarned += amount;
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position:fixed;bottom:20px;right:20px;z-index:9999;
+            background:linear-gradient(135deg,#FF6B35,#F7C948);
+            color:white;padding:0.75rem 1.25rem;border-radius:14px;
+            font-weight:700;font-size:0.88rem;
+            box-shadow:0 4px 20px rgba(255,107,53,0.4);
+            animation:slideIn 0.3s ease;
+        `;
+        toast.innerHTML = `🪙 +${amount} OTA Token!<br><span style="font-size:0.75rem;opacity:0.9">${reason}</span>`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3500);
+    }
+
+    // Platform + Language selectors
+    function selectPlatform(el) {
+        document.querySelectorAll('#platformGrid .hook-option').forEach(o => o.classList.remove('active'));
+        el.classList.add('active');
+        selectedPlatform = el.dataset.platform;
+    }
+    function selectLang(el) {
+        document.querySelectorAll('#langGrid .hook-option').forEach(o => o.classList.remove('active'));
+        el.classList.add('active');
+        selectedLang = el.dataset.lang;
+    }
 
     // ==================== AUTH + PLAN CHECK ====================
     let isPro = false;
@@ -1007,11 +1103,27 @@
             product_description: document.getElementById('productDesc').value,
             target_audience: document.getElementById('targetAudience').value || 'คนไทยทั่วไป',
             hook_type: selectedHook,
+            platform: selectedPlatform,     // ✅ NEW: Platform
+            language: selectedLang,          // ✅ NEW: Language
             customer_pain_point: document.getElementById('customerPainPoint').value,
             seller_story: document.getElementById('sellerStory').value,
             unique_value: document.getElementById('uniqueValue').value,
             common_ground: document.getElementById('commonGround').value
         };
+
+        // ✅ Loading steps สำหรับ v2.0
+        const steps = [
+            '🔍 กำลังวิเคราะห์สินค้า...',
+            `🤖 สร้างคอนเทนต์สำหรับ ${selectedPlatform.toUpperCase()}...`,
+            selectedLang === 'all' ? '🌐 แปล 3 ภาษา (TH/ZH/EN)...' : '📊 AI Critic ตรวจสอบคุณภาพ...',
+            '⚡ กำลังปรับแต่งให้ดีที่สุด...'
+        ];
+        let stepIdx = 0;
+        const stepEl = document.getElementById('loadingStep');
+        const stepInterval = setInterval(() => {
+            if (stepEl) stepEl.textContent = steps[stepIdx % steps.length];
+            stepIdx++;
+        }, 1800);
 
         try {
             const res = await fetch(`${API_URL}/generate`, {
@@ -1019,9 +1131,14 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (!res.ok) throw new Error(`API Error: ${res.status}`);
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || `API Error: ${res.status}`);
+            }
             const data = await res.json();
+            lastGeneratedData = data;
             renderResult(data);
+
             // นับโควต้า (เฉพาะ Free users)
             if (!isPro) {
                 const q2 = getQuota();
@@ -1029,23 +1146,63 @@
                 saveQuota(q2);
                 renderQuotaBar();
             }
+
+            // ✅ OTA Token reward (Earn-to-Create)
+            const score = data.quality?.critic_score || 0;
+            showOTAToast(5, 'สร้างคอนเทนต์สำเร็จ');
+            if (score >= 9) setTimeout(() => showOTAToast(15, `AI Score ${score.toFixed(1)} — Gold Quality! 🏆`), 2000);
+            if (selectedLang === 'all') setTimeout(() => showOTAToast(3, 'แปล 3 ภาษา Bonus'), 4000);
+
+            // ✅ Hermes Agent webhook (background)
+            fetch(`${API_URL}/blockchain/webhook`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event: 'content_created', product: name, score, platform: selectedPlatform })
+            }).catch(() => {});
+
         } catch(err) {
-            alert(`เกิดข้อผิดพลาด: ${err.message}\n\nกรุณาลองใหม่อีกครั้ง`);
-            document.getElementById('resultPlaceholder').style.display = 'flex';
+            // ✅ Fallback: Demo mode ถ้า API ไม่พร้อม
+            if (err.message.includes('fetch') || err.message.includes('NetworkError') || err.message.includes('Failed')) {
+                renderDemoResult(name, category);
+                showOTAToast(5, 'Demo Mode — Content Created');
+            } else {
+                alert(`เกิดข้อผิดพลาด: ${err.message}\n\nกรุณาลองใหม่อีกครั้ง`);
+                document.getElementById('resultPlaceholder').style.display = 'flex';
+            }
         } finally {
             clearInterval(stepInterval);
             document.getElementById('loadingOverlay').classList.remove('show');
             btn.disabled = false;
-            btn.innerHTML = '<span>🚀</span> สร้างคอนเทนต์ TikTok';
+            btn.innerHTML = '<span>🚀</span> สร้างคอนเทนต์';
         }
     }
 
-    // ==================== RENDER RESULT ====================
+    // ✅ Demo fallback เมื่อ API ไม่พร้อม
+    function renderDemoResult(name, category) {
+        const demos = {
+            otop: { hook: `ไม่น่าเชื่อว่า${name}จากชุมชนนี้จะดีขนาดนี้!`, story: `ทำมือทุกชิ้น โดยช่างฝีมือที่สืบทอดมากว่า 3 ชั่วคน วัตถุดิบท้องถิ่น 100% ไม่มีสารเคมี`, cta: `กดติดตามก่อนหมด! ลิงก์ซื้อในไบโอ 🔗` },
+            food: { hook: `ได้กลิ่น${name}แค่นี้ก็หิวแล้ว!`, story: `สูตรดั้งเดิม ส่วนผสมธรรมชาติ ไม่มีผงชูรส อร่อยแบบบ้านๆ ที่หาไม่ได้ในห้าง`, cta: `สั่งได้เลย! ส่งทั่วไทย ลิงก์ในไบโอ 📦` },
+            default: { hook: `รู้ไหมว่า${name}ดีกว่าที่คุณคิด?`, story: `คุณสมบัติพิเศษที่ทำให้ต่างจากคนอื่น — ลูกค้าหลายพันคนพิสูจน์แล้ว`, cta: `ดูรายละเอียดเพิ่มเติม กดลิงก์ในไบโอเลย! 👆` }
+        };
+        const d = demos[category] || demos.default;
+        renderResult({
+            script: d,
+            caption: `✨ ${name} — สินค้าคุณภาพที่คุณต้องลอง! 🛒 ลิงก์สั่งซื้อในไบโอ`,
+            hashtags: [`#${name}`, '#OTOP', '#สินค้าไทย', '#TikTokThailand', '#ของดี', '#แนะนำ', '#viral', '#fyp', '#สินค้าOTOP', '#ของดีราคาถูก'],
+            quality: { critic_score: 7.5, feedback: 'Demo Mode — Connect API for real generation', tip: 'ตั้งค่า ANTHROPIC_API_KEY เพื่อใช้งานจริง' },
+            learning: { hook_type: 'story', why_it_works: 'Hook ตั้งคำถาม กระตุ้นความอยากรู้ — ดีกับ Discovery content', next_try: 'ลอง Process Hook — แสดงกระบวนการผลิต' }
+        });
+    }
+
+    // ==================== RENDER RESULT v2.0 ====================
     function renderResult(data) {
         const score = data.quality?.critic_score || 0;
         document.getElementById('scoreNumber').textContent = score.toFixed(1);
-        document.getElementById('iterInfo').textContent = `ปรับแต่ง ${data.quality?.iterations || 1} รอบ`;
-        document.getElementById('scoreEmoji').textContent = score >= 8 ? '🏆' : score >= 6 ? '⭐' : '📈';
+        // ✅ v2.0: แสดง api_calls_used แทน iterations
+        const apiCalls = data.quality?.api_calls_used;
+        const tip = data.quality?.tip || '';
+        document.getElementById('iterInfo').textContent = apiCalls ? `API calls: ${apiCalls} · Cached` : (tip || 'AI Optimized');
+        document.getElementById('scoreEmoji').textContent = score >= 8.5 ? '🏆' : score >= 7 ? '⭐' : '📈';
 
         document.getElementById('scriptHook').textContent = data.script?.hook || '—';
         document.getElementById('scriptStory').textContent = data.script?.story || '—';
@@ -1062,6 +1219,39 @@
         });
 
         document.getElementById('whyBox').textContent = data.learning?.why_it_works || '—';
+
+        // ✅ NEW: Multi-language tabs (ถ้ามี)
+        const mlBox = document.getElementById('multiLangBox');
+        if (mlBox) {
+            const ml = data.caption_multilang;
+            const mh = data.hashtags_multilang;
+            if (ml && (ml.zh || ml.en)) {
+                mlBox.style.display = 'block';
+                mlBox.innerHTML = `
+                    <div style="font-weight:700;font-size:0.9rem;margin-bottom:0.75rem;">🌐 Multi-Language Output</div>
+                    ${ml.zh ? `<div style="margin-bottom:0.75rem;padding:0.75rem;background:#f8f8f8;border-radius:10px;border-left:3px solid #FF6B35">
+                        <div style="font-size:0.72rem;font-weight:700;color:#FF6B35;margin-bottom:0.35rem;">🇨🇳 中文 (Xiaohongshu)</div>
+                        <div style="font-size:0.88rem;line-height:1.6">${ml.zh}</div>
+                        ${mh?.zh ? `<div style="font-size:0.78rem;color:#888;margin-top:0.3rem">${mh.zh}</div>` : ''}
+                    </div>` : ''}
+                    ${ml.en ? `<div style="padding:0.75rem;background:#f8f8f8;border-radius:10px;border-left:3px solid #4ECDC4">
+                        <div style="font-size:0.72rem;font-weight:700;color:#4ECDC4;margin-bottom:0.35rem;">🇬🇧 English (TikTok Global)</div>
+                        <div style="font-size:0.88rem;line-height:1.6">${ml.en}</div>
+                        ${mh?.en ? `<div style="font-size:0.78rem;color:#888;margin-top:0.3rem">${mh.en}</div>` : ''}
+                    </div>` : ''}
+                `;
+            } else {
+                mlBox.style.display = 'none';
+            }
+        }
+
+        // ✅ NEW: Quality feedback
+        const feedbackEl = document.getElementById('qualityFeedback');
+        if (feedbackEl && data.quality?.feedback) {
+            feedbackEl.style.display = 'block';
+            feedbackEl.textContent = `💡 ${data.quality.feedback}`;
+        }
+
         document.getElementById('contentOutput').classList.add('show');
     }
 

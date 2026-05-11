@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OTA Wallet — OpenThai Chain</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>">
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --dark: #0D0D1A;
+      --dark2: #1A1A2E;
+      --gold: #F7C948;
+      --green: #00E676;
+      --purple: #7C4DFF;
+      --border: rgba(255,255,255,0.08);
+      --card: rgba(255,255,255,0.04);
+      --gradient-ota: linear-gradient(135deg, #FF6B35 0%, #FF8E53 40%, #F7C948 100%);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Noto Sans Thai',sans-serif; background:var(--dark); color:#fff; min-height:100vh; }
+
+    /* BG */
+    .bg-fx { position:fixed; inset:0; z-index:0; pointer-events:none; }
+    .bg-fx::before { content:''; position:absolute; top:-30%; left:-20%; width:70%; height:70%; border-radius:50%; background:radial-gradient(circle,rgba(255,107,53,.12) 0%,transparent 70%); }
+    .bg-fx::after { content:''; position:absolute; bottom:-30%; right:-20%; width:60%; height:60%; border-radius:50%; background:radial-gradient(circle,rgba(247,201,72,.08) 0%,transparent 70%); }
+
+    /* NAV */
+    nav {
+      position:sticky; top:0; z-index:100;
+      background:rgba(13,13,26,.9); backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
+      padding:.9rem 2rem; display:flex; align-items:center; gap:1rem;
+    }
+    .nav-logo { display:flex; align-items:center; gap:.5rem; text-decoration:none; }
+    .nav-logo span { font-size:1.1rem; font-weight:700; }
+    .nav-logo .ot { color:var(--primary); }
+    .nav-logo .ch { color:var(--gold); }
+    .nav-right { margin-left:auto; display:flex; gap:.75rem; align-items:center; }
+    .nav-right a { color:rgba(255,255,255,.5); text-decoration:none; font-size:.85rem; }
+    .nav-right a:hover { color:#fff; }
+    .btn-sm {
+      padding:.45rem 1rem; border-radius:10px; font-size:.83rem; font-weight:700;
+      cursor:pointer; font-family:inherit; border:none; transition:.2s;
+    }
+    .btn-orange { background:var(--gradient-ota); color:#fff; }
+    .btn-outline { background:transparent; color:#fff; border:1px solid rgba(255,255,255,.2); }
+    .btn-outline:hover { border-color:rgba(255,255,255,.4); }
+    .btn-green { background:rgba(0,230,118,.15); color:var(--green); border:1px solid rgba(0,230,118,.3); }
+
+    /* LAYOUT */
+    main { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:2rem; }
+    .grid-2 { display:grid; grid-template-columns:380px 1fr; gap:1.5rem; }
+    @media(max-width:800px){ .grid-2 { grid-template-columns:1fr; } }
+
+    /* WALLET CARD */
+    .wallet-card {
+      background:linear-gradient(135deg,rgba(255,107,53,.15) 0%,rgba(247,201,72,.1) 100%);
+      border:1px solid rgba(255,107,53,.25); border-radius:24px; padding:2rem;
+      position:relative; overflow:hidden;
+    }
+    .wallet-card::before {
+      content:''; position:absolute; top:-50px; right:-50px;
+      width:200px; height:200px; border-radius:50%;
+      background:radial-gradient(circle,rgba(247,201,72,.15),transparent 70%);
+    }
+    .wallet-header { display:flex; align-items:center; gap:.75rem; margin-bottom:1.5rem; }
+    .wallet-avatar {
+      width:48px; height:48px; border-radius:50%;
+      background:var(--gradient-ota); display:flex; align-items:center; justify-content:center;
+      font-size:1.5rem; flex-shrink:0;
+    }
+    .wallet-user { font-weight:700; }
+    .wallet-addr { font-size:.78rem; color:rgba(255,255,255,.45); font-family:monospace; margin-top:.15rem; }
+    .copy-btn { margin-left:auto; background:rgba(255,255,255,.08); border:none; color:rgba(255,255,255,.6); padding:.25rem .5rem; border-radius:6px; cursor:pointer; font-size:.75rem; }
+    .copy-btn:hover { background:rgba(255,255,255,.15); color:#fff; }
+
+    .balance-label { font-size:.75rem; color:rgba(255,255,255,.45); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.3rem; }
+    .balance-ota { font-size:3rem; font-weight:800; color:var(--gold); line-height:1; }
+    .balance-thb { font-size:1rem; color:rgba(255,255,255,.5); margin-top:.25rem; }
+
+    .wallet-actions { display:flex; gap:.75rem; margin-top:1.5rem; flex-wrap:wrap; }
+    .wallet-actions button { flex:1; min-width:100px; }
+
+    .tier-banner {
+      margin-top:1.5rem; padding:.75rem 1rem; border-radius:14px;
+      background:rgba(124,77,255,.15); border:1px solid rgba(124,77,255,.3);
+      display:flex; align-items:center; gap:.75rem;
+    }
+    .tier-banner .tier-ico { font-size:1.5rem; }
+    .tier-banner .tier-info { font-size:.83rem; }
+    .tier-banner .tier-name { font-weight:700; color:#B39DFF; }
+
+    /* TABS */
+    .tab-bar { display:flex; gap:.5rem; margin-bottom:1.25rem; background:rgba(255,255,255,.04); border-radius:14px; padding:.35rem; }
+    .tab-btn {
+      flex:1; text-align:center; padding:.55rem .5rem; border-radius:10px;
+      font-size:.85rem; font-weight:600; cursor:pointer; border:none;
+      background:transparent; color:rgba(255,255,255,.45); font-family:inherit; transition:.2s;
+    }
+    .tab-btn.active { background:var(--gradient-ota); color:#fff; }
+    .tab-pane { display:none; }
+    .tab-pane.active { display:block; }
+
+    /* EARN PANEL */
+    .earn-card {
+      background:var(--card); border:1px solid var(--border); border-radius:18px;
+      padding:1.25rem; margin-bottom:.75rem; display:flex; align-items:center; gap:1rem; transition:.2s;
+    }
+    .earn-card:hover { border-color:rgba(255,107,53,.3); background:rgba(255,107,53,.05); }
+    .earn-card .ec-icon { font-size:2rem; flex-shrink:0; }
+    .earn-card .ec-info { flex:1; }
+    .earn-card .ec-title { font-weight:700; font-size:.9rem; }
+    .earn-card .ec-desc { font-size:.78rem; color:rgba(255,255,255,.45); margin-top:.15rem; }
+    .earn-card .ec-reward { text-align:right; flex-shrink:0; }
+    .earn-card .ec-ota { font-size:1rem; font-weight:800; color:var(--gold); }
+    .earn-card .ec-status { font-size:.73rem; margin-top:.2rem; }
+    .status-done { color:var(--green); }
+    .status-todo { color:rgba(255,255,255,.35); }
+    .status-prog { color:var(--primary); }
+    .ec-btn {
+      padding:.35rem .85rem; border-radius:8px; font-size:.78rem; font-weight:700;
+      cursor:pointer; border:none; font-family:inherit; transition:.2s; margin-top:.3rem;
+    }
+    .ec-btn-orange { background:var(--gradient-ota); color:#fff; }
+    .ec-btn-green { background:rgba(0,230,118,.15); color:var(--green); border:1px solid rgba(0,230,118,.3); }
+    .ec-btn-gray { background:rgba(255,255,255,.07); color:rgba(255,255,255,.45); cursor:default; }
+
+    /* TX HISTORY */
+    .tx-item {
+      display:flex; align-items:center; gap:1rem; padding:.9rem 1rem;
+      border-bottom:1px solid rgba(255,255,255,.04); transition:.2s;
+    }
+    .tx-item:last-child { border-bottom:none; }
+    .tx-item:hover { background:rgba(255,255,255,.02); border-radius:10px; }
+    .tx-icon { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+    .tx-icon.in { background:rgba(0,230,118,.15); }
+    .tx-icon.out { background:rgba(255,82,82,.12); }
+    .tx-icon.stake { background:rgba(124,77,255,.15); }
+    .tx-info { flex:1; }
+    .tx-title { font-size:.88rem; font-weight:600; }
+    .tx-date { font-size:.73rem; color:rgba(255,255,255,.35); margin-top:.1rem; }
+    .tx-hash { font-size:.68rem; color:rgba(255,107,53,.6); font-family:monospace; }
+    .tx-amount { text-align:right; }
+    .tx-ota { font-weight:800; font-size:.95rem; }
+    .tx-ota.pos { color:var(--green); }
+    .tx-ota.neg { color:#FF5252; }
+    .tx-thb { font-size:.73rem; color:rgba(255,255,255,.35); margin-top:.1rem; }
+
+    /* STAKING PANEL */
+    .stake-card {
+      background:var(--card); border:1px solid var(--border); border-radius:18px; padding:1.5rem; margin-bottom:1rem;
+    }
+    .stake-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+    .stake-card-title { font-weight:700; font-size:1rem; }
+    .stake-apy { background:rgba(0,230,118,.1); color:var(--green); border:1px solid rgba(0,230,118,.25); padding:.2rem .65rem; border-radius:8px; font-size:.8rem; font-weight:700; }
+    .stake-progress { height:8px; border-radius:4px; background:rgba(255,255,255,.08); margin:1rem 0; overflow:hidden; }
+    .stake-progress-bar { height:100%; border-radius:4px; background:var(--gradient-ota); transition:width 1s; }
+    .stake-meta { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.75rem; }
+    .sm-item { }
+    .sm-label { font-size:.72rem; color:rgba(255,255,255,.4); margin-bottom:.2rem; }
+    .sm-val { font-size:.95rem; font-weight:700; }
+    .stake-input-row { display:flex; gap:.75rem; margin-top:1rem; align-items:center; }
+    .stake-input {
+      flex:1; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
+      color:#fff; border-radius:12px; padding:.65rem 1rem; font-size:.9rem; font-family:inherit;
+      outline:none; transition:.2s;
+    }
+    .stake-input:focus { border-color:rgba(255,107,53,.5); background:rgba(255,107,53,.06); }
+    .stake-input::placeholder { color:rgba(255,255,255,.3); }
+
+    /* NFT MINI */
+    .nft-mini { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:.75rem; }
+    .nft-mini-card {
+      background:var(--card); border:1px solid var(--border); border-radius:14px; overflow:hidden; transition:.3s; cursor:pointer;
+    }
+    .nft-mini-card:hover { border-color:rgba(255,107,53,.4); transform:translateY(-3px); }
+    .nft-mini-img { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:3rem; }
+    .nft-mini-info { padding:.75rem; }
+    .nft-mini-name { font-size:.8rem; font-weight:700; }
+    .nft-mini-price { font-size:.73rem; color:var(--gold); margin-top:.2rem; }
+
+    /* SEND MODAL */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); backdrop-filter:blur(10px); z-index:500; align-items:center; justify-content:center; }
+    .modal-overlay.open { display:flex; }
+    .modal {
+      background:#1A1A2E; border:1px solid rgba(255,107,53,.25); border-radius:24px;
+      padding:2rem; width:90%; max-width:420px;
+    }
+    .modal h3 { font-size:1.2rem; font-weight:700; margin-bottom:1.25rem; display:flex; gap:.5rem; align-items:center; }
+    .modal-field { margin-bottom:1rem; }
+    .modal-label { font-size:.8rem; color:rgba(255,255,255,.5); margin-bottom:.4rem; }
+    .modal-input {
+      width:100%; background:rgba(255,255,255,.06); border:1px solid var(--border);
+      color:#fff; border-radius:12px; padding:.65rem 1rem; font-size:.9rem; font-family:inherit; outline:none;
+    }
+    .modal-input:focus { border-color:rgba(255,107,53,.5); }
+    .modal-actions { display:flex; gap:.75rem; margin-top:1.25rem; }
+    .modal-actions button { flex:1; padding:.7rem; border-radius:12px; font-size:.9rem; font-weight:700; cursor:pointer; font-family:inherit; border:none; }
+
+    /* MISC */
+    .section-title { font-size:1.1rem; font-weight:700; margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+    .section-title .badge { background:rgba(255,107,53,.15); color:var(--primary); border:1px solid rgba(255,107,53,.3); border-radius:6px; padding:.15rem .5rem; font-size:.73rem; font-weight:700; }
+    .empty-state { text-align:center; padding:2rem; color:rgba(255,255,255,.3); }
+    .empty-state .es-icon { font-size:2.5rem; margin-bottom:.5rem; }
+  </style>
+</head>
+<body>
+<div class="bg-fx"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="blockchain.html" class="nav-logo">
+    <span>⛓️ <span class="ot">OTA</span><span class="ch">Chain</span></span>
+  </a>
+  <div class="nav-right">
+    <a href="generator.html">✍️ สร้างคอนเทนต์</a>
+    <a href="dashboard.html">📊 Dashboard</a>
+    <button class="btn-sm btn-outline" onclick="disconnectWallet()">🔗 <span id="walletLabel">เชื่อมต่อ Wallet</span></button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main>
+  <div class="grid-2">
+
+    <!-- LEFT: WALLET CARD -->
+    <div>
+      <div class="wallet-card">
+        <div class="wallet-header">
+          <div class="wallet-avatar">👤</div>
+          <div>
+            <div class="wallet-user" id="walletUser">Zuejai / OpenThai AI</div>
+            <div class="wallet-addr" id="walletAddr">0x7a3F...d8b2</div>
+          </div>
+          <button class="copy-btn" onclick="copyAddr()">📋 คัดลอก</button>
+        </div>
+
+        <div class="balance-label">ยอด OTA Token</div>
+        <div class="balance-ota" id="balOTA">12,450</div>
+        <div class="balance-thb" id="balTHB">≈ ฿23,032 THB</div>
+
+        <div class="wallet-actions">
+          <button class="btn-sm btn-orange" onclick="openSend()">↗ ส่ง</button>
+          <button class="btn-sm btn-outline" onclick="openReceive()">↙ รับ</button>
+          <button class="btn-sm btn-green" onclick="swapOTA()">🔄 Swap</button>
+          <button class="btn-sm btn-outline" onclick="location.href='blockchain.html#staking'">🔒 Stake</button>
+        </div>
+
+        <div class="tier-banner">
+          <div class="tier-ico">🔥</div>
+          <div class="tier-info">
+            <div class="tier-name">Pro Tier Active</div>
+            <div>Staked 2,000 OTA · APY 16% · 45 วันคงเหลือ</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mini stats below wallet -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem;text-align:center">
+          <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-bottom:.25rem">OTA รับแล้วเดือนนี้</div>
+          <div style="font-size:1.3rem;font-weight:800;color:var(--gold)">+845</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.35)">จาก Earn-to-Create</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem;text-align:center">
+          <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-bottom:.25rem">Staking Reward</div>
+          <div style="font-size:1.3rem;font-weight:800;color:var(--green)">+320</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.35)">APY 16% / 45 วัน</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem;text-align:center">
+          <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-bottom:.25rem">Affiliate Commission</div>
+          <div style="font-size:1.3rem;font-weight:800;color:#82B1FF">฿4,200</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.35)">On-chain · 12 ออเดอร์</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1rem;text-align:center">
+          <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-bottom:.25rem">NFT ที่ Mint แล้ว</div>
+          <div style="font-size:1.3rem;font-weight:800;color:#B39DFF">3 ชิ้น</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.35)">มูลค่า ฿6,750</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: TABS -->
+    <div>
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('earn',this)">✍️ Earn</button>
+        <button class="tab-btn" onclick="switchTab('history',this)">📋 ประวัติ</button>
+        <button class="tab-btn" onclick="switchTab('staking',this)">🔒 Staking</button>
+        <button class="tab-btn" onclick="switchTab('nfts',this)">🖼️ NFT</button>
+      </div>
+
+      <!-- EARN TAB -->
+      <div class="tab-pane active" id="tab-earn">
+        <div class="section-title">ภารกิจ Earn-to-Create <span class="badge">รายวัน</span></div>
+
+        <div class="earn-card">
+          <div class="ec-icon">✍️</div>
+          <div class="ec-info">
+            <div class="ec-title">สร้างคอนเทนต์ TikTok</div>
+            <div class="ec-desc">วันนี้: 2/3 คอนเทนต์ · ทำอีก 1 ชิ้น</div>
+          </div>
+          <div class="ec-reward">
+            <div class="ec-ota">+5 OTA</div>
+            <div class="ec-status status-prog">🔄 กำลังทำ</div>
+            <button class="ec-btn ec-btn-orange" onclick="location.href='generator.html'">ทำเลย</button>
+          </div>
+        </div>
+
+        <div class="earn-card">
+          <div class="ec-icon">📊</div>
+          <div class="ec-info">
+            <div class="ec-title">รับ AI Quality Score ≥ 90</div>
+            <div class="ec-desc">คอนเทนต์ล่าสุดของคุณ: 88 คะแนน</div>
+          </div>
+          <div class="ec-reward">
+            <div class="ec-ota">+15 OTA</div>
+            <div class="ec-status status-todo">⭕ ยังไม่ได้</div>
+            <button class="ec-btn ec-btn-orange" onclick="location.href='generator.html'">ลองใหม่</button>
+          </div>
+        </div>
+
+        <div class="earn-card">
+          <div class="ec-icon">🔗</div>
+          <div class="ec-info">
+            <div class="ec-title">แชร์ Link ให้ถูกคลิก 100 ครั้ง</div>
+            <div class="ec-desc">ปัจจุบัน: 67/100 คลิก</div>
+          </div>
+          <div class="ec-reward">
+            <div class="ec-ota">+25 OTA</div>
+            <div class="ec-status status-prog">🔄 67%</div>
+            <button class="ec-btn ec-btn-green" onclick="shareLink()">แชร์</button>
+          </div>
+        </div>
+
+        <div class="earn-card">
+          <div class="ec-icon">🛍️</div>
+          <div class="ec-info">
+            <div class="ec-title">Affiliate ขายสินค้าได้</div>
+            <div class="ec-desc">เดือนนี้: 12 ออเดอร์ · รวม ฿4,200</div>
+          </div>
+          <div class="ec-reward">
+            <div class="ec-ota">+50 OTA</div>
+            <div class="ec-status status-done">✅ Active</div>
+            <button class="ec-btn ec-btn-gray">กำลังทำงาน</button>
+          </div>
+        </div>
+
+        <div class="earn-card">
+          <div class="ec-icon">👤</div>
+          <div class="ec-info">
+            <div class="ec-title">แนะนำเพื่อนสมัคร Pro</div>
+            <div class="ec-desc">ลิงก์: openthai-ai.com?ref=zuejai</div>
+          </div>
+          <div class="ec-reward">
+            <div class="ec-ota">+100 OTA</div>
+            <div class="ec-status status-todo">⭕ 0 คน</div>
+            <button class="ec-btn ec-btn-orange" onclick="copyRef()">คัดลอก Ref</button>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:1.5rem">Claim OTA ที่ค้างอยู่ <span class="badge" style="background:rgba(247,201,72,.15);color:var(--gold);border-color:rgba(247,201,72,.3)">845 OTA รอ Claim</span></div>
+        <div style="background:linear-gradient(135deg,rgba(247,201,72,.1),rgba(255,107,53,.08));border:1px solid rgba(247,201,72,.25);border-radius:18px;padding:1.5rem;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap">
+          <div>
+            <div style="font-size:.78rem;color:rgba(255,255,255,.45);margin-bottom:.25rem">OTA รอ Claim</div>
+            <div style="font-size:2rem;font-weight:800;color:var(--gold)">845 OTA</div>
+            <div style="font-size:.8rem;color:rgba(255,255,255,.45)">≈ ฿1,563 THB</div>
+          </div>
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:.78rem;color:rgba(255,255,255,.45);margin-bottom:.5rem">มาจาก:</div>
+            <div style="font-size:.82rem;color:rgba(255,255,255,.65);line-height:1.8">
+              ✍️ สร้างคอนเทนต์ 23 ชิ้น = 115 OTA<br>
+              🔗 Viral Bonus 3 ครั้ง = 75 OTA<br>
+              🛍️ Affiliate 12 ออเดอร์ = 600 OTA<br>
+              🏆 Bonus คุณภาพ = 55 OTA
+            </div>
+          </div>
+          <button class="btn-sm btn-orange" style="padding:.8rem 1.5rem;font-size:.95rem" onclick="claimOTA()">💰 Claim OTA</button>
+        </div>
+      </div>
+
+      <!-- HISTORY TAB -->
+      <div class="tab-pane" id="tab-history">
+        <div class="section-title">ประวัติ Transaction</div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden">
+          <div class="tx-item">
+            <div class="tx-icon in">✍️</div>
+            <div class="tx-info">
+              <div class="tx-title">Earn: สร้างคอนเทนต์ "ข้าวหอมมะลิ"</div>
+              <div class="tx-date">09 พ.ค. 2026, 14:32</div>
+              <div class="tx-hash">0xA3b7...f2c1</div>
+            </div>
+            <div class="tx-amount">
+              <div class="tx-ota pos">+20 OTA</div>
+              <div class="tx-thb">+฿37</div>
+            </div>
+          </div>
+          <div class="tx-item">
+            <div class="tx-icon in">🛍️</div>
+            <div class="tx-info">
+              <div class="tx-title">Affiliate: ขายได้ 3 ออเดอร์</div>
+              <div class="tx-date">09 พ.ค. 2026, 11:15</div>
+              <div class="tx-hash">0xB9c2...e3a0</div>
+            </div>
+            <div class="tx-amount">
+              <div class="tx-ota pos">+150 OTA + ฿1,200</div>
+              <div class="tx-thb">Smart Contract</div>
+            </div>
+          </div>
+          <div class="tx-item">
+            <div class="tx-icon stake">🔒</div>
+            <div class="tx-info">
+              <div class="tx-title">Staking Reward อัตโนมัติ</div>
+              <div class="tx-date">08 พ.ค. 2026, 00:00</div>
+              <div class="tx-hash">0xC1d4...7f8b</div>
+            </div>
+            <div class="tx-amount">
+              <div class="tx-ota pos">+32 OTA</div>
+              <div class="tx-thb">APY 16%/ปี</div>
+            </div>
+          </div>
+          <div class="tx-item">
+            <div class="tx-icon out">↗</div>
+            <div class="tx-info">
+              <div class="tx-title">Swap OTA → USDT</div>
+              <div class="tx-date">07 พ.ค. 2026, 16:44</div>
+              <div class="tx-hash">0xD5e6...9c2f</div>
+            </div>
+            <div class="tx-amount">
+              <div class="tx-ota neg">-500 OTA</div>
+              <div class="tx-thb">+฿925 USDT</div>
+            </div>
+          </div>
+          <div class="tx-item">
+            <div class="tx-icon in">🖼️</div>
+            <div class="tx-info">
+              <div class="tx-title">NFT Sold: "กาแฟดอยไทย" #0004</div>
+              <div class="tx-date">06 พ.ค. 2026, 09:21</div>
+              <div class="tx-hash">0xE7f8...4d5e</div>
+            </div>
+            <div class="tx-amount">
+              <div class="tx-ota pos">+฿1,890</div>
+              <div class="tx-thb">หักค่า Gas 10%</div>
+            </div>
+          </div>
+          <div class="tx-item">
+            <div class="tx-icon stake">🔒</div>
+            <div class="tx-info">
+              <div class="tx-title">Stake เข้า Pro Tier</div>
+              <div class="tx-date">20 มี.ค. 2026, 10:00</div>
+              <div class="tx-hash">0xF9a0...2b3c</div>
+            </div>
+            <div class="tx-amount">
+              <div class="tx-ota neg">-2,000 OTA</div>
+              <div class="tx-thb">90 วัน lock</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAKING TAB -->
+      <div class="tab-pane" id="tab-staking">
+        <div class="section-title">Staking ปัจจุบัน</div>
+
+        <div class="stake-card" style="border-color:rgba(255,107,53,.25)">
+          <div class="stake-card-header">
+            <div>
+              <div class="stake-card-title">🔥 Pro Tier — 2,000 OTA</div>
+              <div style="font-size:.8rem;color:rgba(255,255,255,.45);margin-top:.2rem">Lock วันที่ 20 มี.ค. 2026 · ครบ 90 วัน</div>
+            </div>
+            <div class="stake-apy">APY 16%</div>
+          </div>
+          <div style="font-size:.78rem;color:rgba(255,255,255,.4);margin-bottom:.25rem">ความคืบหน้า (45/90 วัน)</div>
+          <div class="stake-progress"><div class="stake-progress-bar" style="width:50%"></div></div>
+          <div class="stake-meta">
+            <div class="sm-item"><div class="sm-label">Staked</div><div class="sm-val" style="color:var(--gold)">2,000 OTA</div></div>
+            <div class="sm-item"><div class="sm-label">Reward สะสม</div><div class="sm-val" style="color:var(--green)">+320 OTA</div></div>
+            <div class="sm-item"><div class="sm-label">คืนวันที่</div><div class="sm-val">18 มิ.ย. 2026</div></div>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-top:1.25rem">Stake เพิ่ม</div>
+        <div class="stake-card">
+          <div style="font-size:.88rem;color:rgba(255,255,255,.55);margin-bottom:1rem">เลือก Tier ที่ต้องการ Stake เพิ่ม</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem">
+            <label style="cursor:pointer">
+              <input type="radio" name="tier" value="starter" style="display:none">
+              <div class="stake-tier-opt" onclick="selectTier(this,'Starter',8)" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:1rem;text-align:center;transition:.2s">
+                <div style="font-size:1.4rem">🌱</div>
+                <div style="font-weight:700;font-size:.88rem;margin-top:.3rem">Starter</div>
+                <div style="font-size:.78rem;color:rgba(255,255,255,.45)">500 OTA · 30 วัน</div>
+                <div style="color:var(--green);font-weight:700;font-size:.85rem;margin-top:.3rem">APY 8%</div>
+              </div>
+            </label>
+            <label style="cursor:pointer">
+              <input type="radio" name="tier" value="business" style="display:none">
+              <div class="stake-tier-opt" onclick="selectTier(this,'Business',20)" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:1rem;text-align:center;transition:.2s">
+                <div style="font-size:1.4rem">👑</div>
+                <div style="font-weight:700;font-size:.88rem;margin-top:.3rem">Business</div>
+                <div style="font-size:.78rem;color:rgba(255,255,255,.45)">5,000 OTA · 180 วัน</div>
+                <div style="color:var(--green);font-weight:700;font-size:.85rem;margin-top:.3rem">APY 20%</div>
+              </div>
+            </label>
+          </div>
+          <div class="stake-input-row">
+            <input class="stake-input" type="number" placeholder="จำนวน OTA ที่จะ Stake" id="stakeAmount">
+            <button class="btn-sm btn-orange" onclick="doStake()">🔒 Stake Now</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NFT TAB -->
+      <div class="tab-pane" id="tab-nfts">
+        <div class="section-title">NFT ของฉัน <span class="badge">3 ชิ้น</span></div>
+        <div class="nft-mini">
+          <div class="nft-mini-card" onclick="location.href='nft.html'">
+            <div class="nft-mini-img" style="background:linear-gradient(135deg,#FF6B35,#F7C948)">🌾</div>
+            <div class="nft-mini-info">
+              <div class="nft-mini-name">ข้าวหอมมะลิ</div>
+              <div class="nft-mini-price">฿850</div>
+            </div>
+          </div>
+          <div class="nft-mini-card" onclick="location.href='nft.html'">
+            <div class="nft-mini-img" style="background:linear-gradient(135deg,#7C4DFF,#2979FF)">🐟</div>
+            <div class="nft-mini-info">
+              <div class="nft-mini-name">น้ำปลาแท้ไทย</div>
+              <div class="nft-mini-price">฿1,200</div>
+            </div>
+          </div>
+          <div class="nft-mini-card" onclick="location.href='nft.html'">
+            <div class="nft-mini-img" style="background:linear-gradient(135deg,#F7C948,#FF6B35)">☕</div>
+            <div class="nft-mini-info">
+              <div class="nft-mini-name">กาแฟดอยไทย</div>
+              <div class="nft-mini-price">฿2,100</div>
+            </div>
+          </div>
+          <div class="nft-mini-card" style="border:2px dashed rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="location.href='nft.html'">
+            <div style="text-align:center;padding:1rem">
+              <div style="font-size:2rem">✨</div>
+              <div style="font-size:.78rem;font-weight:600;margin-top:.3rem">Mint NFT ใหม่</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:1.25rem;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:1.25rem">
+          <div style="font-size:.9rem;font-weight:700;margin-bottom:.75rem">📈 มูลค่า NFT รวม</div>
+          <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
+            <div><div style="font-size:.72rem;color:rgba(255,255,255,.4)">มูลค่ารวม</div><div style="font-size:1.3rem;font-weight:800;color:var(--gold)">฿4,150</div></div>
+            <div><div style="font-size:.72rem;color:rgba(255,255,255,.4)">กำไร/ขาดทุน</div><div style="font-size:1.3rem;font-weight:800;color:var(--green)">+฿1,550</div></div>
+            <div><div style="font-size:.72rem;color:rgba(255,255,255,.4)">ขายได้แล้ว</div><div style="font-size:1.3rem;font-weight:800">฿2,600</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<!-- SEND MODAL -->
+<div class="modal-overlay" id="sendModal">
+  <div class="modal">
+    <h3>↗ ส่ง OTA Token</h3>
+    <div class="modal-field">
+      <div class="modal-label">ที่อยู่ปลายทาง (Wallet Address)</div>
+      <input class="modal-input" placeholder="0x..." id="sendAddr">
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">จำนวน OTA</div>
+      <input class="modal-input" type="number" placeholder="เช่น 100" id="sendAmt">
+    </div>
+    <div style="font-size:.78rem;color:rgba(255,255,255,.35);margin-top:.5rem">⛽ Gas Fee ประมาณ 0.0003 BNB (~฿0.40)</div>
+    <div class="modal-actions">
+      <button class="btn-sm btn-outline" onclick="closeSend()">ยกเลิก</button>
+      <button class="btn-sm btn-orange" onclick="confirmSend()">ยืนยันส่ง</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Tab switcher
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// Copy wallet address
+function copyAddr() {
+  navigator.clipboard.writeText('0x7a3Fc8dE2B491f6A9cBd3eF1e05D87dA9b2d8b2');
+  const btn = document.querySelector('.copy-btn');
+  btn.textContent = '✅ คัดลอกแล้ว';
+  setTimeout(() => btn.textContent = '📋 คัดลอก', 1500);
+}
+
+// Copy referral
+function copyRef() {
+  navigator.clipboard.writeText('https://openthai-ai.com?ref=zuejai');
+  alert('✅ คัดลอก Referral Link แล้ว!\nhttps://openthai-ai.com?ref=zuejai');
+}
+
+// Send modal
+function openSend() { document.getElementById('sendModal').classList.add('open'); }
+function closeSend() { document.getElementById('sendModal').classList.remove('open'); }
+function confirmSend() {
+  const addr = document.getElementById('sendAddr').value;
+  const amt = document.getElementById('sendAmt').value;
+  if(!addr || !amt) { alert('กรุณากรอกข้อมูลให้ครบ'); return; }
+  closeSend();
+  alert(`✅ ส่ง ${amt} OTA ไปยัง ${addr.slice(0,10)}... สำเร็จ!\n\nTransaction จะปรากฏใน BSCScan ภายใน 3-5 วินาที`);
+}
+
+// Receive
+function openReceive() {
+  alert('📬 Wallet Address ของคุณ:\n0x7a3Fc8dE2B491f6A9cBd3eF1e05D87dA9b2d8b2\n\nNetwork: BNB Smart Chain (BSC)\n\n⚠️ ส่งเฉพาะ BEP-20 Token เท่านั้น!');
+}
+
+// Swap
+function swapOTA() {
+  alert('🔄 กำลังเปิด DEX Swap...\n\nOTA ↔ USDT / BNB / THB\nผ่าน PancakeSwap DEX\n\n(Phase 4 Q4/2026 — DEX Listing)');
+}
+
+// Stake
+function doStake() {
+  const amt = document.getElementById('stakeAmount').value;
+  if(!amt) { alert('กรุณาใส่จำนวน OTA ที่ต้องการ Stake'); return; }
+  alert(`🔒 Stake ${amt} OTA สำเร็จ!\n\nTransaction จะปรากฏใน BSCScan ภายใน 3-5 วินาที\nReward จะสะสมทุกวัน และ Claim ได้ตลอดเวลา`);
+}
+
+// Select tier
+function selectTier(el, name, apy) {
+  document.querySelectorAll('.stake-tier-opt').forEach(o => {
+    o.style.borderColor = 'rgba(255,255,255,.1)';
+    o.style.background = 'rgba(255,255,255,.04)';
+  });
+  el.style.borderColor = 'rgba(255,107,53,.5)';
+  el.style.background = 'rgba(255,107,53,.08)';
+}
+
+// Claim OTA
+function claimOTA() {
+  alert('💰 Claim 845 OTA สำเร็จ!\n\nOTA ถูกโอนเข้า Wallet ของคุณแล้ว\nยอดใหม่: 13,295 OTA\n\nTransaction: 0xA1b2...c3d4 (BSCScan)');
+  document.querySelector('.balance-ota').textContent = '13,295';
+  document.querySelector('.balance-thb').textContent = '≈ ฿24,596 THB';
+}
+
+// Share link
+function shareLink() {
+  navigator.clipboard.writeText('https://openthai-ai.com/share?ref=zuejai');
+  alert('✅ คัดลอก Share Link แล้ว!\nนำไปแชร์ใน TikTok / LINE / Facebook เพื่อรับ +25 OTA เมื่อครบ 100 คลิก');
+}
+
+// Disconnect wallet
+function disconnectWallet() {
+  const label = document.getElementById('walletLabel');
+  if(label.textContent !== 'เชื่อมต่อ Wallet') {
+    label.textContent = 'เชื่อมต่อ Wallet';
+  } else {
+    alert('เชื่อมต่อ Wallet ด้วย MetaMask หรือ Trust Wallet');
+  }
+}
+
+// Close modal on overlay click
+document.getElementById('sendModal').addEventListener('click', function(e){
+  if(e.target === this) closeSend();
+});
+</script>
+</body>
+</html>

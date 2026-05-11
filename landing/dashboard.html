@@ -127,6 +127,8 @@
   </a>
   <div class="nav-right">
     <a href="generator.html">🚀 AI Generator</a>
+    <a href="blockchain.html">⛓️ OTAChain</a>
+    <a href="wallet.html">💎 Wallet</a>
     <a href="dashboard.html" class="active">📊 Dashboard</a>
   </div>
 </nav>
@@ -223,6 +225,61 @@ const sb = window.supabase.createClient(
         <div class="card-label">Hook Types</div>
         <div class="card-value">5</div>
         <div class="card-sub">Story · Process · Contrast · Question · Transform</div>
+      </div>
+    </div>
+
+    <!-- ⛓️ OTA BLOCKCHAIN WIDGET -->
+    <div style="background:linear-gradient(135deg,#0D0D1A 0%,#1A1A2E 100%);border-radius:20px;padding:1.5rem;margin-bottom:1.5rem;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(247,201,72,.12),transparent 70%);pointer-events:none;"></div>
+      <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
+        <span style="font-size:1.5rem;">⛓️</span>
+        <div>
+          <div style="font-weight:700;color:#fff;font-size:1rem;">OpenThai Chain</div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.4);">OTA Token · BNB Smart Chain</div>
+        </div>
+        <a href="blockchain.html" style="margin-left:auto;background:linear-gradient(135deg,#FF6B35,#F7C948);color:#fff;text-decoration:none;padding:.35rem .85rem;border-radius:8px;font-size:.78rem;font-weight:700;">Hub →</a>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1rem;margin-bottom:1.25rem;">
+        <div style="background:rgba(255,255,255,.06);border-radius:14px;padding:1rem;text-align:center;">
+          <div style="font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">ยอด OTA</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#F7C948;">12,450</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.35);">≈ ฿23,032</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:14px;padding:1rem;text-align:center;">
+          <div style="font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">รับเดือนนี้</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#00E676;">+845</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.35);">Earn-to-Create</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:14px;padding:1rem;text-align:center;">
+          <div style="font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">Staking</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#B39DFF;">Pro🔥</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.35);">APY 16%</div>
+        </div>
+        <div style="background:rgba(255,255,255,.06);border-radius:14px;padding:1rem;text-align:center;">
+          <div style="font-size:.7rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.25rem;">Affiliate</div>
+          <div style="font-size:1.4rem;font-weight:800;color:#fff;">฿4,200</div>
+          <div style="font-size:.72rem;color:rgba(255,255,255,.35);">On-chain · 12 ออเดอร์</div>
+        </div>
+      </div>
+
+      <!-- OTA to claim -->
+      <div style="background:rgba(247,201,72,.08);border:1px solid rgba(247,201,72,.2);border-radius:14px;padding:1rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+        <div style="font-size:1.3rem;">💰</div>
+        <div>
+          <div style="font-weight:700;color:#F7C948;font-size:.95rem;">845 OTA รอ Claim</div>
+          <div style="font-size:.78rem;color:rgba(255,255,255,.45);">จากการสร้างคอนเทนต์ + Affiliate เดือนนี้</div>
+        </div>
+        <a href="wallet.html" style="margin-left:auto;background:linear-gradient(135deg,#FF6B35,#F7C948);color:#fff;text-decoration:none;padding:.5rem 1.1rem;border-radius:10px;font-size:.83rem;font-weight:700;">Claim OTA</a>
+      </div>
+
+      <!-- Quick links -->
+      <div style="display:flex;gap:.65rem;flex-wrap:wrap;">
+        <a href="wallet.html" style="display:inline-flex;align-items:center;gap:.35rem;background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);text-decoration:none;padding:.4rem .85rem;border-radius:8px;font-size:.78rem;font-weight:600;transition:.2s;" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">💎 Wallet</a>
+        <a href="blockchain.html#staking" style="display:inline-flex;align-items:center;gap:.35rem;background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);text-decoration:none;padding:.4rem .85rem;border-radius:8px;font-size:.78rem;font-weight:600;" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">🔒 Staking</a>
+        <a href="nft.html" style="display:inline-flex;align-items:center;gap:.35rem;background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);text-decoration:none;padding:.4rem .85rem;border-radius:8px;font-size:.78rem;font-weight:600;" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">🖼️ NFT</a>
+        <a href="blockchain.html#affiliate" style="display:inline-flex;align-items:center;gap:.35rem;background:rgba(255,255,255,.07);color:rgba(255,255,255,.7);text-decoration:none;padding:.4rem .85rem;border-radius:8px;font-size:.78rem;font-weight:600;" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">🤝 Affiliate</a>
+        <a href="blockchain.html#earn" style="display:inline-flex;align-items:center;gap:.35rem;background:rgba(0,230,118,.1);color:#00E676;text-decoration:none;padding:.4rem .85rem;border-radius:8px;font-size:.78rem;font-weight:700;border:1px solid rgba(0,230,118,.25);">✍️ Earn-to-Create</a>
       </div>
     </div>
 

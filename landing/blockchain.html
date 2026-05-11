@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenThai Chain — Blockchain Fintech Hub</title>
+  <meta name="description" content="ระบบ Blockchain Fintech ของ OpenThai AI — OTA Token, DeFi Staking, NFT Content, Smart Contract Affiliate">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛓️</text></svg>">
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --primary-dark: #E55A2B;
+      --secondary: #4ECDC4;
+      --dark: #0D0D1A;
+      --dark2: #1A1A2E;
+      --dark3: #16213E;
+      --gold: #F7C948;
+      --gold2: #FFE082;
+      --green: #00E676;
+      --purple: #7C4DFF;
+      --blue: #2979FF;
+      --light: #F7F7F7;
+      --card-bg: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.08);
+      --gradient-ota: linear-gradient(135deg, #FF6B35 0%, #FF8E53 40%, #F7C948 100%);
+      --gradient-dark: linear-gradient(135deg, #0D0D1A 0%, #1A1A2E 50%, #16213E 100%);
+      --glow-gold: 0 0 30px rgba(247,201,72,0.25);
+      --glow-orange: 0 0 30px rgba(255,107,53,0.3);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Noto Sans Thai', sans-serif;
+      background: var(--dark);
+      color: #fff;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== ANIMATED BG ===== */
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,107,53,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,107,53,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridMove 20s linear infinite;
+    }
+    @keyframes gridMove {
+      0% { background-position: 0 0; }
+      100% { background-position: 60px 60px; }
+    }
+    .bg-glow1 {
+      position: fixed; top: -200px; left: -200px;
+      width: 600px; height: 600px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,107,53,0.15) 0%, transparent 70%);
+      z-index: 0; animation: pulse1 8s ease-in-out infinite;
+    }
+    .bg-glow2 {
+      position: fixed; bottom: -200px; right: -200px;
+      width: 600px; height: 600px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(247,201,72,0.1) 0%, transparent 70%);
+      z-index: 0; animation: pulse2 10s ease-in-out infinite;
+    }
+    @keyframes pulse1 { 0%,100%{opacity:.5;transform:scale(1)} 50%{opacity:1;transform:scale(1.1)} }
+    @keyframes pulse2 { 0%,100%{opacity:.3;transform:scale(1)} 50%{opacity:.7;transform:scale(1.15)} }
+
+    /* ===== NAV ===== */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(13,13,26,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+    }
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; gap: 1rem;
+    }
+    .nav-logo { display:flex; align-items:center; gap:.5rem; text-decoration:none; }
+    .nav-logo .chain-icon { font-size:1.5rem; }
+    .nav-logo .brand { font-size:1.1rem; font-weight:700; }
+    .brand-ota { color: var(--gold); }
+    .brand-chain { color: #fff; }
+    .nav-links { display:flex; gap:1.5rem; margin-left:2rem; }
+    .nav-links a { color:rgba(255,255,255,.6); text-decoration:none; font-size:.88rem; font-weight:500; transition:.2s; }
+    .nav-links a:hover, .nav-links a.active { color:#fff; }
+    .nav-right { margin-left:auto; display:flex; align-items:center; gap:.75rem; }
+    .btn-connect {
+      background: var(--gradient-ota);
+      color: #fff; border:none; border-radius:12px;
+      padding:.55rem 1.25rem; font-size:.88rem; font-weight:700;
+      cursor:pointer; font-family:inherit; transition:.2s;
+      display:flex; align-items:center; gap:.4rem;
+    }
+    .btn-connect:hover { transform:translateY(-1px); box-shadow: var(--glow-orange); }
+    .wallet-connected {
+      display:flex; align-items:center; gap:.5rem;
+      background: rgba(0,230,118,.1); border:1px solid rgba(0,230,118,.3);
+      border-radius:12px; padding:.45rem 1rem; font-size:.82rem;
+    }
+    .dot-green { width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+
+    /* ===== MAIN ===== */
+    main { position:relative; z-index:1; }
+
+    /* ===== HERO ===== */
+    .hero {
+      max-width:1200px; margin:0 auto; padding:4rem 2rem 2rem;
+      text-align:center;
+    }
+    .hero-badge {
+      display:inline-flex; align-items:center; gap:.5rem;
+      background: rgba(247,201,72,.12); border:1px solid rgba(247,201,72,.3);
+      border-radius:20px; padding:.4rem 1rem; font-size:.82rem; font-weight:600;
+      color:var(--gold); margin-bottom:1.5rem;
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      font-weight:800; line-height:1.15; margin-bottom:1rem;
+    }
+    .hero h1 .hl { background: var(--gradient-ota); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .hero p { font-size:1.1rem; color:rgba(255,255,255,.65); max-width:600px; margin:0 auto 2rem; line-height:1.7; }
+    .hero-btns { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; margin-bottom:3rem; }
+    .btn-primary {
+      background: var(--gradient-ota); color:#fff;
+      padding:.8rem 2rem; border-radius:14px; font-size:1rem; font-weight:700;
+      text-decoration:none; border:none; cursor:pointer; font-family:inherit;
+      display:inline-flex; align-items:center; gap:.5rem; transition:.2s;
+    }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:var(--glow-orange); }
+    .btn-outline {
+      background:transparent; color:#fff;
+      border:1px solid rgba(255,255,255,.2);
+      padding:.8rem 2rem; border-radius:14px; font-size:1rem; font-weight:600;
+      text-decoration:none; display:inline-flex; align-items:center; gap:.5rem; transition:.2s;
+    }
+    .btn-outline:hover { border-color:rgba(255,255,255,.5); background:rgba(255,255,255,.05); }
+
+    /* ===== TOKEN STATS BAR ===== */
+    .stats-bar {
+      max-width:1200px; margin:0 auto 3rem; padding:0 2rem;
+    }
+    .stats-inner {
+      background: rgba(255,255,255,.04);
+      border:1px solid var(--border);
+      border-radius:20px; padding:1.5rem 2rem;
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1.5rem;
+    }
+    .stat-item { text-align:center; }
+    .stat-label { font-size:.75rem; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.08em; margin-bottom:.3rem; }
+    .stat-val { font-size:1.5rem; font-weight:800; color:var(--gold); }
+    .stat-sub { font-size:.75rem; color:rgba(255,255,255,.4); margin-top:.2rem; }
+    .stat-change { color:var(--green); font-size:.75rem; }
+    .divider-v { width:1px; background:var(--border); }
+
+    /* ===== SECTION ===== */
+    section { max-width:1200px; margin:0 auto; padding:2rem; margin-bottom:1rem; }
+    .sec-title {
+      display:flex; align-items:center; gap:.75rem; margin-bottom:1.5rem;
+    }
+    .sec-title h2 { font-size:1.4rem; font-weight:700; }
+    .sec-title .tag {
+      background: rgba(255,107,53,.15); border:1px solid rgba(255,107,53,.3);
+      color:var(--primary); border-radius:8px; padding:.2rem .6rem; font-size:.75rem; font-weight:700;
+    }
+
+    /* ===== FEATURE CARDS ===== */
+    .cards-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1.25rem; }
+    .feat-card {
+      background: rgba(255,255,255,.04);
+      border:1px solid var(--border); border-radius:20px;
+      padding:1.75rem; transition:.3s; position:relative; overflow:hidden;
+      cursor:default;
+    }
+    .feat-card::before {
+      content:''; position:absolute; inset:0; opacity:0; transition:.3s;
+      background: linear-gradient(135deg,rgba(255,107,53,.08) 0%, transparent 60%);
+    }
+    .feat-card:hover { border-color:rgba(255,107,53,.3); transform:translateY(-3px); box-shadow:var(--glow-orange); }
+    .feat-card:hover::before { opacity:1; }
+    .feat-icon { font-size:2.5rem; margin-bottom:1rem; display:block; }
+    .feat-title { font-size:1.05rem; font-weight:700; margin-bottom:.5rem; }
+    .feat-desc { font-size:.88rem; color:rgba(255,255,255,.55); line-height:1.6; margin-bottom:1rem; }
+    .feat-tag {
+      display:inline-block; padding:.2rem .65rem; border-radius:6px; font-size:.73rem; font-weight:700;
+    }
+    .tag-gold { background:rgba(247,201,72,.15); color:var(--gold); border:1px solid rgba(247,201,72,.3); }
+    .tag-green { background:rgba(0,230,118,.12); color:var(--green); border:1px solid rgba(0,230,118,.25); }
+    .tag-purple { background:rgba(124,77,255,.15); color:#B39DFF; border:1px solid rgba(124,77,255,.3); }
+    .tag-blue { background:rgba(41,121,255,.15); color:#82B1FF; border:1px solid rgba(41,121,255,.3); }
+    .tag-orange { background:rgba(255,107,53,.15); color:#FF8E53; border:1px solid rgba(255,107,53,.3); }
+
+    /* ===== OTA TOKEN BOX ===== */
+    .token-box {
+      background: linear-gradient(135deg, rgba(247,201,72,.1) 0%, rgba(255,107,53,.08) 100%);
+      border:1px solid rgba(247,201,72,.25); border-radius:24px; padding:2.5rem;
+      display:grid; grid-template-columns:1fr 1fr; gap:3rem; align-items:center;
+      position:relative; overflow:hidden;
+    }
+    .token-box::after {
+      content:'OTA'; position:absolute; right:-30px; top:50%; transform:translateY(-50%);
+      font-size:8rem; font-weight:900; color:rgba(247,201,72,.06); line-height:1;
+      pointer-events:none;
+    }
+    .token-logo {
+      width:120px; height:120px; border-radius:50%;
+      background: var(--gradient-ota); display:flex; align-items:center; justify-content:center;
+      font-size:3rem; margin-bottom:1.5rem; box-shadow:var(--glow-gold);
+      animation:tokenSpin 10s linear infinite;
+    }
+    @keyframes tokenSpin { 0%{box-shadow:0 0 30px rgba(247,201,72,.3)} 50%{box-shadow:0 0 60px rgba(255,107,53,.5)} 100%{box-shadow:0 0 30px rgba(247,201,72,.3)} }
+    .token-name { font-size:2rem; font-weight:800; color:var(--gold); }
+    .token-sub { color:rgba(255,255,255,.5); font-size:.9rem; margin:.25rem 0 1rem; }
+    .token-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    .token-info-item { background:rgba(0,0,0,.2); border-radius:12px; padding:1rem; }
+    .ti-label { font-size:.72rem; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.25rem; }
+    .ti-val { font-size:1.1rem; font-weight:700; }
+    .token-uses { list-style:none; }
+    .token-uses li {
+      padding:.7rem 0; border-bottom:1px solid rgba(255,255,255,.05);
+      display:flex; align-items:flex-start; gap:.75rem; font-size:.9rem; color:rgba(255,255,255,.75);
+    }
+    .token-uses li:last-child { border-bottom:none; }
+    .token-uses li .ico { font-size:1.1rem; flex-shrink:0; margin-top:.05rem; }
+    @media(max-width:700px){ .token-box { grid-template-columns:1fr; gap:1.5rem; } .token-box::after { display:none; } }
+
+    /* ===== EARN TABLE ===== */
+    .earn-table { width:100%; border-collapse:collapse; }
+    .earn-table th {
+      text-align:left; padding:.75rem 1rem;
+      font-size:.75rem; text-transform:uppercase; letter-spacing:.07em;
+      color:rgba(255,255,255,.4); border-bottom:1px solid var(--border);
+    }
+    .earn-table td {
+      padding:.85rem 1rem; border-bottom:1px solid rgba(255,255,255,.04);
+      font-size:.9rem; color:rgba(255,255,255,.8);
+    }
+    .earn-table tr:last-child td { border-bottom:none; }
+    .earn-table tr:hover td { background:rgba(255,255,255,.02); }
+    .earn-amount { font-weight:700; color:var(--gold); }
+    .earn-icon { font-size:1.3rem; }
+    .table-wrap {
+      background:rgba(255,255,255,.03); border:1px solid var(--border);
+      border-radius:20px; overflow:hidden;
+    }
+
+    /* ===== STAKING ===== */
+    .staking-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem; }
+    .stake-tier {
+      background:rgba(255,255,255,.04); border:1px solid var(--border);
+      border-radius:18px; padding:1.5rem; text-align:center; transition:.3s;
+      position:relative; overflow:hidden;
+    }
+    .stake-tier.popular { border-color:rgba(247,201,72,.4); background:rgba(247,201,72,.06); }
+    .stake-tier.popular::before {
+      content:'⭐ ยอดนิยม'; position:absolute; top:0; right:0;
+      background:var(--gold); color:var(--dark); font-size:.7rem; font-weight:800;
+      padding:.25rem .6rem; border-radius:0 18px 0 10px;
+    }
+    .tier-icon { font-size:2.5rem; margin-bottom:.75rem; }
+    .tier-name { font-size:1.1rem; font-weight:700; margin-bottom:.25rem; }
+    .tier-lock { font-size:1.5rem; font-weight:800; color:var(--gold); }
+    .tier-lock span { font-size:.85rem; color:rgba(255,255,255,.5); font-weight:400; }
+    .tier-apy {
+      margin:.75rem 0; padding:.5rem; border-radius:10px;
+      background:rgba(0,230,118,.1); color:var(--green); font-weight:700; font-size:1rem;
+    }
+    .tier-perks { list-style:none; text-align:left; margin-top:.75rem; }
+    .tier-perks li { font-size:.83rem; color:rgba(255,255,255,.65); padding:.3rem 0; display:flex; gap:.5rem; }
+
+    /* ===== NFT PREVIEW ===== */
+    .nft-showcase { display:flex; gap:1.25rem; overflow-x:auto; padding-bottom:.5rem; }
+    .nft-showcase::-webkit-scrollbar { height:4px; }
+    .nft-showcase::-webkit-scrollbar-track { background:rgba(255,255,255,.05); border-radius:2px; }
+    .nft-showcase::-webkit-scrollbar-thumb { background:rgba(255,107,53,.4); border-radius:2px; }
+    .nft-card {
+      min-width:200px; background:rgba(255,255,255,.05);
+      border:1px solid var(--border); border-radius:16px; overflow:hidden; transition:.3s;
+    }
+    .nft-card:hover { border-color:rgba(255,107,53,.4); transform:translateY(-4px); box-shadow:var(--glow-orange); }
+    .nft-img {
+      width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center;
+      font-size:4rem; position:relative; overflow:hidden;
+    }
+    .nft-img-bg { position:absolute; inset:0; opacity:.3; }
+    .nft-emoji { position:relative; z-index:1; filter:drop-shadow(0 4px 8px rgba(0,0,0,.5)); }
+    .nft-info { padding:1rem; }
+    .nft-info .nft-name { font-weight:700; font-size:.9rem; margin-bottom:.25rem; }
+    .nft-info .nft-meta { font-size:.77rem; color:rgba(255,255,255,.45); margin-bottom:.5rem; }
+    .nft-info .nft-price { font-size:.9rem; font-weight:700; color:var(--gold); }
+
+    /* ===== AFFILIATE SMART CONTRACT ===== */
+    .aff-flow {
+      display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:wrap;
+      background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:20px;
+      padding:2rem; margin-bottom:1.25rem;
+    }
+    .flow-step {
+      display:flex; flex-direction:column; align-items:center; gap:.5rem; padding:1rem 1.5rem;
+      text-align:center; min-width:130px;
+    }
+    .flow-icon { font-size:2rem; }
+    .flow-title { font-size:.83rem; font-weight:700; }
+    .flow-desc { font-size:.73rem; color:rgba(255,255,255,.45); max-width:120px; }
+    .flow-arrow { font-size:1.5rem; color:rgba(255,107,53,.5); padding:0 .5rem; }
+
+    /* ===== PAYMENT ===== */
+    .pay-methods { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; }
+    .pay-method {
+      background:rgba(255,255,255,.04); border:1px solid var(--border);
+      border-radius:16px; padding:1.25rem; text-align:center; transition:.3s; cursor:pointer;
+    }
+    .pay-method:hover { border-color:rgba(255,107,53,.4); background:rgba(255,107,53,.06); transform:translateY(-2px); }
+    .pay-method.active { border-color:var(--primary); background:rgba(255,107,53,.1); }
+    .pay-method .pm-icon { font-size:2rem; margin-bottom:.5rem; }
+    .pay-method .pm-name { font-weight:700; font-size:.9rem; }
+    .pay-method .pm-sub { font-size:.75rem; color:rgba(255,255,255,.4); margin-top:.2rem; }
+    .pm-badge { display:inline-block; margin-top:.4rem; padding:.15rem .5rem; border-radius:6px; font-size:.68rem; font-weight:700; }
+
+    /* ===== ROADMAP ===== */
+    .roadmap { position:relative; padding-left:2rem; }
+    .roadmap::before { content:''; position:absolute; left:.75rem; top:0; bottom:0; width:2px; background:linear-gradient(to bottom, var(--primary), var(--gold), transparent); }
+    .roadmap-item { display:flex; gap:1.5rem; margin-bottom:2rem; position:relative; }
+    .roadmap-dot {
+      position:absolute; left:-2.35rem; top:.2rem;
+      width:14px; height:14px; border-radius:50%;
+      border:2px solid var(--border); flex-shrink:0;
+    }
+    .roadmap-dot.done { background:var(--green); border-color:var(--green); box-shadow:0 0 10px rgba(0,230,118,.5); }
+    .roadmap-dot.active { background:var(--primary); border-color:var(--primary); box-shadow:0 0 10px rgba(255,107,53,.5); animation:blink 2s infinite; }
+    .roadmap-dot.pending { background:transparent; border-color:rgba(255,255,255,.2); }
+    .roadmap-content { flex:1; }
+    .roadmap-q { font-size:.75rem; color:rgba(255,255,255,.4); font-weight:600; text-transform:uppercase; margin-bottom:.25rem; }
+    .roadmap-title { font-weight:700; font-size:1rem; margin-bottom:.25rem; }
+    .roadmap-desc { font-size:.85rem; color:rgba(255,255,255,.55); line-height:1.5; }
+
+    /* ===== LIVE TICKER ===== */
+    .ticker {
+      background:rgba(247,201,72,.08); border-top:1px solid rgba(247,201,72,.15); border-bottom:1px solid rgba(247,201,72,.15);
+      padding:.6rem 0; overflow:hidden; margin:0 0 2rem;
+    }
+    .ticker-track {
+      display:flex; gap:3rem; white-space:nowrap;
+      animation:tickerScroll 30s linear infinite;
+    }
+    .ticker-item { font-size:.82rem; color:rgba(255,255,255,.7); display:flex; align-items:center; gap:.4rem; }
+    .ticker-item .up { color:var(--green); }
+    .ticker-item .down { color:#FF5252; }
+    @keyframes tickerScroll { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+    /* ===== CTA ===== */
+    .cta-box {
+      background: linear-gradient(135deg, rgba(255,107,53,.15) 0%, rgba(247,201,72,.1) 100%);
+      border:1px solid rgba(255,107,53,.25); border-radius:24px;
+      padding:3rem 2rem; text-align:center; margin:2rem;
+    }
+    .cta-box h2 { font-size:1.8rem; font-weight:800; margin-bottom:.75rem; }
+    .cta-box p { color:rgba(255,255,255,.6); margin-bottom:1.5rem; }
+    .cta-box .cta-btns { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+
+    /* ===== FOOTER ===== */
+    footer {
+      border-top:1px solid var(--border); padding:1.5rem 2rem; margin-top:2rem;
+      text-align:center; color:rgba(255,255,255,.3); font-size:.8rem;
+    }
+    footer a { color:rgba(255,255,255,.5); text-decoration:none; }
+    footer a:hover { color:#fff; }
+
+    /* ===== RESPONSIVE ===== */
+    @media(max-width:600px) {
+      nav { padding:.75rem 1rem; }
+      .nav-links { display:none; }
+      .hero { padding:2rem 1rem 1rem; }
+      section { padding:1.5rem 1rem; }
+      .aff-flow { gap:0; }
+      .flow-arrow { display:none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- BG effects -->
+<div class="bg-grid"></div>
+<div class="bg-glow1"></div>
+<div class="bg-glow2"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <span class="chain-icon">⛓️</span>
+      <span class="brand"><span class="brand-ota">OTA</span><span class="brand-chain">Chain</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="#token" class="active">Token</a>
+      <a href="#earn">Earn-to-Create</a>
+      <a href="#staking">Staking</a>
+      <a href="#nft">NFT</a>
+      <a href="#affiliate">Affiliate</a>
+      <a href="#roadmap">Roadmap</a>
+    </div>
+    <div class="nav-right">
+      <a href="dashboard.html" style="color:rgba(255,255,255,.6);font-size:.85rem;text-decoration:none;">← Dashboard</a>
+      <button class="btn-connect" id="connectBtn" onclick="connectWallet()">
+        🔗 เชื่อมต่อ Wallet
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- LIVE TICKER -->
+<div class="ticker">
+  <div class="ticker-track" id="ticker">
+    <span class="ticker-item">⛓️ OTA/THB <strong style="color:var(--gold)">฿1.85</strong> <span class="up">▲ +12.4%</span></span>
+    <span class="ticker-item">📈 Market Cap <strong style="color:#fff">฿185M</strong></span>
+    <span class="ticker-item">🔥 Total Staked <strong style="color:var(--gold)">45.2M OTA</strong></span>
+    <span class="ticker-item">🎨 NFT Minted <strong style="color:#B39DFF">1,247 ชิ้น</strong></span>
+    <span class="ticker-item">💰 Affiliate Paid <strong style="color:var(--green)">฿2.4M</strong> (on-chain)</span>
+    <span class="ticker-item">👥 Active Users <strong style="color:#fff">8,914</strong></span>
+    <span class="ticker-item">⛓️ OTA/THB <strong style="color:var(--gold)">฿1.85</strong> <span class="up">▲ +12.4%</span></span>
+    <span class="ticker-item">📈 Market Cap <strong style="color:#fff">฿185M</strong></span>
+    <span class="ticker-item">🔥 Total Staked <strong style="color:var(--gold)">45.2M OTA</strong></span>
+    <span class="ticker-item">🎨 NFT Minted <strong style="color:#B39DFF">1,247 ชิ้น</strong></span>
+    <span class="ticker-item">💰 Affiliate Paid <strong style="color:var(--green)">฿2.4M</strong> (on-chain)</span>
+    <span class="ticker-item">👥 Active Users <strong style="color:#fff">8,914</strong></span>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">⛓️ Powered by BNB Smart Chain · BSC BEP-20</div>
+  <h1>
+    <span class="hl">OpenThai Chain</span><br>
+    Blockchain Fintech<br>สำหรับครีเอเตอร์ไทย
+  </h1>
+  <p>ระบบการเงินดิจิทัลแบบใหม่ — สร้างคอนเทนต์ รับ OTA Token, Stake เพื่อปลดล็อก AI, Mint NFT, รับ Affiliate อัตโนมัติผ่าน Smart Contract</p>
+  <div class="hero-btns">
+    <a href="wallet.html" class="btn-primary">🚀 เปิด Wallet ของฉัน</a>
+    <a href="#token" class="btn-outline">📄 Whitepaper</a>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-label">ราคา OTA Token</div>
+      <div class="stat-val">฿1.85</div>
+      <div class="stat-sub"><span class="stat-change">▲ +12.4%</span> 24h</div>
+    </div>
+    <div class="divider-v"></div>
+    <div class="stat-item">
+      <div class="stat-label">Total Supply</div>
+      <div class="stat-val">100M</div>
+      <div class="stat-sub">OTA Token</div>
+    </div>
+    <div class="divider-v"></div>
+    <div class="stat-item">
+      <div class="stat-label">APY Staking</div>
+      <div class="stat-val">24%</div>
+      <div class="stat-sub">สูงสุด Gold Tier</div>
+    </div>
+    <div class="divider-v"></div>
+    <div class="stat-item">
+      <div class="stat-label">Affiliate Pool</div>
+      <div class="stat-val">15%</div>
+      <div class="stat-sub">ของ Revenue ทั้งหมด</div>
+    </div>
+    <div class="divider-v"></div>
+    <div class="stat-item">
+      <div class="stat-label">Network</div>
+      <div class="stat-val" style="font-size:1rem;margin-top:.2rem;">BSC</div>
+      <div class="stat-sub">BNB Smart Chain</div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES OVERVIEW -->
+<section>
+  <div class="sec-title">
+    <h2>ระบบ Blockchain ทั้งหมด</h2>
+    <span class="tag">6 โมดูล</span>
+  </div>
+  <div class="cards-grid">
+    <div class="feat-card">
+      <span class="feat-icon">🪙</span>
+      <div class="feat-title">OTA Token</div>
+      <div class="feat-desc">Token หลักของ ecosystem — ใช้จ่ายค่าบริการ, Stake เพื่อรับสิทธิพิเศษ, Vote DAO governance</div>
+      <span class="feat-tag tag-gold">BEP-20 on BSC</span>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">✍️</span>
+      <div class="feat-title">Earn-to-Create</div>
+      <div class="feat-desc">สร้างคอนเทนต์ TikTok → รับ OTA Token อัตโนมัติ ยิ่งคอนเทนต์ดี ยิ่งได้ Token เยอะ</div>
+      <span class="feat-tag tag-green">Auto-reward</span>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">🔒</span>
+      <div class="feat-title">DeFi Staking</div>
+      <div class="feat-desc">Lock OTA Token → รับ APY สูงสุด 24% + ปลดล็อก Pro/Business features โดยไม่ต้องจ่ายรายเดือน</div>
+      <span class="feat-tag tag-purple">APY สูงสุด 24%</span>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">🖼️</span>
+      <div class="feat-title">NFT Content Badge</div>
+      <div class="feat-desc">Mint คอนเทนต์ที่ดีที่สุดของคุณเป็น NFT — พิสูจน์ความเป็นเจ้าของ + ขายต่อในตลาด</div>
+      <span class="feat-tag tag-purple">Opensea / OTA Market</span>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">🤝</span>
+      <div class="feat-title">Smart Contract Affiliate</div>
+      <div class="feat-desc">Commission จ่ายอัตโนมัติผ่าน Blockchain — ไม่มีการล่าช้า ไม่ต้องรอ ทำ On-Chain 100%</div>
+      <span class="feat-tag tag-green">Instant Payment</span>
+    </div>
+    <div class="feat-card">
+      <span class="feat-icon">💳</span>
+      <div class="feat-title">Multi-Payment Gateway</div>
+      <div class="feat-desc">จ่ายด้วย USDT · BNB · PromptPay · บัตรเครดิต — แปลงอัตโนมัติเป็น OTA Token</div>
+      <span class="feat-tag tag-orange">PromptPay + Crypto</span>
+    </div>
+  </div>
+</section>
+
+<!-- OTA TOKEN -->
+<section id="token">
+  <div class="sec-title">
+    <h2>OTA Token</h2>
+    <span class="tag">Tokenomics</span>
+  </div>
+  <div class="token-box">
+    <div>
+      <div class="token-logo">🪙</div>
+      <div class="token-name">OTA Token</div>
+      <div class="token-sub">OpenThai AI Official Token · BEP-20</div>
+      <div class="token-info-grid">
+        <div class="token-info-item">
+          <div class="ti-label">Total Supply</div>
+          <div class="ti-val" style="color:var(--gold)">100,000,000</div>
+        </div>
+        <div class="token-info-item">
+          <div class="ti-label">Network</div>
+          <div class="ti-val">BNB Chain</div>
+        </div>
+        <div class="token-info-item">
+          <div class="ti-label">ราคาเริ่มต้น</div>
+          <div class="ti-val" style="color:var(--green)">฿0.50</div>
+        </div>
+        <div class="token-info-item">
+          <div class="ti-label">ราคาปัจจุบัน</div>
+          <div class="ti-val" style="color:var(--gold)">฿1.85</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;color:var(--gold)">การกระจาย Token (Tokenomics)</h3>
+      <ul class="token-uses">
+        <li><span class="ico">✍️</span><span><strong>30% — Creator Rewards</strong><br><span style="font-size:.8rem;color:rgba(255,255,255,.45)">แจกให้ครีเอเตอร์ที่สร้างคอนเทนต์</span></span></li>
+        <li><span class="ico">🔒</span><span><strong>25% — Staking Pool</strong><br><span style="font-size:.8rem;color:rgba(255,255,255,.45)">ให้ผลตอบแทน APY แก่ผู้ Stake</span></span></li>
+        <li><span class="ico">🤝</span><span><strong>15% — Affiliate Pool</strong><br><span style="font-size:.8rem;color:rgba(255,255,255,.45)">Commission อัตโนมัติผ่าน Smart Contract</span></span></li>
+        <li><span class="ico">🏗️</span><span><strong>20% — Team & Development</strong><br><span style="font-size:.8rem;color:rgba(255,255,255,.45)">Vested 3 ปี, Unlock ทุกไตรมาส</span></span></li>
+        <li><span class="ico">📢</span><span><strong>10% — Marketing & Ecosystem</strong><br><span style="font-size:.8rem;color:rgba(255,255,255,.45)">Airdrop, Partnership, Listing</span></span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- EARN-TO-CREATE -->
+<section id="earn">
+  <div class="sec-title">
+    <h2>Earn-to-Create</h2>
+    <span class="tag">สร้างคอนเทนต์ → รับ Token</span>
+  </div>
+  <div class="table-wrap">
+    <table class="earn-table">
+      <thead>
+        <tr>
+          <th>กิจกรรม</th>
+          <th>รายละเอียด</th>
+          <th>OTA ที่ได้รับ</th>
+          <th>เงื่อนไข</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="earn-icon">✍️</span> สร้างคอนเทนต์</td>
+          <td>Generate Script + Caption + Hashtag ด้วย AI</td>
+          <td><span class="earn-amount">+5 OTA</span></td>
+          <td>ต่อ 1 คอนเทนต์</td>
+        </tr>
+        <tr>
+          <td><span class="earn-icon">📊</span> AI Quality Score ≥ 90</td>
+          <td>คอนเทนต์ผ่าน AI Critic ระดับ Gold</td>
+          <td><span class="earn-amount">+15 OTA</span></td>
+          <td>โบนัสคุณภาพ</td>
+        </tr>
+        <tr>
+          <td><span class="earn-icon">🔗</span> แชร์ + คลิก 100+</td>
+          <td>Share link ถูกคลิก 100 ครั้งขึ้นไป</td>
+          <td><span class="earn-amount">+25 OTA</span></td>
+          <td>Viral Bonus</td>
+        </tr>
+        <tr>
+          <td><span class="earn-icon">🛍️</span> Affiliate ขายได้</td>
+          <td>มีออเดอร์ผ่าน Affiliate Link ของคุณ</td>
+          <td><span class="earn-amount">+50 OTA + 8% THB</span></td>
+          <td>ต่อ 1 ออเดอร์</td>
+        </tr>
+        <tr>
+          <td><span class="earn-icon">👤</span> แนะนำเพื่อน</td>
+          <td>เพื่อนสมัคร Pro ด้วย Referral Link</td>
+          <td><span class="earn-amount">+100 OTA</span></td>
+          <td>ต่อ 1 คน</td>
+        </tr>
+        <tr>
+          <td><span class="earn-icon">🏆</span> Monthly Top Creator</td>
+          <td>อยู่ใน Top 10 Leaderboard ประจำเดือน</td>
+          <td><span class="earn-amount">+500 OTA</span></td>
+          <td>ประกาศทุกวันที่ 1</td>
+        </tr>
+        <tr>
+          <td><span class="earn-icon">🖼️</span> Mint NFT ที่ถูก Collect</td>
+          <td>มีคนซื้อ NFT คอนเทนต์ของคุณ</td>
+          <td><span class="earn-amount">90% ของราคาขาย</span></td>
+          <td>หักค่า Gas 10%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="margin-top:1rem;padding:1rem 1.25rem;background:rgba(247,201,72,.08);border:1px solid rgba(247,201,72,.2);border-radius:14px;font-size:.85rem;color:rgba(255,255,255,.65)">
+    💡 <strong style="color:var(--gold)">สูตรคำนวณ:</strong> OTA ที่ได้รับ = (จำนวนคอนเทนต์ × 5) + โบนัสคุณภาพ + Viral Bonus + Affiliate Bonus — รีเซ็ตทุกเดือน
+  </div>
+</section>
+
+<!-- STAKING -->
+<section id="staking">
+  <div class="sec-title">
+    <h2>DeFi Staking</h2>
+    <span class="tag">Lock OTA → ปลดล็อก AI</span>
+  </div>
+  <div class="staking-grid">
+    <div class="stake-tier">
+      <div class="tier-icon">🌱</div>
+      <div class="tier-name">Starter Tier</div>
+      <div class="tier-lock">500 OTA <span>/ 30 วัน</span></div>
+      <div class="tier-apy">APY 8%</div>
+      <ul class="tier-perks">
+        <li>✅ ปลดล็อก Pro Features</li>
+        <li>✅ คอนเทนต์ไม่จำกัด</li>
+        <li>✅ AI Critic ทุก Script</li>
+        <li>🔒 NFT Minting (ยังไม่ได้)</li>
+      </ul>
+    </div>
+    <div class="stake-tier popular">
+      <div class="tier-icon">🔥</div>
+      <div class="tier-name">Pro Tier</div>
+      <div class="tier-lock">2,000 OTA <span>/ 90 วัน</span></div>
+      <div class="tier-apy">APY 16%</div>
+      <ul class="tier-perks">
+        <li>✅ ทุกอย่างใน Starter</li>
+        <li>✅ NFT Minting 5 ชิ้น/เดือน</li>
+        <li>✅ Affiliate Priority Lane</li>
+        <li>✅ DAO Voting Rights</li>
+      </ul>
+    </div>
+    <div class="stake-tier">
+      <div class="tier-icon">👑</div>
+      <div class="tier-name">Business Tier</div>
+      <div class="tier-lock">5,000 OTA <span>/ 180 วัน</span></div>
+      <div class="tier-apy">APY 20%</div>
+      <ul class="tier-perks">
+        <li>✅ ทุกอย่างใน Pro</li>
+        <li>✅ Business API Access</li>
+        <li>✅ NFT ไม่จำกัด</li>
+        <li>✅ Team 5 คน + Sub-accounts</li>
+      </ul>
+    </div>
+    <div class="stake-tier">
+      <div class="tier-icon">💎</div>
+      <div class="tier-name">Gold Tier</div>
+      <div class="tier-lock">20,000 OTA <span>/ 365 วัน</span></div>
+      <div class="tier-apy">APY 24%</div>
+      <ul class="tier-perks">
+        <li>✅ ทุกอย่างใน Business</li>
+        <li>✅ White-label Solution</li>
+        <li>✅ Revenue Share 5%</li>
+        <li>✅ Early Access ทุก Feature</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- NFT CONTENT -->
+<section id="nft">
+  <div class="sec-title">
+    <h2>NFT Content Badge</h2>
+    <span class="tag">Mint คอนเทนต์เป็น NFT</span>
+  </div>
+  <div class="nft-showcase" id="nftShowcase">
+    <div class="nft-card">
+      <div class="nft-img" style="background:linear-gradient(135deg,#FF6B35,#F7C948)">
+        <div class="nft-img-bg" style="background:radial-gradient(circle,#fff 0%,transparent 70%)"></div>
+        <span class="nft-emoji">🌾</span>
+      </div>
+      <div class="nft-info">
+        <div class="nft-name">ข้าวหอมมะลิ OTOP</div>
+        <div class="nft-meta">Script #0001 · Gold Score</div>
+        <div class="nft-price">฿850 <span style="font-size:.72rem;color:rgba(255,255,255,.35)">/ 0.5 BNB</span></div>
+      </div>
+    </div>
+    <div class="nft-card">
+      <div class="nft-img" style="background:linear-gradient(135deg,#7C4DFF,#2979FF)">
+        <div class="nft-img-bg" style="background:radial-gradient(circle,#fff 0%,transparent 70%)"></div>
+        <span class="nft-emoji">🐟</span>
+      </div>
+      <div class="nft-info">
+        <div class="nft-name">น้ำปลาแท้ไทย</div>
+        <div class="nft-meta">Script #0002 · Viral Hit</div>
+        <div class="nft-price">฿1,200 <span style="font-size:.72rem;color:rgba(255,255,255,.35)">/ 0.7 BNB</span></div>
+      </div>
+    </div>
+    <div class="nft-card">
+      <div class="nft-img" style="background:linear-gradient(135deg,#00E676,#4ECDC4)">
+        <div class="nft-img-bg" style="background:radial-gradient(circle,#fff 0%,transparent 70%)"></div>
+        <span class="nft-emoji">🧴</span>
+      </div>
+      <div class="nft-info">
+        <div class="nft-name">สบู่สมุนไพรไทย</div>
+        <div class="nft-meta">Script #0003 · Top Seller</div>
+        <div class="nft-price">฿650 <span style="font-size:.72rem;color:rgba(255,255,255,.35)">/ 0.38 BNB</span></div>
+      </div>
+    </div>
+    <div class="nft-card">
+      <div class="nft-img" style="background:linear-gradient(135deg,#F7C948,#FF6B35)">
+        <div class="nft-img-bg" style="background:radial-gradient(circle,#fff 0%,transparent 70%)"></div>
+        <span class="nft-emoji">☕</span>
+      </div>
+      <div class="nft-info">
+        <div class="nft-name">กาแฟดอยแท้ไทย</div>
+        <div class="nft-meta">Script #0004 · Trending</div>
+        <div class="nft-price">฿2,100 <span style="font-size:.72rem;color:rgba(255,255,255,.35)">/ 1.2 BNB</span></div>
+      </div>
+    </div>
+    <div class="nft-card">
+      <div class="nft-img" style="background:linear-gradient(135deg,#E91E63,#9C27B0)">
+        <div class="nft-img-bg" style="background:radial-gradient(circle,#fff 0%,transparent 70%)"></div>
+        <span class="nft-emoji">🌺</span>
+      </div>
+      <div class="nft-info">
+        <div class="nft-name">ดอกไม้ไทย OTOP</div>
+        <div class="nft-meta">Script #0005 · Limited</div>
+        <div class="nft-price">฿5,500 <span style="font-size:.72rem;color:rgba(255,255,255,.35)">/ 3.2 BNB</span></div>
+      </div>
+    </div>
+    <div class="nft-card" style="min-width:200px;display:flex;align-items:center;justify-content:center;border:2px dashed rgba(255,255,255,.15);cursor:pointer;" onclick="location.href='nft.html'">
+      <div style="text-align:center;padding:2rem">
+        <div style="font-size:2.5rem;margin-bottom:.5rem">✨</div>
+        <div style="font-weight:700;font-size:.9rem">Mint คอนเทนต์ของคุณ</div>
+        <div style="font-size:.77rem;color:rgba(255,255,255,.4);margin-top:.25rem">เริ่มต้น 200 OTA</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AFFILIATE SMART CONTRACT -->
+<section id="affiliate">
+  <div class="sec-title">
+    <h2>Smart Contract Affiliate</h2>
+    <span class="tag">จ่ายอัตโนมัติ On-Chain</span>
+  </div>
+  <div class="aff-flow">
+    <div class="flow-step">
+      <div class="flow-icon">🛍️</div>
+      <div class="flow-title">ลูกค้าซื้อสินค้า</div>
+      <div class="flow-desc">ผ่าน Affiliate Link ของคุณ</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-icon">📡</div>
+      <div class="flow-title">Oracle ตรวจสอบ</div>
+      <div class="flow-desc">Chainlink ยืนยันการซื้อ On-chain</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-icon">⚙️</div>
+      <div class="flow-title">Smart Contract</div>
+      <div class="flow-desc">คำนวณ Commission อัตโนมัติ</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-icon">💰</div>
+      <div class="flow-title">โอน Commission</div>
+      <div class="flow-desc">เข้า Wallet ทันที ≤ 3 วินาที</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="flow-icon">🏦</div>
+      <div class="flow-title">ถอน / Stake</div>
+      <div class="flow-desc">แปลงเป็น THB หรือ Stake ต่อ</div>
+    </div>
+  </div>
+  <div class="cards-grid" style="margin-top:1rem">
+    <div class="feat-card" style="padding:1.5rem">
+      <div style="font-size:1.5rem;margin-bottom:.5rem">📊</div>
+      <div class="feat-title" style="font-size:.95rem">Commission Structure</div>
+      <div style="margin-top:.75rem;display:flex;flex-direction:column;gap:.5rem">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;padding:.4rem .75rem;background:rgba(255,255,255,.04);border-radius:8px">
+          <span style="color:rgba(255,255,255,.6)">สินค้า OTOP</span><span style="color:var(--gold);font-weight:700">8%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;padding:.4rem .75rem;background:rgba(255,255,255,.04);border-radius:8px">
+          <span style="color:rgba(255,255,255,.6)">สินค้าไทย-จีน</span><span style="color:var(--gold);font-weight:700">5%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;padding:.4rem .75rem;background:rgba(255,255,255,.04);border-radius:8px">
+          <span style="color:rgba(255,255,255,.6)">สมัคร Pro Plan</span><span style="color:var(--gold);font-weight:700">20%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;padding:.4rem .75rem;background:rgba(255,255,255,.04);border-radius:8px">
+          <span style="color:rgba(255,255,255,.6)">Multi-level (Tier 2)</span><span style="color:var(--gold);font-weight:700">2%</span>
+        </div>
+      </div>
+    </div>
+    <div class="feat-card" style="padding:1.5rem">
+      <div style="font-size:1.5rem;margin-bottom:.5rem">🔐</div>
+      <div class="feat-title" style="font-size:.95rem">ความโปร่งใส On-Chain</div>
+      <ul style="margin-top:.75rem;list-style:none;display:flex;flex-direction:column;gap:.5rem">
+        <li style="font-size:.85rem;color:rgba(255,255,255,.65);display:flex;gap:.5rem">✅ ดู Transaction ได้ใน BSCScan</li>
+        <li style="font-size:.85rem;color:rgba(255,255,255,.65);display:flex;gap:.5rem">✅ Smart Contract Open Source</li>
+        <li style="font-size:.85rem;color:rgba(255,255,255,.65);display:flex;gap:.5rem">✅ Audited โดย CertiK</li>
+        <li style="font-size:.85rem;color:rgba(255,255,255,.65);display:flex;gap:.5rem">✅ ไม่มีบุคคลที่ 3 จัดการเงิน</li>
+        <li style="font-size:.85rem;color:rgba(255,255,255,.65);display:flex;gap:.5rem">✅ Multi-sig Wallet ทีมงาน</li>
+      </ul>
+    </div>
+    <div class="feat-card" style="padding:1.5rem">
+      <div style="font-size:1.5rem;margin-bottom:.5rem">📈</div>
+      <div class="feat-title" style="font-size:.95rem">สถิติ Affiliate</div>
+      <div style="margin-top:.75rem;display:flex;flex-direction:column;gap:.75rem">
+        <div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-bottom:.2rem">Total Paid (On-Chain)</div>
+          <div style="font-size:1.3rem;font-weight:800;color:var(--gold)">฿2,400,000</div>
+        </div>
+        <div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-bottom:.2rem">Active Affiliates</div>
+          <div style="font-size:1.3rem;font-weight:800;color:var(--green)">1,247 คน</div>
+        </div>
+        <div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.4);margin-bottom:.2rem">รายได้เฉลี่ย/คน/เดือน</div>
+          <div style="font-size:1.3rem;font-weight:800;color:#fff">฿1,926</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PAYMENT METHODS -->
+<section id="payment">
+  <div class="sec-title">
+    <h2>วิธีชำระเงิน</h2>
+    <span class="tag">Fiat + Crypto</span>
+  </div>
+  <div class="pay-methods">
+    <div class="pay-method active">
+      <div class="pm-icon">🏦</div>
+      <div class="pm-name">PromptPay</div>
+      <div class="pm-sub">โอนเงินผ่าน QR</div>
+      <div class="pm-badge" style="background:rgba(0,230,118,.15);color:var(--green)">แนะนำ</div>
+    </div>
+    <div class="pay-method">
+      <div class="pm-icon">🟡</div>
+      <div class="pm-name">USDT / USDC</div>
+      <div class="pm-sub">Stablecoin BEP-20</div>
+      <div class="pm-badge" style="background:rgba(247,201,72,.15);color:var(--gold)">Crypto</div>
+    </div>
+    <div class="pay-method">
+      <div class="pm-icon">🔶</div>
+      <div class="pm-name">BNB</div>
+      <div class="pm-sub">BNB Smart Chain</div>
+      <div class="pm-badge" style="background:rgba(247,201,72,.15);color:var(--gold)">Crypto</div>
+    </div>
+    <div class="pay-method">
+      <div class="pm-icon">🪙</div>
+      <div class="pm-name">OTA Token</div>
+      <div class="pm-sub">ลด 20% เมื่อจ่ายด้วย OTA</div>
+      <div class="pm-badge" style="background:rgba(255,107,53,.15);color:var(--primary)">ลด 20%</div>
+    </div>
+    <div class="pay-method">
+      <div class="pm-icon">💳</div>
+      <div class="pm-name">บัตรเครดิต</div>
+      <div class="pm-sub">Visa / Mastercard</div>
+      <div class="pm-badge" style="background:rgba(41,121,255,.15);color:#82B1FF">Stripe</div>
+    </div>
+    <div class="pay-method">
+      <div class="pm-icon">📱</div>
+      <div class="pm-name">TrueMoney</div>
+      <div class="pm-sub">TrueMoney Wallet</div>
+      <div class="pm-badge" style="background:rgba(255,107,53,.15);color:var(--primary)">TH Only</div>
+    </div>
+  </div>
+  <div style="margin-top:1rem;padding:1rem 1.25rem;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:14px;font-size:.85rem;color:rgba(255,255,255,.55)">
+    🔄 ชำระเป็น THB → ระบบแปลงเป็น OTA Token อัตโนมัติ ตาม DEX Rate ณ ขณะนั้น · ไม่มีค่าธรรมเนียมแปลงสกุลเงิน
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="sec-title">
+    <h2>Roadmap</h2>
+    <span class="tag">OpenThai Chain Timeline</span>
+  </div>
+  <div class="roadmap">
+    <div class="roadmap-item">
+      <div class="roadmap-dot done"></div>
+      <div class="roadmap-content">
+        <div class="roadmap-q">Q1 2026 — เสร็จแล้ว ✅</div>
+        <div class="roadmap-title">Phase 1: OpenThai AI Launch</div>
+        <div class="roadmap-desc">Landing page, AI Generator, Affiliate Hub, Vercel Deploy</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot active"></div>
+      <div class="roadmap-content">
+        <div class="roadmap-q">Q2 2026 — กำลังทำ 🔥</div>
+        <div class="roadmap-title">Phase 2: Blockchain Foundation</div>
+        <div class="roadmap-desc">OTA Token Smart Contract, Wallet Integration, Multi-Payment Gateway, Smart Contract Affiliate</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot pending"></div>
+      <div class="roadmap-content">
+        <div class="roadmap-q">Q3 2026</div>
+        <div class="roadmap-title">Phase 3: DeFi & NFT</div>
+        <div class="roadmap-desc">Staking Pool เปิดตัว, NFT Content Marketplace, Earn-to-Create Reward Engine</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot pending"></div>
+      <div class="roadmap-content">
+        <div class="roadmap-q">Q4 2026</div>
+        <div class="roadmap-title">Phase 4: DEX Listing & DAO</div>
+        <div class="roadmap-desc">List OTA บน PancakeSwap, DAO Governance, Cross-chain Bridge (BSC → ETH)</div>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot pending"></div>
+      <div class="roadmap-content">
+        <div class="roadmap-q">Q1 2027</div>
+        <div class="roadmap-title">Phase 5: OpenThai Chain Mainnet</div>
+        <div class="roadmap-desc">L2 Rollup บน BSC, OpenThai DEX, Cross-border Payment TH-ASEAN</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-box">
+  <h2>🚀 เริ่มต้นกับ OpenThai Chain วันนี้</h2>
+  <p>เชื่อมต่อ Wallet และเริ่มรับ OTA Token จากการสร้างคอนเทนต์ TikTok</p>
+  <div class="cta-btns">
+    <a href="wallet.html" class="btn-primary">🔗 เปิด Wallet</a>
+    <a href="generator.html" class="btn-outline">✍️ สร้างคอนเทนต์ → รับ Token</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div style="margin-bottom:.5rem">
+    <a href="index.html">หน้าแรก</a> · <a href="dashboard.html">Dashboard</a> ·
+    <a href="wallet.html">Wallet</a> · <a href="nft.html">NFT</a> ·
+    <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a>
+  </div>
+  <div>© 2026 OpenThai AI / OTAChain · Zuejai · All rights reserved · Smart Contract Audited by CertiK</div>
+</footer>
+
+<script>
+// Connect Wallet
+async function connectWallet() {
+  const btn = document.getElementById('connectBtn');
+  if (typeof window.ethereum !== 'undefined') {
+    try {
+      btn.textContent = '⏳ กำลังเชื่อมต่อ...';
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const addr = accounts[0];
+      const short = addr.slice(0,6) + '...' + addr.slice(-4);
+      btn.outerHTML = `<div class="wallet-connected"><div class="dot-green"></div><span>🔗 ${short}</span></div>`;
+    } catch(e) {
+      btn.textContent = '❌ ยกเลิก';
+      setTimeout(() => btn.textContent = '🔗 เชื่อมต่อ Wallet', 2000);
+    }
+  } else {
+    alert('กรุณาติดตั้ง MetaMask หรือ Trust Wallet ก่อนเชื่อมต่อ\n\nดาวน์โหลดที่: metamask.io');
+  }
+}
+
+// Animate stats counter
+function animateCounters() {
+  const vals = document.querySelectorAll('.stat-val');
+  vals.forEach(el => {
+    const txt = el.textContent;
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.style.transition = 'opacity .5s';
+      el.style.opacity = '1';
+    }, Math.random()*600);
+  });
+}
+animateCounters();
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const t = document.querySelector(a.getAttribute('href'));
+    if(t) t.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+});
+</script>
+</body>
+</html>

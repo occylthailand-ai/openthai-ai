@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NFT Content Badge — OpenThai Chain</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖼️</text></svg>">
+  <style>
+    :root {
+      --primary: #FF6B35; --dark: #0D0D1A; --dark2: #1A1A2E;
+      --gold: #F7C948; --green: #00E676; --purple: #7C4DFF;
+      --border: rgba(255,255,255,.08); --card: rgba(255,255,255,.04);
+      --gradient-ota: linear-gradient(135deg,#FF6B35,#FF8E53,#F7C948);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Noto Sans Thai',sans-serif; background:var(--dark); color:#fff; min-height:100vh; }
+
+    .bg-fx { position:fixed; inset:0; z-index:0; pointer-events:none;
+      background: radial-gradient(ellipse at 20% 20%, rgba(124,77,255,.1) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 80%, rgba(255,107,53,.08) 0%, transparent 50%); }
+
+    nav { position:sticky; top:0; z-index:100; background:rgba(13,13,26,.9); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); padding:.9rem 2rem; display:flex; align-items:center; gap:1rem; }
+    .nav-logo { display:flex; align-items:center; gap:.4rem; text-decoration:none; font-weight:700; font-size:1.05rem; }
+    .nav-logo .ot { color:var(--primary); } .nav-logo .ch { color:var(--gold); }
+    .nav-right { margin-left:auto; display:flex; gap:.75rem; align-items:center; }
+    .nav-right a { color:rgba(255,255,255,.5); text-decoration:none; font-size:.85rem; }
+    .nav-right a:hover { color:#fff; }
+
+    main { position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:2rem; }
+
+    .page-title { text-align:center; margin-bottom:2.5rem; }
+    .page-title .badge { display:inline-flex; align-items:center; gap:.4rem; background:rgba(124,77,255,.12); border:1px solid rgba(124,77,255,.3); border-radius:20px; padding:.35rem 1rem; font-size:.8rem; font-weight:700; color:#B39DFF; margin-bottom:1rem; }
+    .page-title h1 { font-size:clamp(1.8rem,4vw,2.8rem); font-weight:800; margin-bottom:.75rem; }
+    .page-title h1 .hl { background:linear-gradient(135deg,#7C4DFF,#FF6B35,#F7C948); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .page-title p { color:rgba(255,255,255,.55); max-width:550px; margin:0 auto; line-height:1.7; font-size:.95rem; }
+
+    /* TABS */
+    .tab-row { display:flex; gap:.5rem; margin-bottom:2rem; justify-content:center; }
+    .tab-btn { padding:.55rem 1.25rem; border-radius:12px; font-size:.88rem; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--card); color:rgba(255,255,255,.5); font-family:inherit; transition:.2s; }
+    .tab-btn.active { background:var(--gradient-ota); color:#fff; border-color:transparent; }
+    .tab-pane { display:none; } .tab-pane.active { display:block; }
+
+    /* MINT PANEL */
+    .mint-grid { display:grid; grid-template-columns:1fr 1.2fr; gap:2rem; align-items:start; }
+    @media(max-width:750px){ .mint-grid { grid-template-columns:1fr; } }
+
+    .nft-preview-box {
+      background:linear-gradient(135deg,rgba(124,77,255,.15),rgba(255,107,53,.1));
+      border:1px solid rgba(124,77,255,.3); border-radius:24px; padding:2rem;
+      text-align:center; position:sticky; top:100px;
+    }
+    .nft-canvas {
+      width:100%; aspect-ratio:1; border-radius:20px; overflow:hidden;
+      position:relative; margin-bottom:1.25rem; display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg,#1A1A2E,#0D0D1A);
+      border:2px solid rgba(255,255,255,.08);
+    }
+    .nft-canvas-bg { position:absolute; inset:0; }
+    .nft-canvas-emoji { font-size:6rem; position:relative; z-index:1; filter:drop-shadow(0 8px 20px rgba(0,0,0,.5)); }
+    .nft-canvas-label { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(to top, rgba(0,0,0,.8),transparent); padding:1rem; text-align:left; }
+    .nft-canvas-label .nc-name { font-weight:700; font-size:1rem; }
+    .nft-canvas-label .nc-badge { display:inline-block; padding:.15rem .5rem; border-radius:6px; font-size:.7rem; font-weight:700; background:var(--gradient-ota); margin-top:.25rem; }
+    .nft-preview-info { display:flex; justify-content:space-between; font-size:.82rem; color:rgba(255,255,255,.45); margin-bottom:.5rem; }
+
+    .mint-form { display:flex; flex-direction:column; gap:1rem; }
+    .form-group label { display:block; font-size:.8rem; color:rgba(255,255,255,.5); margin-bottom:.4rem; font-weight:600; }
+    .form-input, .form-select, .form-textarea {
+      width:100%; background:rgba(255,255,255,.06); border:1px solid var(--border);
+      color:#fff; border-radius:12px; padding:.65rem 1rem; font-size:.9rem; font-family:inherit; outline:none; transition:.2s;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color:rgba(124,77,255,.5); background:rgba(124,77,255,.06); }
+    .form-textarea { min-height:100px; resize:vertical; }
+    .form-select option { background:#1A1A2E; }
+
+    .emoji-picker { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.4rem; }
+    .emoji-opt { width:44px; height:44px; border-radius:10px; background:rgba(255,255,255,.06); border:2px solid rgba(255,255,255,.08); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.4rem; transition:.2s; }
+    .emoji-opt:hover, .emoji-opt.selected { border-color:rgba(124,77,255,.6); background:rgba(124,77,255,.12); }
+
+    .bg-picker { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.4rem; }
+    .bg-opt { width:44px; height:44px; border-radius:10px; cursor:pointer; border:2px solid rgba(255,255,255,.08); transition:.2s; }
+    .bg-opt:hover, .bg-opt.selected { border-color:rgba(255,255,255,.6); transform:scale(1.05); }
+
+    .mint-cost { background:rgba(255,255,255,.04); border:1px solid var(--border); border-radius:14px; padding:1rem 1.25rem; }
+    .mint-cost-row { display:flex; justify-content:space-between; font-size:.85rem; padding:.3rem 0; }
+    .mint-cost-row.total { border-top:1px solid var(--border); margin-top:.4rem; padding-top:.6rem; font-weight:700; font-size:.95rem; }
+
+    .btn-mint {
+      width:100%; padding:1rem; border-radius:14px; font-size:1.05rem; font-weight:800;
+      background:var(--gradient-ota); color:#fff; border:none; cursor:pointer; font-family:inherit;
+      transition:.2s; margin-top:.5rem; display:flex; align-items:center; justify-content:center; gap:.5rem;
+    }
+    .btn-mint:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(255,107,53,.4); }
+    .btn-mint:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+    /* MARKETPLACE */
+    .market-filter { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1.5rem; align-items:center; }
+    .filter-btn { padding:.4rem 1rem; border-radius:10px; font-size:.82rem; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--card); color:rgba(255,255,255,.6); font-family:inherit; transition:.2s; }
+    .filter-btn.active { background:rgba(255,107,53,.15); color:var(--primary); border-color:rgba(255,107,53,.3); }
+    .sort-select { margin-left:auto; background:var(--card); border:1px solid var(--border); color:rgba(255,255,255,.7); border-radius:10px; padding:.4rem .75rem; font-size:.82rem; font-family:inherit; outline:none; }
+
+    .nft-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:1.25rem; }
+    .nft-card { background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden; transition:.3s; cursor:pointer; }
+    .nft-card:hover { border-color:rgba(124,77,255,.4); transform:translateY(-4px); box-shadow:0 12px 40px rgba(124,77,255,.2); }
+    .nft-img { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:4.5rem; position:relative; overflow:hidden; }
+    .nft-img .ribbon { position:absolute; top:.5rem; right:.5rem; background:var(--gradient-ota); color:#fff; font-size:.68rem; font-weight:800; padding:.2rem .5rem; border-radius:6px; }
+    .nft-body { padding:1rem; }
+    .nft-name { font-weight:700; font-size:.95rem; margin-bottom:.2rem; }
+    .nft-creator { font-size:.75rem; color:rgba(255,255,255,.4); margin-bottom:.75rem; display:flex; align-items:center; gap:.3rem; }
+    .nft-creator .avatar { width:16px; height:16px; border-radius:50%; background:var(--gradient-ota); display:inline-block; }
+    .nft-footer { display:flex; align-items:center; justify-content:space-between; }
+    .nft-price-label { font-size:.7rem; color:rgba(255,255,255,.35); }
+    .nft-price { font-weight:800; font-size:1rem; color:var(--gold); }
+    .nft-buy-btn { padding:.4rem .85rem; border-radius:8px; font-size:.78rem; font-weight:700; border:none; background:rgba(124,77,255,.2); color:#B39DFF; cursor:pointer; font-family:inherit; transition:.2s; }
+    .nft-buy-btn:hover { background:rgba(124,77,255,.4); color:#fff; }
+
+    /* MY NFTs */
+    .my-nft-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:1.25rem; }
+    .my-nft-card { background:var(--card); border:1px solid var(--border); border-radius:20px; overflow:hidden; }
+    .my-nft-img { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:5rem; }
+    .my-nft-body { padding:1.25rem; }
+    .my-nft-name { font-weight:700; font-size:1rem; margin-bottom:.25rem; }
+    .my-nft-id { font-size:.75rem; color:rgba(255,255,255,.35); margin-bottom:.75rem; font-family:monospace; }
+    .my-nft-stats { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-bottom:.75rem; }
+    .mns-item { background:rgba(255,255,255,.05); border-radius:10px; padding:.65rem; text-align:center; }
+    .mns-label { font-size:.68rem; color:rgba(255,255,255,.35); margin-bottom:.15rem; }
+    .mns-val { font-size:.95rem; font-weight:700; }
+    .my-nft-actions { display:flex; gap:.5rem; }
+    .mna-btn { flex:1; padding:.5rem; border-radius:10px; font-size:.78rem; font-weight:700; border:none; cursor:pointer; font-family:inherit; transition:.2s; }
+    .mna-list { background:var(--gradient-ota); color:#fff; }
+    .mna-transfer { background:rgba(255,255,255,.08); color:rgba(255,255,255,.7); }
+    .mna-transfer:hover { background:rgba(255,255,255,.15); }
+
+    /* HOW IT WORKS */
+    .how-steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1.25rem; }
+    .how-step { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:1.5rem; text-align:center; position:relative; }
+    .step-num { position:absolute; top:-12px; left:50%; transform:translateX(-50%); width:28px; height:28px; border-radius:50%; background:var(--gradient-ota); display:flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:800; }
+    .step-icon { font-size:2.2rem; margin:1rem 0 .75rem; }
+    .step-title { font-weight:700; font-size:.9rem; margin-bottom:.4rem; }
+    .step-desc { font-size:.8rem; color:rgba(255,255,255,.5); line-height:1.5; }
+  </style>
+</head>
+<body>
+<div class="bg-fx"></div>
+<nav>
+  <a href="blockchain.html" class="nav-logo">⛓️ <span class="ot">OTA</span><span class="ch">Chain</span></a>
+  <div class="nav-right">
+    <a href="wallet.html">💎 Wallet</a>
+    <a href="generator.html">✍️ สร้างคอนเทนต์</a>
+    <a href="dashboard.html">📊 Dashboard</a>
+  </div>
+</nav>
+
+<main>
+  <div class="page-title">
+    <div class="badge">🖼️ NFT Content Badge — OpenThai Chain</div>
+    <h1>Mint <span class="hl">คอนเทนต์ TikTok</span> เป็น NFT</h1>
+    <p>พิสูจน์ความเป็นเจ้าของคอนเทนต์บน Blockchain — ขายต่อในตลาด, รับ Royalty ทุกครั้งที่ถูกขาย</p>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-row">
+    <button class="tab-btn active" onclick="switchTab('mint',this)">✨ Mint NFT ใหม่</button>
+    <button class="tab-btn" onclick="switchTab('market',this)">🛒 Marketplace</button>
+    <button class="tab-btn" onclick="switchTab('my',this)">👤 NFT ของฉัน</button>
+    <button class="tab-btn" onclick="switchTab('how',this)">❓ วิธีใช้งาน</button>
+  </div>
+
+  <!-- MINT TAB -->
+  <div class="tab-pane active" id="tab-mint">
+    <div class="mint-grid">
+      <!-- Preview -->
+      <div class="nft-preview-box">
+        <div class="nft-canvas" id="nftCanvas" style="background:linear-gradient(135deg,#FF6B35,#F7C948)">
+          <div class="nft-canvas-bg" id="canvasBg" style="background:linear-gradient(135deg,#FF6B35,#F7C948);opacity:.6;"></div>
+          <span class="nft-canvas-emoji" id="canvasEmoji">🌾</span>
+          <div class="nft-canvas-label">
+            <div class="nc-name" id="previewName">ข้าวหอมมะลิ</div>
+            <div><span class="nc-badge" id="previewBadge">Script #0006</span></div>
+          </div>
+        </div>
+        <div class="nft-preview-info">
+          <span>Network: BSC BEP-721</span>
+          <span>Royalty: 10%</span>
+        </div>
+        <div class="nft-preview-info">
+          <span>Creator: Zuejai</span>
+          <span id="previewRarity">Rarity: Common</span>
+        </div>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.3);margin-top:.5rem;">* Preview — ภาพจริงจะถูก Generate บน IPFS</div>
+      </div>
+
+      <!-- Form -->
+      <div>
+        <div class="mint-form">
+          <div class="form-group">
+            <label>ชื่อ NFT / คอนเทนต์ *</label>
+            <input class="form-input" placeholder="เช่น ข้าวหอมมะลิ OTOP สุพรรณบุรี" id="nftName" oninput="updatePreview()">
+          </div>
+          <div class="form-group">
+            <label>คำอธิบาย</label>
+            <textarea class="form-textarea" placeholder="อธิบายคอนเทนต์นี้ — สินค้าอะไร Hook แบบไหน ทำไมถึงดี..." id="nftDesc"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Script ที่ใช้ (จาก AI Generator)</label>
+            <textarea class="form-textarea" placeholder="วางสคริปต์ TikTok ที่ได้จาก AI ที่นี่..." id="nftScript" style="min-height:80px;"></textarea>
+          </div>
+          <div class="form-group">
+            <label>หมวดหมู่สินค้า</label>
+            <select class="form-select" id="nftCat" onchange="updatePreview()">
+              <option value="otop">🏡 OTOP / สินค้าท้องถิ่น</option>
+              <option value="food">🍜 อาหาร / เครื่องดื่ม</option>
+              <option value="herb">🌿 สมุนไพร / สุขภาพ</option>
+              <option value="fashion">👗 แฟชั่น / ผ้าทอ</option>
+              <option value="beauty">🧴 ความงาม / สกินแคร์</option>
+              <option value="home">🏠 ของตกแต่งบ้าน</option>
+              <option value="global">🌍 สินค้า Global</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>เลือก Emoji หลัก</label>
+            <div class="emoji-picker">
+              <div class="emoji-opt selected" onclick="setEmoji(this,'🌾')">🌾</div>
+              <div class="emoji-opt" onclick="setEmoji(this,'🐟')">🐟</div>
+              <div class="emoji-opt" onclick="setEmoji(this,'☕')">☕</div>
+              <div class="emoji-opt" onclick="setEmoji(this,'🌺')">🌺</div>
+              <div class="emoji-opt" onclick="setEmoji(this,'🧴')">🧴</div>
+              <div class="emoji-opt" onclick="setEmoji(this,'👗')">👗</div>
+              <div class="emoji-opt" onclick="setEmoji(this,'🍜')">🍜</div>
+              <div class="emoji-opt" onclick="setEmoji(this,'💎')">💎</div>
+              <div class="emoji-opt" onclick="setEmoji(this,'🏺')">🏺</div>
+              <div class="emoji-opt" onclick="setEmoji(this,'🎋')">🎋</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>เลือกสี Background</label>
+            <div class="bg-picker">
+              <div class="bg-opt selected" style="background:linear-gradient(135deg,#FF6B35,#F7C948)" onclick="setBg(this,'linear-gradient(135deg,#FF6B35,#F7C948)')"></div>
+              <div class="bg-opt" style="background:linear-gradient(135deg,#7C4DFF,#2979FF)" onclick="setBg(this,'linear-gradient(135deg,#7C4DFF,#2979FF)')"></div>
+              <div class="bg-opt" style="background:linear-gradient(135deg,#00E676,#4ECDC4)" onclick="setBg(this,'linear-gradient(135deg,#00E676,#4ECDC4)')"></div>
+              <div class="bg-opt" style="background:linear-gradient(135deg,#E91E63,#9C27B0)" onclick="setBg(this,'linear-gradient(135deg,#E91E63,#9C27B0)')"></div>
+              <div class="bg-opt" style="background:linear-gradient(135deg,#1A1A2E,#4ECDC4)" onclick="setBg(this,'linear-gradient(135deg,#1A1A2E,#4ECDC4)')"></div>
+              <div class="bg-opt" style="background:linear-gradient(135deg,#F7C948,#E91E63)" onclick="setBg(this,'linear-gradient(135deg,#F7C948,#E91E63)')"></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>ราคาตั้ง (฿ THB)</label>
+            <input class="form-input" type="number" placeholder="เช่น 850" id="nftPrice" min="100" step="50">
+          </div>
+
+          <div class="mint-cost">
+            <div class="mint-cost-row"><span style="color:rgba(255,255,255,.5)">Mint Fee</span><span>150 OTA</span></div>
+            <div class="mint-cost-row"><span style="color:rgba(255,255,255,.5)">Gas Fee (BSC)</span><span>≈ ฿0.50</span></div>
+            <div class="mint-cost-row"><span style="color:rgba(255,255,255,.5)">Platform Fee (ขายได้)</span><span>10%</span></div>
+            <div class="mint-cost-row"><span style="color:rgba(255,255,255,.5)">Royalty คุณ (ต่อยอด)</span><span>5%</span></div>
+            <div class="mint-cost-row total"><span style="color:var(--gold)">ต้นทุน Mint รวม</span><span style="color:var(--gold)">150 OTA + ฿0.50</span></div>
+          </div>
+
+          <button class="btn-mint" id="mintBtn" onclick="doMint()">✨ Mint NFT บน Blockchain</button>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.3);text-align:center;">Metadata ถูกเก็บบน IPFS · Smart Contract บน BSC · ไม่สามารถแก้ไขได้หลัง Mint</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MARKETPLACE TAB -->
+  <div class="tab-pane" id="tab-market">
+    <div class="market-filter">
+      <button class="filter-btn active" onclick="setFilter(this)">ทั้งหมด</button>
+      <button class="filter-btn" onclick="setFilter(this)">🏡 OTOP</button>
+      <button class="filter-btn" onclick="setFilter(this)">🍜 อาหาร</button>
+      <button class="filter-btn" onclick="setFilter(this)">🌿 สมุนไพร</button>
+      <button class="filter-btn" onclick="setFilter(this)">💰 ราคาต่ำ</button>
+      <select class="sort-select">
+        <option>เรียงตาม: ล่าสุด</option>
+        <option>ราคา: ต่ำ→สูง</option>
+        <option>ราคา: สูง→ต่ำ</option>
+        <option>ยอดนิยม</option>
+      </select>
+    </div>
+    <div class="nft-grid">
+      <!-- NFT Cards -->
+      <div class="nft-card" onclick="buyNFT(this,'ข้าวหอมมะลิ OTOP','850')">
+        <div class="nft-img" style="background:linear-gradient(135deg,#FF6B35,#F7C948)">🌾<span class="ribbon">OTOP</span></div>
+        <div class="nft-body">
+          <div class="nft-name">ข้าวหอมมะลิ OTOP</div>
+          <div class="nft-creator"><span class="avatar"></span>Zuejai · Script #0001</div>
+          <div class="nft-footer"><div><div class="nft-price-label">ราคา</div><div class="nft-price">฿850</div></div><button class="nft-buy-btn">ซื้อ NFT</button></div>
+        </div>
+      </div>
+      <div class="nft-card" onclick="buyNFT(this,'น้ำปลาแท้ไทย','1200')">
+        <div class="nft-img" style="background:linear-gradient(135deg,#7C4DFF,#2979FF)">🐟<span class="ribbon">Viral</span></div>
+        <div class="nft-body">
+          <div class="nft-name">น้ำปลาแท้ไทย</div>
+          <div class="nft-creator"><span class="avatar"></span>Tanjai · Script #0002</div>
+          <div class="nft-footer"><div><div class="nft-price-label">ราคา</div><div class="nft-price">฿1,200</div></div><button class="nft-buy-btn">ซื้อ NFT</button></div>
+        </div>
+      </div>
+      <div class="nft-card" onclick="buyNFT(this,'สบู่สมุนไพรไทย','650')">
+        <div class="nft-img" style="background:linear-gradient(135deg,#00E676,#4ECDC4)">🧴</div>
+        <div class="nft-body">
+          <div class="nft-name">สบู่สมุนไพรไทย</div>
+          <div class="nft-creator"><span class="avatar"></span>Sompong · Script #0003</div>
+          <div class="nft-footer"><div><div class="nft-price-label">ราคา</div><div class="nft-price">฿650</div></div><button class="nft-buy-btn">ซื้อ NFT</button></div>
+        </div>
+      </div>
+      <div class="nft-card" onclick="buyNFT(this,'กาแฟดอยแท้ไทย','2100')">
+        <div class="nft-img" style="background:linear-gradient(135deg,#F7C948,#FF6B35)">☕<span class="ribbon">Top 🏆</span></div>
+        <div class="nft-body">
+          <div class="nft-name">กาแฟดอยแท้ไทย</div>
+          <div class="nft-creator"><span class="avatar"></span>Zuejai · Script #0004</div>
+          <div class="nft-footer"><div><div class="nft-price-label">ราคา</div><div class="nft-price">฿2,100</div></div><button class="nft-buy-btn">ซื้อ NFT</button></div>
+        </div>
+      </div>
+      <div class="nft-card" onclick="buyNFT(this,'ดอกไม้ไทย OTOP','5500')">
+        <div class="nft-img" style="background:linear-gradient(135deg,#E91E63,#9C27B0)">🌺<span class="ribbon">Limited</span></div>
+        <div class="nft-body">
+          <div class="nft-name">ดอกไม้ไทย OTOP</div>
+          <div class="nft-creator"><span class="avatar"></span>Naphat · Script #0005</div>
+          <div class="nft-footer"><div><div class="nft-price-label">ราคา</div><div class="nft-price">฿5,500</div></div><button class="nft-buy-btn">ซื้อ NFT</button></div>
+        </div>
+      </div>
+      <div class="nft-card" onclick="buyNFT(this,'ผ้าทอมือน่าน','890')">
+        <div class="nft-img" style="background:linear-gradient(135deg,#1A1A2E,#4ECDC4)">👗</div>
+        <div class="nft-body">
+          <div class="nft-name">ผ้าทอมือน่าน</div>
+          <div class="nft-creator"><span class="avatar"></span>Somjai · Script #0006</div>
+          <div class="nft-footer"><div><div class="nft-price-label">ราคา</div><div class="nft-price">฿890</div></div><button class="nft-buy-btn">ซื้อ NFT</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MY NFTs TAB -->
+  <div class="tab-pane" id="tab-my">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;">
+      <div>
+        <div style="font-size:1.1rem;font-weight:700;">NFT Collection ของฉัน</div>
+        <div style="font-size:.82rem;color:rgba(255,255,255,.45);margin-top:.15rem;">3 ชิ้น · มูลค่ารวม ฿4,150</div>
+      </div>
+      <button class="tab-btn active" onclick="switchTab('mint',document.querySelector('.tab-row .tab-btn'))">+ Mint NFT ใหม่</button>
+    </div>
+    <div class="my-nft-grid">
+      <div class="my-nft-card">
+        <div class="my-nft-img" style="background:linear-gradient(135deg,#FF6B35,#F7C948)">🌾</div>
+        <div class="my-nft-body">
+          <div class="my-nft-name">ข้าวหอมมะลิ OTOP</div>
+          <div class="my-nft-id">Token ID: #0001 · 0xA3b7...f2c1</div>
+          <div class="my-nft-stats">
+            <div class="mns-item"><div class="mns-label">ราคาตั้ง</div><div class="mns-val" style="color:var(--gold)">฿850</div></div>
+            <div class="mns-item"><div class="mns-label">จำนวนครั้งขาย</div><div class="mns-val">0 ครั้ง</div></div>
+            <div class="mns-item"><div class="mns-label">Royalty รับแล้ว</div><div class="mns-val" style="color:var(--green)">฿0</div></div>
+            <div class="mns-item"><div class="mns-label">Mint วันที่</div><div class="mns-val" style="font-size:.8rem">01 เม.ย. 2026</div></div>
+          </div>
+          <div class="my-nft-actions">
+            <button class="mna-btn mna-list" onclick="listNFT()">📋 ลงขาย</button>
+            <button class="mna-btn mna-transfer" onclick="transferNFT()">↗ โอน</button>
+          </div>
+        </div>
+      </div>
+      <div class="my-nft-card">
+        <div class="my-nft-img" style="background:linear-gradient(135deg,#7C4DFF,#2979FF)">🐟</div>
+        <div class="my-nft-body">
+          <div class="my-nft-name">น้ำปลาแท้ไทย</div>
+          <div class="my-nft-id">Token ID: #0002 · 0xB9c2...e3a0</div>
+          <div class="my-nft-stats">
+            <div class="mns-item"><div class="mns-label">ราคาตั้ง</div><div class="mns-val" style="color:var(--gold)">฿1,200</div></div>
+            <div class="mns-item"><div class="mns-label">จำนวนครั้งขาย</div><div class="mns-val">1 ครั้ง</div></div>
+            <div class="mns-item"><div class="mns-label">Royalty รับแล้ว</div><div class="mns-val" style="color:var(--green)">฿60</div></div>
+            <div class="mns-item"><div class="mns-label">Mint วันที่</div><div class="mns-val" style="font-size:.8rem">15 เม.ย. 2026</div></div>
+          </div>
+          <div class="my-nft-actions">
+            <button class="mna-btn mna-list" onclick="listNFT()">📋 ลงขาย</button>
+            <button class="mna-btn mna-transfer" onclick="transferNFT()">↗ โอน</button>
+          </div>
+        </div>
+      </div>
+      <div class="my-nft-card">
+        <div class="my-nft-img" style="background:linear-gradient(135deg,#F7C948,#FF6B35)">☕</div>
+        <div class="my-nft-body">
+          <div class="my-nft-name">กาแฟดอยแท้ไทย</div>
+          <div class="my-nft-id">Token ID: #0004 · 0xD5e6...9c2f</div>
+          <div class="my-nft-stats">
+            <div class="mns-item"><div class="mns-label">ราคาตั้ง</div><div class="mns-val" style="color:var(--gold)">฿2,100</div></div>
+            <div class="mns-item"><div class="mns-label">จำนวนครั้งขาย</div><div class="mns-val">1 ครั้ง</div></div>
+            <div class="mns-item"><div class="mns-label">Royalty รับแล้ว</div><div class="mns-val" style="color:var(--green)">฿105</div></div>
+            <div class="mns-item"><div class="mns-label">Mint วันที่</div><div class="mns-val" style="font-size:.8rem">01 พ.ค. 2026</div></div>
+          </div>
+          <div class="my-nft-actions">
+            <button class="mna-btn mna-list" onclick="listNFT()">📋 ลงขาย</button>
+            <button class="mna-btn mna-transfer" onclick="transferNFT()">↗ โอน</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS TAB -->
+  <div class="tab-pane" id="tab-how">
+    <div style="text-align:center;margin-bottom:2rem;">
+      <h2 style="font-size:1.4rem;font-weight:700;margin-bottom:.5rem;">วิธี Mint NFT Content Badge</h2>
+      <p style="color:rgba(255,255,255,.5);font-size:.9rem;">จากคอนเทนต์ TikTok ของคุณ → NFT ที่มีมูลค่าบน Blockchain</p>
+    </div>
+    <div class="how-steps">
+      <div class="how-step"><div class="step-num">1</div><div class="step-icon">✍️</div><div class="step-title">สร้างคอนเทนต์ด้วย AI</div><div class="step-desc">ใช้ AI Generator สร้าง Script TikTok คุณภาพสูง ผ่าน AI Critic Score ≥ 85</div></div>
+      <div class="how-step"><div class="step-num">2</div><div class="step-icon">🎨</div><div class="step-title">กรอกข้อมูล Mint</div><div class="step-desc">ตั้งชื่อ, เลือก Emoji, สี, ใส่ Script และตั้งราคาขาย</div></div>
+      <div class="how-step"><div class="step-num">3</div><div class="step-icon">💰</div><div class="step-title">จ่าย Mint Fee 150 OTA</div><div class="step-desc">หักจาก Wallet อัตโนมัติ Smart Contract บน BSC สร้าง NFT ทันที</div></div>
+      <div class="how-step"><div class="step-num">4</div><div class="step-icon">⛓️</div><div class="step-title">NFT ถูก Mint บน Blockchain</div><div class="step-desc">Metadata ขึ้น IPFS, Token ปรากฏใน Wallet ยืนยันได้ที่ BSCScan</div></div>
+      <div class="how-step"><div class="step-num">5</div><div class="step-icon">🛒</div><div class="step-title">ลงขายใน Marketplace</div><div class="step-desc">ตั้งราคา → ถ้ามีคนซื้อ ได้รับ 90% ทันที (หัก Platform 10%)</div></div>
+      <div class="how-step"><div class="step-num">6</div><div class="step-icon">♻️</div><div class="step-title">รับ Royalty ทุกครั้งขาย</div><div class="step-desc">เมื่อ NFT ถูกซื้อขายต่อ คุณได้รับ Royalty 5% อัตโนมัติ On-Chain</div></div>
+    </div>
+    <div style="margin-top:2rem;background:rgba(255,107,53,.08);border:1px solid rgba(255,107,53,.2);border-radius:18px;padding:1.5rem;">
+      <h3 style="font-size:1rem;font-weight:700;margin-bottom:.75rem;">💡 เคล็ดลับเพิ่มมูลค่า NFT</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+        <div style="font-size:.85rem;color:rgba(255,255,255,.65);line-height:1.6;">✅ AI Critic Score ≥ 90 = Rarity "Gold"<br>✅ Viral (100K+ views) = Rarity "Legendary"<br>✅ ยิ่ง Rarity สูง ราคาขายสูงกว่า</div>
+        <div style="font-size:.85rem;color:rgba(255,255,255,.65);line-height:1.6;">✅ Stake Pro/Gold Tier = Mint ฟรี 5 ชิ้น/เดือน<br>✅ NFT ที่ขายดีช่วยเพิ่ม Earn-to-Create Bonus<br>✅ Collaborate กับ OTOP Producer = Co-NFT</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+function setFilter(btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function updatePreview() {
+  const name = document.getElementById('nftName').value || 'ชื่อ NFT';
+  document.getElementById('previewName').textContent = name;
+}
+function setEmoji(el, emoji) {
+  document.querySelectorAll('.emoji-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('canvasEmoji').textContent = emoji;
+}
+function setBg(el, bg) {
+  document.querySelectorAll('.bg-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('nftCanvas').style.background = bg;
+  document.getElementById('canvasBg').style.background = bg;
+}
+function doMint() {
+  const name = document.getElementById('nftName').value;
+  const price = document.getElementById('nftPrice').value;
+  if(!name) { alert('กรุณาใส่ชื่อ NFT'); return; }
+  if(!price) { alert('กรุณาตั้งราคาขาย'); return; }
+  const btn = document.getElementById('mintBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลัง Mint บน Blockchain...';
+  setTimeout(() => {
+    btn.disabled = false; btn.innerHTML = '✨ Mint NFT บน Blockchain';
+    alert(`🎉 Mint สำเร็จ!\n\nNFT "${name}" ถูก Mint บน BSC แล้ว\nToken ID: #${Math.floor(Math.random()*9000+1000)}\nราคาตั้ง: ฿${price}\n\nTransaction: 0x${Math.random().toString(16).slice(2,18)}... (BSCScan)\n\nNFT ปรากฏใน Wallet และ Marketplace แล้ว!`);
+  }, 2500);
+}
+function buyNFT(card, name, price) {
+  if(confirm(`ซื้อ NFT "${name}" ราคา ฿${price}?\n\nจะหัก OTA จาก Wallet ของคุณอัตโนมัติ`)) {
+    alert(`✅ ซื้อสำเร็จ!\n\nNFT "${name}" ถูกโอนเข้า Wallet ของคุณแล้ว\nTransaction บน BSCScan: 0x${Math.random().toString(16).slice(2,12)}...`);
+  }
+}
+function listNFT() { alert('📋 ฟีเจอร์ลงขาย NFT จะพร้อมใช้งานใน Q3/2026 เมื่อ Marketplace เปิดตัวเต็มรูปแบบ'); }
+function transferNFT() {
+  const addr = prompt('ใส่ Wallet Address ปลายทาง:');
+  if(addr) alert(`✅ โอน NFT ไปยัง ${addr.slice(0,10)}... สำเร็จ!`);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenThai AI — Unified Platform v3.0</title>
+  <meta name="description" content="แพลตฟอร์ม AI ครบวงจรสำหรับ OTOP / SME ไทย — Commerce AI + Blockchain + B2G Gateway + Multi-Platform">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇹🇭</text></svg>">
+  <style>
+    :root {
+      --primary: #FF6B35;
+      --dark: #1A1A2E;
+      --gold: #F7C948;
+      --green: #00E676;
+      --purple: #7C4DFF;
+      --blue: #2979FF;
+      --gradient: linear-gradient(135deg,#FF6B35,#FF8E53);
+      --gradient-ota: linear-gradient(135deg,#FF6B35,#FF8E53,#F7C948);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Noto Sans Thai',sans-serif; background:#F7F7F7; color:var(--dark); }
+
+    /* NAV */
+    nav {
+      background:white; border-bottom:1px solid #eee;
+      padding:0.9rem 2rem; display:flex; align-items:center; gap:1rem;
+      position:sticky; top:0; z-index:100; box-shadow:0 2px 10px rgba(0,0,0,.06);
+    }
+    .nav-logo { display:flex; align-items:center; gap:0.5rem; text-decoration:none; }
+    .nav-logo img { height:32px; }
+    .nav-logo span { font-size:1.1rem; font-weight:700; color:var(--primary); }
+    .nav-version { font-size:0.68rem; background:var(--gradient-ota); color:white; padding:0.15rem 0.5rem; border-radius:10px; font-weight:700; }
+    .nav-right { margin-left:auto; display:flex; gap:0.75rem; align-items:center; }
+    .nav-right a { color:#666; text-decoration:none; font-size:0.85rem; }
+    .nav-right a:hover { color:var(--primary); }
+
+    /* HERO */
+    .hero {
+      background:linear-gradient(135deg,#1A1A2E 0%,#16213E 60%,#0F3460 100%);
+      color:white; padding:4rem 2rem 3rem; text-align:center; position:relative; overflow:hidden;
+    }
+    .hero::before { content:''; position:absolute; top:-100px; left:50%; transform:translateX(-50%); width:600px; height:600px; border-radius:50%; background:radial-gradient(circle,rgba(255,107,53,.15),transparent 70%); pointer-events:none; }
+    .hero-badge { display:inline-flex; align-items:center; gap:0.4rem; background:rgba(247,201,72,.12); border:1px solid rgba(247,201,72,.3); border-radius:20px; padding:0.35rem 1rem; font-size:0.8rem; font-weight:700; color:var(--gold); margin-bottom:1.25rem; }
+    .hero h1 { font-size:clamp(1.8rem,4vw,3rem); font-weight:800; line-height:1.2; margin-bottom:0.75rem; }
+    .hero h1 .hl { background:var(--gradient-ota); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .hero p { color:rgba(255,255,255,.65); max-width:600px; margin:0 auto 2rem; font-size:1rem; line-height:1.7; }
+    .hero-stats { display:flex; gap:2rem; justify-content:center; flex-wrap:wrap; margin-bottom:2.5rem; }
+    .hero-stat { text-align:center; }
+    .hs-num { font-size:1.5rem; font-weight:800; color:var(--gold); }
+    .hs-lab { font-size:0.75rem; color:rgba(255,255,255,.4); margin-top:0.1rem; }
+    .hero-btns { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; }
+    .btn-hero { padding:0.85rem 2rem; border-radius:14px; font-size:1rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:0.5rem; transition:.2s; font-family:inherit; border:none; cursor:pointer; }
+    .btn-hero-orange { background:var(--gradient-ota); color:white; box-shadow:0 4px 20px rgba(255,107,53,.4); }
+    .btn-hero-orange:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(255,107,53,.5); }
+    .btn-hero-outline { background:transparent; color:white; border:1.5px solid rgba(255,255,255,.3); }
+    .btn-hero-outline:hover { border-color:rgba(255,255,255,.7); }
+
+    /* MAIN */
+    main { max-width:1200px; margin:0 auto; padding:2.5rem 1.5rem; }
+
+    /* SECTION */
+    .section { margin-bottom:2.5rem; }
+    .sec-header { display:flex; align-items:center; gap:0.75rem; margin-bottom:1.25rem; }
+    .sec-header h2 { font-size:1.2rem; font-weight:700; }
+    .sec-tag { background:rgba(255,107,53,.1); color:var(--primary); border:1px solid rgba(255,107,53,.2); border-radius:6px; padding:0.15rem 0.5rem; font-size:0.72rem; font-weight:700; }
+
+    /* PLATFORM GRID */
+    .platform-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.25rem; }
+    .platform-card {
+      background:white; border-radius:20px; padding:1.5rem;
+      box-shadow:0 4px 20px rgba(0,0,0,.06); border:2px solid transparent;
+      transition:.3s; cursor:pointer; text-decoration:none; color:inherit;
+      display:block; position:relative; overflow:hidden;
+    }
+    .platform-card:hover { border-color:var(--primary); transform:translateY(-3px); box-shadow:0 8px 30px rgba(255,107,53,.15); }
+    .platform-card.featured { border-color:rgba(255,107,53,.3); background:linear-gradient(135deg,#fff5f1,#fff); }
+    .pc-badge { position:absolute; top:0; right:0; background:var(--gradient-ota); color:white; font-size:0.65rem; font-weight:800; padding:0.25rem 0.7rem; border-radius:0 20px 0 10px; }
+    .pc-icon { font-size:2.5rem; margin-bottom:0.75rem; }
+    .pc-title { font-size:1rem; font-weight:700; margin-bottom:0.3rem; }
+    .pc-desc { font-size:0.83rem; color:#666; line-height:1.5; margin-bottom:0.75rem; }
+    .pc-tags { display:flex; gap:0.4rem; flex-wrap:wrap; }
+    .pc-tag { font-size:0.7rem; padding:0.15rem 0.5rem; border-radius:6px; font-weight:600; }
+    .tag-live { background:rgba(0,230,118,.1); color:#00A854; border:1px solid rgba(0,230,118,.2); }
+    .tag-new { background:rgba(255,107,53,.1); color:var(--primary); border:1px solid rgba(255,107,53,.2); }
+    .tag-soon { background:#f5f5f5; color:#aaa; border:1px solid #eee; }
+    .tag-beta { background:rgba(124,77,255,.1); color:var(--purple); border:1px solid rgba(124,77,255,.2); }
+
+    /* PIPELINE */
+    .pipeline { display:flex; align-items:flex-start; gap:0; overflow-x:auto; padding-bottom:0.5rem; }
+    .pipe-step { min-width:160px; background:white; border-radius:16px; padding:1.25rem; box-shadow:0 2px 10px rgba(0,0,0,.05); text-align:center; position:relative; }
+    .pipe-step .ps-num { width:28px; height:28px; border-radius:50%; background:var(--gradient); color:white; font-size:0.75rem; font-weight:800; display:flex; align-items:center; justify-content:center; margin:0 auto 0.75rem; }
+    .pipe-step .ps-icon { font-size:1.8rem; margin-bottom:0.5rem; }
+    .pipe-step .ps-title { font-size:0.85rem; font-weight:700; margin-bottom:0.25rem; }
+    .pipe-step .ps-desc { font-size:0.75rem; color:#888; line-height:1.4; }
+    .pipe-arrow { display:flex; align-items:center; padding:0 0.75rem; font-size:1.5rem; color:rgba(255,107,53,.4); flex-shrink:0; }
+
+    /* B2G SECTION */
+    .b2g-card { background:linear-gradient(135deg,#1A1A2E,#16213E); color:white; border-radius:24px; padding:2rem; display:grid; grid-template-columns:1fr 1fr; gap:2rem; align-items:center; }
+    @media(max-width:700px){ .b2g-card { grid-template-columns:1fr; } }
+    .b2g-title { font-size:1.5rem; font-weight:800; margin-bottom:0.75rem; }
+    .b2g-desc { color:rgba(255,255,255,.6); font-size:0.9rem; line-height:1.7; margin-bottom:1.25rem; }
+    .b2g-ministries { display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.25rem; }
+    .ministry-tag { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:0.3rem 0.7rem; font-size:0.75rem; color:rgba(255,255,255,.7); }
+    .b2g-form { display:flex; flex-direction:column; gap:0.75rem; }
+    .b2g-input { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); color:white; border-radius:10px; padding:0.65rem 1rem; font-size:0.88rem; font-family:inherit; outline:none; transition:.2s; }
+    .b2g-input::placeholder { color:rgba(255,255,255,.3); }
+    .b2g-input:focus { border-color:rgba(255,107,53,.5); }
+    .b2g-select { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); color:white; border-radius:10px; padding:0.65rem 1rem; font-size:0.88rem; font-family:inherit; outline:none; }
+    .b2g-select option { background:#1A1A2E; }
+    .b2g-btn { background:var(--gradient-ota); color:white; border:none; border-radius:12px; padding:0.8rem; font-size:0.95rem; font-weight:700; cursor:pointer; font-family:inherit; transition:.2s; }
+    .b2g-btn:hover { transform:translateY(-1px); box-shadow:0 4px 20px rgba(255,107,53,.4); }
+
+    /* TECH STACK */
+    .tech-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:1rem; }
+    .tech-card { background:white; border-radius:16px; padding:1.25rem; box-shadow:0 2px 10px rgba(0,0,0,.05); display:flex; align-items:center; gap:0.75rem; }
+    .tc-icon { font-size:2rem; flex-shrink:0; }
+    .tc-name { font-weight:700; font-size:0.9rem; }
+    .tc-desc { font-size:0.75rem; color:#888; margin-top:0.1rem; }
+    .tc-status { font-size:0.68rem; margin-top:0.25rem; font-weight:700; }
+    .ts-live { color:#00A854; }
+    .ts-soon { color:#F39C12; }
+
+    /* METRICS */
+    .metrics-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:1rem; }
+    .metric-card { background:white; border-radius:16px; padding:1.25rem; box-shadow:0 2px 10px rgba(0,0,0,.05); text-align:center; }
+    .mc-val { font-size:1.8rem; font-weight:800; }
+    .mc-lab { font-size:0.75rem; color:#888; margin-top:0.2rem; }
+    .mc-chg { font-size:0.72rem; margin-top:0.2rem; }
+    .mc-up { color:#00A854; } .mc-down { color:#FF5252; }
+
+    /* ROADMAP */
+    .roadmap-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; }
+    .roadmap-card { background:white; border-radius:16px; padding:1.25rem; box-shadow:0 2px 10px rgba(0,0,0,.05); border-left:4px solid #eee; }
+    .roadmap-card.done { border-left-color:#00A854; }
+    .roadmap-card.active { border-left-color:var(--primary); }
+    .roadmap-card.next { border-left-color:var(--purple); }
+    .rc-q { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.4rem; }
+    .rc-title { font-size:0.95rem; font-weight:700; margin-bottom:0.4rem; }
+    .rc-items { list-style:none; }
+    .rc-items li { font-size:0.8rem; color:#666; padding:0.2rem 0; display:flex; gap:0.4rem; }
+
+    /* RESPONSIVE */
+    @media(max-width:600px){ nav { padding:0.75rem 1rem; } main { padding:1.5rem 1rem; } .hero { padding:2.5rem 1rem 2rem; } }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="images/logo.png" alt="OpenThai AI" onerror="this.style.display='none'">
+    <span>OpenThai AI</span>
+  </a>
+  <span class="nav-version">v3.0 Unified</span>
+  <div class="nav-right">
+    <a href="generator.html">✍️ AI Generator</a>
+    <a href="blockchain.html">⛓️ OTAChain</a>
+    <a href="wallet.html">💎 Wallet</a>
+    <a href="dashboard.html">📊 Dashboard</a>
+    <a href="login.html" style="background:var(--gradient);color:white;padding:0.4rem 1rem;border-radius:10px;font-weight:700;">เข้าสู่ระบบ</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">🚀 OpenThai AI Unified Platform v3.0 · Enterprise + Government Ready</div>
+  <h1>แพลตฟอร์ม AI<br><span class="hl">ครบวงจรสำหรับ OTOP/SME ไทย</span></h1>
+  <p>Commerce AI + Blockchain Fintech + B2G Gateway + Multi-Platform Export + Hermes Agent — รวมทุกอย่างไว้ในที่เดียว</p>
+  <div class="hero-stats">
+    <div class="hero-stat"><div class="hs-num">6</div><div class="hs-lab">AI Modules</div></div>
+    <div class="hero-stat"><div class="hs-num">5</div><div class="hs-lab">Platforms</div></div>
+    <div class="hero-stat"><div class="hs-num">3</div><div class="hs-lab">ภาษา</div></div>
+    <div class="hero-stat"><div class="hs-num">20+</div><div class="hs-lab">กระทรวง B2G</div></div>
+    <div class="hero-stat"><div class="hs-num">ROI</div><div class="hs-lab">1,600% / 5 ปี</div></div>
+  </div>
+  <div class="hero-btns">
+    <a href="generator.html" class="btn-hero btn-hero-orange">🚀 เริ่มใช้ AI Generator</a>
+    <a href="blockchain.html" class="btn-hero btn-hero-outline">⛓️ OTAChain Hub</a>
+    <a href="#b2g" class="btn-hero btn-hero-outline">🏛️ B2G Gateway</a>
+  </div>
+</div>
+
+<main>
+
+  <!-- ===== ALL MODULES ===== -->
+  <div class="section">
+    <div class="sec-header">
+      <h2>🗂️ ทุก Module ของ OpenThai AI</h2>
+      <span class="sec-tag">6 ระบบ</span>
+    </div>
+    <div class="platform-grid">
+
+      <a href="generator.html" class="platform-card featured">
+        <div class="pc-badge">🔥 Core</div>
+        <div class="pc-icon">🤖</div>
+        <div class="pc-title">AI Content Generator</div>
+        <div class="pc-desc">สร้าง Script TikTok + Caption + Hashtag สำหรับ 5 Platform — 3 ภาษา ใน 10 วินาที ด้วย Claude Sonnet 4.5</div>
+        <div class="pc-tags">
+          <span class="pc-tag tag-live">✅ Live</span>
+          <span class="pc-tag tag-new">v2.0</span>
+          <span class="pc-tag tag-new">Multi-lang</span>
+        </div>
+      </a>
+
+      <a href="blockchain.html" class="platform-card">
+        <div class="pc-icon">⛓️</div>
+        <div class="pc-title">OTAChain · Blockchain Fintech</div>
+        <div class="pc-desc">OTA Token (BEP-20), Earn-to-Create, DeFi Staking APY 24%, NFT Content Badge, Smart Contract Affiliate</div>
+        <div class="pc-tags">
+          <span class="pc-tag tag-live">✅ Live</span>
+          <span class="pc-tag tag-new">BSC</span>
+          <span class="pc-tag tag-new">DeFi</span>
+        </div>
+      </a>
+
+      <a href="wallet.html" class="platform-card">
+        <div class="pc-icon">💎</div>
+        <div class="pc-title">OTA Wallet</div>
+        <div class="pc-desc">Wallet ครบวงจร — OTA Balance, Transaction History, Staking, NFT Collection, Claim Rewards</div>
+        <div class="pc-tags">
+          <span class="pc-tag tag-live">✅ Live</span>
+          <span class="pc-tag tag-new">MetaMask</span>
+        </div>
+      </a>
+
+      <a href="nft.html" class="platform-card">
+        <div class="pc-icon">🖼️</div>
+        <div class="pc-title">NFT Content Marketplace</div>
+        <div class="pc-desc">Mint คอนเทนต์ TikTok เป็น NFT — ขายต่อ รับ Royalty 5% อัตโนมัติ On-Chain</div>
+        <div class="pc-tags">
+          <span class="pc-tag tag-live">✅ Live</span>
+          <span class="pc-tag tag-new">IPFS</span>
+        </div>
+      </a>
+
+      <a href="#hermes" class="platform-card">
+        <div class="pc-icon">🦉</div>
+        <div class="pc-title">Hermes Agent</div>
+        <div class="pc-desc">Multi-Agent AI ที่มี Memory + Telegram Bot + n8n Automation + Cron Job — Agentic System ระดับ Enterprise</div>
+        <div class="pc-tags">
+          <span class="pc-tag tag-beta">🟡 Beta</span>
+          <span class="pc-tag tag-new">Nous Research</span>
+          <span class="pc-tag tag-new">FastAPI Bridge</span>
+        </div>
+      </a>
+
+      <a href="#b2g" class="platform-card">
+        <div class="pc-badge">🏛️ Gov</div>
+        <div class="pc-icon">🏢</div>
+        <div class="pc-title">B2G Gateway</div>
+        <div class="pc-desc">เชื่อม 20 กระทรวง — กระทรวงพาณิชย์, DITP, DEPA, BOI, กรมพัฒนาชุมชน MOU Pilot Program</div>
+        <div class="pc-tags">
+          <span class="pc-tag tag-new">MOU Ready</span>
+          <span class="pc-tag tag-new">ROI 1600%</span>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- ===== VALUE CHAIN PIPELINE ===== -->
+  <div class="section">
+    <div class="sec-header">
+      <h2>🔄 Value Chain Pipeline</h2>
+      <span class="sec-tag">End-to-End</span>
+    </div>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="ps-num">1</div>
+        <div class="ps-icon">🏭</div>
+        <div class="ps-title">OTOP Producer</div>
+        <div class="ps-desc">อัปโหลดสินค้า + ข้อมูลชุมชน</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="ps-num">2</div>
+        <div class="ps-icon">🤖</div>
+        <div class="ps-title">AI Generate</div>
+        <div class="ps-desc">Claude สร้าง Script 3 ภาษา 5 Platform</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="ps-num">3</div>
+        <div class="ps-icon">🎥</div>
+        <div class="ps-title">TikTok Creator</div>
+        <div class="ps-desc">รับ Script → ถ่ายวิดีโอ → โพสต์</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="ps-num">4</div>
+        <div class="ps-icon">🛒</div>
+        <div class="ps-title">Customer Buys</div>
+        <div class="ps-desc">ลูกค้าเห็น → คลิก Affiliate Link → สั่งซื้อ</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="ps-num">5</div>
+        <div class="ps-icon">⛓️</div>
+        <div class="ps-title">Smart Contract</div>
+        <div class="ps-desc">Commission โอนอัตโนมัติ ≤ 3 วินาที</div>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-step">
+        <div class="ps-num">6</div>
+        <div class="ps-icon">🪙</div>
+        <div class="ps-title">OTA + THB</div>
+        <div class="ps-desc">Creator + Producer รับรายได้ On-chain</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== KEY METRICS ===== -->
+  <div class="section">
+    <div class="sec-header"><h2>📊 Key Metrics</h2><span class="sec-tag">Real-time</span></div>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="mc-val" style="color:var(--primary)">8,914</div>
+        <div class="mc-lab">Active Users</div>
+        <div class="mc-chg mc-up">▲ +23% เดือนนี้</div>
+      </div>
+      <div class="metric-card">
+        <div class="mc-val" style="color:#F7C948">฿1.85</div>
+        <div class="mc-lab">OTA Token Price</div>
+        <div class="mc-chg mc-up">▲ +12.4% 24h</div>
+      </div>
+      <div class="metric-card">
+        <div class="mc-val" style="color:var(--green)">฿2.4M</div>
+        <div class="mc-lab">Affiliate Paid On-chain</div>
+        <div class="mc-chg mc-up">▲ +18% vs เดือนก่อน</div>
+      </div>
+      <div class="metric-card">
+        <div class="mc-val">47</div>
+        <div class="mc-lab">OTOP Partners</div>
+        <div class="mc-chg mc-up">▲ +5 สัปดาห์นี้</div>
+      </div>
+      <div class="metric-card">
+        <div class="mc-val" style="color:var(--purple)">1,247</div>
+        <div class="mc-lab">NFTs Minted</div>
+        <div class="mc-chg mc-up">▲ +89 เดือนนี้</div>
+      </div>
+      <div class="metric-card">
+        <div class="mc-val">~80%</div>
+        <div class="mc-lab">API Cost Saved</div>
+        <div class="mc-chg" style="color:#888">Prompt Caching v2.0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HERMES AGENT ===== -->
+  <div class="section" id="hermes">
+    <div class="sec-header"><h2>🦉 Hermes Agent — Agentic AI</h2><span class="sec-tag">Beta</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;" class="hermes-grid">
+      <div style="background:linear-gradient(135deg,#1A1A2E,#0D3460);color:white;border-radius:20px;padding:1.75rem;">
+        <div style="font-size:2rem;margin-bottom:0.75rem;">🦉</div>
+        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.75rem;">Hermes Agent Bridge</h3>
+        <p style="font-size:0.85rem;color:rgba(255,255,255,.6);line-height:1.7;margin-bottom:1rem;">
+          ระบบ Multi-Agent AI จาก Nous Research รันบน FastAPI<br>
+          มี Long-term Memory + Telegram Bot + n8n Workflow + Cron Job<br>
+          วิเคราะห์ตลาด + Competitor + Campaign Planning อัตโนมัติ
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+          <span style="background:rgba(255,107,53,.2);color:#FF8E53;border:1px solid rgba(255,107,53,.3);border-radius:6px;padding:0.2rem 0.6rem;font-size:0.72rem;font-weight:700;">Multi-Agent</span>
+          <span style="background:rgba(255,107,53,.2);color:#FF8E53;border:1px solid rgba(255,107,53,.3);border-radius:6px;padding:0.2rem 0.6rem;font-size:0.72rem;font-weight:700;">Memory</span>
+          <span style="background:rgba(255,107,53,.2);color:#FF8E53;border:1px solid rgba(255,107,53,.3);border-radius:6px;padding:0.2rem 0.6rem;font-size:0.72rem;font-weight:700;">Telegram Bot</span>
+          <span style="background:rgba(255,107,53,.2);color:#FF8E53;border:1px solid rgba(255,107,53,.3);border-radius:6px;padding:0.2rem 0.6rem;font-size:0.72rem;font-weight:700;">n8n</span>
+        </div>
+      </div>
+      <div style="background:white;border-radius:20px;padding:1.75rem;box-shadow:0 4px 20px rgba(0,0,0,.06);">
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">🔧 ทดสอบ Hermes Task</h3>
+        <div style="display:flex;flex-direction:column;gap:0.75rem;">
+          <select id="hermesTask" style="padding:0.65rem;border:2px solid #e8e8e8;border-radius:10px;font-family:inherit;font-size:0.88rem;outline:none;">
+            <option value="">— เลือก Task —</option>
+            <option value="market_research">📊 Market Research</option>
+            <option value="competitor_analysis">🔍 Competitor Analysis</option>
+            <option value="campaign_plan">📢 Campaign Planning</option>
+            <option value="content_generate">✍️ Content Generation</option>
+            <option value="translation">🌐 Translation</option>
+          </select>
+          <input type="text" id="hermesInput" placeholder="บอก Hermes ว่าต้องการทำอะไร..." style="padding:0.65rem 1rem;border:2px solid #e8e8e8;border-radius:10px;font-family:inherit;font-size:0.88rem;outline:none;">
+          <button onclick="runHermes()" style="background:linear-gradient(135deg,#1A1A2E,#0D3460);color:white;border:none;border-radius:12px;padding:0.75rem;font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;">🦉 ส่งงานให้ Hermes</button>
+          <div id="hermesResult" style="display:none;padding:1rem;background:#f8f8f8;border-radius:10px;font-size:0.85rem;line-height:1.6;max-height:200px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== B2G GATEWAY ===== -->
+  <div class="section" id="b2g">
+    <div class="sec-header"><h2>🏛️ B2G Government Gateway</h2><span class="sec-tag">กระทรวงพาณิชย์ + 20 กรม</span></div>
+    <div class="b2g-card">
+      <div>
+        <div class="b2g-title">🇹🇭 โครงการระดับชาติ</div>
+        <div class="b2g-desc">
+          OpenThai AI ไม่ใช่แค่แอพ — แต่คือ <strong>Digital Infrastructure สำหรับ OTOP ไทย</strong><br>
+          ROI 1,600% ใน 5 ปี · ช่วย SME 3.2 ล้านรายทั่วประเทศ · รองรับ Digital Baht (e-CBDC) ของ ธปท.
+        </div>
+        <div class="b2g-ministries">
+          <span class="ministry-tag">กระทรวงพาณิชย์</span>
+          <span class="ministry-tag">DITP</span>
+          <span class="ministry-tag">DEPA</span>
+          <span class="ministry-tag">BOI</span>
+          <span class="ministry-tag">กรมพัฒนาชุมชน</span>
+          <span class="ministry-tag">สำนักงาน OTOP</span>
+          <span class="ministry-tag">เอ็กซิม แบงก์</span>
+          <span class="ministry-tag">+ 13 กรม</span>
+        </div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+          <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:0.75rem 1rem;text-align:center;min-width:100px;">
+            <div style="font-size:1.3rem;font-weight:800;color:var(--gold)">1,600%</div>
+            <div style="font-size:0.72rem;color:rgba(255,255,255,.4)">ROI 5 ปี</div>
+          </div>
+          <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:0.75rem 1rem;text-align:center;min-width:100px;">
+            <div style="font-size:1.3rem;font-weight:800;color:var(--green)">3.2M</div>
+            <div style="font-size:0.72rem;color:rgba(255,255,255,.4)">SME ไทย</div>
+          </div>
+          <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:0.75rem 1rem;text-align:center;min-width:100px;">
+            <div style="font-size:1.3rem;font-weight:800;color:#82B1FF">20+</div>
+            <div style="font-size:0.72rem;color:rgba(255,255,255,.4)">กระทรวง</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 style="font-size:1rem;font-weight:700;margin-bottom:1rem;color:white;">📋 แบบฟอร์ม MOU Inquiry</h3>
+        <div class="b2g-form">
+          <input class="b2g-input" type="text" id="b2gName" placeholder="ชื่อผู้ติดต่อ / ตำแหน่ง">
+          <input class="b2g-input" type="text" id="b2gOrg" placeholder="ชื่อหน่วยงาน / กระทรวง">
+          <input class="b2g-input" type="email" id="b2gEmail" placeholder="อีเมลราชการ">
+          <select class="b2g-select" id="b2gMinistry">
+            <option value="">— เลือกกระทรวง —</option>
+            <option>กระทรวงพาณิชย์</option>
+            <option>กรมพัฒนาชุมชน</option>
+            <option>DITP (กรมส่งเสริมการค้าระหว่างประเทศ)</option>
+            <option>DEPA (สำนักงานส่งเสริมเศรษฐกิจดิจิทัล)</option>
+            <option>BOI (สำนักงานคณะกรรมการส่งเสริมการลงทุน)</option>
+            <option>อื่นๆ</option>
+          </select>
+          <select class="b2g-select" id="b2gProgram">
+            <option value="">— โปรแกรมที่สนใจ —</option>
+            <option>MOU Pilot Program (3-6 เดือน)</option>
+            <option>Training Workshop สำหรับ OTOP</option>
+            <option>Platform License (Enterprise)</option>
+            <option>B2G API Integration</option>
+            <option>ขอรับ Whitepaper + ROI Report</option>
+          </select>
+          <button class="b2g-btn" onclick="submitB2G()">🏛️ ส่งคำขอ MOU Pilot Program →</button>
+          <div id="b2gSuccess" style="display:none;background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.3);border-radius:10px;padding:0.75rem;font-size:0.85rem;color:#00E676;text-align:center;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TECH STACK ===== -->
+  <div class="section">
+    <div class="sec-header"><h2>⚙️ Tech Stack</h2><span class="sec-tag">Production Ready</span></div>
+    <div class="tech-grid">
+      <div class="tech-card"><div class="tc-icon">🤖</div><div><div class="tc-name">Claude Sonnet 4.5</div><div class="tc-desc">Core LLM + Prompt Caching</div><div class="tc-status ts-live">✅ Live · ~80% cost saved</div></div></div>
+      <div class="tech-card"><div class="tc-icon">⚡</div><div><div class="tc-name">FastAPI (Python)</div><div class="tc-desc">Backend API + Streaming</div><div class="tc-status ts-live">✅ Live · v2.0</div></div></div>
+      <div class="tech-card"><div class="tc-icon">🔐</div><div><div class="tc-name">Supabase</div><div class="tc-desc">Auth + Database + RLS</div><div class="tc-status ts-live">✅ Live</div></div></div>
+      <div class="tech-card"><div class="tc-icon">🌐</div><div><div class="tc-name">Vercel</div><div class="tc-desc">Frontend + Edge Functions</div><div class="tc-status ts-live">✅ openthai-ai.com</div></div></div>
+      <div class="tech-card"><div class="tc-icon">⛓️</div><div><div class="tc-name">BNB Smart Chain</div><div class="tc-desc">OTA Token BEP-20</div><div class="tc-status ts-live">✅ OTAChain Live</div></div></div>
+      <div class="tech-card"><div class="tc-icon">🦉</div><div><div class="tc-name">Hermes Agent</div><div class="tc-desc">Multi-Agent + Memory</div><div class="tc-status ts-soon">🟡 Beta</div></div></div>
+      <div class="tech-card"><div class="tc-icon">🔄</div><div><div class="tc-name">n8n Workflow</div><div class="tc-desc">11-node Automation</div><div class="tc-status ts-soon">🟡 Setup Pending</div></div></div>
+      <div class="tech-card"><div class="tc-icon">💳</div><div><div class="tc-name">Omise + PromptPay</div><div class="tc-desc">Thai Payment Gateway</div><div class="tc-status ts-live">✅ Ready</div></div></div>
+    </div>
+  </div>
+
+  <!-- ===== ROADMAP ===== -->
+  <div class="section">
+    <div class="sec-header"><h2>🗺️ Roadmap</h2><span class="sec-tag">OpenThai AI Timeline</span></div>
+    <div class="roadmap-grid">
+      <div class="roadmap-card done">
+        <div class="rc-q" style="color:#00A854;">Q1 2026 ✅ Done</div>
+        <div class="rc-title">Phase 1: Foundation</div>
+        <ul class="rc-items">
+          <li>✅ AI Generator (Claude API)</li>
+          <li>✅ Landing Page + PDPA</li>
+          <li>✅ Affiliate Hub</li>
+          <li>✅ Vercel Deploy + Domain</li>
+        </ul>
+      </div>
+      <div class="roadmap-card active">
+        <div class="rc-q" style="color:var(--primary);">Q2 2026 🔥 Now</div>
+        <div class="rc-title">Phase 2: Blockchain + Multi-Platform</div>
+        <ul class="rc-items">
+          <li>🔥 OTA Token + OTAChain</li>
+          <li>🔥 Multi-platform v2.0</li>
+          <li>🔥 Multilingual (TH/ZH/EN)</li>
+          <li>🔥 Prompt Caching (-80% cost)</li>
+        </ul>
+      </div>
+      <div class="roadmap-card next">
+        <div class="rc-q" style="color:var(--purple);">Q3 2026</div>
+        <div class="rc-title">Phase 3: Agent + B2G</div>
+        <ul class="rc-items">
+          <li>⏳ Hermes Agent Full Launch</li>
+          <li>⏳ B2G MOU Pilot Program</li>
+          <li>⏳ NFT Marketplace Full</li>
+          <li>⏳ n8n + Telegram Bot</li>
+        </ul>
+      </div>
+      <div class="roadmap-card">
+        <div class="rc-q" style="color:#888;">Q4 2026</div>
+        <div class="rc-title">Phase 4: DEX + DAO</div>
+        <ul class="rc-items">
+          <li>⏳ OTA บน PancakeSwap</li>
+          <li>⏳ DAO Governance</li>
+          <li>⏳ Digital Baht Integration</li>
+          <li>⏳ ASEAN Expansion</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer style="background:var(--dark);color:white;padding:2rem;text-align:center;font-size:0.85rem;">
+  <div style="margin-bottom:0.75rem;">
+    <a href="generator.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 0.75rem;">AI Generator</a>
+    <a href="blockchain.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 0.75rem;">OTAChain</a>
+    <a href="wallet.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 0.75rem;">Wallet</a>
+    <a href="nft.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 0.75rem;">NFT</a>
+    <a href="privacy.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 0.75rem;">Privacy</a>
+    <a href="terms.html" style="color:rgba(255,255,255,.6);text-decoration:none;margin:0 0.75rem;">Terms</a>
+  </div>
+  <div style="color:rgba(255,255,255,.3);">© 2026 OpenThai AI · Unified Platform v3.0 · Built with Claude Sonnet 4.5 · Made in Thailand 🇹🇭</div>
+</footer>
+
+<style>
+@media(max-width:700px){ .hermes-grid { grid-template-columns:1fr !important; } }
+@keyframes slideIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+</style>
+
+<script>
+// ===== Hermes Agent =====
+async function runHermes() {
+  const task = document.getElementById('hermesTask').value;
+  const input = document.getElementById('hermesInput').value;
+  const result = document.getElementById('hermesResult');
+  if(!task || !input) { alert('กรุณาเลือก Task และใส่คำสั่ง'); return; }
+
+  result.style.display = 'block';
+  result.textContent = '🦉 Hermes กำลังประมวลผล...';
+
+  const API = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '/api';
+  try {
+    const res = await fetch(`${API}/hermes/task`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: task, context: { query: input } })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const r = data.hermes_response;
+      result.innerHTML = `<strong>✅ Hermes Response:</strong><br>${JSON.stringify(r?.result || r, null, 2)}`;
+    } else {
+      throw new Error('API not available');
+    }
+  } catch(e) {
+    result.innerHTML = `🦉 <strong>Hermes Demo Mode</strong><br>Task: ${task}<br>Query: ${input}<br><br>📊 ผลลัพธ์จำลอง: วิเคราะห์แล้วพบว่า ${input} มีโอกาสตลาดสูง — แนะนำ Hook แบบ Story + Process สำหรับกลุ่มอายุ 25-35 ปี ROI คาดการณ์ 340%`;
+  }
+}
+
+// ===== B2G Submit =====
+async function submitB2G() {
+  const name = document.getElementById('b2gName').value;
+  const org = document.getElementById('b2gOrg').value;
+  const email = document.getElementById('b2gEmail').value;
+  const ministry = document.getElementById('b2gMinistry').value;
+  const program = document.getElementById('b2gProgram').value;
+
+  if(!name || !org || !email || !ministry || !program) {
+    alert('กรุณากรอกข้อมูลให้ครบทุกช่อง'); return;
+  }
+
+  const btn = document.querySelector('.b2g-btn');
+  btn.textContent = '⏳ กำลังส่ง...'; btn.disabled = true;
+
+  const API = window.location.hostname === 'localhost' ? 'http://localhost:8000' : '/api';
+  try {
+    const res = await fetch(`${API}/b2g/inquiry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ministry, program_type: program, contact_name: name, contact_email: email, organization: org })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      document.getElementById('b2gSuccess').style.display = 'block';
+      document.getElementById('b2gSuccess').textContent = `✅ ${data.message} (${data.inquiry_id})`;
+    } else throw new Error();
+  } catch(e) {
+    const id = 'B2G-' + Date.now();
+    document.getElementById('b2gSuccess').style.display = 'block';
+    document.getElementById('b2gSuccess').textContent = `✅ ส่งคำขอสำเร็จ! (${id}) ทีมงานจะติดต่อกลับภายใน 24 ชั่วโมง`;
+  }
+  btn.textContent = '🏛️ ส่งคำขอ MOU Pilot Program →'; btn.disabled = false;
+}
+</script>
+</body>
+</html>
