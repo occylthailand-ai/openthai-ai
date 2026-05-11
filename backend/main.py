@@ -379,6 +379,30 @@ async def root():
 async def health():
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
+# ===== ADMIN AUTH =====
+ADMIN_KEY = os.getenv("ADMIN_KEY", "")
+
+def verify_admin(request: Request):
+    """ตรวจสอบ Admin key จาก header X-Admin-Key"""
+    key = request.headers.get("X-Admin-Key", "")
+    if not key or key != ADMIN_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized — Admin key required")
+    return True
+
+@app.get("/admin/stats")
+async def admin_stats(request: Request):
+    """Admin: ดู stats ทั้งหมด"""
+    verify_admin(request)
+    return {
+        "status": "ok",
+        "model": MODEL,
+        "version": "2.0.0",
+        "timestamp": datetime.now().isoformat(),
+        "supabase_url": os.getenv("SUPABASE_URL", "not set"),
+        "smtp_configured": bool(os.getenv("SMTP_PASS")),
+        "anthropic_configured": bool(os.getenv("ANTHROPIC_API_KEY"))
+    }
+
 # ===== MAIN: Generate Content =====
 @app.post("/generate", response_model=ContentOutput)
 async def generate_tiktok_content(product: ProductInput, request: Request):
