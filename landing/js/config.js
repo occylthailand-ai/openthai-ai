@@ -7,8 +7,8 @@ const OPENTHAI_CONFIG = {
 
   // --- Supabase (สร้างฟรีได้ที่ supabase.com) ---
   supabase: {
-    url:     'YOUR_SUPABASE_URL',       // เช่น https://xxxx.supabase.co
-    anonKey: 'YOUR_SUPABASE_ANON_KEY'  // จาก Settings → API
+    url:     'https://tpeskbbhuuqztwyllnli.supabase.co',
+    anonKey: 'sb_publishable_w1csh8WAomyLN_nVzTiAOA_yZXWmoys'
   },
 
   // --- PromptPay ---
