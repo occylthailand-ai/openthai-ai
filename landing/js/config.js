@@ -13,7 +13,7 @@ const OPENTHAI_CONFIG = {
 
   // --- PromptPay ---
   promptpay: {
-    number: '0812345678',   // เบอร์โทร หรือ เลขบัตรประชาชน 13 หลัก
+    number: '0972560801',
     name:   'OpenThai AI'
   },
 
