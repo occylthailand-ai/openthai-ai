@@ -1,0 +1,182 @@
+# ============================================================
+# OpenThai AI — Cursor Rules v1.0
+# AI สร้างคอนเทนต์ TikTok สำหรับ OTOP/SME ไทย + OTAChain
+# ============================================================
+
+## Project Identity
+- ชื่อ: OpenThai AI (โอเพ่นไทย AI)
+- ภาษาหลัก: ไทย (comment, UI text), Python + JavaScript (code)
+- Stack: FastAPI (backend) + Vanilla JS HTML (frontend) + Supabase (auth/db)
+- Hosting: Vercel (frontend) + Railway/Render (backend FastAPI)
+- AI Core: Anthropic Claude Sonnet 4.5 (claude-sonnet-4-5)
+
+## File Structure
+```
+openthai-ai/
+├── backend/
+│   ├── main.py          # FastAPI app หลัก v2.0
+│   ├── mcp_server.py    # MCP Server สำหรับ Cursor integration
+│   └── .env             # ANTHROPIC_API_KEY, SUPABASE_URL, ...
+├── landing/
+│   ├── index.html       # Landing page
+│   ├── generator.html   # AI Content Generator
+│   ├── platform.html    # Unified Platform v3.0 Dashboard
+│   ├── blockchain.html  # OTAChain Hub
+│   ├── wallet.html      # OTA Digital Wallet
+│   ├── nft.html         # NFT Content Badge Marketplace
+│   ├── studio.html      # Cursor Dev Studio (Monaco Editor)
+│   ├── dashboard.html   # User Dashboard
+│   └── js/
+│       └── config.js    # OPENTHAI_CONFIG (Supabase, plans, PromptPay)
+├── .cursorrules         # (this file)
+└── .cursor/
+    └── mcp.json         # MCP Server config for Cursor
+```
+
+## Backend Rules (FastAPI / Python)
+
+### AI Model
+- ใช้ `claude-sonnet-4-5` เสมอ — ห้ามใช้ชื่อ deprecated
+- เปิด Prompt Caching ทุก system prompt: `"cache_control": {"type": "ephemeral"}`
+- ลด API calls ให้น้อยที่สุด: รวม generate + critique เป็น 1 call เดียว
+
+### Pydantic Models
+- ทุก endpoint ต้องมี Pydantic model รับ input
+- ใช้ `Field(..., description="...")` ทุก field สำหรับ docs
+- Optional fields ให้มี default ที่สมเหตุสมผล
+
+### Endpoints Convention
+```python
+# Naming: /verb/noun (kebab-case)
+POST /generate          # สร้างคอนเทนต์หลัก
+POST /generate/stream   # SSE streaming version
+POST /hermes/task       # Hermes Agent
+POST /b2g/inquiry       # B2G Government Gateway
+POST /blockchain/webhook # OTA earn events
+POST /mcp/tools/call    # Cursor MCP tools
+GET  /mcp/tools/list    # Cursor MCP tool list
+GET  /health            # Health check
+GET  /stats             # Platform stats
+GET  /platforms         # Available platforms
+```
+
+### JSON Safety
+- ใช้ `parse_json_safe()` เสมอ — อย่า `json.loads()` ตรงๆ
+- 3-layer fallback: direct → markdown strip → regex extract
+
+### CORS
+- อย่าใช้ `allow_origins=["*"]` ใน production
+- เพิ่ม origin ใน `ALLOWED_ORIGINS` list
+
+## Frontend Rules (HTML / Vanilla JS)
+
+### UI Theme
+```css
+/* Dark Theme Standard */
+--bg-primary: #0a0a1a;
+--bg-card: #1a1a2e;
+--accent-gold: #ffd700;
+--accent-blue: #00d4ff;
+--text-primary: #ffffff;
+--text-muted: #888;
+--gradient-main: linear-gradient(135deg, #667eea, #764ba2);
+```
+
+### Component Pattern
+```javascript
+// ทุก section มี pattern เดียวกัน:
+// 1. HTML structure (semantic)
+// 2. CSS ใน <style> ใน <head>
+// 3. JavaScript ใน <script> ท้าย <body>
+
+// API calls ใช้ pattern นี้เสมอ
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : '/api';
+```
+
+### OTA Token Integration
+- ทุก content creation action → ต้องมี OTA earn notification
+- `showOTAToast(amount, reason)` function ต้องอยู่ในทุกหน้าที่ earn OTA ได้
+- OTA earn amounts: +5 (base), +15 (quality bonus), +25 (viral bonus)
+
+### Wallet / NFT / Blockchain
+- MetaMask connect: ใช้ `window.ethereum.request({method:'eth_requestAccounts'})`
+- เสมอ check `if (typeof window.ethereum === 'undefined')` ก่อน
+- Network: BNB Smart Chain (chainId: 0x38), Testnet (chainId: 0x61)
+- OTA Contract: deploy บน BSC, standard BEP-20
+
+## Platform Support
+```
+tiktok        → 60-90 วินาที, Hook แรก 3 วิ, hashtag 5-8 อัน
+xiaohongshu   → สไตล์ lifestyle, emoji มาก, 小红书 format
+shopee        → SEO title 120 chars, bullet points, ราคา/ส่วนลด
+taobao        → ภาษาจีนกลาง, 淘宝 format, trust signals
+temu          → อังกฤษ, global appeal, value-for-money angle
+```
+
+## Language Support
+```
+th  → ไทย (default)
+zh  → 简体中文
+en  → English
+all → ทั้ง 3 ภาษาในครั้งเดียว (1 API call, prompt caching)
+```
+
+## Business Context (สำคัญมาก)
+- ลูกค้าหลัก: ผู้ผลิต OTOP, SME ไทย, เกษตรกร, หัตถกรรม
+- Cross-border: ส่งออกจีน (TaoBao, Xiaohongshu), Global (TEMU)
+- B2G: เชื่อมกระทรวงพาณิชย์, DITP, DEPA, BOI, กระทรวงเกษตร
+- ROI: 1,600% ใน 5 ปี (เอกสาร pitch รัฐบาล)
+- OTA Token: Earn-to-Create ให้ผู้ผลิต OTOP ได้ประโยชน์จาก blockchain
+
+## Hermes Agent
+- Framework: Nous Research Hermes multi-agent + memory
+- Trigger: Telegram Bot, n8n workflow (11 nodes)
+- Endpoint: POST /hermes/task {"task_type": "...", "context": "..."}
+- Use cases: auto-post schedule, market analysis, competitor watch
+
+## Environment Variables
+```bash
+ANTHROPIC_API_KEY=sk-ant-...
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_KEY=eyJ...
+BSC_RPC_URL=https://bsc-dataseed.binance.org/
+OTA_CONTRACT_ADDRESS=0x...
+OMISE_PUBLIC_KEY=pkey_...
+OMISE_SECRET_KEY=skey_...
+```
+
+## Cursor MCP Integration
+- MCP Server: `backend/mcp_server.py` expose tools ให้ Cursor ใช้ได้
+- Config: `.cursor/mcp.json` ชี้ไปที่ `http://localhost:8000/mcp`
+- Tools ที่ Cursor ใช้ได้:
+  * `generate_content` — สร้างคอนเทนต์ TikTok/Multi-platform
+  * `generate_multilingual` — ทั้ง 3 ภาษาพร้อมกัน
+  * `analyze_product` — วิเคราะห์สินค้า OTOP
+  * `check_ota_balance` — ดู OTA token balance
+  * `list_platforms` — ดู platform ที่รองรับ
+  * `b2g_inquiry` — ส่งคำร้องหน่วยงานรัฐ
+
+## Code Quality
+- ใช้ `async/await` ทุก I/O operation
+- Error handling: ทุก try/except ต้อง log และ return meaningful error
+- Thai comments สำหรับ business logic
+- ห้าม hardcode API keys ในโค้ด — ใช้ os.getenv() เสมอ
+- Type hints ทุก Python function
+
+## Testing
+- `GET /health` → `{"status": "ok", "model": "claude-sonnet-4-5", "version": "2.0.0"}`
+- `GET /mcp/tools/list` → list ของ tools ทั้งหมด
+- ทดสอบ MetaMask connect บน Testnet ก่อน Mainnet
+
+## Commit Convention
+```
+feat: เพิ่มฟีเจอร์ใหม่
+fix: แก้บัก
+perf: ปรับประสิทธิภาพ
+docs: อัปเดตเอกสาร
+style: แก้ UI/CSS
+refactor: refactor โค้ด
+```

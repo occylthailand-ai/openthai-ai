@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenThai Dev Studio — Cursor-Powered AI Workspace</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+
+<!-- Monaco Editor CDN -->
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg: #0d1117;
+    --sidebar: #161b22;
+    --panel: #1c2128;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --gold: #ffd700;
+    --green: #3fb950;
+    --purple: #bc8cff;
+    --orange: #f78166;
+    --text: #e6edf3;
+    --muted: #7d8590;
+    --tab-active: #1f6feb;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    height: 48px;
+    background: var(--sidebar);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .topbar-logo .badge {
+    background: linear-gradient(135deg, #58a6ff, #bc8cff);
+    color: white;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+  }
+  .topbar-tabs {
+    display: flex;
+    gap: 2px;
+    margin-left: 16px;
+  }
+  .tab-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tab-btn:hover { background: var(--panel); color: var(--text); }
+  .tab-btn.active { background: var(--tab-active); color: white; }
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .ota-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,215,0,.1);
+    border: 1px solid rgba(255,215,0,.3);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--gold);
+    cursor: pointer;
+  }
+  .cursor-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--green);
+  }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .run-btn {
+    background: var(--green);
+    color: #000;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .run-btn:hover { transform: scale(1.05); }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 220px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .sidebar-section {
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-section-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 1px;
+    padding: 6px 8px 4px;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted);
+    transition: all .15s;
+  }
+  .sidebar-item:hover { background: var(--panel); color: var(--text); }
+  .sidebar-item.active { background: rgba(88,166,255,.15); color: var(--accent); }
+  .sidebar-item .icon { font-size: 14px; }
+  .sidebar-item .label { flex: 1; }
+  .sidebar-item .badge-count {
+    background: var(--tab-active);
+    color: white;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 10px;
+  }
+
+  /* ── MCP TOOLS PANEL ── */
+  .mcp-panel {
+    padding: 8px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .mcp-tool-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .mcp-tool-card:hover { border-color: var(--accent); }
+  .mcp-tool-card.active { border-color: var(--accent); background: rgba(88,166,255,.08); }
+  .mcp-tool-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 3px;
+  }
+  .mcp-tool-desc {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* ── EDITOR AREA ── */
+  .editor-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .editor-tabs {
+    height: 36px;
+    background: var(--sidebar);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    gap: 2px;
+    overflow-x: auto;
+    flex-shrink: 0;
+  }
+  .editor-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    height: 28px;
+    border-radius: 6px 6px 0 0;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--muted);
+    background: transparent;
+    border: none;
+  }
+  .editor-tab.active { background: var(--bg); color: var(--text); }
+  .editor-tab .close { font-size: 10px; opacity: .5; }
+  .editor-tab .close:hover { opacity: 1; }
+
+  #monaco-container {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    width: 380px;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .right-panel-tabs {
+    display: flex;
+    background: var(--sidebar);
+    border-bottom: 1px solid var(--border);
+  }
+  .rp-tab {
+    flex: 1;
+    padding: 10px;
+    font-size: 11px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--muted);
+    border: none;
+    background: transparent;
+    transition: all .2s;
+  }
+  .rp-tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+  .rp-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: none;
+  }
+  .rp-content.active { display: block; }
+
+  /* ── OUTPUT PANEL ── */
+  .output-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--green);
+    min-height: 200px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .output-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .output-section { margin-bottom: 16px; }
+
+  /* ── FORM CONTROLS ── */
+  .form-group { margin-bottom: 12px; }
+  .form-label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12px;
+    color: var(--text);
+    outline: none;
+    font-family: inherit;
+    transition: border .2s;
+  }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+  .form-select option { background: var(--panel); }
+
+  /* ── RESULT CARD ── */
+  .result-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .result-card-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: .5px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .result-card-body { font-size: 13px; line-height: 1.6; }
+  .hashtag { color: var(--accent); margin-right: 4px; font-size: 12px; }
+  .copy-mini {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .copy-mini:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── OTA EARN BADGE ── */
+  .ota-earn-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(255,215,0,.15), rgba(255,165,0,.1));
+    border: 1px solid rgba(255,215,0,.4);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--gold);
+    margin-bottom: 12px;
+  }
+
+  /* ── BOTTOM STATUS BAR ── */
+  .statusbar {
+    height: 24px;
+    background: var(--tab-active);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 16px;
+    font-size: 11px;
+    color: rgba(255,255,255,.8);
+    flex-shrink: 0;
+  }
+  .statusbar-item { display: flex; align-items: center; gap: 4px; }
+  .statusbar-sep { opacity: .3; }
+
+  /* ── LOADING ── */
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.5s infinite;
+  }
+  @keyframes dots {
+    0%{content:'.'}
+    33%{content:'..'}
+    66%{content:'...'}
+    100%{content:''}
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .sidebar { width: 48px; }
+    .sidebar-item .label, .sidebar-item .badge-count, .mcp-tool-desc, .sidebar-section-title { display: none; }
+    .mcp-tool-name { font-size: 18px; }
+    .mcp-tool-card { padding: 8px; text-align: center; }
+    .right-panel { width: 300px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <span>⚡</span>
+    <span>OpenThai Dev Studio</span>
+    <span class="badge">Cursor-Powered</span>
+  </div>
+
+  <div class="topbar-tabs">
+    <button class="tab-btn active" onclick="switchWorkspace('prompt')">📝 Prompt Studio</button>
+    <button class="tab-btn" onclick="switchWorkspace('api')">🔌 API Explorer</button>
+    <button class="tab-btn" onclick="switchWorkspace('mcp')">🤖 MCP Tools</button>
+    <button class="tab-btn" onclick="switchWorkspace('template')">📋 Templates</button>
+  </div>
+
+  <div class="topbar-right">
+    <div class="ota-indicator" onclick="window.open('wallet.html')">
+      🪙 <span id="ota-display">+0 OTA</span>
+    </div>
+    <div class="cursor-status">
+      <span class="dot"></span>
+      <span id="mcp-status">MCP Connected</span>
+    </div>
+    <button class="run-btn" onclick="runCurrentWorkspace()">▶ Run</button>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="main">
+
+  <!-- ── SIDEBAR ── -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">Explorer</div>
+      <div class="sidebar-item active" onclick="loadFile('prompt_template')">
+        <span class="icon">📝</span><span class="label">prompt_template.json</span>
+      </div>
+      <div class="sidebar-item" onclick="loadFile('api_config')">
+        <span class="icon">⚙️</span><span class="label">api_config.json</span>
+      </div>
+      <div class="sidebar-item" onclick="loadFile('mcp_config')">
+        <span class="icon">🤖</span><span class="label">mcp.json</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-section-title">MCP Tools</div>
+      <div class="mcp-panel" id="mcp-tools-sidebar"></div>
+    </div>
+  </div>
+
+  <!-- ── EDITOR AREA ── -->
+  <div class="editor-area">
+    <div class="editor-tabs">
+      <button class="editor-tab active" id="tab-prompt">
+        📝 prompt_template.json <span class="close">×</span>
+      </button>
+      <button class="editor-tab" id="tab-output" onclick="showEditorTab('output')">
+        📤 output.json
+      </button>
+    </div>
+    <div id="monaco-container"></div>
+  </div>
+
+  <!-- ── RIGHT PANEL ── -->
+  <div class="right-panel">
+    <div class="right-panel-tabs">
+      <button class="rp-tab active" onclick="switchRPTab('generate')">Generate</button>
+      <button class="rp-tab" onclick="switchRPTab('output')">Output</button>
+      <button class="rp-tab" onclick="switchRPTab('mcp')">MCP Logs</button>
+    </div>
+
+    <!-- Generate Form -->
+    <div class="rp-content active" id="rp-generate">
+      <div class="form-group">
+        <label class="form-label">🏪 ชื่อสินค้า</label>
+        <input class="form-input" id="inp-product" type="text" placeholder="เช่น ผ้าไหมมัดหมี่อุบล" value="ข้าวหอมมะลิอินทรีย์">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📦 ประเภทสินค้า</label>
+        <select class="form-select" id="inp-category">
+          <option value="food">🍚 อาหาร/ข้าว</option>
+          <option value="herb">🌿 สมุนไพร</option>
+          <option value="textile" selected>🧵 ผ้า/เครื่องแต่งกาย</option>
+          <option value="craft">🏺 หัตถกรรม</option>
+          <option value="beauty">💄 ความงาม</option>
+          <option value="otop">⭐ OTOP ทั่วไป</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="form-group">
+          <label class="form-label">📱 Platform</label>
+          <select class="form-select" id="inp-platform">
+            <option value="tiktok">TikTok</option>
+            <option value="xiaohongshu">小红书</option>
+            <option value="shopee">Shopee</option>
+            <option value="taobao">Taobao</option>
+            <option value="temu">TEMU</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">🌐 ภาษา</label>
+          <select class="form-select" id="inp-language">
+            <option value="th">🇹🇭 ไทย</option>
+            <option value="zh">🇨🇳 จีน</option>
+            <option value="en">🇺🇸 EN</option>
+            <option value="all">All 3</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">🎣 Hook Type</label>
+        <select class="form-select" id="inp-hook">
+          <option value="auto">✨ Auto (AI เลือกให้)</option>
+          <option value="story">📖 เล่าเรื่อง</option>
+          <option value="question">❓ ตั้งคำถาม</option>
+          <option value="contrast">⚡ Contrast</option>
+          <option value="transformation">🔄 Transformation</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">📄 รายละเอียดเพิ่มเติม</label>
+        <textarea class="form-textarea" id="inp-desc" placeholder="บอกรายละเอียดสินค้า จุดเด่น ที่มา..."></textarea>
+      </div>
+
+      <button class="run-btn" style="width:100%;padding:10px;font-size:14px;border-radius:8px" onclick="generateContent()">
+        ▶ Generate Content
+      </button>
+
+      <div style="margin-top:12px">
+        <div class="form-label" style="margin-bottom:8px">🤖 MCP Tool Call</div>
+        <select class="form-select" id="mcp-tool-select" style="margin-bottom:8px">
+          <option value="generate_content">generate_content</option>
+          <option value="analyze_product">analyze_product</option>
+          <option value="earn_ota_preview">earn_ota_preview</option>
+          <option value="list_platforms">list_platforms</option>
+          <option value="get_otop_templates">get_otop_templates</option>
+          <option value="b2g_inquiry">b2g_inquiry</option>
+        </select>
+        <button class="run-btn" style="width:100%;background:#bc8cff;color:#000;padding:8px;border-radius:8px"
+                onclick="callMCPTool()">
+          🤖 Call MCP Tool
+        </button>
+      </div>
+    </div>
+
+    <!-- Output Panel -->
+    <div class="rp-content" id="rp-output">
+      <div id="output-placeholder" style="color:var(--muted);text-align:center;padding:40px 20px;font-size:13px">
+        <div style="font-size:48px;margin-bottom:12px">📤</div>
+        กด ▶ Generate Content เพื่อดูผลลัพธ์
+      </div>
+      <div id="output-result" style="display:none">
+        <div class="ota-earn-badge" id="ota-badge">🪙 +5 OTA Token earned</div>
+        <div id="result-cards"></div>
+      </div>
+    </div>
+
+    <!-- MCP Logs -->
+    <div class="rp-content" id="rp-mcp">
+      <div class="output-label">MCP Call Logs</div>
+      <div class="output-box" id="mcp-logs" style="color:var(--muted);min-height:300px">
+// Waiting for MCP tool calls...
+// เรียกใช้ Tools จาก Generate หรือ MCP Tools sidebar
+      </div>
+      <div style="margin-top:12px">
+        <div class="output-label">MCP Server Info</div>
+        <div class="result-card" style="font-size:11px">
+          <div>🔌 <strong>URL:</strong> <span style="color:var(--accent)">http://localhost:8000/mcp</span></div>
+          <div style="margin-top:4px">📋 <strong>Tools:</strong> 8 tools available</div>
+          <div style="margin-top:4px">⚡ <strong>Transport:</strong> HTTP + SSE</div>
+          <div style="margin-top:4px">🤖 <strong>Model:</strong> claude-sonnet-4-5</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATUS BAR ── -->
+<div class="statusbar">
+  <div class="statusbar-item">⚡ OpenThai Dev Studio v1.0</div>
+  <span class="statusbar-sep">|</span>
+  <div class="statusbar-item">🤖 Cursor MCP</div>
+  <span class="statusbar-sep">|</span>
+  <div class="statusbar-item" id="sb-model">claude-sonnet-4-5</div>
+  <span class="statusbar-sep">|</span>
+  <div class="statusbar-item" id="sb-status">Ready</div>
+  <span class="statusbar-sep" style="margin-left:auto"></span>
+  <div class="statusbar-item">🪙 OTA: <span id="sb-ota">0</span></div>
+</div>
+
+<script>
+// ================== CONFIG ==================
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : '/api';
+
+let totalOTA = 0;
+let monacoEditor = null;
+let currentWorkspace = 'prompt';
+let mcpLogs = [];
+
+// ================== MONACO INIT ==================
+const DEFAULT_PROMPT = {
+  "tool": "generate_content",
+  "params": {
+    "product_name": "ข้าวหอมมะลิอินทรีย์",
+    "category": "food",
+    "platform": "tiktok",
+    "language": "th",
+    "hook_type": "auto",
+    "description": "ข้าวหอมมะลิ GI จากสุรินทร์ ปลูกแบบอินทรีย์ 100%"
+  },
+  "_comment": "แก้ params แล้วกด ▶ Run เพื่อ generate"
+};
+
+require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' }});
+require(['vs/editor/editor.main'], function() {
+    monacoEditor = monaco.editor.create(document.getElementById('monaco-container'), {
+        value: JSON.stringify(DEFAULT_PROMPT, null, 2),
+        language: 'json',
+        theme: 'vs-dark',
+        fontSize: 13,
+        fontFamily: "'Consolas', 'Courier New', monospace",
+        lineNumbers: 'on',
+        minimap: { enabled: true },
+        scrollBeyondLastLine: false,
+        automaticLayout: true,
+        formatOnType: true,
+        formatOnPaste: true,
+        bracketPairColorization: { enabled: true },
+        wordWrap: 'on',
+        padding: { top: 12 },
+        suggest: { showKeywords: true },
+    });
+
+    // Listen for content changes
+    monacoEditor.onDidChangeModelContent(() => {
+        syncFormFromEditor();
+    });
+
+    // Add keyboard shortcut: Ctrl+Enter to run
+    monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+        runCurrentWorkspace();
+    });
+
+    setStatusBar('Monaco editor loaded — Ctrl+Enter to run');
+});
+
+// ================== SIDEBAR MCP TOOLS ==================
+const MCP_TOOLS_LIST = [
+    { name: 'generate_content', icon: '📝', desc: 'สร้างคอนเทนต์ TikTok/Multi-platform' },
+    { name: 'analyze_product', icon: '🔍', desc: 'วิเคราะห์สินค้า OTOP/SME' },
+    { name: 'earn_ota_preview', icon: '🪙', desc: 'คำนวณ OTA ที่จะได้ล่วงหน้า' },
+    { name: 'list_platforms', icon: '📱', desc: 'ดู platforms ที่รองรับ' },
+    { name: 'get_otop_templates', icon: '📋', desc: 'Template สำเร็จรูป OTOP' },
+    { name: 'b2g_inquiry', icon: '🏛️', desc: 'ส่งคำร้องหน่วยงานรัฐ' },
+    { name: 'check_ota_balance', icon: '💰', desc: 'ตรวจ OTA Token balance' },
+    { name: 'generate_multilingual', icon: '🌐', desc: 'สร้างพร้อมกัน 3 ภาษา' },
+];
+
+function renderSidebarTools() {
+    const el = document.getElementById('mcp-tools-sidebar');
+    el.innerHTML = MCP_TOOLS_LIST.map(t => `
+        <div class="mcp-tool-card" onclick="loadMCPTool('${t.name}')">
+            <div class="mcp-tool-name">${t.icon} ${t.name}</div>
+            <div class="mcp-tool-desc">${t.desc}</div>
+        </div>
+    `).join('');
+}
+renderSidebarTools();
+
+// ================== MCP TOOL LOADER ==================
+const MCP_TEMPLATES = {
+    generate_content: {
+        tool: 'generate_content',
+        params: {
+            product_name: 'ข้าวหอมมะลิอินทรีย์',
+            category: 'food',
+            platform: 'tiktok',
+            language: 'th',
+            hook_type: 'auto'
+        }
+    },
+    analyze_product: {
+        tool: 'analyze_product',
+        params: {
+            product_name: 'ผ้าไหมมัดหมี่อุบล',
+            category: 'textile',
+            description: 'ผ้าไหมทอมือโดยช่างฝีมือพื้นบ้าน',
+            price: 2500,
+            origin: 'อุบลราชธานี'
+        }
+    },
+    earn_ota_preview: {
+        tool: 'earn_ota_preview',
+        params: { platform: 'tiktok', language: 'all', content_type: 'multilingual' }
+    },
+    list_platforms: {
+        tool: 'list_platforms',
+        params: {}
+    },
+    get_otop_templates: {
+        tool: 'get_otop_templates',
+        params: { category: 'food' }
+    },
+    b2g_inquiry: {
+        tool: 'b2g_inquiry',
+        params: {
+            ministry: 'ditp',
+            inquiry_type: 'export_support',
+            business_name: 'OTOP วิสาหกิจชุมชนตัวอย่าง',
+            details: 'ต้องการส่งออกผ้าไหมไปตลาดจีน'
+        }
+    },
+    check_ota_balance: {
+        tool: 'check_ota_balance',
+        params: { wallet_address: '0xYourWalletAddress' }
+    },
+    generate_multilingual: {
+        tool: 'generate_multilingual',
+        params: {
+            product_name: 'สบู่สมุนไพรไทย',
+            category: 'herb',
+            platforms: ['tiktok', 'xiaohongshu', 'temu']
+        }
+    }
+};
+
+function loadMCPTool(toolName) {
+    // Highlight active card
+    document.querySelectorAll('.mcp-tool-card').forEach(c => c.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    // Load template into editor
+    const template = MCP_TEMPLATES[toolName] || { tool: toolName, params: {} };
+    if (monacoEditor) {
+        monacoEditor.setValue(JSON.stringify(template, null, 2));
+    }
+
+    // Update MCP tool select
+    const sel = document.getElementById('mcp-tool-select');
+    if (sel) sel.value = toolName;
+
+    setStatusBar(`Loaded template: ${toolName}`);
+}
+
+// ================== WORKSPACE SWITCHER ==================
+function switchWorkspace(ws) {
+    currentWorkspace = ws;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    const templates = {
+        prompt: DEFAULT_PROMPT,
+        api: { endpoint: 'POST /generate', body: { product_name: '', category: 'otop', platform: 'tiktok', language: 'th' }, headers: { 'Content-Type': 'application/json' } },
+        mcp: { mcpServers: { 'openthai-ai': { url: 'http://localhost:8000/mcp/sse' } } },
+        template: MCP_TEMPLATES.generate_content
+    };
+
+    if (monacoEditor && templates[ws]) {
+        monacoEditor.setValue(JSON.stringify(templates[ws], null, 2));
+    }
+}
+
+function loadFile(filename) {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    const files = {
+        prompt_template: DEFAULT_PROMPT,
+        api_config: { api_url: API_URL, model: 'claude-sonnet-4-5', max_tokens: 2000, prompt_caching: true },
+        mcp_config: { mcpServers: { 'openthai-ai': { url: 'http://localhost:8000/mcp/sse', description: 'OpenThai AI MCP Server' } } }
+    };
+
+    if (monacoEditor && files[filename]) {
+        monacoEditor.setValue(JSON.stringify(files[filename], null, 2));
+    }
+}
+
+// ================== SYNC EDITOR → FORM ==================
+function syncFormFromEditor() {
+    try {
+        const val = monacoEditor ? JSON.parse(monacoEditor.getValue()) : null;
+        if (!val || !val.params) return;
+        const p = val.params;
+        if (p.product_name) document.getElementById('inp-product').value = p.product_name;
+        if (p.category) document.getElementById('inp-category').value = p.category;
+        if (p.platform) document.getElementById('inp-platform').value = p.platform;
+        if (p.language) document.getElementById('inp-language').value = p.language;
+        if (p.hook_type) document.getElementById('inp-hook').value = p.hook_type;
+        if (p.description) document.getElementById('inp-desc').value = p.description;
+    } catch(e) {}
+}
+
+// ================== GENERATE ==================
+async function generateContent() {
+    const product = document.getElementById('inp-product').value.trim();
+    const category = document.getElementById('inp-category').value;
+    const platform = document.getElementById('inp-platform').value;
+    const language = document.getElementById('inp-language').value;
+    const hook = document.getElementById('inp-hook').value;
+    const desc = document.getElementById('inp-desc').value.trim();
+
+    if (!product) { alert('กรุณากรอกชื่อสินค้า'); return; }
+
+    setStatusBar('Generating content...', true);
+    switchRPTab('output');
+
+    document.getElementById('output-placeholder').textContent = '⏳ กำลัง generate...';
+    document.getElementById('output-placeholder').style.display = 'block';
+    document.getElementById('output-result').style.display = 'none';
+
+    const payload = { product_name: product, product_category: category, platform, language, hook_type: hook, product_description: desc };
+
+    addMCPLog('CALL', 'generate_content', payload);
+
+    try {
+        const res = await fetch(`${API_URL}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        renderOutput(data, platform, language);
+        addMCPLog('SUCCESS', 'generate_content', { ota_earned: data.ota_earned || 5 });
+        setStatusBar(`Done — ${data.api_calls_used || 1} API call(s) used`);
+
+    } catch(err) {
+        // Demo fallback
+        const demo = getDemoContent(product, category, platform, language);
+        renderOutput(demo, platform, language);
+        addMCPLog('FALLBACK', 'generate_content (demo mode)', { reason: err.message });
+        setStatusBar('Demo mode — backend not connected');
+    }
+}
+
+function getDemoContent(product, category, platform, language) {
+    return {
+        hook: `🔥 ${product} — สินค้าไทยคุณภาพระดับ Export!`,
+        script: `[Hook] รู้ไหมว่า ${product} จาก ${category} ของไทย กำลังได้รับความนิยมไปทั่วโลก?\n\n[Body] คุณสมบัติ: ✅ คุณภาพสูง ✅ ราคาเป็นมิตร ✅ ส่งตรงจากผู้ผลิต\n\n[CTA] กดลิงก์ในไบโอ หรือ DM มาเลย!`,
+        hashtags: [`#${product.replace(/\s+/g,'')}`, '#OTOP', '#สินค้าไทย', '#TikTokShop'],
+        caption: `${product} — ${category} ไทยแท้ คุณภาพเยี่ยม 🇹🇭`,
+        cta: 'กดลิงก์ในไบโอสั่งซื้อเลย!',
+        ota_earned: 5,
+        platform,
+        language,
+        demo: true
+    };
+}
+
+function renderOutput(data, platform, language) {
+    document.getElementById('output-placeholder').style.display = 'none';
+    document.getElementById('output-result').style.display = 'block';
+
+    const otaEarned = data.ota_earned || 5;
+    totalOTA += otaEarned;
+    document.getElementById('ota-display').textContent = `+${totalOTA} OTA`;
+    document.getElementById('sb-ota').textContent = totalOTA;
+    document.getElementById('ota-badge').textContent = `🪙 +${otaEarned} OTA Token earned`;
+
+    const cards = document.getElementById('result-cards');
+    cards.innerHTML = `
+        ${data.hook ? `
+        <div class="result-card">
+            <div class="result-card-title">
+                🎣 Hook (3 วิแรก)
+                <button class="copy-mini" onclick="copyText('${escHtml(data.hook)}')">Copy</button>
+            </div>
+            <div class="result-card-body">${escHtml(data.hook)}</div>
+        </div>` : ''}
+
+        ${data.script ? `
+        <div class="result-card">
+            <div class="result-card-title">
+                📜 Script
+                <button class="copy-mini" onclick="copyText(\`${escHtml(data.script)}\`)">Copy</button>
+            </div>
+            <div class="result-card-body" style="white-space:pre-wrap;font-size:12px">${escHtml(data.script)}</div>
+        </div>` : ''}
+
+        ${data.hashtags && data.hashtags.length ? `
+        <div class="result-card">
+            <div class="result-card-title">
+                # Hashtags
+                <button class="copy-mini" onclick="copyText('${data.hashtags.join(' ')}')">Copy</button>
+            </div>
+            <div class="result-card-body">
+                ${data.hashtags.map(h => `<span class="hashtag">${escHtml(h)}</span>`).join('')}
+            </div>
+        </div>` : ''}
+
+        ${data.cta ? `
+        <div class="result-card">
+            <div class="result-card-title">📢 CTA</div>
+            <div class="result-card-body">${escHtml(data.cta)}</div>
+        </div>` : ''}
+
+        ${data.demo ? `
+        <div style="font-size:11px;color:var(--orange);text-align:center;padding:8px;background:rgba(247,129,102,.1);border-radius:6px">
+            ⚠️ Demo Mode — เชื่อมต่อ backend เพื่อรับ AI content จริง
+        </div>` : ''}
+    `;
+
+    // Update editor with output
+    if (monacoEditor) {
+        const outputTab = document.getElementById('tab-output');
+        outputTab.classList.add('active');
+    }
+}
+
+// ================== MCP TOOL CALL ==================
+async function callMCPTool() {
+    const toolName = document.getElementById('mcp-tool-select').value;
+    let editorVal = {};
+
+    try {
+        const parsed = JSON.parse(monacoEditor ? monacoEditor.getValue() : '{}');
+        editorVal = parsed.params || parsed;
+    } catch(e) {}
+
+    switchRPTab('mcp');
+    addMCPLog('CALL', toolName, editorVal);
+    setStatusBar(`Calling MCP tool: ${toolName}...`, true);
+
+    try {
+        const res = await fetch(`${API_URL}/mcp/tools/call`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: Date.now(),
+                method: 'tools/call',
+                params: { name: toolName, arguments: editorVal }
+            })
+        });
+
+        const data = await res.json();
+        const result = data.result?.content?.[0]?.text || JSON.stringify(data, null, 2);
+        addMCPLog('RESULT', toolName, JSON.parse(result));
+        setStatusBar(`MCP tool completed: ${toolName}`);
+
+        // Show in output
+        if (monacoEditor) {
+            monacoEditor.setValue(result);
+        }
+    } catch(err) {
+        addMCPLog('ERROR', toolName, { error: err.message, note: 'Backend ไม่ได้รัน — mock result' });
+        const mockResults = {
+            list_platforms: { platforms: ['TikTok', '小红书', 'Shopee', 'Taobao', 'TEMU'] },
+            earn_ota_preview: { total_earn: 15, base_earn: 5, bonus_earn: 10 }
+        };
+        if (mockResults[toolName]) addMCPLog('MOCK', toolName, mockResults[toolName]);
+        setStatusBar('MCP error — check logs');
+    }
+}
+
+// ================== MCP LOG ==================
+function addMCPLog(type, tool, data) {
+    const colors = { CALL: '#58a6ff', SUCCESS: '#3fb950', ERROR: '#f78166', RESULT: '#bc8cff', FALLBACK: '#ffd700', MOCK: '#888' };
+    const color = colors[type] || '#888';
+    const time = new Date().toLocaleTimeString('th-TH');
+    const log = `[${time}] <span style="color:${color}">[${type}]</span> ${tool}\n${JSON.stringify(data, null, 2)}\n\n`;
+    mcpLogs.unshift(log);
+    const el = document.getElementById('mcp-logs');
+    if (el) el.innerHTML = mcpLogs.slice(0, 20).join('<hr style="border-color:#30363d;margin:8px 0">');
+}
+
+// ================== RUN ==================
+function runCurrentWorkspace() {
+    if (currentWorkspace === 'mcp') { callMCPTool(); return; }
+    generateContent();
+}
+
+// ================== TAB SWITCHERS ==================
+function switchRPTab(tab) {
+    document.querySelectorAll('.rp-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.rp-content').forEach(c => c.classList.remove('active'));
+
+    const tabs = { generate: 0, output: 1, mcp: 2 };
+    const idx = tabs[tab] ?? 0;
+    document.querySelectorAll('.rp-tab')[idx]?.classList.add('active');
+    document.getElementById(`rp-${tab}`)?.classList.add('active');
+}
+
+function showEditorTab(tab) {
+    document.querySelectorAll('.editor-tab').forEach(t => t.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+}
+
+// ================== UTILS ==================
+function setStatusBar(msg, loading = false) {
+    const el = document.getElementById('sb-status');
+    if (el) el.innerHTML = loading ? `<span class="loading-dots">${msg}</span>` : msg;
+}
+
+function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        setStatusBar('✅ Copied to clipboard!');
+        setTimeout(() => setStatusBar('Ready'), 2000);
+    } catch(e) {
+        setStatusBar('Copy failed — use Ctrl+C');
+    }
+}
+
+// ================== MCP STATUS CHECK ==================
+async function checkMCPStatus() {
+    try {
+        const res = await fetch(`${API_URL}/mcp/info`);
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('mcp-status').textContent = `MCP ✅ ${data.tools} tools`;
+        }
+    } catch(e) {
+        document.getElementById('mcp-status').textContent = 'MCP — backend offline';
+        document.querySelector('.dot').style.background = '#f78166';
+    }
+}
+checkMCPStatus();
+</script>
+</body>
+</html>

@@ -31,6 +31,7 @@ import anthropic
 import os
 from dotenv import load_dotenv
 import json
+from mcp_server import router as mcp_router
 from datetime import datetime
 import asyncio
 import re
@@ -41,11 +42,14 @@ load_dotenv()
 
 app = FastAPI(
     title="OpenThai AI API v2.0",
-    description="Multi-platform AI content generator — TikTok, Xiaohongshu, Shopee, Taobao, TEMU",
+    description="Multi-platform AI content generator — TikTok, Xiaohongshu, Shopee, Taobao, TEMU | Cursor MCP Server",
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# ===== Cursor MCP Router =====
+app.include_router(mcp_router)
 
 # ===== CORS — Production whitelist =====
 ALLOWED_ORIGINS = [

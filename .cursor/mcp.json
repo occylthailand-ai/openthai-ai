@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "openthai-ai": {
+      "url": "http://localhost:8000/mcp/sse",
+      "description": "OpenThai AI — Content Generator, OTAChain, B2G Gateway",
+      "env": {
+        "OPENTHAI_ENV": "development"
+      }
+    },
+    "openthai-ai-prod": {
+      "url": "https://openthai-ai.com/api/mcp/sse",
+      "description": "OpenThai AI Production Server",
+      "headers": {
+        "X-API-Key": "${OPENTHAI_API_KEY}"
+      }
+    }
+  }
+}
