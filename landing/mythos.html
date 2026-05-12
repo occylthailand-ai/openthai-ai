@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenThai AI × Claude Mythos Preview</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔮</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3HNY397MM2"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-3HNY397MM2');</script>
+
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg: #05050f;
+  --card: #0d0d1f;
+  --border: #1e1e3f;
+  --gold: #ffd700;
+  --purple: #9b59b6;
+  --blue: #3498db;
+  --green: #2ecc71;
+  --orange: #e67e22;
+  --red: #e74c3c;
+  --text: #e8e8ff;
+  --muted: #6b6b9b;
+}
+body {
+  font-family: 'Noto Sans Thai', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* NAV */
+nav {
+  background: rgba(5,5,15,.95);
+  border-bottom: 1px solid var(--border);
+  padding: .8rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+}
+.nav-logo { display:flex; align-items:center; gap:.6rem; text-decoration:none; }
+.nav-logo-icon { font-size: 1.5rem; }
+.nav-logo-text { font-size: 1rem; font-weight: 700; background: linear-gradient(135deg, #9b59b6, #3498db); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.nav-badge { background: linear-gradient(135deg, #9b59b6, #3498db); color: white; font-size: .65rem; padding: .15rem .5rem; border-radius: 20px; font-weight: 700; }
+.nav-links { margin-left: auto; display: flex; gap: 1rem; align-items: center; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: .85rem; transition: color .2s; }
+.nav-links a:hover { color: var(--text); }
+
+/* HERO */
+.hero {
+  padding: 5rem 2rem 4rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(circle, rgba(155,89,182,.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  background: rgba(155,89,182,.15);
+  border: 1px solid rgba(155,89,182,.4);
+  border-radius: 20px;
+  padding: .4rem 1.2rem;
+  font-size: .8rem;
+  font-weight: 700;
+  color: #c39bd3;
+  margin-bottom: 1.5rem;
+}
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 1rem;
+}
+.hero h1 .hl {
+  background: linear-gradient(135deg, #9b59b6, #3498db, #1abc9c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero p {
+  color: var(--muted);
+  max-width: 600px;
+  margin: 0 auto 2.5rem;
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+.hero-ctas { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.btn-primary {
+  background: linear-gradient(135deg, #9b59b6, #3498db);
+  color: white;
+  border: none;
+  padding: .8rem 2rem;
+  border-radius: 50px;
+  font-size: .95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+  text-decoration: none;
+  font-family: inherit;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(155,89,182,.4); }
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: .8rem 2rem;
+  border-radius: 50px;
+  font-size: .95rem;
+  cursor: pointer;
+  transition: all .2s;
+  text-decoration: none;
+  font-family: inherit;
+}
+.btn-outline:hover { border-color: #9b59b6; color: #c39bd3; }
+
+/* PROVIDERS SECTION */
+.section { padding: 3rem 2rem; max-width: 1100px; margin: 0 auto; }
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: .4rem;
+}
+.section-sub {
+  color: var(--muted);
+  font-size: .9rem;
+  margin-bottom: 2rem;
+}
+
+.providers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.provider-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  transition: all .3s;
+  position: relative;
+  overflow: hidden;
+}
+.provider-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 16px 16px 0 0;
+}
+.provider-card.anthropic::before { background: linear-gradient(90deg, #e74c3c, #9b59b6); }
+.provider-card.bedrock::before   { background: linear-gradient(90deg, #e67e22, #f39c12); }
+.provider-card.vertex::before    { background: linear-gradient(90deg, #3498db, #1abc9c); }
+.provider-card.fallback::before  { background: linear-gradient(90deg, #2ecc71, #27ae60); }
+.provider-card:hover { border-color: #9b59b6; transform: translateY(-3px); }
+
+.provider-header {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  margin-bottom: 1rem;
+}
+.provider-icon { font-size: 2rem; }
+.provider-name { font-size: 1.05rem; font-weight: 700; }
+.provider-sub  { font-size: .75rem; color: var(--muted); margin-top: .1rem; }
+
+.provider-status {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .2rem .7rem;
+  border-radius: 20px;
+  font-size: .72rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.status-available  { background: rgba(46,204,113,.15); color: #2ecc71; border: 1px solid rgba(46,204,113,.3); }
+.status-pending    { background: rgba(241,196,15,.15);  color: #f1c40f;  border: 1px solid rgba(241,196,15,.3); }
+.status-unavailable{ background: rgba(231,76,60,.15);   color: #e74c3c;  border: 1px solid rgba(231,76,60,.3); }
+
+.provider-model {
+  font-family: 'Consolas', monospace;
+  font-size: .75rem;
+  color: #9b59b6;
+  background: rgba(155,89,182,.1);
+  padding: .3rem .7rem;
+  border-radius: 6px;
+  margin-bottom: .8rem;
+  word-break: break-all;
+}
+.provider-features {
+  list-style: none;
+  font-size: .82rem;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.provider-features li::before { content: '→ '; color: #9b59b6; }
+
+.provider-action {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.provider-action a, .provider-action button {
+  font-size: .8rem;
+  color: #9b59b6;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}
+.provider-action a:hover, .provider-action button:hover { text-decoration: underline; }
+
+/* PRIORITY FLOW */
+.flow-section { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+.flow-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem; text-align: center; }
+.flow-steps {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  overflow-x: auto;
+  padding: 1rem 0;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.flow-step {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .8rem 1.2rem;
+  text-align: center;
+  min-width: 140px;
+}
+.flow-step .step-num {
+  font-size: .7rem;
+  color: var(--muted);
+  margin-bottom: .2rem;
+}
+.flow-step .step-name {
+  font-size: .9rem;
+  font-weight: 700;
+  margin-bottom: .2rem;
+}
+.flow-step .step-model {
+  font-size: .65rem;
+  color: #9b59b6;
+  font-family: monospace;
+}
+.flow-arrow {
+  color: var(--muted);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* TEST PANEL */
+.test-section {
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto 3rem;
+}
+.test-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+}
+.test-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.form-group { margin-bottom: 1rem; }
+.form-label { display: block; font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: .4rem; }
+.form-input, .form-select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .7rem 1rem;
+  font-size: .9rem;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border .2s;
+}
+.form-input:focus, .form-select:focus { border-color: #9b59b6; }
+.form-select option { background: var(--card); }
+
+.provider-select-group {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+.provider-select-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .6rem;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--muted);
+  font-size: .75rem;
+  transition: all .2s;
+}
+.provider-select-btn:hover { border-color: #9b59b6; color: var(--text); }
+.provider-select-btn.active { background: rgba(155,89,182,.2); border-color: #9b59b6; color: #c39bd3; }
+.provider-select-btn .ps-icon { font-size: 1.2rem; display: block; margin-bottom: .2rem; }
+
+.generate-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #9b59b6, #3498db);
+  color: white;
+  border: none;
+  padding: .9rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .2s;
+}
+.generate-btn:hover { transform: translateY(-2px); opacity: .9; }
+.generate-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+.result-box {
+  margin-top: 1.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  display: none;
+}
+.result-provider-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: rgba(155,89,182,.15);
+  border: 1px solid rgba(155,89,182,.3);
+  border-radius: 20px;
+  padding: .25rem .8rem;
+  font-size: .75rem;
+  color: #c39bd3;
+  margin-bottom: 1rem;
+}
+.result-section { margin-bottom: 1rem; }
+.result-label { font-size: .7rem; text-transform: uppercase; color: var(--muted); letter-spacing: .5px; margin-bottom: .3rem; }
+.result-content { font-size: .9rem; line-height: 1.7; }
+.ota-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: rgba(255,215,0,.1);
+  border: 1px solid rgba(255,215,0,.3);
+  border-radius: 20px;
+  padding: .3rem .8rem;
+  font-size: .8rem;
+  color: var(--gold);
+  margin-top: .5rem;
+}
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem;
+  text-align: center;
+  color: var(--muted);
+  font-size: .8rem;
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">
+    <span class="nav-logo-icon">🔮</span>
+    <span class="nav-logo-text">OpenThai AI × Mythos</span>
+    <span class="nav-badge">Preview</span>
+  </a>
+  <div class="nav-links">
+    <a href="generator.html">⚡ Generator</a>
+    <a href="platform.html">🗂️ Platform</a>
+    <a href="blockchain.html">⛓️ OTAChain</a>
+    <a href="studio.html">🛠️ Studio</a>
+    <a href="index.html">🏠 Home</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">🔮 Claude Mythos Preview — Frontier AI</div>
+  <h1>OpenThai AI<br><span class="hl">× Claude Mythos</span></h1>
+  <p>พลังของ Frontier Model ระดับโลก รวมกับ OpenThai AI<br>
+  รองรับ 3 providers: Anthropic Direct · AWS Bedrock · Google Vertex AI</p>
+  <div class="hero-ctas">
+    <button class="btn-primary" onclick="document.getElementById('test-section').scrollIntoView({behavior:'smooth'})">
+      🚀 ทดลองใช้ Mythos
+    </button>
+    <a href="https://red.anthropic.com/2026/mythos-preview/" target="_blank" class="btn-outline">
+      🔑 ขอ Access
+    </a>
+  </div>
+</section>
+
+<!-- PROVIDERS -->
+<section class="section">
+  <div class="section-title">🌐 3 Provider Access Points</div>
+  <div class="section-sub">เชื่อมต่อ Claude Mythos Preview ผ่าน 3 ช่องทาง — Auto-fallback เมื่อ provider ไม่พร้อม</div>
+
+  <div class="providers-grid">
+
+    <!-- Anthropic Direct -->
+    <div class="provider-card anthropic">
+      <div class="provider-header">
+        <div class="provider-icon">🤖</div>
+        <div>
+          <div class="provider-name">Anthropic Direct API</div>
+          <div class="provider-sub">api.anthropic.com</div>
+        </div>
+      </div>
+      <div class="provider-status status-pending" id="status-anthropic">
+        ⏳ รอ Mythos Access
+      </div>
+      <div class="provider-model" id="model-anthropic">claude-mythos-20260407</div>
+      <ul class="provider-features">
+        <li>Prompt Caching — ประหยัด ~80% cost</li>
+        <li>Priority: #1 (ลอง provider นี้ก่อน)</li>
+        <li>ขอ access: red.anthropic.com/2026/mythos-preview</li>
+        <li>OTA Earned: +25 per generation</li>
+      </ul>
+      <div class="provider-action">
+        <a href="https://red.anthropic.com/2026/mythos-preview/" target="_blank">→ ขอ Mythos Access ↗</a>
+      </div>
+    </div>
+
+    <!-- AWS Bedrock -->
+    <div class="provider-card bedrock">
+      <div class="provider-header">
+        <div class="provider-icon">☁️</div>
+        <div>
+          <div class="provider-name">AWS Bedrock</div>
+          <div class="provider-sub">bedrock-runtime.us-east-1.amazonaws.com</div>
+        </div>
+      </div>
+      <div class="provider-status status-pending" id="status-bedrock">
+        ⏳ รอ AWS Credentials
+      </div>
+      <div class="provider-model" id="model-bedrock">anthropic.claude-mythos-preview-v1:0</div>
+      <ul class="provider-features">
+        <li>AWS Infrastructure — Enterprise grade</li>
+        <li>Priority: #2 (fallback จาก Anthropic)</li>
+        <li>ต้องการ AWS_ACCESS_KEY_ID + SECRET</li>
+        <li>Region: us-east-1 (รองรับ Mythos)</li>
+      </ul>
+      <div class="provider-action">
+        <a href="https://console.aws.amazon.com/bedrock/home#/model-access" target="_blank">→ AWS Bedrock Console ↗</a>
+      </div>
+    </div>
+
+    <!-- Vertex AI -->
+    <div class="provider-card vertex">
+      <div class="provider-header">
+        <div class="provider-icon">🌩️</div>
+        <div>
+          <div class="provider-name">Google Vertex AI</div>
+          <div class="provider-sub">us-east5-aiplatform.googleapis.com</div>
+        </div>
+      </div>
+      <div class="provider-status status-pending" id="status-vertex">
+        ⏳ รอ GCP Project
+      </div>
+      <div class="provider-model" id="model-vertex">claude-mythos-preview@anthropic</div>
+      <ul class="provider-features">
+        <li>Google Cloud Infrastructure</li>
+        <li>Priority: #3 (fallback จาก Bedrock)</li>
+        <li>ต้องการ GCP_PROJECT_ID + credentials</li>
+        <li>Region: us-east5</li>
+      </ul>
+      <div class="provider-action">
+        <a href="https://console.cloud.google.com/vertex-ai/model-garden" target="_blank">→ Vertex AI Model Garden ↗</a>
+      </div>
+    </div>
+
+    <!-- Fallback -->
+    <div class="provider-card fallback">
+      <div class="provider-header">
+        <div class="provider-icon">🛡️</div>
+        <div>
+          <div class="provider-name">Fallback</div>
+          <div class="provider-sub">claude-sonnet-4-5 (always available)</div>
+        </div>
+      </div>
+      <div class="provider-status status-available" id="status-fallback">
+        ✅ พร้อมใช้งาน
+      </div>
+      <div class="provider-model">claude-sonnet-4-5</div>
+      <ul class="provider-features">
+        <li>ใช้เมื่อ Mythos ทุก provider ไม่พร้อม</li>
+        <li>Priority: #4 (last resort)</li>
+        <li>Prompt Caching เปิดอยู่</li>
+        <li>OTA Earned: +5 per generation</li>
+      </ul>
+      <div class="provider-action">
+        <span style="color:var(--green);font-size:.8rem">✅ ใช้งานได้ทันที</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- PRIORITY FLOW -->
+<section class="flow-section">
+  <div class="flow-title">⚡ Auto-Routing Priority Flow</div>
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="step-num">Priority 1</div>
+      <div class="step-name">🤖 Anthropic</div>
+      <div class="step-model">claude-mythos-20260407</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-num">Priority 2</div>
+      <div class="step-name">☁️ AWS Bedrock</div>
+      <div class="step-model">claude-mythos-preview-v1</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-num">Priority 3</div>
+      <div class="step-name">🌩️ Vertex AI</div>
+      <div class="step-model">claude-mythos-preview</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-num">Fallback</div>
+      <div class="step-name">🛡️ Sonnet 4.5</div>
+      <div class="step-model">claude-sonnet-4-5</div>
+    </div>
+  </div>
+</section>
+
+<!-- TEST PANEL -->
+<section class="test-section" id="test-section">
+  <div class="test-card">
+    <h3>🧪 ทดลอง Generate ด้วย Claude Mythos</h3>
+
+    <div class="form-group">
+      <div class="form-label">🌐 เลือก Provider</div>
+      <div class="provider-select-group">
+        <button class="provider-select-btn" onclick="selectProvider('auto')" id="ps-auto">
+          <span class="ps-icon">⚡</span>Auto Route
+        </button>
+        <button class="provider-select-btn" onclick="selectProvider('anthropic')" id="ps-anthropic">
+          <span class="ps-icon">🤖</span>Anthropic
+        </button>
+        <button class="provider-select-btn" onclick="selectProvider('bedrock')" id="ps-bedrock">
+          <span class="ps-icon">☁️</span>Bedrock
+        </button>
+        <button class="provider-select-btn" onclick="selectProvider('vertex')" id="ps-vertex">
+          <span class="ps-icon">🌩️</span>Vertex AI
+        </button>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">🏪 ชื่อสินค้า</label>
+        <input class="form-input" id="inp-product" type="text" value="ผ้าไหมมัดหมี่อุบล" placeholder="ชื่อสินค้า">
+      </div>
+      <div class="form-group">
+        <label class="form-label">📦 ประเภท</label>
+        <select class="form-select" id="inp-category">
+          <option value="textile">🧵 ผ้า/เครื่องแต่งกาย</option>
+          <option value="food">🍚 อาหาร</option>
+          <option value="herb">🌿 สมุนไพร</option>
+          <option value="craft">🏺 หัตถกรรม</option>
+          <option value="beauty">💄 ความงาม</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">📱 Platform</label>
+        <select class="form-select" id="inp-platform">
+          <option value="tiktok">TikTok</option>
+          <option value="xiaohongshu">小红书</option>
+          <option value="shopee">Shopee</option>
+          <option value="taobao">Taobao</option>
+          <option value="temu">TEMU</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">🌐 ภาษา</label>
+        <select class="form-select" id="inp-language">
+          <option value="th">🇹🇭 ไทย</option>
+          <option value="zh">🇨🇳 จีน</option>
+          <option value="en">🇺🇸 EN</option>
+          <option value="all">🌐 ทั้ง 3</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="generate-btn" id="generate-btn" onclick="generateMythos()">
+      🔮 Generate ด้วย Claude Mythos
+    </button>
+
+    <div class="result-box" id="result-box">
+      <div class="result-provider-badge" id="result-provider-badge">🔮 Provider: —</div>
+
+      <div class="result-section">
+        <div class="result-label">🎣 Hook</div>
+        <div class="result-content" id="r-hook">—</div>
+      </div>
+      <div class="result-section">
+        <div class="result-label">📜 Script</div>
+        <div class="result-content" id="r-script" style="white-space:pre-wrap;font-size:.85rem">—</div>
+      </div>
+      <div class="result-section">
+        <div class="result-label"># Hashtags</div>
+        <div class="result-content" id="r-hashtags">—</div>
+      </div>
+      <div class="result-section">
+        <div class="result-label">📢 CTA</div>
+        <div class="result-content" id="r-cta">—</div>
+      </div>
+      <div class="result-section">
+        <div class="result-label">🧠 Why Viral</div>
+        <div class="result-content" id="r-why" style="color:#9b59b6">—</div>
+      </div>
+      <div class="ota-badge" id="r-ota">🪙 +25 OTA Token earned (Mythos Quality)</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>🔮 OpenThai AI × Claude Mythos Preview — Frontier AI สำหรับ OTOP/SME ไทย</p>
+  <p style="margin-top:.4rem">Powered by Anthropic Direct · AWS Bedrock · Google Vertex AI</p>
+</footer>
+
+<script>
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : '/api';
+
+let selectedProvider = 'auto';
+
+// =================== PROVIDER SELECT ===================
+function selectProvider(p) {
+    selectedProvider = p;
+    document.querySelectorAll('.provider-select-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`ps-${p}`)?.classList.add('active');
+}
+selectProvider('auto');
+
+// =================== CHECK STATUS ===================
+async function checkStatus() {
+    try {
+        const res = await fetch(`${API_URL}/mythos/status`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const providers = data.providers || {};
+        Object.entries(providers).forEach(([name, info]) => {
+            const el = document.getElementById(`status-${name}`);
+            if (!el) return;
+            if (info.available) {
+                el.className = 'provider-status status-available';
+                el.textContent = '✅ พร้อมใช้งาน';
+            }
+        });
+    } catch(e) {
+        console.log('Backend offline — demo mode');
+    }
+}
+checkStatus();
+
+// =================== GENERATE ===================
+async function generateMythos() {
+    const product  = document.getElementById('inp-product').value.trim();
+    const category = document.getElementById('inp-category').value;
+    const platform = document.getElementById('inp-platform').value;
+    const language = document.getElementById('inp-language').value;
+
+    if (!product) { alert('กรุณากรอกชื่อสินค้า'); return; }
+
+    const btn = document.getElementById('generate-btn');
+    btn.disabled = true;
+    btn.textContent = '🔮 กำลัง Generate...';
+
+    const box = document.getElementById('result-box');
+    box.style.display = 'none';
+
+    const payload = {
+        product_name: product,
+        product_category: category,
+        product_description: '',
+        platform,
+        language,
+        hook_type: 'auto',
+        target_audience: 'คนไทยทั่วไป',
+        customer_pain_point: '',
+        seller_story: '',
+        unique_value: '',
+        common_ground: '',
+        preferred_provider: selectedProvider === 'auto' ? null : selectedProvider
+    };
+
+    try {
+        const res = await fetch(`${API_URL}/mythos/content`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderResult(data);
+
+    } catch(err) {
+        // Demo fallback
+        renderResult(getDemoResult(product, category, platform));
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔮 Generate ด้วย Claude Mythos';
+    }
+}
+
+function renderResult(data) {
+    const providerLabels = {
+        anthropic: '🤖 Anthropic Direct',
+        bedrock:   '☁️ AWS Bedrock',
+        vertex:    '🌩️ Google Vertex AI',
+        fallback:  '🛡️ Fallback (Sonnet 4.5)',
+        demo:      '📋 Demo Mode'
+    };
+    const provider = data.provider || 'demo';
+    const ota = data.ota_earned || 25;
+
+    document.getElementById('result-provider-badge').textContent =
+        `🔮 Provider: ${providerLabels[provider] || provider} · Model: ${data.model || 'claude-mythos'}`;
+
+    document.getElementById('r-hook').textContent     = data.hook    || '—';
+    document.getElementById('r-script').textContent  = data.script  || '—';
+    document.getElementById('r-cta').textContent      = data.cta     || '—';
+    document.getElementById('r-why').textContent      = data.why_viral || data.why_it_works || '—';
+
+    const hashtags = data.hashtags || [];
+    document.getElementById('r-hashtags').innerHTML = hashtags
+        .map(h => `<span style="color:#9b59b6;margin-right:6px">${h}</span>`)
+        .join('');
+
+    document.getElementById('r-ota').textContent = `🪙 +${ota} OTA Token earned (Mythos Quality)`;
+
+    const box = document.getElementById('result-box');
+    box.style.display = 'block';
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function getDemoResult(product, category, platform) {
+    return {
+        provider: 'demo',
+        model: 'demo-mode',
+        hook: `🔮 ${product} — คอนเทนต์ระดับ Mythos AI!`,
+        script: `[Hook - 3 วิ]\n${product} ที่คนไทย ${category} รู้จักมานาน กำลังบุก ${platform}!\n\n[Body - 20 วิ]\nสร้างโดยช่างฝีมือไทยแท้ คุณภาพส่งออกระดับโลก ราคาเป็นมิตร\n\n[CTA - 7 วิ]\nกดลิงก์ในไบโอ สั่งได้เลยวันนี้!`,
+        hashtags: [`#${product.replace(/\s/g,'')}`, '#OTOP', '#สินค้าไทย', '#MythosAI'],
+        cta: 'กดลิงก์ในไบโอสั่งซื้อได้เลย!',
+        why_viral: 'Hook ดึงความสนใจด้วยการเชื่อม local heritage กับ global trend',
+        ota_earned: 25
+    };
+}
+</script>
+</body>
+</html>

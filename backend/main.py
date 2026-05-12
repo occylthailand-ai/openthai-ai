@@ -32,6 +32,7 @@ import os
 from dotenv import load_dotenv
 import json
 from mcp_server import router as mcp_router
+from mythos_router import get_mythos_router
 from datetime import datetime
 import asyncio
 import re
@@ -377,7 +378,86 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+    return {"status": "ok", "timestamp": datetime.now().isoformat(), "model": MODEL}
+
+# ================== MYTHOS ENDPOINTS ==================
+
+@app.get("/mythos/status")
+async def mythos_status():
+    """ตรวจสอบสถานะ Claude Mythos ทั้ง 3 providers"""
+    router = get_mythos_router()
+    return await router.check_status()
+
+@app.post("/mythos/generate")
+async def mythos_generate(request: Request):
+    """
+    Generate content ด้วย Claude Mythos Preview
+    รองรับ 3 providers: Anthropic → Bedrock → Vertex AI → Fallback
+    """
+    body = await request.json()
+    messages  = body.get("messages", [])
+    system    = body.get("system", "คุณเป็น AI ผู้เชี่ยวชาญด้านคอนเทนต์ OTOP/SME ไทย")
+    max_tokens = body.get("max_tokens", 2000)
+    provider  = body.get("preferred_provider", None)  # anthropic | bedrock | vertex
+
+    if not messages:
+        raise HTTPException(status_code=400, detail="messages required")
+
+    router = get_mythos_router()
+    try:
+        result = await router.generate(
+            messages=messages,
+            system=system,
+            max_tokens=max_tokens,
+            preferred_provider=provider
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
+
+@app.post("/mythos/content")
+async def mythos_content(product: "ProductInput"):
+    """
+    สร้างคอนเทนต์ TikTok ด้วย Claude Mythos Preview
+    ใช้แทน /generate เมื่อต้องการ Mythos-grade quality
+    """
+    from backend_helpers import build_system_prompt, build_user_prompt
+    router = get_mythos_router()
+
+    system = f"""คุณเป็น AI ผู้เชี่ยวชาญระดับ Mythos สร้างคอนเทนต์ขายสินค้า OTOP/SME ไทย
+สร้างสคริปต์ {product.platform.upper()} ภาษา {product.language} ที่ทรงพลังและ viral ที่สุด"""
+
+    user = f"""สินค้า: {product.product_name}
+ประเภท: {product.product_category}
+คำอธิบาย: {product.product_description}
+Platform: {product.platform}
+ภาษา: {product.language}
+Hook Type: {product.hook_type}
+
+ตอบเป็น JSON: {{
+  "hook": "...", "script": "...", "hashtags": [...],
+  "caption": "...", "cta": "...", "why_viral": "...",
+  "ota_earned": 25
+}}"""
+
+    try:
+        result = await router.generate(
+            messages=[{"role": "user", "content": user}],
+            system=system,
+            max_tokens=2500
+        )
+        content_text = result["content"]
+        content_text = content_text.strip()
+        if content_text.startswith("```"):
+            content_text = re.sub(r"^```(?:json)?\n?", "", content_text)
+            content_text = re.sub(r"\n?```$", "", content_text)
+        content = json.loads(content_text)
+        content["provider"] = result["provider"]
+        content["model"] = result["model"]
+        content["ota_earned"] = 25  # Mythos quality = max OTA bonus
+        return content
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
 # ===== ADMIN AUTH =====
 ADMIN_KEY = os.getenv("ADMIN_KEY", "")
