@@ -1,0 +1,27 @@
+﻿name: Supabase Migration
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "run" to execute migration'
+        required: true
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Run Schema Migration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD:  ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          supabase link --project-ref tpeskbbhuuqztwyllnli --password "$SUPABASE_DB_PASSWORD"
+          supabase db execute --file backend/supabase_schema.sql
+          echo "Migration complete!"
