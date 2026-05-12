@@ -24,4 +24,6 @@ Thumbs.db
 
 # Temp
 pr_body.md
+pr_body2.md
+pr_body*.md
 *.tmp

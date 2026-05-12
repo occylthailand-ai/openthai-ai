@@ -34,7 +34,7 @@ import json
 from mcp_server import router as mcp_router
 from mythos_router import get_mythos_router
 from datetime import datetime
-import asyncio
+import hmac
 import re
 
 load_dotenv()
@@ -416,12 +416,11 @@ async def mythos_generate(request: Request):
         raise HTTPException(status_code=503, detail=str(e))
 
 @app.post("/mythos/content")
-async def mythos_content(product: "ProductInput"):
+async def mythos_content(product: ProductInput):
     """
     สร้างคอนเทนต์ TikTok ด้วย Claude Mythos Preview
     ใช้แทน /generate เมื่อต้องการ Mythos-grade quality
     """
-    from backend_helpers import build_system_prompt, build_user_prompt
     router = get_mythos_router()
 
     system = f"""คุณเป็น AI ผู้เชี่ยวชาญระดับ Mythos สร้างคอนเทนต์ขายสินค้า OTOP/SME ไทย
@@ -446,12 +445,7 @@ Hook Type: {product.hook_type}
             system=system,
             max_tokens=2500
         )
-        content_text = result["content"]
-        content_text = content_text.strip()
-        if content_text.startswith("```"):
-            content_text = re.sub(r"^```(?:json)?\n?", "", content_text)
-            content_text = re.sub(r"\n?```$", "", content_text)
-        content = json.loads(content_text)
+        content = parse_json_safe(result["content"])  # ✅ reuse robust parser
         content["provider"] = result["provider"]
         content["model"] = result["model"]
         content["ota_earned"] = 25  # Mythos quality = max OTA bonus
@@ -463,9 +457,9 @@ Hook Type: {product.hook_type}
 ADMIN_KEY = os.getenv("ADMIN_KEY", "")
 
 def verify_admin(request: Request):
-    """ตรวจสอบ Admin key จาก header X-Admin-Key"""
+    """ตรวจสอบ Admin key จาก header X-Admin-Key (timing-safe comparison)"""
     key = request.headers.get("X-Admin-Key", "")
-    if not key or key != ADMIN_KEY:
+    if not key or not ADMIN_KEY or not hmac.compare_digest(key, ADMIN_KEY):
         raise HTTPException(status_code=401, detail="Unauthorized — Admin key required")
     return True
 
@@ -682,9 +676,16 @@ async def b2g_inquiry(req: B2GRequest):
     }
 
 # ===== OTA BLOCKCHAIN WEBHOOK =====
+WEBHOOK_SECRET = os.getenv("BLOCKCHAIN_WEBHOOK_SECRET", "")
+
 @app.post("/blockchain/webhook")
 async def blockchain_webhook(request: Request):
     """⛓️ รับ event จาก Smart Contract (Earn-to-Create, Affiliate, Staking)"""
+    # ✅ ตรวจสอบ secret header ก่อนประมวลผล
+    if WEBHOOK_SECRET:
+        sig = request.headers.get("X-Webhook-Secret", "")
+        if not hmac.compare_digest(sig, WEBHOOK_SECRET):
+            raise HTTPException(status_code=401, detail="Invalid webhook secret")
     body = await request.json()
     event_type = body.get("event", "unknown")
 

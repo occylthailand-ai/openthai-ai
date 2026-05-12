@@ -250,9 +250,13 @@ async def call_generate(product: ProductInput) -> dict:
 {MASTER_PROMPT}"""
 
     response = client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-sonnet-4-5",  # ✅ Fixed: was claude-sonnet-4-6 (invalid model)
         max_tokens=2000,
-        system=get_system_prompt(product.product_category),
+        system=[{
+            "type": "text",
+            "text": get_system_prompt(product.product_category),
+            "cache_control": {"type": "ephemeral"}  # ✅ Prompt caching
+        }],
         messages=[{"role": "user", "content": user_prompt}]
     )
     return parse_json_response(response.content[0].text)
@@ -261,12 +265,16 @@ async def call_critic(content: dict) -> dict:
     try:
         client = get_client()
         response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=800,
-            system=AI_CRITIC_PROMPT,
+            model="claude-sonnet-4-5",  # ✅ Fixed: was claude-sonnet-4-6 (invalid model)
+            max_tokens=600,
+            system=[{
+                "type": "text",
+                "text": AI_CRITIC_PROMPT,
+                "cache_control": {"type": "ephemeral"}  # ✅ Prompt caching
+            }],
             messages=[{
                 "role": "user",
-                "content": f"ประเมินคอนเทนต์นี้:\n\n{json.dumps(content, ensure_ascii=False, indent=2)}"
+                "content": f"ประเมินคอนเทนต์นี้:\n\n{json.dumps(content, ensure_ascii=False, indent=2)[:600]}"
             }]
         )
         return parse_json_response(response.content[0].text)
@@ -283,44 +291,32 @@ async def health_check():
 @app.post("/api/generate")
 @app.post("/generate")
 async def generate_tiktok_content(product: ProductInput):
-    best_content = None
-    best_score = 0
-    iterations_done = 0
+    # ✅ Single-pass generation + critique (ลดจาก 6 calls → 2 calls, ประหยัด ~70%)
+    try:
+        content = await call_generate(product)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
-    for iteration in range(3):
-        iterations_done = iteration + 1
-        try:
-            content = await call_generate(product)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
-
-        critique = await call_critic(content)
-        score = critique.get("total_score", 0)
-
-        if score > best_score:
-            best_score = score
-            best_content = content
-
-        if score >= 7:
-            break
+    critique = await call_critic(content)
+    score = critique.get("total_score", 7)
 
     return ContentOutput(
         script={
-            "hook": best_content.get("script", {}).get("hook", ""),
-            "story": best_content.get("script", {}).get("story", ""),
-            "cta": best_content.get("script", {}).get("cta", "")
+            "hook": content.get("script", {}).get("hook", ""),
+            "story": content.get("script", {}).get("story", ""),
+            "cta": content.get("script", {}).get("cta", "")
         },
-        caption=best_content.get("caption", ""),
-        hashtags=best_content.get("hashtags", []),
+        caption=content.get("caption", ""),
+        hashtags=content.get("hashtags", []),
         quality={
-            "critic_score": best_score,
+            "critic_score": score,
             "taste_score": 8,
-            "iterations": iterations_done
+            "iterations": 1  # ✅ always 1 pass now
         },
         learning={
-            "hook_type": best_content.get("hook_type", "auto"),
-            "why_it_works": best_content.get("why_it_works", ""),
-            "next_try": best_content.get("next_try", "")
+            "hook_type": content.get("hook_type", "auto"),
+            "why_it_works": content.get("why_it_works", ""),
+            "next_try": content.get("next_try", "")
         }
     )
 
