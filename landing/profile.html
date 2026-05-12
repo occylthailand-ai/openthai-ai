@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั้งค่าโปรไฟล์ — OpenThai AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <style>
+    :root { --primary:#FF6B35; --dark:#1A1A2E; --light:#F7F7F7; --gradient:linear-gradient(135deg,#FF6B35,#FF8E53); }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Noto Sans Thai',sans-serif; background:var(--light); color:var(--dark); }
+
+    nav {
+      background:white; padding:0.9rem 2rem;
+      box-shadow:0 2px 10px rgba(0,0,0,0.07);
+      display:flex; align-items:center; gap:1rem;
+      position:sticky; top:0; z-index:100;
+    }
+    .nav-logo { display:flex; align-items:center; gap:0.6rem; text-decoration:none; }
+    .nav-logo img { height:34px; }
+    .nav-logo span { font-size:1.15rem; font-weight:700; color:var(--primary); }
+    .nav-right { margin-left:auto; display:flex; align-items:center; gap:1rem; }
+    .nav-right a { font-size:0.85rem; color:#666; text-decoration:none; }
+    .nav-right a:hover { color:var(--primary); }
+
+    .page { max-width:680px; margin:2rem auto; padding:0 1.5rem; }
+
+    .page-title { font-size:1.4rem; font-weight:700; margin-bottom:1.75rem; }
+
+    .card {
+      background:white; border-radius:20px;
+      padding:1.75rem; box-shadow:0 4px 20px rgba(0,0,0,0.06);
+      margin-bottom:1.25rem;
+    }
+    .card-title { font-size:1rem; font-weight:700; margin-bottom:1.25rem; color:var(--dark); }
+
+    .avatar-row {
+      display:flex; align-items:center; gap:1.25rem; margin-bottom:1.5rem;
+    }
+    .avatar {
+      width:72px; height:72px; border-radius:50%;
+      background:var(--gradient); display:flex; align-items:center;
+      justify-content:center; font-size:1.8rem; font-weight:700; color:white;
+      flex-shrink:0;
+    }
+    .avatar-info h3 { font-size:1rem; font-weight:700; margin-bottom:0.2rem; }
+    .avatar-info p { font-size:0.82rem; color:#888; }
+
+    .form-group { margin-bottom:1.1rem; }
+    label { display:block; font-size:0.82rem; font-weight:600; color:#555; margin-bottom:0.35rem; }
+    input {
+      width:100%; padding:0.75rem 1rem;
+      border:2px solid #e8e8e8; border-radius:10px;
+      font-size:0.95rem; font-family:inherit;
+      transition:border-color 0.2s; background:white;
+    }
+    input:focus { outline:none; border-color:var(--primary); }
+    input:disabled { background:#fafafa; color:#aaa; cursor:not-allowed; }
+
+    .save-btn {
+      padding:0.75rem 2rem; background:var(--gradient); color:white;
+      border:none; border-radius:12px; font-size:0.95rem; font-weight:700;
+      cursor:pointer; font-family:inherit; transition:all 0.2s;
+    }
+    .save-btn:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(255,107,53,0.35); }
+    .save-btn:disabled { opacity:0.6; transform:none; cursor:not-allowed; }
+
+    .msg { padding:0.7rem 1rem; border-radius:10px; font-size:0.85rem; margin-bottom:1rem; display:none; }
+    .msg.error { background:#fef2f2; color:#c0392b; border:1px solid #fcc; display:block; }
+    .msg.success { background:#f0fdf4; color:#166534; border:1px solid #bbf7d0; display:block; }
+
+    .danger-zone { border:2px solid #fee2e2; border-radius:20px; padding:1.5rem; }
+    .danger-zone .card-title { color:#dc2626; }
+    .danger-btn {
+      padding:0.65rem 1.5rem; border:2px solid #fee2e2; border-radius:10px;
+      background:white; color:#dc2626; font-size:0.85rem; font-weight:600;
+      cursor:pointer; font-family:inherit; transition:all 0.2s;
+    }
+    .danger-btn:hover { background:#fef2f2; }
+
+    .spinner-inline {
+      display:inline-block; width:14px; height:14px;
+      border:2px solid rgba(255,255,255,0.4); border-top-color:white;
+      border-radius:50%; animation:spin 0.6s linear infinite;
+      vertical-align:middle; margin-right:6px;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .loading { text-align:center; padding:4rem; color:#ccc; }
+    .spinner { width:40px; height:40px; border:3px solid #eee; border-top-color:var(--primary); border-radius:50%; animation:spin 0.7s linear infinite; margin:0 auto 1rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">
+    <img src="images/logo.png" alt="OpenThai AI" onerror="this.style.display='none'">
+    <span>OpenThai AI</span>
+  </a>
+  <div class="nav-right">
+    <a href="generator.html">🚀 AI Generator</a>
+    <a href="dashboard.html">📊 Dashboard</a>
+    <a href="profile.html" style="color:var(--primary);font-weight:600;">👤 โปรไฟล์</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="loading" id="loadingState">
+    <div class="spinner"></div>
+    กำลังโหลดข้อมูล...
+  </div>
+  <div id="pageContent" style="display:none;">
+    <div class="page-title">👤 ตั้งค่าโปรไฟล์</div>
+
+    <!-- Avatar + info -->
+    <div class="card">
+      <div class="avatar-row">
+        <div class="avatar" id="avatarEl">?</div>
+        <div class="avatar-info">
+          <h3 id="avatarName">—</h3>
+          <p id="avatarEmail">—</p>
+        </div>
+      </div>
+
+      <div id="profileMsg" class="msg"></div>
+
+      <div class="form-group">
+        <label>ชื่อ-นามสกุล</label>
+        <input type="text" id="fieldName" placeholder="เช่น สมชาย ใจดี">
+      </div>
+      <div class="form-group">
+        <label>เบอร์โทร / LINE ID</label>
+        <input type="text" id="fieldPhone" placeholder="0812345678">
+      </div>
+      <div class="form-group">
+        <label>อีเมล</label>
+        <input type="email" id="fieldEmail" disabled>
+      </div>
+
+      <button class="save-btn" id="saveProfileBtn" onclick="saveProfile()">บันทึกข้อมูล</button>
+    </div>
+
+    <!-- Change Password -->
+    <div class="card">
+      <div class="card-title">🔑 เปลี่ยนรหัสผ่าน</div>
+      <div id="passwordMsg" class="msg"></div>
+      <div class="form-group">
+        <label>รหัสผ่านใหม่</label>
+        <input type="password" id="newPassword" placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>ยืนยันรหัสผ่านใหม่</label>
+        <input type="password" id="confirmPassword" placeholder="พิมพ์รหัสผ่านอีกครั้ง" autocomplete="new-password">
+      </div>
+      <button class="save-btn" id="savePassBtn" onclick="savePassword()">เปลี่ยนรหัสผ่าน</button>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="danger-zone">
+      <div class="card-title">⚠️ Danger Zone</div>
+      <p style="font-size:0.85rem;color:#666;margin-bottom:1rem;">ออกจากระบบบนอุปกรณ์นี้</p>
+      <button class="danger-btn" onclick="doLogout()">ออกจากระบบ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const sb = window.supabase.createClient(
+  OPENTHAI_CONFIG.supabase.url,
+  OPENTHAI_CONFIG.supabase.anonKey
+);
+
+let currentSession = null;
+
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) { location.href = 'login.html?next=profile.html'; return; }
+  currentSession = session;
+
+  const user = session.user;
+  const name = user.user_metadata?.name || user.email.split('@')[0];
+
+  // Try to load profile from Supabase
+  let phone = user.user_metadata?.phone || '';
+  try {
+    const res = await fetch(
+      `${OPENTHAI_CONFIG.supabase.url}/rest/v1/profiles?id=eq.${user.id}&select=name,phone`,
+      { headers: { 'Authorization': `Bearer ${session.access_token}`, 'apikey': OPENTHAI_CONFIG.supabase.anonKey } }
+    );
+    if (res.ok) {
+      const rows = await res.json();
+      if (rows.length) {
+        if (rows[0].name) document.getElementById('fieldName').value = rows[0].name;
+        if (rows[0].phone) phone = rows[0].phone;
+      }
+    }
+  } catch(e) {}
+
+  document.getElementById('fieldName').value = document.getElementById('fieldName').value || name;
+  document.getElementById('fieldPhone').value = phone;
+  document.getElementById('fieldEmail').value = user.email;
+
+  const initials = name.slice(0,1).toUpperCase();
+  document.getElementById('avatarEl').textContent = initials;
+  document.getElementById('avatarName').textContent = name;
+  document.getElementById('avatarEmail').textContent = user.email;
+
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('pageContent').style.display = 'block';
+})();
+
+async function saveProfile() {
+  const name  = document.getElementById('fieldName').value.trim();
+  const phone = document.getElementById('fieldPhone').value.trim();
+  const btn   = document.getElementById('saveProfileBtn');
+  const msg   = document.getElementById('profileMsg');
+
+  if (!name) { showMsg(msg, 'กรุณากรอกชื่อ', 'error'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-inline"></span>กำลังบันทึก...';
+
+  try {
+    // Update Supabase profiles table
+    const res = await fetch(
+      `${OPENTHAI_CONFIG.supabase.url}/rest/v1/profiles?id=eq.${currentSession.user.id}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${currentSession.access_token}`,
+          'apikey': OPENTHAI_CONFIG.supabase.anonKey,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ name, phone, updated_at: new Date().toISOString() })
+      }
+    );
+
+    // Also update user_metadata
+    await sb.auth.updateUser({ data: { name, phone } });
+
+    document.getElementById('avatarEl').textContent = name.slice(0,1).toUpperCase();
+    document.getElementById('avatarName').textContent = name;
+    localStorage.setItem('ot_user', JSON.stringify({ name, email: currentSession.user.email }));
+
+    showMsg(msg, 'บันทึกข้อมูลสำเร็จ', 'success');
+  } catch(e) {
+    showMsg(msg, 'เกิดข้อผิดพลาด: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'บันทึกข้อมูล';
+}
+
+async function savePassword() {
+  const pass    = document.getElementById('newPassword').value;
+  const confirm = document.getElementById('confirmPassword').value;
+  const btn     = document.getElementById('savePassBtn');
+  const msg     = document.getElementById('passwordMsg');
+
+  if (pass.length < 8) { showMsg(msg, 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร', 'error'); return; }
+  if (pass !== confirm) { showMsg(msg, 'รหัสผ่านไม่ตรงกัน', 'error'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-inline"></span>กำลังเปลี่ยน...';
+
+  const { error } = await sb.auth.updateUser({ password: pass });
+
+  btn.disabled = false;
+  btn.textContent = 'เปลี่ยนรหัสผ่าน';
+
+  if (error) { showMsg(msg, error.message, 'error'); return; }
+
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+  showMsg(msg, 'เปลี่ยนรหัสผ่านสำเร็จ', 'success');
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  localStorage.removeItem('ot_user');
+  location.href = 'index.html';
+}
+
+function showMsg(el, text, type) {
+  el.textContent = text;
+  el.className = 'msg ' + type;
+  setTimeout(() => { el.className = 'msg'; }, 4000);
+}
+</script>
+</body>
+</html>
