@@ -193,6 +193,121 @@ CREATE INDEX IF NOT EXISTS idx_b2g_status ON public.b2g_inquiries(status);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_user ON public.subscriptions(user_id) WHERE status = 'active';
 
 -- ============================================================
+-- 8. PAYMENT NOTIFICATIONS (PromptPay manual verify)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.payment_notifications (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  ref_number  TEXT UNIQUE NOT NULL,
+  plan        TEXT NOT NULL CHECK (plan IN ('pro','business')),
+  amount      INTEGER NOT NULL,
+  name        TEXT NOT NULL,
+  phone       TEXT NOT NULL,
+  email       TEXT NOT NULL,
+  status      TEXT DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  reviewed_at TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.payment_notifications ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can submit payment notification"
+  ON public.payment_notifications FOR INSERT WITH CHECK (TRUE);
+
+CREATE POLICY "Users can view own payment notifications"
+  ON public.payment_notifications FOR SELECT
+  USING (auth.uid() = user_id OR user_id IS NULL);
+
+CREATE INDEX IF NOT EXISTS idx_payment_status  ON public.payment_notifications(status);
+CREATE INDEX IF NOT EXISTS idx_payment_ref     ON public.payment_notifications(ref_number);
+CREATE INDEX IF NOT EXISTS idx_payment_created ON public.payment_notifications(created_at DESC);
+
+-- ============================================================
+-- RPC: activate_subscription (เรียกจาก /api/admin/activate)
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.activate_subscription(
+  p_ref_number TEXT,
+  p_plan       TEXT,
+  p_months     INTEGER DEFAULT 1
+) RETURNS TEXT AS $$
+DECLARE
+  v_user_id UUID;
+  v_expires TIMESTAMPTZ;
+BEGIN
+  -- หา user_id จาก payment ที่ pending
+  SELECT user_id INTO v_user_id
+    FROM public.payment_notifications
+    WHERE ref_number = p_ref_number AND status = 'pending';
+
+  IF v_user_id IS NULL THEN
+    RETURN 'ERROR: ref_number not found or already processed';
+  END IF;
+
+  v_expires := NOW() + (p_months || ' months')::INTERVAL;
+
+  -- upsert subscription
+  INSERT INTO public.subscriptions
+    (user_id, plan, status, price_thb, payment_method, payment_ref, expires_at)
+  VALUES
+    (v_user_id, p_plan, 'active', 0, 'promptpay', p_ref_number, v_expires)
+  ON CONFLICT (user_id) WHERE status = 'active'
+  DO UPDATE SET
+    plan        = EXCLUDED.plan,
+    status      = 'active',
+    expires_at  = EXCLUDED.expires_at,
+    payment_ref = EXCLUDED.payment_ref;
+
+  -- mark payment approved
+  UPDATE public.payment_notifications
+    SET status = 'approved', reviewed_at = NOW()
+    WHERE ref_number = p_ref_number;
+
+  -- update profile plan
+  UPDATE public.profiles SET plan = p_plan WHERE id = v_user_id;
+
+  RETURN 'OK: activated ' || p_plan || ' until ' || v_expires::DATE::TEXT;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================
+-- RPC: check_free_limit (ตรวจสอบ free tier quota)
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.check_free_limit(p_user_id UUID)
+RETURNS JSONB AS $$
+DECLARE
+  v_plan  TEXT;
+  v_count INTEGER;
+BEGIN
+  SELECT plan INTO v_plan FROM public.profiles WHERE id = p_user_id;
+
+  IF v_plan IS NULL THEN
+    RETURN jsonb_build_object('allowed', true, 'plan', 'free', 'count', 0, 'limit', 3);
+  END IF;
+
+  IF v_plan != 'free' THEN
+    RETURN jsonb_build_object('allowed', true, 'plan', v_plan, 'count', 0, 'limit', -1);
+  END IF;
+
+  -- นับ content เดือนนี้
+  SELECT COUNT(*) INTO v_count
+    FROM public.content_history
+    WHERE user_id = p_user_id
+      AND created_at >= date_trunc('month', NOW());
+
+  RETURN jsonb_build_object(
+    'allowed', v_count < 3,
+    'plan',    'free',
+    'count',   v_count,
+    'limit',   3,
+    'remaining', GREATEST(0, 3 - v_count)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================
 -- 8. PAYMENT NOTIFICATIONS
 -- ============================================================
 

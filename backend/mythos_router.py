@@ -1,12 +1,24 @@
 """
-OpenThai AI — Claude Mythos Multi-Provider Router v1.0
+OpenThai AI — Claude Mythos Multi-Provider Router v1.1
 รองรับ 3 provider พร้อมกัน + Auto-fallback
 
 Provider Priority:
   1. Anthropic Direct API  (claude-mythos-20260407)
+     → ขอ access: https://red.anthropic.com/2026/mythos-preview
+     → ใช้ ANTHROPIC_API_KEY เดิม + Mythos approval
+
   2. AWS Bedrock           (anthropic.claude-mythos-preview-v1:0)
+     → IAM: AmazonBedrockFullAccess policy
+     → Bedrock Console → Model access → Claude Mythos Preview
+     → ต้องการ: AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY
+
   3. Google Vertex AI      (claude-mythos-preview@anthropic)
+     → Vertex AI API ต้อง enable
+     → Service Account: Vertex AI User role + JSON key
+     → ต้องการ: GCP_PROJECT_ID + GOOGLE_APPLICATION_CREDENTIALS
+
   4. Fallback              (claude-sonnet-4-5)
+     → ใช้งานได้ทันทีเมื่อมี ANTHROPIC_API_KEY
 
 วิธีใช้:
   router = MythosRouter()

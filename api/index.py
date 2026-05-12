@@ -10,7 +10,9 @@ from typing import Optional, List
 import anthropic
 import os
 import json
+import hmac
 import httpx
+import asyncio
 from datetime import datetime
 
 app = FastAPI(
@@ -290,35 +292,64 @@ async def health_check():
 
 @app.post("/api/generate")
 @app.post("/generate")
-async def generate_tiktok_content(product: ProductInput):
-    # ✅ Single-pass generation + critique (ลดจาก 6 calls → 2 calls, ประหยัด ~70%)
+async def generate_tiktok_content(
+    product: ProductInput,
+    authorization: Optional[str] = Header(default=None)
+):
+    # ───── ① ตรวจสอบ Free Tier Limit ─────
+    user_id = await get_supabase_user(authorization) if authorization else None
+
+    if user_id:
+        quota = await check_free_quota(user_id)
+        if not quota.get("allowed", True):
+            remaining = quota.get("remaining", 0)
+            raise HTTPException(
+                status_code=402,
+                detail={
+                    "error":     "free_limit_reached",
+                    "message":   f"ใช้ครบ {quota.get('limit', 3)} ครั้ง/เดือนแล้ว — อัปเกรด Pro เพื่อใช้งานไม่จำกัด",
+                    "plan":      "free",
+                    "used":      quota.get("count", 3),
+                    "limit":     quota.get("limit", 3),
+                    "remaining": remaining,
+                    "upgrade":   "https://openthai-ai.com/payment.html"
+                }
+            )
+
+    # ───── ② Generate Content ─────
     try:
         content = await call_generate(product)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
     critique = await call_critic(content)
-    score = critique.get("total_score", 7)
+    score    = critique.get("total_score", 7)
 
-    return ContentOutput(
+    result = ContentOutput(
         script={
-            "hook": content.get("script", {}).get("hook", ""),
+            "hook":  content.get("script", {}).get("hook", ""),
             "story": content.get("script", {}).get("story", ""),
-            "cta": content.get("script", {}).get("cta", "")
+            "cta":   content.get("script", {}).get("cta", "")
         },
         caption=content.get("caption", ""),
         hashtags=content.get("hashtags", []),
         quality={
             "critic_score": score,
-            "taste_score": 8,
-            "iterations": 1  # ✅ always 1 pass now
+            "taste_score":  8,
+            "iterations":   1
         },
         learning={
-            "hook_type": content.get("hook_type", "auto"),
+            "hook_type":    content.get("hook_type", "auto"),
             "why_it_works": content.get("why_it_works", ""),
-            "next_try": content.get("next_try", "")
+            "next_try":     content.get("next_try", "")
         }
     )
+
+    # ───── ③ บันทึก content history → Supabase (fire-and-forget) ─────
+    if user_id:
+        asyncio.create_task(save_content_history(user_id, product, content, score))
+
+    return result
 
 @app.get("/api/empathy-questions/{category}")
 @app.get("/empathy-questions/{category}")
@@ -408,6 +439,80 @@ async def get_subscription(authorization: Optional[str] = Header(default=None)):
 
     except Exception as e:
         return {"plan": "free", "status": "active", "error": str(e)}
+
+# ================== CONTENT & QUOTA HELPERS ==================
+
+async def check_free_quota(user_id: str) -> dict:
+    """
+    ตรวจสอบว่า free-tier user ใช้ครบ 3 ครั้ง/เดือนหรือยัง
+    เรียก RPC check_free_limit ใน Supabase
+    """
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        return {"allowed": True}  # ถ้าไม่มี Supabase → ไม่ enforce
+    try:
+        async with httpx.AsyncClient() as client:
+            res = await client.post(
+                f"{url}/rest/v1/rpc/check_free_limit",
+                headers={"Authorization": f"Bearer {key}", "apikey": key,
+                         "Content-Type": "application/json"},
+                json={"p_user_id": user_id},
+                timeout=4.0
+            )
+            if res.status_code == 200:
+                return res.json()
+    except Exception:
+        pass
+    return {"allowed": True}  # fail-open: ถ้า Supabase ล่มไม่บล็อก user
+
+
+async def save_content_history(
+    user_id: str,
+    product: "ProductInput",
+    content: dict,
+    score: float
+) -> None:
+    """
+    บันทึก content ที่ generate ลง Supabase content_history
+    Fire-and-forget — ไม่ block response
+    """
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        return
+
+    script  = content.get("script", {})
+    tags    = content.get("hashtags", [])
+
+    row = {
+        "user_id":          user_id,
+        "product_name":     product.product_name,
+        "product_category": product.product_category,
+        "platform":         getattr(product, "platform", "tiktok") or "tiktok",
+        "language":         getattr(product, "language",  "th")    or "th",
+        "hook_type":        content.get("hook_type", "auto"),
+        "result_hook":      script.get("hook",  ""),
+        "result_script":    script.get("story", ""),
+        "result_hashtags":  tags[:10] if isinstance(tags, list) else [],
+        "result_cta":       script.get("cta",   ""),
+        "critic_score":     score,
+        "ota_earned":       5,
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"{url}/rest/v1/content_history",
+                headers={"Authorization": f"Bearer {key}", "apikey": key,
+                         "Content-Type": "application/json",
+                         "Prefer": "return=minimal"},
+                json=row,
+                timeout=5.0
+            )
+    except Exception:
+        pass  # ไม่ต้อง raise — saving history ล้มเหลวไม่กระทบ user
+
 
 # ================== ADMIN HELPERS ==================
 
