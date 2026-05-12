@@ -188,3 +188,54 @@ CREATE INDEX IF NOT EXISTS idx_content_history_created ON public.content_history
 CREATE INDEX IF NOT EXISTS idx_ota_tx_user ON public.ota_transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_nft_listed ON public.nft_badges(is_listed) WHERE is_listed = TRUE;
 CREATE INDEX IF NOT EXISTS idx_b2g_status ON public.b2g_inquiries(status);
+
+-- Allow only one active subscription per user
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subscriptions_user ON public.subscriptions(user_id) WHERE status = 'active';
+
+-- ============================================================
+-- 8. PAYMENT NOTIFICATIONS
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.payment_notifications (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  ref_number  TEXT UNIQUE NOT NULL,
+  plan        TEXT NOT NULL CHECK (plan IN ('pro','business')),
+  amount      INTEGER NOT NULL,
+  name        TEXT NOT NULL,
+  phone       TEXT NOT NULL,
+  email       TEXT NOT NULL,
+  status      TEXT DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
+  reviewed_at TIMESTAMPTZ,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE public.payment_notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users insert own payment" ON public.payment_notifications FOR INSERT WITH CHECK (TRUE);
+CREATE POLICY "Users view own payment" ON public.payment_notifications FOR SELECT USING (auth.uid() = user_id OR user_id IS NULL);
+CREATE INDEX IF NOT EXISTS idx_payment_status ON public.payment_notifications(status);
+CREATE INDEX IF NOT EXISTS idx_payment_ref ON public.payment_notifications(ref_number);
+
+-- ============================================================
+-- RPC: activate_subscription
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION public.activate_subscription(
+  p_ref_number TEXT,
+  p_plan TEXT,
+  p_months INTEGER DEFAULT 1
+) RETURNS TEXT AS $$
+DECLARE
+  v_user_id UUID;
+  v_expires TIMESTAMPTZ;
+BEGIN
+  SELECT user_id INTO v_user_id FROM public.payment_notifications WHERE ref_number = p_ref_number AND status = 'pending';
+  IF v_user_id IS NULL THEN RETURN 'ERROR: ref_number not found or already processed'; END IF;
+  v_expires := NOW() + (p_months || ' months')::INTERVAL;
+  INSERT INTO public.subscriptions (user_id, plan, status, price_thb, payment_method, payment_ref, expires_at)
+    VALUES (v_user_id, p_plan, 'active', 0, 'promptpay', p_ref_number, v_expires)
+    ON CONFLICT (user_id) DO UPDATE SET plan = p_plan, status = 'active', expires_at = v_expires, payment_ref = p_ref_number;
+  UPDATE public.payment_notifications SET status = 'approved', reviewed_at = NOW() WHERE ref_number = p_ref_number;
+  UPDATE public.profiles SET plan = p_plan WHERE id = v_user_id;
+  RETURN 'OK: subscription activated until ' || v_expires::TEXT;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
