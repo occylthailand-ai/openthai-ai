@@ -1,0 +1,80 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OpenThai AI — Local Development Environment
+# รัน: docker-compose up -d
+# หยุด: docker-compose down
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  # ── Backend API ────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: openthai-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=8000
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Frontend Dev Server ────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: openthai-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8000
+    restart: unless-stopped
+
+  # ── Redis (session cache + rate limiting) ─────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: openthai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+
+  # ── n8n Automation ────────────────────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: openthai-n8n
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n-openthai-gemini.json:/home/node/.n8n/workflows/openthai.json
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  n8n_data:

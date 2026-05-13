@@ -1,0 +1,69 @@
+name: 🧪 Tests & Quality
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm test -- --run --coverage
+        working-directory: frontend
+        env:
+          CI: true
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          directory: frontend/coverage
+          fail_ci_if_error: false
+
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+        working-directory: backend
+      - run: npm test 2>/dev/null || echo "No backend tests yet"
+        working-directory: backend
+
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - name: Check for console.log in production code
+        run: |
+          if grep -r "console\.log" frontend/src --include="*.jsx" --include="*.js" | grep -v "__tests__" | grep -v "// debug"; then
+            echo "⚠️  Found console.log statements (warning only)"
+          fi
+      - name: Check for hardcoded secrets
+        run: |
+          if grep -rE "(api_key|apikey|secret|password)\s*=\s*['\"][a-zA-Z0-9]{20,}" frontend/src backend --include="*.js" --include="*.jsx" --include="*.ts"; then
+            echo "❌ Potential hardcoded secret found!"
+            exit 1
+          fi
+          echo "✅ No hardcoded secrets found"

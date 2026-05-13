@@ -1,0 +1,116 @@
+{
+  "_comment": "OpenThai AI — Role-Based Access Control (RBAC)",
+  "_version": "1.0.0",
+  "_updated": "2026-05-13",
+
+  "roles": {
+    "free": {
+      "label": "Free User",
+      "limits": {
+        "ai_generate_per_day": 3,
+        "platforms": ["tiktok", "facebook"],
+        "history_days": 0,
+        "hashtags_max": 5,
+        "team_members": 1
+      },
+      "features": {
+        "ai_generate": true,
+        "ai_critic_basic": true,
+        "ai_critic_full": false,
+        "content_calendar": false,
+        "brand_memory": false,
+        "trending": true,
+        "affiliate": true,
+        "api_access": false,
+        "white_label": false,
+        "export_csv": false,
+        "analytics_dashboard": false
+      }
+    },
+    "pro": {
+      "label": "Pro User",
+      "price_thb": 149,
+      "price_usd": 4,
+      "limits": {
+        "ai_generate_per_day": -1,
+        "platforms": "all",
+        "history_days": 30,
+        "hashtags_max": 20,
+        "team_members": 1
+      },
+      "features": {
+        "ai_generate": true,
+        "ai_critic_basic": true,
+        "ai_critic_full": true,
+        "content_calendar": true,
+        "brand_memory": true,
+        "trending": true,
+        "affiliate": true,
+        "api_access": false,
+        "white_label": false,
+        "export_csv": true,
+        "analytics_dashboard": true
+      }
+    },
+    "business": {
+      "label": "Business User",
+      "price_thb": 299,
+      "price_usd": 8,
+      "limits": {
+        "ai_generate_per_day": -1,
+        "platforms": "all",
+        "history_days": 365,
+        "hashtags_max": -1,
+        "team_members": 5
+      },
+      "features": {
+        "ai_generate": true,
+        "ai_critic_basic": true,
+        "ai_critic_full": true,
+        "content_calendar": true,
+        "brand_memory": true,
+        "trending": true,
+        "affiliate": true,
+        "api_access": true,
+        "white_label": true,
+        "export_csv": true,
+        "analytics_dashboard": true,
+        "dedicated_manager": true,
+        "sla_uptime": 0.999,
+        "custom_integration": true
+      }
+    },
+    "admin": {
+      "label": "System Administrator",
+      "limits": {
+        "ai_generate_per_day": -1,
+        "platforms": "all",
+        "history_days": -1,
+        "hashtags_max": -1,
+        "team_members": -1
+      },
+      "features": {
+        "all": true,
+        "view_all_users": true,
+        "manage_affiliates": true,
+        "view_audit_log": true,
+        "manage_plans": true,
+        "system_config": true
+      }
+    }
+  },
+
+  "api_endpoints": {
+    "POST /api/generate":         ["free", "pro", "business", "admin"],
+    "POST /api/generate-batch":   ["pro", "business", "admin"],
+    "GET  /api/history":          ["pro", "business", "admin"],
+    "GET  /api/analytics":        ["pro", "business", "admin"],
+    "POST /api/brand-memory":     ["pro", "business", "admin"],
+    "GET  /api/trending":         ["free", "pro", "business", "admin"],
+    "POST /api/affiliate/apply":  ["free", "pro", "business", "admin"],
+    "GET  /api/affiliate/stats":  ["pro", "business", "admin"],
+    "GET  /api/admin/*":          ["admin"],
+    "POST /api/admin/users":      ["admin"],
+    "GET  /api/audit-log":        ["admin"]
+  }
+}

@@ -25,6 +25,8 @@ import {
   getAdminUsers, checkPassword, checkOverrideKey,
   useRecoveryCode, generateRecoveryCodes, getGoogleAuthUrl, exchangeGoogleCode,
 } from './auth.js';
+import { auditMiddleware, audit } from './middleware/auditLog.js';
+import { perfMiddleware, healthHandler, metricsHandler, errorHandler, trackAiUsage } from './middleware/monitor.js';
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -32,6 +34,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 app.use(cors({ origin: true, credentials: true })); // allow all origins (file://, localhost, Vercel)
 app.use(express.json({ limit: '50kb' })); // default limit
+app.use(perfMiddleware);    // ติดตาม response time ทุก request
+app.use(auditMiddleware);   // บันทึก audit log อัตโนมัติสำหรับ endpoints สำคัญ
 // image endpoint uses its own larger limit (see /api/analyze-image)
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
@@ -1310,6 +1314,14 @@ app.get('/api/health', (req, res) => {
       persistence:        '✅ system_log + agents.json + agent_checkpoint',
     },
   });
+});
+
+// ─── Performance metrics (admin only) ───────────────────────────────────────
+app.get('/api/metrics', requireAuth, (req, res) => {
+  if (req.user?.role !== 'admin' && req.user?.username !== 'admin') {
+    return res.status(403).json({ error: 'Admin only' });
+  }
+  metricsHandler(req, res);
 });
 
 // ─── Serve openthai-ai-tool.html at /tool ────────────────────────────────────

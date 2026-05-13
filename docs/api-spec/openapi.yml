@@ -1,0 +1,127 @@
+openapi: 3.1.0
+info:
+  title: OpenThai AI API
+  version: 2.0.0
+  description: API สำหรับสร้างคอนเทนต์ TikTok/Facebook ด้วย AI
+  contact:
+    email: occylthailand@gmail.com
+
+servers:
+  - url: https://www.openthai-ai.com
+    description: Production
+  - url: http://localhost:8000
+    description: Local Development
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    GenerateRequest:
+      type: object
+      required: [product]
+      properties:
+        product:   { type: string, example: "ข้าวหอมมะลิ OTOP อุบลราชธานี" }
+        platform:  { type: string, enum: [tiktok, facebook, instagram, youtube, twitter, linkedin], default: tiktok }
+        language:  { type: string, enum: [th, en, zh, ja, ko], default: th }
+        hookType:  { type: string, enum: [question, shock, story, tutorial, trend] }
+        targetAge: { type: string, enum: [13-17, 18-24, 25-34, 35-44, 45+] }
+
+    GenerateResponse:
+      type: object
+      properties:
+        hook:      { type: string }
+        script:    { type: array, items: { type: object } }
+        hashtags:  { type: array, items: { type: string } }
+        source:    { type: string, enum: [claude, gemini, mock] }
+        cached:    { type: boolean }
+
+    HealthResponse:
+      type: object
+      properties:
+        status:    { type: string, enum: [ok, degraded] }
+        version:   { type: string }
+        uptime_s:  { type: integer }
+        ai:        { type: object }
+        requests:  { type: object }
+        latency_ms:{ type: object }
+
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: System status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthResponse' }
+
+  /api/generate:
+    post:
+      summary: สร้างคอนเทนต์ AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GenerateRequest' }
+      responses:
+        '200':
+          description: คอนเทนต์ที่สร้าง
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GenerateResponse' }
+        '429':
+          description: Rate limit exceeded (free plan)
+        '401':
+          description: Unauthorized
+
+  /api/auth/login:
+    post:
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: JWT token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  user:  { type: object }
+
+  /api/affiliate/apply:
+    post:
+      summary: สมัคร Affiliate
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email]
+              properties:
+                name:    { type: string }
+                email:   { type: string, format: email }
+                website: { type: string }
+      responses:
+        '200':
+          description: Affiliate code

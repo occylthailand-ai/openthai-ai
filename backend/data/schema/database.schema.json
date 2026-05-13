@@ -1,0 +1,77 @@
+{
+  "_comment": "OpenThai AI — Database Schema Reference (Supabase)",
+  "_version": "2.0.0",
+  "_migrations_applied": ["001_initial_schema", "002_payment_methods"],
+
+  "tables": {
+    "profiles": {
+      "description": "ข้อมูลผู้ใช้ทุกคน — auto-created เมื่อ sign up",
+      "columns": {
+        "id":           { "type": "UUID", "pk": true, "ref": "auth.users.id" },
+        "email":        { "type": "TEXT", "unique": true, "required": true },
+        "display_name": { "type": "TEXT" },
+        "plan":         { "type": "TEXT", "enum": ["free","pro","business"], "default": "free" },
+        "plan_expires": { "type": "TIMESTAMPTZ" },
+        "ota_balance":  { "type": "NUMERIC(18,6)", "default": 0 },
+        "created_at":   { "type": "TIMESTAMPTZ", "default": "NOW()" },
+        "updated_at":   { "type": "TIMESTAMPTZ", "default": "NOW()" }
+      },
+      "rls": "user can only read/write own row"
+    },
+    "content_history": {
+      "description": "ประวัติคอนเทนต์ที่ generate",
+      "columns": {
+        "id":          { "type": "UUID", "pk": true },
+        "user_id":     { "type": "UUID", "fk": "profiles.id" },
+        "product":     { "type": "TEXT", "required": true },
+        "platform":    { "type": "TEXT", "required": true },
+        "language":    { "type": "TEXT", "default": "th" },
+        "hook":        { "type": "TEXT" },
+        "script":      { "type": "JSONB" },
+        "hashtags":    { "type": "TEXT[]" },
+        "ai_source":   { "type": "TEXT", "enum": ["claude","gemini","mock"] },
+        "tokens_used": { "type": "INTEGER", "default": 0 },
+        "created_at":  { "type": "TIMESTAMPTZ" }
+      }
+    },
+    "payments": {
+      "description": "ประวัติการชำระเงิน",
+      "columns": {
+        "id":                { "type": "UUID", "pk": true },
+        "user_id":           { "type": "UUID", "fk": "profiles.id" },
+        "plan":              { "type": "TEXT", "required": true },
+        "amount_thb":        { "type": "NUMERIC(10,2)", "required": true },
+        "payment_method_id": { "type": "TEXT" },
+        "payment_group":     { "type": "TEXT", "enum": ["thai","sea","asia","international","crypto"] },
+        "gateway":           { "type": "TEXT", "enum": ["OMISE","TWOC2P","STRIPE","CRYPTO","MANUAL"] },
+        "status":            { "type": "TEXT", "enum": ["pending","confirmed","failed","refunded"] },
+        "currency":          { "type": "TEXT", "default": "THB" },
+        "created_at":        { "type": "TIMESTAMPTZ" }
+      }
+    },
+    "affiliates": {
+      "description": "ข้อมูล Affiliate Partners",
+      "columns": {
+        "id":             { "type": "UUID", "pk": true },
+        "user_id":        { "type": "UUID", "fk": "profiles.id" },
+        "code":           { "type": "TEXT", "unique": true },
+        "commission_pct": { "type": "NUMERIC(5,2)", "default": 20 },
+        "total_earned":   { "type": "NUMERIC(12,2)", "default": 0 },
+        "status":         { "type": "TEXT", "enum": ["active","suspended","pending"] }
+      }
+    },
+    "audit_logs": {
+      "description": "Audit trail ทุก action สำคัญ",
+      "columns": {
+        "id":      { "type": "BIGSERIAL", "pk": true },
+        "ts":      { "type": "TIMESTAMPTZ" },
+        "action":  { "type": "TEXT", "required": true },
+        "user_id": { "type": "UUID", "fk": "profiles.id" },
+        "ip":      { "type": "TEXT" },
+        "meta":    { "type": "JSONB" },
+        "success": { "type": "BOOLEAN" }
+      },
+      "rls": "admin only"
+    }
+  }
+}
