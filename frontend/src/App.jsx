@@ -19,6 +19,7 @@ import BrandMemoryPage from './pages/BrandMemoryPage';
 import AgentPage from './pages/AgentPage';
 import TrendingPage from './pages/TrendingPage';
 import ContentCalendarPage from './pages/ContentCalendarPage';
+import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import PDPABanner from './components/PDPABanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
@@ -89,6 +90,7 @@ function App() {
             <Route path="/trending" element={<TrendingPage />} />
             <Route path="/calendar" element={<ContentCalendarPage />} />
             <Route path="/brand" element={<BrandMemoryPage />} />
+            <Route path="/payment-methods" element={<PaymentMethodsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />

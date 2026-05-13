@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PAYMENT_GROUPS } from '../data/paymentMethods';
 
 const PLANS = [
   {
@@ -49,7 +50,7 @@ const PLANS = [
 const FAQ_ITEMS = [
   ['ทดลองฟรีได้กี่ครั้ง?', '3 ครั้งต่อวัน ไม่ต้องสมัคร ไม่ต้องใส่บัตรเครดิต'],
   ['ยกเลิกได้เมื่อไหร่?', 'ยกเลิกได้ทุกเมื่อ ไม่มีค่าปรับ ไม่มีสัญญาผูกมัด'],
-  ['จ่ายด้วยอะไรได้บ้าง?', 'PromptPay, QR Code, บัตรเครดิต/เดบิต, LINE Pay, TrueMoney'],
+  ['จ่ายด้วยอะไรได้บ้าง?', 'รองรับ 150+ ช่องทาง: PromptPay (ทุกธนาคารไทย), TrueMoney, LINE Pay, Alipay, WeChat Pay, PayPal, Visa/MC/JCB, SWIFT, Crypto (USDT/BTC) และอีกมาก'],
   ['Pro กับ Business ต่างกันอย่างไร?', 'Business เพิ่ม Team 5 คน, API Access, White-label และ Dedicated Manager'],
   ['มี Affiliate Program ไหม?', 'มี! แชร์ให้เพื่อนรับคอมมิชชั่นสูงสุด 40% ทุกออเดอร์ที่ผ่านลิงก์คุณ'],
 ];
@@ -62,8 +63,11 @@ export default function PricingPage() {
   const [selected, setSelected] = useState('pro');
   const [showPay, setShowPay] = useState(false);
   useEffect(() => { document.title = 'แผนราคา — OpenThai AI'; }, []);
-  const [payStep, setPayStep] = useState('select'); // select | qr | confirm
+  const [payStep, setPayStep] = useState('select'); // select | method | qr | confirm
+  const [payMethod, setPayMethod] = useState(null); // selected payment method
   const [openFaq, setOpenFaq] = useState(null);
+  const [paySearch, setPaySearch] = useState('');
+  const [payGroupFilter, setPayGroupFilter] = useState('thai');
 
   const plan = PLANS.find((p) => p.id === selected);
 
@@ -75,6 +79,7 @@ export default function PricingPage() {
         <button onClick={() => navigate('/')} style={navBtn}>← หน้าหลัก</button>
         <span style={{ flex: 1 }} />
         <button onClick={() => navigate('/affiliate')} style={navBtn}>💰 Affiliate</button>
+        <button onClick={() => navigate('/payment-methods')} style={navBtn}>🏦 ช่องทางชำระเงิน</button>
       </nav>
 
       {/* HERO */}
@@ -118,67 +123,150 @@ export default function PricingPage() {
 
       {/* PAYMENT MODAL */}
       {showPay && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }}>
-          <div style={{ ...card, maxWidth: 460, width: '100%', position: 'relative' }}>
-            <button onClick={() => setShowPay(false)} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: '#64748b', fontSize: 20, cursor: 'pointer' }}>✕</button>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }}>
+          <div style={{ ...card, maxWidth: payStep === 'method' ? 720 : 480, width: '100%', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
+            <button onClick={() => { setShowPay(false); setPayStep('select'); setPayMethod(null); setPaySearch(''); }} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: '#64748b', fontSize: 20, cursor: 'pointer', zIndex: 1 }}>✕</button>
 
+            {/* ── STEP 1: เลือกกลุ่มช่องทาง ───────────────────────────────── */}
             {payStep === 'select' && (
               <>
-                <h3 style={{ margin: '0 0 4px', fontWeight: 800 }}>ชำระเงิน — {plan.name} ฿{plan.thb}/เดือน</h3>
-                <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>เลือกช่องทางชำระเงิน</p>
+                <h3 style={{ margin: '0 0 4px', fontWeight: 800, paddingRight: 32 }}>ชำระเงิน — {plan.name} ฿{plan.thb}/เดือน</h3>
+                <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>เลือกกลุ่มช่องทางชำระเงิน</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[
-                    { id: 'promptpay', icon: '📱', label: 'PromptPay / QR Code', desc: 'สแกน QR ได้เลยทันที', color: '#10b981' },
-                    { id: 'card', icon: '💳', label: 'บัตรเครดิต / เดบิต', desc: 'Visa, Mastercard, JCB', color: '#6366f1' },
-                    { id: 'truemoney', icon: '🟠', label: 'TrueMoney Wallet', desc: 'โอนผ่าน TrueMoney', color: '#f59e0b' },
-                  ].map((m) => (
-                    <button key={m.id} onClick={() => setPayStep('qr')}
-                      style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', color: '#f8fafc', textAlign: 'left', transition: 'border-color .2s' }}>
-                      <span style={{ fontSize: 28 }}>{m.icon}</span>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14 }}>{m.label}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{m.desc}</div>
+                  {PAYMENT_GROUPS.map((g) => (
+                    <button key={g.id}
+                      onClick={() => { setPayGroupFilter(g.id); setPayStep('method'); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(255,255,255,0.03)', border: `1px solid ${g.color}33`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', color: '#f8fafc', textAlign: 'left' }}>
+                      <span style={{ fontSize: 26 }}>{g.label.split(' ')[0]}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: g.color }}>{g.label.replace(/^[^\s]+\s/, '')}</div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>{g.methods.length} ช่องทาง</div>
                       </div>
-                      <span style={{ marginLeft: 'auto', color: '#64748b' }}>→</span>
+                      <span style={{ color: '#64748b' }}>→</span>
                     </button>
                   ))}
+                </div>
+                <div style={{ marginTop: 16, textAlign: 'center' }}>
+                  <button onClick={() => navigate('/payment-methods')} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
+                    🏦 ดูช่องทางชำระเงินทั้งหมด {PAYMENT_GROUPS.reduce((s, g) => s + g.methods.length, 0)}+ ช่องทาง →
+                  </button>
                 </div>
               </>
             )}
 
+            {/* ── STEP 2: เลือกช่องทางเฉพาะ ───────────────────────────────── */}
+            {payStep === 'method' && (() => {
+              const group = PAYMENT_GROUPS.find((g) => g.id === payGroupFilter);
+              const q = paySearch.toLowerCase();
+              const methods = q ? group.methods.filter((m) => m.label.toLowerCase().includes(q) || m.desc.toLowerCase().includes(q)) : group.methods;
+              return (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, paddingRight: 32 }}>
+                    <button onClick={() => setPayStep('select')} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 18, cursor: 'pointer' }}>←</button>
+                    <div>
+                      <h3 style={{ margin: 0, fontWeight: 800, fontSize: 16 }}>{group?.label}</h3>
+                      <p style={{ color: '#64748b', fontSize: 12, margin: 0 }}>แพ็กเกจ {plan.name} — ฿{plan.thb}/เดือน</p>
+                    </div>
+                  </div>
+                  <input
+                    value={paySearch}
+                    onChange={(e) => setPaySearch(e.target.value)}
+                    placeholder="🔍  ค้นหาธนาคาร..."
+                    style={{ width: '100%', padding: '9px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#f8fafc', fontSize: 13, marginBottom: 14, boxSizing: 'border-box', outline: 'none' }}
+                  />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 8, maxHeight: 400, overflowY: 'auto' }}>
+                    {methods.map((m) => (
+                      <button key={m.id}
+                        onClick={() => { setPayMethod(m); setPayStep('qr'); }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.07)`, borderRadius: 10, padding: '10px 12px', cursor: 'pointer', color: '#f8fafc', textAlign: 'left' }}>
+                        <span style={{ fontSize: 22 }}>{m.icon}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.label}</div>
+                          <div style={{ fontSize: 10, color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.desc}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  {methods.length === 0 && <p style={{ color: '#475569', textAlign: 'center', fontSize: 13, padding: '20px 0' }}>ไม่พบช่องทางที่ตรงกัน</p>}
+                </>
+              );
+            })()}
+
+            {/* ── STEP 3: QR / วิธีชำระ ────────────────────────────────────── */}
             {payStep === 'qr' && (
               <div style={{ textAlign: 'center' }}>
-                <h3 style={{ margin: '0 0 4px', fontWeight: 800 }}>สแกน QR PromptPay</h3>
-                <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>แพ็กเกจ {plan.name} — ฿{plan.thb}/เดือน</p>
-                {/* QR placeholder — replace with real PromptPay QR image */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16, justifyContent: 'center', paddingRight: 32 }}>
+                  <button onClick={() => setPayStep('method')} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: 18, cursor: 'pointer' }}>←</button>
+                  <div>
+                    <h3 style={{ margin: 0, fontWeight: 800, fontSize: 16 }}>{payMethod?.icon} {payMethod?.label}</h3>
+                    <p style={{ color: '#64748b', fontSize: 12, margin: 0 }}>{plan.name} — ฿{plan.thb}/เดือน</p>
+                  </div>
+                </div>
+
+                {/* QR placeholder */}
                 <div style={{ width: 200, height: 200, background: 'rgba(255,255,255,0.95)', margin: '0 auto 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ fontSize: 48 }}>📱</div>
-                  <div style={{ fontSize: 11, color: '#334155', fontWeight: 600 }}>PromptPay QR</div>
-                  <div style={{ fontSize: 12, color: '#6366f1', fontWeight: 700 }}>{PROMPTPAY_NUMBER}</div>
+                  <div style={{ fontSize: 48 }}>{payMethod?.icon || '📱'}</div>
+                  <div style={{ fontSize: 11, color: '#334155', fontWeight: 600 }}>{payMethod?.label}</div>
+                  {(payMethod?.id === 'promptpay' || PAYMENT_GROUPS[0].methods.find((m) => m.id === payMethod?.id)) && (
+                    <div style={{ fontSize: 12, color: '#6366f1', fontWeight: 700 }}>{PROMPTPAY_NUMBER}</div>
+                  )}
                 </div>
-                <div style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13, color: '#94a3b8', lineHeight: 1.7 }}>
-                  1. เปิดแอปธนาคาร → สแกน QR<br />
-                  2. ยอด: <strong style={{ color: '#f8fafc' }}>฿{plan.thb}</strong><br />
-                  3. กดยืนยัน → แคปหน้าจอสลิป<br />
-                  4. ส่งสลิปมาที่ LINE: <strong style={{ color: '#6366f1' }}>@openthaiai</strong>
+
+                {/* คำแนะนำตามประเภท */}
+                <div style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13, color: '#94a3b8', lineHeight: 1.8, textAlign: 'left' }}>
+                  {payMethod?.id === 'swift' || payMethod?.id === 'sepa' || payMethod?.id === 'ach' ? (
+                    <>
+                      1. ใช้รหัส SWIFT/BIC ของธนาคารปลายทาง<br />
+                      2. ยอดโอน: <strong style={{ color: '#f8fafc' }}>฿{plan.thb}</strong> (หรือเทียบเท่า USD/EUR)<br />
+                      3. ระบุข้อความ: <strong style={{ color: '#f8fafc' }}>OpenThaiAI {plan.name}</strong><br />
+                      4. ส่ง Proof of Transfer มาที่ LINE: <strong style={{ color: '#6366f1' }}>@openthaiai</strong>
+                    </>
+                  ) : payMethod?.id === 'paypal' ? (
+                    <>
+                      1. เปิด PayPal → Send Money<br />
+                      2. ยอด: <strong style={{ color: '#f8fafc' }}>${plan.usd} USD</strong><br />
+                      3. อีเมล PayPal: <strong style={{ color: '#6366f1' }}>pay@openthai-ai.com</strong><br />
+                      4. ส่งสลิปมาที่ LINE: <strong style={{ color: '#6366f1' }}>@openthaiai</strong>
+                    </>
+                  ) : payMethod?.id === 'usdt_trc20' || payMethod?.id?.startsWith('usdt') || payMethod?.id === 'usdc' ? (
+                    <>
+                      1. เปิด Crypto Wallet ของคุณ<br />
+                      2. ยอด: <strong style={{ color: '#f8fafc' }}>${plan.usd} USDT/USDC</strong><br />
+                      3. Network: <strong style={{ color: '#f8fafc' }}>{payMethod?.id?.includes('trc20') ? 'TRC20 (Tron)' : payMethod?.id?.includes('erc20') ? 'ERC20 (Ethereum)' : 'ตามที่เลือก'}</strong><br />
+                      4. ส่ง Tx Hash มาที่ LINE: <strong style={{ color: '#6366f1' }}>@openthaiai</strong>
+                    </>
+                  ) : (
+                    <>
+                      1. เปิดแอป <strong style={{ color: '#f8fafc' }}>{payMethod?.label}</strong><br />
+                      2. สแกน QR หรือโอนเบอร์ PromptPay: <strong style={{ color: '#f8fafc' }}>{PROMPTPAY_NUMBER}</strong><br />
+                      3. ยอด: <strong style={{ color: '#f8fafc' }}>฿{plan.thb}</strong><br />
+                      4. แคปสลิป → ส่งมาที่ LINE: <strong style={{ color: '#6366f1' }}>@openthaiai</strong>
+                    </>
+                  )}
                 </div>
+
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setPayStep('select')} style={{ flex: 1, ...outlineBtn }}>← ย้อนกลับ</button>
-                  <button onClick={() => setPayStep('confirm')} style={{ flex: 2, ...primaryBtn }}>📸 ส่งสลิปแล้ว →</button>
+                  <button onClick={() => setPayStep('method')} style={{ flex: 1, ...outlineBtn }}>← ย้อนกลับ</button>
+                  <button onClick={() => setPayStep('confirm')} style={{ flex: 2, ...primaryBtn }}>📸 ชำระแล้ว →</button>
                 </div>
               </div>
             )}
 
+            {/* ── STEP 4: ยืนยัน ───────────────────────────────────────────── */}
             {payStep === 'confirm' && (
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
                 <h3 style={{ fontWeight: 900, fontSize: 22, marginBottom: 8, color: '#10b981' }}>ขอบคุณ!</h3>
+                <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7, marginBottom: 12 }}>
+                  ช่องทาง: <strong style={{ color: '#f8fafc' }}>{payMethod?.icon} {payMethod?.label}</strong><br />
+                  แพ็กเกจ: <strong style={{ color: '#f8fafc' }}>{plan.name} ฿{plan.thb}/เดือน</strong>
+                </p>
                 <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
-                  ทีมงานจะตรวจสอบสลิปและเปิดใช้งาน<br />
-                  <strong style={{ color: '#f8fafc' }}>ภายใน 30 นาที</strong> ในเวลาทำการ (9:00–21:00)
+                  ทีมงานจะตรวจสอบและเปิดใช้งาน<br />
+                  <strong style={{ color: '#f8fafc' }}>ภายใน 30 นาที</strong> (9:00–21:00)
                 </p>
                 <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>
-                  📧 ยืนยันจะส่งไปที่อีเมลของคุณ<br />
+                  📧 ยืนยันส่งไปที่อีเมลของคุณ<br />
                   💬 LINE: <strong style={{ color: '#6366f1' }}>@openthaiai</strong>
                 </p>
                 <button onClick={() => { setShowPay(false); navigate('/ai-generator'); }} style={{ ...primaryBtn, width: '100%' }}>
