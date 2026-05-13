@@ -137,18 +137,22 @@ const MOCK_HOOKS = [
 ];
 
 function mockGenerate(form) {
-  const hook = MOCK_HOOKS[Math.floor(Math.random() * MOCK_HOOKS.length)](form.product);
+  const product  = form.product  || 'สินค้าไทย';
+  const category = form.category || 'สินค้าไทย';
+  const platform = form.platform || 'TikTok';
+  const hook = MOCK_HOOKS[Math.floor(Math.random() * MOCK_HOOKS.length)](product);
+  const productTag = product.replace(/\s+/g, '').slice(0, 30);
   return {
     hook,
     script: [
-      `📍 เปิดด้วยคำถาม: "${form.product} คืออะไร และทำไมคนไทยถึงต้องมี?"`,
-      `🔍 อธิบายที่มา: บอกเล่าประวัติและความพิเศษของ ${form.category} ไทยแท้`,
+      `📍 เปิดด้วยคำถาม: "${product} คืออะไร และทำไมคนไทยถึงต้องมี?"`,
+      `🔍 อธิบายที่มา: บอกเล่าประวัติและความพิเศษของ ${category} ไทยแท้`,
       `✅ ข้อเท็จจริง 3 ข้อ: คุณสมบัติ, วัสดุ, มาตรฐาน`,
-      `💡 เปรียบเทียบ: ทำไม ${form.product} ของไทยถึงดีกว่านำเข้า`,
+      `💡 เปรียบเทียบ: ทำไม ${product} ของไทยถึงดีกว่านำเข้า`,
       `🎯 CTA: "กดลิงก์ด้านล่างสั่งได้เลย ส่งฟรีทั่วไทย"`,
     ],
-    caption: `✨ ${form.product} — สินค้าไทยแท้คุณภาพพรีเมียม\n💰 ราคาพิเศษ${form.price ? ` ${form.price}` : ''}\n🚚 ส่งฟรีทั่วไทย\n⭐ รีวิวจริงกว่า 5,000 คำสั่งซื้อ\n📩 DM หรือกดลิงก์ใน Bio`,
-    hashtags: ['#OTOP', '#สินค้าไทย', '#ของดีบ้านเรา', '#ขายออนไลน์', '#TikTokShop', `#${form.product.replace(/\s+/g, '')}`, '#OpenThaiAI'],
+    caption: `✨ ${product} — สินค้าไทยแท้คุณภาพพรีเมียม\n💰 ราคาพิเศษ${form.price ? ` ${form.price}` : ''}\n🚚 ส่งฟรีทั่วไทย\n⭐ รีวิวจริงกว่า 5,000 คำสั่งซื้อ\n📩 DM หรือกดลิงก์ใน Bio`,
+    hashtags: ['#OTOP', '#สินค้าไทย', '#ของดีบ้านเรา', `#${platform}Shop`, '#TikTokShop', `#${productTag}`, '#OpenThaiAI'],
     criticScore: (7 + Math.random() * 2.8).toFixed(1),
     source: 'mock',
   };
@@ -202,11 +206,13 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
 
   try {
     const data = await smartGenerate(form);
+    trackAiUsage({ source: data.source || 'mock', tokensUsed: data.usage?.input_tokens || 0 });
     return res.json(data);
   } catch (err) {
     console.error('[generate error]', err.message);
     const fallback = mockGenerate(form);
     fallback.source = 'mock-fallback';
+    trackAiUsage({ source: 'mock' });
     return res.json(fallback);
   }
 });
@@ -300,7 +306,7 @@ const affiliates = loadAffiliates(); // persistent JSON file store
 
 app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
   try {
-    const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link } = req.body;
+    const { name, email, phone, platform, followers, channel_url, note } = req.body;
     if (!name || !email) return res.status(400).json({ success: false, message: 'ต้องการชื่อและอีเมล' });
 
     // ป้องกันสมัครซ้ำ
@@ -308,6 +314,7 @@ app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
       return res.status(409).json({ success: false, message: 'อีเมลนี้สมัครไปแล้ว' });
     }
 
+    const newCode = `AFF${Date.now().toString().slice(-6)}`;
     const record = {
       id: Date.now().toString(),
       name, email, phone: phone || '',
@@ -315,8 +322,8 @@ app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
       followers: followers || '',
       channel_url: channel_url || '',
       note: note || '',
-      ref_code: ref_code || `AFF${Date.now().toString().slice(-6)}`,
-      ref_link: ref_link || `https://openthai-ai.vercel.app/?ref=${ref_code}`,
+      ref_code: newCode,
+      ref_link: `https://www.openthai-ai.com/?ref=${newCode}`,
       tier: 'starter',
       commission_rate: 0.20,
       total_sales: 0,
