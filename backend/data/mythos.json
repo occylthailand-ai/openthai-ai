@@ -203,23 +203,78 @@
       "within_threshold": true,
       "alert_sent": false,
       "triggered_by": "mythos_heartbeat_2"
+    },
+    {
+      "ts": "2026-05-14T21:32:00Z",
+      "endpoint": "https://www.openthai-ai.com/api/health",
+      "status": "healthy",
+      "http": 200,
+      "response_ms": 4124,
+      "curl_s": 3.850885,
+      "version": "1.0.0",
+      "result": "WARN",
+      "threshold_ms": 3000,
+      "within_threshold": false,
+      "exceeded_by_ms": 1124,
+      "alert_sent": true,
+      "alert_type": "SLOW_RESPONSE",
+      "diagnosis": "Vercel cold start — warmup cron ยังไม่ได้ deploy (OBS-001 pending: ANTHROPIC_API_KEY)",
+      "triggered_by": "kronos_health_watch_3"
+    },
+    {
+      "ts": "2026-05-14T21:32:29Z",
+      "endpoint": "https://www.openthai-ai.com/api/health",
+      "status": "healthy",
+      "http": 200,
+      "response_ms": 650,
+      "curl_s": 0.649711,
+      "version": "1.0.0",
+      "result": "OK",
+      "threshold_ms": 5000,
+      "within_threshold": true,
+      "alert_sent": false,
+      "triggered_by": "kronos_warmup_ping_3"
     }
   ],
   "kronos": {
-    "last_check": "2026-05-14T13:03:39Z",
-    "checks_total": 2,
-    "checks_ok": 1,
-    "checks_warn": 1,
+    "last_check": "2026-05-14T21:32:00Z",
+    "checks_total": 4,
+    "checks_ok": 2,
+    "checks_warn": 2,
     "checks_critical": 0,
-    "avg_response_ms": 2162,
+    "avg_response_ms": 2285,
+    "cold_start_pattern": "CONFIRMED — check #2 (3564ms) และ check #3 (4124ms) เป็น cold start",
+    "cold_start_fix_status": "warmup cron เพิ่มใน vercel.json แล้ว — รอ deploy เมื่อ push ถึง production",
     "last_alert": {
-      "ts": "2026-05-14T13:03:39Z",
+      "ts": "2026-05-14T21:32:00Z",
       "type": "SLOW_RESPONSE",
-      "response_ms": 3564,
+      "response_ms": 4124,
       "threshold_ms": 3000,
+      "exceeded_by_ms": 1124,
       "hermes_notified": true,
       "line_sent": false,
-      "line_blocked_reason": "LINE_NOTIFY_TOKEN ยังไม่ได้ตั้งค่า (OBS-004)"
+      "line_blocked_reason": "LINE_NOTIFY_TOKEN ยังไม่ได้ตั้งค่า (OBS-004)",
+      "email_sent": false,
+      "email_blocked_reason": "RESEND_API_KEY ยังไม่ได้ตั้งค่า"
+    }
+  },
+  "plutus_daily_report": {
+    "ts": "2026-05-14T21:32:00Z",
+    "report_type": "DAILY_REVENUE_CHECK",
+    "status": "PRE_LAUNCH",
+    "payments_pending": 0,
+    "payments_over_24h": 0,
+    "affiliates_total": 4,
+    "affiliates_active": 4,
+    "affiliate_revenue": 0,
+    "mrr_estimate_thb": 0,
+    "arr_estimate_thb": 0,
+    "note": "ยังไม่มี payment จริง — Omise ยังไม่ได้เชื่อมต่อ (OBS-006) + Supabase migrations ยังไม่ได้รัน (OBS-002)",
+    "affiliate_bug_detected": {
+      "issue": "affiliates 2 รายมี ref_link เป็น '?ref=undefined' (encoding bug เดิม)",
+      "affected_ids": ["1778680240214", "1778680347112"],
+      "status": "KNOWN_BUG — แก้แล้วใน code แต่ข้อมูลเก่ายังคงอยู่",
+      "fix": "จะล้างเมื่อ migrations รัน + DB จริงใช้งาน"
     }
   }
 }
