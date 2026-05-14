@@ -1,0 +1,89 @@
+name: 🔥 Warmup & Health Watch
+
+on:
+  schedule:
+    # ทุก 10 นาที — bypass Vercel Hobby cron limit (ซึ่งอนุญาตแค่วันละครั้ง)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:  # รันมือได้จาก GitHub Actions UI
+
+env:
+  PROD_URL: https://www.openthai-ai.com
+  THRESHOLD_MS: 3000
+
+jobs:
+  warmup-and-health:
+    name: 🌡️ Warmup Ping + Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: 🔥 Warmup ping (prevent cold start)
+        id: warmup
+        run: |
+          echo "⏱️ $(date '+%Y-%m-%d %H:%M:%S UTC') — pinging warmup..."
+          START=$(date +%s%3N)
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 10 \
+            "${{ env.PROD_URL }}/api/warmup")
+
+          END=$(date +%s%3N)
+          ELAPSED=$((END - START))
+
+          echo "warmup_status=$STATUS" >> $GITHUB_OUTPUT
+          echo "warmup_ms=$ELAPSED"   >> $GITHUB_OUTPUT
+
+          echo "📡 Warmup: HTTP $STATUS — ${ELAPSED}ms"
+
+          if [ "$STATUS" != "200" ]; then
+            echo "⚠️ Warmup returned $STATUS (expected 200)"
+          fi
+
+      - name: ❤️ Health check
+        id: health
+        run: |
+          echo "🏥 Running health check..."
+          START=$(date +%s%3N)
+
+          BODY=$(curl -s --max-time 10 "${{ env.PROD_URL }}/api/health")
+          STATUS=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status','unknown'))" 2>/dev/null || echo "parse_error")
+          VERSION=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('version','?'))" 2>/dev/null || echo "?")
+
+          END=$(date +%s%3N)
+          ELAPSED=$((END - START))
+
+          echo "health_status=$STATUS"   >> $GITHUB_OUTPUT
+          echo "health_ms=$ELAPSED"     >> $GITHUB_OUTPUT
+          echo "health_version=$VERSION" >> $GITHUB_OUTPUT
+
+          echo "❤️  Health: status=$STATUS version=$VERSION — ${ELAPSED}ms"
+
+          # WARN ถ้า response > threshold
+          if [ "$ELAPSED" -gt "${{ env.THRESHOLD_MS }}" ]; then
+            echo "⚠️ SLOW RESPONSE: ${ELAPSED}ms > ${{ env.THRESHOLD_MS }}ms (cold start?)"
+            echo "slow_response=true" >> $GITHUB_OUTPUT
+          else
+            echo "slow_response=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📊 Report
+        run: |
+          echo "════════════════════════════════════"
+          echo "🔥 Warmup  : HTTP ${{ steps.warmup.outputs.warmup_status }} — ${{ steps.warmup.outputs.warmup_ms }}ms"
+          echo "❤️  Health  : ${{ steps.health.outputs.health_status }} v${{ steps.health.outputs.health_version }} — ${{ steps.health.outputs.health_ms }}ms"
+          echo "════════════════════════════════════"
+
+          # บันทึก result เพื่อ debug
+          if [ "${{ steps.health.outputs.slow_response }}" == "true" ]; then
+            echo "🚨 ALERT: Slow response detected — possible cold start"
+            echo "   Consider upgrading to Vercel Pro for always-on compute"
+          else
+            echo "✅ All good — system healthy"
+          fi
+
+      - name: 🔔 LINE Notify (slow response only)
+        if: steps.health.outputs.slow_response == 'true' && secrets.LINE_NOTIFY_TOKEN != ''
+        run: |
+          curl -s -X POST https://notify-api.line.me/api/notify \
+            -H "Authorization: Bearer ${{ secrets.LINE_NOTIFY_TOKEN }}" \
+            --data-urlencode "message=⚠️ OpenThai AI SLOW: ${{ steps.health.outputs.health_ms }}ms (threshold: ${{ env.THRESHOLD_MS }}ms) — $(date '+%H:%M UTC')"
