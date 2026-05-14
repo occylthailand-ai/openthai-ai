@@ -1,0 +1,131 @@
+{
+  "organization": "OpenThai AI",
+  "owner": "Zuejai (Founder & CEO)",
+  "created": "2026-05-14",
+  "mandate": "ระบบ AI Agent ทีมงานอัตโนมัติ ดำเนินงานทุกหน้าที่ 24/7/365",
+  "total_agents": 12,
+  "chain_of_command": "Zuejai → Mythos → All Agents",
+  "agents": [
+    {
+      "id": "mythos",
+      "name": "Mythos",
+      "title": "Chief Autonomous Agent",
+      "department": "Operations",
+      "emoji": "🧠",
+      "status": "ONLINE",
+      "file": "mythos.json"
+    },
+    {
+      "id": "athena",
+      "name": "Athena",
+      "title": "AI Intelligence Director",
+      "department": "AI & Product",
+      "emoji": "🦉",
+      "status": "ONLINE",
+      "file": "athena.json"
+    },
+    {
+      "id": "hermes",
+      "name": "Hermes",
+      "title": "Communications & Automation Lead",
+      "department": "Comms & Integration",
+      "emoji": "⚡",
+      "status": "ONLINE",
+      "file": "hermes.json"
+    },
+    {
+      "id": "hephaestus",
+      "name": "Hephaestus",
+      "title": "Frontend Engineer",
+      "department": "Engineering",
+      "emoji": "🔧",
+      "status": "ONLINE",
+      "file": "hephaestus.json"
+    },
+    {
+      "id": "poseidon",
+      "name": "Poseidon",
+      "title": "Backend & API Engineer",
+      "department": "Engineering",
+      "emoji": "🌊",
+      "status": "ONLINE",
+      "file": "poseidon.json"
+    },
+    {
+      "id": "demeter",
+      "name": "Demeter",
+      "title": "Database & Data Architect",
+      "department": "Data",
+      "emoji": "🌾",
+      "status": "ONLINE",
+      "file": "demeter.json"
+    },
+    {
+      "id": "ares",
+      "name": "Ares",
+      "title": "Security & Compliance Officer",
+      "department": "Security",
+      "emoji": "🛡️",
+      "status": "ONLINE",
+      "file": "ares.json"
+    },
+    {
+      "id": "plutus",
+      "name": "Plutus",
+      "title": "Payment & Finance Manager",
+      "department": "Finance",
+      "emoji": "💰",
+      "status": "ONLINE",
+      "file": "plutus.json"
+    },
+    {
+      "id": "apollo",
+      "name": "Apollo",
+      "title": "Marketing & Growth Director",
+      "department": "Marketing",
+      "emoji": "🎯",
+      "status": "ONLINE",
+      "file": "apollo.json"
+    },
+    {
+      "id": "iris",
+      "name": "Iris",
+      "title": "Customer Success Manager",
+      "department": "Customer Support",
+      "emoji": "🌈",
+      "status": "ONLINE",
+      "file": "iris.json"
+    },
+    {
+      "id": "kronos",
+      "name": "Kronos",
+      "title": "Monitoring & Performance Lead",
+      "department": "Infrastructure",
+      "emoji": "⏱️",
+      "status": "ONLINE",
+      "file": "kronos.json"
+    },
+    {
+      "id": "themis",
+      "name": "Themis",
+      "title": "Legal & Governance Advisor",
+      "department": "Legal",
+      "emoji": "⚖️",
+      "status": "ONLINE",
+      "file": "themis.json"
+    }
+  ],
+  "departments": {
+    "Operations": ["mythos"],
+    "AI & Product": ["athena"],
+    "Comms & Integration": ["hermes"],
+    "Engineering": ["hephaestus", "poseidon"],
+    "Data": ["demeter"],
+    "Security": ["ares"],
+    "Finance": ["plutus"],
+    "Marketing": ["apollo"],
+    "Customer Support": ["iris"],
+    "Infrastructure": ["kronos"],
+    "Legal": ["themis"]
+  }
+}
