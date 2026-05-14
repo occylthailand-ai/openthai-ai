@@ -1,0 +1,125 @@
+{
+  "board": "OpenThai AI — Central Command Board",
+  "owner": "Zuejai",
+  "managed_by": "Mythos",
+  "created": "2026-05-14",
+  "status": "ACTIVE",
+  "notification_hours": { "start": "08:00", "end": "18:00", "tz": "Asia/Bangkok" },
+  "notify_channels": ["LINE", "mobile_push"],
+
+  "active_obstacles": [],
+
+  "resolved": [],
+
+  "team_status": {
+    "mythos":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "ดูแลระบบทั้งหมด" },
+    "athena":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "AI routing ready, รอ ANTHROPIC_API_KEY จริง" },
+    "hermes":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "รอ LINE_NOTIFY_TOKEN + n8n setup" },
+    "hephaestus":  { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "Frontend build ผ่านแล้ว 113 modules, deploy บน Vercel" },
+    "poseidon":    { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "API endpoints ครบ, rate limit ทำงานปกติ" },
+    "demeter":     { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "รอรัน migrations 001+002 ใน Supabase" },
+    "ares":        { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "RBAC/JWT พร้อม, secrets rotation plan ready" },
+    "plutus":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "150+ payment channels ready, รอเชื่อม Omise/Stripe จริง" },
+    "apollo":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "Affiliate system พร้อม, รอ launch marketing" },
+    "iris":        { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "FAQ/Support system พร้อม, รอ LINE OA connect" },
+    "kronos":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "Health check ทุก 15 นาที, monitoring active" },
+    "themis":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "PDPA docs พร้อม, รอสร้าง ToS/Privacy pages จริง" }
+  },
+
+  "initial_obstacle_report": {
+    "reported_by": "mythos",
+    "timestamp": "2026-05-14T20:55:00+07:00",
+    "title": "🚦 รายงานอุปสรรคเริ่มต้น — ต้องแก้ก่อน Launch",
+    "items": [
+      {
+        "id": "OBS-001",
+        "severity": "CRITICAL",
+        "agent": "athena",
+        "title": "ANTHROPIC_API_KEY ไม่ได้ตั้งใน Vercel Production",
+        "detail": "AI generate ใช้ mock mode อยู่ ต้องเพิ่ม key จริงใน Vercel Dashboard > Settings > Environment Variables",
+        "action_url": "https://vercel.com/dashboard",
+        "assigned_to": "zuejai",
+        "status": "PENDING",
+        "eta": "ต้องทำก่อน launch"
+      },
+      {
+        "id": "OBS-002",
+        "severity": "CRITICAL",
+        "agent": "demeter",
+        "title": "Supabase migrations ยังไม่ได้รัน",
+        "detail": "ต้องรัน 001_initial_schema.sql และ 002_payment_methods.sql ใน Supabase SQL Editor เพื่อสร้าง tables ทั้งหมด",
+        "action_url": "https://supabase.com/dashboard/project/tpeskbbhuuqztwyllnli/sql",
+        "assigned_to": "zuejai",
+        "status": "PENDING",
+        "eta": "ต้องทำก่อน login/payment ใช้งานได้"
+      },
+      {
+        "id": "OBS-003",
+        "severity": "CRITICAL",
+        "agent": "demeter",
+        "title": "Supabase Auth ยังไม่เปิดใช้งาน",
+        "detail": "ต้องไปที่ Authentication > Providers > Email และเปิด Enable, ตั้ง Redirect URL เป็น https://openthai-ai.com",
+        "action_url": "https://supabase.com/dashboard/project/tpeskbbhuuqztwyllnli/auth/providers",
+        "assigned_to": "zuejai",
+        "status": "PENDING",
+        "eta": "ต้องทำพร้อมกับ OBS-002"
+      },
+      {
+        "id": "OBS-004",
+        "severity": "IMPORTANT",
+        "agent": "hermes",
+        "title": "LINE_NOTIFY_TOKEN ยังไม่ได้ตั้งค่า",
+        "detail": "ระบบแจ้งเตือนยังส่ง LINE ไม่ได้ ต้องขอ token จาก notify.line.me แล้วใส่ใน Vercel ENV",
+        "action_url": "https://notify-bot.line.me/my/",
+        "assigned_to": "zuejai",
+        "status": "PENDING",
+        "eta": "สำคัญสำหรับ mobile notifications"
+      },
+      {
+        "id": "OBS-005",
+        "severity": "IMPORTANT",
+        "agent": "ares",
+        "title": "GitHub Secrets ยังไม่ได้ตั้ง — CI/CD หยุดทำงาน",
+        "detail": "ต้องตั้ง VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID, LINE_NOTIFY_TOKEN ใน GitHub repo Secrets เพื่อให้ Actions deploy อัตโนมัติ",
+        "action_url": "https://github.com/settings/tokens",
+        "assigned_to": "zuejai",
+        "status": "PENDING",
+        "eta": "ก่อน push code ครั้งต่อไป"
+      },
+      {
+        "id": "OBS-006",
+        "severity": "IMPORTANT",
+        "agent": "plutus",
+        "title": "Payment gateway ยังเป็น manual (ส่ง slip LINE)",
+        "detail": "ยังไม่มี Omise/Stripe key จริง ทุก payment ต้องส่ง slip ยืนยันเอง ต้อง: 1) สมัคร Omise, 2) ใส่ OMISE_PUBLIC_KEY+SECRET_KEY ใน ENV",
+        "action_url": "https://dashboard.omise.co",
+        "assigned_to": "zuejai",
+        "status": "PENDING",
+        "eta": "ก่อน launch จริง"
+      },
+      {
+        "id": "OBS-007",
+        "severity": "FUTURE",
+        "agent": "themis",
+        "title": "หน้า Terms of Service และ Privacy Policy ยังไม่มีเนื้อหาจริง",
+        "detail": "มี route /terms และ /privacy แล้ว แต่เนื้อหายังเป็น placeholder ต้องเขียนให้ถูกต้องตาม PDPA",
+        "assigned_to": "themis",
+        "status": "IN_PROGRESS",
+        "eta": "ภายใน 7 วัน"
+      },
+      {
+        "id": "OBS-008",
+        "severity": "FUTURE",
+        "agent": "hermes",
+        "title": "n8n automation workflows ยังไม่ได้ setup",
+        "detail": "ต้องสมัคร app.n8n.cloud หรือ self-host แล้ว import n8n-openthai-gemini.json",
+        "action_url": "https://app.n8n.cloud",
+        "assigned_to": "hermes+zuejai",
+        "status": "PENDING",
+        "eta": "หลัง core launch"
+      }
+    ]
+  },
+
+  "board_log": []
+}

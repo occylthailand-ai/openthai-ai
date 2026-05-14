@@ -1126,6 +1126,117 @@ app.get('/api/system/metrics', (req, res) => {
   });
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+// COMMAND BOARD — Central board for Mythos Team (OBS-xxx tracking)
+// ══════════════════════════════════════════════════════════════════════════════
+const BOARD_FILE = join(STATIC_DATA_DIR, 'board/command-board.json');
+
+function readBoard() {
+  try { return JSON.parse(readFileSync(BOARD_FILE, 'utf8')); }
+  catch { return null; }
+}
+function writeBoard(data) {
+  try { writeFileSync(BOARD_FILE, JSON.stringify(data, null, 2), 'utf8'); }
+  catch (e) { console.error('[BOARD] write error:', e.message); }
+}
+
+// GET /api/board/status — team status + active obstacles (สาธารณะ)
+app.get('/api/board/status', (req, res) => {
+  const board = readBoard();
+  if (!board) return res.status(500).json({ error: 'Board unavailable' });
+  const initObs = board.initial_obstacle_report?.items || [];
+  const allActive = [
+    ...(board.active_obstacles || []),
+    ...initObs.filter(i => i.status === 'PENDING' || i.status === 'IN_PROGRESS'),
+  ];
+  res.json({
+    ok: true,
+    summary: {
+      board_status: board.status,
+      total_agents: Object.keys(board.team_status || {}).length,
+      agents_online: Object.values(board.team_status || {}).filter(a => a.status === 'ONLINE').length,
+      active_obstacles: allActive.length,
+      critical: allActive.filter(o => o.severity === 'CRITICAL').length,
+    },
+    team_status: board.team_status,
+    active_obstacles: allActive,
+    notification_hours: board.notification_hours,
+  });
+});
+
+// GET /api/board — full board (admin)
+app.get('/api/board', (req, res) => {
+  const board = readBoard();
+  if (!board) return res.status(500).json({ error: 'Board unavailable' });
+  res.json({ ok: true, board });
+});
+
+// POST /api/board/obstacle — รายงานอุปสรรค
+app.post('/api/board/obstacle', (req, res) => {
+  const { agent, title, detail, severity = 'IMPORTANT', assigned_to, action_url } = req.body;
+  if (!agent || !title) return res.status(400).json({ error: 'agent and title required' });
+  const board = readBoard();
+  if (!board) return res.status(500).json({ error: 'Board unavailable' });
+  const id = `OBS-${Date.now().toString().slice(-6)}`;
+  const obstacle = { id, severity, agent, title, detail: detail || '', action_url: action_url || null,
+    assigned_to: assigned_to || 'mythos', status: 'PENDING', reported_at: new Date().toISOString() };
+  board.active_obstacles.push(obstacle);
+  board.board_log.push({ ts: new Date().toISOString(), event: 'OBSTACLE_REPORTED', id, by: agent, title });
+  writeBoard(board);
+  addLog('warn', 'Board', `🚨 [${id}] ${title} — reported by ${agent}`);
+  res.json({ ok: true, id, message: `Obstacle ${id} reported to board` });
+});
+
+// PUT /api/board/resolve — resolve อุปสรรค
+app.put('/api/board/resolve', (req, res) => {
+  const { id, resolved_by, resolution } = req.body;
+  if (!id) return res.status(400).json({ error: 'id required' });
+  const board = readBoard();
+  if (!board) return res.status(500).json({ error: 'Board unavailable' });
+
+  // ค้นหาใน active_obstacles ก่อน
+  let idx = (board.active_obstacles || []).findIndex(o => o.id === id);
+  if (idx === -1) {
+    // ลองค้นหาใน initial_obstacle_report
+    const initObs = board.initial_obstacle_report?.items || [];
+    const initIdx = initObs.findIndex(o => o.id === id);
+    if (initIdx !== -1) {
+      initObs[initIdx].status = 'RESOLVED';
+      initObs[initIdx].resolved_by = resolved_by || 'unknown';
+      initObs[initIdx].resolution = resolution || '-';
+      initObs[initIdx].resolved_at = new Date().toISOString();
+      writeBoard(board);
+      addLog('info', 'Board', `✅ [${id}] resolved by ${resolved_by}`);
+      return res.json({ ok: true, id, message: `Initial obstacle ${id} marked resolved` });
+    }
+    return res.status(404).json({ error: `Obstacle ${id} not found` });
+  }
+  const obs = board.active_obstacles.splice(idx, 1)[0];
+  obs.status = 'RESOLVED';
+  obs.resolved_by = resolved_by || 'unknown';
+  obs.resolution = resolution || '-';
+  obs.resolved_at = new Date().toISOString();
+  board.resolved.push(obs);
+  board.board_log.push({ ts: new Date().toISOString(), event: 'OBSTACLE_RESOLVED', id, by: resolved_by, resolution });
+  writeBoard(board);
+  addLog('info', 'Board', `✅ [${id}] resolved by ${resolved_by}`);
+  res.json({ ok: true, id });
+});
+
+// PUT /api/board/agent-status — อัปเดต agent status
+app.put('/api/board/agent-status', (req, res) => {
+  const { agent_id, status, current_task } = req.body;
+  if (!agent_id) return res.status(400).json({ error: 'agent_id required' });
+  const board = readBoard();
+  if (!board) return res.status(500).json({ error: 'Board unavailable' });
+  if (!board.team_status[agent_id]) return res.status(404).json({ error: `Agent ${agent_id} not found` });
+  board.team_status[agent_id].status = status || board.team_status[agent_id].status;
+  board.team_status[agent_id].last_seen = new Date().toISOString();
+  if (current_task) board.team_status[agent_id].current_task = current_task;
+  writeBoard(board);
+  res.json({ ok: true, agent_id, status: board.team_status[agent_id] });
+});
+
 // ── 2. GET /api/system/logs ──────────────────────────────────────────────────
 app.get('/api/system/logs', (req, res) => {
   const limit    = Math.min(parseInt(req.query.limit) || 100, 500);
