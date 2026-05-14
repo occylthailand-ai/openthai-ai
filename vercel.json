@@ -34,8 +34,9 @@
     }
   ],
   "crons": [
-    { "path": "/api/system/watchdog",       "schedule": "0 6 * * *"    },
-    { "path": "/api/system/news-rag-clear", "schedule": "0 4 * * *"    },
-    { "path": "/api/health",                "schedule": "*/5 * * * *"  }
+    { "path": "/api/system/watchdog",       "schedule": "0 6 * * *"   },
+    { "path": "/api/system/news-rag-clear", "schedule": "0 4 * * *"   },
+    { "path": "/api/warmup",               "schedule": "*/3 * * * *"  },
+    { "path": "/api/health",               "schedule": "*/5 * * * *"  }
   ]
 }

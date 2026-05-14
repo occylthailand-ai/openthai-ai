@@ -666,17 +666,24 @@ const AGENT_FILE      = join(WRITE_DATA_DIR,  'agents.json');
 const CHECKPOINT_FILE = join(WRITE_DATA_DIR,  'agent_checkpoint.json');
 const CHARTER_FILE    = join(STATIC_DATA_DIR, 'system_charter.json'); // read-only static config
 
-/** นโยบายถาวร — อ่านจาก backend/data/system_charter.json (แก้ไฟล์ได้โดยไม่ต้องรีสตาร์ท) */
+/** นโยบายถาวร — อ่านจาก backend/data/system_charter.json
+ *  FIX: cache ผลลัพธ์ในหน่วยความจำ — อ่านไฟล์แค่ครั้งแรกต่อ process (ลด cold start I/O)
+ */
+let _charterCache = null;
 function getSystemCharter() {
+  if (_charterCache) return _charterCache; // cache hit — ไม่ต้องอ่านไฟล์ซ้ำ
   try {
     if (existsSync(CHARTER_FILE)) {
       const data = JSON.parse(readFileSync(CHARTER_FILE, 'utf8'));
-      if (data && typeof data === 'object' && data.version != null) return data;
+      if (data && typeof data === 'object' && data.version != null) {
+        _charterCache = data;
+        return data;
+      }
     }
   } catch (e) {
     console.warn('[charter]', e.message);
   }
-  return {
+  _charterCache = {
     version: 0,
     title: 'OpenThai AI — System charter (embedded fallback)',
     summary: 'ตั้งค่าไฟล์ backend/data/system_charter.json เพื่อล็อกนโยบายถาวร',
@@ -689,6 +696,7 @@ function getSystemCharter() {
     ],
     technical_hooks: ['GET /api/system/charter', 'GET /api/system/skills-gap'],
   };
+  return _charterCache;
 }
 
 function loadAgents() {
@@ -781,28 +789,31 @@ async function sendLine(to, text) {
   return res.json();
 }
 
-// ── node-cron: ทุกชั่วโมงที่นาที :05 ──────────────────────────────────────────
-cron.schedule('5 * * * *', async () => {
-  const now = new Date();
-  const hour = now.getHours();
-  for (const agent of agents) {
-    if (!agent.active) continue;
-    if (agent.schedule !== 'daily' && agent.schedule !== 'weekly') continue;
+// ── node-cron: รันเฉพาะ LOCAL — บน Vercel ใช้ Vercel Cron Jobs (vercel.json) ──
+// FIX: ป้องกัน node-cron init บน cold start Vercel (ลด latency ~800ms)
+if (!IS_VERCEL) {
+  cron.schedule('5 * * * *', async () => {
+    const now = new Date();
+    const hour = now.getHours();
+    for (const agent of agents) {
+      if (!agent.active) continue;
+      if (agent.schedule !== 'daily' && agent.schedule !== 'weekly') continue;
 
-    // Weekly: ตรวจวันในสัปดาห์ (0=อาทิตย์)
-    if (agent.schedule === 'weekly' && now.getDay() !== (agent.weekDay ?? 1)) continue;
+      // Weekly: ตรวจวันในสัปดาห์ (0=อาทิตย์)
+      if (agent.schedule === 'weekly' && now.getDay() !== (agent.weekDay ?? 1)) continue;
 
-    if (parseInt(agent.hour ?? 18) !== hour) continue;
+      if (parseInt(agent.hour ?? 18) !== hour) continue;
 
-    // ป้องกันรันซ้ำวันเดียวกัน
-    const lastRun = agent.lastRun ? new Date(agent.lastRun) : null;
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    if (lastRun && lastRun >= today) continue;
+      // ป้องกันรันซ้ำวันเดียวกัน
+      const lastRun = agent.lastRun ? new Date(agent.lastRun) : null;
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      if (lastRun && lastRun >= today) continue;
 
-    await runAgent(agent);
-  }
-});
-console.log('[Scheduler] ✅ Agent cron started (checks every hour at :05)');
+      await runAgent(agent);
+    }
+  });
+  console.log('[Scheduler] ✅ Agent cron started (checks every hour at :05)');
+}
 
 // ── CRUD /api/agent ───────────────────────────────────────────────────────────
 app.get('/api/agent', (req, res) => {
@@ -1449,7 +1460,7 @@ app.get('/api/health', (req, res) => {
   const charter = getSystemCharter();
   const aiEngine = anthropic ? 'claude-haiku-4-5' : gemini ? 'gemini-1.5-flash' : 'mock';
   res.json({
-    status:        'ok',
+    status:        'healthy', // Kronos checks for "healthy" — ต้องสอดคล้อง
     version:       '2.0.0',
     charter_version: charter.version,
     charter_title:   charter.title,
@@ -1474,13 +1485,21 @@ app.get('/api/health', (req, res) => {
       competitor_analysis:'✅ Active',
       tts:                process.env.ELEVENLABS_API_KEY ? '✅ Active' : '⚠️ No API Key',
       line_oa:            process.env.LINE_CHANNEL_TOKEN ? '✅ Active' : '⚠️ No Token',
-      auto_heal:          '✅ Active (every 30 min)',
-      agent_cron:         '✅ Active (every hour)',
+      auto_heal:          IS_VERCEL ? '⚡ Vercel Cron' : '✅ Local cron (every 30 min)',
+      agent_cron:         IS_VERCEL ? '⚡ Vercel Cron' : '✅ Local cron (every hour)',
       watchdog:           '✅ Active',
       diagnostics:        '✅ Active',
       persistence:        '✅ system_log + agents.json + agent_checkpoint',
+      cold_start_fix:     IS_VERCEL ? '✅ Warmup cron */5 + cron guard' : 'N/A (local)',
     },
+    timestamp: new Date().toISOString(),
   });
+});
+
+// ─── GET /api/warmup — super lightweight endpoint สำหรับ keep-warm ──────────
+// FIX cold start: ตอบเร็วที่สุด ไม่อ่านไฟล์ ไม่ query DB
+app.get('/api/warmup', (req, res) => {
+  res.json({ ok: true, ts: Date.now(), pid: process.pid });
 });
 
 // ─── Performance metrics (admin only) ───────────────────────────────────────
