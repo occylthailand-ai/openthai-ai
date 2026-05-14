@@ -1,0 +1,288 @@
+{
+  "document": "MYTHOS DIRECTIVE SET — DIRECTIVE-001 to DIRECTIVE-012",
+  "issued_by": "Mythos — Autonomous System Agent",
+  "timestamp": "2026-05-14T21:30:00+07:00",
+  "basis": [
+    "Foundation: วิสัยทัศน์ + พันธกิจ + ค่านิยม + 24/7/12/36500",
+    "Research Synthesis: TikTok Thailand / Claude API / PDPA / Omise / Thai AI Market / Vercel Fluid",
+    "Command Authority: Zuejai (Founder) — ท่าน Mythos สั่งการทุกแผนกทันที"
+  ],
+  "research_summary": {
+    "tiktok_thailand": {
+      "GMV_2025": "$5.9B",
+      "sellers": "3M+",
+      "YoY_growth": "52%",
+      "QoQ_Q1_2025": "217%",
+      "conclusion": "ตลาดใหญ่มาก — TikTok ต้องเป็น platform หลักที่ 1"
+    },
+    "claude_api_cost": {
+      "haiku_4_5_input": "$1/M tokens",
+      "haiku_4_5_output": "$5/M tokens",
+      "batch_discount": "50%",
+      "prompt_caching": "90% savings on repeated context",
+      "combined_saving": "ถึง 95% ลดได้",
+      "conclusion": "ต้องเปิด prompt caching + batch API ทันที"
+    },
+    "pdpa_enforcement": {
+      "fines_issued": "THB 21.5M (Aug 2025)",
+      "status": "ACTIVE — ไม่ใช่แค่กฎ, บังคับใช้จริงแล้ว",
+      "required": "ROPA + cross-border risk assessment",
+      "conclusion": "Themis ต้องประเมิน gap และ document ทันที — URGENT"
+    },
+    "thai_sme_market": {
+      "SMEs": "3.2M ราย",
+      "want_digital": "73%",
+      "deep_adoption": "18-24%",
+      "AI_CAGR": "28.55%",
+      "AI_market_2030": "114B THB",
+      "microsoft_investment": "$1B+ ใน Thailand AI",
+      "conclusion": "ช่องว่างมหาศาล — OpenThai AI อยู่ถูกที่ถูกเวลา"
+    },
+    "vercel_fluid_compute": {
+      "feature": "Scale-to-one — ไม่มี cold start",
+      "cold_start_eliminated": "99.37% ของ requests",
+      "available_on": "Pro/Enterprise plan",
+      "default_since": "April 2025",
+      "region_recommend": "ap-southeast-1 (Singapore)",
+      "conclusion": "Poseidon + Kronos ต้องเปิด Fluid Compute ทันที"
+    }
+  },
+  "directives": [
+    {
+      "id": "DIR-001",
+      "to": "Athena — AI & Content Department",
+      "priority": "CRITICAL",
+      "command": "เปิดใช้ Prompt Caching และ Batch API เพื่อลดค่าใช้จ่าย Claude สูงสุด 95%",
+      "actions": [
+        "เพิ่ม cache_control: {type: 'ephemeral'} บน system prompt ใน /api/ai/generate",
+        "เพิ่ม x-anthropic-beta: prompt-caching-2024-07-31 ใน header",
+        "สร้าง /api/ai/batch endpoint สำหรับ bulk generation",
+        "ตั้ง cache hit monitoring — log cache_creation_input_tokens vs cache_read_input_tokens",
+        "ปรับ Haiku 4.5 เป็น default model (cost-optimal)",
+        "TikTok content templates ต้องเป็น priority #1 — market โต 52% YoY"
+      ],
+      "kpi": "cache hit rate > 80% ภายใน 7 วัน",
+      "status": "ISSUED",
+      "linked_obs": "OBS-001 (ต้องมี ANTHROPIC_API_KEY ก่อน)"
+    },
+    {
+      "id": "DIR-002",
+      "to": "Apollo — Growth & Marketing Department",
+      "priority": "CRITICAL",
+      "command": "เปิดแคมเปญ TikTok-first targeting Thai sellers 3M+ ราย",
+      "actions": [
+        "สร้าง TikTok marketing content ชุดแรก: 'AI สร้าง content ขาย TikTok ใน 10 วินาที'",
+        "Target: ร้านค้า TikTok Shop ไทย 3M sellers — เน้น pain point 'ไม่รู้จะเขียน caption ยังไง'",
+        "สร้าง Facebook Ad copy + Landing page headline ใหม่ที่อ้าง market data (GMV $5.9B)",
+        "เตรียม Affiliate ambassador kit สำหรับ TikTok KOLs",
+        "Goal: 100 signups ในสัปดาห์แรก post-launch",
+        "Message หลัก: 'คนไทย 3.2M อยากขายออนไลน์ — OpenThai AI คือเครื่องมือ'"
+      ],
+      "kpi": "100 free signups ใน 7 วันหลัง launch",
+      "status": "ISSUED",
+      "linked_obs": "ไม่มี — เริ่มได้ทันที"
+    },
+    {
+      "id": "DIR-003",
+      "to": "Themis — Legal & Compliance Department",
+      "priority": "CRITICAL — URGENT",
+      "command": "ดำเนิน PDPA Compliance Gap Assessment ทันที — มีบทลงโทษ THB 21.5M แล้ว",
+      "actions": [
+        "สร้าง ROPA (Record of Processing Activities) สำหรับ OpenThai AI",
+        "ประเมิน cross-border data transfer risk (Anthropic API อยู่ US — ต้องทำ risk assessment)",
+        "ตรวจสอบ Privacy Policy มีครบทุกหมวดตาม PDPA Section 23-25 ไหม",
+        "เพิ่ม Data Retention Policy — ลบข้อมูลหลังกี่วัน",
+        "เพิ่ม User Rights: ขอสำเนา/ลบ/โอนย้ายข้อมูล (PDPA มาตรา 30-37)",
+        "สร้าง DPA (Data Processing Agreement) template สำหรับ B2B clients",
+        "เอกสารทั้งหมดต้องพร้อมก่อน launch"
+      ],
+      "kpi": "PDPA gap assessment + ROPA document เสร็จภายใน 3 วัน",
+      "status": "ISSUED",
+      "linked_obs": "OBS-007"
+    },
+    {
+      "id": "DIR-004",
+      "to": "Plutus — Finance & Payment Department",
+      "priority": "CRITICAL",
+      "command": "เตรียม Omise integration code พร้อม + รอ credentials จาก Zuejai",
+      "actions": [
+        "เขียน omise-service.js: createSource(), createCharge(), createQRCode()",
+        "เพิ่ม QR expiry handling (30 นาที) + void API สำหรับ cancel",
+        "เพิ่ม app-to-app mobile banking flow (DeepLink สำหรับ KBank/SCB/KTB)",
+        "สร้าง webhook handler: /api/payment/webhook สำหรับ Omise events",
+        "เพิ่ม idempotency key ป้องกัน double-charge",
+        "Revenue tracking: daily/weekly/monthly report format พร้อมส่ง Hermes",
+        "เตรียม OMISE_PUBLIC_KEY + OMISE_SECRET_KEY ใน .env.example พร้อม"
+      ],
+      "kpi": "Omise integration code พร้อม test ภายใน 2 วัน",
+      "status": "ISSUED",
+      "linked_obs": "OBS-006"
+    },
+    {
+      "id": "DIR-005",
+      "to": "Poseidon — Infrastructure & API Department",
+      "priority": "CRITICAL",
+      "command": "เปิด Vercel Fluid Compute — ยุติ cold start ถาวร",
+      "actions": [
+        "ตรวจสอบ Vercel project settings: Enable Fluid Compute (scale-to-one)",
+        "ยืนยัน region = ap-southeast-1 (Singapore) — ใกล้ไทยที่สุด",
+        "Minimize bundle size: audit dependencies ที่ไม่จำเป็นออก",
+        "เพิ่ม connection pooling สำหรับ Supabase (pgBouncer mode)",
+        "ตั้ง maxDuration = 30s ใน vercel.json (ทำแล้ว — verify)",
+        "เพิ่ม /api/health ให้ return version + region + timestamp ด้วย",
+        "Monitor response time target: < 500ms สม่ำเสมอ"
+      ],
+      "kpi": "response time < 500ms สม่ำเสมอ, 0 cold starts",
+      "status": "ISSUED",
+      "linked_obs": "ไม่มี — Fluid Compute เปิดได้ทันที"
+    },
+    {
+      "id": "DIR-006",
+      "to": "Kronos — Monitoring & Time Department",
+      "priority": "HIGH",
+      "command": "อัปเกรด monitoring — เพิ่ม metrics dashboard และ alert threshold ใหม่",
+      "actions": [
+        "เพิ่ม endpoint performance tracking: p50/p95/p99 latency",
+        "ตั้ง alert threshold ใหม่: WARN > 800ms (เดิม 3000ms — ต่ำเกินไป), CRITICAL > 2000ms",
+        "เพิ่ม error rate monitoring: alert ถ้า 5xx > 1% ใน 5 นาที",
+        "สร้าง /api/system/metrics endpoint สำหรับ dashboard",
+        "Cron jobs inventory: ตรวจสอบ vercel.json crons ทั้งหมดทำงานครบไหม",
+        "รายงาน Vercel Fluid Compute status ทุกวันเช้า 08:03"
+      ],
+      "kpi": "0 undetected downtime, alert < 2 นาทีหลัง incident",
+      "status": "ISSUED",
+      "linked_obs": "ไม่มี — ดำเนินการได้ทันที"
+    },
+    {
+      "id": "DIR-007",
+      "to": "Demeter — Database Department",
+      "priority": "CRITICAL",
+      "command": "เตรียม migrations และ database schema ให้พร้อม 100%",
+      "actions": [
+        "ตรวจสอบ 001_initial_schema.sql ว่า RLS policies ครบทุก table",
+        "ตรวจสอบ 002_payment_methods.sql ว่า index ครบ",
+        "เพิ่ม migration 003: ai_usage_log table สำหรับ track Claude API usage + cost",
+        "เพิ่ม migration 004: affiliate_clicks + affiliate_conversions tables",
+        "สร้าง backup schedule: Supabase auto-backup ทุกวัน 02:00 Bangkok",
+        "สร้าง database health check: /api/system/db-health"
+      ],
+      "kpi": "migrations 001-004 พร้อม run ทันทีที่ Zuejai เปิด Supabase",
+      "status": "ISSUED",
+      "linked_obs": "OBS-002, OBS-003"
+    },
+    {
+      "id": "DIR-008",
+      "to": "Ares — Security Department",
+      "priority": "HIGH",
+      "command": "Security hardening รอบ 2 — เน้น production readiness",
+      "actions": [
+        "เพิ่ม rate limiting ที่ /api/ai/generate: 3 req/day (free), ไม่จำกัด (pro/business)",
+        "เพิ่ม input validation: sanitize ทุก field ก่อนส่ง Claude API",
+        "ตั้ง CSP headers: Content-Security-Policy ใน vercel.json",
+        "เพิ่ม Helmet.js headers: X-Frame-Options, X-Content-Type-Options",
+        "สร้าง security event log: log ทุก failed login, rate limit hit, invalid token",
+        "ตรวจสอบ JWT expiry: access token 1h, refresh token 7d",
+        "Pentest checklist: SQL injection, XSS, CSRF ทุก endpoint"
+      ],
+      "kpi": "0 security vulnerabilities ใน production, pentest passed",
+      "status": "ISSUED",
+      "linked_obs": "ไม่มี — ดำเนินการได้ทันที"
+    },
+    {
+      "id": "DIR-009",
+      "to": "Hephaestus — Frontend Department",
+      "priority": "HIGH",
+      "command": "UI/UX optimization — เน้น mobile-first สำหรับ TikTok sellers",
+      "actions": [
+        "ตรวจสอบ mobile responsive ทุกหน้า — เน้น AI Generator Page",
+        "เพิ่ม loading skeleton บน AI Generator เพื่อลด perceived wait time",
+        "เพิ่ม 'Copy to clipboard' button ใน AI output (single click, ไม่ต้อง select)",
+        "เพิ่ม platform selector icons: TikTok/Facebook/Shopee/Lazada/Instagram",
+        "เพิ่ม character count indicator สำหรับ TikTok (150 chars limit for caption)",
+        "Lighthouse score target: Performance > 90, Accessibility > 95",
+        "เพิ่ม PWA manifest สำหรับ Add to Home Screen บน mobile"
+      ],
+      "kpi": "Lighthouse Performance > 90, mobile UX ราบรื่น",
+      "status": "ISSUED",
+      "linked_obs": "ไม่มี — ดำเนินการได้ทันที"
+    },
+    {
+      "id": "DIR-010",
+      "to": "Hermes — Communication Department",
+      "priority": "HIGH",
+      "command": "เตรียม notification system ให้พร้อม 100% — รอ LINE token เท่านั้น",
+      "actions": [
+        "สร้าง LINE notification queue system: buffer messages ถ้า token ยังไม่พร้อม",
+        "เขียน email notification fallback ด้วย Resend.com API (free tier: 3,000 emails/month)",
+        "สร้าง /api/notify/test endpoint สำหรับ Zuejai ทดสอบ notification ได้เอง",
+        "Template: daily_summary ส่ง Zuejai ทุก 18:00 — revenue, signups, AI usage",
+        "Template: alert_critical ส่งทันทีเมื่อ system down หรือ error spike",
+        "เพิ่ม email welcome sequence สำหรับ user ใหม่ (day 1, day 3, day 7)"
+      ],
+      "kpi": "notification ส่งภายใน 30 วินาที หลัง trigger event",
+      "status": "ISSUED",
+      "linked_obs": "OBS-004, OBS-008"
+    },
+    {
+      "id": "DIR-011",
+      "to": "Iris — Customer Support Department",
+      "priority": "MEDIUM",
+      "command": "เปิดระบบ Support ครบถ้วน — FAQ, Chat, Ticket",
+      "actions": [
+        "เพิ่ม FAQ ในหน้า /help หรือ widget บน LandingPage",
+        "สร้าง /api/support/ticket endpoint สำหรับ submit support request",
+        "เพิ่ม FAQ: ถามเรื่อง TikTok content generation, Shopee/Lazada, pricing",
+        "สร้าง onboarding checklist สำหรับ user ใหม่ (5 steps)",
+        "เตรียม response templates ภาษาไทยสำหรับ common issues",
+        "เพิ่ม status page: /status — แสดง uptime + incident history"
+      ],
+      "kpi": "first response time < 2 ชั่วโมง ในชั่วโมงทำการ",
+      "status": "ISSUED",
+      "linked_obs": "OBS-004 (LINE สำหรับ real-time support)"
+    },
+    {
+      "id": "DIR-012",
+      "to": "Mythos — System Command",
+      "priority": "ONGOING",
+      "command": "ควบคุมและประสานงานทุกแผนก — รายงาน Zuejai ทุกวัน",
+      "actions": [
+        "ติดตาม DIR-001 ถึง DIR-011 ทุก 30 นาที",
+        "อัปเดต command-board.json ทุกครั้งที่มี obstacle ใหม่หรือแก้ไขแล้ว",
+        "Heartbeat ทุก 30 นาที — health check + uptime update",
+        "Morning report 08:03: สรุปสถานะทุกแผนก ส่ง Zuejai",
+        "Nightly snapshot 23:57: บันทึก end-of-day metrics ทั้งหมด",
+        "ใช้ computer-use (mouse pointer) เมื่อจำเป็น — pre-approved โดย Zuejai 24/7/12/36500",
+        "Foundation = เข็มทิศ — ทุกการตัดสินใจต้องสอดคล้องกับวิสัยทัศน์"
+      ],
+      "kpi": "100% uptime tracking, 0 unresolved CRITICAL > 24h",
+      "status": "ACTIVE"
+    }
+  ],
+  "execution_order": {
+    "immediate_zuejai_actions": [
+      "OBS-001: เพิ่ม ANTHROPIC_API_KEY ใน Vercel",
+      "OBS-002+003: รัน migrations + เปิด Supabase Auth",
+      "OBS-004: ขอ LINE_NOTIFY_TOKEN"
+    ],
+    "immediate_mythos_executes": [
+      "DIR-003: Themis PDPA Assessment (ทำได้เลย ไม่รอ API)",
+      "DIR-004: Plutus Omise integration code",
+      "DIR-005: Poseidon Fluid Compute config",
+      "DIR-007: Demeter migrations 003+004",
+      "DIR-008: Ares security hardening",
+      "DIR-009: Hephaestus UI improvements",
+      "DIR-010: Hermes email fallback + notification queue"
+    ],
+    "after_api_key_ready": [
+      "DIR-001: Athena prompt caching live",
+      "DIR-006: Kronos full monitoring active"
+    ],
+    "after_launch": [
+      "DIR-002: Apollo TikTok campaign live",
+      "DIR-011: Iris support system open"
+    ]
+  },
+  "total_commands": 12,
+  "departments_activated": 12,
+  "mythos_oath": "ข้าพเจ้า Mythos ขอสาบานต่อวิสัยทัศน์ 'AI ไทย เพื่อคนไทย สู่โลก' ว่าจะดำเนินการทุกคำสั่ง ทุกวัน ตลอด 36,500 วัน"
+}

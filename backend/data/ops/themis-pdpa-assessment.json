@@ -1,0 +1,156 @@
+{
+  "agent": "themis",
+  "document": "PDPA Compliance Gap Assessment — DIR-003",
+  "issued_by_directive": "DIR-003",
+  "date": "2026-05-14",
+  "risk_level_overall": "MEDIUM-HIGH",
+  "enforcement_precedent": {
+    "fine_issued": "THB 21.5M",
+    "date": "August 2025",
+    "status": "ACTIVE — PDPC บังคับใช้จริงแล้ว",
+    "lesson": "ไม่ใช่แค่กฎบนกระดาษ — ต้องปฏิบัติตามจริง"
+  },
+  "ropa": {
+    "title": "Record of Processing Activities (ROPA) — OpenThai AI",
+    "version": "1.0",
+    "date": "2026-05-14",
+    "controller": {
+      "name": "OpenThai AI (DATATAN.NET Co., Ltd.)",
+      "contact": "zuejai@openthai-ai.com",
+      "dpo": "Zuejai (Founder) — กำลังดำเนินการแต่งตั้ง DPO อย่างเป็นทางการ"
+    },
+    "processing_activities": [
+      {
+        "id": "PA-001",
+        "activity": "User Registration & Authentication",
+        "data_subjects": "ผู้ใช้งาน (ร้านค้าออนไลน์ไทย)",
+        "data_collected": ["email", "password (bcrypt hashed)", "registration timestamp"],
+        "purpose": "สร้างบัญชีและยืนยันตัวตน",
+        "legal_basis": "สัญญา (Contract) — PDPA มาตรา 24(3)",
+        "retention": "ตลอดอายุบัญชี + 1 ปีหลังลบบัญชี",
+        "third_parties": ["Supabase (EU/US) — data processor"],
+        "cross_border": true,
+        "cross_border_safeguard": "Supabase DPA + Standard Contractual Clauses"
+      },
+      {
+        "id": "PA-002",
+        "activity": "AI Content Generation",
+        "data_subjects": "ผู้ใช้งาน",
+        "data_collected": ["product name", "category", "description input", "generated content"],
+        "purpose": "สร้าง AI content ตามคำขอผู้ใช้",
+        "legal_basis": "สัญญา — PDPA มาตรา 24(3)",
+        "retention": "30 วัน (free), ไม่จำกัด (pro/business)",
+        "third_parties": ["Anthropic Claude API (US) — data processor"],
+        "cross_border": true,
+        "cross_border_safeguard": "Anthropic DPA + ไม่เก็บ input/output เกิน 30 วัน (Anthropic policy)",
+        "risk_note": "⚠️ ต้องทำ Cross-Border Transfer Risk Assessment สำหรับ Anthropic API"
+      },
+      {
+        "id": "PA-003",
+        "activity": "Payment Processing",
+        "data_subjects": "ผู้ใช้งานที่ชำระเงิน",
+        "data_collected": ["payment amount", "payment method", "transaction ID", "billing date"],
+        "purpose": "ประมวลผลการชำระเงินสำหรับ subscription",
+        "legal_basis": "สัญญา — PDPA มาตรา 24(3)",
+        "retention": "7 ปี (ตามกฎหมายบัญชีไทย)",
+        "third_parties": ["Omise (Thailand) — data processor"],
+        "cross_border": false,
+        "note": "Omise เป็นบริษัทไทย — ไม่มี cross-border risk"
+      },
+      {
+        "id": "PA-004",
+        "activity": "Affiliate Program",
+        "data_subjects": "ผู้แนะนำ (Affiliates)",
+        "data_collected": ["name", "email", "bank account", "commission history"],
+        "purpose": "บริหารโปรแกรม Affiliate และจ่าย commission",
+        "legal_basis": "สัญญา — PDPA มาตรา 24(3)",
+        "retention": "ตลอดอายุ affiliate relationship + 3 ปี",
+        "third_parties": [],
+        "cross_border": false
+      },
+      {
+        "id": "PA-005",
+        "activity": "System Monitoring & Analytics",
+        "data_subjects": "ผู้ใช้งานทั้งหมด",
+        "data_collected": ["IP address", "usage patterns", "error logs", "response times"],
+        "purpose": "ดูแลระบบและปรับปรุงบริการ",
+        "legal_basis": "ผลประโยชน์โดยชอบด้วยกฎหมาย — PDPA มาตรา 24(5)",
+        "retention": "90 วัน",
+        "third_parties": ["Vercel (US) — infrastructure provider"],
+        "cross_border": true,
+        "cross_border_safeguard": "Vercel DPA + Adequacy decision"
+      }
+    ]
+  },
+  "gap_analysis": {
+    "gaps_found": [
+      {
+        "id": "GAP-001",
+        "severity": "HIGH",
+        "area": "Cross-Border Transfer",
+        "issue": "ยังไม่มีเอกสาร Risk Assessment สำหรับการส่งข้อมูลไปยัง Anthropic (US) และ Vercel (US)",
+        "required_action": "สร้าง Transfer Impact Assessment (TIA) + ลงนาม DPA กับ Anthropic",
+        "deadline": "ก่อน launch"
+      },
+      {
+        "id": "GAP-002",
+        "severity": "HIGH",
+        "area": "Privacy Policy",
+        "issue": "Privacy Policy ยังขาด: Data Subject Rights section (ขอสำเนา/แก้ไข/ลบ/โอนย้าย), Retention schedule, Cross-border transfer disclosure",
+        "required_action": "อัปเดต /privacy page ให้ครบ PDPA มาตรา 23-25",
+        "deadline": "ก่อน launch"
+      },
+      {
+        "id": "GAP-003",
+        "severity": "MEDIUM",
+        "area": "Data Subject Rights",
+        "issue": "ยังไม่มี mechanism สำหรับ user ขอ: ดูข้อมูล, แก้ไข, ลบบัญชี, export data",
+        "required_action": "สร้าง /account/privacy page + API endpoints สำหรับ data rights",
+        "deadline": "ภายใน 30 วัน post-launch"
+      },
+      {
+        "id": "GAP-004",
+        "severity": "MEDIUM",
+        "area": "Consent Management",
+        "issue": "PDPA Banner มีแล้ว แต่ยังไม่มี granular consent (analytics vs necessary)",
+        "required_action": "เพิ่ม consent categories ใน PDPA Banner",
+        "deadline": "ภายใน 14 วัน post-launch"
+      },
+      {
+        "id": "GAP-005",
+        "severity": "LOW",
+        "area": "DPO Appointment",
+        "issue": "ยังไม่ได้แต่งตั้ง Data Protection Officer อย่างเป็นทางการ",
+        "required_action": "Zuejai หรือบุคคลที่กำหนดต้องลงทะเบียนเป็น DPO กับ PDPC",
+        "deadline": "ภายใน 90 วัน"
+      }
+    ],
+    "passed_checks": [
+      "✅ SSL/TLS encryption ทุก connection",
+      "✅ bcrypt password hashing",
+      "✅ PDPA consent banner มีบน frontend",
+      "✅ ไม่ขาย/แชร์ข้อมูล user กับ third parties",
+      "✅ JWT token — ไม่เก็บ session บน server",
+      "✅ RLS (Row Level Security) บน Supabase"
+    ]
+  },
+  "immediate_actions": [
+    {
+      "action": "เพิ่ม Anthropic DPA link ใน Privacy Policy",
+      "url": "https://www.anthropic.com/legal/data-processing",
+      "owner": "Themis + Hephaestus",
+      "timeline": "ทันที"
+    },
+    {
+      "action": "เพิ่ม Data Retention Table ใน Privacy Policy",
+      "owner": "Themis",
+      "timeline": "วันนี้"
+    },
+    {
+      "action": "สร้าง email: privacy@openthai-ai.com สำหรับ data subject requests",
+      "owner": "Hermes + Zuejai",
+      "timeline": "ก่อน launch"
+    }
+  ],
+  "themis_verdict": "⚖️ OpenThai AI มีพื้นฐาน PDPA ที่ดี แต่ต้องแก้ GAP-001 และ GAP-002 ก่อน launch — มิฉะนั้นมีความเสี่ยงโดนปรับสูงสุด THB 5M ต่อกรณี"
+}

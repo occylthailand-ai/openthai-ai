@@ -68,13 +68,43 @@ const gemini = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({ model: 'gemini-1.5-flash' })
   : null;
 
-// ── Generate with Claude 3.5 Haiku (fast + affordable) ──────────────────────
+// ── System prompt สำหรับ Claude — cacheable (ลดค่าใช้จ่าย 90%) ─────────────
+const CLAUDE_SYSTEM_PROMPT = `คุณคือ AI ผู้เชี่ยวชาญด้านการสร้าง content ขายสินค้าภาษาไทย สำหรับแพลตฟอร์ม TikTok, Facebook, Shopee, Lazada, Instagram และ LINE OA
+
+กฎสำคัญ:
+- ตอบเป็น JSON เท่านั้น ไม่มีข้อความอื่น
+- ภาษาไทยเป็นหลัก เข้าใจบริบทและวัฒนธรรมไทย
+- Hook ต้องดึงดูด กระตุ้นความอยากรู้ภายใน 3 วินาที
+- Hashtags ต้องมี #OpenThaiAI เสมอ
+- เนื้อหาต้องฟังดูเป็นคนไทยพูด ไม่ใช่แปลจากอังกฤษ
+- Script แบ่งเป็น intro (0-3s), demo (3-8s), cta (8-15s)`;
+
+// ── Generate with Claude Haiku 4.5 + Prompt Caching (ลด cost สูงสุด 95%) ────
+// DIR-001: Athena — เปิด prompt caching เพื่อประหยัดค่า Claude API
 async function generateWithClaude(form) {
-  const msg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5',
-    max_tokens: 1024,
-    messages: [{ role: 'user', content: buildPrompt(form) }],
-  });
+  const startMs = Date.now();
+  const msg = await anthropic.messages.create(
+    {
+      model: 'claude-haiku-4-5',
+      max_tokens: 1024,
+      system: [
+        {
+          type: 'text',
+          text: CLAUDE_SYSTEM_PROMPT,
+          cache_control: { type: 'ephemeral' }, // cache system prompt — ประหยัด 90%
+        },
+      ],
+      messages: [{ role: 'user', content: buildPrompt(form) }],
+    },
+    {
+      headers: { 'anthropic-beta': 'prompt-caching-2024-07-31' },
+    }
+  );
+  const responseMs = Date.now() - startMs;
+  const usage = msg.usage || {};
+  // Log cache stats
+  console.log(`[Athena] Claude ✅ | cache_create=${usage.cache_creation_input_tokens || 0} cache_read=${usage.cache_read_input_tokens || 0} input=${usage.input_tokens} output=${usage.output_tokens} | ${responseMs}ms`);
+
   const text = msg.content[0]?.text?.trim() || '';
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Claude did not return valid JSON');
@@ -83,6 +113,13 @@ async function generateWithClaude(form) {
     data.hashtags.push('#OpenThaiAI');
   }
   data.source = 'claude';
+  data._usage = {
+    input_tokens: usage.input_tokens,
+    output_tokens: usage.output_tokens,
+    cache_creation_input_tokens: usage.cache_creation_input_tokens || 0,
+    cache_read_input_tokens: usage.cache_read_input_tokens || 0,
+    response_ms: responseMs,
+  };
   return data;
 }
 

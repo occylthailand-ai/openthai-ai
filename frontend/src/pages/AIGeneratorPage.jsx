@@ -28,7 +28,15 @@ const STYLES     = [
   { id: 'entertainment', label: '🎭 Entertainment', desc: 'สนุก / ฮา / เทรนด์' },
   { id: 'sales',         label: '💰 Sales',        desc: 'ขายตรง / ปิดการขาย' },
 ];
-const PLATFORMS = ['TikTok','Facebook','Instagram Reels','YouTube Shorts','LINE'];
+// DIR-009: Hephaestus — เพิ่ม platform icons + char limits
+const PLATFORMS = [
+  { id: 'TikTok',          icon: '🎵', label: 'TikTok',       charLimit: 150  },
+  { id: 'Facebook',        icon: '📘', label: 'Facebook',     charLimit: 500  },
+  { id: 'Shopee',          icon: '🛒', label: 'Shopee',       charLimit: 120  },
+  { id: 'Lazada',          icon: '🛍️', label: 'Lazada',       charLimit: 120  },
+  { id: 'Instagram Reels', icon: '📸', label: 'Instagram',    charLimit: 150  },
+  { id: 'LINE',            icon: '💬', label: 'LINE OA',      charLimit: 1000 },
+];
 const LANGS     = ['ภาษาไทย','English','ไทย + อังกฤษ'];
 
 // ── API helpers ───────────────────────────────────────────────────────────────
@@ -114,7 +122,14 @@ const ScoreRing = ({ score }) => {
 };
 
 // ── Result Panel ──────────────────────────────────────────────────────────────
-function ResultPanel({ result, product, formMeta, onCopy, copied, label }) {
+// DIR-009: Hephaestus — เพิ่ม char count + platform limit indicator
+const PLATFORM_LIMITS = { TikTok: 150, Facebook: 500, Shopee: 120, Lazada: 120, 'Instagram Reels': 150, LINE: 1000 };
+
+function ResultPanel({ result, product, formMeta, onCopy, copied, label, platform }) {
+  const charLimit = PLATFORM_LIMITS[platform] || 500;
+  const captionLen = (result.caption || '').length;
+  const captionOk  = captionLen <= charLimit;
+
   const CopyBtn = ({ text, id }) => (
     <button className={`gen-copy-btn ${copied === id ? 'copied' : ''}`} onClick={() => onCopy(text, id)}>
       {copied === id ? '✅ คัดลอกแล้ว' : '📋 คัดลอก'}
@@ -154,6 +169,9 @@ function ResultPanel({ result, product, formMeta, onCopy, copied, label }) {
           <div className="gen-block-header">
             <span className="gen-block-icon">📝</span>
             <span className="gen-block-title">Caption</span>
+            <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: captionOk ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.15)', color: captionOk ? '#6ee7b7' : '#f87171', border: `1px solid ${captionOk ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, fontWeight: 700 }}>
+              {captionLen}/{charLimit} {captionOk ? '✓' : '⚠️'}
+            </span>
             <CopyBtn text={result.caption} id={`${label}caption`} />
           </div>
           <pre className="gen-caption-text">{result.caption}</pre>
@@ -639,8 +657,10 @@ const AIGeneratorPage = () => {
             <label>แพลตฟอร์ม</label>
             <div className="gen-platform-btns">
               {PLATFORMS.map(p => (
-                <button key={p} className={`gen-platform-btn ${form.platform === p ? 'active' : ''}`}
-                  onClick={() => setForm(f => ({ ...f, platform: p }))}>{p}</button>
+                <button key={p.id} className={`gen-platform-btn ${form.platform === p.id ? 'active' : ''}`}
+                  onClick={() => setForm(f => ({ ...f, platform: p.id }))}>
+                  {p.icon} {p.label}
+                </button>
               ))}
             </div>
           </div>
@@ -741,7 +761,7 @@ const AIGeneratorPage = () => {
           {/* Single result */}
           {result && !loading && (
             <>
-              <ResultPanel result={result} product={form.product} formMeta={`${form.platform} · ${form.category} · ${form.style}`} onCopy={copy} copied={copied} label="" />
+              <ResultPanel result={result} product={form.product} formMeta={`${form.platform} · ${form.category} · ${form.style}`} onCopy={copy} copied={copied} label="" platform={form.platform} />
               <button className="gen-regen-btn" onClick={handleGenerate}>🔄 สร้างใหม่อีกครั้ง</button>
             </>
           )}
@@ -750,8 +770,8 @@ const AIGeneratorPage = () => {
           {abResult && !loading && (
             <>
               <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                <ResultPanel result={abResult.a} product={form.product} formMeta={`${form.platform} · สไตล์ A`} onCopy={copy} copied={copied} label="🅰️ แบบ A" />
-                <ResultPanel result={abResult.b} product={form.product} formMeta={`${form.platform} · สไตล์ B`} onCopy={copy} copied={copied} label="🅱️ แบบ B" />
+                <ResultPanel result={abResult.a} product={form.product} formMeta={`${form.platform} · สไตล์ A`} onCopy={copy} copied={copied} label="🅰️ แบบ A" platform={form.platform} />
+                <ResultPanel result={abResult.b} product={form.product} formMeta={`${form.platform} · สไตล์ B`} onCopy={copy} copied={copied} label="🅱️ แบบ B" platform={form.platform} />
               </div>
               <button className="gen-regen-btn" style={{ marginTop: 16 }} onClick={handleGenerate}>🔄 สร้าง A/B ใหม่</button>
             </>
