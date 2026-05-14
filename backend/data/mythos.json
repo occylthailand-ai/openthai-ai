@@ -142,13 +142,38 @@
       "status": "SUCCESS"
     }
   ],
-  "last_heartbeat": "2026-05-14T21:30:00Z",
+  "last_heartbeat": "2026-05-14T21:46:00Z",
   "first_online": "2026-05-14T20:55:00Z",
-  "total_commands_executed": 72,
-  "uptime_hours": 2.5,
+  "total_commands_executed": 89,
+  "uptime_hours": 3.0,
   "directives_issued": 12,
-  "directives_completed": 7,
+  "directives_completed": 10,
   "directives_pending_zuejai": 3,
+  "last_deploy": {
+    "ts": "2026-05-14T21:45:00Z",
+    "deployment_id": "dpl_Bb53cGUNfhDxJkCF8djnJ98aswQg",
+    "url": "https://openthai-95nagv1f3-occylthailand.vercel.app",
+    "production_url": "https://www.openthai-ai.com",
+    "status": "READY",
+    "deployed_by": "Mythos (Vercel CLI)",
+    "fixes_deployed": [
+      "cold start: IS_VERCEL cron guard",
+      "cold start: charter cache in-memory",
+      "cold start: /api/warmup endpoint",
+      "security: CSP + HSTS + X-Frame-Options headers",
+      "affiliate: ref_link=undefined แก้แล้ว (2 records)",
+      "prompt caching: Claude Haiku 4.5 system prompt cached",
+      "notification: LINE→Email fallback service",
+      "omise: PromptPay QR + void + app-to-app code"
+    ],
+    "health_check_post_deploy": {
+      "http": 200,
+      "response_ms": 1872,
+      "status": "healthy",
+      "version": "2.0.0",
+      "warmup_endpoint": "200 OK @ 1024ms"
+    }
+  },
   "health_log": [
     {
       "ts": "2026-05-14T12:43:50Z",
