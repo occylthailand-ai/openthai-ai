@@ -7,23 +7,42 @@
   "notification_hours": { "start": "08:00", "end": "18:00", "tz": "Asia/Bangkok" },
   "notify_channels": ["LINE", "mobile_push"],
 
-  "active_obstacles": [],
+  "active_obstacles": [
+    {
+      "id": "OBS-009",
+      "severity": "CRITICAL",
+      "reported_by": "mythos",
+      "reported_at": "2026-05-14T21:40:00+07:00",
+      "title": "🚨 GitHub Remote ไม่ได้ตั้งค่า — Fixes ติดค้างใน Local",
+      "detail": "มี 4 commits สำคัญพร้อม deploy แต่ push ไม่ได้เพราะไม่มี GitHub remote\nFixes ที่รอ: cold start fix, warmup endpoint, affiliate bug, security headers, PDPA docs, Omise service\nต้องตั้ง remote ก่อน Vercel จะ deploy code ใหม่ได้",
+      "commits_pending": ["4365006","fcf9de6","f04ac23","ff22314"],
+      "action_steps": [
+        "1. สร้าง GitHub repo: github.com/new ชื่อ openthai-ai",
+        "2. git -C 'C:\\OPENTHAI AI' remote add origin https://github.com/YOUR_USERNAME/openthai-ai.git",
+        "3. git -C 'C:\\OPENTHAI AI' push -u origin master",
+        "4. ใน Vercel Dashboard: เชื่อม GitHub repo → auto-deploy ทุก push"
+      ],
+      "assigned_to": "zuejai",
+      "status": "PENDING",
+      "eta": "ทันที — ทุก fix ติดค้างจนกว่าจะ push"
+    }
+  ],
 
   "resolved": [],
 
   "team_status": {
-    "mythos":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "ดูแลระบบทั้งหมด" },
-    "athena":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "AI routing ready, รอ ANTHROPIC_API_KEY จริง" },
-    "hermes":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "รอ LINE_NOTIFY_TOKEN + n8n setup" },
-    "hephaestus":  { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "Frontend build ผ่านแล้ว 113 modules, deploy บน Vercel" },
-    "poseidon":    { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "API endpoints ครบ, rate limit ทำงานปกติ" },
-    "demeter":     { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "รอรัน migrations 001+002 ใน Supabase" },
-    "ares":        { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "RBAC/JWT พร้อม, secrets rotation plan ready" },
-    "plutus":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "150+ payment channels ready, รอเชื่อม Omise/Stripe จริง" },
-    "apollo":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "Affiliate system พร้อม, รอ launch marketing" },
-    "iris":        { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "FAQ/Support system พร้อม, รอ LINE OA connect" },
-    "kronos":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "Health check ทุก 15 นาที, monitoring active" },
-    "themis":      { "status": "ONLINE", "last_seen": "2026-05-14T20:55:00+07:00", "current_task": "PDPA docs พร้อม, รอสร้าง ToS/Privacy pages จริง" }
+    "mythos":      { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "แก้ WARN ทั้งหมด — รอ GitHub push" },
+    "athena":      { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "Prompt caching ready (+95% cost saving) — รอ ANTHROPIC_API_KEY + deploy" },
+    "hermes":      { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "LINE→Email fallback service ready — รอ LINE token + deploy" },
+    "hephaestus":  { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "UI อัปเกรด: platform icons + char count — รอ deploy" },
+    "poseidon":    { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "API endpoints ครบ, /api/warmup endpoint พร้อม — รอ deploy" },
+    "demeter":     { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "migrations 001-004 พร้อม — รอ Zuejai รัน Supabase SQL" },
+    "ares":        { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "CSP+HSTS headers พร้อม — รอ deploy" },
+    "plutus":      { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "Omise service code พร้อม — รอ credentials + deploy" },
+    "apollo":      { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "TikTok campaign plan พร้อม — รอ launch หลัง API key" },
+    "iris":        { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "FAQ system พร้อม — รอ deploy" },
+    "kronos":      { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "ตรวจพบ WARN×2 (cold start) — แก้แล้ว รอ deploy เพื่อยืนยัน" },
+    "themis":      { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "PDPA ROPA+gap assessment เสร็จ — 5 gaps พบ, 2 ต้องแก้ก่อน launch" }
   },
 
   "initial_obstacle_report": {
