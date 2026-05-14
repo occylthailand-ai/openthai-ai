@@ -1,0 +1,13 @@
+{
+  "managed_by": "Hermes",
+  "version": "1.0.0",
+  "templates": {
+    "deploy_success": "✅ Deploy สำเร็จ\n🕐 {timestamp}\n🌿 Branch: {branch}\n🔗 {url}",
+    "deploy_fail":    "🚨 Deploy ล้มเหลว!\n🕐 {timestamp}\n🌿 Branch: {branch}\n❌ Error: {error}\nกรุณาตรวจสอบทันที",
+    "payment_received": "💰 ได้รับชำระเงิน\n👤 {user_email}\n💵 ฿{amount} ({plan} plan)\n🕐 {timestamp}\n📋 Ref: {ref}",
+    "new_affiliate":  "🔗 Affiliate ใหม่!\n👤 {name}\n📧 {email}\n🕐 {timestamp}",
+    "system_down":    "🔴 ระบบมีปัญหา!\n⚠️ {endpoint}\n🕐 {timestamp}\n📊 Response: {status}\nMythos กำลังตรวจสอบ",
+    "daily_report":   "📊 รายงานประจำวัน {date}\n👥 Users: {users}\n💰 Revenue: ฿{revenue}\n🤖 AI calls: {ai_calls}\n⚡ Uptime: {uptime}%\n🚨 Issues: {issues}",
+    "morning_brief":  "🌅 OpenThai AI — เช้าวันใหม่ {date}\n\n🚨 Critical: {critical} รายการ\n🟡 Important: {important} รายการ\n\n📌 Action วันนี้:\n{actions}\n\n🤖 Mythos พร้อมรับคำสั่ง"
+  }
+}

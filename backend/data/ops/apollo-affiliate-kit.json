@@ -1,0 +1,37 @@
+{
+  "agent": "apollo",
+  "report_type": "AFFILIATE_KIT",
+  "date": "2026-05-14",
+  "title": "OpenThai AI — Affiliate Partner Kit v1.0",
+  "program": {
+    "commission": "10% ของยอดขายสุทธิ",
+    "type": "Lifetime Recurring — ตราบใดที่ลูกค้าที่แนะนำยังสมัครอยู่",
+    "payout_day": "ทุกวันที่ 1 ของเดือน",
+    "min_payout_thb": 100,
+    "tracking": "?ref=AFFXXXXXX (6 หลัก)",
+    "cookie_days": 30
+  },
+  "earnings_estimate": {
+    "scenario_1": { "label": "10 ลูกค้า Pro", "monthly_thb": 149, "commission_thb": "฿149/เดือน" },
+    "scenario_2": { "label": "50 ลูกค้า Pro", "monthly_thb": 745, "commission_thb": "฿745/เดือน" },
+    "scenario_3": { "label": "100 ลูกค้า Mix", "monthly_thb": 2000, "commission_thb": "฿2,000/เดือน" },
+    "scenario_4": { "label": "500 ลูกค้า", "monthly_thb": 10000, "commission_thb": "฿10,000+/เดือน" }
+  },
+  "content_templates": {
+    "tiktok_hook": [
+      "ใครทำ TikTok ขายของแล้วต้องนึกถึง AI ตัวนี้ 👇",
+      "ลองใช้ AI ไทยตัวนี้แล้วยอดขายเพิ่ม 3 เท่าใน 30 วัน",
+      "SME ไทยฟัง! AI ราคา 149 บาท ช่วยสร้าง content ขายได้ทุกวัน"
+    ],
+    "facebook_post": "🤖 เจ้าของร้านออนไลน์ต้องดู!\n\nเคยใช้เวลานานแค่ไหนกับการเขียน caption ขายของ?\nตอนนี้มี AI ภาษาไทยช่วยสร้าง content ได้ใน 10 วินาที!\n\n✅ TikTok / Facebook / Shopee / Lazada\n✅ เข้าใจบริบทไทย วัฒนธรรมไทย\n✅ เริ่มใช้ฟรี 3 ครั้ง/วัน\n\nลองฟรีได้เลย → {ref_link}\n\n#AI #SMEไทย #ขายออนไลน์ #TikTok",
+    "line_message": "สวัสดีครับ/ค่ะ 🙏\n\nแนะนำ OpenThai AI — AI สร้าง content ขายของภาษาไทย\n✅ ฟรี 3 ครั้ง/วัน ไม่ต้องบัตรเครดิต\n✅ Pro เพียง 149 บาท/เดือน\n\nลองฟรี: {ref_link}"
+  },
+  "target_audience": [
+    "เจ้าของร้านออนไลน์ TikTok Shop",
+    "SME ขายสินค้า OTOP / สินค้าท้องถิ่น",
+    "Dropshipper / Reseller",
+    "นักการตลาดดิจิทัล",
+    "Freelance Content Creator"
+  ],
+  "channels": ["TikTok", "Facebook Group", "LINE Group", "Instagram", "YouTube"]
+}
