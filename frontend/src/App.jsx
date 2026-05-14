@@ -22,6 +22,7 @@ import ContentCalendarPage from './pages/ContentCalendarPage';
 import PaymentMethodsPage from './pages/PaymentMethodsPage';
 import TeamPage from './pages/TeamPage';
 import CommandBoardPage from './pages/CommandBoardPage';
+import FoundationPage from './pages/FoundationPage';
 import PDPABanner from './components/PDPABanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
@@ -95,6 +96,7 @@ function App() {
             <Route path="/payment-methods" element={<PaymentMethodsPage />} />
             <Route path="/team" element={<TeamPage />} />
             <Route path="/board" element={<CommandBoardPage />} />
+            <Route path="/foundation" element={<FoundationPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />

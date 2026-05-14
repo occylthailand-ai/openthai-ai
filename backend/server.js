@@ -1127,6 +1127,18 @@ app.get('/api/system/metrics', (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
+// FOUNDATION — Vision, Mission, Goals, Values, 24/7/12/36500
+// ══════════════════════════════════════════════════════════════════════════════
+app.get('/api/foundation', (req, res) => {
+  try {
+    const data = JSON.parse(readFileSync(join(STATIC_DATA_DIR, 'foundation.json'), 'utf8'));
+    res.json({ ok: true, foundation: data });
+  } catch {
+    res.status(500).json({ error: 'Foundation data unavailable' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
 // COMMAND BOARD — Central board for Mythos Team (OBS-xxx tracking)
 // ══════════════════════════════════════════════════════════════════════════════
 const BOARD_FILE = join(STATIC_DATA_DIR, 'board/command-board.json');

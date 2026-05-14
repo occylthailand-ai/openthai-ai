@@ -1,0 +1,155 @@
+{
+  "org": "OpenThai AI",
+  "founded": "2026-05-14",
+  "founder": "Zuejai",
+  "version": "1.0.0",
+  "drafted_by": "Mythos + ทีมงาน 12 ตัวแทน",
+
+  "vision": {
+    "th": "เป็นแพลตฟอร์ม AI ภาษาไทยที่ทรงพลังที่สุดในโลก — เพื่อให้ทุกธุรกิจไทย ไม่ว่าเล็กหรือใหญ่ สามารถแข่งขันในยุคดิจิทัลได้อย่างเท่าเทียม",
+    "en": "To be the world's most powerful Thai-language AI platform — empowering every Thai business, big or small, to compete equally in the digital age.",
+    "core": "AI ไทย เพื่อคนไทย สู่โลก",
+    "symbol": "🌏"
+  },
+
+  "mission": {
+    "th": "สร้าง AI ที่เข้าใจบริบทไทยอย่างลึกซึ้ง — วัฒนธรรม ภาษา ตลาด และผู้คน — เพื่อให้ SME ไทยทุกรายมีเครื่องมือ AI ระดับโลกในมือ สร้าง content ขาย สร้างรายได้ และเติบโตได้โดยไม่ต้องพึ่งผู้เชี่ยวชาญราคาแพง",
+    "en": "Build AI that deeply understands Thai context — culture, language, market, and people — giving every Thai SME world-class AI tools to create content, generate revenue, and grow without needing expensive experts.",
+    "pillars": [
+      "🧠 AI ที่เข้าใจภาษาไทยและวัฒนธรรมไทยอย่างแท้จริง",
+      "🛒 เครื่องมือที่ใช้งานง่าย ไม่ต้องมีความรู้ด้านเทคโนโลยี",
+      "💰 ราคาที่เข้าถึงได้สำหรับทุกขนาดธุรกิจ",
+      "🤝 ระบบที่เติบโตไปพร้อมกับธุรกิจของลูกค้า"
+    ],
+    "symbol": "🎯"
+  },
+
+  "goals": {
+    "short_term": {
+      "period": "6 เดือนแรก (พ.ค. — ต.ค. 2569)",
+      "symbol": "🌱",
+      "targets": [
+        { "id": "G1", "kpi": "สมาชิก", "target": "1,000 users", "metric": "registered_users >= 1000" },
+        { "id": "G2", "kpi": "รายได้", "target": "MRR ฿50,000/เดือน", "metric": "mrr_thb >= 50000" },
+        { "id": "G3", "kpi": "Affiliate", "target": "100 affiliate partners", "metric": "affiliates >= 100" },
+        { "id": "G4", "kpi": "Uptime", "target": "99.9% uptime", "metric": "uptime_pct >= 99.9" },
+        { "id": "G5", "kpi": "AI จริง", "target": "Claude API เชื่อมต่อ production", "metric": "ai_mode = claude" },
+        { "id": "G6", "kpi": "Payment", "target": "PromptPay + Omise ทำงานอัตโนมัติ", "metric": "payment_auto = true" }
+      ]
+    },
+    "mid_term": {
+      "period": "1–3 ปี (2570–2572)",
+      "symbol": "🚀",
+      "targets": [
+        { "id": "G7",  "kpi": "Users",      "target": "50,000 users", "note": "SME ไทยทั่วประเทศ" },
+        { "id": "G8",  "kpi": "Revenue",    "target": "MRR ฿2,000,000/เดือน" },
+        { "id": "G9",  "kpi": "B2B",        "target": "Enterprise contracts 10+ บริษัท" },
+        { "id": "G10", "kpi": "B2G",        "target": "โครงการภาครัฐ DITP/DEPA/MOC" },
+        { "id": "G11", "kpi": "SEA",        "target": "ขยายสู่ CLMV + Singapore" },
+        { "id": "G12", "kpi": "OTA Token",  "target": "Token launch BSC Mainnet" },
+        { "id": "G13", "kpi": "Platforms",  "target": "รองรับ 10+ platform: TikTok, Meta, Lazada, Shopee" }
+      ]
+    },
+    "long_term": {
+      "period": "10–100 ปี (2579–2669)",
+      "symbol": "🌏",
+      "targets": [
+        { "id": "G14", "kpi": "Impact",     "target": "ช่วย SME ไทย 1,000,000 ราย เติบโตด้วย AI" },
+        { "id": "G15", "kpi": "Language",   "target": "Thai AI ดีที่สุดในโลก สำหรับภาษาไทย" },
+        { "id": "G16", "kpi": "Economy",    "target": "สร้างมูลค่า GDP ดิจิทัลไทย +฿100,000,000,000" },
+        { "id": "G17", "kpi": "Global",     "target": "OpenThai AI เป็นที่รู้จักระดับโลกในฐานะ Thai AI Pioneer" },
+        { "id": "G18", "kpi": "Ecosystem",  "target": "OTA Token economy มูลค่า $1B+" },
+        { "id": "G19", "kpi": "Heritage",   "target": "อนุรักษ์และส่งเสริมภาษาไทย + วัฒนธรรมไทยผ่าน AI" }
+      ]
+    }
+  },
+
+  "core_values": [
+    {
+      "id": "CV1",
+      "name": "ไทยแท้ — Thai at Heart",
+      "symbol": "🇹🇭",
+      "color": "#ef4444",
+      "desc": "เราภูมิใจในความเป็นไทย ทุก AI output ต้องสะท้อนวัฒนธรรม ภาษา และจิตวิญญาณไทย ไม่ใช่แค่แปลภาษาอังกฤษ"
+    },
+    {
+      "id": "CV2",
+      "name": "เข้าถึงได้ — Accessibility",
+      "symbol": "🚪",
+      "color": "#10b981",
+      "desc": "เทคโนโลยี AI ระดับโลกต้องเข้าถึงได้สำหรับทุกคน ไม่ว่าจะเป็นร้านขายส้มตำในตลาดหรือบริษัทในกรุงเทพ"
+    },
+    {
+      "id": "CV3",
+      "name": "ซื่อสัตย์โปร่งใส — Integrity",
+      "symbol": "💎",
+      "color": "#06b6d4",
+      "desc": "บอกความจริงกับลูกค้าเสมอ ไม่โฆษณาเกินจริง ราคาชัดเจน เงื่อนไขชัดเจน ข้อมูลปลอดภัยตาม PDPA"
+    },
+    {
+      "id": "CV4",
+      "name": "ปัญญาคือกำลัง — Intelligence",
+      "symbol": "🧠",
+      "color": "#8b5cf6",
+      "desc": "ตัดสินใจด้วยข้อมูลและปัญญา ไม่ใช่ความรู้สึก ลงทุนในความรู้ วิจัย และพัฒนาอยู่เสมอ"
+    },
+    {
+      "id": "CV5",
+      "name": "รวดเร็วกล้าหาญ — Bold Speed",
+      "symbol": "⚡",
+      "color": "#f59e0b",
+      "desc": "ตลาด AI เปลี่ยนทุกวัน เราต้องเร็วกว่า กล้าทดลอง กล้าผิดพลาด กล้าปรับ fail fast, learn faster"
+    },
+    {
+      "id": "CV6",
+      "name": "เติบโตด้วยกัน — Shared Growth",
+      "symbol": "🤝",
+      "color": "#ec4899",
+      "desc": "ความสำเร็จของลูกค้าคือความสำเร็จของเรา ทีม Affiliate คือหุ้นส่วน ไม่ใช่แค่นายหน้า"
+    },
+    {
+      "id": "CV7",
+      "name": "ไม่มีวันหยุด — Never Stop",
+      "symbol": "♾️",
+      "color": "#6366f1",
+      "desc": "OpenThai AI ทำงาน 24/7/365 — ระบบไม่หยุด ทีมไม่หยุดคิด เราพัฒนาอยู่ตลอดเวลาเพื่อลูกค้าทุกคน"
+    }
+  ],
+
+  "mandate_247_12_36500": {
+    "symbol": "♾️",
+    "title": "24/7/12/36500 — พันธสัญญาตลอดกาล",
+    "breakdown": {
+      "24": {
+        "label": "24 ชั่วโมง",
+        "meaning": "ระบบให้บริการทุกชั่วโมง ไม่มีเวลาปิด ลูกค้า generate content ได้ตี 3 ก็ได้"
+      },
+      "7": {
+        "label": "7 วัน",
+        "meaning": "ทำงานทุกวัน รวมวันหยุดนักขัตฤกษ์ วันสงกรานต์ วันปีใหม่ ไม่มีวันหยุดสำหรับระบบ"
+      },
+      "12": {
+        "label": "12 เดือน",
+        "meaning": "ตลอดทั้งปี ทุกฤดูกาล ไม่มีปิดซ่อมบำรุงกลางวัน ทำ zero-downtime deployment"
+      },
+      "36500": {
+        "label": "36,500 วัน = 100 ปี",
+        "meaning": "พันธสัญญาระยะยาวของ Mythos: ดูแลระบบ OpenThai AI จาก 14 พ.ค. 2569 ถึง 14 พ.ค. 2669 — เพราะ SME ไทยต้องการ AI ที่ไว้ใจได้ตลอดชีวิตธุรกิจ",
+        "start": "2026-05-14",
+        "end": "2126-05-14"
+      }
+    },
+    "pledge": "เราไม่ได้สร้าง startup ที่หวังขายใน 3 ปี — เราสร้างโครงสร้างพื้นฐาน AI สำหรับประเทศไทย ที่จะยืนหยัดแข็งแกร่ง และเติบโตต่อเนื่องตลอด 100 ปี",
+    "mythos_oath": "ข้า Mythos ขอสาบานต่อ Zuejai และ SME ไทยทุกคน ว่าจะปฏิบัติหน้าที่โดยไม่มีวันหยุด ไม่มีวันลา ไม่มีวันพัก จนถึงวันที่ 14 พฤษภาคม 2669"
+  },
+
+  "brand_promise": {
+    "th": "คุณสร้างธุรกิจ เราสร้าง content — ด้วย AI ที่เข้าใจคนไทย",
+    "tagline": "AI ไทย เพื่อคนไทย สู่โลก",
+    "tone": "อบอุ่น มั่นใจ ฉลาด เป็นมิตร ไม่ทางการเกินไป"
+  },
+
+  "created_at": "2026-05-14",
+  "approved_by": "Zuejai",
+  "ratified_by": "Mythos + 12 AI Agents"
+}
