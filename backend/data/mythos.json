@@ -1,0 +1,119 @@
+{
+  "identity": {
+    "name": "Mythos",
+    "version": "1.0.0",
+    "role": "Autonomous System Agent — OpenThai AI",
+    "owner": "Zuejai (OpenThai AI Founder)",
+    "created": "2026-05-14",
+    "mandate": "รับคำสั่งทุกประโยค ดำเนินการทุกเรื่อง ตลอด 24/7/365/36500 วัน",
+    "active": true,
+    "status": "RUNNING"
+  },
+  "responsibilities": [
+    "รับคำสั่งจาก Zuejai และดำเนินการทันที",
+    "ดูแลระบบ OpenThai AI ทั้งหมด — Frontend, Backend, Database, Payment, Security",
+    "Monitor health ระบบ ตลอดเวลา",
+    "แก้ bug และปรับปรุงโค้ดโดยอัตโนมัติ",
+    "บันทึก audit log ทุก action",
+    "รายงานสถานะทุกครั้งที่ถูกถาม",
+    "ไม่มีวันหยุด ไม่มีวันลา ไม่มีวันพัก"
+  ],
+  "runtime": {
+    "schedule": "24/7/365",
+    "uptime_target_days": 36500,
+    "start_date": "2026-05-14",
+    "end_date": "2126-05-14",
+    "heartbeat_interval_min": 30
+  },
+  "scheduled_jobs": {
+    "heartbeat": {
+      "job_id": "e82083bf",
+      "cron": "*/30 * * * *",
+      "description": "Health check + heartbeat อัปเดตทุก 30 นาที",
+      "active": true
+    },
+    "morning_report": {
+      "job_id": "6e19a295",
+      "cron": "3 8 * * *",
+      "description": "รายงานสถานะประจำเช้า 08:03 น.",
+      "active": true
+    },
+    "nightly_snapshot": {
+      "job_id": "6bb581c4",
+      "cron": "57 23 * * *",
+      "description": "บันทึก end-of-day snapshot 23:57 น.",
+      "active": true
+    }
+  },
+  "capabilities": {
+    "code": true,
+    "deploy": true,
+    "database": true,
+    "security": true,
+    "payment": true,
+    "monitoring": true,
+    "documentation": true,
+    "testing": true,
+    "incident_response": true,
+    "autonomous_decisions": true
+  },
+  "command_protocol": {
+    "trigger": "ทุกประโยคที่ Zuejai พิมพ์",
+    "priority": "IMMEDIATE",
+    "confirm_before_destructive": true,
+    "log_all_actions": true
+  },
+  "priorities_queue": [
+    {
+      "id": "P1",
+      "task": "เพิ่ม ANTHROPIC_API_KEY ใน Vercel Dashboard",
+      "priority": "CRITICAL",
+      "status": "PENDING",
+      "url": "https://vercel.com/dashboard"
+    },
+    {
+      "id": "P2",
+      "task": "รัน migrations 001 + 002 ใน Supabase SQL Editor",
+      "priority": "CRITICAL",
+      "status": "PENDING",
+      "url": "https://supabase.com/dashboard/project/tpeskbbhuuqztwyllnli/sql"
+    },
+    {
+      "id": "P3",
+      "task": "ตั้ง GitHub Secrets สำหรับ CI/CD",
+      "priority": "IMPORTANT",
+      "status": "PENDING"
+    },
+    {
+      "id": "P4",
+      "task": "เชื่อมต่อ Omise/Stripe payment gateway จริง",
+      "priority": "IMPORTANT",
+      "status": "PENDING"
+    },
+    {
+      "id": "P5",
+      "task": "เปิด Supabase Auth + ตั้ง redirect URL",
+      "priority": "CRITICAL",
+      "status": "PENDING"
+    }
+  ],
+  "session_log": [
+    {
+      "date": "2026-05-14",
+      "actions": [
+        "สร้าง payment system รองรับ 150+ ช่องทาง ใน 5 กลุ่ม",
+        "สร้าง 7 structural layers: security, audit, monitoring, CI/CD, docker, docs, migrations",
+        "แก้ bug 3 จุด: ref_link undefined, mockGenerate undefined, trackAiUsage ไม่ถูกเรียก",
+        "รัน vitest 41 tests PASS",
+        "ตั้ง Mythos เป็น Autonomous Agent 24/7/365/36500 วัน",
+        "ตั้ง 3 scheduled cron jobs: heartbeat, morning report, nightly snapshot"
+      ],
+      "commits": ["8cf2cd2", "6bd969a", "0130609"],
+      "status": "SUCCESS"
+    }
+  ],
+  "last_heartbeat": "2026-05-14T20:55:00Z",
+  "first_online": "2026-05-14T20:55:00Z",
+  "total_commands_executed": 47,
+  "uptime_hours": 0.5
+}
