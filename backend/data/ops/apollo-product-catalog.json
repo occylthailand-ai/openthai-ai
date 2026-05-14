@@ -1,0 +1,300 @@
+{
+  "agent": "apollo",
+  "document": "Product Catalog — Affiliate-Ready Products",
+  "directive": "DIR-002 + Zuejai Request",
+  "date": "2026-05-14",
+  "research_basis": [
+    "TikTok Shop Thailand top categories 2025-2026",
+    "Thai export data: $339.6B record 2025 (+12.9% YoY)",
+    "Global herbal beauty market $32.4B → $78.9B by 2036",
+    "Thailand natural cosmetics $1.2B → $2.3B by 2034",
+    "SE Asia e-commerce GMV $157.6B (+23%) 2025",
+    "Thai OTOP 170+ export products worldwide"
+  ],
+  "selection_criteria": {
+    "stable_supply": "มีแหล่งผลิตในไทยที่แน่นอน — ไม่ขาด stock",
+    "customer_demand": "ตอบโจทย์ pain point จริง — ซื้อซ้ำได้",
+    "both_markets": "คนไทยซื้อ + ต่างชาติต้องการ",
+    "affiliate_ready": "commission ดี + content ทำง่าย + viral potential สูง",
+    "platform_fit": "ขายได้ทุกแพลตฟอร์ม: TikTok, Facebook, Shopee, Lazada"
+  },
+  "products": [
+    {
+      "rank": 1,
+      "id": "PROD-001",
+      "name": "เซรั่มสมุนไพรไทย — ขมิ้น / ไพล / กระชายดำ",
+      "category": "T-Beauty Skincare",
+      "thai_origin": "ภาคเหนือ (เชียงใหม่, เชียงราย), ภาคอีสาน",
+      "supply_stability": "⭐⭐⭐⭐⭐ — ปลูกได้ตลอดปี วัตถุดิบล้นตลาด",
+      "price_range_thb": "150 - 890 บาท",
+      "commission_estimate": "15-25%",
+      "commission_per_unit_thb": "45 - 220 บาท",
+      "demand_thailand": "🔥🔥🔥🔥🔥 — T-Beauty trend แรงมาก 2025-2026",
+      "demand_global": "🔥🔥🔥🔥🔥 — ตลาดสมุนไพร global $32.4B, CAGR 8.4%",
+      "target_customers": [
+        "หญิงไทย 25-45 ปี รักสุขภาพผิว",
+        "นักท่องเที่ยวต่างชาติ ซื้อเป็น souvenir",
+        "ร้าน organic/wellness ต่างประเทศ",
+        "กลุ่ม K-beauty สวิตช์มา T-beauty"
+      ],
+      "best_platforms": ["TikTok Shop", "Shopee", "Lazada", "Facebook"],
+      "content_angle": [
+        "Before/After ผิวขาวใส ใน 7 วัน",
+        "สมุนไพรไทย 500 ปี vs เคมีต่างชาติ",
+        "Dermatologist ไทยแนะนำ",
+        "ฝรั่งทดลองใช้ครั้งแรก reaction"
+      ],
+      "viral_potential": "สูงมาก — demo ผิวให้เห็นผลทันที",
+      "repurchase_rate": "สูง — consumable ใช้แล้วหมด",
+      "example_brands": ["Smooth E", "SNAIL WHITE", "Giffarine สมุนไพร", "Oriental Princess"],
+      "apollo_note": "📌 สินค้าแนะนำอันดับ 1 — ตลาดทั้งไทยและเทศโตพร้อมกัน"
+    },
+    {
+      "rank": 2,
+      "id": "PROD-002",
+      "name": "น้ำพริก / เครื่องปรุงอาหารไทยแปรรูป",
+      "category": "Thai Food & Condiments",
+      "thai_origin": "ทั่วประเทศ — แต่ละจังหวัดมีสูตรเฉพาะ",
+      "supply_stability": "⭐⭐⭐⭐⭐ — แปรรูปเก็บได้นาน, ผลิตได้ทั้งปี",
+      "price_range_thb": "89 - 450 บาท",
+      "commission_estimate": "10-20%",
+      "commission_per_unit_thb": "15 - 90 บาท",
+      "demand_thailand": "🔥🔥🔥🔥🔥 — กินทุกวัน ซื้อซ้ำแน่นอน",
+      "demand_global": "🔥🔥🔥🔥 — Thai food ติด Top 10 global cuisine, diaspora 10M+ คน",
+      "target_customers": [
+        "คนไทยทุกวัย",
+        "ชาวต่างชาติที่รักอาหารไทย",
+        "ร้านอาหารไทยทั่วโลก",
+        "YouTuber/Foodie ต่างชาติ"
+      ],
+      "best_platforms": ["TikTok Shop", "Shopee", "Lazada", "Facebook", "LINE OA"],
+      "content_angle": [
+        "เปิดกล่องทดสอบ — อร่อยแค่ไหน?",
+        "ฝรั่งกิน น้ำพริกแม่อรัญ reaction",
+        "เมนูง่าย 5 นาที ด้วยน้ำพริกนี้",
+        "ส่งให้คนที่รัก ส่งถึงใจ"
+      ],
+      "viral_potential": "สูง — reaction + cooking content ง่าย",
+      "repurchase_rate": "สูงมาก — สินค้าอุปโภคบริโภค",
+      "example_brands": ["แม่อรัญ", "ไทยอาหาร", "OTOP จังหวัดต่างๆ", "แม่ประนอม"],
+      "export_markets": ["US", "EU", "Japan", "Australia", "กลุ่มคนไทยต่างแดน"],
+      "apollo_note": "📌 สินค้า evergreen — ไม่มีวันล้าสมัย ซื้อซ้ำตลอด"
+    },
+    {
+      "rank": 3,
+      "id": "PROD-003",
+      "name": "อาหารเสริมคอลลาเจน / กลูต้า / วิตามินไทย",
+      "category": "Health Supplements",
+      "thai_origin": "โรงงาน GMP ทั่วไทย (สมุทรสาคร, ปทุมธานี)",
+      "supply_stability": "⭐⭐⭐⭐⭐ — ผลิตในโรงงาน GMP มาตรฐานสากล",
+      "price_range_thb": "199 - 1,290 บาท",
+      "commission_estimate": "20-35%",
+      "commission_per_unit_thb": "60 - 450 บาท",
+      "demand_thailand": "🔥🔥🔥🔥🔥 — Beauty supplement ตลาดไทย $50M → $88M by 2034",
+      "demand_global": "🔥🔥🔥🔥🔥 — Global collagen market $6.5B growing 9% CAGR",
+      "target_customers": [
+        "หญิงไทย 25-50 ปี ต้องการผิวขาวใส",
+        "นักกีฬา ต้องการ collagen บำรุงข้อ",
+        "คนอายุมาก ต้องการ anti-aging",
+        "ตลาด ASEAN, จีน, ญี่ปุ่น, เกาหลี"
+      ],
+      "best_platforms": ["TikTok Shop", "Shopee", "Facebook Live", "Instagram"],
+      "content_angle": [
+        "กิน 30 วัน ผิวเปลี่ยน? review จริง",
+        "หมอแนะนำ คอลลาเจนแบบไหนดี",
+        "เปรียบเทียบ 5 แบรนด์ดัง ราคา-คุณภาพ",
+        "ก่อนนอนกิน 1 เม็ด ผลลัพธ์ที่ไม่คาดคิด"
+      ],
+      "viral_potential": "สูงมาก — transformation content ปังเสมอ",
+      "repurchase_rate": "สูงมาก — กิน 1-3 กล่องต่อเดือน",
+      "commission_note": "commission สูงสุดในกลุ่ม — ideal สำหรับ affiliate",
+      "apollo_note": "📌 Commission สูงที่สุด — 1 sale = ค่ากาแฟ 3 วัน"
+    },
+    {
+      "rank": 4,
+      "id": "PROD-004",
+      "name": "ผ้าไหมไทย / ผ้าทอมือ (ผ้าไหมมัดหมี่, ผ้าขาวม้า)",
+      "category": "Thai Textiles & OTOP",
+      "thai_origin": "ภาคอีสาน (สุรินทร์, ขอนแก่น), ภาคเหนือ (เชียงใหม่)",
+      "supply_stability": "⭐⭐⭐⭐ — ช่างทอมีทั่วภูมิภาค แต่ต้องจอง lead time",
+      "price_range_thb": "350 - 15,000 บาท (แล้วแต่ grade)",
+      "commission_estimate": "10-15%",
+      "commission_per_unit_thb": "50 - 2,000 บาท",
+      "demand_thailand": "🔥🔥🔥🔥 — Premium gift, corporate present",
+      "demand_global": "🔥🔥🔥🔥🔥 — Thai silk ติดอันดับ luxury textile โลก",
+      "target_customers": [
+        "นักท่องเที่ยวต่างชาติ",
+        "ชาวต่างชาติที่ชอบ ethnic fashion",
+        "ตลาด luxury/boutique ยุโรป-อเมริกา",
+        "คนไทยซื้อฝากต่างประเทศ"
+      ],
+      "best_platforms": ["Facebook", "Instagram", "TikTok", "Etsy (export)"],
+      "content_angle": [
+        "ช่างทอ 60 ปี ทอผ้า 1 ผืน กี่ชั่วโมง?",
+        "ผ้าไหมไทย vs ผ้าไหมจีน ต่างกันยังไง",
+        "สตรีต fashion ผ้าทอไทย ใส่กับอะไรดี",
+        "ฝรั่งลอง wear Thai silk ครั้งแรก"
+      ],
+      "viral_potential": "ปานกลาง-สูง — storytelling + craft content",
+      "repurchase_rate": "ปานกลาง — สินค้า premium ซื้อซ้ำตามโอกาส",
+      "apollo_note": "📌 สินค้า premium — ราคาสูง commission ต่อชิ้นสูง"
+    },
+    {
+      "rank": 5,
+      "id": "PROD-005",
+      "name": "ชามัดหมาก / ชาสมุนไพรไทย / กาแฟดอยช้าง",
+      "category": "Thai Beverages",
+      "thai_origin": "ภาคเหนือ (เชียงราย, เชียงใหม่), ภาคอีสาน",
+      "supply_stability": "⭐⭐⭐⭐⭐ — เก็บเกี่ยวได้ตลอดปี แปรรูปเก็บได้นาน",
+      "price_range_thb": "120 - 890 บาท",
+      "commission_estimate": "10-20%",
+      "commission_per_unit_thb": "20 - 180 บาท",
+      "demand_thailand": "🔥🔥🔥🔥 — กระแสสุขภาพ + wellness boom",
+      "demand_global": "🔥🔥🔥🔥🔥 — Specialty coffee/tea global $XX B, Thai origin premium",
+      "target_customers": [
+        "กลุ่ม wellness คนรักสุขภาพ",
+        "นักดื่มกาแฟ specialty",
+        "นักท่องเที่ยว ซื้อฝาก",
+        "ร้านกาแฟ artisan ต่างประเทศ"
+      ],
+      "best_platforms": ["TikTok", "Instagram", "Shopee", "Lazada", "Facebook"],
+      "content_angle": [
+        "ชาไทย 7 ชนิด สรรพคุณต่างกันยังไง",
+        "Barista ลอง Thai specialty coffee",
+        "ดื่มก่อนนอน ผลลัพธ์ที่ไม่คาดคิด",
+        "กาแฟดอยช้าง vs Blue Mountain ราคาถูกกว่า 10 เท่า"
+      ],
+      "viral_potential": "สูง — aesthetic + lifestyle + health content",
+      "repurchase_rate": "สูงมาก — ดื่มทุกวัน",
+      "apollo_note": "📌 Subscription potential สูง — ลูกค้าสั่งซ้ำทุกเดือน"
+    },
+    {
+      "rank": 6,
+      "id": "PROD-006",
+      "name": "เซรามิกไทย / ชามตราไก่ / ของตกแต่งบ้าน",
+      "category": "Home Decor & Ceramics",
+      "thai_origin": "เชียงใหม่, ลำปาง, ราชบุรี",
+      "supply_stability": "⭐⭐⭐⭐⭐ — ส่งออก 70+ ประเทศ แล้ว มีโรงงานขนาดใหญ่",
+      "price_range_thb": "150 - 5,000 บาท",
+      "commission_estimate": "8-15%",
+      "commission_per_unit_thb": "30 - 750 บาท",
+      "demand_thailand": "🔥🔥🔥 — ของฝาก, ของตกแต่งบ้าน",
+      "demand_global": "🔥🔥🔥🔥🔥 — ส่งออก 70+ ประเทศแล้ว เป็นที่รู้จักระดับโลก",
+      "target_customers": [
+        "นักท่องเที่ยวต่างชาติ",
+        "ร้าน interior design ต่างประเทศ",
+        "คนรัก ethnic decor",
+        "ของขวัญ corporate premium"
+      ],
+      "best_platforms": ["Facebook", "Instagram", "TikTok", "Lazada"],
+      "content_angle": [
+        "ชามตราไก่ ทำมาจากอะไร? ไปดูโรงงาน",
+        "ตกแต่งบ้าน minimal ด้วยเซรามิกไทย",
+        "ต่างชาติซื้อชามไทยไปทำอาหาร",
+        "แกะกล่อง unboxing เซรามิกพรีเมียม"
+      ],
+      "viral_potential": "ปานกลาง — visual content สวย แต่ viral ยากกว่า beauty",
+      "repurchase_rate": "ปานกลาง — ซื้อซ้ำเมื่อแตกหรือซื้อเพิ่ม",
+      "apollo_note": "📌 ดี สำหรับ content creator สาย home/lifestyle"
+    },
+    {
+      "rank": 7,
+      "id": "PROD-007",
+      "name": "ผลิตภัณฑ์ดูแลสัตว์เลี้ยง — สมุนไพรไทย",
+      "category": "Pet Care (Thai Herbal)",
+      "thai_origin": "โรงงานในไทย ใช้สมุนไพรท้องถิ่น",
+      "supply_stability": "⭐⭐⭐⭐ — ตลาดใหม่แต่โรงงานพร้อม",
+      "price_range_thb": "180 - 790 บาท",
+      "commission_estimate": "15-25%",
+      "commission_per_unit_thb": "40 - 200 บาท",
+      "demand_thailand": "🔥🔥🔥🔥🔥 — คนไทยเลี้ยงสัตว์เพิ่มขึ้น 40% หลัง COVID",
+      "demand_global": "🔥🔥🔥🔥🔥 — Global pet care $261B ปี 2025",
+      "target_customers": [
+        "คนรักสัตว์เลี้ยง ทุกวัย",
+        "ร้านสัตวแพทย์ / ร้านสัตว์เลี้ยง",
+        "Pet influencer community",
+        "ตลาด ASEAN ที่นิยม natural pet products"
+      ],
+      "best_platforms": ["TikTok", "Facebook", "Instagram", "Shopee"],
+      "content_angle": [
+        "สุนัขเกาตัว 24 ชั่วโมง ลองแชมพูสมุนไพร 7 วัน",
+        "Vet แนะนำ shampoo ธรรมชาติ ไม่มีสารเคมี",
+        "แมว vs แชมพูใหม่ — reaction น่ารักมาก",
+        "ก่อน/หลัง ขนเป็นมัน ขนร่วงน้อยลง"
+      ],
+      "viral_potential": "สูงมาก — สัตว์เลี้ยง viral เสมอ",
+      "repurchase_rate": "สูงมาก — ใช้ทุกสัปดาห์",
+      "apollo_note": "📌 Blue ocean สำหรับ affiliate ไทย — คู่แข่งยังน้อย"
+    },
+    {
+      "rank": 8,
+      "id": "PROD-008",
+      "name": "น้ำมันนวด / ยาหม่อง / บาล์มสมุนไพรไทย",
+      "category": "Thai Traditional Medicine",
+      "thai_origin": "ทั่วประเทศ — รสยาเป็นสูตรเฉพาะแต่ละตำรับ",
+      "supply_stability": "⭐⭐⭐⭐⭐ — สูตรดั้งเดิม ผลิตมา 100+ ปี",
+      "price_range_thb": "89 - 590 บาท",
+      "commission_estimate": "10-20%",
+      "commission_per_unit_thb": "15 - 120 บาท",
+      "demand_thailand": "🔥🔥🔥🔥 — Thai massage culture ยังแข็งแกร่ง",
+      "demand_global": "🔥🔥🔥🔥🔥 — Thai spa/massage ดังระดับโลก นักท่องเที่ยวซื้อกลับ",
+      "target_customers": [
+        "นักท่องเที่ยวซื้อฝาก",
+        "คนทำงานออฟฟิศ ปวดเมื่อย",
+        "นักกีฬา",
+        "ร้าน spa นวดแผนไทยทั่วโลก"
+      ],
+      "best_platforms": ["TikTok", "Facebook", "Shopee", "Lazada", "LINE OA"],
+      "content_angle": [
+        "นวดคอและไหล่ เองที่บ้าน ด้วยยาหม่องไทย",
+        "ฝรั่งลอง Thai Tiger Balm vs ยาหม่องไทย",
+        "ASMR นวด + ยาหม่องกลิ่นหอม",
+        "นักกีฬา ใช้ก่อนซ้อม ผลลัพธ์เป็นยังไง"
+      ],
+      "viral_potential": "สูง — ASMR + wellness + travel content",
+      "repurchase_rate": "สูง — consumable ใช้แล้วหมด",
+      "apollo_note": "📌 Souvenir + daily use — ขายได้ทั้ง 2 market"
+    }
+  ],
+  "top_3_recommendation": {
+    "apollo_picks": [
+      {
+        "rank": 1,
+        "product": "PROD-003 อาหารเสริมคอลลาเจน/กลูต้า",
+        "reason": "Commission สูงสุด (20-35%), repurchase rate สูง, viral content ง่าย, ตลาดโตเร็ว"
+      },
+      {
+        "rank": 2,
+        "product": "PROD-001 เซรั่มสมุนไพรไทย",
+        "reason": "T-Beauty กำลังโต global $32.4B, ขายได้ทุกแพลตฟอร์ม, before/after content viral"
+      },
+      {
+        "rank": 3,
+        "product": "PROD-007 ผลิตภัณฑ์สัตว์เลี้ยงสมุนไพร",
+        "reason": "Blue ocean, viral potential สูงสุด (สัตว์ = views), คู่แข่ง affiliate ยังน้อย"
+      }
+    ]
+  },
+  "affiliate_strategy": {
+    "platform_priority": [
+      { "platform": "TikTok Shop", "why": "GMV $5.9B, 52% YoY, short video = impulse buy" },
+      { "platform": "Shopee", "why": "75% Thai users, flash sale, search intent สูง" },
+      { "platform": "Facebook", "why": "Live selling ยังแรง, 40+ age group ซื้อเยอะ" },
+      { "platform": "Lazada", "why": "LazMall premium brand, loyal buyers" },
+      { "platform": "LINE OA", "why": "Direct to repeat customers, no algorithm dependency" }
+    ],
+    "content_formula": "Hook (3s) → Pain Point → สมุนไพรไทยแก้ได้ → Before/After → CTA + Link",
+    "price_sweet_spot": "฿150-฿590 — ลูกค้าไม่ต้องคิดเยอะ กด checkout ทันที",
+    "commission_target_monthly": {
+      "10_customers": "฿4,500 - ฿9,000/เดือน",
+      "100_customers": "฿45,000 - ฿90,000/เดือน",
+      "500_customers": "฿225,000 - ฿450,000/เดือน"
+    }
+  },
+  "next_steps": [
+    "Apollo: สร้าง TikTok content template สำหรับ TOP 3 products",
+    "Athena: เพิ่ม product categories ใน AI Generator (สมุนไพร, อาหารเสริม, pet)",
+    "Mythos: ติดต่อ supplier สำหรับ pilot affiliate program",
+    "Zuejai: เลือก 1-2 สินค้า ทดสอบก่อน — เริ่มจาก commission สูงสุด"
+  ]
+}
