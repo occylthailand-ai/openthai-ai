@@ -64,10 +64,10 @@ const gemini = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({ model: 'gemini-1.5-flash' })
   : null;
 
-// ── Generate with Claude 3.5 Haiku (fast + affordable) ──────────────────────
+// ── Generate with Claude Haiku 4.5 (fast + affordable) ──────────────────────
 async function generateWithClaude(form) {
   const msg = await anthropic.messages.create({
-    model: 'claude-haiku-4-5',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 1024,
     messages: [{ role: 'user', content: buildPrompt(form) }],
   });
@@ -312,7 +312,7 @@ app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
       channel_url: channel_url || '',
       note: note || '',
       ref_code: ref_code || `AFF${Date.now().toString().slice(-6)}`,
-      ref_link: ref_link || `https://openthai-ai.vercel.app/?ref=${ref_code}`,
+      ref_link: ref_link || `https://www.openthai-ai.com/?ref=${ref_code}`,
       tier: 'starter',
       commission_rate: 0.20,
       total_sales: 0,
@@ -500,7 +500,7 @@ app.post('/api/analyze-image', express.json({ limit: '5mb' }), generateLimiter, 
   if (anthropic) {
     try {
       const msg = await anthropic.messages.create({
-        model: 'claude-haiku-4-5',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 512,
         messages: [{
           role: 'user',
@@ -733,8 +733,8 @@ async function sendLine(to, text) {
   return res.json();
 }
 
-// ── node-cron: ทุกชั่วโมงที่นาที :05 ──────────────────────────────────────────
-cron.schedule('5 * * * *', async () => {
+// ── node-cron: ทุกชั่วโมงที่นาที :05 (local only — Vercel ใช้ Vercel Cron แทน) ─
+if (!IS_VERCEL) cron.schedule('5 * * * *', async () => {
   const now = new Date();
   const hour = now.getHours();
   for (const agent of agents) {
@@ -754,7 +754,7 @@ cron.schedule('5 * * * *', async () => {
     await runAgent(agent);
   }
 });
-console.log('[Scheduler] ✅ Agent cron started (checks every hour at :05)');
+if (!IS_VERCEL) console.log('[Scheduler] ✅ Agent cron started (checks every hour at :05 — local only)');
 
 // ── CRUD /api/agent ───────────────────────────────────────────────────────────
 app.get('/api/agent', (req, res) => {
@@ -867,7 +867,7 @@ app.get('/api/news-rag', async (req, res) => {
 
       let text = '';
       if (anthropic) {
-        const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5', max_tokens: 512, messages: [{ role: 'user', content: prompt }] });
+        const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 512, messages: [{ role: 'user', content: prompt }] });
         text = msg.content[0]?.text?.trim() || '';
       } else {
         const r = await gemini.generateContent(prompt);
@@ -977,7 +977,7 @@ app.post('/api/competitor-analyze', competitorLimiter, async (req, res) => {
   try {
     let text = '';
     if (anthropic) {
-      const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5', max_tokens: 1024, messages: [{ role: 'user', content: prompt }] });
+      const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, messages: [{ role: 'user', content: prompt }] });
       text = msg.content[0]?.text?.trim() || '';
     } else if (gemini) {
       const r = await gemini.generateContent(prompt);
@@ -1255,7 +1255,7 @@ Warnings: ${recentWarns.slice(0,3).map(w=>w.message).join(' | ') || 'ไม่�
   try {
     let text = '';
     if (anthropic) {
-      const msg = await anthropic.messages.create({ model:'claude-haiku-4-5', max_tokens:512, messages:[{role:'user',content:prompt}] });
+      const msg = await anthropic.messages.create({ model:'claude-haiku-4-5-20251001', max_tokens:512, messages:[{role:'user',content:prompt}] });
       text = msg.content[0]?.text?.trim() || '';
     } else {
       const r = await gemini.generateContent(prompt);
@@ -1276,7 +1276,7 @@ Warnings: ${recentWarns.slice(0,3).map(w=>w.message).join(' | ') || 'ไม่�
 // ─── Health check (v2) ────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   const charter = getSystemCharter();
-  const aiEngine = anthropic ? 'claude-haiku-4-5' : gemini ? 'gemini-1.5-flash' : 'mock';
+  const aiEngine = anthropic ? 'claude-haiku-4-5-20251001' : gemini ? 'gemini-1.5-flash' : 'mock';
   res.json({
     status:        'ok',
     version:       '2.0.0',
@@ -1309,6 +1309,90 @@ app.get('/api/health', (req, res) => {
       diagnostics:        '✅ Active',
       persistence:        '✅ system_log + agents.json + agent_checkpoint',
     },
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PDPA COMPLIANCE — GAP-001 (consent record) + GAP-002 (data subject rights)
+// ═══════════════════════════════════════════════════════════════════════════════
+const CONSENT_FILE = join(WRITE_DATA_DIR, 'pdpa_consents.json');
+
+function loadConsents() {
+  try { if (existsSync(CONSENT_FILE)) return JSON.parse(readFileSync(CONSENT_FILE, 'utf8')); } catch (_) {}
+  return [];
+}
+function saveConsents(data) {
+  try {
+    const dir = CONSENT_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(CONSENT_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) { console.error('Save consents error:', e.message); }
+}
+const consents = loadConsents();
+
+// GAP-001: บันทึก Consent ตาม PDPA มาตรา 19
+app.post('/api/privacy/consent', (req, res) => {
+  const { email, ip, purposes, version } = req.body || {};
+  if (!email || !purposes?.length) {
+    return res.status(400).json({ success: false, message: 'ต้องระบุ email และ purposes' });
+  }
+  const record = {
+    id:        Date.now().toString(),
+    email:     String(email).toLowerCase().trim().slice(0, 254),
+    ip:        ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+    purposes:  Array.isArray(purposes) ? purposes : [purposes],
+    version:   version || '1.0',
+    consented: true,
+    ts:        new Date().toISOString(),
+  };
+  // อัปเดตถ้ามีแล้ว
+  const idx = consents.findIndex(c => c.email === record.email);
+  if (idx >= 0) { consents[idx] = record; } else { consents.push(record); }
+  saveConsents(consents);
+  addLog('info', 'PDPA', `✅ Consent บันทึก: ${record.email} | purposes: ${record.purposes.join(',')}`);
+  res.json({ success: true, message: 'บันทึกความยินยอมเรียบร้อย', id: record.id });
+});
+
+// GAP-002: สิทธิ์ขอลบข้อมูล (Right to Erasure — PDPA มาตรา 33)
+app.post('/api/privacy/erasure', rateLimit({ windowMs: 3600000, max: 5 }), (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'อีเมลไม่ถูกต้อง' });
+  }
+  const sanitized = email.toLowerCase().trim();
+  let removed = 0;
+
+  // ลบออกจาก waitlist
+  const wBefore = waitlist.length;
+  const wIdx = waitlist.findIndex(w => w.email === sanitized);
+  if (wIdx >= 0) { waitlist.splice(wIdx, 1); saveWaitlist(waitlist); removed++; }
+
+  // ลบ consent record
+  const cIdx = consents.findIndex(c => c.email === sanitized);
+  if (cIdx >= 0) { consents.splice(cIdx, 1); saveConsents(consents); removed++; }
+
+  addLog('info', 'PDPA', `🗑️ Erasure request: ${sanitized} — ลบแล้ว ${removed} รายการ`);
+  res.json({ success: true, message: `ดำเนินการลบข้อมูลแล้ว (${removed} รายการ) ภายใน 30 วันตาม PDPA`, removed });
+});
+
+// GET /api/privacy/policy — ข้อมูล Privacy Policy สำหรับ frontend
+app.get('/api/privacy/policy', (req, res) => {
+  res.json({
+    version:     '1.1',
+    effective:   '2026-05-15',
+    controller:  'OpenThai AI (DATATAN.NET)',
+    contact:     'occylthailand@gmail.com',
+    purposes: [
+      { id: 'service',    name: 'ให้บริการ AI Generator',   legal_basis: 'สัญญา (มาตรา 24(3))',     required: true  },
+      { id: 'affiliate',  name: 'โปรแกรม Affiliate',        legal_basis: 'สัญญา (มาตรา 24(3))',     required: false },
+      { id: 'marketing',  name: 'ส่งข่าวสาร/โปรโมชัน',      legal_basis: 'ความยินยอม (มาตรา 19)',   required: false },
+      { id: 'analytics',  name: 'วิเคราะห์การใช้งาน',       legal_basis: 'ประโยชน์โดยชอบธรรม (24(5))', required: false },
+    ],
+    retention:   'ลบข้อมูลภายใน 3 ปีหลังยุติการใช้บริการ หรือเมื่อร้องขอ',
+    rights:      ['ขอดูข้อมูล','แก้ไข','ลบ','โอนย้าย','คัดค้าน'],
+    erasure_url: '/api/privacy/erasure',
+    pdpa_gaps_fixed: ['GAP-001: บันทึก consent record ✅','GAP-002: Right to erasure endpoint ✅'],
+    ts: new Date().toISOString(),
   });
 });
 
