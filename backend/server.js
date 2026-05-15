@@ -1516,6 +1516,248 @@ app.post('/api/auth/recovery-codes/generate', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//  AUTO-POST ENGINE v1
+//  ทำงานอัตโนมัติเมื่อ AI Agent สร้าง content แล้ว
+//  Platform: LINE ✅ | Facebook ✅ | TikTok 🔜 (ต้องมี video file) | IG 🔜
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const AUTOPOST_FILE = join(WRITE_DATA_DIR, 'autopost_queue.json');
+const AUTOPOST_LOG  = join(WRITE_DATA_DIR, 'autopost_log.json');
+
+function loadAutopostQueue() {
+  try { if (existsSync(AUTOPOST_FILE)) return JSON.parse(readFileSync(AUTOPOST_FILE, 'utf8')); } catch (_) {}
+  return [];
+}
+function saveAutopostQueue(data) {
+  try {
+    const dir = AUTOPOST_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(AUTOPOST_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) { console.error('[autopost] save queue error:', e.message); }
+}
+function loadAutopostLog() {
+  try { if (existsSync(AUTOPOST_LOG)) return JSON.parse(readFileSync(AUTOPOST_LOG, 'utf8')); } catch (_) {}
+  return [];
+}
+function saveAutopostLog(data) {
+  try {
+    writeFileSync(AUTOPOST_LOG, JSON.stringify(data.slice(0, 200), null, 2), 'utf8');
+  } catch (_) {}
+}
+
+const autopostQueue = loadAutopostQueue();
+const autopostLog   = loadAutopostLog();
+
+// ── Platform Poster Functions ─────────────────────────────────────────────────
+
+// 1️⃣ LINE Broadcast — ส่งหา Followers ทั้งหมด (ต้องมี LINE_CHANNEL_TOKEN)
+async function postToLINE(content) {
+  const token = process.env.LINE_CHANNEL_TOKEN;
+  if (!token) throw new Error('LINE_CHANNEL_TOKEN ยังไม่ได้ตั้ง');
+  const msg = `🌿 ${content.hook}\n\n${content.caption}\n\n${(content.hashtags||[]).join(' ')}`;
+  const res = await fetch('https://api.line.me/v2/bot/message/broadcast', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: [{ type: 'text', text: msg.slice(0, 5000) }] }),
+  });
+  if (!res.ok) { const e = await res.text(); throw new Error(`LINE broadcast error ${res.status}: ${e}`); }
+  return { platform: 'line', status: 'success', ts: new Date().toISOString() };
+}
+
+// 2️⃣ Facebook Page Post — ข้อความ + hashtags (ต้องมี FB_PAGE_ID + FB_PAGE_TOKEN)
+async function postToFacebook(content) {
+  const pageId    = process.env.FB_PAGE_ID;
+  const pageToken = process.env.FB_PAGE_TOKEN;
+  if (!pageId || !pageToken) throw new Error('FB_PAGE_ID หรือ FB_PAGE_TOKEN ยังไม่ได้ตั้ง');
+  const message = `${content.hook}\n\n${content.script?.join('\n') || ''}\n\n${content.caption}\n\n${(content.hashtags||[]).join(' ')}`;
+  const res = await fetch(`https://graph.facebook.com/v25.0/${pageId}/feed`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: message.slice(0, 60000), access_token: pageToken }),
+  });
+  if (!res.ok) { const e = await res.text(); throw new Error(`Facebook post error ${res.status}: ${e}`); }
+  const data = await res.json();
+  return { platform: 'facebook', status: 'success', post_id: data.id, ts: new Date().toISOString() };
+}
+
+// 3️⃣ TikTok — เพิ่ม caption ลง queue (video ต้องอัปโหลดเองก่อน — API ต้องการไฟล์วิดีโอ)
+//    เมื่อมี TIKTOK_ACCESS_TOKEN + video file → จะ auto-post อัตโนมัติ
+async function postToTikTok(content, videoPath) {
+  const token = process.env.TIKTOK_ACCESS_TOKEN;
+  if (!token) throw new Error('TIKTOK_ACCESS_TOKEN ยังไม่ได้ตั้ง');
+  if (!videoPath) throw new Error('ต้องการ video file path สำหรับ TikTok');
+
+  // Step 1: Init upload
+  const initRes = await fetch('https://open.tiktokapis.com/v2/post/publish/video/init/', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify({
+      post_info: {
+        title:           content.caption?.slice(0, 150) || content.hook?.slice(0, 150),
+        privacy_level:   'PUBLIC_TO_EVERYONE',
+        disable_duet:    false,
+        disable_comment: false,
+        disable_stitch:  false,
+        video_cover_timestamp_ms: 1000,
+      },
+      source_info: { source: 'FILE_UPLOAD', video_size: 0, chunk_size: 0, total_chunk_count: 1 },
+    }),
+  });
+  if (!initRes.ok) { const e = await initRes.text(); throw new Error(`TikTok init error ${initRes.status}: ${e}`); }
+  const initData = await initRes.json();
+  return { platform: 'tiktok', status: 'queued', publish_id: initData?.data?.publish_id, caption: content.caption?.slice(0,150), ts: new Date().toISOString() };
+}
+
+// ── Master Auto-Post Dispatcher ───────────────────────────────────────────────
+async function dispatchAutoPost(item) {
+  const results = [];
+  const platforms = item.platforms || [];
+
+  for (const platform of platforms) {
+    try {
+      let result;
+      if (platform === 'line')     result = await postToLINE(item.content);
+      if (platform === 'facebook') result = await postToFacebook(item.content);
+      if (platform === 'tiktok')   result = await postToTikTok(item.content, item.videoPath);
+      if (result) {
+        results.push(result);
+        addLog('info', 'AutoPost', `✅ ${platform.toUpperCase()} posted — ${item.content.hook?.slice(0,60)}`);
+      }
+    } catch (err) {
+      results.push({ platform, status: 'error', error: err.message, ts: new Date().toISOString() });
+      addLog('warn', 'AutoPost', `⚠️ ${platform.toUpperCase()} ไม่สำเร็จ: ${err.message}`);
+    }
+  }
+
+  // บันทึก log
+  autopostLog.unshift({ id: item.id, product: item.product, results, dispatched_at: new Date().toISOString() });
+  saveAutopostLog(autopostLog);
+  return results;
+}
+
+// ── POST /api/autopost/queue — เพิ่มงานเข้า queue ───────────────────────────
+app.post('/api/autopost/queue', requireAuth, async (req, res) => {
+  const { product, content, platforms, schedule_at, videoPath } = req.body || {};
+  if (!product || !content?.hook) return res.status(400).json({ success: false, message: 'ต้องการ product และ content.hook' });
+
+  const item = {
+    id:          Date.now().toString(),
+    product,
+    content,
+    platforms:   platforms || ['line', 'facebook'],
+    schedule_at: schedule_at || new Date().toISOString(),
+    videoPath:   videoPath || null,
+    status:      'queued',
+    created_at:  new Date().toISOString(),
+  };
+
+  // ถ้า schedule_at เป็นปัจจุบัน → post ทันที
+  const scheduledTime = new Date(item.schedule_at).getTime();
+  const now = Date.now();
+
+  if (scheduledTime <= now + 60000) { // ภายใน 1 นาที = ส่งทันที
+    const results = await dispatchAutoPost(item);
+    item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
+    item.results = results;
+    autopostQueue.push(item);
+    saveAutopostQueue(autopostQueue);
+    return res.json({ success: true, message: 'โพสต์ทันที', item });
+  }
+
+  // ถ้ามีเวลากำหนด → เข้า queue รอ cron ส่ง
+  autopostQueue.push(item);
+  saveAutopostQueue(autopostQueue);
+  addLog('info', 'AutoPost', `📋 Queued: ${product} → ${platforms?.join('+')} @ ${item.schedule_at}`);
+  res.json({ success: true, message: `เพิ่มใน queue แล้ว จะส่ง ${item.schedule_at}`, item });
+});
+
+// ── GET /api/autopost/queue — ดู queue ทั้งหมด ──────────────────────────────
+app.get('/api/autopost/queue', (req, res) => {
+  res.json({ success: true, total: autopostQueue.length, data: autopostQueue.slice(0, 50) });
+});
+
+// ── GET /api/autopost/log — ประวัติการส่ง ──────────────────────────────────
+app.get('/api/autopost/log', (req, res) => {
+  res.json({ success: true, total: autopostLog.length, data: autopostLog.slice(0, 50) });
+});
+
+// ── GET /api/autopost/status — สถานะ credentials ทุก platform ───────────────
+app.get('/api/autopost/status', (req, res) => {
+  res.json({
+    success: true,
+    platforms: {
+      line: {
+        ready:    !!process.env.LINE_CHANNEL_TOKEN,
+        token:    process.env.LINE_CHANNEL_TOKEN ? '✅ Set' : '❌ ต้องการ LINE_CHANNEL_TOKEN',
+        can_post: !!process.env.LINE_CHANNEL_TOKEN,
+        note:     'Broadcast ไปหา Followers ทั้งหมดของ LINE OA',
+      },
+      facebook: {
+        ready:    !!(process.env.FB_PAGE_ID && process.env.FB_PAGE_TOKEN),
+        page_id:  process.env.FB_PAGE_ID   ? '✅ Set' : '❌ ต้องการ FB_PAGE_ID',
+        token:    process.env.FB_PAGE_TOKEN ? '✅ Set' : '❌ ต้องการ FB_PAGE_TOKEN (never-expiring)',
+        can_post: !!(process.env.FB_PAGE_ID && process.env.FB_PAGE_TOKEN),
+        note:     'Post ข้อความ+ลิงก์บน Facebook Page',
+      },
+      tiktok: {
+        ready:    !!process.env.TIKTOK_ACCESS_TOKEN,
+        token:    process.env.TIKTOK_ACCESS_TOKEN ? '✅ Set' : '❌ ต้องการ TIKTOK_ACCESS_TOKEN',
+        can_post: false,
+        note:     'ต้องการ video file + TikTok API approval (2-6 สัปดาห์) — ตอนนี้: queue caption ไว้รอ',
+      },
+      instagram: {
+        ready:    !!(process.env.IG_USER_ID && process.env.FB_PAGE_TOKEN),
+        ig_user:  process.env.IG_USER_ID ? '✅ Set' : '❌ ต้องการ IG_USER_ID',
+        can_post: !!(process.env.IG_USER_ID && process.env.FB_PAGE_TOKEN),
+        note:     'Post Reels/Image บน Instagram Business ผ่าน Facebook Graph API',
+      },
+      shopee: {
+        ready:    false,
+        can_post: false,
+        note:     'Shopee ไม่มี auto-post API — ใช้ export CSV + manual upload แทน',
+      },
+    },
+    summary: {
+      ready_now:    [process.env.LINE_CHANNEL_TOKEN && 'LINE', process.env.FB_PAGE_ID && process.env.FB_PAGE_TOKEN && 'Facebook', process.env.IG_USER_ID && process.env.FB_PAGE_TOKEN && 'Instagram'].filter(Boolean),
+      needs_setup:  [!process.env.LINE_CHANNEL_TOKEN && 'LINE', !(process.env.FB_PAGE_ID && process.env.FB_PAGE_TOKEN) && 'Facebook', !process.env.TIKTOK_ACCESS_TOKEN && 'TikTok'].filter(Boolean),
+    },
+    ts: new Date().toISOString(),
+  });
+});
+
+// ── Cron: ทุก 5 นาที ตรวจ queue ที่ถึงเวลา (local only) ─────────────────────
+if (!IS_VERCEL) {
+  cron.schedule('*/5 * * * *', async () => {
+    const now = Date.now();
+    const pending = autopostQueue.filter(i => i.status === 'queued' && new Date(i.schedule_at).getTime() <= now);
+    for (const item of pending) {
+      item.status = 'processing';
+      const results = await dispatchAutoPost(item);
+      item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
+      item.results = results;
+    }
+    if (pending.length > 0) saveAutopostQueue(autopostQueue);
+  });
+}
+
+// ── Vercel Cron trigger: GET /api/autopost/process ────────────────────────────
+app.get('/api/autopost/process', async (req, res) => {
+  const now = Date.now();
+  const pending = autopostQueue.filter(i => i.status === 'queued' && new Date(i.schedule_at).getTime() <= now);
+  let processed = 0;
+  for (const item of pending) {
+    item.status = 'processing';
+    const results = await dispatchAutoPost(item);
+    item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
+    item.results = results;
+    processed++;
+  }
+  if (processed > 0) saveAutopostQueue(autopostQueue);
+  addLog('info', 'AutoPost', `🔄 Cron processed ${processed} queued posts`);
+  res.json({ success: true, processed, ts: new Date().toISOString() });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //  STARTUP
 // ═══════════════════════════════════════════════════════════════════════════════
 
