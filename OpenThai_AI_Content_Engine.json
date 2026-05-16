@@ -1,0 +1,361 @@
+{
+  "name": "OpenThai AI Content Engine (9 Skills)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openthai-ai",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "openthai-ai-generate"
+    },
+    {
+      "parameters": {
+        "functionCode": "// S7: Context Card - สรุป 5 ฟิลด์หลัก\nconst input = $input.first().json;\n\nconst contextCard = {\n  productId: input.product_id || 'CUSTOM',\n  productName: input.product_name || input.name,\n  category: input.category || 'general',\n  priceRange: input.price ? `฿${input.price}` : 'N/A',\n  standards: input.standards || '-',\n  usp: input.usp || input.selling_point || '',\n  region: input.region || input.country || 'Thailand',\n  hookType: input.hook_type || 'Story',\n  systemPromptKey: input.system_prompt || 'global',\n  targetAudience: input.target || 'TikTok creators Thailand',\n  language: input.language || 'th'\n};\n\nreturn [{ json: { contextCard, originalInput: input } }];"
+      },
+      "id": "context-card",
+      "name": "S7 Context Card",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sheets.googleapis.com/v4/spreadsheets/{{$env.GOOGLE_SHEET_ID}}/values/Master Catalog!A:L",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "options": {}
+      },
+      "id": "knowledge-base",
+      "name": "S8 Knowledge Base",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [500, 400],
+      "credentials": {
+        "oAuth2Api": {
+          "id": "google-sheets-oauth",
+          "name": "Google Sheets OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// S1+S3+S5: Prompt Assembly\nconst contextCard = $('S7 Context Card').first().json.contextCard;\nconst kbData = $('S8 Knowledge Base').first().json;\n\n// System Prompts by category\nconst systemPrompts = {\n  food: `คุณเป็นผู้เชี่ยวชาญ Content อาหาร/เครื่องดื่ม เน้น: รสชาติ, สูตรโบราณ, วัตถุดิบคุณภาพ, ความอร่อย น้ำเสียง: กระตุ้นความหิว, อบอุ่น`,\n  textile: `คุณเป็นผู้เชี่ยวชาญ Content ผ้าทอ/สิ่งทอ เน้น: ลายผ้า, กระบวนการทอ, สีย้อมธรรมชาติ, ฝีมือช่าง น้ำเสียง: หรูหรา, ภูมิใจในวัฒนธรรม`,\n  craft: `คุณเป็นผู้เชี่ยวชาญ Content หัตถกรรม เน้น: ฝีมือทำมือ, ภูมิปัญญาท้องถิ่น, ความเป็นเอกลักษณ์ น้ำเสียง: ชื่นชม, ศิลปะ`,\n  herb: `คุณเป็นผู้เชี่ยวชาญ Content สมุนไพร/ความงาม เน้น: สรรพคุณ, ธรรมชาติ, ผลลัพธ์ที่พิสูจน์ได้, ความปลอดภัย น้ำเสียง: น่าเชื่อถือ, วิทยาศาสตร์`,\n  global: `คุณเป็นผู้เชี่ยวชาญ Content สินค้าทั่วไป/Tech เน้น: คุณภาพ, ราคาคุ้มค่า, นวัตกรรม น้ำเสียง: ทันสมัย, มั่นใจ`\n};\n\n// Hook templates\nconst hookTemplates = {\n  Story: `เริ่มต้นด้วยเรื่องราว/ประวัติ/ตำนาน ที่เชื่อมโยงอารมณ์`,\n  Process: `แสดงกระบวนการผลิต/ทำ แบบ ASMR หรือ satisfying`,\n  Contrast: `เปรียบเทียบความแตกต่าง หรือความหายาก/พิเศษ`,\n  Question: `ตั้งคำถามชวนสงสัย กระตุ้นให้ดูต่อ`,\n  Transformation: `แสดง Before/After ผลลัพธ์ที่เห็นได้ชัด`\n};\n\nconst systemPrompt = systemPrompts[contextCard.systemPromptKey] || systemPrompts.global;\nconst hookGuide = hookTemplates[contextCard.hookType] || hookTemplates.Story;\n\n// S1: RCCF Prompt\nconst rccfPrompt = `\n[ROLE]\nคุณคือ \"OpenThai AI\" ผู้เชี่ยวชาญสร้าง TikTok Content สำหรับสินค้าไทยและสินค้าทั่วโลก\n\n[CONTEXT]\n${systemPrompt}\n\nข้อมูลสินค้า:\n- ชื่อ: ${contextCard.productName}\n- หมวด: ${contextCard.category}\n- ราคา: ${contextCard.priceRange}\n- จุดขาย: ${contextCard.usp}\n- ภูมิภาค: ${contextCard.region}\n- มาตรฐาน: ${contextCard.standards}\n\n[COMMAND]\nสร้าง TikTok Content ประกอบด้วย:\n1. Script 30 วินาที (Hook 3วิ + Story 20วิ + CTA 7วิ)\n2. Caption (100-150 ตัวอักษร)\n3. Hashtags 10 อัน\n\nใช้ Hook Type: ${contextCard.hookType}\nคำแนะนำ: ${hookGuide}\n\n[FORMAT]\nตอบเป็น JSON:\n{\n  \"script\": {\n    \"hook\": \"...\",\n    \"story\": \"...\",\n    \"cta\": \"...\"\n  },\n  \"caption\": \"...\",\n  \"hashtags\": [\"#...\", ...]\n}\n`;\n\nreturn [{ json: { prompt: rccfPrompt, contextCard, iteration: 1 } }];"
+      },
+      "id": "prompt-assembly",
+      "name": "S1+S3+S5 Prompt Assembly",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-5-20251001\",\n  \"max_tokens\": 2000,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.prompt) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "claude-generate",
+      "name": "Claude Generate Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse Claude response\nconst response = $input.first().json;\nconst contextCard = $('S1+S3+S5 Prompt Assembly').first().json.contextCard;\nconst iteration = $('S1+S3+S5 Prompt Assembly').first().json.iteration || 1;\n\nlet content;\ntry {\n  const text = response.content[0].text;\n  // Extract JSON from response\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    content = JSON.parse(jsonMatch[0]);\n  } else {\n    content = { error: 'Could not parse JSON', raw: text };\n  }\n} catch (e) {\n  content = { error: e.message, raw: response };\n}\n\nreturn [{ json: { content, contextCard, iteration } }];"
+      },
+      "id": "parse-response",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-5-20251001\",\n  \"max_tokens\": 1000,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"คุณเป็น AI Critic (Autopsy Method) วิเคราะห์ TikTok Content นี้:\\n\\n\" + JSON.stringify($json.content) + \"\\n\\nวิเคราะห์:\\n1. จุดแข็ง 3 ข้อ\\n2. จุดอ่อน 3 ข้อ\\n3. คำแนะนำปรับปรุง\\n4. คะแนน 1-10\\n\\nตอบเป็น JSON:\\n{\\n  \\\"strengths\\\": [...],\\n  \\\"weaknesses\\\": [...],\\n  \\\"suggestions\\\": [...],\\n  \\\"score\\\": 8\\n}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "ai-critic",
+      "name": "S6 AI Critic (Autopsy)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1500, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse Critic response\nconst response = $input.first().json;\nconst content = $('Parse Response').first().json.content;\nconst contextCard = $('Parse Response').first().json.contextCard;\nconst iteration = $('Parse Response').first().json.iteration;\n\nlet critique;\ntry {\n  const text = response.content[0].text;\n  const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    critique = JSON.parse(jsonMatch[0]);\n  } else {\n    critique = { score: 7, error: 'Could not parse' };\n  }\n} catch (e) {\n  critique = { score: 7, error: e.message };\n}\n\nreturn [{ json: { content, critique, contextCard, iteration } }];"
+      },
+      "id": "parse-critique",
+      "name": "Parse Critique",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1750, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.critique.score >= 7 || $json.iteration >= 3}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "quality-gate",
+      "name": "Quality Gate (S4)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// S2: Taste Check + S9: Learning Layer\nconst content = $input.first().json.content;\nconst critique = $input.first().json.critique;\nconst contextCard = $input.first().json.contextCard;\nconst iteration = $input.first().json.iteration;\n\n// S2: Taste Curation - เทียบกับมาตรฐาน viral content\nconst tasteScore = Math.min(10, critique.score + (critique.strengths?.length || 0) * 0.5);\n\n// S9: Learning Layer - อธิบายว่าทำไมถึงได้ผล\nconst learning = {\n  hookType: contextCard.hookType,\n  whyItWorks: `ใช้ ${contextCard.hookType} Hook ที่เหมาะกับสินค้าประเภท ${contextCard.category}`,\n  nextTry: critique.suggestions?.[0] || 'ลองเพิ่ม emotional trigger',\n  bestPractice: `สำหรับ ${contextCard.systemPromptKey}: ${critique.strengths?.[0] || 'เน้นจุดขายหลัก'}`\n};\n\nconst finalOutput = {\n  content: content,\n  quality: {\n    criticScore: critique.score,\n    tasteScore: tasteScore,\n    iterations: iteration,\n    passedQuality: critique.score >= 7,\n    strengths: critique.strengths,\n    suggestions: critique.suggestions\n  },\n  learning: learning,\n  metadata: {\n    productId: contextCard.productId,\n    productName: contextCard.productName,\n    category: contextCard.category,\n    hookType: contextCard.hookType,\n    generatedAt: new Date().toISOString()\n  }\n};\n\nreturn [{ json: finalOutput }];"
+      },
+      "id": "learning-layer",
+      "name": "S2+S9 Taste & Learning",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2250, 200]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Loop back for iteration (S4)\nconst content = $input.first().json.content;\nconst critique = $input.first().json.critique;\nconst contextCard = $input.first().json.contextCard;\nconst iteration = $input.first().json.iteration;\n\n// สร้าง prompt ใหม่พร้อม feedback\nconst improvedPrompt = `\nContent เดิม:\n${JSON.stringify(content)}\n\nFeedback จาก AI Critic:\n- จุดอ่อน: ${critique.weaknesses?.join(', ')}\n- คำแนะนำ: ${critique.suggestions?.join(', ')}\n\nกรุณาปรับปรุง Content ให้ดีขึ้นตาม feedback โดยรักษาจุดแข็งเดิม:\n- จุดแข็ง: ${critique.strengths?.join(', ')}\n\nตอบเป็น JSON format เดิม\n`;\n\nreturn [{ json: { prompt: improvedPrompt, contextCard, iteration: iteration + 1 } }];"
+      },
+      "id": "iteration-loop",
+      "name": "S4 Iteration Loop",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2250, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-OpenThai-AI",
+                "value": "9-Skills-Engine"
+              }
+            ]
+          }
+        }
+      },
+      "id": "response",
+      "name": "Send Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2500, 200]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "S7 Context Card",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "S8 Knowledge Base",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S7 Context Card": {
+      "main": [
+        [
+          {
+            "node": "S1+S3+S5 Prompt Assembly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S8 Knowledge Base": {
+      "main": [
+        [
+          {
+            "node": "S1+S3+S5 Prompt Assembly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S1+S3+S5 Prompt Assembly": {
+      "main": [
+        [
+          {
+            "node": "Claude Generate Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Generate Content": {
+      "main": [
+        [
+          {
+            "node": "Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          {
+            "node": "S6 AI Critic (Autopsy)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S6 AI Critic (Autopsy)": {
+      "main": [
+        [
+          {
+            "node": "Parse Critique",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Critique": {
+      "main": [
+        [
+          {
+            "node": "Quality Gate (S4)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quality Gate (S4)": {
+      "main": [
+        [
+          {
+            "node": "S2+S9 Taste & Learning",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "S4 Iteration Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S2+S9 Taste & Learning": {
+      "main": [
+        [
+          {
+            "node": "Send Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "S4 Iteration Loop": {
+      "main": [
+        [
+          {
+            "node": "Claude Generate Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "instanceId": "openthai-ai-content-engine"
+  },
+  "tags": [
+    {
+      "name": "OpenThai AI",
+      "createdAt": "2026-03-15"
+    },
+    {
+      "name": "9-Skills",
+      "createdAt": "2026-03-15"
+    }
+  ]
+}

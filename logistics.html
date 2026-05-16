@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenThai AI — Logistics Hub ศูนย์รวมขนส่งไทย</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans Thai', sans-serif; }
+    .gradient-text { background: linear-gradient(135deg,#f472b6,#fb923c,#fbbf24); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .gradient-btn  { background: linear-gradient(135deg,#ec4899,#f97316,#f59e0b); }
+    .glass { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); }
+    .card-hover { transition:all 0.2s; }
+    .card-hover:hover { transform:translateY(-2px); background:rgba(255,255,255,0.08); }
+    .badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:0.7rem; font-weight:600; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white min-h-screen">
+
+<!-- Header -->
+<header class="glass sticky top-0 z-50 px-4 py-3">
+  <div class="max-w-6xl mx-auto flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">🚚</span>
+      <div>
+        <h1 class="font-bold text-lg gradient-text">OpenThai AI — Logistics Hub</h1>
+        <p class="text-xs text-gray-400">ศูนย์รวมขนส่งไทยและ SEA ครบจบในที่เดียว</p>
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <a href="http://localhost:8000/tool" class="text-xs px-3 py-2 glass rounded-lg hover:bg-white/10 transition">✨ Content Gen</a>
+      <a href="http://localhost:8000" class="text-xs px-3 py-2 gradient-btn rounded-lg font-semibold">🏠 หน้าหลัก</a>
+    </div>
+  </div>
+</header>
+
+<!-- Tabs -->
+<div class="max-w-6xl mx-auto px-4 mt-6">
+  <div class="flex gap-2 overflow-x-auto pb-2">
+    <button onclick="showTab('domestic')"      id="tab-domestic"      class="tab-btn whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium gradient-btn text-white">🇹🇭 ในประเทศ</button>
+    <button onclick="showTab('marketplace')"   id="tab-marketplace"   class="tab-btn whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium glass hover:bg-white/10 transition">🛒 Marketplace</button>
+    <button onclick="showTab('international')" id="tab-international" class="tab-btn whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium glass hover:bg-white/10 transition">🌏 ต่างประเทศ</button>
+    <button onclick="showTab('calculator')"    id="tab-calculator"    class="tab-btn whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium glass hover:bg-white/10 transition">🧮 คำนวณค่าส่ง</button>
+    <button onclick="showTab('tracking')"      id="tab-tracking"      class="tab-btn whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium glass hover:bg-white/10 transition">📦 ติดตามพัสดุ</button>
+    <button onclick="showTab('tips')"          id="tab-tips"          class="tab-btn whitespace-nowrap px-4 py-2 rounded-lg text-sm font-medium glass hover:bg-white/10 transition">💡 เทคนิค</button>
+  </div>
+</div>
+
+<main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+<!-- ══════════════════════════════ ในประเทศ ══════════════════════════════ -->
+<div id="section-domestic">
+  <h2 class="text-xl font-bold mb-1">🇹🇭 ขนส่งในประเทศไทย</h2>
+  <p class="text-gray-400 text-sm mb-6">เปรียบเทียบขนส่งทุกเจ้า ราคา ความเร็ว และจุดเด่น</p>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+    <!-- Kerry -->
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🟠</div><h3 class="font-bold text-lg">Kerry Express</h3><p class="text-xs text-gray-400">บริการขนส่งชั้นนำไทย</p></div>
+        <span class="badge bg-orange-500/20 text-orange-300">ยอดนิยม</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿35</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">น้ำหนักสูงสุด</span><span>50 กก.</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ระยะเวลา</span><span>1–3 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">COD</span><span class="text-green-400">✅</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">รับที่บ้าน</span><span class="text-green-400">✅</span></div>
+      </div>
+      <div class="space-y-2">
+        <a href="https://track.th.kerryexpress.com" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">📦 ติดตามพัสดุ</a>
+        <a href="https://th.kerryexpress.com" target="_blank" class="block text-center py-2 glass rounded-lg text-sm hover:bg-white/10 transition">🌐 เว็บไซต์</a>
+      </div>
+    </div>
+
+    <!-- Flash -->
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">⚡</div><h3 class="font-bold text-lg">Flash Express</h3><p class="text-xs text-gray-400">ราคาถูก ส่งไว</p></div>
+        <span class="badge bg-yellow-500/20 text-yellow-300">ราคาดี</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿25</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">น้ำหนักสูงสุด</span><span>30 กก.</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ระยะเวลา</span><span>1–3 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">COD</span><span class="text-green-400">✅</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">รับที่บ้าน</span><span class="text-green-400">✅</span></div>
+      </div>
+      <div class="space-y-2">
+        <a href="https://www.flashexpress.co.th/tracking" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">📦 ติดตามพัสดุ</a>
+        <a href="https://www.flashexpress.co.th" target="_blank" class="block text-center py-2 glass rounded-lg text-sm hover:bg-white/10 transition">🌐 เว็บไซต์</a>
+      </div>
+    </div>
+
+    <!-- ไปรษณีย์ไทย -->
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">📮</div><h3 class="font-bold text-lg">ไปรษณีย์ไทย EMS</h3><p class="text-xs text-gray-400">รัฐบาล ส่งได้ทุกพื้นที่</p></div>
+        <span class="badge bg-red-500/20 text-red-300">ทุกที่</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿30</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">น้ำหนักสูงสุด</span><span>30 กก.</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ระยะเวลา</span><span>1–3 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">COD</span><span class="text-red-400">❌</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ส่งต่างประเทศ</span><span class="text-green-400">✅</span></div>
+      </div>
+      <div class="space-y-2">
+        <a href="https://track.thailandpost.co.th" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">📦 ติดตามพัสดุ</a>
+        <a href="https://www.thailandpost.co.th" target="_blank" class="block text-center py-2 glass rounded-lg text-sm hover:bg-white/10 transition">🌐 เว็บไซต์</a>
+      </div>
+    </div>
+
+    <!-- J&T -->
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🔵</div><h3 class="font-bold text-lg">J&amp;T Express</h3><p class="text-xs text-gray-400">ส่งไว COD ครบ</p></div>
+        <span class="badge bg-blue-500/20 text-blue-300">ราคาดี</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿25</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">น้ำหนักสูงสุด</span><span>50 กก.</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ระยะเวลา</span><span>1–3 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">COD</span><span class="text-green-400">✅</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">API ร้านค้า</span><span class="text-green-400">✅</span></div>
+      </div>
+      <div class="space-y-2">
+        <a href="https://www.jtexpress.co.th/trajectoryQuery" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">📦 ติดตามพัสดุ</a>
+        <a href="https://www.jtexpress.co.th" target="_blank" class="block text-center py-2 glass rounded-lg text-sm hover:bg-white/10 transition">🌐 เว็บไซต์</a>
+      </div>
+    </div>
+
+    <!-- Ninja Van -->
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🥷</div><h3 class="font-bold text-lg">Ninja Van Thailand</h3><p class="text-xs text-gray-400">ครอบคลุม SEA</p></div>
+        <span class="badge bg-green-500/20 text-green-300">SEA</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿35</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">น้ำหนักสูงสุด</span><span>30 กก.</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ระยะเวลา</span><span>2–4 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">COD</span><span class="text-green-400">✅</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ข้ามประเทศ SEA</span><span class="text-green-400">✅</span></div>
+      </div>
+      <div class="space-y-2">
+        <a href="https://www.ninjavan.co/th-th/tracking" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">📦 ติดตามพัสดุ</a>
+        <a href="https://www.ninjavan.co/th-th" target="_blank" class="block text-center py-2 glass rounded-lg text-sm hover:bg-white/10 transition">🌐 เว็บไซต์</a>
+      </div>
+    </div>
+
+    <!-- DHL eCommerce -->
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🟡</div><h3 class="font-bold text-lg">DHL eCommerce</h3><p class="text-xs text-gray-400">มาตรฐานระดับโลก</p></div>
+        <span class="badge bg-yellow-600/20 text-yellow-300">Premium</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿45</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">น้ำหนักสูงสุด</span><span>70 กก.</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ระยะเวลา</span><span>1–2 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">COD</span><span class="text-red-400">❌</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ประกันสินค้า</span><span class="text-green-400">✅</span></div>
+      </div>
+      <div class="space-y-2">
+        <a href="https://www.dhl.com/th-th/home/tracking.html" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">📦 ติดตามพัสดุ</a>
+        <a href="https://www.dhl.com/th-th" target="_blank" class="block text-center py-2 glass rounded-lg text-sm hover:bg-white/10 transition">🌐 เว็บไซต์</a>
+      </div>
+    </div>
+
+    <!-- SCG Express -->
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🔴</div><h3 class="font-bold text-lg">SCG Express</h3><p class="text-xs text-gray-400">เชื่อถือได้ ตรงเวลา</p></div>
+        <span class="badge bg-red-600/20 text-red-300">B2B</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿40</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">น้ำหนักสูงสุด</span><span>100 กก.</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ระยะเวลา</span><span>1–3 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">COD</span><span class="text-green-400">✅</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ของหนัก/ใหญ่</span><span class="text-green-400">✅</span></div>
+      </div>
+      <div class="space-y-2">
+        <a href="https://www.scgexpress.co.th/tracking" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">📦 ติดตามพัสดุ</a>
+        <a href="https://www.scgexpress.co.th" target="_blank" class="block text-center py-2 glass rounded-lg text-sm hover:bg-white/10 transition">🌐 เว็บไซต์</a>
+      </div>
+    </div>
+
+    <!-- Best Express -->
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🟢</div><h3 class="font-bold text-lg">Best Express</h3><p class="text-xs text-gray-400">จากจีน ครอบคลุม SEA</p></div>
+        <span class="badge bg-green-600/20 text-green-300">ราคาดี</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿25</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">น้ำหนักสูงสุด</span><span>50 กก.</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ระยะเวลา</span><span>1–3 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">COD</span><span class="text-green-400">✅</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">รับที่บ้าน</span><span class="text-green-400">✅</span></div>
+      </div>
+      <div class="space-y-2">
+        <a href="https://www.best-inc.co.th" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">📦 ติดตามพัสดุ</a>
+        <a href="https://www.best-inc.co.th" target="_blank" class="block text-center py-2 glass rounded-lg text-sm hover:bg-white/10 transition">🌐 เว็บไซต์</a>
+      </div>
+    </div>
+
+    <!-- Lalamove -->
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🛵</div><h3 class="font-bold text-lg">Lalamove</h3><p class="text-xs text-gray-400">ส่งด่วนภายในวัน</p></div>
+        <span class="badge bg-pink-500/20 text-pink-300">Same Day</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿59</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">น้ำหนักสูงสุด</span><span>200 กก. (รถ)</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ระยะเวลา</span><span>ภายใน 1 ชั่วโมง</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">COD</span><span class="text-green-400">✅</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">พื้นที่</span><span>กทม.+หัวเมือง</span></div>
+      </div>
+      <div class="space-y-2">
+        <a href="https://www.lalamove.com/th/" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">🛵 สั่งส่งด่วน</a>
+        <a href="https://www.lalamove.com/th/" target="_blank" class="block text-center py-2 glass rounded-lg text-sm hover:bg-white/10 transition">🌐 เว็บไซต์</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════ Marketplace ══════════════════════════════ -->
+<div id="section-marketplace" class="hidden">
+  <h2 class="text-xl font-bold mb-1">🛒 Marketplace Logistics</h2>
+  <p class="text-gray-400 text-sm mb-6">ระบบขนส่งในตัวของแต่ละแพลตฟอร์ม — ใช้ฟรีเมื่อขายในแพลตฟอร์มนั้น</p>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <div class="glass rounded-2xl p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-xl">🛍️</div>
+        <div><h3 class="font-bold">Shopee Express (SPX)</h3><p class="text-xs text-gray-400">ขนส่งในตัว Shopee</p></div>
+        <span class="ml-auto badge bg-orange-500/20 text-orange-300">ฟรี subsidy</span>
+      </div>
+      <ul class="text-sm text-gray-300 space-y-1 mb-4">
+        <li>• ส่งฟรีสำหรับผู้ขายที่มียอดขายถึงเกณฑ์</li>
+        <li>• ติดตามได้ใน App Shopee</li>
+        <li>• COD ครบทุกจังหวัด</li>
+        <li>• ราคาเริ่ม ฿20 (ขึ้นกับโปรโมชั่น)</li>
+      </ul>
+      <a href="https://shopee.co.th" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">เปิด Shopee</a>
+    </div>
+
+    <div class="glass rounded-2xl p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-xl">🛒</div>
+        <div><h3 class="font-bold">Lazada Logistics (LEX)</h3><p class="text-xs text-gray-400">ขนส่งในตัว Lazada</p></div>
+        <span class="ml-auto badge bg-blue-500/20 text-blue-300">ฟรี</span>
+      </div>
+      <ul class="text-sm text-gray-300 space-y-1 mb-4">
+        <li>• ส่งฟรีผ่าน LEX สำหรับ Seller ที่ผ่านเกณฑ์</li>
+        <li>• มีจุดรับพัสดุ LEX Hub ทั่วประเทศ</li>
+        <li>• COD รองรับ</li>
+        <li>• ประกันสินค้าเสียหายระหว่างส่ง</li>
+      </ul>
+      <a href="https://lazada.co.th" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">เปิด Lazada</a>
+    </div>
+
+    <div class="glass rounded-2xl p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center text-xl">🎵</div>
+        <div><h3 class="font-bold">TikTok Shop Logistics</h3><p class="text-xs text-gray-400">ขนส่งใน TikTok Shop</p></div>
+        <span class="ml-auto badge bg-pink-500/20 text-pink-300">Hot 🔥</span>
+      </div>
+      <ul class="text-sm text-gray-300 space-y-1 mb-4">
+        <li>• เชื่อมกับ Kerry, Flash, J&amp;T, ไปรษณีย์ไทย</li>
+        <li>• ปริ้น Label ได้ใน Seller Center</li>
+        <li>• COD — โอนเงินให้ seller ทุกวัน</li>
+        <li>• ติดตามได้ใน TikTok App</li>
+      </ul>
+      <a href="https://seller-th.tiktok.com" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">เปิด TikTok Seller</a>
+    </div>
+
+    <div class="glass rounded-2xl p-5">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center text-xl">💬</div>
+        <div><h3 class="font-bold">LINE MAN Wongnai</h3><p class="text-xs text-gray-400">ส่งด่วนกรุงเทพ</p></div>
+        <span class="ml-auto badge bg-green-500/20 text-green-300">1 ชม.</span>
+      </div>
+      <ul class="text-sm text-gray-300 space-y-1 mb-4">
+        <li>• ส่งภายใน 1 ชั่วโมงในกรุงเทพฯ และปริมณฑล</li>
+        <li>• เหมาะสำหรับอาหาร ของสด ของด่วน</li>
+        <li>• สั่งผ่าน LINE MAN App</li>
+        <li>• ราคาเริ่ม ฿40 ขึ้นกับระยะทาง</li>
+      </ul>
+      <a href="https://lineman.line.me" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">เปิด LINE MAN</a>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════ ต่างประเทศ ══════════════════════════════ -->
+<div id="section-international" class="hidden">
+  <h2 class="text-xl font-bold mb-1">🌏 ส่งสินค้าต่างประเทศ</h2>
+  <p class="text-gray-400 text-sm mb-6">ส่งออกสินค้าไทยไปทั่วโลก เลือกขนส่งที่ใช่ตามงบและความเร็ว</p>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🟡</div><h3 class="font-bold">DHL Express International</h3><p class="text-xs text-gray-400">เร็วที่สุด ทั่วโลก</p></div>
+        <span class="badge bg-yellow-500/20 text-yellow-300">เร็วสุด</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿350+</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">เวลาส่ง</span><span>3–5 วันทำการ</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">พื้นที่</span><span>220+ ประเทศ</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ติดตาม</span><span class="text-green-400">Real-time</span></div>
+      </div>
+      <a href="https://www.dhl.com/th-th/home/express.html" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">คำนวณค่าส่ง</a>
+    </div>
+
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🟣</div><h3 class="font-bold">FedEx Thailand</h3><p class="text-xs text-gray-400">มาตรฐานอเมริกา</p></div>
+        <span class="badge bg-purple-500/20 text-purple-300">USA Strong</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿400+</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">เวลาส่ง</span><span>3–5 วันทำการ</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">พื้นที่</span><span>200+ ประเทศ</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ประกัน</span><span class="text-green-400">✅ ครบ</span></div>
+      </div>
+      <a href="https://www.fedex.com/th-th/home.html" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">คำนวณค่าส่ง</a>
+    </div>
+
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🟤</div><h3 class="font-bold">UPS Thailand</h3><p class="text-xs text-gray-400">B2B ระดับโลก</p></div>
+        <span class="badge bg-amber-700/30 text-amber-300">B2B</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿380+</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">เวลาส่ง</span><span>3–7 วันทำการ</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">พื้นที่</span><span>220+ ประเทศ</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">สินค้าหนัก</span><span class="text-green-400">✅ เหมาะมาก</span></div>
+      </div>
+      <a href="https://www.ups.com/th/th/Home.page" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">คำนวณค่าส่ง</a>
+    </div>
+
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">📮</div><h3 class="font-bold">EMS ไปรษณีย์ไทย</h3><p class="text-xs text-gray-400">ราคาประหยัด</p></div>
+        <span class="badge bg-red-500/20 text-red-300">ประหยัด</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿200+</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">เวลาส่ง</span><span>7–14 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">พื้นที่</span><span>150+ ประเทศ</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ราคา</span><span class="text-green-400">ถูกที่สุด</span></div>
+      </div>
+      <a href="https://www.thailandpost.co.th/th/service/international" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">ดูรายละเอียด</a>
+    </div>
+
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">📬</div><h3 class="font-bold">SAL ไปรษณีย์ไทย</h3><p class="text-xs text-gray-400">ช้าแต่ถูกมาก</p></div>
+        <span class="badge bg-gray-500/20 text-gray-300">ถูกสุด</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿150+</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">เวลาส่ง</span><span>14–30 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">เหมาะกับ</span><span>ของเล็ก น้ำหนักน้อย</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">ราคา</span><span class="text-green-400">ถูกที่สุด</span></div>
+      </div>
+      <a href="https://www.thailandpost.co.th" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">ดูรายละเอียด</a>
+    </div>
+
+    <div class="glass rounded-2xl p-5 card-hover">
+      <div class="flex items-start justify-between mb-3">
+        <div><div class="text-2xl mb-1">🥷</div><h3 class="font-bold">Ninja Van International</h3><p class="text-xs text-gray-400">SEA Cross-border</p></div>
+        <span class="badge bg-green-500/20 text-green-300">SEA</span>
+      </div>
+      <div class="space-y-2 text-sm mb-4">
+        <div class="flex justify-between"><span class="text-gray-400">ราคาเริ่มต้น</span><span class="text-amber-300 font-semibold">฿250+</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">เวลาส่ง</span><span>3–7 วัน</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">พื้นที่</span><span>SG, MY, ID, PH, VN</span></div>
+        <div class="flex justify-between"><span class="text-gray-400">เหมาะกับ</span><span>ขายข้าม SEA</span></div>
+      </div>
+      <a href="https://www.ninjavan.co/th-th" target="_blank" class="block text-center py-2 gradient-btn rounded-lg text-sm font-semibold">ดูรายละเอียด</a>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════ Calculator ══════════════════════════════ -->
+<div id="section-calculator" class="hidden">
+  <h2 class="text-xl font-bold mb-1">🧮 คำนวณค่าส่งเปรียบเทียบ</h2>
+  <p class="text-gray-400 text-sm mb-6">ประมาณการค่าส่งจาก Kerry, Flash Express และไปรษณีย์ไทย</p>
+  <div class="glass rounded-2xl p-6 max-w-xl mx-auto mb-8">
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">น้ำหนักสินค้า (กรัม)</label>
+        <input type="number" id="calcWeight" value="500" min="1" max="50000"
+          class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-pink-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">จังหวัดปลายทาง</label>
+        <select id="calcProvince" class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-pink-500">
+          <option value="bkk">กรุงเทพฯ / ปริมณฑล</option>
+          <option value="central">ภาคกลาง (อยุธยา, นครปฐม)</option>
+          <option value="north">ภาคเหนือ (เชียงใหม่, เชียงราย)</option>
+          <option value="northeast">ภาคอีสาน (ขอนแก่น, อุดร, โคราช)</option>
+          <option value="east">ภาคตะวันออก (ชลบุรี, ระยอง)</option>
+          <option value="south">ภาคใต้ (หาดใหญ่, ภูเก็ต)</option>
+          <option value="remote">พื้นที่ห่างไกล / เกาะ</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">ประเภทสินค้า</label>
+        <select id="calcType" class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-pink-500">
+          <option value="normal">ทั่วไป</option>
+          <option value="fragile">เปราะบาง (+฿15)</option>
+          <option value="food">อาหาร / ด่วน (+฿10)</option>
+        </select>
+      </div>
+      <button onclick="calculateShipping()" class="w-full py-3 gradient-btn rounded-xl font-bold text-lg">🧮 คำนวณเปรียบเทียบ</button>
+    </div>
+  </div>
+  <div id="calcResult" class="hidden">
+    <h3 class="text-lg font-bold mb-4 text-center">📊 ผลเปรียบเทียบราคาค่าส่ง</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="calcCards"></div>
+    <p class="text-xs text-gray-500 text-center mt-4">* ราคาประมาณการ อาจแตกต่างจากราคาจริง โปรดตรวจสอบกับขนส่งโดยตรง</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ Tracking ══════════════════════════════ -->
+<div id="section-tracking" class="hidden">
+  <h2 class="text-xl font-bold mb-1">📦 ติดตามพัสดุ — Auto Detect</h2>
+  <p class="text-gray-400 text-sm mb-6">ใส่เลข tracking ระบบจะตรวจจับขนส่งให้อัตโนมัติ</p>
+  <div class="glass rounded-2xl p-6 max-w-xl mx-auto">
+    <div class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-300 mb-2">เลข Tracking Number</label>
+        <input type="text" id="trackingInput" placeholder="เช่น TH123456789TH, THFF1234567890"
+          class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-pink-500"
+          oninput="detectCarrier()">
+      </div>
+      <div id="detectedCarrier" class="hidden glass rounded-xl p-3 text-sm">
+        <span class="text-gray-400">ตรวจพบขนส่ง: </span>
+        <span id="carrierName" class="font-bold text-amber-300"></span>
+      </div>
+      <button onclick="openTracking()" class="w-full py-3 gradient-btn rounded-xl font-bold text-lg">📦 ติดตามพัสดุ</button>
+    </div>
+    <div class="mt-6 pt-6 border-t border-white/10">
+      <p class="text-xs text-gray-400 mb-3 font-medium">รูปแบบเลข Tracking ที่รองรับ:</p>
+      <div class="space-y-1.5 text-xs">
+        <div class="flex gap-3"><code class="text-amber-300">TH + 9 ตัว + TH</code><span class="text-gray-400">→ ไปรษณีย์ไทย</span></div>
+        <div class="flex gap-3"><code class="text-amber-300">THFF + 10 ตัวเลข</code><span class="text-gray-400">→ Flash Express</span></div>
+        <div class="flex gap-3"><code class="text-amber-300">K + 10 ตัวเลข</code><span class="text-gray-400">→ Kerry Express</span></div>
+        <div class="flex gap-3"><code class="text-amber-300">JT + 10 ตัวเลข</code><span class="text-gray-400">→ J&amp;T Express</span></div>
+        <div class="flex gap-3"><code class="text-amber-300">NVATH + ตัวเลข</code><span class="text-gray-400">→ Ninja Van</span></div>
+        <div class="flex gap-3"><code class="text-amber-300">JD + 18 ตัวเลข</code><span class="text-gray-400">→ DHL eCommerce</span></div>
+        <div class="flex gap-3"><code class="text-amber-300">1Z + 16 ตัวอักขระ</code><span class="text-gray-400">→ UPS</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="mt-8">
+    <h3 class="font-bold mb-4">🔗 ลิงก์ติดตามด่วนทุกเจ้า</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <a href="https://track.th.kerryexpress.com" target="_blank" class="glass rounded-xl p-3 text-center card-hover text-sm">🟠 Kerry</a>
+      <a href="https://www.flashexpress.co.th/tracking" target="_blank" class="glass rounded-xl p-3 text-center card-hover text-sm">⚡ Flash</a>
+      <a href="https://track.thailandpost.co.th" target="_blank" class="glass rounded-xl p-3 text-center card-hover text-sm">📮 ไปรษณีย์ไทย</a>
+      <a href="https://www.jtexpress.co.th/trajectoryQuery" target="_blank" class="glass rounded-xl p-3 text-center card-hover text-sm">🔵 J&amp;T</a>
+      <a href="https://www.ninjavan.co/th-th/tracking" target="_blank" class="glass rounded-xl p-3 text-center card-hover text-sm">🥷 Ninja Van</a>
+      <a href="https://www.dhl.com/th-th/home/tracking.html" target="_blank" class="glass rounded-xl p-3 text-center card-hover text-sm">🟡 DHL</a>
+      <a href="https://www.fedex.com/fedextrack/?trknbr=" target="_blank" class="glass rounded-xl p-3 text-center card-hover text-sm">🟣 FedEx</a>
+      <a href="https://www.ups.com/track?loc=th_TH" target="_blank" class="glass rounded-xl p-3 text-center card-hover text-sm">🟤 UPS</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ Tips ══════════════════════════════ -->
+<div id="section-tips" class="hidden">
+  <h2 class="text-xl font-bold mb-1">💡 เทคนิคลดต้นทุนค่าส่ง</h2>
+  <p class="text-gray-400 text-sm mb-6">คำแนะนำจากประสบการณ์ผู้ขายออนไลน์ไทย</p>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <div class="glass rounded-2xl p-5">
+      <h3 class="font-bold text-amber-300 mb-3">⚡ ส่งไว vs ส่งถูก เลือกยังไง?</h3>
+      <div class="space-y-3 text-sm">
+        <div class="glass rounded-xl p-3 border border-green-500/20">
+          <p class="font-semibold text-green-300 mb-1">✅ เลือกส่งไว (Kerry / DHL) เมื่อ:</p>
+          <ul class="space-y-1 text-gray-400 ml-3 text-xs">
+            <li>• สินค้าเปราะบาง ต้องการการดูแล</li>
+            <li>• ลูกค้าต้องการของด่วน</li>
+            <li>• สินค้าราคาสูง มีประกัน</li>
+          </ul>
+        </div>
+        <div class="glass rounded-xl p-3 border border-blue-500/20">
+          <p class="font-semibold text-blue-300 mb-1">✅ เลือกส่งถูก (Flash / J&amp;T) เมื่อ:</p>
+          <ul class="space-y-1 text-gray-400 ml-3 text-xs">
+            <li>• ออเดอร์จำนวนมาก ต้องการลดต้นทุน</li>
+            <li>• สินค้าน้ำหนักเบา ราคาต่ำ</li>
+            <li>• ลูกค้าไม่รีบ ยืดหยุ่นได้</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass rounded-2xl p-5">
+      <h3 class="font-bold text-amber-300 mb-3">💰 6 เทคนิคลดต้นทุนค่าส่ง</h3>
+      <div class="space-y-2 text-sm text-gray-300">
+        <div class="flex gap-2 items-start"><span class="text-pink-400 font-bold shrink-0">1.</span><p>เปิดบัญชีธุรกิจกับขนส่ง → ได้ส่วนลด 10–20%</p></div>
+        <div class="flex gap-2 items-start"><span class="text-pink-400 font-bold shrink-0">2.</span><p>ใช้ Flash / J&amp;T สำหรับสินค้าน้ำหนักน้อย ราคาถูกที่สุด</p></div>
+        <div class="flex gap-2 items-start"><span class="text-pink-400 font-bold shrink-0">3.</span><p>ส่งต่างประเทศ → ใช้ไปรษณีย์ไทย EMS/SAL ราคาถูกที่สุด</p></div>
+        <div class="flex gap-2 items-start"><span class="text-pink-400 font-bold shrink-0">4.</span><p>แพ็กสินค้าให้กะทัดรัด ลด volumetric weight ได้มาก</p></div>
+        <div class="flex gap-2 items-start"><span class="text-pink-400 font-bold shrink-0">5.</span><p>ใช้ขนส่งใน marketplace (SPX, LEX) ได้ subsidy ฟรี</p></div>
+        <div class="flex gap-2 items-start"><span class="text-pink-400 font-bold shrink-0">6.</span><p>รวมออเดอร์ส่งพร้อมกัน ลด trips ค่าแรงแพ็กได้</p></div>
+      </div>
+    </div>
+
+    <div class="glass rounded-2xl p-5">
+      <h3 class="font-bold text-amber-300 mb-3">💳 COD ดีไหม? ควรเปิดหรือไม่?</h3>
+      <div class="space-y-3 text-sm">
+        <div class="glass rounded-xl p-3 border border-green-500/20">
+          <p class="font-semibold text-green-300 mb-1 text-xs">✅ ข้อดี COD:</p>
+          <ul class="space-y-1 text-gray-400 ml-3 text-xs">
+            <li>• ลูกค้าไทยชอบ COD มากกว่า 60%</li>
+            <li>• เพิ่มยอดขายได้ 30–50%</li>
+            <li>• สร้างความน่าเชื่อถือ</li>
+          </ul>
+        </div>
+        <div class="glass rounded-xl p-3 border border-red-500/20">
+          <p class="font-semibold text-red-300 mb-1 text-xs">⚠️ ข้อเสีย COD:</p>
+          <ul class="space-y-1 text-gray-400 ml-3 text-xs">
+            <li>• อัตราปฏิเสธรับ (rejection) 15–30%</li>
+            <li>• ค่าส่งเพิ่ม ฿5–15 ต่อชิ้น</li>
+            <li>• รอรับเงิน 3–7 วัน</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass rounded-2xl p-5">
+      <h3 class="font-bold text-amber-300 mb-3">📦 Volumetric Weight คืออะไร?</h3>
+      <div class="space-y-3 text-sm text-gray-300">
+        <p>ขนส่งคิดราคาจาก <strong class="text-white">น้ำหนักจริง vs น้ำหนักเชิงปริมาตร</strong> เลือกค่าที่มากกว่า</p>
+        <div class="glass rounded-xl p-3 bg-amber-500/5 border border-amber-500/20">
+          <p class="text-amber-300 font-semibold mb-1 text-xs">สูตรคำนวณ:</p>
+          <code class="text-white text-xs">กว้าง × ยาว × สูง (ซม.) ÷ 5,000 = กก.</code>
+          <p class="text-gray-400 text-xs mt-1">เช่น กล่อง 30×30×30 = 27,000 ÷ 5,000 = <strong class="text-white">5.4 กก.</strong></p>
+        </div>
+        <p class="text-xs">💡 แพ็กให้แน่น ลดช่องว่าง ลด volumetric weight ได้มาก ประหยัดค่าส่งหลายบาท</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</main>
+
+<!-- Footer -->
+<footer class="glass mt-12 py-6 text-center text-sm text-gray-500">
+  <p>© 2568 <span class="gradient-text font-semibold">OpenThai AI</span> — ศูนย์รวมโลจิสติกสำหรับผู้ขายออนไลน์ไทย</p>
+  <div class="flex justify-center gap-4 mt-2">
+    <a href="http://localhost:8000/tool" class="hover:text-pink-400 transition">✨ Content Generator</a>
+    <span>•</span>
+    <a href="http://localhost:8000" class="hover:text-pink-400 transition">🏠 หน้าหลัก</a>
+  </div>
+</footer>
+
+<script>
+// ─── Tab switching ──────────────────────────────────────────────────────
+const TABS = ['domestic','marketplace','international','calculator','tracking','tips'];
+function showTab(name) {
+  TABS.forEach(s => {
+    document.getElementById('section-'+s).classList.add('hidden');
+    const btn = document.getElementById('tab-'+s);
+    btn.classList.remove('gradient-btn','text-white');
+    btn.classList.add('glass');
+  });
+  document.getElementById('section-'+name).classList.remove('hidden');
+  const active = document.getElementById('tab-'+name);
+  active.classList.add('gradient-btn','text-white');
+  active.classList.remove('glass');
+}
+
+// ─── Shipping Calculator ──────────────────────────────────────────────
+const RATES = {
+  kerry:  { name:'Kerry Express',     emoji:'🟠', base:35, perKg:8, cod:true,  zones:{bkk:0,central:5,north:10,northeast:10,east:5,south:15,remote:25} },
+  flash:  { name:'Flash Express',     emoji:'⚡', base:25, perKg:6, cod:true,  zones:{bkk:0,central:3,north:8, northeast:8, east:3,south:12,remote:20} },
+  thpost: { name:'ไปรษณีย์ไทย EMS',  emoji:'📮', base:30, perKg:7, cod:false, zones:{bkk:0,central:5,north:10,northeast:10,east:5,south:15,remote:15} },
+};
+function calcCost(r, weightKg, province, addon) {
+  return Math.ceil(r.base + Math.max(0, weightKg-1)*r.perKg + r.zones[province] + addon);
+}
+function calculateShipping() {
+  const weightG   = parseInt(document.getElementById('calcWeight').value) || 500;
+  const province  = document.getElementById('calcProvince').value;
+  const type      = document.getElementById('calcType').value;
+  const weightKg  = Math.max(0.5, weightG/1000);
+  const addon     = (type==='fragile'?15:0)+(type==='food'?10:0);
+  const costs     = Object.fromEntries(Object.entries(RATES).map(([k,r])=>[k, calcCost(r,weightKg,province,addon)]));
+  const minCost   = Math.min(...Object.values(costs));
+  const html = Object.entries(RATES).map(([key,r]) => {
+    const cost = costs[key];
+    const isMin = cost === minCost;
+    return `<div class="glass rounded-2xl p-5 ${isMin?'border border-amber-400/50':''}">
+      ${isMin?'<div class="text-xs font-bold text-amber-300 mb-2">🏆 ถูกที่สุด</div>':''}
+      <div class="text-2xl mb-1">${r.emoji}</div>
+      <h3 class="font-bold mb-2">${r.name}</h3>
+      <div class="text-3xl font-bold gradient-text mb-1">฿${cost}</div>
+      <p class="text-xs text-gray-400 mb-3">${weightG}g → ${province}</p>
+      <div class="text-xs text-gray-400 space-y-1">
+        <div>น้ำหนัก: ${weightKg.toFixed(1)} กก.</div>
+        <div>ค่าโซน: +฿${r.zones[province]}</div>
+        <div>COD: ${r.cod?'✅ มีบริการ':'❌ ไม่มี'}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('calcCards').innerHTML = html;
+  document.getElementById('calcResult').classList.remove('hidden');
+}
+
+// ─── Tracking Auto-detect ─────────────────────────────────────────────
+const PATTERNS = [
+  { re:/^TH\d{9}TH$/i,         name:'ไปรษณีย์ไทย EMS', url:'https://track.thailandpost.co.th/?barcode=' },
+  { re:/^(THFF|FX)\d{9,12}$/i, name:'Flash Express',    url:'https://www.flashexpress.co.th/tracking/?se=' },
+  { re:/^K\d{10,13}$/i,         name:'Kerry Express',    url:'https://track.th.kerryexpress.com/?trackNo=' },
+  { re:/^JT\d{9,12}$/i,         name:'J&T Express',      url:'https://www.jtexpress.co.th/trajectoryQuery?billCode=' },
+  { re:/^NVATH\d{10,}$/i,       name:'Ninja Van',        url:'https://www.ninjavan.co/th-th/tracking?id=' },
+  { re:/^JD\d{18}$/i,           name:'DHL eCommerce',    url:'https://www.dhl.com/th-th/home/tracking.html?tracking-id=' },
+  { re:/^1Z[A-Z0-9]{16}$/i,     name:'UPS',              url:'https://www.ups.com/track?tracknum=' },
+  { re:/^\d{12}$/,              name:'FedEx',            url:'https://www.fedex.com/fedextrack/?trknbr=' },
+];
+let detectedUrl = '';
+function detectCarrier() {
+  const val = document.getElementById('trackingInput').value.trim().toUpperCase();
+  const m   = PATTERNS.find(p => p.re.test(val));
+  const el  = document.getElementById('detectedCarrier');
+  if (m && val.length >= 8) {
+    document.getElementById('carrierName').textContent = m.name;
+    el.classList.remove('hidden');
+    detectedUrl = m.url + val;
+  } else {
+    el.classList.add('hidden');
+    detectedUrl = '';
+  }
+}
+function openTracking() {
+  const val = document.getElementById('trackingInput').value.trim();
+  if (!val) { alert('กรุณาใส่เลข Tracking'); return; }
+  window.open(detectedUrl || 'https://track.thailandpost.co.th/?barcode='+val.toUpperCase(), '_blank');
+}
+</script>
+</body>
+</html>

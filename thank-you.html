@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ขอบคุณที่สมัคร — OpenThai AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800&family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold: #D4AF37;
+  --gold-light: #f0c940;
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --text: #e8e8e8;
+  --muted: #666;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Sarabun', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* BG grid */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(212,175,55,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212,175,55,0.04) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+}
+
+.container { max-width: 680px; margin: 0 auto; padding: 40px 20px 80px; position: relative; }
+
+/* Header */
+.logo {
+  text-align: center;
+  margin-bottom: 48px;
+  font-family: 'Kanit', sans-serif;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+.logo .open { color: #fff; }
+.logo .thai { color: var(--gold); }
+.logo .ai { color: #555; font-size: 18px; }
+
+/* Hero success */
+.success-hero {
+  text-align: center;
+  margin-bottom: 40px;
+  animation: fadeUp 0.6s ease both;
+}
+.success-icon {
+  width: 80px; height: 80px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  margin: 0 auto 20px;
+  box-shadow: 0 0 40px rgba(212,175,55,0.4);
+  animation: pulse-gold 2s ease infinite;
+}
+.success-hero h1 {
+  font-family: 'Kanit', sans-serif;
+  font-size: clamp(24px, 5vw, 32px);
+  font-weight: 800;
+  line-height: 1.3;
+  margin-bottom: 12px;
+}
+.success-hero h1 span { color: var(--gold); }
+.success-hero p {
+  color: #999;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* Steps card */
+.steps-card {
+  background: var(--surface);
+  border: 1px solid rgba(212,175,55,0.2);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 28px;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+.steps-title {
+  font-family: 'Kanit', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.step:last-child { margin-bottom: 0; }
+.step-num {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Kanit', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  color: #0a0a0f;
+  flex-shrink: 0;
+}
+.step-content h3 {
+  font-family: 'Kanit', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.step-content p { color: #888; font-size: 13px; line-height: 1.5; }
+
+/* Scripts preview */
+.scripts-preview {
+  background: var(--surface);
+  border: 1px solid rgba(212,175,55,0.15);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 28px;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+.script-item {
+  border-left: 3px solid var(--gold);
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  border-radius: 0 8px 8px 0;
+  background: rgba(212,175,55,0.04);
+}
+.script-item:last-child { margin-bottom: 0; }
+.script-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.script-preview {
+  font-size: 13px;
+  color: #bbb;
+  line-height: 1.6;
+}
+
+/* CTA Primary */
+.cta-primary {
+  display: block;
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+  color: #0a0a0f;
+  font-family: 'Kanit', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  padding: 18px 32px;
+  border-radius: 14px;
+  text-align: center;
+  text-decoration: none;
+  letter-spacing: 0.3px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 24px rgba(212,175,55,0.3);
+  animation: fadeUp 0.6s 0.3s ease both;
+}
+.cta-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(212,175,55,0.45);
+}
+.cta-note {
+  text-align: center;
+  color: #555;
+  font-size: 12px;
+  margin-bottom: 36px;
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 36px 0;
+}
+.divider-line { flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
+.divider-text { color: #444; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }
+
+/* Upsell card */
+.upsell-card {
+  background: linear-gradient(135deg, #0d0d1a, #100d08);
+  border: 1px solid rgba(212,175,55,0.35);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
+  animation: fadeUp 0.6s 0.4s ease both;
+}
+.upsell-card::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(212,175,55,0.12), transparent);
+  border-radius: 50%;
+}
+.upsell-badge {
+  display: inline-block;
+  background: rgba(212,175,55,0.15);
+  border: 1px solid rgba(212,175,55,0.4);
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 11px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.upsell-card h2 {
+  font-family: 'Kanit', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+.upsell-card h2 span { color: var(--gold); }
+.feature-list { list-style: none; margin: 0 0 20px; }
+.feature-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 14px;
+  color: #ccc;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.feature-list li:last-child { border-bottom: none; }
+.feature-list li::before {
+  content: '✓';
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.upsell-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.upsell-price .price {
+  font-family: 'Kanit', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--gold);
+}
+.upsell-price .period { color: #666; font-size: 14px; }
+.upsell-price .old {
+  color: #444;
+  text-decoration: line-through;
+  font-size: 16px;
+}
+.cta-secondary {
+  display: block;
+  background: transparent;
+  color: var(--gold);
+  font-family: 'Kanit', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px 24px;
+  border-radius: 12px;
+  text-align: center;
+  text-decoration: none;
+  border: 2px solid rgba(212,175,55,0.5);
+  transition: all 0.2s;
+}
+.cta-secondary:hover {
+  background: rgba(212,175,55,0.08);
+  border-color: var(--gold);
+}
+.skip-link {
+  display: block;
+  text-align: center;
+  color: #333;
+  font-size: 12px;
+  text-decoration: none;
+  margin-top: 12px;
+}
+.skip-link:hover { color: #555; }
+
+/* Social proof */
+.social-proof {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 36px;
+  animation: fadeUp 0.6s 0.5s ease both;
+}
+.proof-item {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+}
+.proof-num {
+  font-family: 'Kanit', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--gold);
+  display: block;
+  margin-bottom: 4px;
+}
+.proof-label { font-size: 11px; color: #666; line-height: 1.3; }
+
+/* Footer */
+.footer { text-align: center; color: #333; font-size: 12px; line-height: 2; }
+.footer a { color: #444; }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 20px rgba(212,175,55,0.4); }
+  50% { box-shadow: 0 0 50px rgba(212,175,55,0.7); }
+}
+
+@media (max-width: 480px) {
+  .social-proof { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Logo -->
+  <div class="logo">
+    <span class="open">Open</span><span class="thai">Thai</span> <span class="ai">AI</span>
+  </div>
+
+  <!-- Success Hero -->
+  <div class="success-hero">
+    <div class="success-icon">🎉</div>
+    <h1>สมัครเสร็จแล้ว!<br><span>ตรวจอีเมลได้เลยครับ</span></h1>
+    <p>
+      Script AI 3 ตัวแรกของคุณกำลังเดินทางไปที่อีเมล<br>
+      ในระหว่างนี้ — มีของฟรีให้อีกด้านล่างนี้ครับ 👇
+    </p>
+  </div>
+
+  <!-- Quick Start Steps -->
+  <div class="steps-card">
+    <div class="steps-title">⚡ เริ่มต้นภายใน 3 ขั้นตอน</div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h3>เช็คอีเมล</h3>
+        <p>Script 3 ตัว + คู่มือ quick start จะอยู่ในอีเมลที่ส่งไปแล้ว (เช็ค Spam ด้วยนะครับ)</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h3>เข้าใช้งาน Platform</h3>
+        <p>ไปที่ openthai-ai.vercel.app → เลือกสินค้าจาก OTOP Database → กด Generate</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h3>โพสต์ Script แรกวันนี้</h3>
+        <p>เวลาที่ดีที่สุดคือ 20:00-21:00 น. — Algorithm TikTok ไทยทำงานดีที่สุดช่วงนี้</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Free Scripts Preview -->
+  <div class="scripts-preview">
+    <div class="steps-title">🎬 Preview: Script ที่คุณจะได้รับ</div>
+    <div class="script-item">
+      <div class="script-label">Script #1 — น้ำมันมะพร้าวสกัดเย็น</div>
+      <div class="script-preview">"ผิวแห้งแตกทุกปีซ้ำๆ? หยุดแล้วหันมาฟังนี่สักที! น้ำมันมะพร้าวสกัดเย็น จ.ชุมพร บำรุงผิว ทำอาหาร ขัดฟัน ใน 1 ขวดเดียว..."</div>
+    </div>
+    <div class="script-item">
+      <div class="script-label">Script #2 — ผ้าไหมมัดหมี่</div>
+      <div class="script-preview">"รู้ไหมว่าคนจีนกำลังบ้าสิ่งนี้จากไทย? ผ้าไหมมัดหมี่ จ.ขอนแก่น ลายเป็นเอกลักษณ์ไม่ซ้ำกัน..."</div>
+    </div>
+    <div class="script-item">
+      <div class="script-label">Script #3 — มาสก์ทองคำสมุนไพร</div>
+      <div class="script-preview">"10,000 คนแล้วที่ผิวดีขึ้นใน 7 วัน จากมาสก์ตัวนี้ ขมิ้น มะขาม ว่านหางจระเข้ ไม่มีสารเคมี..."</div>
+    </div>
+  </div>
+
+  <!-- CTA to platform -->
+  <a href="https://openthai-ai.vercel.app" class="cta-primary">
+    🚀 ไปสร้าง Script ของคุณเองเลย →
+  </a>
+  <p class="cta-note">ฟรี 3 script/วัน · ไม่ต้องใส่บัตรเครดิต · เริ่มได้ทันที</p>
+
+  <!-- Social Proof Numbers -->
+  <div class="social-proof">
+    <div class="proof-item">
+      <span class="proof-num">300+</span>
+      <span class="proof-label">สินค้าใน<br>Database</span>
+    </div>
+    <div class="proof-item">
+      <span class="proof-num">9M</span>
+      <span class="proof-label">ผู้สร้างคอนเทนต์<br>ไทยบน TikTok</span>
+    </div>
+    <div class="proof-item">
+      <span class="proof-num">30วิ</span>
+      <span class="proof-label">สร้าง Script<br>พร้อมขาย</span>
+    </div>
+  </div>
+
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-text">ข้อเสนอพิเศษ</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <!-- Upsell Card -->
+  <div class="upsell-card">
+    <div class="upsell-badge">⚡ Early Access Offer</div>
+    <h2>อัปเกรดเป็น <span>Pro Plan</span><br>แค่ ฿149/เดือน</h2>
+    <ul class="feature-list">
+      <li>Unlimited Script Generator (ไม่จำกัด)</li>
+      <li>Trend Alerts — จับ trend TH+CN ทุก 4 ชม.</li>
+      <li>300+ OTOP Database + Thai-China Products</li>
+      <li>Script 3 ภาษา — ไทย/อังกฤษ/จีน</li>
+      <li>AI Agent Score สำหรับสินค้าของคุณ</li>
+      <li>Priority Support ตอบภายใน 24 ชม.</li>
+    </ul>
+    <div class="upsell-price">
+      <span class="price">฿149</span>
+      <span class="period">/เดือน</span>
+      <span class="old">฿299</span>
+    </div>
+    <a href="https://openthai-ai.vercel.app/upgrade?plan=basic&ref=thankyou" class="cta-secondary">
+      อัปเกรดตอนนี้ — Lock ราคานี้ไว้ →
+    </a>
+    <a href="#" class="skip-link">ขอบคุณ แต่ฉันใช้แบบฟรีก่อน</a>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>OpenThai AI · <a href="https://openthai-ai.vercel.app">openthai-ai.vercel.app</a></p>
+    <p>TikTok: <a href="https://tiktok.com/@zj.sy">@zj.sy</a> · Email: occylthailand@gmail.com</p>
+    <p style="margin-top:8px;color:#222">
+      <a href="#" style="color:#222">ยกเลิกการรับอีเมล</a> · 
+      <a href="#" style="color:#222">Privacy Policy</a>
+    </p>
+  </div>
+
+</div>
+
+<script>
+// Auto-fill name from URL params
+const params = new URLSearchParams(window.location.search);
+const name = params.get('name') || '';
+if (name) {
+  document.querySelectorAll('[data-name]').forEach(el => {
+    el.textContent = name;
+  });
+}
+
+// Track upsell click
+document.querySelector('.cta-secondary').addEventListener('click', () => {
+  // Send to n8n webhook
+  fetch('https://your-n8n.railway.app/webhook/openthai-upsell-click', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: params.get('email') || '',
+      event: 'upsell_click',
+      source: 'thankyou_page',
+      timestamp: new Date().toISOString()
+    })
+  }).catch(() => {});
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dev Team Orchestrator — OpenThai.ai</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Sarabun:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a12;
+    --bg2: #090f1c;
+    --bg3: #0d1525;
+    --card: #0f1e35;
+    --border: #1a3050;
+    --border2: #1e3c60;
+    --thai-red: #dc2626;
+    --thai-blue: #1d4ed8;
+    --accent: #00d4ff;
+    --accent2: #00ff88;
+    --accent3: #ff6b35;
+    --gold: #f59e0b;
+    --text: #e2eaf5;
+    --text2: #8ba4c0;
+    --text3: #4a6580;
+    --font-mono: 'Space Mono', monospace;
+    --font-th: 'Sarabun', sans-serif;
+    --font-zh: 'Noto Sans SC', sans-serif;
+    --glow: 0 0 20px rgba(0, 212, 255, 0.3);
+    --glow2: 0 0 30px rgba(0, 255, 136, 0.2);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-th);
+    overflow-x: hidden;
+    line-height: 1.7;
+  }
+
+  /* === GRID BACKGROUND === */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* === NAV === */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 40px;
+    background: rgba(5, 10, 18, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .nav-logo .dot { color: var(--accent2); }
+
+  .nav-tags {
+    display: flex;
+    gap: 8px;
+  }
+
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 2px;
+    border: 1px solid;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .tag-blue { border-color: var(--accent); color: var(--accent); }
+  .tag-green { border-color: var(--accent2); color: var(--accent2); }
+  .tag-orange { border-color: var(--accent3); color: var(--accent3); }
+
+  /* === LANGUAGE SWITCHER === */
+  .lang-switcher {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--border2);
+    border-radius: 5px;
+    overflow: hidden;
+    background: var(--bg3);
+    flex-shrink: 0;
+  }
+
+  .lang-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.06em;
+    transition: all 0.18s;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lang-btn:last-child { border-right: none; }
+
+  .lang-btn:hover {
+    color: var(--text);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .lang-btn.active {
+    color: var(--bg);
+    font-weight: 700;
+    background: var(--accent);
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.15);
+  }
+
+  .lang-btn.active.zh  { background: var(--gold); }
+  .lang-btn.active.en  { background: var(--accent2); }
+
+  .lang-flag-sm { font-size: 13px; line-height: 1; }
+  .lang-code    { font-size: 10px; letter-spacing: 0.1em; }
+
+  .nav-center-tags {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 900px) {
+    .nav-center-tags { display: none; }
+  }
+
+  /* === LANGUAGE CONTENT SWITCHING === */
+  /* Hide non-active language blocks */
+  html.lang-th [data-lang]:not([data-lang="th"]) { display: none !important; }
+  html.lang-zh [data-lang]:not([data-lang="zh"]) { display: none !important; }
+  html.lang-en [data-lang]:not([data-lang="en"]) { display: none !important; }
+
+  /* Highlight active lang-card, dim others */
+  html.lang-th .lang-card.zh,
+  html.lang-th .lang-card.en {
+    opacity: 0.3;
+    filter: grayscale(0.5);
+    transform: scale(0.97) !important;
+    pointer-events: none;
+  }
+  html.lang-zh .lang-card.th,
+  html.lang-zh .lang-card.en {
+    opacity: 0.3;
+    filter: grayscale(0.5);
+    transform: scale(0.97) !important;
+    pointer-events: none;
+  }
+  html.lang-en .lang-card.th,
+  html.lang-en .lang-card.zh {
+    opacity: 0.3;
+    filter: grayscale(0.5);
+    transform: scale(0.97) !important;
+    pointer-events: none;
+  }
+  .lang-card { transition: opacity 0.3s, filter 0.3s, transform 0.3s; }
+
+  /* Active card glows */
+  html.lang-th .lang-card.th { box-shadow: 0 0 20px rgba(0,212,255,0.2); border-color: var(--accent); }
+  html.lang-zh .lang-card.zh { box-shadow: 0 0 20px rgba(245,158,11,0.2); border-color: var(--gold); }
+  html.lang-en .lang-card.en { box-shadow: 0 0 20px rgba(0,255,136,0.2); border-color: var(--accent2); }
+
+  /* === HERO === */
+  .hero {
+    position: relative;
+    padding: 140px 40px 80px;
+    max-width: 1200px;
+    margin: 0 auto;
+    z-index: 1;
+  }
+
+  .hero-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .hero h1 {
+    font-size: clamp(32px, 5vw, 64px);
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+
+  .hero h1 .line1 { color: var(--text); }
+  .hero h1 .line2 {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 18px;
+    color: var(--text2);
+    max-width: 580px;
+    margin: 20px 0 36px;
+    font-family: var(--font-th);
+  }
+
+  .hero-zh {
+    font-family: var(--font-zh);
+    font-size: 14px;
+    color: var(--text3);
+    margin-bottom: 40px;
+    letter-spacing: 0.05em;
+  }
+
+  .hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 48px;
+  }
+
+  .badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--card);
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text2);
+    transition: all 0.2s;
+  }
+
+  .badge:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: var(--glow);
+  }
+
+  .badge .icon { font-size: 14px; }
+
+  /* === PROBLEM SECTION === */
+  .section {
+    position: relative;
+    z-index: 1;
+    padding: 60px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .section-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 32px;
+  }
+
+  .section-title span { color: var(--accent); }
+
+  /* === QUOTE BLOCK === */
+  .quote-block {
+    position: relative;
+    background: var(--card);
+    border-left: 3px solid var(--accent3);
+    padding: 24px 28px;
+    border-radius: 0 6px 6px 0;
+    margin: 24px 0;
+  }
+
+  .quote-block p {
+    font-size: 16px;
+    color: var(--text2);
+    font-style: italic;
+  }
+
+  .quote-block .author {
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--accent3);
+    font-style: normal;
+  }
+
+  /* === PROBLEM LIST === */
+  .problem-list {
+    display: grid;
+    gap: 16px;
+    margin: 32px 0;
+  }
+
+  .problem-item {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: border-color 0.2s;
+  }
+
+  .problem-item:hover { border-color: var(--border2); }
+
+  .problem-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .problem-text h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    font-family: var(--font-mono);
+  }
+
+  .problem-text p {
+    font-size: 14px;
+    color: var(--text2);
+  }
+
+  /* === ARCHITECTURE === */
+  .arch-container {
+    position: relative;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 32px 0;
+  }
+
+  .arch-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .arch-header .dot-row { display: flex; gap: 6px; }
+  .arch-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .arch-dot.r { background: #ff5f57; }
+  .arch-dot.y { background: #febc2e; }
+  .arch-dot.g { background: #28c840; }
+
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 200px 1fr 180px;
+    min-height: 340px;
+  }
+
+  .arch-lead {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    border-right: 1px solid var(--border);
+    background: linear-gradient(135deg, rgba(0,212,255,0.05), transparent);
+    gap: 12px;
+  }
+
+  .arch-lead-icon {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, var(--accent), #0088cc);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.4); }
+    50% { box-shadow: 0 0 40px rgba(0, 212, 255, 0.7); }
+  }
+
+  .arch-lead h3 {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--accent);
+    text-align: center;
+  }
+
+  .arch-lead p {
+    font-size: 11px;
+    color: var(--text3);
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .arch-agents {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-right: 1px solid var(--border);
+  }
+
+  .agent-cell {
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    transition: background 0.2s;
+    cursor: default;
+  }
+
+  .agent-cell:nth-child(even) { border-right: none; }
+  .agent-cell:nth-last-child(-n+2) { border-bottom: none; }
+  .agent-cell:hover { background: rgba(255,255,255,0.02); }
+
+  .agent-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .agent-emoji { font-size: 16px; }
+
+  .agent-name h4 {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .agent-cell p {
+    font-size: 11px;
+    color: var(--text3);
+    line-height: 1.5;
+  }
+
+  .agent-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .stack-pill {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 2px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text3);
+  }
+
+  .stack-pill.blue { border-color: rgba(0,212,255,0.3); color: var(--accent); }
+  .stack-pill.green { border-color: rgba(0,255,136,0.3); color: var(--accent2); }
+  .stack-pill.orange { border-color: rgba(255,107,53,0.3); color: var(--accent3); }
+  .stack-pill.gold { border-color: rgba(245,158,11,0.3); color: var(--gold); }
+
+  .arch-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 24px 20px;
+    gap: 16px;
+  }
+
+  .arch-right h4 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .stack-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  .stack-item .s-icon { font-size: 16px; }
+
+  /* === FLOW DIAGRAM === */
+  .flow-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 32px;
+    overflow-x: auto;
+    flex-wrap: wrap;
+  }
+
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    min-width: 100px;
+  }
+
+  .flow-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    border: 1px solid var(--border2);
+  }
+
+  .flow-icon.f1 { background: rgba(0,212,255,0.1); border-color: var(--accent); }
+  .flow-icon.f2 { background: rgba(245,158,11,0.1); border-color: var(--gold); }
+  .flow-icon.f3 { background: rgba(0,255,136,0.1); border-color: var(--accent2); }
+  .flow-icon.f4 { background: rgba(255,107,53,0.1); border-color: var(--accent3); }
+
+  .flow-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text3);
+    text-align: center;
+    max-width: 90px;
+    line-height: 1.4;
+  }
+
+  .flow-arrow {
+    color: var(--border2);
+    font-size: 20px;
+    padding: 0 4px;
+    margin-bottom: 24px;
+  }
+
+  /* === TRILINGUAL CARDS === */
+  .lang-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin: 32px 0;
+  }
+
+  .lang-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .lang-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-2px);
+  }
+
+  .lang-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .lang-flag { font-size: 20px; }
+
+  .lang-title {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .lang-sub {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: var(--font-mono);
+  }
+
+  .lang-body {
+    padding: 20px;
+  }
+
+  .lang-body p {
+    font-size: 14px;
+    color: var(--text2);
+    line-height: 1.8;
+    margin-bottom: 12px;
+  }
+
+  .lang-body p:last-child { margin-bottom: 0; }
+
+  .lang-card.th .lang-body p { font-family: var(--font-th); }
+  .lang-card.zh .lang-body p { font-family: var(--font-zh); }
+  .lang-card.en .lang-body p { font-family: var(--font-mono); font-size: 12px; }
+
+  /* === OPENTHAI INTEGRATION === */
+  .integration-box {
+    background: linear-gradient(135deg, rgba(0,212,255,0.05), rgba(0,255,136,0.05));
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 32px;
+    margin: 32px 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .integration-box::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .integration-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .integration-title h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .ot-logo {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent2);
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.3);
+    padding: 4px 12px;
+    border-radius: 3px;
+  }
+
+  .use-cases {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+  }
+
+  .use-case {
+    padding: 18px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+
+  .use-case:hover {
+    border-color: var(--accent);
+    box-shadow: var(--glow);
+  }
+
+  .uc-num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .use-case h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .use-case p {
+    font-size: 12px;
+    color: var(--text3);
+    line-height: 1.6;
+  }
+
+  /* === EVOLUTION === */
+  .evolution-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 32px 0;
+  }
+
+  .evo-step {
+    background: var(--bg2);
+    padding: 24px;
+    transition: background 0.2s;
+  }
+
+  .evo-step:hover { background: var(--card); }
+  .evo-step.active { background: rgba(0,212,255,0.07); }
+
+  .evo-num {
+    font-family: var(--font-mono);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--border2);
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .evo-step.active .evo-num { color: var(--accent); }
+
+  .evo-step h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .evo-step p {
+    font-size: 13px;
+    color: var(--text3);
+    line-height: 1.6;
+  }
+
+  .evo-step .evo-tag {
+    display: inline-block;
+    margin-top: 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    border: 1px solid var(--border2);
+    color: var(--text3);
+  }
+
+  .evo-step.active .evo-tag {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+  }
+
+  /* === CODE BLOCK === */
+  .code-block {
+    background: #020810;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 24px 0;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--bg3);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-lang {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.1em;
+  }
+
+  .code-body {
+    padding: 20px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: #cdd6f4;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+
+  .code-body .c-green { color: #a6e3a1; }
+  .code-body .c-blue { color: #89b4fa; }
+  .code-body .c-yellow { color: #f9e2af; }
+  .code-body .c-red { color: #f38ba8; }
+  .code-body .c-gray { color: #585b70; }
+  .code-body .c-cyan { color: #89dceb; }
+
+  /* === FOOTER === */
+  .footer {
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 40px;
+    max-width: 1200px;
+    margin: 60px auto 0;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 40px;
+    align-items: start;
+  }
+
+  .footer-brand {
+    font-family: var(--font-mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .footer-tagline {
+    font-size: 13px;
+    color: var(--text3);
+  }
+
+  .footer-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text3);
+    text-align: right;
+  }
+
+  .footer-links a {
+    color: var(--text2);
+    text-decoration: none;
+  }
+
+  .footer-links a:hover { color: var(--accent); }
+
+  /* === DIVIDER === */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* === SCROLL ANIMATIONS === */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(16px);
+    animation: fadeIn 0.5s ease forwards;
+  }
+
+  @keyframes fadeIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* delay utilities */
+  .d1 { animation-delay: 0.1s; }
+  .d2 { animation-delay: 0.2s; }
+  .d3 { animation-delay: 0.3s; }
+  .d4 { animation-delay: 0.4s; }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 768px) {
+    nav { padding: 10px 16px; gap: 8px; }
+    .hero, .section { padding-left: 20px; padding-right: 20px; }
+    .arch-grid { grid-template-columns: 1fr; }
+    .arch-lead, .arch-right { border-right: none; border-bottom: 1px solid var(--border); }
+    .evolution-row { grid-template-columns: 1fr; }
+    .footer { grid-template-columns: 1fr; }
+    .footer-links { text-align: left; }
+    .flow-diagram { gap: 0; padding: 16px; }
+    .flow-arrow { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    Open<span class="dot">.</span>Thai<span class="dot">.</span>ai
+  </a>
+  <div class="nav-center-tags">
+    <span class="tag tag-blue">#ClaudeCode</span>
+    <span class="tag tag-green">#AIAgent</span>
+    <span class="tag tag-orange">#ThaiDev</span>
+  </div>
+  <div class="lang-switcher">
+    <button class="lang-btn th active" onclick="setLang('th')">
+      <span class="lang-flag-sm">🇹🇭</span>
+      <span class="lang-code">ไทย</span>
+    </button>
+    <button class="lang-btn zh" onclick="setLang('zh')">
+      <span class="lang-flag-sm">🇨🇳</span>
+      <span class="lang-code">中文</span>
+    </button>
+    <button class="lang-btn en" onclick="setLang('en')">
+      <span class="lang-flag-sm">🇬🇧</span>
+      <span class="lang-code">EN</span>
+    </button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow fade-in">OpenThai.ai × Dev Team Orchestrator</div>
+
+  <!-- TH -->
+  <h1 class="fade-in d1" data-lang="th">
+    <div class="line1">ระบบจัดการทีม AI</div>
+    <div class="line2">อัจฉริยะด้วย Claude Code</div>
+  </h1>
+  <p class="hero-sub fade-in d2" data-lang="th">
+    เปลี่ยน AI คนเดียวให้กลายเป็นทีม Dev จริงๆ — Lead, Frontend, Backend, QA, Reviewer ทำงานพร้อมกันใน terminal เดียว
+  </p>
+
+  <!-- ZH -->
+  <h1 class="fade-in d1" data-lang="zh" style="font-family:var(--font-zh);">
+    <div class="line1">AI 开发团队管理系统</div>
+    <div class="line2">通过 Claude Code 智能编排</div>
+  </h1>
+  <p class="hero-sub fade-in d2" data-lang="zh" style="font-family:var(--font-zh);">
+    将单一 AI 转变为真正的开发团队 — Lead、Frontend、Backend、QA、Reviewer 在同一个终端并行工作
+  </p>
+
+  <!-- EN -->
+  <h1 class="fade-in d1" data-lang="en" style="font-family:var(--font-mono);letter-spacing:-0.03em;">
+    <div class="line1">AI Dev Team</div>
+    <div class="line2">Orchestration with Claude Code</div>
+  </h1>
+  <p class="hero-sub fade-in d2" data-lang="en" style="font-family:var(--font-mono);font-size:14px;">
+    Turn a single AI into a real dev team — Lead, Frontend, Backend, QA &amp; Reviewer working in parallel inside one terminal.
+  </p>
+
+  <p class="hero-zh fade-in d2" data-lang="zh" style="font-family:var(--font-zh);color:var(--text3);font-size:13px;margin-bottom:40px;">
+    多智能体框架 · tmux 多窗格协调 · 零额外费用
+  </p>
+
+  <div class="hero-badges fade-in d3">
+    <div class="badge"><span class="icon">🤖</span>Claude Code</div>
+    <div class="badge"><span class="icon">📺</span>tmux Multi-Pane</div>
+    <div class="badge"><span class="icon">⚡</span>Shell Orchestration</div>
+    <div class="badge"><span class="icon">🇹🇭</span>OpenThai.ai Platform</div>
+    <div class="badge"><span class="icon">🔄</span>Parallel Agents</div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- PROBLEM -->
+<section class="section">
+  <div class="section-label" data-lang="th">ปัญหาที่พบบ่อย / Common Pain Points</div>
+  <div class="section-label" data-lang="zh" style="font-family:var(--font-zh);">常见痛点 / Common Pain Points</div>
+  <div class="section-label" data-lang="en">Common Pain Points</div>
+
+  <h2 class="section-title" data-lang="th">ทำไม AI คนเดียว<span> ไม่พอ?</span></h2>
+  <h2 class="section-title" data-lang="zh" style="font-family:var(--font-zh);">为什么单个 AI<span> 不够用？</span></h2>
+  <h2 class="section-title" data-lang="en">Why One AI<span> Is Never Enough?</span></h2>
+
+  <div class="quote-block">
+    <p data-lang="th">"มันเหมือนจ้างคนๆ เดียวมานั่งทำงานแทนทั้งบริษัท — ทำได้ครบ แต่ไม่มีทางดีเท่าทีมจริงๆ"</p>
+    <p data-lang="zh" style="font-family:var(--font-zh);">"就像雇一个人替代整个公司工作 — 能完成任务，但绝无法媲美真正的团队。"</p>
+    <p data-lang="en">"It's like hiring one person to replace the entire company — it gets done, but it'll never match a real team."</p>
+    <div class="author" data-lang="th">— จากประสบการณ์ใช้งาน Claude Code จริง</div>
+    <div class="author" data-lang="zh">— 来自真实 Claude Code 使用经验</div>
+    <div class="author" data-lang="en">— From real Claude Code usage experience</div>
+  </div>
+
+  <div class="problem-list">
+    <div class="problem-item fade-in">
+      <div class="problem-icon">🧠</div>
+      <div class="problem-text">
+        <h4>Context Overflow</h4>
+        <p data-lang="th">สั่งงานใหญ่ๆ เช่น "ทำ feature login ทั้ง frontend-backend" — AI ต้องแบกทุกอย่างไว้ในหัวเดียว พองานยาวขึ้น คุณภาพเริ่มด้อยลง</p>
+        <p data-lang="zh" style="font-family:var(--font-zh);">当任务庞大（如"完成完整的登录功能"），AI 需要在单一上下文中承载一切。任务越长，质量越下降。</p>
+        <p data-lang="en">When you ask for a large task like "build the entire login feature", the AI must hold everything in one context. As work grows longer, quality degrades.</p>
+      </div>
+    </div>
+    <div class="problem-item fade-in d1">
+      <div class="problem-icon">🔀</div>
+      <div class="problem-text">
+        <h4>Pattern Amnesia</h4>
+        <p data-lang="th">เขียน backend แล้วลืม pattern ที่ตกลงกันไว้ใน frontend บางทีลืมของที่คุยไปตอนต้น เพราะ context window มีขีดจำกัด</p>
+        <p data-lang="zh" style="font-family:var(--font-zh);">写完 backend 后忘记了 frontend 约定的模式，或遗忘早期对话内容——因为 context window 有上限。</p>
+        <p data-lang="en">The AI writes the backend, then forgets the patterns agreed upon in the frontend — or loses early conversation context due to context window limits.</p>
+      </div>
+    </div>
+    <div class="problem-item fade-in d2">
+      <div class="problem-icon">🐌</div>
+      <div class="problem-text">
+        <h4>Sequential Bottleneck</h4>
+        <p data-lang="th">งาน frontend ต้องรอ backend เสร็จก่อน ไม่มีการทำงานแบบ parallel ทำให้เสียเวลามากกว่าที่ควร</p>
+        <p data-lang="zh" style="font-family:var(--font-zh);">前端工作必须等待后端完成——没有并行处理，浪费了本可节省的大量时间。</p>
+        <p data-lang="en">Frontend work must wait for backend to finish. No parallel execution means wasted time that a real team would never tolerate.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ARCHITECTURE -->
+<section class="section">
+  <div class="section-label" data-lang="th">Architecture / สถาปัตยกรรมระบบ</div>
+  <div class="section-label" data-lang="zh" style="font-family:var(--font-zh);">系统架构 / Architecture</div>
+  <div class="section-label" data-lang="en">System Architecture</div>
+  <h2 class="section-title" data-lang="th">ทีม AI <span>8 Panes</span> ใน Terminal เดียว</h2>
+  <h2 class="section-title" data-lang="zh" style="font-family:var(--font-zh);">单终端内的 <span>8 面板</span> AI 团队</h2>
+  <h2 class="section-title" data-lang="en">An <span>8-Pane</span> AI Team in One Terminal</h2>
+
+  <div class="arch-container fade-in">
+    <div class="arch-header">
+      <div class="dot-row">
+        <div class="arch-dot r"></div>
+        <div class="arch-dot y"></div>
+        <div class="arch-dot g"></div>
+      </div>
+      <span>tmux — Dev Team Orchestrator v1.0 — OpenThai.ai</span>
+    </div>
+    <div class="arch-grid">
+      <!-- LEAD -->
+      <div class="arch-lead">
+        <div class="arch-lead-icon">🤖</div>
+        <h3>LEAD</h3>
+        <p>รับงาน → วิเคราะห์ → กระจายงานให้ทีม</p>
+        <p style="margin-top:8px;font-family:var(--font-mono);font-size:10px;color:var(--accent);background:rgba(0,212,255,0.08);padding:6px 10px;border-radius:4px;border:1px solid rgba(0,212,255,0.2);text-align:center;">Orchestrator<br>Claude Instance</p>
+      </div>
+
+      <!-- AGENTS GRID -->
+      <div class="arch-agents">
+        <div class="agent-cell">
+          <div class="agent-name">
+            <span class="agent-emoji">🎨</span>
+            <h4>FRONTEND</h4>
+          </div>
+          <p>UI components, user experience</p>
+          <div class="agent-stack">
+            <span class="stack-pill blue">React</span>
+            <span class="stack-pill blue">Next.js</span>
+            <span class="stack-pill blue">TypeScript</span>
+          </div>
+        </div>
+        <div class="agent-cell">
+          <div class="agent-name">
+            <span class="agent-emoji">🖌️</span>
+            <h4>DESIGNER</h4>
+          </div>
+          <p>UI/UX design, visual consistency</p>
+          <div class="agent-stack">
+            <span class="stack-pill gold">Figma</span>
+            <span class="stack-pill gold">Tailwind</span>
+          </div>
+        </div>
+        <div class="agent-cell">
+          <div class="agent-name">
+            <span class="agent-emoji">⚙️</span>
+            <h4>BACKEND</h4>
+          </div>
+          <p>API, business logic, database</p>
+          <div class="agent-stack">
+            <span class="stack-pill green">REST</span>
+            <span class="stack-pill green">GraphQL</span>
+            <span class="stack-pill green">DB</span>
+          </div>
+        </div>
+        <div class="agent-cell">
+          <div class="agent-name">
+            <span class="agent-emoji">🧪</span>
+            <h4>QA</h4>
+          </div>
+          <p>Edge cases, test coverage</p>
+          <div class="agent-stack">
+            <span class="stack-pill orange">Jest</span>
+            <span class="stack-pill orange">Playwright</span>
+          </div>
+        </div>
+        <div class="agent-cell">
+          <div class="agent-name">
+            <span class="agent-emoji">📱</span>
+            <h4>MOBILE</h4>
+          </div>
+          <p>iOS / Android apps</p>
+          <div class="agent-stack">
+            <span class="stack-pill blue">React Native</span>
+            <span class="stack-pill blue">Expo</span>
+          </div>
+        </div>
+        <div class="agent-cell">
+          <div class="agent-name">
+            <span class="agent-emoji">🔍</span>
+            <h4>REVIEWER</h4>
+          </div>
+          <p>Code review, standards check</p>
+          <div class="agent-stack">
+            <span class="stack-pill gold">ESLint</span>
+            <span class="stack-pill gold">Patterns</span>
+          </div>
+        </div>
+        <div class="agent-cell" style="border-right:none;">
+          <div class="agent-name">
+            <span class="agent-emoji">🚀</span>
+            <h4>DEVOPS</h4>
+          </div>
+          <p>CI/CD, Docker, deployment</p>
+          <div class="agent-stack">
+            <span class="stack-pill green">Docker</span>
+            <span class="stack-pill green">CI/CD</span>
+          </div>
+        </div>
+        <div class="agent-cell" style="border-right:none;border-bottom:none;">
+          <div class="agent-name" style="opacity:0.3;">
+            <span class="agent-emoji">➕</span>
+            <h4>CUSTOM</h4>
+          </div>
+          <p style="opacity:0.4;">เพิ่ม agent ของคุณเอง</p>
+        </div>
+      </div>
+
+      <!-- RIGHT STACK -->
+      <div class="arch-right">
+        <div>
+          <h4>Stack</h4>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="stack-item"><span class="s-icon">🤖</span>Claude Code</div>
+            <div class="stack-item"><span class="s-icon">📺</span>tmux</div>
+            <div class="stack-item"><span class="s-icon">📜</span>Shell Script</div>
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <h4>Protocol</h4>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="stack-item" style="font-size:10px;"><span class="s-icon">🔗</span>tmux paste-buffer</div>
+            <div class="stack-item" style="font-size:10px;"><span class="s-icon">📂</span>projects.json</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOW -->
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">WORKFLOW</span>
+      <span class="code-lang">Lead → Parallel Agents → Review</span>
+    </div>
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="flow-icon f1">👤</div>
+        <div class="flow-label">ผู้ใช้สั่งงาน<br>"เพิ่ม login feature"</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon f2">🤖</div>
+        <div class="flow-label">Lead วิเคราะห์<br>& แตก tasks</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon f3">⚡</div>
+        <div class="flow-label">Frontend + Backend<br>ทำงาน parallel</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="flow-icon f4">✅</div>
+        <div class="flow-label">QA + Reviewer<br>ตรวจสอบ</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- OPENTHAI INTEGRATION -->
+<section class="section">
+  <div class="section-label" data-lang="th">Platform Integration / การรวมเข้ากับ Platform</div>
+  <div class="section-label" data-lang="zh" style="font-family:var(--font-zh);">平台集成 / Platform Integration</div>
+  <div class="section-label" data-lang="en">Platform Integration</div>
+  <h2 class="section-title" data-lang="th">Dev Team Orchestrator <span>× OpenThai.ai</span></h2>
+  <h2 class="section-title" data-lang="zh">Dev Team Orchestrator <span>× OpenThai.ai</span></h2>
+  <h2 class="section-title" data-lang="en">Dev Team Orchestrator <span>× OpenThai.ai</span></h2>
+
+  <div class="integration-box fade-in">
+    <div class="integration-title">
+      <h3>สิ่งที่ Platform ได้รับจากการรวม</h3>
+      <span class="ot-logo">OpenThai.ai</span>
+    </div>
+    <p style="color:var(--text2);font-size:15px;margin-bottom:8px;">
+      Dev Team Orchestrator เป็นเครื่องมือที่เหมาะสมกับ OpenThai.ai อย่างยิ่ง เพราะ Platform ต้องการสร้างเนื้อหาหลายภาษา (ไทย/จีน/อังกฤษ) พร้อมกัน วิเคราะห์ข้อมูลซัพพลายเชน AI และสร้าง Business Framework Analysis แบบ parallel
+    </p>
+    <p style="color:var(--text3);font-size:13px;font-family:var(--font-zh);">
+      多智能体团队架构完美契合 OpenThai.ai 平台需求 — 同时生成三语内容、分析供应链数据、构建商业框架
+    </p>
+
+    <div class="use-cases">
+      <div class="use-case">
+        <div class="uc-num">USE CASE 01</div>
+        <h4>🌐 Trilingual Content Pipeline</h4>
+        <p>Frontend agent สร้าง UI, Backend agent ดึงข้อมูล AI Supply Chain, Content agent เขียนเนื้อหาทั้ง 3 ภาษา พร้อมกัน</p>
+      </div>
+      <div class="use-case">
+        <div class="uc-num">USE CASE 02</div>
+        <h4>📊 Business Framework Generator</h4>
+        <p>Lead รับ Business Problem → กระจายให้ SWOT agent, Porter's agent, BCG agent ทำงานพร้อมกัน → Reviewer รวมผล</p>
+      </div>
+      <div class="use-case">
+        <div class="uc-num">USE CASE 03</div>
+        <h4>🔗 AI Supply Chain Mapper</h4>
+        <p>Backend agent ดึงข้อมูล Supplier, Designer agent สร้าง Visualization, Frontend agent build interactive map</p>
+      </div>
+      <div class="use-case">
+        <div class="uc-num">USE CASE 04</div>
+        <h4>📈 Trade Agreement Analyzer</h4>
+        <p>Research agent วิเคราะห์ tariff rates, Content agent เขียน Thai/ZH/EN สรุป, DevOps agent deploy รายงานอัตโนมัติ</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- EVOLUTION -->
+<section class="section">
+  <div class="section-label" data-lang="th">AI Evolution / วิวัฒนาการ AI</div>
+  <div class="section-label" data-lang="zh" style="font-family:var(--font-zh);">AI 进化 / AI Evolution</div>
+  <div class="section-label" data-lang="en">AI Evolution</div>
+  <h2 class="section-title" data-lang="th">จาก Assistant <span>สู่ Agent Team</span></h2>
+  <h2 class="section-title" data-lang="zh" style="font-family:var(--font-zh);">从助手<span>到智能体团队</span></h2>
+  <h2 class="section-title" data-lang="en">From Assistant <span>to Agent Team</span></h2>
+
+  <div class="evolution-row">
+    <div class="evo-step">
+      <div class="evo-num">1.0</div>
+      <h3>Assistant</h3>
+      <p>คุณสั่ง — AI ทำ ทีละขั้น reactive ไม่มี autonomy</p>
+      <span class="evo-tag">คำสั่งเดียว</span>
+    </div>
+    <div class="evo-step">
+      <div class="evo-num">2.0</div>
+      <h3>Copilot</h3>
+      <p>AI เข้าใจ context ช่วยงานแบบ collaborative แต่ยังเป็น AI คนเดียว</p>
+      <span class="evo-tag">Claude Code เดี่ยว</span>
+    </div>
+    <div class="evo-step active">
+      <div class="evo-num">3.0</div>
+      <h3>Agent Team ✦</h3>
+      <p>หลาย AI ทำงานพร้อมกัน มี orchestration แบบทีม Dev จริงๆ</p>
+      <span class="evo-tag">Dev Team Orchestrator</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- TRILINGUAL -->
+<section class="section">
+  <div class="section-label" data-lang="th">Multilingual Summary / สรุปหลายภาษา</div>
+  <div class="section-label" data-lang="zh" style="font-family:var(--font-zh);">多语言摘要 / Multilingual Summary</div>
+  <div class="section-label" data-lang="en">Multilingual Summary</div>
+  <h2 class="section-title" data-lang="th">บทสรุป<span> 3 ภาษา</span></h2>
+  <h2 class="section-title" data-lang="zh" style="font-family:var(--font-zh);">三语<span>内容摘要</span></h2>
+  <h2 class="section-title" data-lang="en">Summary in <span>3 Languages</span></h2>
+
+  <div class="lang-grid">
+    <div class="lang-card th fade-in">
+      <div class="lang-header">
+        <span class="lang-flag">🇹🇭</span>
+        <div>
+          <div class="lang-title">ภาษาไทย</div>
+          <div class="lang-sub">Thai Summary</div>
+        </div>
+      </div>
+      <div class="lang-body">
+        <p>Dev Team Orchestrator เปลี่ยนวิธีการทำงานกับ AI อย่างสิ้นเชิง แทนที่จะสั่ง AI ทำทุกอย่างคนเดียว เราออกแบบให้มันทำงานเป็นทีมจริงๆ</p>
+        <p>ใน OpenThai.ai เราสามารถนำแนวคิดนี้มาใช้สร้างเนื้อหาพาณิชย์หลายภาษา วิเคราะห์ Supply Chain AI และสร้าง Business Framework ได้เร็วกว่าเดิมหลายเท่า</p>
+        <p>Stack ที่ต้องการ: Claude Code + tmux + Shell Script เท่านั้น ไม่มีค่าใช้จ่ายเพิ่ม</p>
+      </div>
+    </div>
+
+    <div class="lang-card zh fade-in d1">
+      <div class="lang-header">
+        <span class="lang-flag">🇨🇳</span>
+        <div>
+          <div class="lang-title">中文摘要</div>
+          <div class="lang-sub">Chinese Summary</div>
+        </div>
+      </div>
+      <div class="lang-body">
+        <p>Dev Team Orchestrator 彻底改变了与 AI 协作的方式。不再让单个 AI 承担所有工作，而是构建真正的多智能体团队架构。</p>
+        <p>在 OpenThai.ai 平台中，此架构可同步生成泰中英三语商务内容、分析 AI 供应链数据，并并行运行多种商业框架分析。</p>
+        <p>所需技术栈极简：Claude Code + tmux + Shell Script，无需额外付费。</p>
+      </div>
+    </div>
+
+    <div class="lang-card en fade-in d2">
+      <div class="lang-header">
+        <span class="lang-flag">🇬🇧</span>
+        <div>
+          <div class="lang-title">English Summary</div>
+          <div class="lang-sub">EN</div>
+        </div>
+      </div>
+      <div class="lang-body">
+        <p>Dev Team Orchestrator transforms how we work with AI — from a single AI doing everything, to a real team of specialized agents working in parallel.</p>
+        <p>For OpenThai.ai, this means simultaneous trilingual content generation, parallel AI supply chain analysis, and concurrent business framework execution.</p>
+        <p>Stack required: Claude Code + tmux + Shell Script. Zero extra cost for existing Claude Code users.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- CODE SETUP -->
+<section class="section">
+  <div class="section-label" data-lang="th">Quick Start / เริ่มต้นใช้งาน</div>
+  <div class="section-label" data-lang="zh" style="font-family:var(--font-zh);">快速开始 / Quick Start</div>
+  <div class="section-label" data-lang="en">Quick Start</div>
+  <h2 class="section-title" data-lang="th">Setup <span>3 ขั้นตอน</span></h2>
+  <h2 class="section-title" data-lang="zh" style="font-family:var(--font-zh);">三步<span>完成部署</span></h2>
+  <h2 class="section-title" data-lang="en">Setup in <span>3 Steps</span></h2>
+
+  <div class="code-block fade-in">
+    <div class="code-header">
+      <span class="code-lang">SHELL — setup.sh</span>
+      <span class="code-lang">OpenThai.ai × Dev Team Orchestrator</span>
+    </div>
+    <div class="code-body">
+<span class="c-gray"># Step 1: สร้าง tmux session สำหรับ OpenThai Dev Team</span><br>
+<span class="c-blue">tmux</span> <span class="c-green">new-session</span> -d -s <span class="c-yellow">openthai-team</span><br><br>
+
+<span class="c-gray"># Step 2: แบ่ง panes — Lead + 7 Specialists</span><br>
+<span class="c-blue">tmux</span> split-window -h <span class="c-gray"># Frontend | Backend</span><br>
+<span class="c-blue">tmux</span> split-window -v <span class="c-gray"># + Designer</span><br>
+<span class="c-blue">tmux</span> select-pane -t <span class="c-yellow">0</span> <span class="c-gray">&amp;&amp;</span> tmux split-window -v <span class="c-gray"># + QA</span><br><br>
+
+<span class="c-gray"># Step 3: เปิด Claude Code ในแต่ละ pane</span><br>
+<span class="c-blue">for</span> pane <span class="c-green">in</span> <span class="c-yellow">$(tmux list-panes -F '#{pane_id}')</span>; <span class="c-green">do</span><br>
+&nbsp;&nbsp;<span class="c-blue">tmux</span> send-keys -t <span class="c-yellow">$pane</span> <span class="c-red">"claude"</span> Enter<br>
+<span class="c-green">done</span><br><br>
+
+<span class="c-gray"># สั่ง Lead — มันจะกระจายงานให้ทีมเอง</span><br>
+<span class="c-blue">tmux</span> send-keys -t <span class="c-yellow">openthai-team:0.0</span> \<br>
+&nbsp;&nbsp;<span class="c-red">"สร้าง trilingual content pipeline สำหรับ AI Supply Chain report"</span> Enter
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div>
+    <div class="footer-brand">OpenThai.ai</div>
+    <div class="footer-tagline">AI-Powered Multilingual Commerce Platform for Thailand & ASEAN</div>
+    <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+      <span class="tag tag-blue">#ClaudeCode</span>
+      <span class="tag tag-green">#AIAgent</span>
+      <span class="tag tag-orange">#ThaiDev</span>
+      <span class="tag tag-blue">#โปรแกรมเมอร์ไทย</span>
+    </div>
+  </div>
+  <div class="footer-links">
+    <span style="color:var(--text3);font-size:10px;">POWERED BY</span>
+    <a href="#">Claude Code</a>
+    <a href="#">tmux</a>
+    <a href="#">Shell Script</a>
+    <a href="#">OpenThai.ai</a>
+  </div>
+</footer>
+
+<script>
+  function setLang(lang) {
+    // Update <html> class for CSS-driven content switching
+    document.documentElement.className = 'lang-' + lang;
+
+    // Update button active states
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.classList.contains(lang));
+    });
+
+    // Update <html> lang attribute
+    const map = { th: 'th', zh: 'zh-Hans', en: 'en' };
+    document.documentElement.lang = map[lang] || lang;
+
+    // Persist choice
+    try { localStorage.setItem('ot-lang', lang); } catch(e) {}
+  }
+
+  // Restore saved language on load
+  (function() {
+    let saved = 'th';
+    try { saved = localStorage.getItem('ot-lang') || 'th'; } catch(e) {}
+    setLang(saved);
+  })();
+</script>
+
+</body>
+</html>
