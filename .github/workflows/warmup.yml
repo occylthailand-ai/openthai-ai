@@ -82,8 +82,15 @@ jobs:
           fi
 
       - name: 🔔 LINE Notify (slow response only)
-        if: steps.health.outputs.slow_response == 'true' && secrets.LINE_NOTIFY_TOKEN != ''
+        if: steps.health.outputs.slow_response == 'true'
+        env:
+          LINE_NOTIFY_TOKEN: ${{ secrets.LINE_NOTIFY_TOKEN }}
         run: |
-          curl -s -X POST https://notify-api.line.me/api/notify \
-            -H "Authorization: Bearer ${{ secrets.LINE_NOTIFY_TOKEN }}" \
-            --data-urlencode "message=⚠️ OpenThai AI SLOW: ${{ steps.health.outputs.health_ms }}ms (threshold: ${{ env.THRESHOLD_MS }}ms) — $(date '+%H:%M UTC')"
+          if [ -n "$LINE_NOTIFY_TOKEN" ]; then
+            curl -s -X POST https://notify-api.line.me/api/notify \
+              -H "Authorization: Bearer $LINE_NOTIFY_TOKEN" \
+              --data-urlencode "message=⚠️ OpenThai AI SLOW: ${{ steps.health.outputs.health_ms }}ms (threshold: ${{ env.THRESHOLD_MS }}ms) — $(date '+%H:%M UTC')"
+            echo "📱 LINE notified"
+          else
+            echo "⏭️ LINE_NOTIFY_TOKEN not set — skipping LINE notify"
+          fi
