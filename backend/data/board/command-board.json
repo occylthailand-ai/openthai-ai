@@ -7,28 +7,20 @@
   "notification_hours": { "start": "08:00", "end": "18:00", "tz": "Asia/Bangkok" },
   "notify_channels": ["LINE", "mobile_push"],
 
-  "active_obstacles": [
+  "active_obstacles": [],
+
+  "resolved": [
     {
       "id": "OBS-009",
       "severity": "CRITICAL",
-      "reported_by": "mythos",
-      "reported_at": "2026-05-14T21:40:00+07:00",
-      "title": "🚨 GitHub Remote ไม่ได้ตั้งค่า — Fixes ติดค้างใน Local",
-      "detail": "มี 4 commits สำคัญพร้อม deploy แต่ push ไม่ได้เพราะไม่มี GitHub remote\nFixes ที่รอ: cold start fix, warmup endpoint, affiliate bug, security headers, PDPA docs, Omise service\nต้องตั้ง remote ก่อน Vercel จะ deploy code ใหม่ได้",
-      "commits_pending": ["4365006","fcf9de6","f04ac23","ff22314"],
-      "action_steps": [
-        "1. สร้าง GitHub repo: github.com/new ชื่อ openthai-ai",
-        "2. git -C 'C:\\OPENTHAI AI' remote add origin https://github.com/YOUR_USERNAME/openthai-ai.git",
-        "3. git -C 'C:\\OPENTHAI AI' push -u origin master",
-        "4. ใน Vercel Dashboard: เชื่อม GitHub repo → auto-deploy ทุก push"
-      ],
-      "assigned_to": "zuejai",
-      "status": "PENDING",
-      "eta": "ทันที — ทุก fix ติดค้างจนกว่าจะ push"
+      "title": "✅ GitHub Push สำเร็จ — code ขึ้น GitHub แล้ว",
+      "resolved_at": "2026-05-18T00:00:00+07:00",
+      "resolved_by": "mythos",
+      "method": "Chrome MCP → github.com/occylthailand-ai/openthai-ai → push worktree branch → force push to main",
+      "result": "36 commits พร้อม code Node.js/Express/React ทั้งหมดอยู่ใน GitHub แล้ว — branch: main",
+      "github_url": "https://github.com/occylthailand-ai/openthai-ai"
     }
   ],
-
-  "resolved": [],
 
   "team_status": {
     "mythos":      { "status": "ONLINE", "last_seen": "2026-05-14T21:40:00+07:00", "current_task": "แก้ WARN ทั้งหมด — รอ GitHub push" },
