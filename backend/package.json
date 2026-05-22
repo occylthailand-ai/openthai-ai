@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "sdk:gen": "node sdk-gen.js",
+    "sdk:watch": "node --watch sdk-gen.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

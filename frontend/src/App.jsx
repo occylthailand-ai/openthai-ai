@@ -24,6 +24,20 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
 import ScrollToTop from './components/ScrollToTop';
 import { apiUrl } from './apiBase';
+import VoiceCommander from './components/VoiceCommander';
+import VoiceCommandPage from './pages/VoiceCommandPage';
+import VideoGeneratorPage from './pages/VideoGeneratorPage';
+import PaymentPage from './pages/PaymentPage';
+import CorporateDashboard from './pages/corporate/CorporateDashboard';
+import InvestorRelationsPage from './pages/corporate/InvestorRelationsPage';
+import CompliancePage from './pages/corporate/CompliancePage';
+import ESGPage from './pages/corporate/ESGPage';
+import HRPage from './pages/corporate/HRPage';
+import GlobalOpsPage from './pages/corporate/GlobalOpsPage';
+import FinancePage from './pages/corporate/FinancePage';
+import BoardPage from './pages/corporate/BoardPage';
+import PRCommsPage from './pages/corporate/PRCommsPage';
+import CommandCenterPage from './pages/corporate/CommandCenterPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -89,9 +103,25 @@ function App() {
             <Route path="/trending" element={<TrendingPage />} />
             <Route path="/calendar" element={<ContentCalendarPage />} />
             <Route path="/brand" element={<BrandMemoryPage />} />
+            <Route path="/voice" element={<VoiceCommandPage />} />
+            <Route path="/video" element={isAuthenticated ? <VideoGeneratorPage /> : <Navigate to="/login" />} />
+            <Route path="/payment" element={<PaymentPage />} />
+            {/* Corporate System — Public Company */}
+            <Route path="/corporate"             element={isAuthenticated ? <CorporateDashboard />    : <Navigate to="/login" />} />
+            <Route path="/corporate/board"       element={isAuthenticated ? <BoardPage />             : <Navigate to="/login" />} />
+            <Route path="/corporate/ir"          element={isAuthenticated ? <InvestorRelationsPage /> : <Navigate to="/login" />} />
+            <Route path="/corporate/compliance"  element={isAuthenticated ? <CompliancePage />        : <Navigate to="/login" />} />
+            <Route path="/corporate/esg"         element={isAuthenticated ? <ESGPage />               : <Navigate to="/login" />} />
+            <Route path="/corporate/hr"          element={isAuthenticated ? <HRPage />                : <Navigate to="/login" />} />
+            <Route path="/corporate/finance"     element={isAuthenticated ? <FinancePage />           : <Navigate to="/login" />} />
+            <Route path="/corporate/global"      element={isAuthenticated ? <GlobalOpsPage />         : <Navigate to="/login" />} />
+            <Route path="/corporate/pr"          element={isAuthenticated ? <PRCommsPage />           : <Navigate to="/login" />} />
+            <Route path="/corporate/command"     element={isAuthenticated ? <CommandCenterPage />     : <Navigate to="/login" />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />
+          {/* Voice Commander Widget — ปรากฏทุกหน้าหลัง login */}
+          {isAuthenticated && <VoiceCommander mode="widget" />}
         </Router>
       </ToastProvider>
     </ErrorBoundary>
