@@ -10,6 +10,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import cron from 'node-cron';
 import https from 'https';
+import { createHmac } from 'node:crypto';
 import { openapiSpec } from './openapi.js';
 import { handleMcp } from './mcp-handler.js';
 import { createMemorySystem } from './vector-memory.js';
@@ -2507,6 +2508,142 @@ app.patch('/api/corporate/tasks', requireAuth, corpLimiter, (req, res) => {
 app.get('/api/corporate/kpis',   (req, res) => res.json({ success: true, data: pr.getKPIs() }));
 app.patch('/api/corporate/kpis', requireAuth, corpLimiter, (req, res) => {
   pr.saveKPIs(req.body); res.json({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  LINE MESSAGING API WEBHOOK — รับ events จาก LINE OA @326gwipr
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Save LINE User ID to Supabase line_followers table ────────────────────────
+async function saveLINEUserId(userId, displayName, pictureUrl) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) return;
+  try {
+    await fetch(`${process.env.SUPABASE_URL}/rest/v1/line_followers`, {
+      method: 'POST',
+      headers: {
+        'apikey': process.env.SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates',
+      },
+      body: JSON.stringify({ user_id: userId, display_name: displayName, picture_url: pictureUrl, updated_at: new Date().toISOString() }),
+    });
+  } catch (e) {
+    addLog('warn', 'LINE', `saveLINEUserId error: ${e.message}`);
+  }
+}
+
+// POST /api/line/webhook — LINE OA incoming events
+app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  // LINE always expects 200 OK immediately
+  res.status(200).json({ received: true });
+
+  const signature = req.headers['x-line-signature'] || '';
+  const rawBody   = req.body;
+
+  // Signature check (skip if no secret configured — dev mode)
+  if (process.env.LINE_CHANNEL_SECRET) {
+    const expected = createHmac('sha256', process.env.LINE_CHANNEL_SECRET).update(rawBody).digest('base64');
+    if (signature !== expected) {
+      addLog('warn', 'LINE', 'Webhook signature mismatch — ignored');
+      return;
+    }
+  }
+
+  let body;
+  try { body = JSON.parse(rawBody.toString()); } catch { return; }
+
+  const token = process.env.LINE_CHANNEL_TOKEN;
+
+  for (const event of (body.events || [])) {
+    const userId      = event.source?.userId;
+    const replyToken  = event.replyToken;
+    const eventType   = event.type;
+
+    addLog('info', 'LINE', `Event: ${eventType} userId=${userId}`);
+
+    // ── ดึง profile แล้วบันทึก userId ────────────────────────────────────────
+    if (userId && token) {
+      try {
+        const profileRes = await fetch(`https://api.line.me/v2/bot/profile/${userId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (profileRes.ok) {
+          const profile = await profileRes.json();
+          await saveLINEUserId(userId, profile.displayName, profile.pictureUrl);
+          addLog('info', 'LINE', `✅ Saved LINE userId: ${userId} (${profile.displayName})`);
+        }
+      } catch (e) {
+        addLog('warn', 'LINE', `Profile fetch error: ${e.message}`);
+      }
+    }
+
+    // ── Reply to messages ─────────────────────────────────────────────────────
+    if (eventType === 'message' && replyToken && token) {
+      const userMsg = event.message?.text || '';
+      let replyText = `สวัสดีครับ! 👋 ขอบคุณที่ติดต่อ OpenThai AI\nเราได้รับข้อความของคุณแล้ว\n\n🌐 openthai-ai.com`;
+
+      // Auto-reply with AI if message is a question
+      if (userMsg.length > 3 && (gemini || anthropic)) {
+        try {
+          const aiRes = await smartGenerate({
+            product: userMsg,
+            platform: 'line',
+            style: 'friendly',
+            lang: 'th',
+            audience: 'SME',
+            prompt_override: `ผู้ใช้ส่งข้อความใน LINE OA: "${userMsg}"\nตอบสั้นๆ กระชับ เป็นมิตร ภาษาไทย ไม่เกิน 200 ตัวอักษร (OpenThai AI assistant)`,
+          });
+          if (aiRes?.content) replyText = aiRes.content.slice(0, 4000);
+        } catch { /* fallback to default reply */ }
+      }
+
+      try {
+        await fetch('https://api.line.me/v2/bot/message/reply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ replyToken, messages: [{ type: 'text', text: replyText }] }),
+        });
+      } catch (e) {
+        addLog('warn', 'LINE', `Reply error: ${e.message}`);
+      }
+    }
+
+    // ── Follow event (เพิ่มเพื่อน) ────────────────────────────────────────────
+    if (eventType === 'follow' && replyToken && token) {
+      try {
+        await fetch('https://api.line.me/v2/bot/message/reply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            replyToken,
+            messages: [{ type: 'text', text: '🎉 ยินดีต้อนรับสู่ OpenThai AI!\n\nเราช่วย SME ไทยสร้างคอนเทนต์ TikTok ด้วย AI ครบ 241+ platforms\n\n🌐 openthai-ai.com\n#OpenThaiAI' }],
+          }),
+        });
+      } catch (e) {
+        addLog('warn', 'LINE', `Follow reply error: ${e.message}`);
+      }
+    }
+  }
+});
+
+// GET /api/line/users — list captured LINE User IDs (admin)
+app.get('/api/line/users', requireAuth, async (req, res) => {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+    return res.json({ success: true, data: [], note: 'Supabase not configured' });
+  }
+  try {
+    const r = await fetch(`${process.env.SUPABASE_URL}/rest/v1/line_followers?order=updated_at.desc&limit=100`, {
+      headers: {
+        'apikey': process.env.SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+      },
+    });
+    const data = await r.json();
+    res.json({ success: true, data: Array.isArray(data) ? data : [], count: Array.isArray(data) ? data.length : 0 });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // POST /api/n8n/register-webhooks — auto-register n8n webhook URLs
