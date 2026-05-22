@@ -100,7 +100,7 @@ const anthropic = (() => {
               'X-Title': 'OpenThai AI',
             },
             body: JSON.stringify({
-              model: model.startsWith('claude') ? `anthropic/${model}` : model,
+              model: ({'claude-haiku-4-5-20251001':'anthropic/claude-haiku-4-5','claude-haiku-4-5':'anthropic/claude-haiku-4-5','claude-sonnet-4-5':'anthropic/claude-sonnet-4-5','claude-3-haiku-20240307':'anthropic/claude-3-haiku'})[model] || (model.startsWith('claude') ? `anthropic/${model}` : model),
               max_tokens,
               messages: msgs,
             }),
