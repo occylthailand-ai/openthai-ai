@@ -10,6 +10,20 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import cron from 'node-cron';
 import https from 'https';
+import { openapiSpec } from './openapi.js';
+import { handleMcp } from './mcp-handler.js';
+import { createMemorySystem } from './vector-memory.js';
+import { createWebhookSystem } from './webhook-system.js';
+import { createTenantManager, requireTenant, PLANS } from './tenant-manager.js';
+import { processVoiceCommand } from './voice-commander.js';
+import { generateVideoScript, submitToVideoAPI, pollVideoJob } from './video-generator.js';
+import {
+  createPromptPayCharge, getChargeStatus, createOrGetCustomer,
+  createSubscription, cancelSubscription, verifyOmiseWebhook,
+  SUBSCRIPTION_PLANS,
+} from './omise-payment.js';
+import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
+import { createPRSystem } from './pr-communications.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -20,6 +34,14 @@ const IS_VERCEL = !!process.env.VERCEL;
 // Local: ทุกอย่างอยู่ใน backend/data/
 const STATIC_DATA_DIR = join(__dirname, 'data');
 const WRITE_DATA_DIR  = IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR;
+// ── Infrastructure Layer — Vector Memory · Webhooks · Multi-tenant ────────────
+// Initialized after WRITE_DATA_DIR is known
+const memory    = createMemorySystem(WRITE_DATA_DIR, () => gemini ? { _googleAI: { getGenerativeModel: (o) => new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel(o) } } : null);
+const webhooks  = createWebhookSystem(WRITE_DATA_DIR);
+const tenants   = createTenantManager(WRITE_DATA_DIR);
+const corporate = createCorporateSystem(WRITE_DATA_DIR);
+const pr        = createPRSystem(WRITE_DATA_DIR);
+
 import {
   signToken, verifyToken, requireAuth,
   getAdminUsers, checkPassword, checkOverrideKey,
@@ -56,12 +78,45 @@ const authLimiter = rateLimit({
 });
 
 // ─── AI Clients — Hybrid: Claude (primary) → Gemini (fallback) → Mock ────────
-const anthropic = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  : null;
+// Priority: 1) Anthropic direct  2) OpenRouter (Claude via OpenRouter)  3) Gemini
+const anthropic = (() => {
+  if (process.env.ANTHROPIC_API_KEY) {
+    return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  if (process.env.OPENROUTER_API_KEY) {
+    // OpenRouter wrapper — ใช้ interface เดิมของ Anthropic SDK
+    return {
+      messages: {
+        create: async ({ model, max_tokens, messages, system }) => {
+          const msgs = system
+            ? [{ role: 'system', content: system }, ...messages]
+            : messages;
+          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': 'https://www.openthai-ai.com',
+              'X-Title': 'OpenThai AI',
+            },
+            body: JSON.stringify({
+              model: model.startsWith('claude') ? `anthropic/${model}` : model,
+              max_tokens,
+              messages: msgs,
+            }),
+          });
+          const data = await res.json();
+          if (data.error) throw new Error(data.error.message || 'OpenRouter error');
+          return { content: [{ text: data.choices[0].message.content }] };
+        },
+      },
+    };
+  }
+  return null;
+})();
 
 const gemini = process.env.GEMINI_API_KEY
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({ model: 'gemini-1.5-flash' })
+  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({ model: 'gemini-flash-latest' })
   : null;
 
 // ── Generate with Claude Haiku 4.5 (fast + affordable) ──────────────────────
@@ -82,7 +137,7 @@ async function generateWithClaude(form) {
   return data;
 }
 
-// ── Generate with Gemini 1.5 Flash ──────────────────────────────────────────
+// ── Generate with Gemini Flash Latest ──────────────────────────────────────────
 async function generateWithGemini(form) {
   const result = await gemini.generateContent(buildPrompt(form));
   const text = result.response.text().trim();
@@ -325,8 +380,9 @@ app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
     saveAffiliates(affiliates); // บันทึกลงไฟล์ถาวร
     console.log(`✅ Affiliate สมัครใหม่: ${name} (${email}) — Ref: ${record.ref_code}`);
 
-    // ส่ง welcome email อัตโนมัติ (async — ไม่บล็อก response)
+    // ส่ง welcome email + dispatch webhook (async — ไม่บล็อก response)
     sendAffiliateWelcome(email, name, record.ref_code, record.ref_link);
+    webhooks.dispatch('affiliate.joined', { name, ref_code: record.ref_code, platform: record.platform });
 
     res.json({
       success: true,
@@ -709,6 +765,16 @@ async function runAgent(agent) {
       }
     }
     console.log(`[Agent] ✅ Done — Score: ${result.criticScore}`);
+
+    // Auto-learn into memory + fire webhook (non-blocking)
+    memory.autoLearn({ tenantId: agent.tenantId || 'global', result, form: {
+      product: agent.product, category: agent.category, platform: agent.platform, style: agent.style,
+    }}).catch(() => {});
+    webhooks.dispatch('agent.completed', {
+      agentId: agent.id, agentName: agent.name, product: agent.product,
+      platform: agent.platform, score: result.criticScore, source: result.source,
+    }, agent.tenantId || null);
+
     return entry;
   } catch (err) {
     console.error(`[Agent] ❌ Failed: ${err.message}`);
@@ -1020,8 +1086,12 @@ function addLog(level, source, message, detail = null) {
   sysLogs.unshift(entry);
   if (sysLogs.length > MAX_LOGS) sysLogs.splice(MAX_LOGS);
   saveSysLogs(sysLogs);
-  if (level === 'error') console.error(`[${source}] ${message}`, detail || '');
-  else console.log(`[${source}] ${message}`);
+  if (level === 'error') {
+    console.error(`[${source}] ${message}`, detail || '');
+    webhooks.dispatch('system.error', { source, message, detail: detail || null });
+  } else {
+    console.log(`[${source}] ${message}`);
+  }
 }
 
 // ── Watchdog state ─────────────────────────────────────────────────────────────
@@ -1068,6 +1138,7 @@ async function runWatchdog() {
   const next = new Date(); next.setMinutes(next.getMinutes() + 30);
   watchdogStats.nextRun  = next.toISOString();
   addLog('info', 'Watchdog', `✅ Watchdog เสร็จ — checked:${watchdogStats.checked} healed:${healed}`);
+  if (healed > 0) webhooks.dispatch('watchdog.healed', { checked: watchdogStats.checked, healed });
   return healed;
 }
 
@@ -1083,6 +1154,18 @@ if (!IS_VERCEL) {
 // Log startup
 addLog('info', 'System', `🚀 OpenThai AI backend started — AI:${anthropic?'Claude':gemini?'Gemini':'Mock'}`);
 (() => { const c = getSystemCharter(); addLog('info', 'Charter', `📜 นโยบายถาวร v${c.version} — ${c.title}`); })();
+
+// ── TEST: GET /api/test-gemini ────────────────────────────────────────────────
+app.get('/api/test-gemini', async (req, res) => {
+  if (!gemini) return res.json({ status: 'no_key', gemini: false });
+  try {
+    const result = await gemini.generateContent('Reply ONLY with this exact text: {"test":"ok","source":"gemini"}');
+    const text = result.response.text().trim();
+    return res.json({ status: 'ok', text, gemini: true });
+  } catch (err) {
+    return res.json({ status: 'error', error: err.message, code: err.status || err.code });
+  }
+});
 
 // ── 1. GET /api/system/metrics ───────────────────────────────────────────────
 app.get('/api/system/metrics', (req, res) => {
@@ -1276,14 +1359,14 @@ Warnings: ${recentWarns.slice(0,3).map(w=>w.message).join(' | ') || 'ไม่�
 // ─── Health check (v2) ────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   const charter = getSystemCharter();
-  const aiEngine = anthropic ? 'claude-haiku-4-5-20251001' : gemini ? 'gemini-1.5-flash' : 'mock';
+  const aiEngine = anthropic ? 'claude-haiku-4-5-20251001' : gemini ? 'gemini-flash-latest' : 'mock';
   res.json({
     status:        'ok',
     version:       '2.0.0',
     charter_version: charter.version,
     charter_title:   charter.title,
     ai_primary:    anthropic ? '✅ Claude Haiku'     : '⚠️ No ANTHROPIC_API_KEY',
-    ai_fallback:   gemini    ? '✅ Gemini 1.5 Flash' : '⚠️ No GEMINI_API_KEY',
+    ai_fallback:   gemini    ? '✅ Gemini Flash Latest' : '⚠️ No GEMINI_API_KEY',
     ai_active:     aiEngine,
     google_oauth:  !!process.env.GOOGLE_CLIENT_ID,
     affiliates:    affiliates.length,
@@ -1308,6 +1391,9 @@ app.get('/api/health', (req, res) => {
       watchdog:           '✅ Active',
       diagnostics:        '✅ Active',
       persistence:        '✅ system_log + agents.json + agent_checkpoint',
+      vector_memory:      '✅ Active (semantic long-term memory)',
+      webhook_system:     `✅ Active (${webhooks.list().length} registered)`,
+      multi_tenant:       `✅ Active (${tenants.listAll().length} tenants)`,
     },
   });
 });
@@ -1404,6 +1490,313 @@ app.get('/tool', (req, res) => {
 // ─── Serve logistics.html at /logistics ──────────────────────────────────────
 app.get('/logistics', (req, res) => {
   res.sendFile(join(__dirname, '..', 'logistics.html'));
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  STAINLESS-LAYER — OpenAPI · SDK · MCP Server
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── GET /api/openapi.json — Machine-readable API spec ─────────────────────────
+app.get('/api/openapi.json', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.json(openapiSpec);
+});
+
+// ── GET /api-docs — Interactive Swagger UI (CDN, no extra deps) ───────────────
+app.get('/api-docs', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>OpenThai AI — API Docs</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"/>
+  <style>
+    body { margin:0; background:#0f0f1a; }
+    .swagger-ui .topbar { background: linear-gradient(135deg,#fe2c55,#6366f1); }
+    .swagger-ui .topbar .download-url-wrapper input[type=text] { display:none; }
+    .swagger-ui .topbar-wrapper .link { pointer-events:none; }
+    .swagger-ui .topbar-wrapper img { content:url('https://www.openthai-ai.com/logo.png'); height:32px; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script>
+    SwaggerUIBundle({
+      url: '/api/openapi.json',
+      dom_id: '#swagger-ui',
+      deepLinking: true,
+      presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+      layout: 'BaseLayout',
+      tryItOutEnabled: true,
+      requestInterceptor: (req) => {
+        const token = localStorage.getItem('auth_token');
+        if (token) req.headers['Authorization'] = 'Bearer ' + token;
+        return req;
+      },
+    });
+  </script>
+</body>
+</html>`);
+});
+
+// ── POST /mcp — MCP Server (Model Context Protocol) ──────────────────────────
+// Lets Claude agents and other AI systems discover and call OpenThai AI tools.
+// Implements JSON-RPC 2.0 + MCP spec (2024-11-05).
+//   node sdk:  new Client({ name:'x', version:'1' })  →  transport POST /mcp
+//   methods:   initialize | tools/list | tools/call
+const mcpLimiter = rateLimit({ windowMs: 60000, max: 60, message: { error: 'MCP rate limit exceeded' } });
+
+app.post('/mcp', mcpLimiter, handleMcp);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  VOICE COMMANDER — รับ transcript → AI แปล intent → รัน command → speak_text
+// ═══════════════════════════════════════════════════════════════════════════════
+const voiceLimiter = rateLimit({ windowMs: 60000, max: 20, message: { error: 'Voice API rate limit exceeded' } });
+
+app.post('/api/voice/command', voiceLimiter, async (req, res) => {
+  const { transcript, lang, tenantId } = req.body || {};
+  if (!transcript?.trim()) {
+    return res.status(400).json({ success: false, error: 'transcript is required' });
+  }
+  try {
+    const result = await processVoiceCommand(
+      { transcript, lang, tenantId: req.tenant?.id || tenantId || 'global' },
+      { anthropic, gemini, smartGenerate, mockGenerate },
+    );
+    addLog('info', 'Voice', `🎙️ "${transcript.slice(0, 60)}" → ${result.action} (${(result.confidence * 100).toFixed(0)}%)`);
+    webhooks.dispatch('voice.command', { action: result.action, transcript: transcript.slice(0, 100) }, tenantId || null);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error('[voice]', err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/voice/commands — list available voice commands (th/zh/en)
+app.get('/api/voice/commands', (req, res) => {
+  res.json({
+    success: true,
+    lang_supported: ['th-TH', 'zh-CN', 'en-US'],
+    commands: [
+      { th: 'สร้างคอนเทนต์ [สินค้า]',      zh: '为[产品]创建内容',        en: 'Create content for [product]',      action: 'generate_content' },
+      { th: 'ดูเทรนด์วันนี้',               zh: '查看今日趋势',            en: 'Show trending hashtags',            action: 'get_trending' },
+      { th: 'ดูข่าวล่าสุด',                 zh: '最新新闻资讯',            en: 'Get latest news',                   action: 'get_news' },
+      { th: 'ตรวจสุขภาพระบบ',               zh: '检查系统健康状态',        en: 'Check system health',               action: 'system_health' },
+      { th: 'วิเคราะห์คู่แข่งนิช [niche]', zh: '分析[领域]竞争对手',      en: 'Analyze competitor niche [niche]',  action: 'competitor_analyze' },
+      { th: 'ดูรายการเอเจนต์',              zh: '查看Agent列表',           en: 'List agents',                       action: 'list_agents' },
+      { th: 'ช่วยอะไรได้บ้าง',              zh: '帮助 / 可以做什么',       en: 'What can you do?',                  action: 'help' },
+    ],
+  });
+});
+
+// ── GET /mcp — MCP server metadata (for discovery) ───────────────────────────
+app.get('/mcp', (req, res) => {
+  res.json({
+    name:        'openthai-ai',
+    version:     '2.0.0',
+    description: 'OpenThai AI — Thai social media content generation. POST /mcp for JSON-RPC.',
+    protocol:    'mcp/2024-11-05',
+    tools_count: 9,
+    docs:        '/api-docs',
+    spec:        '/api/openapi.json',
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  VECTOR MEMORY — Long-term semantic memory for AI agents
+// ═══════════════════════════════════════════════════════════════════════════════
+const memoryLimiter = rateLimit({ windowMs: 60000, max: 30, message: { error: 'Memory API rate limit exceeded' } });
+
+// POST /api/memory/store — บันทึก memory พร้อม embedding
+app.post('/api/memory/store', memoryLimiter, async (req, res) => {
+  try {
+    const { text, type, metadata, tenantId } = req.body || {};
+    if (!text) return res.status(400).json({ success: false, message: 'text is required' });
+    const tid = req.tenant?.id || tenantId || 'global';
+    const result = await memory.store({ tenantId: tid, text, type, metadata });
+    res.json({ success: true, ...result });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// POST /api/memory/search — ค้นหาด้วย semantic similarity
+app.post('/api/memory/search', memoryLimiter, async (req, res) => {
+  try {
+    const { query, type, topK, threshold, tenantId } = req.body || {};
+    if (!query) return res.status(400).json({ success: false, message: 'query is required' });
+    const tid = req.tenant?.id || tenantId || 'global';
+    const result = await memory.search({ tenantId: tid, query, type, topK, threshold });
+    res.json({ success: true, ...result });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// GET /api/memory — list memories
+app.get('/api/memory', (req, res) => {
+  const { type, limit, tenantId } = req.query;
+  const tid = req.tenant?.id || tenantId || 'global';
+  const result = memory.list({ tenantId: tid, type, limit: parseInt(limit) || 50 });
+  res.json({ success: true, ...result });
+});
+
+// DELETE /api/memory/:id — ลบ memory รายชิ้น
+app.delete('/api/memory/:id', (req, res) => {
+  const tid = req.tenant?.id || req.query.tenantId || 'global';
+  const result = memory.delete({ tenantId: tid, id: req.params.id });
+  res.json({ success: true, ...result });
+});
+
+// DELETE /api/memory — clear ทั้งหมด (with optional ?type=)
+app.delete('/api/memory', (req, res) => {
+  const tid = req.tenant?.id || req.query.tenantId || 'global';
+  const result = memory.clear({ tenantId: tid, type: req.query.type });
+  res.json({ success: true, ...result });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  WEBHOOK SYSTEM — Push events to subscribers
+// ═══════════════════════════════════════════════════════════════════════════════
+const webhookLimiter = rateLimit({ windowMs: 60000, max: 20, message: { error: 'Webhook API rate limit' } });
+
+// POST /api/webhooks — ลงทะเบียน webhook
+app.post('/api/webhooks', webhookLimiter, (req, res) => {
+  try {
+    const { url, events, description } = req.body || {};
+    const tenantId = req.tenant?.id || 'global';
+    const result = webhooks.register({ tenantId, url, events, description });
+    res.json({ success: true, ...result });
+  } catch (e) { res.status(400).json({ success: false, message: e.message }); }
+});
+
+// GET /api/webhooks — list webhooks
+app.get('/api/webhooks', (req, res) => {
+  const tenantId = req.tenant?.id;
+  const adminView = !tenantId; // admin sees all
+  res.json({ success: true, data: webhooks.list({ tenantId, adminView }) });
+});
+
+// DELETE /api/webhooks/:id — unregister
+app.delete('/api/webhooks/:id', (req, res) => {
+  const result = webhooks.remove(req.params.id);
+  res.json({ success: true, ...result });
+});
+
+// POST /api/webhooks/:id/test — fire test event
+app.post('/api/webhooks/:id/test', async (req, res) => {
+  try {
+    const result = await webhooks.test(req.params.id);
+    res.json({ success: true, ...result });
+  } catch (e) { res.status(404).json({ success: false, message: e.message }); }
+});
+
+// GET /api/webhooks/logs — delivery log (admin)
+app.get('/api/webhooks/logs', (req, res) => {
+  res.json({ success: true, data: webhooks.logs({ limit: parseInt(req.query.limit) || 50 }) });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  MULTI-TENANT — แต่ละร้านค้ามี agent space ของตัวเอง
+// ═══════════════════════════════════════════════════════════════════════════════
+const tenantLimiter = rateLimit({ windowMs: 15 * 60000, max: 10, message: { error: 'Tenant API rate limit' } });
+
+// POST /api/tenants/register — สร้าง tenant ใหม่
+app.post('/api/tenants/register', tenantLimiter, (req, res) => {
+  try {
+    const { name, email, plan, businessType, contactPhone } = req.body || {};
+    const result = tenants.register({ name, email, plan, businessType, contactPhone });
+    addLog('info', 'Tenant', `🏪 Tenant ใหม่: ${result.tenant.name} (${result.tenant.email}) plan:${result.tenant.plan}`);
+    webhooks.dispatch('tenant.created', { tenantId: result.tenant.id, name: result.tenant.name, plan: result.tenant.plan });
+    res.json({
+      success: true,
+      message: '🎉 ลงทะเบียนสำเร็จ! บันทึก API key ไว้ด้วย — จะไม่แสดงอีกครั้ง',
+      tenant:  result.tenant,
+      apiKey:  result.apiKey,
+      note:    'ใช้ X-API-Key header ในทุก request หรือ login เพื่อรับ JWT',
+    });
+  } catch (e) { res.status(400).json({ success: false, message: e.message }); }
+});
+
+// POST /api/tenants/login — login รับ JWT
+app.post('/api/tenants/login', tenantLimiter, (req, res) => {
+  try {
+    const { email, apiKey } = req.body || {};
+    const result = tenants.login({ email, apiKey });
+    res.json({ success: true, ...result });
+  } catch (e) { res.status(401).json({ success: false, message: e.message }); }
+});
+
+// GET /api/tenants/me — ข้อมูล tenant ปัจจุบัน (ต้องการ X-API-Key หรือ JWT)
+app.get('/api/tenants/me', requireTenant(tenants), (req, res) => {
+  res.json({ success: true, tenant: tenants.safeView(req.tenant) });
+});
+
+// PATCH /api/tenants/me — อัปเดต settings
+app.patch('/api/tenants/me', requireTenant(tenants), (req, res) => {
+  try {
+    const updated = tenants.update(req.tenant.id, req.body);
+    res.json({ success: true, tenant: updated });
+  } catch (e) { res.status(400).json({ success: false, message: e.message }); }
+});
+
+// POST /api/tenants/me/rotate-key — rotate API key
+app.post('/api/tenants/me/rotate-key', requireTenant(tenants), (req, res) => {
+  const result = tenants.rotateKey(req.tenant.id);
+  res.json({ success: true, ...result });
+});
+
+// GET /api/tenants — admin: list all tenants
+app.get('/api/tenants', requireAuth, (req, res) => {
+  res.json({ success: true, data: tenants.listAll(), plans: PLANS });
+});
+
+// GET /api/tenants/plans — public: plan details
+app.get('/api/tenants/plans', (req, res) => {
+  res.json({ success: true, plans: PLANS });
+});
+
+// ── Tenant-scoped AI Generation (uses X-API-Key + tracks daily quota) ─────────
+app.post('/api/t/generate', requireTenant(tenants), generateLimiter, async (req, res) => {
+  const tenant = req.tenant;
+
+  // Check daily quota
+  if (!tenants.withinLimit(tenant.id)) {
+    return res.status(429).json({
+      success: false,
+      message: `เกิน quota รายวัน (${tenant.planLimits.generates_per_day} ครั้ง) — อัปเกรด plan`,
+      plan: tenant.plan,
+    });
+  }
+
+  const form = { ...req.body };
+  // Apply tenant brand defaults if not specified
+  if (!form.product?.trim()) return res.status(400).json({ error: 'product is required' });
+  form.platform = form.platform || tenant.settings.default_platform;
+  form.lang     = form.lang     || tenant.settings.default_lang;
+  form.style    = form.style    || tenant.settings.default_style;
+
+  const sanitize = (s) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').slice(0, 500) : '');
+  form.product  = sanitize(form.product);
+  form.audience = sanitize(form.audience);
+  form.price    = sanitize(form.price);
+
+  try {
+    const data = await smartGenerate(form);
+    tenants.trackUsage(tenant.id);
+
+    // Auto-learn into tenant's memory (non-blocking)
+    memory.autoLearn({ tenantId: tenant.id, result: data, form }).catch(() => {});
+
+    // Dispatch webhook event
+    webhooks.dispatch('content.generated', {
+      product: form.product, platform: form.platform, score: data.criticScore,
+    }, tenant.id);
+
+    return res.json({ ...data, tenantId: tenant.id });
+  } catch (err) {
+    const fallback = mockGenerate(form);
+    return res.json({ ...fallback, tenantId: tenant.id });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1758,6 +2151,389 @@ app.get('/api/autopost/process', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//  VIDEO GENERATOR — Script + Storyboard + Multi-provider Video AI
+// ═══════════════════════════════════════════════════════════════════════════════
+const VIDEO_JOBS_FILE = join(WRITE_DATA_DIR, 'video_jobs.json');
+function loadVideoJobs() {
+  try { if (existsSync(VIDEO_JOBS_FILE)) return JSON.parse(readFileSync(VIDEO_JOBS_FILE, 'utf8')); } catch (_) {}
+  return [];
+}
+function saveVideoJobs(data) {
+  try { writeFileSync(VIDEO_JOBS_FILE, JSON.stringify(data.slice(0, 200), null, 2), 'utf8'); } catch (_) {}
+}
+const videoJobs = loadVideoJobs();
+
+const videoLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'Video API rate limit — 10/min' } });
+
+// POST /api/video/generate — สร้าง Script + ส่งไป Video API
+app.post('/api/video/generate', videoLimiter, async (req, res) => {
+  const form = req.body || {};
+  if (!form.product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const sanitize = s => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').slice(0, 500) : '');
+  form.product     = sanitize(form.product);
+  form.description = sanitize(form.description);
+
+  try {
+    const script = await generateVideoScript(form, { anthropic, gemini });
+    const provider = form.provider || 'mock';
+    const apiKey   = provider === 'runway' ? process.env.RUNWAY_API_KEY
+                   : provider === 'pika'   ? process.env.PIKA_API_KEY
+                   : provider === 'kling'  ? process.env.KLING_API_KEY
+                   : provider === 'luma'   ? process.env.LUMA_API_KEY
+                   : provider === 'veo'    ? process.env.GEMINI_API_KEY
+                   : '';
+
+    const job = await submitToVideoAPI(script, provider, apiKey || '');
+
+    // persist job
+    const entry = { id: `vj_${Date.now()}`, form, script, job, createdAt: new Date().toISOString() };
+    videoJobs.unshift(entry);
+    saveVideoJobs(videoJobs);
+
+    // fire webhook
+    webhooks.dispatch('video.generated', { jobId: entry.id, product: form.product, provider, score: script.criticScore }, null);
+
+    res.json({ success: true, script, job, jobRecordId: entry.id });
+  } catch (e) {
+    addLog('error', 'VideoGen', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/video/jobs — รายการ jobs
+app.get('/api/video/jobs', (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+  res.json({ success: true, data: videoJobs.slice(0, limit) });
+});
+
+// GET /api/video/jobs/:id/status — poll provider status
+app.get('/api/video/jobs/:id/status', async (req, res) => {
+  const entry = videoJobs.find(j => j.id === req.params.id);
+  if (!entry) return res.status(404).json({ error: 'job not found' });
+
+  const { job, form } = entry;
+  if (job.provider === 'mock') return res.json({ ...job, message: 'Script-only mode' });
+
+  const apiKey = form.provider === 'runway' ? process.env.RUNWAY_API_KEY
+               : form.provider === 'pika'   ? process.env.PIKA_API_KEY
+               : form.provider === 'kling'  ? process.env.KLING_API_KEY
+               : form.provider === 'luma'   ? process.env.LUMA_API_KEY : '';
+  try {
+    const status = await pollVideoJob(job.job_id, job.provider, apiKey || '');
+    entry.job = { ...entry.job, ...status };
+    saveVideoJobs(videoJobs);
+    res.json({ success: true, ...status });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  OMISE PAYMENT — PromptPay QR + Subscription Billing
+// ═══════════════════════════════════════════════════════════════════════════════
+const PAYMENTS_FILE = join(WRITE_DATA_DIR, 'payments.json');
+function loadPayments() {
+  try { if (existsSync(PAYMENTS_FILE)) return JSON.parse(readFileSync(PAYMENTS_FILE, 'utf8')); } catch (_) {}
+  return [];
+}
+function savePayments(data) {
+  try { writeFileSync(PAYMENTS_FILE, JSON.stringify(data.slice(0, 500), null, 2), 'utf8'); } catch (_) {}
+}
+const payments = loadPayments();
+
+const paymentLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'Payment rate limit' } });
+
+// POST /api/payment/create — สร้าง PromptPay charge หรือ subscription
+app.post('/api/payment/create', paymentLimiter, async (req, res) => {
+  const { plan = 'pro', method = 'promptpay', email, name } = req.body || {};
+  const planDef = SUBSCRIPTION_PLANS[plan];
+  if (!planDef) return res.status(400).json({ error: 'Invalid plan' });
+  if (planDef.price_thb === 0) return res.json({ success: true, plan, status: 'free', message: 'ไม่ต้องชำระเงิน' });
+
+  if (!process.env.OMISE_SECRET_KEY) {
+    // Mock mode — Omise ยังไม่ได้ตั้ง
+    const mock = {
+      charge_id:     `mock_charge_${Date.now()}`,
+      status:        'pending',
+      amount_thb:    planDef.price_thb,
+      qr_image_url:  null,
+      expires_at:    new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      promptpay_ref: 'MOCKREF001',
+      plan,
+      message:       'OMISE_SECRET_KEY ยังไม่ได้ตั้งค่า — นี่คือ mock response',
+    };
+    payments.unshift({ ...mock, method, createdAt: new Date().toISOString() });
+    savePayments(payments);
+    return res.json({ success: true, ...mock });
+  }
+
+  try {
+    if (method === 'promptpay') {
+      const charge = await createPromptPayCharge({
+        amount_thb: planDef.price_thb,
+        description: `OpenThai AI ${planDef.name} Plan`,
+        metadata: { plan, email: email || '', method },
+      });
+      payments.unshift({ ...charge, plan, method, createdAt: new Date().toISOString() });
+      savePayments(payments);
+      return res.json({ success: true, ...charge, plan });
+    }
+
+    if (method === 'subscription' && email) {
+      const customer = await createOrGetCustomer({ email, name: name || email });
+      const sub = await createSubscription({ customer_id: customer.customer_id, plan_key: plan });
+      payments.unshift({ ...sub, method, createdAt: new Date().toISOString() });
+      savePayments(payments);
+      return res.json({ success: true, ...sub });
+    }
+
+    return res.status(400).json({ error: 'method must be promptpay or subscription' });
+  } catch (e) {
+    addLog('error', 'Payment', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/payment/status/:chargeId — poll charge status
+app.get('/api/payment/status/:chargeId', async (req, res) => {
+  if (!process.env.OMISE_SECRET_KEY) {
+    return res.json({ charge_id: req.params.chargeId, status: 'pending', paid: false, message: 'Omise not configured' });
+  }
+  try {
+    const status = await getChargeStatus(req.params.chargeId);
+    // If paid → update payment record
+    if (status.paid) {
+      const rec = payments.find(p => p.charge_id === req.params.chargeId);
+      if (rec && !rec.paid_at) { rec.paid_at = status.paid_at; rec.status = 'successful'; savePayments(payments); }
+      webhooks.dispatch('payment.completed', { charge_id: req.params.chargeId, amount_thb: status.amount_thb, plan: rec?.plan }, null);
+    }
+    res.json({ success: true, ...status });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/payment/plans — ราคาแผนทั้งหมด
+app.get('/api/payment/plans', (req, res) => {
+  res.json({ success: true, plans: SUBSCRIPTION_PLANS });
+});
+
+// GET /api/payment/history — ประวัติ payment (admin)
+app.get('/api/payment/history', requireAuth, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  res.json({ success: true, data: payments.slice(0, limit), total: payments.length });
+});
+
+// POST /api/payment/webhook — Omise webhook (signed)
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  const sig = req.headers['x-opn-signature'] || req.headers['x-omise-signature'] || '';
+  if (!verifyOmiseWebhook(req.body, sig)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  try {
+    const event = JSON.parse(req.body.toString());
+    const key   = event.key;   // charge.complete, charge.fail, etc.
+    const data  = event.data;
+    addLog('info', 'OmiseWebhook', `Event: ${key} — charge: ${data?.id}`);
+    if (key === 'charge.complete' && data?.paid) {
+      const rec = payments.find(p => p.charge_id === data.id);
+      if (rec) { rec.status = 'successful'; rec.paid_at = data.paid_at; savePayments(payments); }
+      webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
+    }
+    res.json({ received: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  n8n AUTOMATION — Webhook receiver + workflow trigger
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// POST /api/n8n/trigger — n8n calls this to trigger actions in OpenThai AI
+app.post('/api/n8n/trigger', async (req, res) => {
+  const { action, payload, secret } = req.body || {};
+  if (secret !== (process.env.N8N_WEBHOOK_SECRET || 'openthai-n8n-secret')) {
+    return res.status(401).json({ error: 'Invalid secret' });
+  }
+  addLog('info', 'n8n', `Trigger: ${action}`);
+  try {
+    switch (action) {
+      case 'generate_content': {
+        const form = payload?.form || {};
+        if (!form.product) return res.status(400).json({ error: 'form.product required' });
+        const result = await smartGenerate(form);
+        webhooks.dispatch('content.generated', { product: form.product, score: result.criticScore, source: result.source }, payload?.tenantId || null);
+        return res.json({ success: true, action, result });
+      }
+      case 'run_agent': {
+        const agent = agents.find(a => a.id === payload?.agentId);
+        if (!agent) return res.status(404).json({ error: 'agent not found' });
+        const result = await runAgent(agent);
+        return res.json({ success: true, action, result });
+      }
+      case 'dispatch_webhook': {
+        await webhooks.dispatch(payload?.event, payload?.data, payload?.tenantId);
+        return res.json({ success: true, action });
+      }
+      default:
+        return res.status(400).json({ error: `Unknown action: ${action}` });
+    }
+  } catch (e) {
+    addLog('error', 'n8n', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/n8n/status — n8n dashboard / setup guide
+app.get('/api/n8n/status', (req, res) => {
+  const baseUrl = process.env.BACKEND_URL || `http://localhost:${PORT}`;
+  res.json({
+    success: true,
+    n8n_configured: !!process.env.N8N_URL,
+    n8n_url: process.env.N8N_URL || null,
+    webhook_endpoints: {
+      trigger:           `POST ${baseUrl}/api/n8n/trigger`,
+      content_generated: `POST <n8n-webhook-url> (fires when content is generated)`,
+      agent_completed:   `POST <n8n-webhook-url> (fires when agent completes)`,
+    },
+    setup_steps: [
+      '1. สมัคร n8n.cloud → สร้าง account',
+      '2. Import workflow: backend/n8n-workflows/openthai-ai-automation.json',
+      '3. ตั้ง N8N_URL=https://your-n8n.app.n8n.cloud ใน backend/.env',
+      '4. ตั้ง N8N_WEBHOOK_SECRET ใน backend/.env',
+      `5. ลงทะเบียน webhook: POST ${baseUrl}/api/webhooks`,
+    ],
+    workflow_file: 'backend/n8n-workflows/openthai-ai-automation.json',
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CORPORATE SYSTEM — Public Company / บริษัทมหาชน
+// ═══════════════════════════════════════════════════════════════════════════════
+const corpLimiter = rateLimit({ windowMs: 60000, max: 30, message: { error: 'Corporate API rate limit' } });
+
+// GET /api/corporate/overview
+app.get('/api/corporate/overview', (req, res) => {
+  res.json({ success: true, departments: DEPARTMENTS, ts: new Date().toISOString() });
+});
+
+// Board
+app.get('/api/corporate/board',   (req, res) => res.json({ success: true, data: corporate.getBoard() }));
+app.patch('/api/corporate/board', requireAuth, corpLimiter, (req, res) => {
+  corporate.saveBoard(req.body);
+  res.json({ success: true });
+});
+
+// Compliance
+app.get('/api/corporate/compliance',   (req, res) => res.json({ success: true, data: corporate.getCompliance() }));
+app.patch('/api/corporate/compliance', requireAuth, corpLimiter, (req, res) => {
+  const current = corporate.getCompliance();
+  corporate.saveCompliance({ ...current, ...req.body });
+  res.json({ success: true });
+});
+
+// IR
+app.get('/api/corporate/ir',   (req, res) => res.json({ success: true, data: corporate.getIR() }));
+app.patch('/api/corporate/ir', requireAuth, corpLimiter, (req, res) => {
+  const current = corporate.getIR();
+  corporate.saveIR({ ...current, ...req.body });
+  res.json({ success: true });
+});
+
+// HR
+app.get('/api/corporate/hr',   (req, res) => res.json({ success: true, data: corporate.getHR() }));
+app.patch('/api/corporate/hr', requireAuth, corpLimiter, (req, res) => {
+  const current = corporate.getHR();
+  corporate.saveHR({ ...current, ...req.body });
+  res.json({ success: true });
+});
+
+// ESG
+app.get('/api/corporate/esg',   (req, res) => res.json({ success: true, data: corporate.getESG() }));
+app.patch('/api/corporate/esg', requireAuth, corpLimiter, (req, res) => {
+  const current = corporate.getESG();
+  corporate.saveESG({ ...current, ...req.body });
+  res.json({ success: true });
+});
+
+// Finance
+app.get('/api/corporate/finance',   (req, res) => res.json({ success: true, data: corporate.getFinance() }));
+app.patch('/api/corporate/finance', requireAuth, corpLimiter, (req, res) => {
+  const current = corporate.getFinance();
+  corporate.saveFinance({ ...current, ...req.body });
+  res.json({ success: true });
+});
+
+// Global Operations
+app.get('/api/corporate/global',   (req, res) => res.json({ success: true, data: corporate.getGlobalOps() }));
+app.patch('/api/corporate/global', requireAuth, corpLimiter, (req, res) => {
+  const current = corporate.getGlobalOps();
+  corporate.saveGlobalOps({ ...current, ...req.body });
+  res.json({ success: true });
+});
+
+// ── PR & Global Communications ────────────────────────────────────────────────
+app.get('/api/corporate/pr/releases',   (req, res) => res.json({ success: true, data: pr.getPressReleases() }));
+app.patch('/api/corporate/pr/releases', requireAuth, corpLimiter, (req, res) => {
+  pr.savePressReleases(req.body); res.json({ success: true });
+});
+
+app.get('/api/corporate/pr/contacts',   (req, res) => res.json({ success: true, data: pr.getMediaContacts() }));
+app.patch('/api/corporate/pr/contacts', requireAuth, corpLimiter, (req, res) => {
+  pr.saveMediaContacts(req.body); res.json({ success: true });
+});
+
+app.get('/api/corporate/pr/campaigns',   (req, res) => res.json({ success: true, data: pr.getCampaigns() }));
+app.patch('/api/corporate/pr/campaigns', requireAuth, corpLimiter, (req, res) => {
+  pr.saveCampaigns(req.body); res.json({ success: true });
+});
+
+app.get('/api/corporate/pr/kols',   (req, res) => res.json({ success: true, data: pr.getKOLs() }));
+app.patch('/api/corporate/pr/kols', requireAuth, corpLimiter, (req, res) => {
+  pr.saveKOLs(req.body); res.json({ success: true });
+});
+
+app.get('/api/corporate/pr/crisis',   (req, res) => res.json({ success: true, data: pr.getCrisisPlan() }));
+app.get('/api/corporate/pr/newsletters', (req, res) => res.json({ success: true, data: pr.getNewsletters() }));
+
+// Command Center — Team Tasks + KPIs
+app.get('/api/corporate/tasks',   (req, res) => res.json({ success: true, data: pr.getTasks() }));
+app.patch('/api/corporate/tasks', requireAuth, corpLimiter, (req, res) => {
+  pr.saveTasks(req.body); res.json({ success: true });
+});
+
+app.get('/api/corporate/kpis',   (req, res) => res.json({ success: true, data: pr.getKPIs() }));
+app.patch('/api/corporate/kpis', requireAuth, corpLimiter, (req, res) => {
+  pr.saveKPIs(req.body); res.json({ success: true });
+});
+
+// POST /api/n8n/register-webhooks — auto-register n8n webhook URLs
+app.post('/api/n8n/register-webhooks', async (req, res) => {
+  const { n8n_base_url } = req.body || {};
+  const base = n8n_base_url || process.env.N8N_URL;
+  if (!base) return res.status(400).json({ error: 'n8n_base_url required' });
+
+  const registrations = [
+    { url: `${base}/webhook/openthai-content-generated`, events: ['content.generated', 'video.generated'], description: 'n8n: content generated' },
+    { url: `${base}/webhook/openthai-agent-completed`,   events: ['agent.completed'], description: 'n8n: agent completed' },
+    { url: `${base}/webhook/openthai-payment`,           events: ['payment.completed'], description: 'n8n: payment completed' },
+  ];
+
+  const results = [];
+  for (const r of registrations) {
+    try {
+      results.push(webhooks.register({ tenantId: 'system', ...r }));
+    } catch (e) {
+      results.push({ error: e.message, url: r.url });
+    }
+  }
+  addLog('info', 'n8n', `Registered ${results.length} webhooks for n8n`);
+  res.json({ success: true, registered: results });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //  STARTUP
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1788,12 +2564,21 @@ async function startServer() {
   app.listen(PORT, () => {
     console.log(`\n🚀 OpenThai AI Backend running on http://localhost:${PORT}`);
     console.log(`   AI Primary  : ${anthropic ? '✅ Claude Haiku 4.5' : '⚠️  ใส่ ANTHROPIC_API_KEY ใน .env'}`);
-    console.log(`   AI Fallback : ${gemini    ? '✅ Gemini 1.5 Flash' : '⚠️  ใส่ GEMINI_API_KEY ใน .env'}`);
+    console.log(`   AI Fallback : ${gemini    ? '✅ Gemini Flash Latest' : '⚠️  ใส่ GEMINI_API_KEY ใน .env'}`);
     console.log(`   AI Mode     : ${anthropic ? 'Claude' : gemini ? 'Gemini' : '⚠️  Mock (ไม่มี API key)'}`);
     console.log(`   Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? '✅ Configured' : '⚠️  Not configured'}`);
     console.log(`   Recovery    : ${process.env.RECOVERY_CODES ? '✅ Codes set' : '⚠️  No codes in .env'}`);
     console.log(`   IS_VERCEL   : ${IS_VERCEL ? '✅ Serverless mode' : '⚠️  Local mode'}`);
-    console.log(`   Health      : http://localhost:${PORT}/api/health\n`);
+    console.log(`   Health      : http://localhost:${PORT}/api/health`);
+    console.log(`   API Docs    : http://localhost:${PORT}/api-docs`);
+    console.log(`   OpenAPI     : http://localhost:${PORT}/api/openapi.json`);
+    console.log(`   MCP Server  : http://localhost:${PORT}/mcp`);
+    console.log(`   Vector Mem  : http://localhost:${PORT}/api/memory`);
+    console.log(`   Webhooks    : http://localhost:${PORT}/api/webhooks`);
+    console.log(`   Tenants     : http://localhost:${PORT}/api/tenants`);
+    console.log(`   Video Gen   : http://localhost:${PORT}/api/video/generate`);
+    console.log(`   Payment     : http://localhost:${PORT}/api/payment/plans`);
+    console.log(`   n8n         : http://localhost:${PORT}/api/n8n/status\n`);
   });
 }
 
