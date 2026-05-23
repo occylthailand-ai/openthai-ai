@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.aff_users (
   verify_token  TEXT,
   verify_expires_at TIMESTAMPTZ,
   level         TEXT DEFAULT 'Silver' CHECK (level IN ('Silver','Gold','Platinum')),
+  is_admin      BOOLEAN DEFAULT FALSE,
   bank_account  TEXT,
   promptpay_id  TEXT,
   created_at    TIMESTAMPTZ DEFAULT NOW()
