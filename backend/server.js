@@ -2541,17 +2541,31 @@ app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (
   const signature = req.headers['x-line-signature'] || '';
   const rawBody   = req.body;
 
+  // ── Normalise rawBody → Buffer (Vercel may pre-parse as Object) ──────────────
+  let rawBodyBuf;
+  let body;
+  if (Buffer.isBuffer(rawBody)) {
+    rawBodyBuf = rawBody;
+    try { body = JSON.parse(rawBody.toString()); } catch { return; }
+  } else if (typeof rawBody === 'string') {
+    rawBodyBuf = Buffer.from(rawBody, 'utf8');
+    try { body = JSON.parse(rawBody); } catch { return; }
+  } else if (rawBody && typeof rawBody === 'object') {
+    // Vercel already parsed — convert back for HMAC, body is ready
+    rawBodyBuf = Buffer.from(JSON.stringify(rawBody), 'utf8');
+    body = rawBody;
+  } else {
+    return;
+  }
+
   // Signature check (skip if no secret configured — dev mode)
-  if (process.env.LINE_CHANNEL_SECRET) {
-    const expected = createHmac('sha256', process.env.LINE_CHANNEL_SECRET).update(rawBody).digest('base64');
+  if (process.env.LINE_CHANNEL_SECRET && signature) {
+    const expected = createHmac('sha256', process.env.LINE_CHANNEL_SECRET).update(rawBodyBuf).digest('base64');
     if (signature !== expected) {
       addLog('warn', 'LINE', 'Webhook signature mismatch — ignored');
       return;
     }
   }
-
-  let body;
-  try { body = JSON.parse(rawBody.toString()); } catch { return; }
 
   const token = process.env.LINE_CHANNEL_TOKEN;
 
