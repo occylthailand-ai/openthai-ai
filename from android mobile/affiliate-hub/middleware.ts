@@ -10,9 +10,10 @@ export async function middleware(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get:    (name) => req.cookies.get(name)?.value,
-        set:    (name, value, opts) => res.cookies.set({ name, value, ...opts }),
-        remove: (name, opts) => res.cookies.set({ name, value: "", ...opts }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        get:    (name: string) => req.cookies.get(name)?.value,
+        set:    (name: string, value: string, opts: any) => res.cookies.set({ name, value, ...opts }),
+        remove: (name: string, opts: any) => res.cookies.set({ name, value: "", ...opts }),
       },
     }
   );
