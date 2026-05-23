@@ -23,15 +23,21 @@ export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
   // ── Protected routes ────────────────────────────────
-  if (path.startsWith("/dashboard") || path.startsWith("/admin")) {
+  if (path.startsWith("/dashboard") || path.startsWith("/admin") || path.startsWith("/producer/dashboard")) {
     if (!session) {
       const url = req.nextUrl.clone();
-      url.pathname = "/";
-      url.searchParams.set("auth", "login");
+      // Producer dashboard → redirect to /producer login
+      if (path.startsWith("/producer/dashboard")) {
+        url.pathname = "/producer";
+        url.searchParams.set("auth", "login");
+      } else {
+        url.pathname = "/";
+        url.searchParams.set("auth", "login");
+      }
       return NextResponse.redirect(url);
     }
 
-    // Admin routes — ตรวจ role (เพิ่ม is_admin column ใน users table)
+    // Admin routes — ตรวจ role
     if (path.startsWith("/admin")) {
       const { data: profile } = await supabase
         .from("aff_users")
@@ -54,5 +60,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/", "/dashboard/:path*", "/admin/:path*", "/producer/dashboard/:path*"],
 };
