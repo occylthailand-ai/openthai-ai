@@ -70,11 +70,16 @@ ALTER TABLE public.aff_clicks       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.aff_commissions  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.aff_withdrawals  ENABLE ROW LEVEL SECURITY;
 
--- Service role full access
-CREATE POLICY IF NOT EXISTS "aff_users_service_all"       ON public.aff_users       FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "aff_clicks_service_all"      ON public.aff_clicks      FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "aff_commissions_service_all" ON public.aff_commissions FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS "aff_withdrawals_service_all" ON public.aff_withdrawals FOR ALL TO service_role USING (true) WITH CHECK (true);
+-- Service role full access (DROP first = idempotent re-run safe)
+DROP POLICY IF EXISTS "aff_users_service_all"       ON public.aff_users;
+DROP POLICY IF EXISTS "aff_clicks_service_all"      ON public.aff_clicks;
+DROP POLICY IF EXISTS "aff_commissions_service_all" ON public.aff_commissions;
+DROP POLICY IF EXISTS "aff_withdrawals_service_all" ON public.aff_withdrawals;
+
+CREATE POLICY "aff_users_service_all"       ON public.aff_users       FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "aff_clicks_service_all"      ON public.aff_clicks      FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "aff_commissions_service_all" ON public.aff_commissions FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "aff_withdrawals_service_all" ON public.aff_withdrawals FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_aff_clicks_ref     ON public.aff_clicks(ref_code, created_at DESC);
