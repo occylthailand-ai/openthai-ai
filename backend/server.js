@@ -2580,19 +2580,28 @@ app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (
 
     addLog('info', 'LINE', `Event: ${eventType} userId=${userId}`);
 
-    // ── ดึง profile แล้วบันทึก userId ────────────────────────────────────────
-    if (userId && token) {
-      try {
-        const profileRes = await fetch(`https://api.line.me/v2/bot/profile/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (profileRes.ok) {
-          const profile = await profileRes.json();
-          await saveLINEUserId(userId, profile.displayName, profile.pictureUrl);
-          addLog('info', 'LINE', `✅ Saved LINE userId: ${userId} (${profile.displayName})`);
+    // ── บันทึก userId ก่อน แล้วค่อย enrich ด้วย profile ─────────────────────
+    if (userId) {
+      // Save immediately with just userId (guarantee capture even if profile fails)
+      await saveLINEUserId(userId, null, null);
+
+      if (token) {
+        try {
+          const profileRes = await fetch(`https://api.line.me/v2/bot/profile/${userId}`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(5000),
+          });
+          if (profileRes.ok) {
+            const profile = await profileRes.json();
+            await saveLINEUserId(userId, profile.displayName, profile.pictureUrl);
+            addLog('info', 'LINE', `✅ Saved LINE userId: ${userId} (${profile.displayName})`);
+          } else {
+            addLog('info', 'LINE', `✅ Saved LINE userId: ${userId} (profile ${profileRes.status})`);
+          }
+        } catch (e) {
+          addLog('warn', 'LINE', `Profile fetch error: ${e.message}`);
+          addLog('info', 'LINE', `✅ Saved LINE userId: ${userId} (no profile)`);
         }
-      } catch (e) {
-        addLog('warn', 'LINE', `Profile fetch error: ${e.message}`);
       }
     }
 
