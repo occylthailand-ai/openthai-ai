@@ -13,6 +13,12 @@ Thumbs.db
 recovery-codes.txt
 *.pem
 *.key
+ANTHROPIC_API_KEY.txt
+*_API_KEY.txt
+backend/.env.*
+backend/data/moltbook-credentials.json
+*.n8nexport*
+sync-all.ps1
 
 # Runtime data — ป้องกัน commit ข้อมูลผู้ใช้/log โดยไม่ตั้งใจ
 backend/data/affiliates.json
