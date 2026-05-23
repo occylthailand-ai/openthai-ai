@@ -2,9 +2,14 @@
 
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM   = process.env.EMAIL_FROM ?? "noreply@openthai.ai";
-const APP    = process.env.NEXT_PUBLIC_APP_URL ?? "https://openthai.ai";
+// Lazy init — avoids crash at build time when RESEND_API_KEY is not yet set
+function getResend(): Resend {
+  if (!process.env.RESEND_API_KEY) throw new Error("RESEND_API_KEY not configured");
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
+const FROM = process.env.EMAIL_FROM ?? "noreply@openthai.ai";
+const APP  = process.env.NEXT_PUBLIC_APP_URL ?? "https://openthai.ai";
 
 /* ── 1. Email Verification ───────────────────────────── */
 export async function sendVerificationEmail(
@@ -14,7 +19,7 @@ export async function sendVerificationEmail(
 ) {
   const link = `${APP}/api/auth/verify-email?token=${token}`;
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: "✦ ยืนยันอีเมล — Affiliate Hub",
@@ -67,7 +72,7 @@ export async function sendCommissionAlert(
   product: string,
   totalBalance: number
 ) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: `✦ รับ Commission ฿${amount.toLocaleString()} — Affiliate Hub`,
@@ -112,7 +117,7 @@ export async function sendWithdrawConfirmation(
   method: string,
   destination: string
 ) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM,
     to,
     subject: `✦ ถอนเงิน ฿${amount.toLocaleString()} — กำลังดำเนินการ`,
