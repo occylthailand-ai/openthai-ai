@@ -1,10 +1,11 @@
 "use client";
 // app/page.tsx — Landing + Auth Modal
-import { useState, useEffect } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signUp } from "@/lib/auth";
 
-export default function LandingPage() {
+// Inner component uses useSearchParams — must be wrapped in Suspense
+function LandingContent() {
   const router       = useRouter();
   const params       = useSearchParams();
   const [modal, setModal]   = useState<"login"|"register"|null>(
@@ -188,5 +189,14 @@ export default function LandingPage() {
         </div>
       )}
     </>
+  );
+}
+
+// Default export wraps in Suspense (required when using useSearchParams in Next.js 14)
+export default function LandingPage() {
+  return (
+    <Suspense fallback={null}>
+      <LandingContent />
+    </Suspense>
   );
 }

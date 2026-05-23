@@ -1,5 +1,6 @@
 // app/verified/page.tsx
 "use client";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -10,7 +11,8 @@ const MESSAGES = {
   invalid: { icon:"✕", title:"ลิงก์ไม่ถูกต้อง",     sub:"ลิงก์นี้ไม่ถูกต้อง กรุณาตรวจสอบอีเมลอีกครั้ง",         color:"var(--red)",    cta:"กลับหน้าหลัก", href:"/" },
 };
 
-export default function VerifiedPage() {
+// Inner component uses useSearchParams — must be wrapped in Suspense
+function VerifiedContent() {
   const params = useSearchParams();
   const status = (params.get("status") ?? "invalid") as keyof typeof MESSAGES;
   const m = MESSAGES[status] ?? MESSAGES.invalid;
@@ -24,5 +26,14 @@ export default function VerifiedPage() {
         <Link href={m.href} className="btn-gold" style={{display:"inline-flex",textDecoration:"none"}}>{m.cta}</Link>
       </div>
     </div>
+  );
+}
+
+// Default export wraps in Suspense (required when using useSearchParams in Next.js 14)
+export default function VerifiedPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifiedContent />
+    </Suspense>
   );
 }
