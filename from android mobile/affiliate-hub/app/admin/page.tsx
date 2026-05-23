@@ -67,7 +67,7 @@ export default function AdminPage() {
                 ].map(s=>(
                   <div key={s.l} style={{background:"var(--surface)",padding:"24px 20px"}}>
                     <div className="tag" style={{display:"block",marginBottom:"10px"}}>{s.l}</div>
-                    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"28px",fontWeight:700,color:s.c==="gold"?"var(--gold)":s.c==="gr"?"var(--green)":s.c==="red"?"var(--red)":"var(--text)"}}>{v}</div>
+                    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"28px",fontWeight:700,color:s.c==="gold"?"var(--gold)":s.c==="gr"?"var(--green)":s.c==="red"?"var(--red)":"var(--text)"}}>{s.v}</div>
                   </div>
                 ))}
               </div>
