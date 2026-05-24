@@ -28,7 +28,7 @@ import PDPABanner from './components/PDPABanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
 import ScrollToTop from './components/ScrollToTop';
-import { apiUrl } from './apiBase';
+import { apiUrl, fetchWithTimeout } from './apiBase';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,7 +39,7 @@ function App() {
     const token = localStorage.getItem('auth_token');
     if (!token) { setAuthChecked(true); return; }
 
-    fetch(apiUrl('/api/auth/verify'), { headers: { Authorization: `Bearer ${token}` } })
+    fetchWithTimeout(apiUrl('/api/auth/verify'), { headers: { Authorization: `Bearer ${token}` } }, 10000)
       .then(r => r.json())
       .then(data => { setIsAuthenticated(data.valid === true); })
       .catch(() => { setIsAuthenticated(false); })
@@ -54,7 +54,11 @@ function App() {
   };
 
   // รอตรวจ token ก่อน render เพื่อป้องกัน flash
-  if (!authChecked) return null;
+  if (!authChecked) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0f0f1a', color: '#94a3b8', fontSize: '14px' }}>
+      กำลังโหลด...
+    </div>
+  );
 
   return (
     <ErrorBoundary>
