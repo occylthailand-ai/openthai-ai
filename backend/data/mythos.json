@@ -69,6 +69,7 @@
       "task": "เพิ่ม ANTHROPIC_API_KEY ใน Vercel Dashboard",
       "priority": "CRITICAL",
       "status": "PENDING",
+      "assigned_to": "Athena",
       "url": "https://vercel.com/dashboard"
     },
     {
@@ -76,25 +77,51 @@
       "task": "รัน migrations 001 + 002 ใน Supabase SQL Editor",
       "priority": "CRITICAL",
       "status": "PENDING",
+      "assigned_to": "Demeter",
       "url": "https://supabase.com/dashboard/project/tpeskbbhuuqztwyllnli/sql"
     },
     {
       "id": "P3",
-      "task": "ตั้ง GitHub Secrets สำหรับ CI/CD",
-      "priority": "IMPORTANT",
-      "status": "PENDING"
+      "task": "ตั้ง GitHub Secrets: SLACK_WEBHOOK_URL, VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID, LINE_NOTIFY_TOKEN",
+      "priority": "CRITICAL",
+      "status": "PENDING",
+      "assigned_to": "Ares",
+      "note": "SLACK_WEBHOOK_URL จาก Slack Incoming Webhook ที่เพิ่งเปิด"
     },
     {
       "id": "P4",
-      "task": "เชื่อมต่อ Omise/Stripe payment gateway จริง",
+      "task": "เชื่อมต่อ Omise/PromptPay payment gateway จริง + ตั้ง OMISE_PUBLIC_KEY + OMISE_SECRET_KEY",
       "priority": "IMPORTANT",
-      "status": "PENDING"
+      "status": "PENDING",
+      "assigned_to": "Plutus"
     },
     {
       "id": "P5",
-      "task": "เปิด Supabase Auth + ตั้ง redirect URL",
+      "task": "เปิด Supabase Auth + ตั้ง redirect URL: https://www.openthai-ai.com",
       "priority": "CRITICAL",
-      "status": "PENDING"
+      "status": "PENDING",
+      "assigned_to": "Demeter"
+    },
+    {
+      "id": "P6",
+      "task": "แก้ encoding bug ใน affiliates — ชื่อ 2 ราย แสดงเป็น garbled characters",
+      "priority": "IMPORTANT",
+      "status": "PENDING",
+      "assigned_to": "Hermes"
+    },
+    {
+      "id": "P7",
+      "task": "ยืนยัน cold start แก้แล้ว — ตรวจ Vercel Cron warmup ทุก 10 นาที active จริง",
+      "priority": "IMPORTANT",
+      "status": "PENDING",
+      "assigned_to": "Kronos"
+    },
+    {
+      "id": "P8",
+      "task": "เปิด affiliate campaign แรก — เป้าหมาย 10 คนใน 30 วัน",
+      "priority": "STANDARD",
+      "status": "PENDING",
+      "assigned_to": "Apollo"
     }
   ],
   "session_log": [
@@ -140,15 +167,48 @@
       ],
       "commits": ["ff22314"],
       "status": "SUCCESS"
+    },
+    {
+      "date": "2026-05-24",
+      "session": "SHIFT-003",
+      "directive": "DIRECTIVE-003 — Slack Integration + Team Work Orders",
+      "actions": [
+        "เพิ่ม sync.bat + sync.ps1 — one-click git sync สำหรับ Windows (%~dp0 path-safe)",
+        "เพิ่ม Slack Webhook notifications ครบทุก workflow: deploy.yml, test.yml, warmup.yml",
+        "สร้าง pr-notify.yml ใหม่ — แจ้งเตือน Slack ทุก PR event (opened/merged/closed/review)",
+        "เชื่อม Slack workspace: openthaiai.slack.com ใช้งานได้แล้ว",
+        "ออก DIRECTIVE-003 — มอบหมายงานให้ทีม 8 ตัวแทน (Ares, Athena, Demeter, Plutus, Hermes, Kronos, Hephaestus, Themis, Apollo)",
+        "อัปเดต priorities_queue P1–P8 พร้อม assigned_to ทุก task",
+        "Zuejai รับคำสั่ง DIRECTIVE-003 แล้ว — สถานะ: IN PROGRESS"
+      ],
+      "directives_executed": [
+        "DIR-011: Mythos — sync.bat + sync.ps1 Windows launcher",
+        "DIR-012: Ares/Hermes — Slack webhook ทุก CI/CD workflow",
+        "DIR-013: Mythos — pr-notify.yml PR event notifications",
+        "DIR-014: Mythos — DIRECTIVE-003 work orders ออกให้ทีม 8 คน"
+      ],
+      "pending_zuejai": [
+        "P1: ANTHROPIC_API_KEY → Vercel (Athena)",
+        "P2: Supabase migrations 001+002 (Demeter)",
+        "P3: GitHub Secrets: SLACK_WEBHOOK_URL, VERCEL_TOKEN, LINE_NOTIFY_TOKEN (Ares)",
+        "P4: Omise payment keys (Plutus)",
+        "P5: Supabase Auth redirect URL (Demeter)",
+        "P6: Affiliate encoding bug fix (Hermes)",
+        "P7: Kronos cold-start verification",
+        "P8: Affiliate campaign launch (Apollo)"
+      ],
+      "commits": ["8778237", "5485b7e"],
+      "slack_status": "CONNECTED — openthaiai.slack.com",
+      "status": "SUCCESS"
     }
   ],
-  "last_heartbeat": "2026-05-14T21:46:00Z",
+  "last_heartbeat": "2026-05-24T10:35:00Z",
   "first_online": "2026-05-14T20:55:00Z",
-  "total_commands_executed": 89,
-  "uptime_hours": 3.0,
-  "directives_issued": 12,
-  "directives_completed": 10,
-  "directives_pending_zuejai": 3,
+  "total_commands_executed": 97,
+  "uptime_hours": 241.5,
+  "directives_issued": 15,
+  "directives_completed": 12,
+  "directives_pending_zuejai": 8,
   "last_deploy": {
     "ts": "2026-05-14T21:45:00Z",
     "deployment_id": "dpl_Bb53cGUNfhDxJkCF8djnJ98aswQg",
