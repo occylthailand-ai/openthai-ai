@@ -11,6 +11,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import cron from 'node-cron';
 import https from 'https';
+import { randomBytes } from 'crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -430,7 +431,11 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
 // ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
 app.get('/api/affiliate/list', (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
-  const adminKey = process.env.ADMIN_KEY || 'openthai-admin-2026';
+  const adminKey = process.env.ADMIN_KEY;
+  if (!adminKey) {
+    console.warn('[SECURITY] ADMIN_KEY ไม่ได้ตั้งค่า — endpoint นี้ถูกปิดชั่วคราว (OBS-005)');
+    return res.status(503).json({ success: false, message: 'Admin endpoint unavailable — ADMIN_KEY not configured' });
+  }
   if (key !== adminKey) {
     return res.status(401).json({ success: false, message: 'Unauthorized — ต้องการ Admin Key' });
   }
@@ -1573,7 +1578,7 @@ app.post('/api/consent', (req, res) => {
   if (typeof granted !== 'boolean')
     return res.status(400).json({ error: 'granted must be a boolean' });
 
-  const consentId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const consentId = `c_${Date.now()}_${randomBytes(4).toString('hex')}`;
   const entry = {
     consentId,
     userId:      userId.trim(),

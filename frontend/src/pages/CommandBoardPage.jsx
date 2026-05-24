@@ -106,7 +106,9 @@ export default function CommandBoardPage() {
         body: JSON.stringify({ id, resolved_by: 'zuejai', resolution }),
       });
       await fetchBoard();
-    } catch { }
+    } catch (e) {
+      setError(`บันทึกการแก้ไขไม่สำเร็จ: ${e.message}`);
+    }
     setResolving(null);
   };
 
