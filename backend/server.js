@@ -1630,6 +1630,38 @@ app.post('/api/auth/recovery-codes/generate', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//  MOBILE SYNC — ADB Guide API
+// ═══════════════════════════════════════════════════════════════════════════════
+
+app.get('/api/mobile-sync/guide', (req, res) => {
+  res.json({
+    ok: true,
+    scripts: [
+      { file: 'check-device.bat', title: 'ตรวจสอบอุปกรณ์', desc: 'ตรวจการเชื่อมต่อและข้อมูลโทรศัพท์' },
+      { file: 'sync-download.bat', title: 'Sync: โทรศัพท์ → PC', desc: 'ดาวน์โหลดไฟล์จากโทรศัพท์' },
+      { file: 'sync-upload.bat', title: 'Sync: PC → โทรศัพท์', desc: 'อัปโหลดไฟล์ไปโทรศัพท์' },
+      { file: 'diagnose-vivo.bat', title: 'Diagnostic Report', desc: 'วินิจฉัยโทรศัพท์ vivo ครบถ้วน' },
+    ],
+    quick_commands: {
+      check: 'adb devices -l',
+      download_photos: 'adb pull /sdcard/DCIM %USERPROFILE%\\Pictures\\PhoneSync',
+      upload_file: 'adb push <local_file> /sdcard/Download/',
+      device_info: 'adb shell getprop ro.product.model',
+      storage: 'adb shell df -h',
+    },
+    setup_steps: [
+      'เปิด Developer Options: Settings → About Phone → แตะ Build Number 7 ครั้ง',
+      'เปิด USB Debugging: Developer Options → USB debugging ON',
+      'เสียบ USB → เลือก File Transfer (MTP)',
+      'กด Allow บน popup USB Debugging',
+      'รัน check-device.bat เพื่อยืนยัน',
+    ],
+    scripts_path: 'tools/mobile-sync/',
+    docs_url: '/mobile-sync',
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //  STARTUP
 // ═══════════════════════════════════════════════════════════════════════════════
 

@@ -24,6 +24,7 @@ import TeamPage from './pages/TeamPage';
 import CommandBoardPage from './pages/CommandBoardPage';
 import FoundationPage from './pages/FoundationPage';
 import SetupGuidePage from './pages/SetupGuidePage';
+import MobileSyncPage from './pages/MobileSyncPage';
 import PDPABanner from './components/PDPABanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
@@ -99,6 +100,7 @@ function App() {
             <Route path="/board" element={<CommandBoardPage />} />
             <Route path="/foundation" element={<FoundationPage />} />
             <Route path="/setup" element={<SetupGuidePage />} />
+            <Route path="/mobile-sync" element={<MobileSyncPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />
