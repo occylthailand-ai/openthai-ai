@@ -12,6 +12,9 @@ import { fileURLToPath } from 'url';
 import cron from 'node-cron';
 import https from 'https';
 import { randomBytes } from 'crypto';
+import {
+  createPromptPaySource, createCharge, getCharge, voidCharge, parseWebhookEvent
+} from './services/omise-service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -1624,9 +1627,6 @@ app.get('/api/consent/:userId', requireAuth, (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  PAYMENT FLOW — Omise PromptPay + Webhook
 // ═══════════════════════════════════════════════════════════════════════════════
-import {
-  createPromptPaySource, createCharge, getCharge, voidCharge, parseWebhookEvent
-} from './services/omise-service.js';
 
 const paymentLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'ส่งคำขอ payment บ่อยเกินไป' } });
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogoEmblem } from '../components/Logo';
 import { useToast } from '../components/ToastContext';
-import { apiUrl } from '../apiBase';
+import { apiUrl, fetchWithTimeout } from '../apiBase';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 // n8n webhook: ใช้ได้เฉพาะ local dev (localhost) — production จะ fallback ไป BACKEND_API อัตโนมัติ
@@ -48,13 +48,13 @@ async function generateContent(form) {
       if (r.ok) { const d = await r.json(); if (d.hook) return d; }
     } catch (_) {}
   }
-  const res = await fetch(BACKEND_API(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+  const res = await fetchWithTimeout(BACKEND_API(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) }, 30000);
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json();
 }
 
 async function generateAB(form) {
-  const res = await fetch(AB_API(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+  const res = await fetchWithTimeout(AB_API(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) }, 30000);
   if (!res.ok) throw new Error(`AB API error ${res.status}`);
   return res.json();
 }
@@ -74,12 +74,11 @@ async function speak(text) {
   ttsActive = true;
   // 1️⃣ ลอง ElevenLabs API ก่อน
   try {
-    const res = await fetch(TTS_API(), {
+    const res = await fetchWithTimeout(TTS_API(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: text.slice(0, 500) }),
-      signal: AbortSignal.timeout(8000),
-    });
+    }, 8000);
     if (res.ok && res.headers.get('content-type')?.includes('audio')) {
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
@@ -212,10 +211,10 @@ function CompetitorTab({ toast, onUseIdea }) {
     if (!form.niche.trim()) { toast.error('กรุณาใส่ niche / หมวดสินค้า'); return; }
     setLoading(true); setResult(null);
     try {
-      const d = await fetch(COMPETITOR_API(), {
+      const d = await fetchWithTimeout(COMPETITOR_API(), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
-      }).then(r => r.json());
+      }, 20000).then(r => r.json());
       if (d.error) throw new Error(d.error);
       setResult(d);
       toast.success('✅ วิเคราะห์คู่แข่งสำเร็จ!');
@@ -344,7 +343,7 @@ function NewsRagTab({ toast, onIdeaSelect }) {
   const load = async (showToast = false) => {
     if (showToast) setRefreshing(true); else setLoading(true);
     try {
-      const d = await fetch(NEWS_API()).then(r => r.json());
+      const d = await fetchWithTimeout(NEWS_API(), {}, 12000).then(r => r.json());
       setData(d);
       if (showToast) toast.success('✅ โหลดข่าวล่าสุดแล้ว!');
     } catch (_) { toast.error('โหลด News ไม่สำเร็จ'); }
@@ -520,11 +519,11 @@ const AIGeneratorPage = () => {
       setImgLoading(true);
       try {
         const base64 = dataUrl.split(',')[1];
-        const res = await fetch(ANALYZE_API(), {
+        const res = await fetchWithTimeout(ANALYZE_API(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ base64, mimeType: file.type }),
-        });
+        }, 20000);
         const data = await res.json();
         if (data.success) {
           setForm(f => ({
