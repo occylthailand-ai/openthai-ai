@@ -4,6 +4,7 @@
  * Docs: https://docs.opn.ooo/
  */
 import https from 'https';
+import crypto from 'crypto';
 
 const OMISE_SECRET = process.env.OMISE_SECRET_KEY || '';
 const OMISE_PUBLIC = process.env.OMISE_PUBLIC_KEY || '';
@@ -39,14 +40,34 @@ function omiseRequest(method, path, body = null) {
       });
     });
 
+    // 10 second timeout to prevent hanging requests
+    const timeout = setTimeout(() => {
+      req.destroy(new Error('Omise request timed out after 10 seconds'));
+    }, 10000);
+    req.on('close', () => clearTimeout(timeout));
+
     req.on('error', reject);
     if (bodyStr) req.write(bodyStr);
     req.end();
   });
 }
 
+// ─── Amount validation helper ─────────────────────────────────────────────────
+function validateAmountTHB(amountTHB) {
+  if (typeof amountTHB !== 'number' || isNaN(amountTHB)) {
+    throw new Error('amountTHB must be a valid number');
+  }
+  if (amountTHB <= 0) {
+    throw new Error('amountTHB must be a positive number');
+  }
+  if (amountTHB > 999999) {
+    throw new Error('amountTHB exceeds maximum allowed amount of 999999');
+  }
+}
+
 // ─── 1. สร้าง PromptPay QR Source ────────────────────────────────────────────
 export async function createPromptPaySource(amountTHB) {
+  validateAmountTHB(amountTHB);
   const amountSatang = Math.round(amountTHB * 100); // Omise ใช้ satang (สตางค์)
   const source = await omiseRequest('POST', '/sources', {
     type: 'promptpay',
@@ -64,6 +85,7 @@ export async function createCharge({
   orderId,        // idempotency key — ป้องกัน double charge
   metadata = {},
 }) {
+  validateAmountTHB(amountTHB);
   const amountSatang = Math.round(amountTHB * 100);
   const charge = await omiseRequest('POST', '/charges', {
     amount: amountSatang,
@@ -126,9 +148,18 @@ export async function createTrueMoneySource(phoneNumber, amountTHB) {
 // ─── 8. Webhook Event Handler ─────────────────────────────────────────────────
 // ใช้ใน /api/payment/webhook — Omise จะ POST event เมื่อสถานะเปลี่ยน
 export function parseWebhookEvent(rawBody, signature, webhookSecret) {
-  // TODO: verify HMAC-SHA256 signature เมื่อได้ OMISE_WEBHOOK_SECRET
-  // const computed = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
-  // if (computed !== signature) throw new Error('Invalid webhook signature');
+  // TODO: SECURITY REQUIREMENT — Omise webhook signature verification must be enabled before
+  // going live. Set OMISE_WEBHOOK_SECRET in .env and uncomment the verification block below.
+  // Without this check, any party can spoof payment events (e.g. fake "charge.complete").
+  // Reference: https://docs.opn.ooo/webhooks#signature-verification
+  if (webhookSecret) {
+    const computed = crypto.createHmac('sha256', webhookSecret).update(rawBody).digest('hex');
+    const trusted = Buffer.from(signature || '');
+    const actual  = Buffer.from(computed);
+    if (trusted.length !== actual.length || !crypto.timingSafeEqual(trusted, actual)) {
+      throw new Error('Invalid webhook signature — possible spoofed event');
+    }
+  }
   return JSON.parse(rawBody);
 }
 

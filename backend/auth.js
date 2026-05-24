@@ -9,6 +9,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const USED_CODES_FILE = path.join(__dirname, '.used-recovery-codes.json');
 
 // ─── JWT ─────────────────────────────────────────────────────────────────────
+if (!process.env.JWT_SECRET) {
+  console.warn('[auth] WARNING: JWT_SECRET is not set — using random secret. All tokens will be invalidated on every server restart!');
+}
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
 const JWT_EXPIRES = '7d';
 
@@ -68,6 +71,9 @@ export async function getAdminUsers() {
   if (_adminUsers.length === 0) {
     const username = process.env.ADMIN_USERNAME || 'admin';
     const plain = process.env.ADMIN_PASSWORD_PLAIN || '1234';
+    if (!process.env.ADMIN_PASSWORD_PLAIN) {
+      console.warn('[auth] WARNING: ADMIN_PASSWORD is not set in env — using insecure default password "1234". Set ADMIN_PASSWORD_PLAIN or ADMIN_USERS in .env!');
+    }
     const hashed = await hashPassword(plain);
     _adminUsers.push({ username, password: hashed, role: 'admin' });
     console.log(`[auth] default admin: ${username} / ${plain}  ← เปลี่ยนใน .env ด้วย!`);
