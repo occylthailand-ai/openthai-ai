@@ -1,0 +1,71 @@
+name: "\U0001F50D Environment Check"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check-secrets:
+    name: Check Required Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check AI provider keys
+        env:
+          HAS_ANTHROPIC: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAS_GEMINI: ${{ secrets.GEMINI_API_KEY != '' }}
+        run: |
+          echo "=== OpenThai AI — Environment Secret Check ==="
+          MISSING=()
+          WARNINGS=()
+
+          # At least one AI key must be present
+          if [ "$HAS_ANTHROPIC" = "false" ] && [ "$HAS_GEMINI" = "false" ]; then
+            MISSING+=("ANTHROPIC_API_KEY or GEMINI_API_KEY (at least one required)")
+          else
+            if [ "$HAS_ANTHROPIC" = "true" ]; then
+              echo "OK  ANTHROPIC_API_KEY is set"
+            else
+              WARNINGS+=("ANTHROPIC_API_KEY not set (Gemini will be used as primary)")
+            fi
+            if [ "$HAS_GEMINI" = "true" ]; then
+              echo "OK  GEMINI_API_KEY is set"
+            else
+              WARNINGS+=("GEMINI_API_KEY not set (no Gemini fallback available)")
+            fi
+          fi
+
+          # Optional secrets — warn but do not fail
+          if [ "${{ secrets.SLACK_WEBHOOK_URL != '' }}" = "false" ]; then
+            WARNINGS+=("SLACK_WEBHOOK_URL not set — Slack alerts will be disabled")
+          else
+            echo "OK  SLACK_WEBHOOK_URL is set"
+          fi
+
+          if [ "${{ secrets.LINE_NOTIFY_TOKEN != '' }}" = "false" ]; then
+            WARNINGS+=("LINE_NOTIFY_TOKEN not set — LINE notifications will be disabled")
+          else
+            echo "OK  LINE_NOTIFY_TOKEN is set"
+          fi
+
+          # Print warnings
+          if [ ${#WARNINGS[@]} -gt 0 ]; then
+            echo ""
+            echo "--- Warnings (optional secrets not set) ---"
+            for w in "${WARNINGS[@]}"; do
+              echo "::warning::$w"
+            done
+          fi
+
+          # Fail only if a required secret is missing
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo ""
+            echo "--- Missing required secrets ---"
+            for m in "${MISSING[@]}"; do
+              echo "::error::MISSING: $m"
+            done
+            exit 1
+          fi
+
+          echo ""
+          echo "Environment check passed."

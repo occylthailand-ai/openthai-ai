@@ -64,10 +64,19 @@ router.post('/obstacle', (req, res) => {
   const { agent, title, detail, severity = 'IMPORTANT', assigned_to, action_url } = req.body;
   if (!agent || !title) return res.status(400).json({ error: 'agent and title required' });
 
+  // Input validation
+  if (typeof title !== 'string' || title.length > 200) {
+    return res.status(400).json({ error: 'title must be a string with max 200 characters' });
+  }
+  const VALID_SEVERITIES = ['low', 'medium', 'high', 'critical'];
+  if (severity !== 'IMPORTANT' && !VALID_SEVERITIES.includes(severity)) {
+    return res.status(400).json({ error: `severity must be one of: ${VALID_SEVERITIES.join(', ')}` });
+  }
+
   const board = readBoard();
   if (!board) return res.status(500).json({ error: 'Board unavailable' });
 
-  const id = `OBS-${String(Date.now()).slice(-6)}`;
+  const id = `OBS-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   const obstacle = {
     id,
     severity,
@@ -138,7 +147,7 @@ router.put('/agent-status', (req, res) => {
   const board = readBoard();
   if (!board) return res.status(500).json({ error: 'Board unavailable' });
 
-  if (!board.team_status[agent_id]) {
+  if (!board.team_status || !board.team_status[agent_id]) {
     return res.status(404).json({ error: `Agent ${agent_id} not found` });
   }
 

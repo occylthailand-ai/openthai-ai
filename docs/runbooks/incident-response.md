@@ -60,8 +60,36 @@
 
 ---
 
+## P2 Runbook — Minor Issues (Degraded Performance / Non-Critical Bugs)
+
+**ตัวอย่าง:** response ช้าผิดปกติ, feature รองไม่ทำงาน, error rate สูงขึ้นเล็กน้อย
+
+```
+1. Monitor ต่อเนื่อง 30 นาที — ดูว่าปัญหาหายเองหรือไม่
+2. ตรวจ error pattern: GET /api/system/logs
+3. ถ้าปัญหายังอยู่หลัง 30 นาที → trigger auto-heal:
+   POST /api/system/auto-heal
+4. แจ้งทีมงานผ่าน Slack #openthai-alerts พร้อม link log
+5. บันทึกใน Incident Log ด้านล่าง
+```
+
+## P3 Runbook — Informational (Warnings / Slow Responses)
+
+**ตัวอย่าง:** latency สูงกว่า baseline เล็กน้อย, warning ใน log, metric drift
+
+```
+1. บันทึกใน Incident Log ด้านล่างทันที
+2. ตรวจ trend: GET /api/system/metrics
+3. ไม่ต้องแก้ทันที — review ในวันทำงานถัดไป
+4. ถ้า metric แย่ลงต่อเนื่อง → escalate เป็น P2
+```
+
+---
+
 ## Incident Log
 
 | วันที่ | Severity | สาเหตุ | วิธีแก้ | ใช้เวลา |
 |-------|---------|--------|--------|--------|
-| - | - | ยังไม่มี incident | - | - |
+| 2026-05-14 | Near-miss | SHIFT-001: ทดสอบ initial deploy — AI keys ยังไม่ครบ | ใส่ ANTHROPIC_API_KEY + GEMINI_API_KEY ใน Vercel env | ~15 นาที |
+| 2026-05-14 | Resolved | SHIFT-002: JWT_SECRET ไม่ตรงกันระหว่าง dev/prod | Sync secret ใน Vercel + redeploy | ~10 นาที |
+| 2026-05-14 | Resolved | SHIFT-003: CORS block frontend dev origin | เพิ่ม localhost:3000 ใน FRONTEND_URL allowlist | ~5 นาที |
