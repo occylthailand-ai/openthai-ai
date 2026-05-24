@@ -1,4 +1,15 @@
 @echo off
+REM ============================================================
+REM  OpenThai AI — n8n Workflow Engine (Windows launcher)
+REM
+REM  Alternative: start n8n via Docker instead of running it
+REM  natively. Make sure Docker Desktop is running, then use:
+REM
+REM    docker-compose up n8n -d
+REM
+REM  To stop:  docker-compose stop n8n
+REM  Logs:     docker-compose logs -f n8n
+REM ============================================================
 echo ========================================
 echo   OpenThai AI — n8n Workflow Engine
 echo ========================================
