@@ -77,6 +77,7 @@ if ($LASTEXITCODE -eq 0) {
 
 # === [4/4] OneDrive Copy ===
 Write-Step 4 4 "OneDrive Sync..."
+$oneDriveOk = $true
 if (-not (Test-Path $OneDriveDir)) {
     try {
         New-Item -ItemType Directory -Path $OneDriveDir -Force | Out-Null
@@ -84,20 +85,21 @@ if (-not (Test-Path $OneDriveDir)) {
     } catch {
         Write-Warn "Cannot create OneDrive folder: $OneDriveDir"
         Write-Warn "Skipping OneDrive sync."
-        goto summary
+        $oneDriveOk = $false
     }
 }
 
-$roboArgs = @($RepoDir, $OneDriveDir, "/MIR", "/XD", ".git", "node_modules", "/XF", "*.log", "/NFL", "/NDL", "/NJH", "/NJS", "/nc", "/ns", "/np")
-robocopy @roboArgs | Out-Null
-$rc = $LASTEXITCODE
-if ($rc -lt 8) {
-    Write-Ok "OneDrive copy complete (robocopy code: $rc)."
-} else {
-    Write-Warn "OneDrive copy had errors (robocopy code: $rc)."
+if ($oneDriveOk) {
+    $roboArgs = @($RepoDir, $OneDriveDir, "/MIR", "/XD", ".git", "node_modules", "/XF", "*.log", "/NFL", "/NDL", "/NJH", "/NJS", "/nc", "/ns", "/np")
+    robocopy @roboArgs | Out-Null
+    $rc = $LASTEXITCODE
+    if ($rc -lt 8) {
+        Write-Ok "OneDrive copy complete (robocopy code: $rc)."
+    } else {
+        Write-Warn "OneDrive copy had errors (robocopy code: $rc)."
+    }
 }
 
-:summary
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor DarkCyan
 Write-Host "  Sync complete: $Timestamp" -ForegroundColor White
