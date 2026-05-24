@@ -4,6 +4,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from '@anthropic-ai/sdk';
+import Redis from 'ioredis';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import nodemailer from 'nodemailer';
 import { join, dirname } from 'path';
@@ -20,6 +21,23 @@ const IS_VERCEL = !!process.env.VERCEL;
 // Local: ทุกอย่างอยู่ใน backend/data/
 const STATIC_DATA_DIR = join(__dirname, 'data');
 const WRITE_DATA_DIR  = IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR;
+// ── Redis client (optional — graceful degradation when unavailable) ──────────
+const redis = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, { lazyConnect: true, enableOfflineQueue: false })
+  : null;
+
+async function cacheGet(key) {
+  if (!redis) return null;
+  try { const v = await redis.get(key); return v ? JSON.parse(v) : null; }
+  catch { return null; }
+}
+
+async function cacheSet(key, value, ttlSecs) {
+  if (!redis) return;
+  try { await redis.set(key, JSON.stringify(value), 'EX', ttlSecs); }
+  catch { /* ignore redis write errors */ }
+}
+
 import {
   signToken, verifyToken, requireAuth,
   getAdminUsers, checkPassword, checkOverrideKey,
@@ -588,9 +606,15 @@ app.post('/api/analyze-image', express.json({ limit: '5mb' }), generateLimiter, 
 
 // ─── GET /api/trending — Trending Thai hashtags (cached 30 min) ───────────────
 const trendCache = { data: null, ts: 0 };
-const TREND_TTL  = 30 * 60 * 1000;
+const TREND_TTL     = 30 * 60 * 1000;   // in-memory TTL (ms)
+const TREND_TTL_SEC = 30 * 60;           // Redis TTL (seconds)
 
 app.get('/api/trending', async (req, res) => {
+  // 1. Try Redis cache first
+  const cached = await cacheGet('trending:th');
+  if (cached) return res.json(cached);
+
+  // 2. Fallback to in-memory cache
   if (trendCache.data && Date.now() - trendCache.ts < TREND_TTL) {
     return res.json(trendCache.data);
   }
@@ -608,6 +632,7 @@ app.get('/api/trending', async (req, res) => {
         const ai = JSON.parse(m[0]);
         const payload = { ...ai, ts: new Date().toISOString(), source: 'gemini' };
         trendCache.data = payload; trendCache.ts = Date.now();
+        await cacheSet('trending:th', payload, TREND_TTL_SEC);
         return res.json(payload);
       }
     } catch (_) {}
@@ -638,6 +663,7 @@ app.get('/api/trending', async (req, res) => {
     ts: new Date().toISOString(), source: 'curated',
   };
   trendCache.data = payload; trendCache.ts = Date.now();
+  await cacheSet('trending:th', payload, TREND_TTL_SEC);
   return res.json(payload);
 });
 
@@ -1521,6 +1547,76 @@ app.get('/logistics', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//  PDPA CONSENT (Thailand Personal Data Protection Act B.E. 2562)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const CONSENT_LOG_DIR = IS_VERCEL ? '/tmp/openthai-consent' : join(STATIC_DATA_DIR, 'consent-logs');
+const VALID_CONSENT_TYPES = ['marketing', 'analytics', 'essential', 'third_party'];
+
+function ensureConsentDir() {
+  if (!existsSync(CONSENT_LOG_DIR)) mkdirSync(CONSENT_LOG_DIR, { recursive: true });
+}
+
+function consentLogFile(userId) {
+  const safe = String(userId).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
+  return join(CONSENT_LOG_DIR, `consent-${safe}.jsonl`);
+}
+
+// POST /api/consent — record a consent decision
+app.post('/api/consent', (req, res) => {
+  const { userId, consentType, granted, ipAddress } = req.body || {};
+
+  if (!userId || typeof userId !== 'string' || !userId.trim())
+    return res.status(400).json({ error: 'userId is required' });
+  if (!consentType || !VALID_CONSENT_TYPES.includes(consentType))
+    return res.status(400).json({ error: `consentType must be one of: ${VALID_CONSENT_TYPES.join(', ')}` });
+  if (typeof granted !== 'boolean')
+    return res.status(400).json({ error: 'granted must be a boolean' });
+
+  const consentId = `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const entry = {
+    consentId,
+    userId:      userId.trim(),
+    consentType,
+    granted,
+    ipAddress:   ipAddress || req.ip || req.headers['x-forwarded-for'] || 'unknown',
+    userAgent:   req.headers['user-agent']?.slice(0, 200) || '',
+    version:     '1.0',
+    ts:          new Date().toISOString(),
+  };
+
+  try {
+    ensureConsentDir();
+    writeFileSync(consentLogFile(userId.trim()), JSON.stringify(entry) + '\n', { flag: 'a', encoding: 'utf8' });
+    addLog('info', 'PDPA', `Consent recorded: user=${entry.userId} type=${consentType} granted=${granted}`);
+    res.json({ success: true, consentId });
+  } catch (err) {
+    addLog('error', 'PDPA', `Consent write failed: ${err.message}`);
+    res.status(500).json({ error: 'Failed to record consent' });
+  }
+});
+
+// GET /api/consent/:userId — retrieve consent history for a user (auth required)
+app.get('/api/consent/:userId', requireAuth, (req, res) => {
+  const { userId } = req.params;
+  if (!userId || !userId.trim())
+    return res.status(400).json({ error: 'userId is required' });
+
+  try {
+    ensureConsentDir();
+    const file = consentLogFile(userId.trim());
+    if (!existsSync(file)) return res.json({ success: true, userId, history: [] });
+
+    const lines = readFileSync(file, 'utf8').split('\n').filter(Boolean);
+    const history = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    res.json({ success: true, userId, history });
+  } catch (err) {
+    addLog('error', 'PDPA', `Consent read failed: ${err.message}`);
+    res.status(500).json({ error: 'Failed to retrieve consent history' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //  AUTH ROUTES
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1664,6 +1760,7 @@ async function startServer() {
     console.log(`   AI Mode     : ${anthropic ? 'Claude' : gemini ? 'Gemini' : '⚠️  Mock (ไม่มี API key)'}`);
     console.log(`   Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? '✅ Configured' : '⚠️  Not configured'}`);
     console.log(`   Recovery    : ${process.env.RECOVERY_CODES ? '✅ Codes set' : '⚠️  No codes in .env'}`);
+    console.log(`   Redis       : ${process.env.REDIS_URL ? `✅ ${process.env.REDIS_URL}` : '⚠️  No REDIS_URL (in-memory cache only)'}`);
     console.log(`   IS_VERCEL   : ${IS_VERCEL ? '✅ Serverless mode' : '⚠️  Local mode'}`);
     console.log(`   Health      : http://localhost:${PORT}/api/health\n`);
   });
