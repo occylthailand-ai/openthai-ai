@@ -1617,6 +1617,99 @@ app.get('/api/consent/:userId', requireAuth, (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//  PAYMENT FLOW — Omise PromptPay + Webhook
+// ═══════════════════════════════════════════════════════════════════════════════
+import {
+  createPromptPaySource, createCharge, getCharge, voidCharge, parseWebhookEvent
+} from './services/omise-service.js';
+
+const paymentLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'ส่งคำขอ payment บ่อยเกินไป' } });
+
+// POST /api/payment/initiate — สร้าง PromptPay QR สำหรับชำระเงิน
+app.post('/api/payment/initiate', paymentLimiter, requireAuth, async (req, res) => {
+  const { plan, amountTHB, returnUrl } = req.body || {};
+  if (!plan || !amountTHB) return res.status(400).json({ success: false, error: 'ต้องการ plan และ amountTHB' });
+  if (!process.env.OMISE_SECRET_KEY) {
+    return res.status(503).json({ success: false, error: 'Payment gateway ยังไม่ได้ตั้งค่า — ติดต่อทีมงาน' });
+  }
+  try {
+    const source = await createPromptPaySource(amountTHB);
+    const charge = await createCharge({
+      amountTHB,
+      sourceId: source.id,
+      description: `OpenThai AI — ${plan} plan`,
+      orderId: `order_${Date.now()}`,
+      metadata: { plan, userId: req.user?.id || 'guest', returnUrl },
+    });
+    audit(req, 'payment.initiate', true, { plan, amountTHB, chargeId: charge.id });
+    res.json({
+      success: true,
+      chargeId: charge.id,
+      qrImage: charge.source?.scannable_code?.image?.download_uri,
+      amount: amountTHB,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    });
+  } catch (err) {
+    audit(req, 'payment.initiate', false, { error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/payment/status/:chargeId — ตรวจสอบสถานะ charge
+app.get('/api/payment/status/:chargeId', requireAuth, async (req, res) => {
+  if (!process.env.OMISE_SECRET_KEY) return res.status(503).json({ success: false, error: 'Payment gateway ยังไม่ได้ตั้งค่า' });
+  try {
+    const charge = await getCharge(req.params.chargeId);
+    res.json({
+      success: true,
+      chargeId: charge.id,
+      status: charge.status,       // pending / successful / failed / expired
+      paid: charge.paid,
+      amount: charge.amount / 100, // แปลงจาก satang เป็น THB
+      paidAt: charge.paid_at,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/payment/webhook — รับ event จาก Omise (charge.complete ฯลฯ)
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const rawBody = req.body.toString('utf8');
+    const sig = req.headers['x-omise-signature'] || '';
+    const webhookSecret = process.env.OMISE_WEBHOOK_SECRET || '';
+    const event = parseWebhookEvent(rawBody, sig, webhookSecret);
+
+    addLog('info', 'Payment', `Webhook: ${event.key} — ${event.data?.id}`);
+
+    if (event.key === 'charge.complete' && event.data?.paid) {
+      const { metadata } = event.data;
+      addLog('info', 'Payment', `✅ ชำระสำเร็จ: ${event.data.id} plan=${metadata?.plan} user=${metadata?.userId}`);
+      // TODO: อัปเดต profiles.plan ใน Supabase เมื่อเชื่อมต่อ DB
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    addLog('error', 'Payment', `Webhook error: ${err.message}`);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/payment/void/:chargeId — ยกเลิก charge (admin only)
+app.post('/api/payment/void/:chargeId', requireAuth, async (req, res) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ success: false, error: 'Admin only' });
+  if (!process.env.OMISE_SECRET_KEY) return res.status(503).json({ success: false, error: 'Payment gateway ยังไม่ได้ตั้งค่า' });
+  try {
+    const result = await voidCharge(req.params.chargeId);
+    audit(req, 'payment.void', true, { chargeId: req.params.chargeId });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //  AUTH ROUTES
 // ═══════════════════════════════════════════════════════════════════════════════
 
