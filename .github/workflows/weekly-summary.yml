@@ -1,0 +1,92 @@
+name: "📊 Weekly Summary"
+
+on:
+  schedule:
+    # 02:00 UTC = 09:00 Bangkok time (UTC+7), every Monday
+    - cron: "0 2 * * 1"
+  workflow_dispatch:
+
+jobs:
+  weekly-summary:
+    name: Weekly Summary Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Count commits this week
+        id: commits
+        run: |
+          COUNT=$(git log --oneline --since="7 days ago" | wc -l | tr -d ' ')
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+          echo "Commits this week: $COUNT"
+
+      - name: Count open PRs
+        id: prs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COUNT=$(gh pr list --state open --json number --jq length)
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+          echo "Open PRs: $COUNT"
+
+      - name: Uptime check
+        id: uptime
+        run: |
+          START=$(date +%s%3N)
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 15 \
+            https://www.openthai-ai.com/api/health)
+          END=$(date +%s%3N)
+          RESPONSE_MS=$((END - START))
+
+          echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+          echo "response_ms=$RESPONSE_MS" >> $GITHUB_OUTPUT
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "status=✅ Online (${RESPONSE_MS}ms)" >> $GITHUB_OUTPUT
+          else
+            echo "status=⚠️ Degraded (HTTP $HTTP_CODE)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build weekly summary message
+        id: message
+        run: |
+          WEEK_START=$(TZ="Asia/Bangkok" date -d "7 days ago" "+%Y-%m-%d")
+          WEEK_END=$(TZ="Asia/Bangkok" date "+%Y-%m-%d")
+          REPO_URL="https://github.com/${{ github.repository }}"
+          COMMIT_COUNT="${{ steps.commits.outputs.count }}"
+          PR_COUNT="${{ steps.prs.outputs.count }}"
+          UPTIME_STATUS="${{ steps.uptime.outputs.status }}"
+
+          MSG="📊 OpenThai AI — Weekly Summary (${WEEK_START} → ${WEEK_END})
+
+🔗 Repo: ${REPO_URL}
+📝 Commits this week: ${COMMIT_COUNT}
+🔀 Open PRs: ${PR_COUNT}
+🌐 Uptime: ${UPTIME_STATUS}"
+
+          echo "msg<<EOF" >> $GITHUB_OUTPUT
+          echo "$MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "$MSG"
+
+      - name: Post to Slack
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          MSG="${{ steps.message.outputs.msg }}"
+          JSON_TEXT=$(echo "$MSG" | jq -Rs .)
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": $JSON_TEXT}"

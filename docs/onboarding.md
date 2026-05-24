@@ -81,3 +81,39 @@ vercel --prod
 
 ## ถ้าระบบมีปัญหา
 → ดู `docs/runbooks/incident-response.md`
+
+## Migrations
+
+รัน SQL files ใน backend/migrations/ ใน Supabase SQL Editor ตามลำดับก่อน start backend
+
+## Troubleshooting
+
+**Port 8000 already in use**
+```bash
+# หา process ที่ใช้ port 8000 แล้ว kill
+lsof -ti :8000 | xargs kill -9
+# หรือเปลี่ยน port ใน backend/.env
+PORT=8001
+```
+
+**Cannot connect to Supabase**
+- ตรวจสอบว่า `SUPABASE_URL` และ `SUPABASE_ANON_KEY` ถูกต้องใน `backend/.env`
+- ค่าเหล่านี้อยู่ใน Supabase Dashboard → Project Settings → API
+
+**AI returns mock data**
+- ตรวจสอบว่า `ANTHROPIC_API_KEY` หรือ `GEMINI_API_KEY` ถูก set ใน `backend/.env`
+- ระบบจะ fallback เป็น mock data ถ้าไม่มี API key
+
+**Node version issues**
+- ใช้ nvm เพื่อ manage Node version
+- version ที่ต้องการอยู่ใน `.nvmrc`
+```bash
+nvm install
+nvm use
+```
+
+**Missing environment variables**
+```bash
+cp environments/dev.env.example backend/.env
+# แล้วแก้ไขค่าต่างๆ ใน backend/.env ให้ถูกต้อง
+```

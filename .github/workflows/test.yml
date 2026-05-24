@@ -65,3 +65,36 @@ jobs:
             exit 1
           fi
           echo "✅ No hardcoded secrets found"
+
+  notify-slack:
+    name: 🔔 Notify Slack on Failure
+    runs-on: ubuntu-latest
+    needs: [frontend-test, backend-test, lint]
+    if: failure()
+    steps:
+      - name: Notify Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GH_ACTOR: ${{ github.actor }}
+          GH_REF: ${{ github.ref_name }}
+          GH_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          python3 - <<'EOF'
+import urllib.request, json, os
+payload = json.dumps({
+    "username": "OpenThai AI Bot",
+    "icon_emoji": ":x:",
+    "text": f"❌ *OpenThai AI — Tests/Lint ล้มเหลว!* <{os.environ['GH_RUN_URL']}|ดู Log>",
+    "attachments": [{
+        "color": "#e01e5a",
+        "fields": [
+            {"title": "Branch", "value": os.environ["GH_REF"], "short": True},
+            {"title": "Actor", "value": os.environ["GH_ACTOR"], "short": True},
+        ]
+    }]
+}).encode()
+req = urllib.request.Request(os.environ["SLACK_WEBHOOK_URL"], data=payload, headers={"Content-Type": "application/json"})
+urllib.request.urlopen(req)
+print("Slack notified")
+EOF

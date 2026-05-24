@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PAYMENT_GROUPS } from '../data/paymentMethods';
+import { apiUrl, fetchWithTimeout } from '../apiBase';
 
 const PLANS = [
   {
@@ -68,8 +69,66 @@ export default function PricingPage() {
   const [openFaq, setOpenFaq] = useState(null);
   const [paySearch, setPaySearch] = useState('');
   const [payGroupFilter, setPayGroupFilter] = useState('thai');
+  const [payChargeId, setPayChargeId] = useState(null);
+  const [payQrUrl, setPayQrUrl] = useState(null);
+  const [payLoadingQr, setPayLoadingQr] = useState(false);
+  const pollRef = useRef(null);
 
   const plan = PLANS.find((p) => p.id === selected);
+
+  // Call payment API when PromptPay QR step opens
+  useEffect(() => {
+    if (payStep !== 'qr' || !payMethod) return;
+    const isPromptPayMethod = ['thai', 'ewallet'].includes(
+      PAYMENT_GROUPS.find((g) => g.methods.some((m) => m.id === payMethod.id))?.id
+    );
+    if (!isPromptPayMethod) return;
+    const token = localStorage.getItem('token');
+    if (!token || plan.thb === 0) return;
+
+    setPayLoadingQr(true);
+    setPayQrUrl(null);
+    setPayChargeId(null);
+
+    fetchWithTimeout(apiUrl('/api/payment/initiate'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ plan: plan.id, amountTHB: plan.thb }),
+    }, 12000)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          setPayChargeId(data.chargeId);
+          setPayQrUrl(data.qrImage || null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setPayLoadingQr(false));
+  }, [payStep, payMethod?.id]);
+
+  // Poll payment status every 5 seconds
+  useEffect(() => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+    if (payStep !== 'qr' || !payChargeId) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const r = await fetchWithTimeout(apiUrl(`/api/payment/status/${payChargeId}`), {
+          headers: { Authorization: `Bearer ${token}` },
+        }, 8000);
+        const data = await r.json();
+        if (data.paid || data.status === 'successful') {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          setPayStep('confirm');
+        }
+      } catch {}
+    }, 5000);
+
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+  }, [payStep, payChargeId]);
 
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif" }}>
@@ -203,14 +262,27 @@ export default function PricingPage() {
                   </div>
                 </div>
 
-                {/* QR placeholder */}
+                {/* QR — real from Omise API or static fallback */}
                 <div style={{ width: 200, height: 200, background: 'rgba(255,255,255,0.95)', margin: '0 auto 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ fontSize: 48 }}>{payMethod?.icon || '📱'}</div>
-                  <div style={{ fontSize: 11, color: '#334155', fontWeight: 600 }}>{payMethod?.label}</div>
-                  {(payMethod?.id === 'promptpay' || PAYMENT_GROUPS[0].methods.find((m) => m.id === payMethod?.id)) && (
-                    <div style={{ fontSize: 12, color: '#6366f1', fontWeight: 700 }}>{PROMPTPAY_NUMBER}</div>
+                  {payLoadingQr ? (
+                    <div style={{ fontSize: 13, color: '#334155', textAlign: 'center' }}>⏳ กำลังสร้าง QR…</div>
+                  ) : payQrUrl ? (
+                    <img src={payQrUrl} alt="PromptPay QR" style={{ width: 180, height: 180, objectFit: 'contain', borderRadius: 8 }} />
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 48 }}>{payMethod?.icon || '📱'}</div>
+                      <div style={{ fontSize: 11, color: '#334155', fontWeight: 600 }}>{payMethod?.label}</div>
+                      {(payMethod?.id === 'promptpay' || PAYMENT_GROUPS[0].methods.find((m) => m.id === payMethod?.id)) && (
+                        <div style={{ fontSize: 12, color: '#6366f1', fontWeight: 700 }}>{PROMPTPAY_NUMBER}</div>
+                      )}
+                    </>
                   )}
                 </div>
+                {payChargeId && (
+                  <div style={{ fontSize: 11, color: '#475569', marginBottom: 8 }}>
+                    🔄 ตรวจสอบสถานะอัตโนมัติ… <code style={{ color: '#6366f1' }}>{payChargeId.slice(0, 16)}</code>
+                  </div>
+                )}
 
                 {/* คำแนะนำตามประเภท */}
                 <div style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13, color: '#94a3b8', lineHeight: 1.8, textAlign: 'left' }}>

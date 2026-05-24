@@ -1,0 +1,105 @@
+name: "🌅 Morning Report"
+
+on:
+  schedule:
+    # 01:03 UTC = 08:03 Bangkok time (UTC+7)
+    - cron: "3 1 * * *"
+  workflow_dispatch:
+
+jobs:
+  morning-report:
+    name: Morning Health Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check system health
+        id: health
+        run: |
+          START=$(date +%s%3N)
+          HTTP_CODE=$(curl -s -o /tmp/health_body.json -w "%{http_code}" \
+            --max-time 15 \
+            https://www.openthai-ai.com/api/health)
+          END=$(date +%s%3N)
+          RESPONSE_MS=$((END - START))
+
+          echo "http_code=$HTTP_CODE" >> $GITHUB_OUTPUT
+          echo "response_ms=$RESPONSE_MS" >> $GITHUB_OUTPUT
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "status=healthy" >> $GITHUB_OUTPUT
+          else
+            echo "status=degraded (HTTP $HTTP_CODE)" >> $GITHUB_OUTPUT
+          fi
+
+          cat /tmp/health_body.json || true
+
+      - name: Get system metrics
+        id: metrics
+        run: |
+          HTTP_CODE=$(curl -s -o /tmp/metrics_body.json -w "%{http_code}" \
+            --max-time 15 \
+            https://www.openthai-ai.com/api/system/metrics)
+
+          echo "metrics_http=$HTTP_CODE" >> $GITHUB_OUTPUT
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            CLAUDE_PCT=$(jq -r '.ai.claude_pct // .claude_pct // "N/A"' /tmp/metrics_body.json 2>/dev/null || echo "N/A")
+            GEMINI_PCT=$(jq -r '.ai.gemini_pct // .gemini_pct // "N/A"' /tmp/metrics_body.json 2>/dev/null || echo "N/A")
+          else
+            CLAUDE_PCT="N/A"
+            GEMINI_PCT="N/A"
+          fi
+
+          echo "claude_pct=$CLAUDE_PCT" >> $GITHUB_OUTPUT
+          echo "gemini_pct=$GEMINI_PCT" >> $GITHUB_OUTPUT
+
+          cat /tmp/metrics_body.json || true
+
+      - name: Build report message
+        id: message
+        run: |
+          REPORT_DATE=$(TZ="Asia/Bangkok" date "+%Y-%m-%d")
+          HEALTH_STATUS="${{ steps.health.outputs.status }}"
+          RESPONSE_MS="${{ steps.health.outputs.response_ms }}"
+          CLAUDE_PCT="${{ steps.metrics.outputs.claude_pct }}"
+          GEMINI_PCT="${{ steps.metrics.outputs.gemini_pct }}"
+
+          MSG="🌅 OpenThai AI — Morning Report ${REPORT_DATE}
+✅ Health: ${HEALTH_STATUS}
+⏱️ Response: ${RESPONSE_MS}ms
+📊 AI: Claude ${CLAUDE_PCT}% | Gemini ${GEMINI_PCT}%"
+
+          echo "msg<<EOF" >> $GITHUB_OUTPUT
+          echo "$MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "$MSG"
+
+      - name: Post to Slack
+        if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          MSG="${{ steps.message.outputs.msg }}"
+          # Escape newlines for JSON
+          JSON_TEXT=$(echo "$MSG" | jq -Rs .)
+          curl -s -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": $JSON_TEXT}"
+
+      - name: Post to LINE Notify
+        if: ${{ env.LINE_NOTIFY_TOKEN != '' }}
+        env:
+          LINE_NOTIFY_TOKEN: ${{ secrets.LINE_NOTIFY_TOKEN }}
+        run: |
+          MSG="${{ steps.message.outputs.msg }}"
+          curl -s -X POST https://notify-api.line.me/api/notify \
+            -H "Authorization: Bearer $LINE_NOTIFY_TOKEN" \
+            --data-urlencode "message=$MSG"
+
+      - name: Fail if unhealthy
+        if: steps.health.outputs.status != 'healthy'
+        run: |
+          echo "::error::Health check failed — status: ${{ steps.health.outputs.status }}"
+          exit 1

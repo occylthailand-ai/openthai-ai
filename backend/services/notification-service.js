@@ -40,6 +40,14 @@ async function sendLine(message) {
         }
       });
     });
+
+    // 8 second timeout to prevent LINE Notify requests from hanging indefinitely
+    const timeout = setTimeout(() => {
+      req.destroy();
+      resolve({ ok: false, reason: 'LINE Notify request timed out after 8 seconds' });
+    }, 8000);
+    req.on('close', () => clearTimeout(timeout));
+
     req.on('error', (e) => resolve({ ok: false, reason: e.message }));
     req.write(body);
     req.end();
@@ -144,9 +152,11 @@ export async function notify({ message, subject, html, priority = 'normal' }) {
 
 // ─── Pre-built notification templates ────────────────────────────────────────
 export async function notifyNewUser(email, plan) {
+  // Escape email to prevent control characters or newlines from injecting extra fields
+  const safeEmail = String(email).replace(/[\r\n\t]/g, ' ').slice(0, 254);
   return notify({
-    message: `🎉 User ใหม่!\nEmail: ${email}\nแผน: ${plan}\n\n📊 ${SITE_URL}/admin`,
-    subject: `[OpenThai AI] User ใหม่: ${email}`,
+    message: `🎉 User ใหม่!\nEmail: ${safeEmail}\nแผน: ${plan}\n\n📊 ${SITE_URL}/admin`,
+    subject: `[OpenThai AI] User ใหม่: ${safeEmail}`,
     priority: 'normal',
   });
 }

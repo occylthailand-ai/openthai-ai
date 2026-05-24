@@ -10,6 +10,9 @@
 | SUPABASE_SERVICE_KEY | 180 วัน | Supabase Dashboard → Settings → API |
 | ADMIN_KEY | 90 วัน | สร้างใหม่ + แจ้งทีมงาน |
 | SMTP_PASS | 365 วัน | Gmail → App Passwords → Revoke + Create |
+| SLACK_WEBHOOK_URL | 180 วัน | Slack → Manage Apps → Incoming Webhooks → Regenerate |
+
+> **หมายเหตุ:** ตั้ง GitHub Actions reminder หรือ calendar alert ก่อนวันหมดอายุ 7 วัน
 
 ## ขั้นตอนการหมุนเวียน (Zero Downtime)
 
@@ -25,10 +28,12 @@
 | Secret | วันที่ล่าสุด | วันที่ควรทำครั้งถัดไป |
 |--------|------------|---------------------|
 | JWT_SECRET | 2026-05-11 | 2026-11-11 |
-| ANTHROPIC_API_KEY | - | เมื่อเริ่มใช้ |
+| ANTHROPIC_API_KEY | 2026-05-14 | 2026-08-14 |
+| GEMINI_API_KEY | 2026-05-14 | 2026-08-14 |
 | SUPABASE_SERVICE_KEY | 2026-05-11 | 2026-11-11 |
 | ADMIN_KEY | 2026-05-11 | 2026-08-11 |
 | SMTP_PASS | 2026-05-11 | 2027-05-11 |
+| SLACK_WEBHOOK_URL | 2026-05-14 | 2026-11-14 |
 
 ## กรณีฉุกเฉิน (Secret รั่วไหล)
 

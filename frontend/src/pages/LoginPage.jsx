@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Logo } from '../components/Logo';
-import { apiUrl } from '../apiBase';
+import { apiUrl, fetchWithTimeout } from '../apiBase';
 
 const TABS = [
   { id: 'password', label: '🔑 Login', icon: '🔑' },
@@ -50,11 +50,11 @@ const LoginPage = ({ onLogin }) => {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const res = await fetch(apiUrl('/api/auth/login'), {
+      const res = await fetchWithTimeout(apiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim(), password }),
-      });
+      }, 10000);
       const data = await res.json();
       if (!res.ok) { handleError(data.error || 'Login ล้มเหลว'); return; }
       localStorage.setItem('auth_token', data.token);
@@ -77,11 +77,11 @@ const LoginPage = ({ onLogin }) => {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const res = await fetch(apiUrl('/api/auth/recovery'), {
+      const res = await fetchWithTimeout(apiUrl('/api/auth/recovery'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: recoveryCode.trim() }),
-      });
+      }, 10000);
       const data = await res.json();
       if (!res.ok) { handleError(data.error || 'Code ไม่ถูกต้อง'); return; }
       handleInfo(data.warning || 'เข้าสู่ระบบสำเร็จ');

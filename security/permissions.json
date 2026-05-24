@@ -100,6 +100,26 @@
     }
   },
 
+  "rate_limits": {
+    "generate":  { "requests": 10, "window": "1m",   "scope": "per_user" },
+    "affiliate": { "requests": 5,  "window": "15min", "scope": "per_ip" },
+    "auth":      { "requests": 20, "window": "15min", "scope": "per_ip" },
+    "contact":   { "requests": 5,  "window": "1h",    "scope": "per_ip" }
+  },
+
+  "session_policy": {
+    "jwt_expiry": "7d",
+    "refresh_token": false,
+    "mfa_required": false,
+    "admin_mfa_recommended": true
+  },
+
+  "notification_channels": {
+    "slack_webhook_url": "SLACK_WEBHOOK_URL (set via environment variable)",
+    "email_alerts": true,
+    "audit_log": true
+  },
+
   "api_endpoints": {
     "POST /api/generate":         ["free", "pro", "business", "admin"],
     "POST /api/generate-batch":   ["pro", "business", "admin"],

@@ -39,7 +39,7 @@
   },
   {
     "id": "1778680430402",
-    "name": "������",
+    "name": "ทดสอบ3",
     "email": "test_fix@test.com",
     "phone": "",
     "platform": "TikTok",
@@ -53,11 +53,12 @@
     "total_sales": 0,
     "total_earned": 0,
     "joined_at": "2026-05-13T13:53:50.402Z",
-    "status": "active"
+    "status": "active",
+    "_fixed": "ref_link bug + encoding fixed 2026-05-24 by Mythos (Hermes)"
   },
   {
     "id": "1778680453654",
-    "name": "���ͺ2",
+    "name": "ทดสอบ4",
     "email": "fixtest2@test.com",
     "phone": "",
     "platform": "TikTok",
@@ -71,6 +72,7 @@
     "total_sales": 0,
     "total_earned": 0,
     "joined_at": "2026-05-13T13:54:13.654Z",
-    "status": "active"
+    "status": "active",
+    "_fixed": "ref_link bug + encoding fixed 2026-05-24 by Mythos (Hermes)"
   }
 ]

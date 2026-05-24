@@ -94,3 +94,61 @@ jobs:
           else
             echo "⏭️ LINE_NOTIFY_TOKEN not set — skipping LINE notify"
           fi
+
+      - name: 🔔 Slack Notify (slow response)
+        if: steps.health.outputs.slow_response == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          HEALTH_MS: ${{ steps.health.outputs.health_ms }}
+          HEALTH_VERSION: ${{ steps.health.outputs.health_version }}
+          GH_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          THRESHOLD: ${{ env.THRESHOLD_MS }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          python3 - <<'EOF'
+import urllib.request, json, os
+payload = json.dumps({
+    "username": "OpenThai AI Bot",
+    "icon_emoji": ":warning:",
+    "text": f"⚠️ *OpenThai AI — Response ช้าผิดปกติ!* {os.environ['HEALTH_MS']}ms (threshold: {os.environ['THRESHOLD']}ms)",
+    "attachments": [{
+        "color": "#ECB22E",
+        "fields": [
+            {"title": "Response Time", "value": f"{os.environ['HEALTH_MS']}ms", "short": True},
+            {"title": "Threshold", "value": f"{os.environ['THRESHOLD']}ms", "short": True},
+            {"title": "Version", "value": os.environ["HEALTH_VERSION"], "short": True},
+            {"title": "Run", "value": f"<{os.environ['GH_RUN_URL']}|View Run>", "short": True},
+        ]
+    }]
+}).encode()
+req = urllib.request.Request(os.environ["SLACK_WEBHOOK_URL"], data=payload, headers={"Content-Type": "application/json"})
+urllib.request.urlopen(req)
+print("Slack notified")
+EOF
+
+      - name: 🔔 Slack Notify (health check down)
+        if: steps.warmup.outputs.warmup_status != '200'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          WARMUP_STATUS: ${{ steps.warmup.outputs.warmup_status }}
+          GH_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          python3 - <<'EOF'
+import urllib.request, json, os
+payload = json.dumps({
+    "username": "OpenThai AI Bot",
+    "icon_emoji": ":rotating_light:",
+    "text": f"🚨 *OpenThai AI — ระบบอาจมีปัญหา!* HTTP {os.environ['WARMUP_STATUS']} <{os.environ['GH_RUN_URL']}|ดู Log>",
+    "attachments": [{
+        "color": "#e01e5a",
+        "fields": [
+            {"title": "HTTP Status", "value": os.environ["WARMUP_STATUS"], "short": True},
+            {"title": "Expected", "value": "200", "short": True},
+        ]
+    }]
+}).encode()
+req = urllib.request.Request(os.environ["SLACK_WEBHOOK_URL"], data=payload, headers={"Content-Type": "application/json"})
+urllib.request.urlopen(req)
+print("Slack notified")
+EOF

@@ -4,12 +4,17 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from '@anthropic-ai/sdk';
+import Redis from 'ioredis';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import nodemailer from 'nodemailer';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import cron from 'node-cron';
 import https from 'https';
+import { randomBytes } from 'crypto';
+import {
+  createPromptPaySource, createCharge, getCharge, voidCharge, parseWebhookEvent
+} from './services/omise-service.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -20,6 +25,23 @@ const IS_VERCEL = !!process.env.VERCEL;
 // Local: ทุกอย่างอยู่ใน backend/data/
 const STATIC_DATA_DIR = join(__dirname, 'data');
 const WRITE_DATA_DIR  = IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR;
+// ── Redis client (optional — graceful degradation when unavailable) ──────────
+const redis = process.env.REDIS_URL
+  ? new Redis(process.env.REDIS_URL, { lazyConnect: true, enableOfflineQueue: false })
+  : null;
+
+async function cacheGet(key) {
+  if (!redis) return null;
+  try { const v = await redis.get(key); return v ? JSON.parse(v) : null; }
+  catch { return null; }
+}
+
+async function cacheSet(key, value, ttlSecs) {
+  if (!redis) return;
+  try { await redis.set(key, JSON.stringify(value), 'EX', ttlSecs); }
+  catch { /* ignore redis write errors */ }
+}
+
 import {
   signToken, verifyToken, requireAuth,
   getAdminUsers, checkPassword, checkOverrideKey,
@@ -412,7 +434,11 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
 // ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
 app.get('/api/affiliate/list', (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
-  const adminKey = process.env.ADMIN_KEY || 'openthai-admin-2026';
+  const adminKey = process.env.ADMIN_KEY;
+  if (!adminKey) {
+    console.warn('[SECURITY] ADMIN_KEY ไม่ได้ตั้งค่า — endpoint นี้ถูกปิดชั่วคราว (OBS-005)');
+    return res.status(503).json({ success: false, message: 'Admin endpoint unavailable — ADMIN_KEY not configured' });
+  }
   if (key !== adminKey) {
     return res.status(401).json({ success: false, message: 'Unauthorized — ต้องการ Admin Key' });
   }
@@ -588,9 +614,15 @@ app.post('/api/analyze-image', express.json({ limit: '5mb' }), generateLimiter, 
 
 // ─── GET /api/trending — Trending Thai hashtags (cached 30 min) ───────────────
 const trendCache = { data: null, ts: 0 };
-const TREND_TTL  = 30 * 60 * 1000;
+const TREND_TTL     = 30 * 60 * 1000;   // in-memory TTL (ms)
+const TREND_TTL_SEC = 30 * 60;           // Redis TTL (seconds)
 
 app.get('/api/trending', async (req, res) => {
+  // 1. Try Redis cache first
+  const cached = await cacheGet('trending:th');
+  if (cached) return res.json(cached);
+
+  // 2. Fallback to in-memory cache
   if (trendCache.data && Date.now() - trendCache.ts < TREND_TTL) {
     return res.json(trendCache.data);
   }
@@ -608,6 +640,7 @@ app.get('/api/trending', async (req, res) => {
         const ai = JSON.parse(m[0]);
         const payload = { ...ai, ts: new Date().toISOString(), source: 'gemini' };
         trendCache.data = payload; trendCache.ts = Date.now();
+        await cacheSet('trending:th', payload, TREND_TTL_SEC);
         return res.json(payload);
       }
     } catch (_) {}
@@ -638,6 +671,7 @@ app.get('/api/trending', async (req, res) => {
     ts: new Date().toISOString(), source: 'curated',
   };
   trendCache.data = payload; trendCache.ts = Date.now();
+  await cacheSet('trending:th', payload, TREND_TTL_SEC);
   return res.json(payload);
 });
 
@@ -1521,6 +1555,166 @@ app.get('/logistics', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+//  PDPA CONSENT (Thailand Personal Data Protection Act B.E. 2562)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const CONSENT_LOG_DIR = IS_VERCEL ? '/tmp/openthai-consent' : join(STATIC_DATA_DIR, 'consent-logs');
+const VALID_CONSENT_TYPES = ['marketing', 'analytics', 'essential', 'third_party'];
+
+function ensureConsentDir() {
+  if (!existsSync(CONSENT_LOG_DIR)) mkdirSync(CONSENT_LOG_DIR, { recursive: true });
+}
+
+function consentLogFile(userId) {
+  const safe = String(userId).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64);
+  return join(CONSENT_LOG_DIR, `consent-${safe}.jsonl`);
+}
+
+// POST /api/consent — record a consent decision
+app.post('/api/consent', (req, res) => {
+  const { userId, consentType, granted, ipAddress } = req.body || {};
+
+  if (!userId || typeof userId !== 'string' || !userId.trim())
+    return res.status(400).json({ error: 'userId is required' });
+  if (!consentType || !VALID_CONSENT_TYPES.includes(consentType))
+    return res.status(400).json({ error: `consentType must be one of: ${VALID_CONSENT_TYPES.join(', ')}` });
+  if (typeof granted !== 'boolean')
+    return res.status(400).json({ error: 'granted must be a boolean' });
+
+  const consentId = `c_${Date.now()}_${randomBytes(4).toString('hex')}`;
+  const entry = {
+    consentId,
+    userId:      userId.trim(),
+    consentType,
+    granted,
+    ipAddress:   ipAddress || req.ip || req.headers['x-forwarded-for'] || 'unknown',
+    userAgent:   req.headers['user-agent']?.slice(0, 200) || '',
+    version:     '1.0',
+    ts:          new Date().toISOString(),
+  };
+
+  try {
+    ensureConsentDir();
+    writeFileSync(consentLogFile(userId.trim()), JSON.stringify(entry) + '\n', { flag: 'a', encoding: 'utf8' });
+    addLog('info', 'PDPA', `Consent recorded: user=${entry.userId} type=${consentType} granted=${granted}`);
+    res.json({ success: true, consentId });
+  } catch (err) {
+    addLog('error', 'PDPA', `Consent write failed: ${err.message}`);
+    res.status(500).json({ error: 'Failed to record consent' });
+  }
+});
+
+// GET /api/consent/:userId — retrieve consent history for a user (auth required)
+app.get('/api/consent/:userId', requireAuth, (req, res) => {
+  const { userId } = req.params;
+  if (!userId || !userId.trim())
+    return res.status(400).json({ error: 'userId is required' });
+
+  try {
+    ensureConsentDir();
+    const file = consentLogFile(userId.trim());
+    if (!existsSync(file)) return res.json({ success: true, userId, history: [] });
+
+    const lines = readFileSync(file, 'utf8').split('\n').filter(Boolean);
+    const history = lines.map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+    res.json({ success: true, userId, history });
+  } catch (err) {
+    addLog('error', 'PDPA', `Consent read failed: ${err.message}`);
+    res.status(500).json({ error: 'Failed to retrieve consent history' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PAYMENT FLOW — Omise PromptPay + Webhook
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const paymentLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'ส่งคำขอ payment บ่อยเกินไป' } });
+
+// POST /api/payment/initiate — สร้าง PromptPay QR สำหรับชำระเงิน
+app.post('/api/payment/initiate', paymentLimiter, requireAuth, async (req, res) => {
+  const { plan, amountTHB, returnUrl } = req.body || {};
+  if (!plan || !amountTHB) return res.status(400).json({ success: false, error: 'ต้องการ plan และ amountTHB' });
+  if (!process.env.OMISE_SECRET_KEY) {
+    return res.status(503).json({ success: false, error: 'Payment gateway ยังไม่ได้ตั้งค่า — ติดต่อทีมงาน' });
+  }
+  try {
+    const source = await createPromptPaySource(amountTHB);
+    const charge = await createCharge({
+      amountTHB,
+      sourceId: source.id,
+      description: `OpenThai AI — ${plan} plan`,
+      orderId: `order_${Date.now()}`,
+      metadata: { plan, userId: req.user?.id || 'guest', returnUrl },
+    });
+    audit(req, 'payment.initiate', true, { plan, amountTHB, chargeId: charge.id });
+    res.json({
+      success: true,
+      chargeId: charge.id,
+      qrImage: charge.source?.scannable_code?.image?.download_uri,
+      amount: amountTHB,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    });
+  } catch (err) {
+    audit(req, 'payment.initiate', false, { error: err.message });
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/payment/status/:chargeId — ตรวจสอบสถานะ charge
+app.get('/api/payment/status/:chargeId', requireAuth, async (req, res) => {
+  if (!process.env.OMISE_SECRET_KEY) return res.status(503).json({ success: false, error: 'Payment gateway ยังไม่ได้ตั้งค่า' });
+  try {
+    const charge = await getCharge(req.params.chargeId);
+    res.json({
+      success: true,
+      chargeId: charge.id,
+      status: charge.status,       // pending / successful / failed / expired
+      paid: charge.paid,
+      amount: charge.amount / 100, // แปลงจาก satang เป็น THB
+      paidAt: charge.paid_at,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/payment/webhook — รับ event จาก Omise (charge.complete ฯลฯ)
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const rawBody = req.body.toString('utf8');
+    const sig = req.headers['x-omise-signature'] || '';
+    const webhookSecret = process.env.OMISE_WEBHOOK_SECRET || '';
+    const event = parseWebhookEvent(rawBody, sig, webhookSecret);
+
+    addLog('info', 'Payment', `Webhook: ${event.key} — ${event.data?.id}`);
+
+    if (event.key === 'charge.complete' && event.data?.paid) {
+      const { metadata } = event.data;
+      addLog('info', 'Payment', `✅ ชำระสำเร็จ: ${event.data.id} plan=${metadata?.plan} user=${metadata?.userId}`);
+      // TODO: อัปเดต profiles.plan ใน Supabase เมื่อเชื่อมต่อ DB
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    addLog('error', 'Payment', `Webhook error: ${err.message}`);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/payment/void/:chargeId — ยกเลิก charge (admin only)
+app.post('/api/payment/void/:chargeId', requireAuth, async (req, res) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ success: false, error: 'Admin only' });
+  if (!process.env.OMISE_SECRET_KEY) return res.status(503).json({ success: false, error: 'Payment gateway ยังไม่ได้ตั้งค่า' });
+  try {
+    const result = await voidCharge(req.params.chargeId);
+    audit(req, 'payment.void', true, { chargeId: req.params.chargeId });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 //  AUTH ROUTES
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1664,6 +1858,7 @@ async function startServer() {
     console.log(`   AI Mode     : ${anthropic ? 'Claude' : gemini ? 'Gemini' : '⚠️  Mock (ไม่มี API key)'}`);
     console.log(`   Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? '✅ Configured' : '⚠️  Not configured'}`);
     console.log(`   Recovery    : ${process.env.RECOVERY_CODES ? '✅ Codes set' : '⚠️  No codes in .env'}`);
+    console.log(`   Redis       : ${process.env.REDIS_URL ? `✅ ${process.env.REDIS_URL}` : '⚠️  No REDIS_URL (in-memory cache only)'}`);
     console.log(`   IS_VERCEL   : ${IS_VERCEL ? '✅ Serverless mode' : '⚠️  Local mode'}`);
     console.log(`   Health      : http://localhost:${PORT}/api/health\n`);
   });

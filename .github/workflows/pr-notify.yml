@@ -1,0 +1,145 @@
+name: 🔔 Slack PR Notifications
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, closed, reopened, review_requested]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  notify:
+    name: Notify Slack
+    runs-on: ubuntu-latest
+    steps:
+      # ── PR เปิดใหม่ ──────────────────────────────────────────────────────────
+      - name: PR Opened
+        if: github.event_name == 'pull_request' && github.event.action == 'opened'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD: ${{ github.event.pull_request.head.ref }}
+          PR_BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          python3 - <<'EOF'
+import urllib.request, json, os
+payload = json.dumps({
+    "username": "OpenThai AI Bot",
+    "icon_emoji": ":git:",
+    "text": f"🔀 *PR #{os.environ['PR_NUMBER']} เปิดแล้ว* — <{os.environ['PR_URL']}|{os.environ['PR_TITLE']}>",
+    "attachments": [{
+        "color": "#0366d6",
+        "fields": [
+            {"title": "Author", "value": os.environ["PR_AUTHOR"], "short": True},
+            {"title": "Branch", "value": f"{os.environ['PR_HEAD']} → {os.environ['PR_BASE']}", "short": True},
+        ]
+    }]
+}).encode()
+req = urllib.request.Request(os.environ["SLACK_WEBHOOK_URL"], data=payload, headers={"Content-Type": "application/json"})
+urllib.request.urlopen(req)
+print("Slack notified")
+EOF
+
+      # ── PR Merge สำเร็จ ──────────────────────────────────────────────────────
+      - name: PR Merged
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          python3 - <<'EOF'
+import urllib.request, json, os
+payload = json.dumps({
+    "username": "OpenThai AI Bot",
+    "icon_emoji": ":large_purple_circle:",
+    "text": f"✅ *PR #{os.environ['PR_NUMBER']} Merged แล้ว!* — <{os.environ['PR_URL']}|{os.environ['PR_TITLE']}>",
+    "attachments": [{
+        "color": "#6f42c1",
+        "fields": [
+            {"title": "Author", "value": os.environ["PR_AUTHOR"], "short": True},
+            {"title": "Merged into", "value": os.environ["PR_BASE"], "short": True},
+        ]
+    }]
+}).encode()
+req = urllib.request.Request(os.environ["SLACK_WEBHOOK_URL"], data=payload, headers={"Content-Type": "application/json"})
+urllib.request.urlopen(req)
+print("Slack notified")
+EOF
+
+      # ── PR ปิดโดยไม่ Merge ──────────────────────────────────────────────────
+      - name: PR Closed (not merged)
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == false
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          python3 - <<'EOF'
+import urllib.request, json, os
+payload = json.dumps({
+    "username": "OpenThai AI Bot",
+    "icon_emoji": ":no_entry_sign:",
+    "text": f"🚫 *PR #{os.environ['PR_NUMBER']} ปิดแล้ว (ไม่ได้ Merge)* — <{os.environ['PR_URL']}|{os.environ['PR_TITLE']}>",
+    "attachments": [{
+        "color": "#cb2431",
+        "fields": [
+            {"title": "Author", "value": os.environ["PR_AUTHOR"], "short": True},
+        ]
+    }]
+}).encode()
+req = urllib.request.Request(os.environ["SLACK_WEBHOOK_URL"], data=payload, headers={"Content-Type": "application/json"})
+urllib.request.urlopen(req)
+print("Slack notified")
+EOF
+
+      # ── Review submitted ─────────────────────────────────────────────────────
+      - name: PR Review Submitted
+        if: github.event_name == 'pull_request_review'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REVIEWER: ${{ github.event.review.user.login }}
+          REVIEW_STATE: ${{ github.event.review.state }}
+          REVIEW_URL: ${{ github.event.review.html_url }}
+        run: |
+          [ -z "$SLACK_WEBHOOK_URL" ] && exit 0
+          python3 - <<'EOF'
+import urllib.request, json, os
+
+state = os.environ["REVIEW_STATE"].upper()
+emoji_map = {"APPROVED": "✅", "CHANGES_REQUESTED": "🔁", "COMMENTED": "💬"}
+color_map = {"APPROVED": "#36a64f", "CHANGES_REQUESTED": "#ECB22E", "COMMENTED": "#0366d6"}
+emoji = emoji_map.get(state, "👀")
+color = color_map.get(state, "#cccccc")
+
+payload = json.dumps({
+    "username": "OpenThai AI Bot",
+    "icon_emoji": ":eyes:",
+    "text": f"{emoji} *Review บน PR #{os.environ['PR_NUMBER']}* — <{os.environ['PR_URL']}|{os.environ['PR_TITLE']}>",
+    "attachments": [{
+        "color": color,
+        "fields": [
+            {"title": "Reviewer", "value": os.environ["REVIEWER"], "short": True},
+            {"title": "Status", "value": state, "short": True},
+            {"title": "Review", "value": f"<{os.environ['REVIEW_URL']}|ดู Review>", "short": True},
+        ]
+    }]
+}).encode()
+req = urllib.request.Request(os.environ["SLACK_WEBHOOK_URL"], data=payload, headers={"Content-Type": "application/json"})
+urllib.request.urlopen(req)
+print("Slack notified")
+EOF

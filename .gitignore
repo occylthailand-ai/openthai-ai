@@ -21,3 +21,6 @@ backend/data/system_log.json
 backend/data/agent_checkpoint.json
 backend/data/waitlist.json
 # หมายเหตุ: backend/data/system_charter.json ไม่ include ตรงนี้ — commit ได้ (static config)
+
+# Claude Code agent worktrees — runtime only, ไม่ต้อง commit
+.claude/worktrees/
