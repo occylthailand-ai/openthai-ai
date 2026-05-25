@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OpenThai AI — โครงสร้างองค์กร</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800;900&family=Sarabun:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9A84C; --gold2:#E8C96A; --gold3:rgba(201,168,76,0.15);
+  --dark:#0A0C0E; --dark2:#0D1117; --dark3:#161B22; --dark4:#1C2333;
+  --line:rgba(201,168,76,0.18);
+  --text:#E6EDF3; --muted:#8B949E;
+  --blue:#00D4FF;  --blue2:rgba(0,212,255,0.12);
+  --green:#3FB950; --green2:rgba(63,185,80,0.12);
+  --purple:#BC8CFF; --purple2:rgba(188,140,255,0.12);
+  --red:#FF4757;   --red2:rgba(255,71,87,0.12);
+  --orange:#F97316; --orange2:rgba(249,115,22,0.12);
+  --pink:#EC4899;  --pink2:rgba(236,72,153,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--dark);color:var(--text);font-family:'Sarabun',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── HEADER ── */
+.site-header{
+  background:linear-gradient(180deg,rgba(13,17,23,0.98) 0%,rgba(10,12,14,0.95) 100%);
+  border-bottom:1px solid var(--line);
+  padding:18px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(16px);
+}
+.hlogo{font-family:'Kanit',sans-serif;font-size:18px;font-weight:800;color:var(--gold);letter-spacing:.04em}
+.hlogo span{color:var(--text)}
+.htag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.hbadge{display:flex;align-items:center;gap:6px;background:var(--red2);border:1px solid rgba(255,71,87,0.3);color:var(--red);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;padding:4px 10px;border-radius:4px;letter-spacing:.08em}
+.hbadge-dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink 1.2s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── PAGE WRAPPER ── */
+.page{padding:40px 24px 80px;max-width:1200px;margin:0 auto}
+
+/* ── SECTION LABEL ── */
+.sec-label{
+  font-family:'Kanit',sans-serif;font-size:11px;font-weight:600;
+  color:var(--gold);letter-spacing:.14em;text-transform:uppercase;
+  margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--line);}
+
+/* ── MNC FRAMEWORK BANNER ── */
+.framework-banner{
+  background:linear-gradient(135deg,rgba(201,168,76,0.06) 0%,rgba(13,17,23,0.9) 100%);
+  border:1px solid var(--line);border-radius:16px;
+  padding:24px 28px;margin-bottom:48px;
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;
+}
+@media(max-width:700px){.framework-banner{grid-template-columns:1fr}}
+.fw-item{display:flex;align-items:flex-start;gap:12px}
+.fw-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.fw-title{font-family:'Kanit',sans-serif;font-size:13px;font-weight:700;color:var(--gold);margin-bottom:4px}
+.fw-desc{font-size:11px;color:var(--muted);line-height:1.6}
+
+/* ── ORG TREE ── */
+.org-tree{display:flex;flex-direction:column;align-items:center;gap:0}
+
+/* connector lines */
+.v-line{width:2px;height:32px;background:linear-gradient(to bottom,var(--gold),rgba(201,168,76,0.4));flex-shrink:0}
+.v-line-short{width:2px;height:20px;background:rgba(201,168,76,0.4);flex-shrink:0}
+
+/* ── NODE CARDS ── */
+.node{
+  border-radius:14px;padding:16px 20px;
+  display:flex;align-items:center;gap:14px;
+  transition:all .2s ease;cursor:default;
+  animation:fadeUp .5s ease both;
+  position:relative;
+}
+.node:hover{transform:translateY(-2px);filter:brightness(1.08)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* CEO */
+.node-ceo{
+  background:linear-gradient(135deg,rgba(201,168,76,0.18),rgba(201,168,76,0.06));
+  border:2px solid var(--gold);
+  min-width:340px;
+}
+/* Mythos */
+.node-mythos{
+  background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(0,212,255,0.04));
+  border:2px solid var(--blue);
+  min-width:340px;
+}
+/* Department head */
+.node-dept{
+  background:var(--dark3);border:1px solid rgba(255,255,255,0.08);
+  min-width:220px;
+}
+/* Agent */
+.node-agent{
+  background:var(--dark2);border:1px solid rgba(255,255,255,0.06);
+  min-width:200px;padding:12px 16px;
+}
+.node-agent:hover{border-color:rgba(201,168,76,0.3)}
+
+.node-emoji{font-size:28px;flex-shrink:0}
+.node-info{}
+.node-name{font-family:'Kanit',sans-serif;font-size:16px;font-weight:700;color:var(--text)}
+.node-title{font-size:12px;color:var(--muted);margin-top:2px}
+.node-badge{
+  position:absolute;top:-8px;right:14px;
+  font-family:'IBM Plex Mono',monospace;font-size:8px;font-weight:700;
+  padding:2px 8px;border-radius:3px;letter-spacing:.08em;text-transform:uppercase;
+}
+.badge-human{background:rgba(201,168,76,0.2);color:var(--gold);border:1px solid rgba(201,168,76,0.4)}
+.badge-ai{background:rgba(0,212,255,0.15);color:var(--blue);border:1px solid rgba(0,212,255,0.3)}
+.badge-online{background:rgba(63,185,80,0.15);color:var(--green);border:1px solid rgba(63,185,80,0.3)}
+
+/* ── DEPARTMENTS ROW ── */
+.dept-row{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;width:100%;
+  position:relative;
+}
+@media(max-width:900px){.dept-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.dept-row{grid-template-columns:1fr}}
+
+/* horizontal line above departments */
+.h-connector{
+  width:100%;height:2px;
+  background:linear-gradient(to right,transparent 0%,rgba(201,168,76,0.35) 20%,rgba(201,168,76,0.35) 80%,transparent 100%);
+  margin:0 0 0;
+  position:relative;
+}
+
+.dept-col{display:flex;flex-direction:column;align-items:center;gap:0}
+.dept-card{
+  border-radius:12px;padding:14px 16px;width:100%;
+  display:flex;align-items:center;gap:10px;
+  transition:all .2s;cursor:default;
+  animation:fadeUp .5s ease both;
+}
+.dept-card:hover{transform:translateY(-2px)}
+
+/* dept color themes */
+.dept-ai     {background:rgba(188,140,255,0.1);border:1px solid rgba(188,140,255,0.25);}
+.dept-eng    {background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.2);}
+.dept-data   {background:rgba(63,185,80,0.08); border:1px solid rgba(63,185,80,0.2);}
+.dept-sec    {background:rgba(255,71,87,0.08);  border:1px solid rgba(255,71,87,0.2);}
+.dept-fin    {background:rgba(201,168,76,0.1);  border:1px solid rgba(201,168,76,0.25);}
+.dept-mkt    {background:rgba(249,115,22,0.08); border:1px solid rgba(249,115,22,0.2);}
+.dept-cs     {background:rgba(236,72,153,0.08); border:1px solid rgba(236,72,153,0.2);}
+.dept-infra  {background:rgba(0,212,255,0.06);  border:1px solid rgba(0,212,255,0.15);}
+.dept-comms  {background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.2);}
+.dept-legal  {background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.2);}
+.dept-ops    {background:rgba(0,212,255,0.1);   border:1px solid rgba(0,212,255,0.3);}
+
+.dept-emoji{font-size:20px;flex-shrink:0}
+.dept-name{font-family:'Kanit',sans-serif;font-size:13px;font-weight:700}
+.dept-sub{font-size:10px;color:var(--muted);margin-top:1px}
+
+/* agent sub-cards */
+.agent-list{width:100%;display:flex;flex-direction:column;gap:6px;padding:0 4px}
+.agent-card{
+  background:var(--dark2);border:1px solid rgba(255,255,255,0.05);
+  border-radius:8px;padding:8px 12px;
+  display:flex;align-items:center;gap:8px;
+  transition:all .15s;font-size:12px;
+  animation:fadeUp .5s ease both;
+}
+.agent-card:hover{border-color:rgba(201,168,76,0.25);background:var(--dark3)}
+.agent-em{font-size:16px;flex-shrink:0}
+.agent-info{}
+.agent-name{font-family:'Kanit',sans-serif;font-size:12px;font-weight:600;color:var(--text)}
+.agent-role{font-size:10px;color:var(--muted)}
+.agent-status{margin-left:auto;display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--green)}
+.agent-status::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green)}
+
+/* ── PLATFORM LAYER ── */
+.platform-layer{
+  margin-top:48px;
+  background:linear-gradient(135deg,rgba(63,185,80,0.06),rgba(13,17,23,0.8));
+  border:1px solid rgba(63,185,80,0.2);
+  border-radius:20px;padding:28px 32px;
+  text-align:center;
+}
+.platform-title{font-family:'Kanit',sans-serif;font-size:15px;font-weight:700;color:var(--green);margin-bottom:16px}
+.platform-grid{display:flex;justify-content:center;flex-wrap:wrap;gap:12px}
+.platform-pill{
+  background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.2);
+  color:var(--text);font-size:12px;font-family:'Kanit',sans-serif;
+  padding:6px 16px;border-radius:20px;
+  transition:all .15s;
+}
+.platform-pill:hover{background:rgba(63,185,80,0.15);border-color:rgba(63,185,80,0.4)}
+
+/* ── STATS BAR ── */
+.stats-bar{
+  display:grid;grid-template-columns:repeat(5,1fr);gap:12px;
+  margin-bottom:40px;
+}
+@media(max-width:700px){.stats-bar{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:420px){.stats-bar{grid-template-columns:repeat(2,1fr)}}
+.stat-card{
+  background:var(--dark3);border:1px solid var(--line);border-radius:10px;
+  padding:14px 16px;text-align:center;
+}
+.stat-num{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;color:var(--gold)}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:3px;font-family:'Kanit',sans-serif;letter-spacing:.04em}
+
+/* ── FOOTNOTE ── */
+.footnote{
+  margin-top:48px;background:var(--dark3);border:1px solid var(--line);border-radius:12px;padding:20px 24px;
+  font-size:12px;color:var(--muted);line-height:1.8;
+}
+.footnote strong{color:var(--gold)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  .node-ceo,.node-mythos{min-width:280px}
+  .site-header{padding:14px 16px}
+  .page{padding:24px 12px 60px}
+}
+
+/* delay stagger for dept cols */
+.dept-col:nth-child(1) .dept-card{animation-delay:.05s}
+.dept-col:nth-child(2) .dept-card{animation-delay:.1s}
+.dept-col:nth-child(3) .dept-card{animation-delay:.15s}
+.dept-col:nth-child(4) .dept-card{animation-delay:.2s}
+.dept-col:nth-child(5) .dept-card{animation-delay:.25s}
+.dept-col:nth-child(6) .dept-card{animation-delay:.3s}
+.dept-col:nth-child(7) .dept-card{animation-delay:.35s}
+.dept-col:nth-child(8) .dept-card{animation-delay:.4s}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div>
+    <div class="hlogo">OpenThai<span>AI</span></div>
+    <div class="htag">โครงสร้างองค์กร — Organizational Chart v1.0</div>
+  </div>
+  <div class="hbadge"><span class="hbadge-dot"></span>LIVE · 12 Agents Online</div>
+</header>
+
+<div class="page">
+
+  <!-- SEC: MNC Framework -->
+  <div class="sec-label">MNC Framework — โครงสร้างที่ OpenThai AI ใช้</div>
+  <div class="framework-banner">
+    <div class="fw-item">
+      <div class="fw-icon">🏭</div>
+      <div>
+        <div class="fw-title">Global Product Core</div>
+        <div class="fw-desc">AI model, API infrastructure, pricing ควบคุมจาก HQ เป็นมาตรฐานเดียว ทั่วโลก — ไม่ปรับตามภูมิภาค</div>
+      </div>
+    </div>
+    <div class="fw-item">
+      <div class="fw-icon">🇹🇭</div>
+      <div>
+        <div class="fw-title">Local Content Layer</div>
+        <div class="fw-desc">OTOP database, Thai language tuning, PDPA compliance ปรับตามบริบทไทย — เพื่อตลาดท้องถิ่น</div>
+      </div>
+    </div>
+    <div class="fw-item">
+      <div class="fw-icon">🌐</div>
+      <div>
+        <div class="fw-title">Platform / Ecosystem</div>
+        <div class="fw-desc">Creator, SME, OTOP seller บริหาร content ตัวเองผ่าน platform — ขยายตลาดสู่ CLMV + Cross-border</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEC: Stats -->
+  <div class="sec-label">ตัวเลขสำคัญ</div>
+  <div class="stats-bar">
+    <div class="stat-card"><div class="stat-num" style="color:var(--blue)">12</div><div class="stat-lbl">AI Agents</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--green)">24/7</div><div class="stat-lbl">ทำงานตลอด</div></div>
+    <div class="stat-card"><div class="stat-num">124</div><div class="stat-lbl">Commands Run</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--gold)">฿149</div><div class="stat-lbl">Pro Plan/เดือน</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--purple)">19</div><div class="stat-lbl">Directives</div></div>
+  </div>
+
+  <!-- SEC: Org Tree -->
+  <div class="sec-label">สายการบังคับบัญชา</div>
+  <div class="org-tree">
+
+    <!-- L0: FOUNDER/CEO -->
+    <div class="node node-ceo" style="animation-delay:0s">
+      <span class="node-badge badge-human">Human · Founder</span>
+      <div class="node-emoji">👑</div>
+      <div class="node-info">
+        <div class="node-name">Zuejai</div>
+        <div class="node-title">Founder & CEO — OpenThai AI</div>
+      </div>
+    </div>
+
+    <!-- connector -->
+    <div class="v-line"></div>
+
+    <!-- L1: MYTHOS (Chief Autonomous Agent) -->
+    <div class="node node-mythos" style="animation-delay:.08s">
+      <span class="node-badge badge-ai">AI · Chief Agent · 24/7</span>
+      <div class="node-emoji">🧠</div>
+      <div class="node-info">
+        <div class="node-name">Mythos</div>
+        <div class="node-title">Chief Autonomous Agent — รับคำสั่งทุกประโยค ดำเนินการทุกเรื่อง</div>
+      </div>
+    </div>
+
+    <!-- connector -->
+    <div class="v-line"></div>
+    <div class="h-connector" style="margin-bottom:0"></div>
+    <div style="width:100%;height:2px;background:linear-gradient(to right,transparent,rgba(201,168,76,0.35) 10%,rgba(201,168,76,0.35) 90%,transparent);margin-bottom:0"></div>
+
+    <!-- L2: DEPARTMENTS -->
+    <div class="dept-row" style="margin-top:0;padding-top:0">
+
+      <!-- AI & Product -->
+      <div class="dept-col">
+        <div class="v-line-short"></div>
+        <div class="dept-card dept-ai">
+          <span class="dept-emoji">🦉</span>
+          <div><div class="dept-name" style="color:var(--purple)">AI & Product</div><div class="dept-sub">Intelligence</div></div>
+        </div>
+        <div class="v-line-short"></div>
+        <div class="agent-list">
+          <div class="agent-card">
+            <span class="agent-em">🦉</span>
+            <div class="agent-info">
+              <div class="agent-name">Athena</div>
+              <div class="agent-role">AI Intelligence Director</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Engineering -->
+      <div class="dept-col">
+        <div class="v-line-short"></div>
+        <div class="dept-card dept-eng">
+          <span class="dept-emoji">⚙️</span>
+          <div><div class="dept-name" style="color:var(--blue)">Engineering</div><div class="dept-sub">Frontend + Backend</div></div>
+        </div>
+        <div class="v-line-short"></div>
+        <div class="agent-list">
+          <div class="agent-card">
+            <span class="agent-em">🔧</span>
+            <div class="agent-info">
+              <div class="agent-name">Hephaestus</div>
+              <div class="agent-role">Frontend Engineer</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+          <div class="agent-card">
+            <span class="agent-em">🌊</span>
+            <div class="agent-info">
+              <div class="agent-name">Poseidon</div>
+              <div class="agent-role">Backend & API Engineer</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data -->
+      <div class="dept-col">
+        <div class="v-line-short"></div>
+        <div class="dept-card dept-data">
+          <span class="dept-emoji">🌾</span>
+          <div><div class="dept-name" style="color:var(--green)">Data</div><div class="dept-sub">Database & Architect</div></div>
+        </div>
+        <div class="v-line-short"></div>
+        <div class="agent-list">
+          <div class="agent-card">
+            <span class="agent-em">🌾</span>
+            <div class="agent-info">
+              <div class="agent-name">Demeter</div>
+              <div class="agent-role">Database & Data Architect</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Infrastructure -->
+      <div class="dept-col">
+        <div class="v-line-short"></div>
+        <div class="dept-card dept-infra">
+          <span class="dept-emoji">⏱️</span>
+          <div><div class="dept-name" style="color:var(--blue)">Infrastructure</div><div class="dept-sub">Monitoring & Uptime</div></div>
+        </div>
+        <div class="v-line-short"></div>
+        <div class="agent-list">
+          <div class="agent-card">
+            <span class="agent-em">⏱️</span>
+            <div class="agent-info">
+              <div class="agent-name">Kronos</div>
+              <div class="agent-role">Monitoring & Performance</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div class="dept-col">
+        <div class="v-line-short"></div>
+        <div class="dept-card dept-sec">
+          <span class="dept-emoji">🛡️</span>
+          <div><div class="dept-name" style="color:var(--red)">Security</div><div class="dept-sub">PDPA · Compliance</div></div>
+        </div>
+        <div class="v-line-short"></div>
+        <div class="agent-list">
+          <div class="agent-card">
+            <span class="agent-em">🛡️</span>
+            <div class="agent-info">
+              <div class="agent-name">Ares</div>
+              <div class="agent-role">Security & Compliance</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Finance -->
+      <div class="dept-col">
+        <div class="v-line-short"></div>
+        <div class="dept-card dept-fin">
+          <span class="dept-emoji">💰</span>
+          <div><div class="dept-name" style="color:var(--gold)">Finance</div><div class="dept-sub">Payment · Revenue</div></div>
+        </div>
+        <div class="v-line-short"></div>
+        <div class="agent-list">
+          <div class="agent-card">
+            <span class="agent-em">💰</span>
+            <div class="agent-info">
+              <div class="agent-name">Plutus</div>
+              <div class="agent-role">Payment & Finance Mgr</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comms & Integration -->
+      <div class="dept-col">
+        <div class="v-line-short"></div>
+        <div class="dept-card dept-comms">
+          <span class="dept-emoji">⚡</span>
+          <div><div class="dept-name" style="color:#FBBF24">Comms & Integration</div><div class="dept-sub">Automation · Notify</div></div>
+        </div>
+        <div class="v-line-short"></div>
+        <div class="agent-list">
+          <div class="agent-card">
+            <span class="agent-em">⚡</span>
+            <div class="agent-info">
+              <div class="agent-name">Hermes</div>
+              <div class="agent-role">Communications Lead</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Marketing -->
+      <div class="dept-col">
+        <div class="v-line-short"></div>
+        <div class="dept-card dept-mkt">
+          <span class="dept-emoji">🎯</span>
+          <div><div class="dept-name" style="color:var(--orange)">Marketing</div><div class="dept-sub">Growth · Affiliate</div></div>
+        </div>
+        <div class="v-line-short"></div>
+        <div class="agent-list">
+          <div class="agent-card">
+            <span class="agent-em">🎯</span>
+            <div class="agent-info">
+              <div class="agent-name">Apollo</div>
+              <div class="agent-role">Marketing & Growth Dir.</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /dept-row -->
+
+    <!-- row 2 (remaining depts) -->
+    <div style="width:100%;height:2px;background:linear-gradient(to right,transparent,rgba(201,168,76,0.2) 20%,rgba(201,168,76,0.2) 80%,transparent);margin:20px 0 0"></div>
+    <div class="dept-row" style="grid-template-columns:repeat(2,1fr);max-width:500px;margin-top:0">
+
+      <!-- Customer Support -->
+      <div class="dept-col">
+        <div class="v-line-short"></div>
+        <div class="dept-card dept-cs">
+          <span class="dept-emoji">🌈</span>
+          <div><div class="dept-name" style="color:var(--pink)">Customer Success</div><div class="dept-sub">Support · Onboarding</div></div>
+        </div>
+        <div class="v-line-short"></div>
+        <div class="agent-list">
+          <div class="agent-card">
+            <span class="agent-em">🌈</span>
+            <div class="agent-info">
+              <div class="agent-name">Iris</div>
+              <div class="agent-role">Customer Success Mgr</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Legal -->
+      <div class="dept-col">
+        <div class="v-line-short"></div>
+        <div class="dept-card dept-legal">
+          <span class="dept-emoji">⚖️</span>
+          <div><div class="dept-name" style="color:#94A3B8">Legal & Governance</div><div class="dept-sub">PDPA · Policy</div></div>
+        </div>
+        <div class="v-line-short"></div>
+        <div class="agent-list">
+          <div class="agent-card">
+            <span class="agent-em">⚖️</span>
+            <div class="agent-info">
+              <div class="agent-name">Themis</div>
+              <div class="agent-role">Legal & Governance</div>
+            </div>
+            <div class="agent-status">ONLINE</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /dept-row 2 -->
+
+  </div><!-- /org-tree -->
+
+  <!-- PLATFORM LAYER -->
+  <div class="platform-layer">
+    <div class="platform-title">🌐 Platform / Ecosystem Layer — กลุ่มผู้ใช้งานและตลาด</div>
+    <div class="platform-grid">
+      <div class="platform-pill">🛍️ OTOP Seller</div>
+      <div class="platform-pill">📱 TikTok Creator</div>
+      <div class="platform-pill">🏪 SME ไทย</div>
+      <div class="platform-pill">🏭 วิสาหกิจชุมชน</div>
+      <div class="platform-pill">🤝 Affiliate Partner</div>
+      <div class="platform-pill">🏢 Enterprise B2B</div>
+      <div class="platform-pill">🏛️ ภาครัฐ DITP/DEPA</div>
+      <div class="platform-pill">🌏 CLMV Cross-border</div>
+    </div>
+  </div>
+
+  <!-- FOOTNOTE -->
+  <div class="footnote">
+    <strong>โครงสร้าง MNC ที่ใช้:</strong> <strong style="color:var(--blue)">Global Product + Platform Hybrid</strong>
+    — AI Core (Athena/Poseidon/Hephaestus/Demeter) เป็น Global Product ควบคุมมาตรฐานเดียว ·
+    Content Layer (Apollo/Iris) ปรับตามตลาดไทย ·
+    Mythos เป็น Autonomous COO รับคำสั่งจาก Zuejai แล้วกระจายงานไป 11 agents ·
+    Chain of Command: <strong style="color:var(--gold)">Zuejai → Mythos → All Agents</strong> ·
+    Founded: 2026-05-14 · Target: 1,000 users ใน 6 เดือน · MRR ฿50,000/เดือน
+  </div>
+
+</div><!-- /page -->
+
+<script>
+// Live clock in header
+(function(){
+  const h = document.querySelector('.htag');
+  setInterval(()=>{
+    const now = new Date().toLocaleString('th-TH',{dateStyle:'medium',timeStyle:'medium'});
+    h.textContent = 'โครงสร้างองค์กร — ' + now;
+  }, 1000);
+})();
+</script>
+</body>
+</html>

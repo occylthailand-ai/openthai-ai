@@ -1559,6 +1559,11 @@ app.get('/landing', (req, res) => {
   res.sendFile(join(__dirname, '..', 'openthai-ai-landing.html'));
 });
 
+// ─── Serve org chart at /orgchart ─────────────────────────────────────────────
+app.get('/orgchart', (req, res) => {
+  res.sendFile(join(__dirname, '..', 'openthai-ai-orgchart.html'));
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  PDPA CONSENT (Thailand Personal Data Protection Act B.E. 2562)
 // ═══════════════════════════════════════════════════════════════════════════════
