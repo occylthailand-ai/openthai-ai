@@ -74,7 +74,7 @@ const FAQ_ITEMS = [
   ['ยกเลิกได้เมื่อไหร่?', 'ยกเลิกได้ทุกเมื่อ ไม่มีค่าปรับ ไม่มีสัญญาผูกมัด'],
   ['จ่ายด้วยอะไรได้บ้าง?', 'รองรับ 150+ ช่องทาง: PromptPay (ทุกธนาคารไทย), TrueMoney, LINE Pay, Alipay, WeChat Pay, PayPal, Visa/MC/JCB, SWIFT, Crypto (USDT/BTC) และอีกมาก'],
   ['Pro กับ Business ต่างกันอย่างไร?', 'Business เพิ่ม Team 5 คน, API Access, White-label และ Dedicated Manager'],
-  ['มี Affiliate Program ไหม?', 'มี! แชร์ให้เพื่อนรับคอมมิชชั่นสูงสุด 40% ทุกออเดอร์ที่ผ่านลิงก์คุณ'],
+  ['มี Referral Program ไหม?', 'มี! แนะนำให้คนอื่นซื้อแพ็กเกจ รับค่าแนะนำสูงสุด 40% จากยอดขาย — คำนวณจากการซื้อเท่านั้น ไม่มีค่าชวนให้มาสมัคร'],
 ];
 
 // ── PromptPay QR section ──────────────────────────────────────────────────────
@@ -527,9 +527,9 @@ export default function PricingPage() {
       <section style={{ maxWidth: 700, margin: '0 auto', padding: '0 5% 80px', textAlign: 'center' }}>
         <div style={{ ...card, background: 'linear-gradient(135deg,rgba(254,44,85,0.08),rgba(99,102,241,0.08))', border: '1.5px solid rgba(99,102,241,0.2)' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>💰</div>
-          <h3 style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>แชร์ → รับคอมมิชชั่นสูงสุด 40%</h3>
-          <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>สมัคร Affiliate ฟรี รับลิงก์ส่วนตัว แชร์ได้เลยทันที</p>
-          <button onClick={() => navigate('/affiliate')} style={{ ...primaryBtn }}>🤝 สมัคร Affiliate ฟรี →</button>
+          <h3 style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>แนะนำ → รับค่าแนะนำสูงสุด 40% จากยอดขาย</h3>
+          <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>สมัครฟรี รับลิงก์ส่วนตัว — ได้ค่าแนะนำเมื่อมีการซื้อแพ็กเกจจริงเท่านั้น</p>
+          <button onClick={() => navigate('/affiliate')} style={{ ...primaryBtn }}>🤝 สมัคร Referral Program ฟรี →</button>
         </div>
       </section>
 

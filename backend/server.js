@@ -324,17 +324,17 @@ async function sendAffiliateWelcome(to, name, refCode, refLink) {
             <tr>
               <td style="padding:10px;background:rgba(16,185,129,0.1);border-radius:8px;text-align:center;">
                 <div style="font-size:20px;font-weight:900;color:#10b981;">20%</div>
-                <div style="font-size:11px;color:#64748b;">Commission เริ่มต้น</div>
+                <div style="font-size:11px;color:#64748b;">ค่าแนะนำเริ่มต้น</div>
               </td>
               <td style="width:8px;"></td>
               <td style="padding:10px;background:rgba(99,102,241,0.1);border-radius:8px;text-align:center;">
                 <div style="font-size:20px;font-weight:900;color:#6366f1;">ทุกจันทร์</div>
-                <div style="font-size:11px;color:#64748b;">จ่ายเงิน</div>
+                <div style="font-size:11px;color:#64748b;">โอนเงิน</div>
               </td>
               <td style="width:8px;"></td>
               <td style="padding:10px;background:rgba(245,158,11,0.1);border-radius:8px;text-align:center;">
                 <div style="font-size:20px;font-weight:900;color:#f59e0b;">40%</div>
-                <div style="font-size:11px;color:#64748b;">สูงสุด Elite</div>
+                <div style="font-size:11px;color:#64748b;">จากยอดขาย Elite</div>
               </td>
             </tr>
           </table>

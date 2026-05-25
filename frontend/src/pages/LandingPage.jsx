@@ -10,7 +10,7 @@ const FEATURES = [
   { icon: '🎯', title: 'โดนใจทุก Gen', desc: 'ปรับสไตล์ได้ตั้งแต่ Gen Z ไปถึงผู้ใหญ่ — ภาษาธรรมชาติ อ่านแล้วอยากกด Like' },
   { icon: '📊', title: 'AI Critic 9.0', desc: 'ให้คะแนนคอนเทนต์ 0-10 พร้อมคำแนะนำปรับปรุง ก่อนโพสต์จริง' },
   { icon: '🛒', title: 'ครอบคลุม 241 แพลตฟอร์ม', desc: 'TikTok, Facebook, Instagram, Shopee, Lazada และอีกกว่า 200 ช่องทาง' },
-  { icon: '💰', title: 'Affiliate Program', desc: 'แชร์ให้เพื่อน — ได้คอมมิชชั่นสูงสุด 40% ทุกออเดอร์ที่ผ่านลิงก์คุณ' },
+  { icon: '💰', title: 'Referral Program', desc: 'แนะนำ OpenThai AI — รับค่าแนะนำสูงสุด 40% จากยอดขายจริงทุกออเดอร์' },
 ];
 
 const STEPS = [

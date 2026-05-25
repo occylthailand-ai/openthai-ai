@@ -37,7 +37,7 @@ const TIERS = [
     color: '#f59e0b',
     bg: 'rgba(245,158,11,0.12)',
     border: 'rgba(245,158,11,0.4)',
-    perks: ['ทุกอย่างใน Pro', 'คอมมิชชั่น 40%', 'Revenue Share รายได้เพิ่ม', 'Co-marketing พิเศษ', 'Dedicated Manager'],
+    perks: ['ทุกอย่างใน Pro', 'คอมมิชชั่น 40% จากยอดขาย', 'Co-marketing Budget พิเศษ', 'Dedicated Manager'],
   },
 ];
 
@@ -45,7 +45,7 @@ const STEPS = [
   { icon: '📝', title: 'สมัครฟรี', desc: 'กรอกข้อมูลด้านล่าง ไม่มีค่าใช้จ่าย' },
   { icon: '🔗', title: 'รับลิงก์พิเศษ', desc: 'ได้รับลิงก์ Affiliate ส่วนตัวทันที' },
   { icon: '📢', title: 'แชร์ให้เพื่อน', desc: 'แชร์ผ่าน TikTok, IG, Facebook ได้เลย' },
-  { icon: '💰', title: 'รับคอมมิชชั่น', desc: 'ทุกการสมัครผ่านลิงก์คุณ = เงินเข้ากระเป๋า' },
+  { icon: '💰', title: 'รับค่าแนะนำ', desc: 'ทุกการซื้อแพ็กเกจผ่านลิงก์คุณ = เงินเข้ากระเป๋า' },
 ];
 
 const PLATFORMS = ['TikTok', 'Instagram', 'Facebook', 'YouTube', 'Twitter/X', 'LINE', 'Discord', 'อื่น ๆ'];
@@ -143,16 +143,16 @@ export default function AffiliatePage() {
       <section style={{ textAlign: 'center', padding: '64px 24px 40px' }}>
         <div style={badgeStyle}>🇹🇭 OpenThai AI Affiliate Program</div>
         <h1 style={{ fontSize: 'clamp(32px,6vw,60px)', fontWeight: 900, margin: '16px 0 12px', lineHeight: 1.2 }}>
-          แชร์ → ได้เงิน<br />
+          แนะนำ → ได้ค่าแนะนำ<br />
           <span style={{ background: 'linear-gradient(90deg,#fe2c55,#ff9800,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            คอมมิชชั่นสูงสุด 40%
+            สูงสุด 40% จากยอดขาย
           </span>
         </h1>
         <p style={{ fontSize: 18, color: '#94a3b8', maxWidth: 560, margin: '0 auto 32px' }}>
-          แชร์ OpenThai AI ให้เพื่อน Creator ไทย — ทุกครั้งที่เขาสมัคร คุณได้เงิน ไม่ต้องลงทุนอะไรเลย
+          แนะนำ OpenThai AI ให้ Creator ไทย — ทุกครั้งที่เขาซื้อแพ็กเกจ คุณได้ค่าแนะนำ ไม่ต้องลงทุนอะไรเลย
         </p>
         <div style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap' }}>
-          {[['1,200+', 'Creator ใช้แล้ว'], ['3x', 'คอนเทนต์โตไว'], ['40%', 'คอมมิชชั่นสูงสุด'], ['24ชม.', 'จ่ายทุกสัปดาห์']].map(([v, l]) => (
+          {[['1,200+', 'Creator ใช้แล้ว'], ['3x', 'คอนเทนต์โตไว'], ['40%', 'ค่าแนะนำสูงสุด'], ['ทุกจันทร์', 'โอนเงินให้']].map(([v, l]) => (
             <div key={l} style={statCard}>
               <div style={{ fontSize: 28, fontWeight: 900, color: '#fe2c55' }}>{v}</div>
               <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{l}</div>
@@ -177,7 +177,7 @@ export default function AffiliatePage() {
 
       {/* ── TIERS ── */}
       <section style={{ maxWidth: 980, margin: '0 auto', padding: '0 24px 60px' }}>
-        <SectionTitle>ระดับ Affiliate & คอมมิชชั่น</SectionTitle>
+        <SectionTitle>ระดับ Affiliate & ค่าแนะนำจากยอดขาย</SectionTitle>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 20 }}>
           {TIERS.map((t) => (
             <div key={t.id} onClick={() => setActiveTier(t.id)}
@@ -375,7 +375,7 @@ export default function AffiliatePage() {
           ['สมัครแล้วได้เงินเมื่อไหร่?', 'ยอดค้างชำระจะถูกโอนให้ทุกวันจันทร์ ผ่าน PromptPay หรือ Bank Transfer ขั้นต่ำ ฿100'],
           ['ต้องมีคนตามเท่าไหร่ถึงสมัครได้?', 'ไม่มีขั้นต่ำ! แม้จะเพิ่งเริ่มต้นก็สมัครได้ทันที'],
           ['ลิงก์มีอายุนานแค่ไหน?', 'ลิงก์ Affiliate ของคุณไม่มีวันหมดอายุ ใช้ได้ตลอดไป'],
-          ['จ่ายคอมมิชชั่นแบบไหน?', 'จ่ายคอมมิชชั่นจากทุกแพ็กเกจที่ขายผ่านลิงก์ของคุณ รวมถึง Renewal ด้วย'],
+          ['ค่าแนะนำคำนวณยังไง?', 'คำนวณจากราคาแพ็กเกจที่ลูกค้าซื้อผ่านลิงก์คุณ รวมถึงการต่ออายุด้วย — ไม่มีค่าแนะนำจากการชวนให้มาสมัคร Affiliate'],
           ['ติดตามยอดขายได้ที่ไหน?', 'หลังสมัครสำเร็จ คุณจะได้รับลิงก์ Dashboard ส่วนตัวทางอีเมล'],
         ].map(([q, a], i) => (
           <FAQItem key={i} q={q} a={a} />
