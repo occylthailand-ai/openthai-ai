@@ -1,4 +1,4 @@
-// OpenThai AI — Vector Memory (Supabase pgvector)
+﻿// Openthai.ai — Vector Memory (Supabase pgvector)
 // Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม
 // ใช้ชุดเดียวกับ createMemorySystem() API
 

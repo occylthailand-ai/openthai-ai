@@ -1,5 +1,5 @@
-const fs = require('fs');
-const dir = 'C:/OPENTHAI AI/all-platform-files';
+﻿const fs = require('fs');
+const dir = 'C:/Openthai.ai/all-platform-files';
 
 // ========================================
 // AFFILIATE PROGRAMS - ALL PLATFORMS
@@ -121,7 +121,7 @@ const affiliates = [
 let created = 0;
 
 // Create main Affiliate Hub page
-let hubHtml = `<!-- OpenThai AI - Global Affiliate Hub -->
+let hubHtml = `<!-- Openthai.ai - Global Affiliate Hub -->
 <html><head><meta charset="utf-8"><style>
 body{font-family:'Sarabun',sans-serif;max-width:1000px;margin:0 auto;padding:20px;background:#f8f9fa}
 h1{text-align:center;color:#FF6B00;font-size:2.5rem}
@@ -131,14 +131,14 @@ h1{text-align:center;color:#FF6B00;font-size:2.5rem}
 .steps{font-size:13px;color:#555;margin-top:8px}
 .steps ol{padding-left:20px;margin:4px 0}
 </style></head><body>
-<h1>🤖 OpenThai AI — Affiliate Hub</h1>
+<h1>🤖 Openthai.ai — Affiliate Hub</h1>
 <p style="text-align:center;color:#666;font-size:1.1rem;">${affiliates.length} Affiliate Programs ทุกแพลตฟอร์ม | คลิกเดียวเริ่มขายได้เลย</p>
 <p style="text-align:center;background:#FF6B00;color:#fff;padding:12px;border-radius:12px;font-size:1.1rem;">🔥 สมัคร Affiliate → แชร์ลิงก์ → ลูกค้าซื้อ → ได้ Commission ทันที | ไม่ต้องมีสินค้าเอง!</p>
 `;
 
 affiliates.forEach((a, idx) => {
   // Individual affiliate page
-  const pageHtml = `<!-- OpenThai AI - ${a.name} Affiliate -->
+  const pageHtml = `<!-- Openthai.ai - ${a.name} Affiliate -->
 <section id="${a.id}" style="max-width:900px;margin:2rem auto;padding:2rem;font-family:'Sarabun',sans-serif;background:#f8f9fa;border-radius:16px;">
 <h2 style="text-align:center;color:${a.color};font-size:2rem;">💰 ${a.name}</h2>
 <p style="text-align:center;color:#666;">${a.signup}</p>
@@ -153,7 +153,7 @@ affiliates.forEach((a, idx) => {
 <ol>${a.steps.map(s => '<li style="padding:4px 0;">'+s+'</li>').join('\n')}</ol>
 </div>
 <div style="text-align:center;margin-top:1.5rem;padding:1rem;background:${a.color};border-radius:12px;">
-<p style="color:#fff;margin:0;font-size:1.1rem;">🤖 OpenThai AI ช่วยสร้าง Content Affiliate ทุกภาษา ทุกแพลตฟอร์ม</p>
+<p style="color:#fff;margin:0;font-size:1.1rem;">🤖 Openthai.ai ช่วยสร้าง Content Affiliate ทุกภาษา ทุกแพลตฟอร์ม</p>
 <a href="/generate" style="display:inline-block;margin-top:8px;padding:10px 24px;background:#fff;color:${a.color};border-radius:20px;text-decoration:none;font-weight:bold;">สร้าง Affiliate Content →</a>
 </div>
 </section>`;
@@ -177,7 +177,7 @@ affiliates.forEach((a, idx) => {
 
 hubHtml += `
 <div style="text-align:center;margin-top:2rem;padding:2rem;background:linear-gradient(135deg,#FF6B00,#FF0066);border-radius:16px;">
-<h2 style="color:#fff;margin:0;">🤖 OpenThai AI Affiliate Hub</h2>
+<h2 style="color:#fff;margin:0;">🤖 Openthai.ai Affiliate Hub</h2>
 <p style="color:#fff;font-size:1.2rem;">${affiliates.length} Programs | ทุกแพลตฟอร์ม | คลิกเดียวเริ่มขาย</p>
 <p style="color:#fff;">สมัคร Affiliate ฟรี → แชร์ลิงก์ → ลูกค้าซื้อ → ได้ Commission ทันที</p>
 <a href="/generate" style="display:inline-block;padding:14px 32px;background:#fff;color:#FF6B00;border-radius:24px;text-decoration:none;font-weight:bold;font-size:1.1rem;">เริ่มสร้าง Affiliate Content ทุกแพลตฟอร์ม →</a>

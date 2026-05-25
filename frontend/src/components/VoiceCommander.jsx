@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { apiUrl } from '../apiBase';
 
 // ── Waveform bars ─────────────────────────────────────────────────────────────
@@ -336,7 +336,7 @@ export default function VoiceCommander({ mode = 'widget' }) {
       {/* Header */}
       <div style={styles.pageHeader}>
         <h1 style={styles.pageTitle}>🎙️ Voice Commander</h1>
-        <p style={styles.pageSubtitle}>พูดคำสั่งเพื่อควบคุม OpenThai AI · กด Space เพื่อเริ่ม/หยุดฟัง</p>
+        <p style={styles.pageSubtitle}>พูดคำสั่งเพื่อควบคุม Openthai.ai · กด Space เพื่อเริ่ม/หยุดฟัง</p>
 
         {/* Lang selector */}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12 }}>

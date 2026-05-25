@@ -1,4 +1,4 @@
-// OpenThai AI — Service Worker v1
+﻿// Openthai.ai — Service Worker v1
 // Cache Strategy: Network-first for API, Cache-first for static assets
 
 const CACHE_NAME = 'openthai-v1';

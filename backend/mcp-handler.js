@@ -1,6 +1,6 @@
-// OpenThai AI — MCP Server Handler
+﻿// Openthai.ai — MCP Server Handler
 // Implements Model Context Protocol (MCP) so Claude and other AI agents
-// can discover and call OpenThai AI's tools directly.
+// can discover and call Openthai.ai's tools directly.
 //
 // Endpoint: POST /mcp
 // Protocol: JSON-RPC 2.0 + MCP spec
@@ -89,7 +89,7 @@ const TOOLS = [
   {
     name: 'system_health',
     description:
-      'Check the health status of the OpenThai AI backend: AI engine, active agents, memory usage, watchdog status, and services.',
+      'Check the health status of the Openthai.ai backend: AI engine, active agents, memory usage, watchdog status, and services.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
@@ -194,7 +194,7 @@ export async function handleMcp(req, res) {
           serverInfo: {
             name: 'openthai-ai',
             version: '2.0.0',
-            description: 'OpenThai AI — Thai social media content generation platform',
+            description: 'Openthai.ai — Thai social media content generation platform',
           },
         });
       }

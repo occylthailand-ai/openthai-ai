@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 
@@ -131,7 +131,7 @@ const DashboardPage = ({ onLogout }) => {
         <div className="pro-topbar">
           <div>
             <h2 className="pro-greeting">สวัสดีผู้จัดการ 👋</h2>
-            <p className="pro-subgreeting">OpenThai AI Pro · วันนี้ระบบสร้างคอนเทนต์ไปแล้ว <strong style={{ color: '#a5b4fc' }}>{ticker.toLocaleString()}</strong> ชิ้น</p>
+            <p className="pro-subgreeting">Openthai.ai Pro · วันนี้ระบบสร้างคอนเทนต์ไปแล้ว <strong style={{ color: '#a5b4fc' }}>{ticker.toLocaleString()}</strong> ชิ้น</p>
           </div>
           <button className="pro-cta-btn" onClick={() => navigate('/ai-generator')}>
             ⚡ สร้างคอนเทนต์ AI
@@ -201,7 +201,7 @@ const DashboardPage = ({ onLogout }) => {
             <div className="pro-section-title">🧠 9-Skills AI Framework</div>
             <div className="pro-skills-list glass-panel">
               <div className="pro-skills-header">
-                ระบบ AI ของ OpenThai AI ประกอบด้วย 9 ทักษะหลัก พัฒนาเฉพาะสำหรับสินค้าไทยและตลาด ASEAN
+                ระบบ AI ของ Openthai.ai ประกอบด้วย 9 ทักษะหลัก พัฒนาเฉพาะสำหรับสินค้าไทยและตลาด ASEAN
               </div>
               {AI_SKILLS.map((s, i) => (
                 <div key={i} className="pro-skill-row">

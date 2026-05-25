@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CorporateLayout from '../../components/CorporateLayout';
 import { apiUrl } from '../../apiBase';
@@ -45,7 +45,7 @@ const CorporateDashboard = () => {
   }, []);
 
   return (
-    <CorporateLayout title="🏛️ Corporate Overview" subtitle="OpenThai AI Public Company Limited — Global AI Platform">
+    <CorporateLayout title="🏛️ Corporate Overview" subtitle="Openthai.ai Public Company Limited — Global AI Platform">
 
       {/* Hero Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>

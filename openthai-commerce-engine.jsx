@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 
 // Sample products from the database
 const sampleProducts = [
@@ -126,7 +126,7 @@ Only include keys for languages that were requested.`;
     <div style={{ fontFamily: 'var(--font-sans)', maxWidth: '100%' }}>
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 500, margin: '0 0 8px' }}>OpenThai AI Commerce Engine</h1>
+        <h1 style={{ fontSize: '22px', fontWeight: 500, margin: '0 0 8px' }}>Openthai.ai Commerce Engine</h1>
         <p style={{ color: 'var(--color-text-secondary)', margin: 0, fontSize: '14px' }}>
           สร้าง TikTok Content หลายภาษาจากสินค้าของคุณ
         </p>

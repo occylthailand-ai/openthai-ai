@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogoEmblem } from '../components/Logo';
 import { apiUrl } from '../apiBase';
@@ -90,7 +90,7 @@ export default function LandingPage() {
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
 
-  useEffect(() => { document.title = 'OpenThai AI — สร้างคอนเทนต์ TikTok ปัง ด้วย AI ไทยแท้'; }, []);
+  useEffect(() => { document.title = 'Openthai.ai — สร้างคอนเทนต์ TikTok ปัง ด้วย AI ไทยแท้'; }, []);
 
   const handleFreeStart = () => navigate('/ai-generator');
 
@@ -120,7 +120,7 @@ export default function LandingPage() {
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(8,8,18,0.85)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '14px 5%', display: 'flex', alignItems: 'center', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
           <LogoEmblem size={32} />
-          <span style={{ fontWeight: 900, fontSize: 18, background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>OpenThai AI</span>
+          <span style={{ fontWeight: 900, fontSize: 18, background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Openthai.ai</span>
           <span style={{ fontSize: 11, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 20, padding: '2px 8px', color: '#a5b4fc' }}>v9.0</span>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -154,7 +154,7 @@ export default function LandingPage() {
 
         <p style={{ fontSize: 'clamp(15px,2vw,20px)', color: '#94a3b8', maxWidth: 620, margin: '0 auto 36px', lineHeight: 1.7 }}>
           ไม่ต้องคิดสคริปต์ ไม่ต้องเขียนแคปชั่น ไม่ต้องหาแฮชแท็ก<br />
-          OpenThai AI สร้างครบเซ็ตพร้อมโพสต์ทันที ภาษาไทยธรรมชาติ
+          Openthai.ai สร้างครบเซ็ตพร้อมโพสต์ทันที ภาษาไทยธรรมชาติ
         </p>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 48 }}>
@@ -185,7 +185,7 @@ export default function LandingPage() {
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#fe2c55' }} />
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b' }} />
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981' }} />
-            <span style={{ fontSize: 12, color: '#475569', marginLeft: 8 }}>OpenThai AI Generator — ผ้าไหมอุบล</span>
+            <span style={{ fontSize: 12, color: '#475569', marginLeft: 8 }}>Openthai.ai Generator — ผ้าไหมอุบล</span>
           </div>
           <div style={{ padding: 24 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -205,7 +205,7 @@ export default function LandingPage() {
             <div style={{ ...demoBox, marginTop: 12 }}>
               <div style={demoLabel}>#️⃣ Hashtags</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                {['#ผ้าไหม', '#OTOP', '#สินค้าไทย', '#ของดีบ้านเรา', '#TikTokShop', '#ภูมิปัญญาไทย', '#OpenThaiAI'].map((h) => (
+                {['#ผ้าไหม', '#OTOP', '#สินค้าไทย', '#ของดีบ้านเรา', '#TikTokShop', '#ภูมิปัญญาไทย', '#Openthai.ai'].map((h) => (
                   <span key={h} style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 20, padding: '3px 10px', fontSize: 12, color: '#a5b4fc' }}>{h}</span>
                 ))}
               </div>
@@ -233,7 +233,7 @@ export default function LandingPage() {
       <section style={{ maxWidth: 1000, margin: '0 auto', padding: '0 5% 80px' }}>
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
           <SectionBadge>ฟีเจอร์</SectionBadge>
-          <SectionTitle>ทำไมต้อง OpenThai AI?</SectionTitle>
+          <SectionTitle>ทำไมต้อง Openthai.ai?</SectionTitle>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20 }}>
           {FEATURES.map((f) => (
@@ -317,7 +317,7 @@ export default function LandingPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <LogoEmblem size={28} />
-              <span style={{ fontWeight: 900, fontSize: 16, color: '#f8fafc' }}>OpenThai AI</span>
+              <span style={{ fontWeight: 900, fontSize: 16, color: '#f8fafc' }}>Openthai.ai</span>
             </div>
             <p style={{ color: '#475569', fontSize: 12, margin: 0, maxWidth: 220, lineHeight: 1.6 }}>
               AI ไทยแท้ สร้างคอนเทนต์ TikTok<br />ใน 10 วินาที รองรับ 241 แพลตฟอร์ม
@@ -333,7 +333,7 @@ export default function LandingPage() {
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>ข้อมูล</div>
-              {[['นโยบายความเป็นส่วนตัว', '/privacy'], ['ข้อกำหนดการใช้งาน', '/terms'], ['ติดต่อเรา', 'mailto:support@openthai-ai.com']].map(([l, r]) => (
+              {[['นโยบายความเป็นส่วนตัว', '/privacy'], ['ข้อกำหนดการใช้งาน', '/terms'], ['ติดต่อเรา', 'mailto:support@openthai.ai']].map(([l, r]) => (
                 r.startsWith('mailto')
                   ? <a key={r} href={r} style={{ display: 'block', color: '#94a3b8', fontSize: 13, textDecoration: 'none', marginBottom: 6 }}>{l}</a>
                   : <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
@@ -342,7 +342,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <span style={{ fontSize: 12, color: '#334155' }}>© 2026 OpenThai AI — สงวนลิขสิทธิ์</span>
+          <span style={{ fontSize: 12, color: '#334155' }}>© 2026 Openthai.ai — สงวนลิขสิทธิ์</span>
           <span style={{ fontSize: 12, color: '#334155' }}>🇹🇭 Made in Thailand · Powered by Gemini AI</span>
         </div>
       </footer>

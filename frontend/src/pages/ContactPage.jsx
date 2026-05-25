@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 import { apiUrl } from '../apiBase';
@@ -20,7 +20,7 @@ export default function ContactPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
-  useEffect(() => { document.title = 'ติดต่อเรา — OpenThai AI'; }, []);
+  useEffect(() => { document.title = 'ติดต่อเรา — Openthai.ai'; }, []);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -67,7 +67,7 @@ export default function ContactPage() {
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← กลับ</button>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>ติดต่อเรา</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>Contact — OpenThai AI</div>
+          <div style={{ fontSize: 11, color: '#64748b' }}>Contact — Openthai.ai</div>
         </div>
       </header>
 
@@ -77,7 +77,7 @@ export default function ContactPage() {
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <div style={{ fontSize: 56, marginBottom: 12 }}>💬</div>
           <h1 style={{ fontSize: 'clamp(24px,5vw,38px)', fontWeight: 900, margin: '0 0 12px', background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            ติดต่อทีมงาน OpenThai AI
+            ติดต่อทีมงาน Openthai.ai
           </h1>
           <p style={{ color: '#64748b', fontSize: 14 }}>ตอบกลับภายใน <strong style={{ color: '#10b981' }}>1–2 วันทำการ</strong> · เปิดให้บริการทุกวัน</p>
         </div>
@@ -88,9 +88,9 @@ export default function ContactPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 8px', color: '#a5b4fc' }}>📡 ช่องทางการติดต่อ</h2>
             {[
-              { icon: '📧', label: 'Email', value: 'support@openthai-ai.com', href: 'mailto:support@openthai-ai.com' },
-              { icon: '💰', label: 'Affiliate', value: 'affiliate@openthai-ai.com', href: 'mailto:affiliate@openthai-ai.com' },
-              { icon: '🔒', label: 'PDPA/Privacy', value: 'privacy@openthai-ai.com', href: 'mailto:privacy@openthai-ai.com' },
+              { icon: '📧', label: 'Email', value: 'support@openthai.ai', href: 'mailto:support@openthai.ai' },
+              { icon: '💰', label: 'Affiliate', value: 'affiliate@openthai.ai', href: 'mailto:affiliate@openthai.ai' },
+              { icon: '🔒', label: 'PDPA/Privacy', value: 'privacy@openthai.ai', href: 'mailto:privacy@openthai.ai' },
               { icon: '🌐', label: 'Website', value: 'www.openthai-ai.com', href: 'https://www.openthai-ai.com' },
             ].map((c) => (
               <a key={c.label} href={c.href} target={c.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer"

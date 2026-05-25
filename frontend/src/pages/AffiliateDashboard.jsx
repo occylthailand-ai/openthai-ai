@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 import { apiUrl } from '../apiBase';
@@ -61,7 +61,7 @@ export default function AffiliateDashboard() {
   const toast = useToast();
   const { copied, copy } = useCopy(toast);
 
-  useEffect(() => { document.title = 'Affiliate Dashboard — OpenThai AI'; }, []);
+  useEffect(() => { document.title = 'Affiliate Dashboard — Openthai.ai'; }, []);
 
   // รับ ref_code จาก URL param ?ref=XXXXX
   const params = new URLSearchParams(window.location.search);
@@ -178,7 +178,7 @@ export default function AffiliateDashboard() {
           <button onClick={() => copy(refLink, 'link')} style={{ ...smallBtn, background: copied === 'link' ? 'rgba(16,185,129,0.2)' : undefined, color: copied === 'link' ? '#6ee7b7' : undefined }}>
             {copied === 'link' ? '✅ คัดลอกแล้ว' : '📋 คัดลอก'}
           </button>
-          <a href={`https://line.me/R/msg/text/?${encodeURIComponent(`ลองใช้ OpenThai AI ฟรี! สร้างคอนเทนต์ TikTok ปังใน 10 วิ 👉 ${refLink}`)}`} target="_blank" rel="noreferrer" style={{ ...smallBtn, textDecoration: 'none', background: 'rgba(6,185,62,0.15)', border: '1px solid rgba(6,185,62,0.3)', color: '#4ade80' }}>
+          <a href={`https://line.me/R/msg/text/?${encodeURIComponent(`ลองใช้ Openthai.ai ฟรี! สร้างคอนเทนต์ TikTok ปังใน 10 วิ 👉 ${refLink}`)}`} target="_blank" rel="noreferrer" style={{ ...smallBtn, textDecoration: 'none', background: 'rgba(6,185,62,0.15)', border: '1px solid rgba(6,185,62,0.3)', color: '#4ade80' }}>
             LINE ↗
           </a>
           <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(refLink)}`} target="_blank" rel="noreferrer" style={{ ...smallBtn, textDecoration: 'none', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#93c5fd' }}>
@@ -289,7 +289,7 @@ export default function AffiliateDashboard() {
                 📅 <strong style={{ color: '#f8fafc' }}>จ่ายทุกวันจันทร์</strong> ผ่าน PromptPay หรือ Bank Transfer<br />
                 💳 ขั้นต่ำ ฿100 ต่อครั้ง<br />
                 ⏱ ยอดขายจะ confirm ภายใน 3 วัน<br />
-                📩 แจ้งช่องทางรับเงินได้ที่ <a href="mailto:affiliate@openthai-ai.com" style={{ color: '#6366f1' }}>affiliate@openthai-ai.com</a>
+                📩 แจ้งช่องทางรับเงินได้ที่ <a href="mailto:affiliate@openthai.ai" style={{ color: '#6366f1' }}>affiliate@openthai.ai</a>
               </div>
             </div>
           </div>
@@ -299,10 +299,10 @@ export default function AffiliateDashboard() {
         {activeTab === 'kit' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 16 }}>
             {[
-              { icon: '📱', title: 'สคริปต์ TikTok 10 แบบ', text: `สร้างคอนเทนต์ TikTok ปัง ๆ ด้วย AI ไทยแท้ ใน 10 วินาที ⚡\nไม่ต้องคิดสคริปต์ ไม่ต้องเขียนแคปชั่น!\nทดลองฟรีที่ ${refLink}\n#OpenThaiAI #AIไทยแท้ #TikTokContent`, key: 'script' },
+              { icon: '📱', title: 'สคริปต์ TikTok 10 แบบ', text: `สร้างคอนเทนต์ TikTok ปัง ๆ ด้วย AI ไทยแท้ ใน 10 วินาที ⚡\nไม่ต้องคิดสคริปต์ ไม่ต้องเขียนแคปชั่น!\nทดลองฟรีที่ ${refLink}\n#Openthai.ai #AIไทยแท้ #TikTokContent`, key: 'script' },
               { icon: '📘', title: 'Facebook Caption', text: `🚀 AI ไทยแท้ ช่วยสร้างคอนเทนต์ครบเซ็ตใน 10 วินาที!\n✅ สคริปต์ ✅ แคปชั่น ✅ แฮชแท็ก\nคนไทยกว่า 1,200 คนใช้แล้ว คอนเทนต์โตไวขึ้น 3 เท่า 📈\nทดลองใช้ฟรีที่ ${refLink}`, key: 'fb' },
               { icon: '🐦', title: 'Twitter/X', text: `AI ไทยแท้ สร้างคอนเทนต์ TikTok ใน 10 วินาที 🤯\nใช้ฟรี ไม่ต้องสมัคร 👇\n${refLink}\n#AI #Thailand #Creator`, key: 'tw' },
-              { icon: '💬', title: 'LINE Message', text: `สวัสดีครับ/ค่ะ 👋\nแนะนำ OpenThai AI — สร้างคอนเทนต์ TikTok ปังด้วย AI ไทยแท้ ใน 10 วิ!\nลองฟรีได้เลยที่ 👉 ${refLink}`, key: 'line' },
+              { icon: '💬', title: 'LINE Message', text: `สวัสดีครับ/ค่ะ 👋\nแนะนำ Openthai.ai — สร้างคอนเทนต์ TikTok ปังด้วย AI ไทยแท้ ใน 10 วิ!\nลองฟรีได้เลยที่ 👉 ${refLink}`, key: 'line' },
             ].map((k) => (
               <div key={k.key} style={glass}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>

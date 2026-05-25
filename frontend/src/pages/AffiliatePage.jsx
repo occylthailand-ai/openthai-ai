@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 import { apiUrl } from '../apiBase';
@@ -141,7 +141,7 @@ export default function AffiliatePage() {
 
       {/* ── HERO ── */}
       <section style={{ textAlign: 'center', padding: '64px 24px 40px' }}>
-        <div style={badgeStyle}>🇹🇭 OpenThai AI Affiliate Program</div>
+        <div style={badgeStyle}>🇹🇭 Openthai.ai Affiliate Program</div>
         <h1 style={{ fontSize: 'clamp(32px,6vw,60px)', fontWeight: 900, margin: '16px 0 12px', lineHeight: 1.2 }}>
           แชร์ → ได้เงิน<br />
           <span style={{ background: 'linear-gradient(90deg,#fe2c55,#ff9800,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -149,7 +149,7 @@ export default function AffiliatePage() {
           </span>
         </h1>
         <p style={{ fontSize: 18, color: '#94a3b8', maxWidth: 560, margin: '0 auto 32px' }}>
-          แชร์ OpenThai AI ให้เพื่อน Creator ไทย — ทุกครั้งที่เขาสมัคร คุณได้เงิน ไม่ต้องลงทุนอะไรเลย
+          แชร์ Openthai.ai ให้เพื่อน Creator ไทย — ทุกครั้งที่เขาสมัคร คุณได้เงิน ไม่ต้องลงทุนอะไรเลย
         </p>
         <div style={{ display: 'flex', gap: 24, justifyContent: 'center', flexWrap: 'wrap' }}>
           {[['1,200+', 'Creator ใช้แล้ว'], ['3x', 'คอนเทนต์โตไว'], ['40%', 'คอมมิชชั่นสูงสุด'], ['24ชม.', 'จ่ายทุกสัปดาห์']].map(([v, l]) => (
@@ -257,7 +257,7 @@ export default function AffiliatePage() {
           {
             key: 'tiktok',
             label: '📱 TikTok Caption',
-            text: `สร้างคอนเทนต์ TikTok ปัง ๆ ด้วย AI ไทยแท้ ใน 10 วินาที! ⚡\nไม่ต้องคิดสคริปต์ ไม่ต้องเขียนแคปชั่น ไม่ต้องหาแฮชแท็กอีกต่อไป 🔥\nใช้ฟรี 3 ครั้งวันนี้ ไม่ต้องสมัคร!\n👉 openthai-ai.vercel.app\n#OpenThaiAI #AIไทย #TikTokContent #ContentCreator`,
+            text: `สร้างคอนเทนต์ TikTok ปัง ๆ ด้วย AI ไทยแท้ ใน 10 วินาที! ⚡\nไม่ต้องคิดสคริปต์ ไม่ต้องเขียนแคปชั่น ไม่ต้องหาแฮชแท็กอีกต่อไป 🔥\nใช้ฟรี 3 ครั้งวันนี้ ไม่ต้องสมัคร!\n👉 openthai-ai.vercel.app\n#Openthai.ai #AIไทย #TikTokContent #ContentCreator`,
           },
           {
             key: 'fb',

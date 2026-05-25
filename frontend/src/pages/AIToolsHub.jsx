@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 
@@ -236,7 +236,7 @@ const AIToolsHub = () => {
         <div className="hub-content">
           <div className="hub-hero">
             <h1 className="hub-hero-title">9-Skills AI Framework<br /><span style={{ color: '#a5b4fc' }}>พัฒนาเฉพาะสำหรับสินค้าไทย</span></h1>
-            <p className="hub-hero-sub">ระบบ AI ของ OpenThai AI ถูกออกแบบมาเพื่อเข้าใจสินค้า วัฒนธรรม และตลาดไทยอย่างลึกซึ้ง</p>
+            <p className="hub-hero-sub">ระบบ AI ของ Openthai.ai ถูกออกแบบมาเพื่อเข้าใจสินค้า วัฒนธรรม และตลาดไทยอย่างลึกซึ้ง</p>
           </div>
           <div className="hub-skills-grid">
             {SKILLS_INFO.map((s, i) => (

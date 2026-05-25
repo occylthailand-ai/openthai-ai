@@ -1,10 +1,10 @@
-// OpenThai AI — OpenAPI 3.0 Specification
+﻿// Openthai.ai — OpenAPI 3.0 Specification
 // Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs
 
 export const openapiSpec = {
   openapi: '3.0.3',
   info: {
-    title: 'OpenThai AI API',
+    title: 'Openthai.ai API',
     version: '2.0.0',
     description:
       'AI-powered Thai social media content generation platform. Supports TikTok, Facebook, LINE, and more. Built on Claude (primary) + Gemini (fallback).',
@@ -53,7 +53,7 @@ export const openapiSpec = {
           hook: { type: 'string', description: 'Opening hook sentence' },
           script: { type: 'array', items: { type: 'string' }, description: 'Video script steps' },
           caption: { type: 'string', description: 'Ready-to-post caption with emojis' },
-          hashtags: { type: 'array', items: { type: 'string' }, example: ['#OTOP', '#สินค้าไทย', '#OpenThaiAI'] },
+          hashtags: { type: 'array', items: { type: 'string' }, example: ['#OTOP', '#สินค้าไทย', '#Openthai.ai'] },
           criticScore: { type: 'string', example: '8.7', description: 'AI quality score 0.0–10.0' },
           source: { type: 'string', enum: ['claude', 'gemini', 'mock', 'mock-fallback'] },
         },

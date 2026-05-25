@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "title": "นโยบายระบบถาวร — OpenThai AI Operations Charter",
+  "title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
   "effective": "2026-05-04",
   "deployment": {
     "frontend": "https://www.openthai-ai.com (Vercel Static)",

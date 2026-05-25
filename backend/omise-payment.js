@@ -1,4 +1,4 @@
-// OpenThai AI — Omise Payment System
+﻿// Openthai.ai — Omise Payment System
 // PromptPay QR · Credit Card · Subscription Billing
 // Docs: https://docs.opn.ooo/
 

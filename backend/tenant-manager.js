@@ -1,4 +1,4 @@
-// OpenThai AI — Multi-Tenant Manager
+﻿// Openthai.ai — Multi-Tenant Manager
 // Each tenant (store/business) gets:
 //   - Isolated agent space  (agents_<id>.json)
 //   - Isolated memory space (memory_<id>.json)

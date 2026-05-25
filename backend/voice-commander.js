@@ -1,4 +1,4 @@
-// OpenThai AI — Voice Commander
+﻿// Openthai.ai — Voice Commander
 // รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text
 //
 // Endpoint: POST /api/voice/command
@@ -6,7 +6,7 @@
 //   returns: { action, params, result, speak_text, confidence }
 
 // ── Intent definitions ────────────────────────────────────────────────────────
-const INTENT_PROMPT = (transcript, lang) => `คุณเป็น AI ผู้ช่วยของ OpenThai AI ระบบสร้างคอนเทนต์ไทย รองรับ 3 ภาษา: ไทย, จีน, อังกฤษ
+const INTENT_PROMPT = (transcript, lang) => `คุณเป็น AI ผู้ช่วยของ Openthai.ai ระบบสร้างคอนเทนต์ไทย รองรับ 3 ภาษา: ไทย, จีน, อังกฤษ
 
 คำสั่งเสียงที่ได้รับ: "${transcript}"
 ภาษา Input: ${lang || 'th-TH'}
@@ -131,10 +131,10 @@ export async function processVoiceCommand({ transcript, lang = 'th-TH', tenantId
       case 'system_health': {
         result = { status: 'ok', message: 'ระบบทำงานปกติ' };
         speak_text = isZh(lang)
-          ? 'OpenThai AI 系统运行正常，未发现错误'
+          ? 'Openthai.ai 系统运行正常，未发现错误'
           : isEn(lang)
-            ? 'OpenThai AI system is healthy, no errors found'
-            : 'ระบบ OpenThai AI ทำงานปกติ ไม่พบข้อผิดพลาด';
+            ? 'Openthai.ai system is healthy, no errors found'
+            : 'ระบบ Openthai.ai ทำงานปกติ ไม่พบข้อผิดพลาด';
         break;
       }
 

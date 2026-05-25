@@ -1,4 +1,4 @@
-# n8n Auto-Post Workflow — เสร็จสมบูรณ์
+﻿# n8n Auto-Post Workflow — เสร็จสมบูรณ์
 วันที่: 21 พฤษภาคม 2569 | เสร็จ ~18:05
 
 ---
@@ -8,7 +8,7 @@
 ### n8n Setup
 - n8n v2.14.2 รันอยู่ที่ localhost:5678 ✅
 - สร้าง owner account: occylthailand@gmail.com / OpenThai@2026 ✅
-- Import workflow "OpenThai AI — Auto-Post X (3x Daily)" ✅
+- Import workflow "Openthai.ai — Auto-Post X (3x Daily)" ✅
 - **ACTIVE: True** — ทำงานจริงแล้ว ✅
 
 ### Workflow: Auto-Post X (3x Daily)

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Section = ({ num, title, children }) => (
@@ -13,7 +13,7 @@ const Section = ({ num, title, children }) => (
 
 export default function TermsPage() {
   const navigate = useNavigate();
-  useEffect(() => { document.title = 'ข้อกำหนดการใช้งาน — OpenThai AI'; }, []);
+  useEffect(() => { document.title = 'ข้อกำหนดการใช้งาน — Openthai.ai'; }, []);
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif", padding: '0 0 80px' }}>
       {/* Header */}
@@ -23,7 +23,7 @@ export default function TermsPage() {
         </button>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>ข้อกำหนดการใช้งาน</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>Terms of Service — OpenThai AI</div>
+          <div style={{ fontSize: 11, color: '#64748b' }}>Terms of Service — Openthai.ai</div>
         </div>
       </header>
 
@@ -41,15 +41,15 @@ export default function TermsPage() {
 
         {/* Warning box */}
         <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 12, padding: '16px 20px', marginBottom: 40, fontSize: 13, color: '#fcd34d', lineHeight: 1.7 }}>
-          ⚠️ กรุณาอ่านข้อกำหนดนี้อย่างละเอียดก่อนใช้งาน OpenThai AI การใช้บริการถือว่าคุณยอมรับข้อกำหนดทั้งหมด
+          ⚠️ กรุณาอ่านข้อกำหนดนี้อย่างละเอียดก่อนใช้งาน Openthai.ai การใช้บริการถือว่าคุณยอมรับข้อกำหนดทั้งหมด
         </div>
 
         <Section num="1" title="การยอมรับข้อกำหนด">
-          <p>การเข้าถึงหรือใช้งาน <strong style={{ color: '#f8fafc' }}>OpenThai AI</strong> ("<strong>บริการ</strong>") ถือว่าคุณยอมรับข้อกำหนดการใช้งานฉบับนี้ หากไม่ยอมรับ กรุณาหยุดใช้งานทันที</p>
+          <p>การเข้าถึงหรือใช้งาน <strong style={{ color: '#f8fafc' }}>Openthai.ai</strong> ("<strong>บริการ</strong>") ถือว่าคุณยอมรับข้อกำหนดการใช้งานฉบับนี้ หากไม่ยอมรับ กรุณาหยุดใช้งานทันที</p>
         </Section>
 
         <Section num="2" title="คำอธิบายบริการ">
-          <p>OpenThai AI เป็นแพลตฟอร์ม AI สร้างคอนเทนต์สำหรับ Social Media โดยเฉพาะ TikTok ประกอบด้วย:</p>
+          <p>Openthai.ai เป็นแพลตฟอร์ม AI สร้างคอนเทนต์สำหรับ Social Media โดยเฉพาะ TikTok ประกอบด้วย:</p>
           <ul style={{ paddingLeft: 20, margin: '8px 0 0' }}>
             <li style={{ marginBottom: 6 }}>AI Content Generator — สร้างสคริปต์ แคปชั่น แฮชแท็ก</li>
             <li style={{ marginBottom: 6 }}>Affiliate Program — โปรแกรมพันธมิตรกับค่าคอมมิชชัน</li>
@@ -78,7 +78,7 @@ export default function TermsPage() {
           <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '14px 18px' }}>
             <div style={{ color: '#f87171', fontWeight: 700, marginBottom: 8 }}>🚫 ไม่อนุญาต</div>
             <ul style={{ paddingLeft: 16, margin: 0 }}>
-              <li>Resell หรือให้บริการต่อในนามของ OpenThai AI</li>
+              <li>Resell หรือให้บริการต่อในนามของ Openthai.ai</li>
               <li>ใช้ API หรือระบบโดยไม่ได้รับอนุญาต</li>
               <li>สร้างคอนเทนต์ที่ผิดกฎหมาย หลอกลวง หรือเป็นอันตราย</li>
               <li>Scrape, reverse engineer หรือ clone บริการ</li>
@@ -107,7 +107,7 @@ export default function TermsPage() {
         </Section>
 
         <Section num="7" title="การยกเว้นความรับผิด">
-          <p>OpenThai AI ให้บริการ "as is" โดยไม่รับประกัน:</p>
+          <p>Openthai.ai ให้บริการ "as is" โดยไม่รับประกัน:</p>
           <ul style={{ paddingLeft: 20, margin: '8px 0 0' }}>
             <li style={{ marginBottom: 6 }}>ความถูกต้องของเนื้อหาที่ AI สร้างขึ้น</li>
             <li style={{ marginBottom: 6 }}>ผลลัพธ์ทางธุรกิจจากการใช้คอนเทนต์</li>
@@ -122,7 +122,7 @@ export default function TermsPage() {
         <Section num="9" title="ติดต่อเรา">
           <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '20px 24px' }}>
             <div style={{ fontSize: 13, lineHeight: 2 }}>
-              📧 Email: <a href="mailto:support@openthai-ai.com" style={{ color: '#6366f1' }}>support@openthai-ai.com</a><br />
+              📧 Email: <a href="mailto:support@openthai.ai" style={{ color: '#6366f1' }}>support@openthai.ai</a><br />
               🌐 Website: <a href="https://www.openthai-ai.com" style={{ color: '#6366f1' }}>www.openthai-ai.com</a>
             </div>
           </div>

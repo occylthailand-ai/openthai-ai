@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 import { apiUrl } from '../apiBase';
@@ -368,7 +368,7 @@ function TabSkills({ toast }) {
       {data.industry_ai_pulse && (
         <div style={glass}>
           <div style={{fontWeight:800,fontSize:14,marginBottom:6}}>🛰 กระแส AI ในอุตสาหกรรม vs โปรแกรมเรา</div>
-          <div style={{fontSize:12,color:'#64748b',marginBottom:14}}>เปรียบเทียบแนวผู้นำตลาดกับฟีเจอร์ OpenThai AI — ช่องว่างและวิธีบริหารจัดการ</div>
+          <div style={{fontSize:12,color:'#64748b',marginBottom:14}}>เปรียบเทียบแนวผู้นำตลาดกับฟีเจอร์ Openthai.ai — ช่องว่างและวิธีบริหารจัดการ</div>
           <div style={{display:'grid',gap:12}}>
             {data.industry_ai_pulse.map((row, i) => (
               <div key={i} style={{background:'rgba(255,255,255,0.02)',borderRadius:12,padding:'12px 14px',border:'1px solid rgba(255,255,255,0.06)'}}>
@@ -409,7 +409,7 @@ function TabSkills({ toast }) {
 
       {/* Our 9 Skills */}
       <div style={glass}>
-        <div style={{fontWeight:800,fontSize:14,marginBottom:16}}>🧠 9-Skills ของ OpenThai AI</div>
+        <div style={{fontWeight:800,fontSize:14,marginBottom:16}}>🧠 9-Skills ของ Openthai.ai</div>
         <div style={{display:'grid',gap:10}}>
           {data.our_skills.map(s=>(
             <div key={s.id}>
@@ -784,7 +784,7 @@ export default function AgentPage() {
   const [lineStatus, setLine] = useState(null);
 
   useEffect(() => {
-    document.title = 'AI Agent — OpenThai AI';
+    document.title = 'AI Agent — Openthai.ai';
     loadAgents();
     fetch(apiUrl('/api/line/status')).then(r=>r.json()).then(setLine).catch(()=>{});
   }, []);

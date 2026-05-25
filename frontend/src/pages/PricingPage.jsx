@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const PLANS = [
@@ -61,7 +61,7 @@ export default function PricingPage() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState('pro');
   const [showPay, setShowPay] = useState(false);
-  useEffect(() => { document.title = 'แผนราคา — OpenThai AI'; }, []);
+  useEffect(() => { document.title = 'แผนราคา — Openthai.ai'; }, []);
   const [payStep, setPayStep] = useState('select'); // select | qr | confirm
   const [openFaq, setOpenFaq] = useState(null);
 
@@ -160,7 +160,7 @@ export default function PricingPage() {
                   1. เปิดแอปธนาคาร → สแกน QR<br />
                   2. ยอด: <strong style={{ color: '#f8fafc' }}>฿{plan.thb}</strong><br />
                   3. กดยืนยัน → แคปหน้าจอสลิป<br />
-                  4. ส่งสลิปมาที่ LINE: <strong style={{ color: '#6366f1' }}>@openthaiai</strong>
+                  4. ส่งสลิปมาที่ LINE: <strong style={{ color: '#6366f1' }}>@Openthai.ai</strong>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setPayStep('select')} style={{ flex: 1, ...outlineBtn }}>← ย้อนกลับ</button>
@@ -179,7 +179,7 @@ export default function PricingPage() {
                 </p>
                 <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>
                   📧 ยืนยันจะส่งไปที่อีเมลของคุณ<br />
-                  💬 LINE: <strong style={{ color: '#6366f1' }}>@openthaiai</strong>
+                  💬 LINE: <strong style={{ color: '#6366f1' }}>@Openthai.ai</strong>
                 </p>
                 <button onClick={() => { setShowPay(false); navigate('/ai-generator'); }} style={{ ...primaryBtn, width: '100%' }}>
                   🚀 เริ่มใช้งานได้เลย →
@@ -217,7 +217,7 @@ export default function PricingPage() {
       {/* FOOTER LEGAL */}
       <footer style={{ textAlign: 'center', padding: '0 5% 40px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 24 }}>
         <p style={{ color: '#334155', fontSize: 12, margin: '0 0 8px' }}>
-          © 2026 OpenThai AI — สงวนลิขสิทธิ์
+          © 2026 Openthai.ai — สงวนลิขสิทธิ์
         </p>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button onClick={() => navigate('/privacy')} style={{ background: 'none', border: 'none', color: '#475569', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>นโยบายความเป็นส่วนตัว</button>

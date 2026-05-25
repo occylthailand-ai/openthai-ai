@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 
@@ -29,7 +29,7 @@ export default function BrandMemoryPage() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    document.title = 'Brand Memory — OpenThai AI';
+    document.title = 'Brand Memory — Openthai.ai';
     try {
       const stored = localStorage.getItem(BRAND_KEY);
       if (stored) setBrand(JSON.parse(stored));

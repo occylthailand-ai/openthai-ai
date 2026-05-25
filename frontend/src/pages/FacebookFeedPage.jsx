@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { LogoEmblem } from '../components/Logo';
@@ -214,7 +214,7 @@ const FacebookFeedPage = () => {
             <span className="fb-search-icon">🔍</span>
             <input
               className="fb-search-input"
-              placeholder="ค้นหาใน OpenThai AI"
+              placeholder="ค้นหาใน Openthai.ai"
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
             />

@@ -1,5 +1,5 @@
-/**
- * OpenThai AI — Unit Tests
+﻿/**
+ * Openthai.ai — Unit Tests
  * Run: npm test
  */
 
@@ -170,7 +170,7 @@ describe('maskEmail()', () => {
   });
 
   it('preserves domain', () => {
-    const result = maskEmail('someone@openthai-ai.com');
-    expect(result).toContain('@openthai-ai.com');
+    const result = maskEmail('someone@openthai.ai');
+    expect(result).toContain('@openthai.ai');
   });
 });

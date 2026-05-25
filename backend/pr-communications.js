@@ -1,4 +1,4 @@
-// OpenThai AI — PR & Global Communications System
+﻿// Openthai.ai — PR & Global Communications System
 // Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -19,16 +19,16 @@ export function createPRSystem(writeDir) {
     // ── Press Releases ────────────────────────────────────────────────────────
     getPressReleases: () => load('pr_releases.json', [
       {
-        id: 'pr001', title: 'OpenThai AI เปิดตัวระบบ AI Content Generator สำหรับ SME ไทย',
-        titleEN: 'OpenThai AI Launches AI Content Generator for Thai SMEs',
+        id: 'pr001', title: 'Openthai.ai เปิดตัวระบบ AI Content Generator สำหรับ SME ไทย',
+        titleEN: 'Openthai.ai Launches AI Content Generator for Thai SMEs',
         date: '2026-05-20', status: 'published', category: 'product',
         languages: ['th', 'en', 'zh'],
-        summary: 'OpenThai AI เปิดตัวแพลตฟอร์ม AI สร้างคอนเทนต์ครบวงจร รองรับ 241 แพลตฟอร์มทั่วโลก',
+        summary: 'Openthai.ai เปิดตัวแพลตฟอร์ม AI สร้างคอนเทนต์ครบวงจร รองรับ 241 แพลตฟอร์มทั่วโลก',
         content: '', views: 0, media_picked_up: [],
       },
       {
-        id: 'pr002', title: 'OpenThai AI ประกาศแผน IPO บน MAI ภายในปี 2027',
-        titleEN: 'OpenThai AI Announces IPO Plans on MAI by 2027',
+        id: 'pr002', title: 'Openthai.ai ประกาศแผน IPO บน MAI ภายในปี 2027',
+        titleEN: 'Openthai.ai Announces IPO Plans on MAI by 2027',
         date: '2026-06-01', status: 'draft', category: 'corporate',
         languages: ['th', 'en'],
         summary: 'บริษัทตั้งเป้า Market Cap ฿1,000M+ ก่อนเข้าจดทะเบียนใน MAI/SET',
@@ -58,7 +58,7 @@ export function createPRSystem(writeDir) {
         region: 'TH', status: 'active',
         channels: ['LINE', 'Facebook', 'TikTok', 'Press Release'],
         audience: 'Thai SME owners, OTOP sellers',
-        message: 'AI ไม่ใช่เรื่องยาก — OpenThai AI ทำให้ทุกคนเข้าถึงได้',
+        message: 'AI ไม่ใช่เรื่องยาก — Openthai.ai ทำให้ทุกคนเข้าถึงได้',
         kpi: { reach: 0, engagement: 0, leads: 0, target_reach: 1000000 },
         startDate: '2026-05-01', endDate: '2026-08-31',
       },
@@ -68,13 +68,13 @@ export function createPRSystem(writeDir) {
         region: 'SEA', status: 'planning',
         channels: ['LinkedIn', 'Tech Media', 'Conference'],
         audience: 'SEA entrepreneurs, investors',
-        message: 'OpenThai AI — The First AI Platform Built for Southeast Asia',
+        message: 'Openthai.ai — The First AI Platform Built for Southeast Asia',
         kpi: { reach: 0, engagement: 0, leads: 0, target_reach: 5000000 },
         startDate: '2026-09-01', endDate: '2026-12-31',
       },
       {
         id: 'camp003', name: '泰国AI平台 — 进军中国市场',
-        nameLocal: 'OpenThai AI 进中国',
+        nameLocal: 'Openthai.ai 进中国',
         region: 'CN', status: 'planning',
         channels: ['WeChat', 'Weibo', 'Xiaohongshu', '36Kr Media'],
         audience: '中国出海品牌, 跨境电商',
@@ -104,9 +104,9 @@ export function createPRSystem(writeDir) {
         { level: 4, color: '#7c3aed', label: 'Critical', desc: 'Regulatory action, major breach',    response_time: '30 นาที', owner: 'All C-Suite' },
       ],
       contacts: [
-        { role: 'PR Lead',       name: 'TBD', phone: '+66-xxx', email: 'pr@openthaiAI.com' },
-        { role: 'Legal Counsel', name: 'TBD', phone: '+66-xxx', email: 'legal@openthaiAI.com' },
-        { role: 'CEO',           name: 'Zuejai', phone: 'Direct', email: 'ceo@openthaiAI.com' },
+        { role: 'PR Lead',       name: 'TBD', phone: '+66-xxx', email: 'pr@Openthai.ai.com' },
+        { role: 'Legal Counsel', name: 'TBD', phone: '+66-xxx', email: 'legal@Openthai.ai.com' },
+        { role: 'CEO',           name: 'Zuejai', phone: 'Direct', email: 'ceo@Openthai.ai.com' },
       ],
       holding_statements: {
         th: 'บริษัทได้รับทราบสถานการณ์ดังกล่าวแล้ว และกำลังดำเนินการตรวจสอบอย่างเร่งด่วน ขอยืนยันว่าความปลอดภัยของลูกค้าคือสิ่งสำคัญสูงสุดของเรา',
@@ -137,12 +137,12 @@ export function createPRSystem(writeDir) {
       { id: 't006', dept: 'compliance',title: 'ยื่นขอจดทะเบียนบริษัท (DBD)',               priority: 'critical', status: 'in_progress', assignee: 'Legal',      due: '2026-06-01' },
       { id: 't007', dept: 'ir',        title: 'จัดทำ Pitch Deck Series A',                   priority: 'high',     status: 'pending',     assignee: 'CEO + IR',   due: '2026-06-15' },
       { id: 't008', dept: 'marketing', title: 'เปิด Facebook Page บริษัท',                  priority: 'high',     status: 'in_progress', assignee: 'Marketing',  due: '2026-05-22' },
-      { id: 't009', dept: 'marketing', title: 'สร้าง TikTok Account @OpenThaiAI',            priority: 'high',     status: 'pending',     assignee: 'PR Team',    due: '2026-05-25' },
+      { id: 't009', dept: 'marketing', title: 'สร้าง TikTok Account @Openthai.ai',            priority: 'high',     status: 'pending',     assignee: 'PR Team',    due: '2026-05-25' },
       { id: 't010', dept: 'pr',        title: 'เขียน Press Release เปิดตัว (TH+EN)',         priority: 'high',     status: 'pending',     assignee: 'PR Team',    due: '2026-06-01' },
       { id: 't011', dept: 'esg',       title: 'จัดทำ Carbon Footprint Baseline Report',     priority: 'medium',   status: 'pending',     assignee: 'ESG Team',   due: '2026-07-01' },
       { id: 't012', dept: 'strategy',  title: 'ทำ Market Research ASEAN Q3 2026',            priority: 'medium',   status: 'pending',     assignee: 'Strategy',   due: '2026-07-31' },
       { id: 't013', dept: 'it',        title: 'ขอ API Key: RunwayML / Pika / Kling',        priority: 'medium',   status: 'pending',     assignee: 'IT Team',    due: '2026-06-15' },
-      { id: 't014', dept: 'it',        title: 'ต่อ Domain openthaiAI.com → Vercel',         priority: 'high',     status: 'in_progress', assignee: 'IT Team',    due: '2026-05-22' },
+      { id: 't014', dept: 'it',        title: 'ต่อ Domain Openthai.ai.com → Vercel',         priority: 'high',     status: 'in_progress', assignee: 'IT Team',    due: '2026-05-22' },
       { id: 't015', dept: 'pr',        title: 'ลงทะเบียน Google News Publisher',             priority: 'medium',   status: 'pending',     assignee: 'PR Team',    due: '2026-06-15' },
     ]),
     saveTasks: (data) => save('cmd_tasks.json', data),

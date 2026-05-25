@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogoEmblem } from '../components/Logo';
 import { useToast } from '../components/ToastContext';
@@ -436,7 +436,7 @@ const AIGeneratorPage = () => {
     toast.info(`💡 โหลด "${productOrHook}" เข้า form แล้ว`);
   };
 
-  useEffect(() => { document.title = 'AI Content Generator — OpenThai AI'; }, []);
+  useEffect(() => { document.title = 'AI Content Generator — Openthai.ai'; }, []);
 
   // Auto-load brand memory
   useEffect(() => {

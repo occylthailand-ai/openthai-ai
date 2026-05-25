@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import CorporateLayout from '../../components/CorporateLayout';
 import { apiUrl } from '../../apiBase';
 
@@ -109,7 +109,7 @@ const HRPage = () => {
             </div>
           ))}
           <div style={{ textAlign: 'center', padding: '16px', color: '#6b7280', fontSize: '13px' }}>
-            สนใจร่วมงาน: <a href="mailto:hr@openthaiAI.com" style={{ color: '#a5b4fc' }}>hr@openthaiAI.com</a>
+            สนใจร่วมงาน: <a href="mailto:hr@Openthai.ai.com" style={{ color: '#a5b4fc' }}>hr@Openthai.ai.com</a>
           </div>
         </div>
       )}

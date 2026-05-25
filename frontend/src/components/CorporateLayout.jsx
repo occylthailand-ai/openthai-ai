@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Logo } from './Logo';
 
@@ -85,7 +85,7 @@ const CorporateLayout = ({ children, title, subtitle }) => {
         {/* Footer */}
         {!collapsed && (
           <div style={{ padding: '12px', borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: '10px', color: '#374151' }}>
-            <div>OpenThai AI Public Co., Ltd.</div>
+            <div>Openthai.ai Public Co., Ltd.</div>
             <div style={{ color: '#6366f1', marginTop: '2px' }}>SET/MAI Ready · Global</div>
           </div>
         )}

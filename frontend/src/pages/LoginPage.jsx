@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 import { apiUrl } from '../apiBase';
@@ -101,7 +101,7 @@ const LoginPage = ({ onLogin }) => {
           <Logo size="lg" />
         </div>
         <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: 0, fontSize: 14 }}>
-          ยินดีต้อนรับสู่ OpenThai AI Platform
+          ยินดีต้อนรับสู่ Openthai.ai Platform
         </p>
 
         {/* ── Tabs ── */}

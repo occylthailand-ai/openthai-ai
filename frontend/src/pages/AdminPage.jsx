@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [data] = useState(MOCK);
 
-  useEffect(() => { document.title = 'Admin Panel — OpenThai AI'; }, []);
+  useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -59,7 +59,7 @@ export default function AdminPage() {
       <div style={{ ...glass, maxWidth: 380, width: '100%', textAlign: 'center' }}>
         <div style={{ fontSize: 44, marginBottom: 12 }}>🔐</div>
         <h2 style={{ margin: '0 0 4px', fontWeight: 900 }}>Admin Panel</h2>
-        <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>OpenThai AI — เฉพาะผู้ดูแลระบบ</p>
+        <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>Openthai.ai — เฉพาะผู้ดูแลระบบ</p>
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <input type="password" placeholder="Admin Password" value={pw} onChange={(e) => setPw(e.target.value)}
             style={{ ...inputSt, textAlign: 'center', letterSpacing: 4 }} />

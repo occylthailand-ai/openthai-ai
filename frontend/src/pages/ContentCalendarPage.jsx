@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 
@@ -26,7 +26,7 @@ export default function ContentCalendarPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ product: '', platform: 'TikTok', note: '', done: false });
 
-  useEffect(() => { document.title = 'Content Calendar — OpenThai AI'; }, []);
+  useEffect(() => { document.title = 'Content Calendar — Openthai.ai'; }, []);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();

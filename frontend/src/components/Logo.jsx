@@ -1,8 +1,8 @@
-import React from 'react';
+﻿import React from 'react';
 import logoSvg from '../assets/logo.svg';
 
 /**
- * OpenThai AI Logo Component
+ * Openthai.ai Logo Component
  *
  * Props:
  *   size   — "sm" | "md" | "lg" | "xl"  (default: "md")
@@ -28,7 +28,7 @@ export const Logo = ({ size = 'md', style = {} }) => {
   return (
     <img
       src={logoSvg}
-      alt="OpenThai AI"
+      alt="Openthai.ai"
       width={width}
       height={height}
       style={{ display: 'block', ...style }}

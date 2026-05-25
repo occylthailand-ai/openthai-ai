@@ -1,4 +1,4 @@
-// OpenThai AI — Vector Memory System
+﻿// Openthai.ai — Vector Memory System
 // Long-term semantic memory for AI agents.
 // Each tenant gets an isolated memory space.
 //

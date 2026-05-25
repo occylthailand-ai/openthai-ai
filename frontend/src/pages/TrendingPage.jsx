@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 import { apiUrl } from '../apiBase';
@@ -12,7 +12,7 @@ export default function TrendingPage() {
   const [activeTab, setActiveTab] = useState('hashtags');
 
   useEffect(() => {
-    document.title = '🔥 Trending Now — OpenThai AI';
+    document.title = '🔥 Trending Now — Openthai.ai';
     fetch(apiUrl('/api/trending'))
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })

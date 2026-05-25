@@ -1,6 +1,6 @@
-# บทสนทนา: วิเคราะห์ Claude Code vs AI Tools สำหรับ OpenThai.ai
+﻿# บทสนทนา: วิเคราะห์ Claude Code vs AI Tools สำหรับ OpenThai.ai
 **วันที่:** 21 พฤษภาคม 2569 (2026-05-21)  
-**ผู้ร่วมสนทนา:** Zuejai (OpenThai AI Founder) & Claude (ท่าน Mythos)
+**ผู้ร่วมสนทนา:** Zuejai (Openthai.ai Founder) & Claude (ท่าน Mythos)
 
 ---
 

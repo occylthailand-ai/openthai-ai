@@ -1,5 +1,5 @@
 {
-  "name": "OpenThai AI — Master Funnel Automation",
+  "name": "Openthai.ai — Master Funnel Automation",
   "nodes": [
 
     {
@@ -91,7 +91,7 @@
       "position": [1020, 200],
       "parameters": {
         "fromEmail": "occylthailand@gmail.com",
-        "fromName": "Zuejai จาก OpenThai AI",
+        "fromName": "Zuejai จาก Openthai.ai",
         "toEmail": "={{ $json.email }}",
         "subject": "🎉 ยินดีต้อนรับ {{ $json.name }}! Script AI 3 ตัวแรกของคุณ",
         "emailFormat": "html",
@@ -312,7 +312,7 @@
       "position": [640, 600],
       "parameters": {
         "toEmail": "={{ $json.email }}",
-        "subject": "🎉 ยืนยันการสมัคร OpenThai AI {{ $json.plan | upper }} — เริ่มได้เลย!",
+        "subject": "🎉 ยืนยันการสมัคร Openthai.ai {{ $json.plan | upper }} — เริ่มได้เลย!",
         "emailFormat": "html"
       }
     },

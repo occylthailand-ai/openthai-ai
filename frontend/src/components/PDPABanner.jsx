@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'openthai_consent_v1';
 
@@ -52,7 +52,7 @@ export default function PDPABanner() {
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <span style={{ fontSize: 20 }}>🍪</span>
-            <strong style={{ fontSize: 16 }}>นโยบายการใช้คุกกี้ — OpenThai AI</strong>
+            <strong style={{ fontSize: 16 }}>นโยบายการใช้คุกกี้ — Openthai.ai</strong>
             <button onClick={() => setDetail(false)} style={{ marginLeft: 'auto', ...linkBtn }}>ย่อลง ▲</button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>
