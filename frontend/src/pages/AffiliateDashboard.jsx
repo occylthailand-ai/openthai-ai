@@ -244,7 +244,7 @@ export default function AffiliateDashboard() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                 <thead>
                   <tr style={{ color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    {['Order ID', 'แพ็กเกจ', 'คอมมิชชั่น', 'วันที่', 'สถานะ'].map((h) => (
+                    {['Order ID', 'แพ็กเกจ', 'ค่าแนะนำ', 'วันที่', 'สถานะ'].map((h) => (
                       <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12 }}>{h}</th>
                     ))}
                   </tr>

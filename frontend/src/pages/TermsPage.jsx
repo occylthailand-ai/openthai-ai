@@ -96,13 +96,13 @@ export default function TermsPage() {
           </ul>
         </Section>
 
-        <Section num="6" title="โปรแกรม Affiliate">
+        <Section num="6" title="โปรแกรมแนะนำผลิตภัณฑ์ (Referral Program)">
           <ul style={{ paddingLeft: 20, margin: 0 }}>
-            <li style={{ marginBottom: 8 }}>Commission คำนวณจากยอดขายสุทธิหลังหักภาษีและค่าธรรมเนียม</li>
-            <li style={{ marginBottom: 8 }}>จ่าย commission ทุกวันจันทร์ผ่าน PromptPay หรือโอนธนาคาร</li>
+            <li style={{ marginBottom: 8 }}>ค่าแนะนำคำนวณจากยอดขายสุทธิหลังหักภาษีและค่าธรรมเนียม — คำนวณจากการซื้อแพ็กเกจเท่านั้น ไม่มีค่าตอบแทนจากการชวนให้ผู้อื่นมาสมัคร Referral</li>
+            <li style={{ marginBottom: 8 }}>จ่ายค่าแนะนำทุกวันจันทร์ผ่าน PromptPay หรือโอนธนาคาร</li>
             <li style={{ marginBottom: 8 }}>ขั้นต่ำในการถอน: 100 บาท</li>
             <li style={{ marginBottom: 8 }}>ห้ามใช้ Spam, โฆษณาเท็จ หรือวิธีการที่ผิดจรรยาบรรณ</li>
-            <li>เราสงวนสิทธิ์ระงับบัญชี Affiliate ที่ผิดเงื่อนไข</li>
+            <li>เราสงวนสิทธิ์ระงับบัญชีที่ผิดเงื่อนไข</li>
           </ul>
         </Section>
 

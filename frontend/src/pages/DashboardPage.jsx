@@ -18,7 +18,7 @@ const QUICK_ACTIONS = [
   { icon: '🛠️', label: 'AI Tools Hub', desc: 'เครื่องมือ AI ทั้งหมด', route: '/ai-tools', color: '#06b6d4' },
   { icon: '▶️', label: 'TikTok Feed', desc: 'Feed สินค้า OTOP', route: '/tiktok', color: '#fe2c55' },
   { icon: '👥', label: 'Facebook Feed', desc: 'โพสต์ + Marketplace', route: '/facebook', color: '#1877f2' },
-  { icon: '💰', label: 'Affiliate', desc: 'รับ commission 20–40%', route: '/affiliate', color: '#f59e0b' },
+  { icon: '💰', label: 'Referral', desc: 'รับค่าแนะนำจากยอดขาย 20–40%', route: '/affiliate', color: '#f59e0b' },
 ];
 
 const ACTIVITY = [

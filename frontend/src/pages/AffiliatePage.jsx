@@ -14,7 +14,7 @@ const TIERS = [
     color: '#10b981',
     bg: 'rgba(16,185,129,0.12)',
     border: 'rgba(16,185,129,0.35)',
-    perks: ['ลิงก์ Affiliate ส่วนตัว', 'Dashboard ติดตามยอด', 'คอมมิชชั่น 20%'],
+    perks: ['ลิงก์แนะนำส่วนตัว', 'Dashboard ติดตามยอดขาย', 'ค่าแนะนำจากยอดขาย 20%'],
   },
   {
     id: 'pro',
@@ -25,7 +25,7 @@ const TIERS = [
     color: '#6366f1',
     bg: 'rgba(99,102,241,0.12)',
     border: 'rgba(99,102,241,0.4)',
-    perks: ['ทุกอย่างใน Starter', 'คอมมิชชั่น 30%', 'โบนัสพิเศษรายเดือน', 'Priority Support'],
+    perks: ['ทุกอย่างใน Starter', 'ค่าแนะนำจากยอดขาย 30%', 'โบนัสพิเศษรายเดือน', 'Priority Support'],
     recommended: true,
   },
   {
@@ -37,7 +37,7 @@ const TIERS = [
     color: '#f59e0b',
     bg: 'rgba(245,158,11,0.12)',
     border: 'rgba(245,158,11,0.4)',
-    perks: ['ทุกอย่างใน Pro', 'คอมมิชชั่น 40% จากยอดขาย', 'Co-marketing Budget พิเศษ', 'Dedicated Manager'],
+    perks: ['ทุกอย่างใน Pro', 'ค่าแนะนำจากยอดขาย 40%', 'Co-marketing Budget พิเศษ', 'Dedicated Manager'],
   },
 ];
 
