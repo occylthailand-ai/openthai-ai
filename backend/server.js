@@ -257,6 +257,18 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     return res.status(400).json({ error: 'product is required' });
   }
 
+  // Quota check
+  const clientKey = getClientKey(req);
+  const quota = checkQuotaAndIncrement(clientKey);
+  if (!quota.allowed) {
+    return res.status(429).json({
+      error: 'quota_exceeded',
+      message: `ครบ ${FREE_DAILY_LIMIT} ครั้งต่อวันแล้ว — อัปเกรด Pro หรือซื้อเครดิตเพิ่ม`,
+      remaining: 0,
+      upgradeUrl: '/pricing',
+    });
+  }
+
   // Basic input sanitization — ตัดอักขระอันตราย
   const sanitize = (s) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').slice(0, 500) : '');
   form.product  = sanitize(form.product);
@@ -512,6 +524,66 @@ function saveWaitlist(data) {
 
 const waitlist = loadWaitlist();
 
+// ─── Usage / Quota Store ───────────────────────────────────────────────────────
+const USAGE_FILE  = join(WRITE_DATA_DIR, 'usage-store.json');
+const CREDITS_LOG = join(WRITE_DATA_DIR, 'credits-log.json');
+const FREE_DAILY_LIMIT = 5;
+
+function loadUsageStore() {
+  try { if (existsSync(USAGE_FILE)) return JSON.parse(readFileSync(USAGE_FILE, 'utf8')); } catch (_) {}
+  return {};
+}
+function saveUsageStore(data) {
+  try {
+    const dir = USAGE_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(USAGE_FILE, JSON.stringify(data), 'utf8');
+  } catch (e) { console.error('Usage store save error:', e.message); }
+}
+function loadCreditsLog() {
+  try { if (existsSync(CREDITS_LOG)) return JSON.parse(readFileSync(CREDITS_LOG, 'utf8')); } catch (_) {}
+  return [];
+}
+function saveCreditsLog(data) {
+  try { writeFileSync(CREDITS_LOG, JSON.stringify(data, null, 2), 'utf8'); } catch (_) {}
+}
+
+const usageStore = loadUsageStore();
+
+function getClientKey(req) {
+  return (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown')
+    .split(',')[0].trim().slice(0, 45);
+}
+function getTodayKey() { return new Date().toISOString().slice(0, 10); }
+
+function checkQuotaAndIncrement(key) {
+  const today = getTodayKey();
+  if (!usageStore[key]) usageStore[key] = {};
+  const rec = usageStore[key];
+  if (rec.date !== today) { rec.date = today; rec.dailyCount = 0; }
+
+  const plan = rec.plan || 'free';
+  const isPaid = ['pro', 'business', 'agent'].includes(plan);
+
+  if (isPaid) {
+    rec.dailyCount = (rec.dailyCount || 0) + 1;
+    saveUsageStore(usageStore);
+    return { allowed: true, plan, remaining: null };
+  }
+  if ((rec.credits || 0) > 0) {
+    rec.credits -= 1;
+    rec.dailyCount = (rec.dailyCount || 0) + 1;
+    saveUsageStore(usageStore);
+    return { allowed: true, plan: 'credits', remaining: rec.credits };
+  }
+  if ((rec.dailyCount || 0) >= FREE_DAILY_LIMIT) {
+    return { allowed: false, plan: 'free', remaining: 0 };
+  }
+  rec.dailyCount = (rec.dailyCount || 0) + 1;
+  saveUsageStore(usageStore);
+  return { allowed: true, plan: 'free', remaining: FREE_DAILY_LIMIT - rec.dailyCount };
+}
+
 const waitlistLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 ชั่วโมง
   max: 3,                    // กรอกอีเมล 3 ครั้ง/ชั่วโมง ต่อ IP
@@ -555,6 +627,71 @@ app.post('/api/waitlist', waitlistLimiter, (req, res) => {
     console.error('Waitlist error:', err);
     res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่' });
   }
+});
+
+// ─── GET /api/usage/status — ตรวจสอบ quota ที่เหลือ ──────────────────────────
+app.get('/api/usage/status', (req, res) => {
+  const key   = getClientKey(req);
+  const today = getTodayKey();
+  const rec   = usageStore[key] || {};
+  const dailyCount = rec.date === today ? (rec.dailyCount || 0) : 0;
+  const plan  = rec.plan || 'free';
+  const isPaid = ['pro', 'business', 'agent'].includes(plan);
+  res.json({
+    plan,
+    dailyCount,
+    dailyLimit: isPaid ? null : FREE_DAILY_LIMIT,
+    remaining:  isPaid ? null : Math.max(0, FREE_DAILY_LIMIT - dailyCount),
+    credits:    rec.credits || 0,
+    canGenerate: isPaid || (rec.credits || 0) > 0 || dailyCount < FREE_DAILY_LIMIT,
+  });
+});
+
+// ─── POST /api/credits/purchase — บันทึกคำขอซื้อ Credits Pack ────────────────
+const CREDIT_PACKS = {
+  starter: { credits: 10,  thb: 49  },
+  value:   { credits: 25,  thb: 99  },
+  pro:     { credits: 60,  thb: 199 },
+  max:     { credits: 150, thb: 399 },
+};
+const PROMPTPAY_NUMBER = '0972560801';
+
+app.post('/api/credits/purchase', (req, res) => {
+  try {
+    const { pack, email } = req.body || {};
+    const p = CREDIT_PACKS[pack];
+    if (!p) return res.status(400).json({ error: 'ไม่พบแพ็กเกจเครดิต' });
+    const orderId = `CR${Date.now()}`;
+    const log = loadCreditsLog();
+    log.push({ orderId, pack, credits: p.credits, thb: p.thb, email: email || '', status: 'pending', ts: new Date().toISOString() });
+    saveCreditsLog(log);
+    addLog('info', 'Credits', `Purchase intent: ${pack} (${p.credits} credits / ฿${p.thb}) — ${email || 'no email'} — ${orderId}`);
+    res.json({
+      success: true, orderId, pack, credits: p.credits, thb: p.thb,
+      promptpay: PROMPTPAY_NUMBER,
+      instructions: `โอน ฿${p.thb} → PromptPay ${PROMPTPAY_NUMBER} · แนบสลิป + หมายเลข ${orderId} → LINE @openthaiai`,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'เกิดข้อผิดพลาด กรุณาลองใหม่' });
+  }
+});
+
+// ─── POST /api/credits/confirm — admin ยืนยันการชำระและเติม credits ───────────
+app.post('/api/credits/confirm', requireAuth, (req, res) => {
+  const { orderId, clientKey: ck } = req.body || {};
+  if (!orderId || !ck) return res.status(400).json({ error: 'ต้องการ orderId และ clientKey' });
+  const log = loadCreditsLog();
+  const order = log.find((o) => o.orderId === orderId);
+  if (!order) return res.status(404).json({ error: 'ไม่พบ order' });
+  if (order.status === 'confirmed') return res.status(409).json({ error: 'ยืนยันแล้ว' });
+  order.status = 'confirmed';
+  order.confirmedAt = new Date().toISOString();
+  saveCreditsLog(log);
+  if (!usageStore[ck]) usageStore[ck] = {};
+  usageStore[ck].credits = (usageStore[ck].credits || 0) + order.credits;
+  saveUsageStore(usageStore);
+  addLog('info', 'Credits', `Confirmed: ${orderId} → +${order.credits} credits for ${ck}`);
+  res.json({ success: true, credits: usageStore[ck].credits });
 });
 
 // ─── POST /api/analyze-image — Gemini/Claude Vision วิเคราะห์รูปสินค้า ─────────

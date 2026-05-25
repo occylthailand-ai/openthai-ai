@@ -30,6 +30,7 @@ const TeamPage           = lazy(() => import('./pages/TeamPage'));
 const CommandBoardPage   = lazy(() => import('./pages/CommandBoardPage'));
 const FoundationPage     = lazy(() => import('./pages/FoundationPage'));
 const SetupGuidePage     = lazy(() => import('./pages/SetupGuidePage'));
+const SupportPage        = lazy(() => import('./pages/SupportPage'));
 
 const PageLoader = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0f0f1a', color: '#6366f1', fontSize: '14px' }}>
@@ -111,6 +112,7 @@ function App() {
             <Route path="/board" element={<CommandBoardPage />} />
             <Route path="/foundation" element={<FoundationPage />} />
             <Route path="/setup" element={<SetupGuidePage />} />
+            <Route path="/support" element={<SupportPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           </Suspense>

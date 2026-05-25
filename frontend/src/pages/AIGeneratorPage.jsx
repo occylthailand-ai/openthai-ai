@@ -445,6 +445,8 @@ const AIGeneratorPage = () => {
   const [imgLoading, setImgLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [brandLoaded, setBrandLoaded] = useState(false);
+  const [quota, setQuota] = useState(null);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   // ใช้ idea จาก Competitor/News → กรอก form + สลับ tab
   const handleUseIdea = (productOrHook, category = 'ทั่วไป') => {
@@ -454,6 +456,10 @@ const AIGeneratorPage = () => {
   };
 
   useEffect(() => { document.title = 'AI Content Generator — OpenThai AI'; }, []);
+
+  useEffect(() => {
+    fetch('/api/usage/status').then(r => r.json()).then(setQuota).catch(() => {});
+  }, []);
 
   // Auto-load brand memory
   useEffect(() => {
@@ -491,9 +497,14 @@ const AIGeneratorPage = () => {
         pushHistory(data);
       }
     } catch (err) {
-      toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่');
+      if (err.message?.includes('429') || err.message?.includes('quota')) {
+        setShowUpgrade(true);
+      } else {
+        toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่');
+      }
     } finally {
       setLoading(false);
+      fetch('/api/usage/status').then(r => r.json()).then(setQuota).catch(() => {});
     }
   };
 
@@ -699,6 +710,25 @@ const AIGeneratorPage = () => {
             </div>
           </div>
 
+          {/* Quota bar */}
+          {quota && quota.plan === 'free' && (
+            <div style={{ marginBottom: 12, padding: '10px 14px', background: quota.remaining === 0 ? 'rgba(239,68,68,0.08)' : 'rgba(99,102,241,0.06)', border: `1px solid ${quota.remaining === 0 ? 'rgba(239,68,68,0.3)' : 'rgba(99,102,241,0.2)'}`, borderRadius: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 12, color: '#94a3b8' }}>วันนี้ใช้ไป {quota.dailyCount}/{quota.dailyLimit} ครั้ง</span>
+                <button onClick={() => navigate('/pricing')} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>อัปเกรด →</button>
+              </div>
+              <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 99 }}>
+                <div style={{ height: 4, borderRadius: 99, background: quota.remaining === 0 ? '#ef4444' : '#6366f1', width: `${Math.min(100, (quota.dailyCount / quota.dailyLimit) * 100)}%`, transition: 'width .4s' }} />
+              </div>
+              {quota.remaining === 0 && (
+                <div style={{ fontSize: 11, color: '#f87171', marginTop: 6 }}>ครบโควต้าวันนี้ — ซื้อเครดิตหรืออัปเกรดเพื่อใช้ต่อ</div>
+              )}
+              {(quota.credits || 0) > 0 && (
+                <div style={{ fontSize: 11, color: '#6ee7b7', marginTop: 4 }}>⚡ เครดิตคงเหลือ: {quota.credits} ครั้ง</div>
+              )}
+            </div>
+          )}
+
           <button className="gen-generate-btn" onClick={handleGenerate} disabled={loading || !form.product.trim()}>
             {loading ? <><span className="gen-spinner">⚡</span> AI กำลังสร้าง...</>
               : abMode ? '🆚 สร้าง A/B 2 แบบ' : '⚡ สร้างคอนเทนต์ AI'}
@@ -778,6 +808,34 @@ const AIGeneratorPage = () => {
         </div>
       </div>
       }  {/* end genTab === 'generate' */}
+
+      {/* Upgrade modal */}
+      {showUpgrade && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }}>
+          <div style={{ background: '#0f0f1a', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 20, padding: 32, maxWidth: 400, width: '100%', textAlign: 'center' }}>
+            <div style={{ fontSize: 52, marginBottom: 12 }}>⚡</div>
+            <h3 style={{ fontWeight: 900, fontSize: 20, margin: '0 0 8px', color: '#f8fafc' }}>ครบโควต้าวันนี้แล้ว</h3>
+            <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
+              Free tier ใช้ได้ 5 ครั้งต่อวัน<br />
+              อัปเกรดหรือซื้อเครดิตเพิ่มเพื่อสร้างต่อ
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button onClick={() => { navigate('/pricing'); setShowUpgrade(false); }}
+                style={{ background: 'linear-gradient(135deg,#fe2c55,#6366f1)', color: '#fff', border: 'none', borderRadius: 50, padding: '14px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                🚀 อัปเกรด Pro ฿149/เดือน →
+              </button>
+              <button onClick={() => { navigate('/pricing#credits'); setShowUpgrade(false); }}
+                style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc', borderRadius: 50, padding: '12px 24px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
+                ⚡ ซื้อเครดิต ฿49 ขึ้นไป
+              </button>
+              <button onClick={() => setShowUpgrade(false)}
+                style={{ background: 'none', border: 'none', color: '#475569', fontSize: 13, cursor: 'pointer', marginTop: 4 }}>
+                ปิด — รอวันพรุ่งนี้
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
