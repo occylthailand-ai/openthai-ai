@@ -1554,6 +1554,11 @@ app.get('/logistics', (req, res) => {
   res.sendFile(join(__dirname, '..', 'logistics.html'));
 });
 
+// ─── Serve standalone landing page at /landing ───────────────────────────────
+app.get('/landing', (req, res) => {
+  res.sendFile(join(__dirname, '..', 'openthai-ai-landing.html'));
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  PDPA CONSENT (Thailand Personal Data Protection Act B.E. 2562)
 // ═══════════════════════════════════════════════════════════════════════════════
