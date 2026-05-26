@@ -1,88 +1,137 @@
-// tier-system.js — Creator Tier + Token Economy + Affect Network
+// tier-system.js — Pack System + Token Economy + Affect Network
 //
-// Tier ladder based on verified monthly earnings (บาท/เดือน):
-//   ลูกค้าระดับ Starter → Creator → Pro → Elite → Champion → Legend
+// Pack ladder (รายได้/เดือน → Pack → AI Model ที่ใช้):
+//   Free Pack → Creator Pack → Pro Pack → Elite Pack → Champion Pack → Private Pack
 //
-// Token = daily posting budget per platform (prevents spam, stays within platform rules)
-// Affect = Elite+ can amplify other customers' feed (expanding circle of influence)
-// Retention flywheel: earn more → tier up → more reach → earn more → stay forever
+// Token = daily posting budget per platform (platform-safe rate limits)
+// Affect = Elite+ can amplify other customers' feed (expanding network)
+// AI tier = แต่ละ Pack ได้ AI model คนละระดับ
+// Retention flywheel: earn → upgrade pack → better AI → more reach → earn more
 
-// ── Tier Definitions ──────────────────────────────────────────────────────────
+// ── Pack Definitions ──────────────────────────────────────────────────────────
 export const TIERS = [
   {
-    name: 'starter', label: 'ลูกค้าระดับ 🌱 Starter', minMonthly: 0,
+    name: 'free',
+    label: '📦 Free Pack',
+    minMonthly: 0,
     color: '#64748b', bgColor: '#1e293b',
+    badge: '📦',
+    aiModel: 'cache_mock',
+    aiLabel: 'Smart Cache + Mock AI',
+    aiNote: 'เร็ว ฟรี ไม่มีค่าใช้จ่าย',
     tokensPerDay: { tiktok: 3, facebook: 5, instagram: 2, line: 8 },
-    affectQuota: 0,       // cannot affect others yet
-    commissionBoost: 0,   // no boost on top of base rate
-    badge: '🌱',
-    perks: ['สร้างคอนเทนต์ AI ไม่จำกัด', 'Affiliate link อัตโนมัติ', 'โพสต์อัตโนมัติ 3 platform'],
+    affectQuota: 0,
+    commissionBoost: 0,
+    perks: [
+      '🤖 AI สร้างคอนเทนต์ (Smart Cache)',
+      '🔗 Affiliate link อัตโนมัติ',
+      '📱 Auto-post 3 platform',
+      '📊 Basic analytics',
+    ],
   },
   {
-    name: 'creator', label: 'ลูกค้าระดับ ✨ Creator', minMonthly: 1_000,
+    name: 'creator',
+    label: '📦 Creator Pack',
+    minMonthly: 1_000,
     color: '#10b981', bgColor: '#022c22',
+    badge: '✨',
+    aiModel: 'gemini-flash',
+    aiLabel: 'Gemini Flash',
+    aiNote: 'เร็ว ถูก เหมาะกับคอนเทนต์ปริมาณมาก',
     tokensPerDay: { tiktok: 6, facebook: 10, instagram: 5, line: 15 },
     affectQuota: 0,
-    commissionBoost: 0.02, // +2% on top of base
-    badge: '✨',
-    perks: ['ทุกอย่างใน ลูกค้าระดับ 🌱 Starter', '+2% commission พิเศษ', 'ตั้งเวลาโพสต์ล่วงหน้า 7 วัน', 'Priority AI response'],
+    commissionBoost: 0.02,
+    perks: [
+      '🤖 Gemini Flash AI (เร็ว × ปริมาณมาก)',
+      'ทุกอย่างใน 📦 Free Pack',
+      '+2% commission พิเศษ',
+      '⏰ ตั้งเวลาโพสต์ล่วงหน้า 7 วัน',
+      '📈 Trending hashtag realtime',
+    ],
   },
   {
-    name: 'pro', label: 'ลูกค้าระดับ 🔥 Pro', minMonthly: 5_000,
+    name: 'pro',
+    label: '📦 Pro Pack',
+    minMonthly: 5_000,
     color: '#3b82f6', bgColor: '#0c1a3d',
+    badge: '🔥',
+    aiModel: 'claude-sonnet',
+    aiLabel: 'Claude Sonnet',
+    aiNote: 'สมดุลระหว่างคุณภาพและความเร็ว',
     tokensPerDay: { tiktok: 12, facebook: 20, instagram: 10, line: 30 },
     affectQuota: 0,
-    commissionBoost: 0.05, // +5%
-    badge: '🔥',
-    perks: ['ทุกอย่างใน ลูกค้าระดับ ✨ Creator', '+5% commission', 'Content Recycler อัตโนมัติ', 'Analytics ขั้นสูง', 'Trending Alert แบบ realtime'],
+    commissionBoost: 0.05,
+    perks: [
+      '🤖 Claude Sonnet AI (สมดุล คุณภาพสูง)',
+      'ทุกอย่างใน 📦 Creator Pack',
+      '+5% commission',
+      '🔄 Content Recycler อัตโนมัติ',
+      '📊 Advanced analytics + ROI tracking',
+      '⚡ Peak-hour auto-scheduler',
+    ],
   },
   {
-    name: 'elite', label: 'ลูกค้าระดับ 💜 Elite', minMonthly: 10_000,
+    name: 'elite',
+    label: '📦 Elite Pack',
+    minMonthly: 10_000,
     color: '#8b5cf6', bgColor: '#1e0a3c',
-    tokensPerDay: { tiktok: 20, facebook: 35, instagram: 18, line: 60 },
-    affectQuota: 10,       // can affect 10 customers/day
-    commissionBoost: 0.08, // +8%
     badge: '💜',
+    aiModel: 'claude-opus',
+    aiLabel: 'Claude Opus',
+    aiNote: 'AI ดีที่สุด คิดลึก สร้างคอนเทนต์ระดับมืออาชีพ',
+    tokensPerDay: { tiktok: 20, facebook: 35, instagram: 18, line: 60 },
+    affectQuota: 10,
+    commissionBoost: 0.08,
     perks: [
-      'ทุกอย่างใน ลูกค้าระดับ 🔥 Pro',
+      '🤖 Claude Opus AI (ดีที่สุด คิดลึก)',
+      'ทุกอย่างใน 📦 Pro Pack',
       '+8% commission',
-      '⭐ Affect Network: ช่วย boost ลูกค้าคนอื่น 10 คน/วัน',
-      'รับ 3% bonus จากยอดที่ลูกค้าระดับอื่นขายได้',
-      'Elite badge บน leaderboard',
-      'ช่องทาง LINE support ตรง',
+      '⭐ Affect Network: boost ลูกค้าคนอื่น 10 คน/วัน',
+      '💰 รับ 3% bonus จากยอดขายที่ปลุกพลัง',
+      '💬 LINE support ตรง',
     ],
   },
   {
-    name: 'champion', label: 'ลูกค้าระดับ 🏆 Champion', minMonthly: 30_000,
+    name: 'champion',
+    label: '📦 Champion Pack',
+    minMonthly: 30_000,
     color: '#f59e0b', bgColor: '#2d1a00',
-    tokensPerDay: { tiktok: 35, facebook: 60, instagram: 30, line: 120 },
-    affectQuota: 30,       // can affect 30 customers/day
-    commissionBoost: 0.12, // +12%
     badge: '🏆',
+    aiModel: 'parallel-race',
+    aiLabel: 'Multi-model Race (Claude + Gemini)',
+    aiNote: 'ยิง AI 2 ตัวพร้อมกัน เอาคำตอบที่เร็วที่สุด',
+    tokensPerDay: { tiktok: 35, facebook: 60, instagram: 30, line: 120 },
+    affectQuota: 30,
+    commissionBoost: 0.12,
     perks: [
-      'ทุกอย่างใน ลูกค้าระดับ 💜 Elite',
+      '🤖 Multi-model Race AI (Claude ⚡ Gemini พร้อมกัน)',
+      'ทุกอย่างใน 📦 Elite Pack',
       '+12% commission',
-      '⭐ Affect Network: boost ลูกค้าคนอื่น 30 คน/วัน',
-      'Radius ขยาย: รับ 5% จาก affected + 2% จาก sub-affected',
-      'Champion badge + featured บน platform',
-      'Priority listing ใน amplifier network',
+      '⭐ Affect Network: boost 30 คน/วัน',
+      '🌐 3-layer radius bonus (5% + 2% + referral)',
+      '🏆 Featured บน leaderboard',
     ],
   },
   {
-    name: 'legend', label: 'ลูกค้าระดับ 👑 Legend', minMonthly: 100_000,
+    name: 'private',
+    label: '📦 Private Pack',
+    minMonthly: 100_000,
     color: '#fe2c55', bgColor: '#1a0010',
-    tokensPerDay: { tiktok: 80, facebook: 150, instagram: 70, line: 300 },
-    affectQuota: 100,      // can affect 100 customers/day
-    commissionBoost: 0.20, // +20%
     badge: '👑',
+    aiModel: 'unlimited',
+    aiLabel: 'Unlimited AI (All Models Priority)',
+    aiNote: 'ทุก AI ทุก model ไม่จำกัด priority queue',
+    tokensPerDay: { tiktok: 80, facebook: 150, instagram: 70, line: 300 },
+    affectQuota: 100,
+    commissionBoost: 0.20,
     perks: [
-      'ทุกอย่างใน ลูกค้าระดับ 🏆 Champion',
+      '🤖 Unlimited AI — ทุก model ทุก request priority',
+      'ทุกอย่างใน 📦 Champion Pack',
       '+20% commission (สูงสุด)',
-      '👑 Affect Network: boost ไม่จำกัด (100 คน/วัน)',
-      '3-layer radius: direct 5% + indirect 2% + extended 1%',
-      'Legend badge + homepage feature',
-      'Co-create content กับ Openthai.ai team',
-      'Revenue share จาก platform growth',
+      '👑 Affect Network: 100 คน/วัน ไม่จำกัด',
+      '💎 Revenue share จาก platform growth',
+      '🤝 Co-create กับทีม Openthai.ai',
+      '📞 Personal account manager',
     ],
   },
 ];

@@ -406,7 +406,7 @@ app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
       ref_code: ref_code || `AFF${Date.now().toString().slice(-6)}`,
       ref_link: ref_link || `https://www.openthai-ai.com/?ref=${ref_code}`,
       referred_by: referred_by || '',
-      tier: 'starter',
+      tier: 'free',
       commission_rate: 0.20,
       total_sales: 0,
       total_earned: 0,
@@ -560,7 +560,7 @@ app.post('/api/affiliate/record-sale', (req, res) => {
   if (newTier.name !== prevTier) {
     aff.tier = newTier.name;
     aff.commission_rate = 0.20 + newTier.commissionBoost;
-    addLog('info', 'Tier', `🎉 ${aff.name} อัพระดับ ${prevTier} → ${newTier.label}`);
+    addLog('info', 'Tier', `🎉 ${aff.name} อัพ Pack ${prevTier} → ${newTier.label}`);
   }
 
   saveAffiliates(affiliates);
@@ -591,7 +591,7 @@ app.get('/api/tier/status/:ref_code', (req, res) => {
 
   res.json({
     success: true,
-    customer: { name: aff.name, ref_code: aff.ref_code, tier_label: tier.label },
+    customer: { name: aff.name, ref_code: aff.ref_code, pack: tier.label, ai_model: tier.aiLabel || tier.aiModel },
     tier: { ...tier, progress },
     tokens,
     affect,
