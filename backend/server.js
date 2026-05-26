@@ -28,6 +28,7 @@ import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { createPRSystem } from './pr-communications.js';
 import { handleLineWebhook } from './line-bot.js';
 import { TIERS, getTierForEarnings, getNextTier, calcProgress, TokenManager, AffectLedger } from './tier-system.js';
+import { NetworkAmplifier, VelocityTracker, getNextPeakTime, injectTrendingHashtags, calcViralScore } from './viral-amplifier.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -376,6 +377,14 @@ function saveJson(file, data) { try { writeFileSync(file, JSON.stringify(data, n
 
 const tokenMgr  = new TokenManager({ usage: loadJson(TOKEN_FILE),  save: () => saveJson(TOKEN_FILE,  tokenMgr.usage) });
 const affectLgr = new AffectLedger({ records: (loadJson(AFFECT_FILE).records || []), save: () => saveJson(AFFECT_FILE, { records: affectLgr.records }) });
+
+// ── Viral Amplifier Network ───────────────────────────────────────────────────
+const VIRAL_FILE    = join(WRITE_DATA_DIR, 'viral_network.json');
+const VELOCITY_FILE = join(WRITE_DATA_DIR, 'velocity_tracker.json');
+const _vn = loadJson(VIRAL_FILE);
+const _vt = loadJson(VELOCITY_FILE);
+const viralNetwork  = new NetworkAmplifier({ pool: _vn.pool || [], queue: _vn.queue || [], save: () => saveJson(VIRAL_FILE, { pool: viralNetwork.pool, queue: viralNetwork.queue }) });
+const velocityTrack = new VelocityTracker({ posts: _vt.posts || [], save: () => saveJson(VELOCITY_FILE, { posts: velocityTrack.posts }) });
 
 app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
   try {
@@ -2277,15 +2286,19 @@ async function dispatchAutoPost(item) {
   const results = [];
   const platforms = item.platforms || [];
 
+  // ① Inject trending hashtags before posting (non-blocking — fallback gracefully)
+  const apiBase = (process.env.API_URL || `http://localhost:${process.env.PORT || 8000}`);
+  const enriched = await injectTrendingHashtags(item.content, apiBase).catch(() => item.content);
+
   for (const platform of platforms) {
     try {
       let result;
-      if (platform === 'line')     result = await postToLINE(item.content);
-      if (platform === 'facebook') result = await postToFacebook(item.content);
-      if (platform === 'tiktok')   result = await postToTikTok(item.content, item.videoPath);
+      if (platform === 'line')     result = await postToLINE(enriched);
+      if (platform === 'facebook') result = await postToFacebook(enriched);
+      if (platform === 'tiktok')   result = await postToTikTok(enriched, item.videoPath);
       if (result) {
         results.push(result);
-        addLog('info', 'AutoPost', `✅ ${platform.toUpperCase()} posted — ${item.content.hook?.slice(0,60)}`);
+        addLog('info', 'AutoPost', `✅ ${platform.toUpperCase()} posted — ${enriched.hook?.slice(0,60)}`);
       }
     } catch (err) {
       results.push({ platform, status: 'error', error: err.message, ts: new Date().toISOString() });
@@ -2293,46 +2306,69 @@ async function dispatchAutoPost(item) {
     }
   }
 
-  // บันทึก log
-  autopostLog.unshift({ id: item.id, product: item.product, results, dispatched_at: new Date().toISOString() });
+  // ② Track velocity + submit to amplifier network if score ≥ 40
+  const postId = item.id;
+  velocityTrack.record(postId, enriched, platforms[0] || 'multi', item.ref_code || '');
+  if (item.ref_code) {
+    const submitResult = viralNetwork.submitPost(enriched, item.product, item.ref_code);
+    if (submitResult.ok) addLog('info', 'Viral', `🚀 Submitted to network — score ${submitResult.viralScore}/100`);
+  }
+
+  // ③ บันทึก log
+  autopostLog.unshift({ id: postId, product: item.product, results, dispatched_at: new Date().toISOString(), viral_score: calcViralScore(enriched) });
   saveAutopostLog(autopostLog);
   return results;
 }
 
-// ── POST /api/autopost/queue — เพิ่มงานเข้า queue ───────────────────────────
+// ── POST /api/autopost/queue — เพิ่มงานเข้า queue (peak-hour aware) ──────────
 app.post('/api/autopost/queue', requireAuth, async (req, res) => {
-  const { product, content, platforms, schedule_at, videoPath } = req.body || {};
+  const { product, content, platforms, schedule_at, videoPath, ref_code, force_now } = req.body || {};
   if (!product || !content?.hook) return res.status(400).json({ success: false, message: 'ต้องการ product และ content.hook' });
+
+  const primaryPlatform = (platforms || ['line'])[0];
+
+  // ── ถ้าไม่ระบุ schedule_at → ใช้ peak hour อัตโนมัติ ──
+  let resolvedTime = schedule_at ? new Date(schedule_at) : null;
+  let peakInfo     = null;
+  if (!resolvedTime) {
+    peakInfo      = getNextPeakTime(primaryPlatform, null);
+    resolvedTime  = peakInfo.time;
+  }
 
   const item = {
     id:          Date.now().toString(),
     product,
     content,
     platforms:   platforms || ['line', 'facebook'],
-    schedule_at: schedule_at || new Date().toISOString(),
+    schedule_at: resolvedTime.toISOString(),
     videoPath:   videoPath || null,
+    ref_code:    ref_code  || '',
     status:      'queued',
     created_at:  new Date().toISOString(),
+    peak_info:   peakInfo,
   };
 
-  // ถ้า schedule_at เป็นปัจจุบัน → post ทันที
-  const scheduledTime = new Date(item.schedule_at).getTime();
+  const scheduledTime = resolvedTime.getTime();
   const now = Date.now();
+  const postNow = force_now || peakInfo?.postNow || (scheduledTime <= now + 60000);
 
-  if (scheduledTime <= now + 60000) { // ภายใน 1 นาที = ส่งทันที
+  if (postNow) {
     const results = await dispatchAutoPost(item);
     item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
     item.results = results;
     autopostQueue.push(item);
     saveAutopostQueue(autopostQueue);
-    return res.json({ success: true, message: 'โพสต์ทันที', item });
+    const msg = peakInfo?.postNow
+      ? `🔥 อยู่ใน peak hour (${peakInfo.reason}) — โพสต์ทันที!`
+      : 'โพสต์ทันที';
+    return res.json({ success: true, message: msg, peak_info: peakInfo, item });
   }
 
-  // ถ้ามีเวลากำหนด → เข้า queue รอ cron ส่ง
   autopostQueue.push(item);
   saveAutopostQueue(autopostQueue);
-  addLog('info', 'AutoPost', `📋 Queued: ${product} → ${platforms?.join('+')} @ ${item.schedule_at}`);
-  res.json({ success: true, message: `เพิ่มใน queue แล้ว จะส่ง ${item.schedule_at}`, item });
+  const waitMsg = peakInfo ? `⏰ รอ peak hour ${peakInfo.reason} (อีก ~${peakInfo.waitMinutes} นาที)` : `จะส่ง ${item.schedule_at}`;
+  addLog('info', 'AutoPost', `📋 Queued: ${product} → ${platforms?.join('+')} — ${waitMsg}`);
+  res.json({ success: true, message: waitMsg, schedule_at: item.schedule_at, peak_info: peakInfo, item });
 });
 
 // ── GET /api/autopost/queue — ดู queue ทั้งหมด ──────────────────────────────
@@ -2388,6 +2424,101 @@ app.get('/api/autopost/status', (req, res) => {
     ts: new Date().toISOString(),
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  VIRAL AMPLIFIER NETWORK
+// ════════════════════════════════════════════════════════════════════════════════
+
+// POST /api/viral/join — สมาชิกเข้าร่วม amplification network (opt-in)
+app.post('/api/viral/join', (req, res) => {
+  const { ref_code, platforms } = req.body || {};
+  if (!ref_code) return res.status(400).json({ success: false, message: 'ต้องการ ref_code' });
+  const aff = affiliates.find(a => a.ref_code === ref_code);
+  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบสมาชิก' });
+  const result = viralNetwork.join(ref_code, ref_code, platforms || ['line', 'facebook', 'tiktok']);
+  addLog('info', 'Viral', `🌐 ${aff.name} เข้าร่วม amplification network`);
+  res.json({ success: true, ...result, member: aff.name, network_size: viralNetwork.stats().network_size });
+});
+
+// POST /api/viral/leave — ออกจาก network
+app.post('/api/viral/leave', (req, res) => {
+  const { ref_code } = req.body || {};
+  if (!ref_code) return res.status(400).json({ success: false, message: 'ต้องการ ref_code' });
+  viralNetwork.leave(ref_code);
+  res.json({ success: true, message: 'ออกจาก amplification network แล้ว' });
+});
+
+// GET /api/viral/amplify?ref_code=XXX — ดึงโพสต์คะแนนสูงรอ boost
+// คืนโพสต์พร้อม affiliate link ของสมาชิกที่ขอ (ไม่ใช่ของคนโพสต์ต้นฉบับ)
+app.get('/api/viral/amplify', (req, res) => {
+  const { ref_code, limit = 5 } = req.query;
+  if (!ref_code) return res.status(400).json({ success: false, message: 'ต้องการ ref_code' });
+  const aff = affiliates.find(a => a.ref_code === ref_code);
+  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบสมาชิก' });
+
+  const posts = viralNetwork.getAmplifyQueue(ref_code, Number(limit));
+
+  // แนบ affiliate link ของสมาชิกที่จะ amplify (ไม่ใช่ของ original poster)
+  const enriched = posts.map(p => ({
+    postId:      p.postId,
+    content:     p.content,
+    product:     p.product,
+    viralScore:  p.viralScore,
+    expiresAt:   p.expiresAt,
+    totalAmplifications: p.totalAmplifications,
+    myAffLink:   `https://openthai-ai.vercel.app/go?ref=${encodeURIComponent(ref_code)}&product=${encodeURIComponent(p.product)}`,
+    readyToCopy: buildShareText(p.content, ref_code),
+  }));
+
+  res.json({ success: true, total: enriched.length, data: enriched });
+});
+
+// POST /api/viral/amplified — บันทึกว่าสมาชิกแชร์แล้ว + คำนวณ affect bonus
+app.post('/api/viral/amplified', (req, res) => {
+  const { ref_code, post_id, platform } = req.body || {};
+  if (!ref_code || !post_id) return res.status(400).json({ success: false, message: 'ต้องการ ref_code และ post_id' });
+
+  const result = viralNetwork.recordAmplification(post_id, ref_code);
+  if (!result.ok) return res.status(400).json({ success: false, ...result });
+
+  // ใช้ token หนึ่งหน่วยสำหรับ platform ที่แชร์
+  if (platform) {
+    const aff  = affiliates.find(a => a.ref_code === ref_code);
+    const tier = aff ? getTierForEarnings(aff.monthly_earned || aff.total_earned || 0) : null;
+    if (tier) tokenMgr.useToken(ref_code, platform, tier.name);
+  }
+
+  addLog('info', 'Viral', `📡 ${ref_code} amplified post ${post_id} on ${platform || 'unknown'}`);
+  res.json({ success: true, totalAmplifications: result.totalAmplifications, message: '🚀 แชร์แล้ว! รอรับ bonus เมื่อมียอดขายผ่านลิงก์ของคุณ' });
+});
+
+// POST /api/viral/submit — ส่งโพสต์เข้า amplifier pool ด้วยตัวเอง
+app.post('/api/viral/submit', (req, res) => {
+  const { ref_code, content, product } = req.body || {};
+  if (!ref_code || !content || !product) return res.status(400).json({ success: false, message: 'ต้องการ ref_code, content, product' });
+  const result = viralNetwork.submitPost(content, product, ref_code);
+  res.json({ success: result.ok, ...result });
+});
+
+// GET /api/viral/stats — สถิติ network + peak times + recycle queue
+app.get('/api/viral/stats', (req, res) => {
+  const primary = req.query.platform || 'tiktok';
+  const peakInfo = getNextPeakTime(primary);
+  const recycle  = velocityTrack.getRecycleQueue(5);
+  res.json({
+    success: true,
+    network: viralNetwork.stats(),
+    next_peak: { platform: primary, ...peakInfo, time: peakInfo.time.toISOString() },
+    recycle_queue: recycle.map(p => ({ postId: p.postId, viralScore: p.viralScore, clicks: p.clicks, platform: p.platform })),
+  });
+});
+
+// Helper — สร้าง ready-to-copy text สำหรับแชร์พร้อม affiliate link
+function buildShareText(content, refCode) {
+  const tags = (content.hashtags || []).join(' ');
+  const link = `https://openthai-ai.vercel.app/go?ref=${encodeURIComponent(refCode)}`;
+  return `${content.hook}\n\n${content.caption}\n\n🔗 ${link}\n\n${tags}\n\n🤖 สร้างด้วย @openthai.ai`;
+}
 
 // ── Cron: ทุก 5 นาที ตรวจ queue ที่ถึงเวลา (local only) ─────────────────────
 if (!IS_VERCEL) {
