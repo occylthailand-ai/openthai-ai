@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Openthai.ai</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{width:380px;min-height:200px;background:#0f0f1a;color:#f1f5f9;font-family:'Segoe UI',sans-serif;font-size:13px}
+
+  /* Header */
+  .hdr{background:linear-gradient(135deg,#fe2c55,#6366f1);padding:12px 16px;display:flex;align-items:center;gap:10px}
+  .hdr-logo{font-size:18px;font-weight:900;letter-spacing:-0.5px}
+  .hdr-sub{font-size:11px;opacity:.85}
+  .hdr-badge{margin-left:auto;background:rgba(255,255,255,.2);border-radius:20px;padding:2px 10px;font-size:10px}
+
+  /* Product card */
+  .product{display:flex;gap:10px;padding:12px 14px;background:#1e1e30;border-bottom:1px solid #2a2a40}
+  .product-img{width:56px;height:56px;object-fit:cover;border-radius:8px;background:#2a2a40;flex-shrink:0}
+  .product-img.placeholder{display:flex;align-items:center;justify-content:center;font-size:24px}
+  .product-info{flex:1;min-width:0}
+  .product-name{font-weight:600;font-size:12px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .product-price{color:#10b981;font-weight:700;font-size:13px;margin-top:3px}
+  .product-platform{font-size:10px;color:#64748b;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+  .no-product{padding:16px;text-align:center;color:#64748b;font-size:12px}
+
+  /* Controls */
+  .controls{padding:10px 14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#16162a}
+  .ctrl-group label{font-size:10px;color:#94a3b8;display:block;margin-bottom:3px}
+  select{width:100%;background:#1e1e30;color:#f1f5f9;border:1px solid #2a2a40;border-radius:6px;padding:5px 8px;font-size:12px;cursor:pointer}
+  select:focus{outline:none;border-color:#6366f1}
+
+  /* Generate button */
+  .btn-gen{display:block;width:calc(100% - 28px);margin:0 14px 12px;padding:11px;background:linear-gradient(135deg,#fe2c55,#6366f1);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:.15s}
+  .btn-gen:hover{opacity:.9;transform:translateY(-1px)}
+  .btn-gen:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .btn-gen .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Result cards */
+  .results{padding:0 14px 14px}
+  .result-card{background:#1e1e30;border:1px solid #2a2a40;border-radius:10px;margin-bottom:8px;overflow:hidden}
+  .result-card-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#16162a;border-bottom:1px solid #2a2a40}
+  .result-label{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
+  .result-label .icon{margin-right:4px}
+  .result-body{padding:10px 12px;font-size:12px;line-height:1.7;color:#e2e8f0;white-space:pre-wrap;word-break:break-word;max-height:120px;overflow-y:auto}
+  .hashtags{display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px}
+  .hashtag{background:#1a1a2e;border:1px solid #312e81;color:#a5b4fc;border-radius:20px;padding:2px 8px;font-size:11px}
+
+  /* Affiliate card */
+  .aff-card{background:linear-gradient(135deg,#052e16,#064e3b);border:1px solid #065f46;border-radius:10px;padding:12px;margin-bottom:8px}
+  .aff-title{font-size:11px;font-weight:700;color:#6ee7b7;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .aff-link{font-size:11px;color:#a7f3d0;word-break:break-all;background:#0a2018;border-radius:6px;padding:6px 8px;margin-bottom:8px;line-height:1.5}
+  .aff-earn{font-size:12px;color:#34d399;font-weight:600}
+  .aff-note{font-size:10px;color:#6ee7b7;opacity:.7;margin-top:3px}
+
+  /* Copy button */
+  .btn-copy{background:#312e81;border:none;color:#a5b4fc;border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;transition:.1s;flex-shrink:0}
+  .btn-copy:hover{background:#3730a3;color:#fff}
+  .btn-copy.copied{background:#065f46;color:#6ee7b7}
+
+  /* Auto-post panel */
+  .autopost{padding:10px 14px 14px;border-top:1px solid #2a2a40}
+  .autopost-title{font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600}
+  .btn-autopost-all{width:100%;padding:10px;background:linear-gradient(135deg,#7c3aed,#2563eb);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;transition:.15s}
+  .btn-autopost-all:hover{opacity:.9}
+  .btn-autopost-all:disabled{opacity:.5;cursor:not-allowed}
+  .platform-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .platform-item{background:#1e1e30;border:1px solid #2a2a40;border-radius:8px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .platform-name{font-size:11px;font-weight:600}
+  .platform-status{font-size:10px;border-radius:10px;padding:2px 7px;flex-shrink:0}
+  .status-ready{background:#064e3b;color:#6ee7b7}
+  .status-api{background:#1e3a5f;color:#93c5fd}
+  .status-wait{background:#292524;color:#a8a29e}
+  .btn-post{padding:3px 8px;font-size:10px;border:none;border-radius:5px;cursor:pointer;font-weight:600;transition:.1s}
+  .btn-post.tiktok{background:#3f0f15;color:#fe2c55;border:1px solid #fe2c55}
+  .btn-post.facebook{background:#0f1a2e;color:#60a5fa;border:1px solid #1877f2}
+  .btn-post.line{background:#052e16;color:#4ade80;border:1px solid #06c755}
+  .btn-post.instagram{background:#2d0a15;color:#f472b6;border:1px solid #e1306c}
+  .btn-post:hover{opacity:.8}
+  .btn-post.posting{opacity:.5;cursor:not-allowed}
+  .btn-post.done{background:#064e3b;color:#6ee7b7;border-color:#065f46}
+
+  /* Settings */
+  .settings{padding:10px 14px;border-top:1px solid #2a2a40}
+  .settings summary{font-size:11px;color:#64748b;cursor:pointer;user-select:none}
+  .settings-body{padding:8px 0 0;display:grid;gap:6px}
+  .settings-body label{font-size:10px;color:#94a3b8}
+  .settings-body input{width:100%;background:#1e1e30;border:1px solid #2a2a40;border-radius:6px;color:#f1f5f9;padding:5px 8px;font-size:11px}
+  .settings-body input:focus{outline:none;border-color:#6366f1}
+  .btn-save{padding:5px 14px;background:#6366f1;border:none;border-radius:6px;color:#fff;font-size:11px;cursor:pointer;margin-top:2px}
+
+  /* Source badge */
+  .source-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600}
+  .source-claude{background:#1e3a5f;color:#93c5fd}
+  .source-gemini{background:#1a3321;color:#6ee7b7}
+  .source-cache{background:#3b2f00;color:#fbbf24}
+  .source-mock{background:#2d1a00;color:#fb923c}
+
+  .error-msg{padding:14px;color:#f87171;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="hdr">
+  <div>
+    <div class="hdr-logo">Openthai.ai</div>
+    <div class="hdr-sub">คลิกเดียวชีวิตเปลี่ยน</div>
+  </div>
+  <div class="hdr-badge" id="sourceBadge" style="display:none"></div>
+</div>
+
+<!-- Product Info -->
+<div id="productSection">
+  <div class="no-product">⏳ กำลังอ่านข้อมูลสินค้า...</div>
+</div>
+
+<!-- Controls -->
+<div class="controls" id="controls" style="display:none">
+  <div class="ctrl-group">
+    <label>แพลตฟอร์ม</label>
+    <select id="selPlatform">
+      <option value="TikTok">TikTok</option>
+      <option value="Facebook">Facebook</option>
+      <option value="Instagram">Instagram</option>
+      <option value="LINE">LINE</option>
+      <option value="YouTube">YouTube</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <label>สไตล์</label>
+    <select id="selStyle">
+      <option value="sales">ขาย (Sales)</option>
+      <option value="educational">สอน (Educational)</option>
+      <option value="entertainment">บันเทิง</option>
+    </select>
+  </div>
+</div>
+
+<!-- Generate Button -->
+<button class="btn-gen" id="btnGenerate" style="display:none" onclick="generate()">
+  ✨ สร้างคอนเทนต์ + Affiliate Link
+</button>
+
+<!-- Results -->
+<div class="results" id="results" style="display:none">
+
+  <div class="result-card">
+    <div class="result-card-head">
+      <span class="result-label"><span class="icon">🎣</span>Hook</span>
+      <button class="btn-copy" onclick="copyField('hook')">คัดลอก</button>
+    </div>
+    <div class="result-body" id="hook"></div>
+  </div>
+
+  <div class="result-card">
+    <div class="result-card-head">
+      <span class="result-label"><span class="icon">🎬</span>Script</span>
+      <button class="btn-copy" onclick="copyField('script')">คัดลอก</button>
+    </div>
+    <div class="result-body" id="script"></div>
+  </div>
+
+  <div class="result-card">
+    <div class="result-card-head">
+      <span class="result-label"><span class="icon">📝</span>Caption</span>
+      <button class="btn-copy" onclick="copyField('caption')">คัดลอก</button>
+    </div>
+    <div class="result-body" id="caption"></div>
+  </div>
+
+  <div class="result-card">
+    <div class="result-card-head">
+      <span class="result-label"><span class="icon">#</span>Hashtags</span>
+      <button class="btn-copy" onclick="copyField('hashtags')">คัดลอก</button>
+    </div>
+    <div class="hashtags" id="hashtags"></div>
+  </div>
+
+  <!-- Affiliate Card -->
+  <div class="aff-card" id="affCard" style="display:none">
+    <div class="aff-title">💰 Affiliate Link — รายได้จริง</div>
+    <div class="aff-link" id="affLink"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div class="aff-earn" id="affEarn"></div>
+        <div class="aff-note">ลิงก์นี้ติดตามยอดขายจริง — ไม่มีโกหก</div>
+      </div>
+      <button class="btn-copy" onclick="copyAff()">คัดลอก Link</button>
+    </div>
+  </div>
+
+  <!-- Auto-Post Panel -->
+  <div class="autopost">
+    <div class="autopost-title">🚀 โพสต์อัตโนมัติทุก Platform</div>
+    <button class="btn-autopost-all" id="btnPostAll" onclick="postAll()">
+      ⚡ โพสต์ทุก Platform ในคลิกเดียว
+    </button>
+    <div class="platform-grid">
+      <div class="platform-item">
+        <span class="platform-name">📱 TikTok</span>
+        <button class="btn-post tiktok" id="postTikTok" onclick="postOne('tiktok')">โพสต์</button>
+      </div>
+      <div class="platform-item">
+        <span class="platform-name">👥 Facebook</span>
+        <button class="btn-post facebook" id="postFacebook" onclick="postOne('facebook')">โพสต์</button>
+      </div>
+      <div class="platform-item">
+        <span class="platform-name">💬 LINE</span>
+        <button class="btn-post line" id="postLine" onclick="postOne('line')">โพสต์</button>
+      </div>
+      <div class="platform-item">
+        <span class="platform-name">📸 Instagram</span>
+        <button class="btn-post instagram" id="postInstagram" onclick="postOne('instagram')">โพสต์</button>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#64748b;text-align:center;margin-top:6px" id="postNote">
+      LINE/Facebook: ยืนยัน 1 ครั้ง &nbsp;|&nbsp; ตั้งค่า API Token → โพสต์ 0 คลิก
+    </div>
+  </div>
+
+</div>
+
+<!-- Error -->
+<div class="error-msg" id="errMsg" style="display:none"></div>
+
+<!-- Settings -->
+<details class="settings" id="settingsSection" style="display:none">
+  <summary>⚙️ ตั้งค่า — API, Affiliate & Auto-Post Token</summary>
+  <div class="settings-body">
+    <label>🌐 API URL (backend)</label>
+    <input type="text" id="inApiUrl" placeholder="https://openthai-ai.vercel.app">
+
+    <label>🛒 Shopee Affiliate SMTT (จาก affiliate.shopee.co.th)</label>
+    <input type="text" id="inShopeeSmtt" placeholder="เช่น 0.123456789">
+
+    <label>🛒 Lazada Affiliate CC (จาก affiliate.lazada.co.th)</label>
+    <input type="text" id="inLazadaCC" placeholder="เช่น abc123">
+
+    <label>🪪 ชื่อ Ref ของคุณ (สำหรับ tracked link)</label>
+    <input type="text" id="inMyRef" placeholder="เช่น myshop2024">
+
+    <label>💚 LINE Notify Token (notify-bot.line.me) — โพสต์ LINE 0 คลิก</label>
+    <input type="text" id="inLineToken" placeholder="token จาก notify-bot.line.me/my">
+
+    <label>💙 Facebook Page ID + Page Token — โพสต์ Facebook 0 คลิก</label>
+    <input type="text" id="inFbPageId" placeholder="Facebook Page ID เช่น 1234567890">
+    <input type="text" id="inFbToken" placeholder="Page Access Token จาก developers.facebook.com">
+
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+      <input type="checkbox" id="inShowCredit" checked style="width:auto">
+      <span>เพิ่ม "สร้างด้วย Openthai.ai" ในทุกโพสต์ (ช่วยให้แบรนด์แพร่กระจาย)</span>
+    </label>
+
+    <button class="btn-save" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
+    <div style="margin-top:6px;font-size:10px;color:#64748b">
+      Token ถูกเก็บใน Chrome local storage — ไม่ส่งออกไปที่อื่น
+    </div>
+  </div>
+</details>
+
+<script src="popup.js"></script>
+</body>
+</html>

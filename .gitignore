@@ -28,8 +28,10 @@ backend/data/agent_checkpoint.json
 backend/data/waitlist.json
 # หมายเหตุ: backend/data/system_charter.json ไม่ include ตรงนี้ — commit ได้ (static config)
 
-# IDE / Editor folders
-.claude/
+# IDE / Editor folders — exclude local session data but keep project config
+.claude/*
+!.claude/settings.json
+!.claude/commands/
 .cursor/
 .history/
 .snapshots/

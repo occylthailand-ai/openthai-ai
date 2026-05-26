@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Openthai.ai | คลิกเดียวชีวิตเปลี่ยน",
+  "short_name": "Openthai.ai",
+  "version": "1.1.0",
+  "description": "สร้างคอนเทนต์ TikTok ภาษาไทย + Affiliate Link + โพสต์อัตโนมัติทุก platform ในคลิกเดียว",
+  "permissions": ["activeTab", "scripting", "storage", "clipboardWrite", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Openthai.ai — คลิกเดียวชีวิตเปลี่ยน",
+    "default_icon": { "48": "icon-48.png", "128": "icon-128.png" }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.tiktok.com/*",
+        "https://studio.tiktok.com/*",
+        "https://www.instagram.com/*",
+        "https://www.facebook.com/*",
+        "https://m.facebook.com/*"
+      ],
+      "js": ["social-poster.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": { "service_worker": "background.js" }
+}
