@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "openthai-ai": {
+      "command": "node",
+      "args": ["mcp-server.js"],
+      "env": {
+        "OPENTHAI_URL": "http://localhost:8000"
+      }
+    }
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '=== OpenThai.ai ===' && git log --oneline -5 2>/dev/null && echo '' && echo 'Backend : cd backend && npm start' && echo 'Frontend: cd frontend && npm run dev' && echo 'MCP     : node mcp-server.js'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "UNTRACKED=$(git status --porcelain 2>/dev/null | grep -c '^'); if [ \"$UNTRACKED\" -gt 0 ]; then echo \"[openthai] $UNTRACKED uncommitted change(s) — remember to git add & commit.\"; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
