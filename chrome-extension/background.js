@@ -185,7 +185,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   if (msg.type === 'POST_TIKTOK') {
     openAndFill(
       'https://www.tiktok.com/tiktok-web-upload',
-      { type: 'AUTO_FILL', platform: 'tiktok', content: msg.content, affLink: msg.affLink, autoSubmit: true },
+      { type: 'AUTO_FILL', platform: 'tiktok', content: msg.content, affLink: msg.affLink, autoSubmit: true, showCredit: msg.showCredit },
       3000
     ).then(r => reply({ ok: true, ...r })).catch(e => reply({ ok: false, error: e.message }));
     return true;
@@ -195,7 +195,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   if (msg.type === 'POST_INSTAGRAM') {
     openAndFill(
       'https://www.instagram.com/',
-      { type: 'AUTO_FILL', platform: 'instagram', content: msg.content, affLink: msg.affLink, autoSubmit: true },
+      { type: 'AUTO_FILL', platform: 'instagram', content: msg.content, affLink: msg.affLink, autoSubmit: true, showCredit: msg.showCredit },
       3000
     ).then(r => reply({ ok: true, ...r })).catch(e => reply({ ok: false, error: e.message }));
     return true;

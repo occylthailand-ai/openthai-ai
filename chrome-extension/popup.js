@@ -254,13 +254,13 @@ async function _doPost(platform) {
   }
 
   if (platform === 'tiktok') {
-    const r = await chrome.runtime.sendMessage({ type: 'POST_TIKTOK', content: c, affLink: aff });
+    const r = await chrome.runtime.sendMessage({ type: 'POST_TIKTOK', content: c, affLink: aff, showCredit: s.showCredit !== false });
     if (!r?.ok) throw new Error(r?.error || 'TikTok post failed');
     return;
   }
 
   if (platform === 'instagram') {
-    const r = await chrome.runtime.sendMessage({ type: 'POST_INSTAGRAM', content: c, affLink: aff });
+    const r = await chrome.runtime.sendMessage({ type: 'POST_INSTAGRAM', content: c, affLink: aff, showCredit: s.showCredit !== false });
     if (!r?.ok) throw new Error(r?.error || 'Instagram post failed');
     return;
   }
@@ -277,6 +277,7 @@ async function loadSettings() {
   set('inLineToken', s.lineNotifyToken);
   set('inFbPageId',  s.fbPageId);
   set('inFbToken',   s.fbPageToken);
+  if (s.showCredit !== undefined && !s.showCredit) document.getElementById('inShowCredit').checked = false;
 }
 
 function saveSettings() {
@@ -289,6 +290,7 @@ function saveSettings() {
     lineNotifyToken: g('inLineToken'),
     fbPageId:        g('inFbPageId'),
     fbPageToken:     g('inFbToken'),
+    showCredit:      document.getElementById('inShowCredit')?.checked !== false,
   }, () => {
     const btn = event.currentTarget;
     btn.textContent = '✅ บันทึกแล้ว';

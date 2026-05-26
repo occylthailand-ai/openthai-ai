@@ -369,7 +369,7 @@ const affiliates = loadAffiliates(); // persistent JSON file store
 
 app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
   try {
-    const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link } = req.body;
+    const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link, referred_by } = req.body;
     if (!name || !email) return res.status(400).json({ success: false, message: 'ต้องการชื่อและอีเมล' });
 
     // ป้องกันสมัครซ้ำ
@@ -386,6 +386,7 @@ app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
       note: note || '',
       ref_code: ref_code || `AFF${Date.now().toString().slice(-6)}`,
       ref_link: ref_link || `https://www.openthai-ai.com/?ref=${ref_code}`,
+      referred_by: referred_by || '',
       tier: 'starter',
       commission_rate: 0.20,
       total_sales: 0,
@@ -482,6 +483,50 @@ app.get('/api/affiliate/list', (req, res) => {
     phone: phone ? phone.replace(/(\d{3})\d+(\d{2})/, '$1****$2') : '',
   }));
   res.json({ success: true, count: affiliates.length, data: safeData });
+});
+
+// ─── GET /api/affiliate/leaderboard — Top 10 earners + referral stats ────────
+app.get('/api/affiliate/leaderboard', (req, res) => {
+  const board = affiliates
+    .filter(a => a.status === 'active')
+    .map(a => ({
+      name: a.name.slice(0, 1) + '***',  // anonymize
+      ref_code: a.ref_code,
+      total_earned: a.total_earned || 0,
+      total_clicks: a.total_clicks || 0,
+      referral_count: affiliates.filter(x => x.referred_by === a.ref_code).length,
+      tier: a.tier,
+    }))
+    .sort((a, b) => b.total_earned - a.total_earned)
+    .slice(0, 10);
+  res.json({ success: true, data: board });
+});
+
+// ─── POST /api/affiliate/record-sale — Record a sale + give referrer bonus ────
+app.post('/api/affiliate/record-sale', (req, res) => {
+  const { ref_code, amount } = req.body || {};
+  if (!ref_code || !amount) return res.status(400).json({ success: false, message: 'ต้องการ ref_code และ amount' });
+
+  const aff = affiliates.find(a => a.ref_code === ref_code);
+  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบ Affiliate' });
+
+  const earned = amount * (aff.commission_rate || 0.20);
+  aff.total_sales = (aff.total_sales || 0) + Number(amount);
+  aff.total_earned = (aff.total_earned || 0) + earned;
+
+  // Referrer bonus 5%
+  let referrerBonus = 0;
+  if (aff.referred_by) {
+    const referrer = affiliates.find(a => a.ref_code === aff.referred_by);
+    if (referrer) {
+      referrerBonus = amount * 0.05;
+      referrer.total_earned = (referrer.total_earned || 0) + referrerBonus;
+      referrer.referral_bonus = (referrer.referral_bonus || 0) + referrerBonus;
+    }
+  }
+
+  saveAffiliates(affiliates);
+  res.json({ success: true, earned, referrerBonus });
 });
 
 // ─── POST /api/contact — ติดต่อทีมงาน ───────────────────────────────────────
