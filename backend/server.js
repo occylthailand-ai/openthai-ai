@@ -560,7 +560,7 @@ app.post('/api/affiliate/record-sale', (req, res) => {
   if (newTier.name !== prevTier) {
     aff.tier = newTier.name;
     aff.commission_rate = 0.20 + newTier.commissionBoost;
-    addLog('info', 'Tier', `🎉 ${aff.name} อัพเลเวล ${prevTier} → ${newTier.label}`);
+    addLog('info', 'Tier', `🎉 ${aff.name} อัพระดับ ${prevTier} → ${newTier.label}`);
   }
 
   saveAffiliates(affiliates);
@@ -578,10 +578,10 @@ app.get('/api/tier/list', (_req, res) => {
   })) });
 });
 
-// GET /api/tier/status/:ref_code — สถานะ tier + tokens + progress ของสมาชิก
+// GET /api/tier/status/:ref_code — สถานะ tier + tokens + progress ของลูกค้า
 app.get('/api/tier/status/:ref_code', (req, res) => {
   const aff = affiliates.find(a => a.ref_code === req.params.ref_code);
-  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบสมาชิก' });
+  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบลูกค้า' });
 
   const monthlyEarned = aff.monthly_earned || aff.total_earned || 0;
   const tier     = getTierForEarnings(monthlyEarned);
@@ -591,7 +591,7 @@ app.get('/api/tier/status/:ref_code', (req, res) => {
 
   res.json({
     success: true,
-    member: { name: aff.name, ref_code: aff.ref_code },
+    customer: { name: aff.name, ref_code: aff.ref_code, tier_label: tier.label },
     tier: { ...tier, progress },
     tokens,
     affect,
@@ -604,20 +604,20 @@ app.post('/api/tier/use-token', (req, res) => {
   const { ref_code, platform } = req.body || {};
   if (!ref_code || !platform) return res.status(400).json({ success: false, message: 'ต้องการ ref_code และ platform' });
   const aff  = affiliates.find(a => a.ref_code === ref_code);
-  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบสมาชิก' });
+  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบลูกค้า' });
   const tier = getTierForEarnings(aff.monthly_earned || aff.total_earned || 0);
   const result = tokenMgr.useToken(ref_code, platform, tier.name);
   res.json({ success: result.ok, ...result, tier: tier.label });
 });
 
-// POST /api/tier/affect — Elite+ affect สมาชิกคนอื่น (ขยายวงกว้าง)
+// POST /api/tier/affect — Elite+ affect ลูกค้าคนอื่น (ขยายวงกว้าง)
 app.post('/api/tier/affect', (req, res) => {
   const { affector_ref, target_ref, post_id } = req.body || {};
   if (!affector_ref || !target_ref) return res.status(400).json({ success: false, message: 'ต้องการ affector_ref และ target_ref' });
   if (affector_ref === target_ref) return res.status(400).json({ success: false, message: 'ไม่สามารถ affect ตัวเองได้' });
 
   const affector = affiliates.find(a => a.ref_code === affector_ref);
-  if (!affector) return res.status(404).json({ success: false, message: 'ไม่พบสมาชิก' });
+  if (!affector) return res.status(404).json({ success: false, message: 'ไม่พบลูกค้า' });
 
   const tier     = getTierForEarnings(affector.monthly_earned || affector.total_earned || 0);
   const useResult = tokenMgr.useAffect(affector_ref, tier.name);
@@ -2429,12 +2429,12 @@ app.get('/api/autopost/status', (req, res) => {
 //  VIRAL AMPLIFIER NETWORK
 // ════════════════════════════════════════════════════════════════════════════════
 
-// POST /api/viral/join — สมาชิกเข้าร่วม amplification network (opt-in)
+// POST /api/viral/join — ลูกค้าเข้าร่วม amplification network (opt-in)
 app.post('/api/viral/join', (req, res) => {
   const { ref_code, platforms } = req.body || {};
   if (!ref_code) return res.status(400).json({ success: false, message: 'ต้องการ ref_code' });
   const aff = affiliates.find(a => a.ref_code === ref_code);
-  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบสมาชิก' });
+  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบลูกค้า' });
   const result = viralNetwork.join(ref_code, ref_code, platforms || ['line', 'facebook', 'tiktok']);
   addLog('info', 'Viral', `🌐 ${aff.name} เข้าร่วม amplification network`);
   res.json({ success: true, ...result, member: aff.name, network_size: viralNetwork.stats().network_size });
@@ -2449,16 +2449,16 @@ app.post('/api/viral/leave', (req, res) => {
 });
 
 // GET /api/viral/amplify?ref_code=XXX — ดึงโพสต์คะแนนสูงรอ boost
-// คืนโพสต์พร้อม affiliate link ของสมาชิกที่ขอ (ไม่ใช่ของคนโพสต์ต้นฉบับ)
+// คืนโพสต์พร้อม affiliate link ของลูกค้าที่ขอ (ไม่ใช่ของคนโพสต์ต้นฉบับ)
 app.get('/api/viral/amplify', (req, res) => {
   const { ref_code, limit = 5 } = req.query;
   if (!ref_code) return res.status(400).json({ success: false, message: 'ต้องการ ref_code' });
   const aff = affiliates.find(a => a.ref_code === ref_code);
-  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบสมาชิก' });
+  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบลูกค้า' });
 
   const posts = viralNetwork.getAmplifyQueue(ref_code, Number(limit));
 
-  // แนบ affiliate link ของสมาชิกที่จะ amplify (ไม่ใช่ของ original poster)
+  // แนบ affiliate link ของลูกค้าที่จะ amplify (ไม่ใช่ของ original poster)
   const enriched = posts.map(p => ({
     postId:      p.postId,
     content:     p.content,
@@ -2473,7 +2473,7 @@ app.get('/api/viral/amplify', (req, res) => {
   res.json({ success: true, total: enriched.length, data: enriched });
 });
 
-// POST /api/viral/amplified — บันทึกว่าสมาชิกแชร์แล้ว + คำนวณ affect bonus
+// POST /api/viral/amplified — บันทึกว่าลูกค้าแชร์แล้ว + คำนวณ affect bonus
 app.post('/api/viral/amplified', (req, res) => {
   const { ref_code, post_id, platform } = req.body || {};
   if (!ref_code || !post_id) return res.status(400).json({ success: false, message: 'ต้องการ ref_code และ post_id' });

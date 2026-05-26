@@ -1,16 +1,16 @@
 // tier-system.js — Creator Tier + Token Economy + Affect Network
 //
 // Tier ladder based on verified monthly earnings (บาท/เดือน):
-//   Starter  → Creator → Pro → Elite → Champion → Legend
+//   ลูกค้าระดับ Starter → Creator → Pro → Elite → Champion → Legend
 //
 // Token = daily posting budget per platform (prevents spam, stays within platform rules)
-// Affect = Elite+ can amplify other members' feed (expanding circle of influence)
+// Affect = Elite+ can amplify other customers' feed (expanding circle of influence)
 // Retention flywheel: earn more → tier up → more reach → earn more → stay forever
 
 // ── Tier Definitions ──────────────────────────────────────────────────────────
 export const TIERS = [
   {
-    name: 'starter', label: '🌱 Starter', minMonthly: 0,
+    name: 'starter', label: 'ลูกค้าระดับ 🌱 Starter', minMonthly: 0,
     color: '#64748b', bgColor: '#1e293b',
     tokensPerDay: { tiktok: 3, facebook: 5, instagram: 2, line: 8 },
     affectQuota: 0,       // cannot affect others yet
@@ -19,64 +19,64 @@ export const TIERS = [
     perks: ['สร้างคอนเทนต์ AI ไม่จำกัด', 'Affiliate link อัตโนมัติ', 'โพสต์อัตโนมัติ 3 platform'],
   },
   {
-    name: 'creator', label: '✨ Creator', minMonthly: 1_000,
+    name: 'creator', label: 'ลูกค้าระดับ ✨ Creator', minMonthly: 1_000,
     color: '#10b981', bgColor: '#022c22',
     tokensPerDay: { tiktok: 6, facebook: 10, instagram: 5, line: 15 },
     affectQuota: 0,
     commissionBoost: 0.02, // +2% on top of base
     badge: '✨',
-    perks: ['ทุกอย่างใน Starter', '+2% commission พิเศษ', 'ตั้งเวลาโพสต์ล่วงหน้า 7 วัน', 'Priority AI response'],
+    perks: ['ทุกอย่างใน ลูกค้าระดับ 🌱 Starter', '+2% commission พิเศษ', 'ตั้งเวลาโพสต์ล่วงหน้า 7 วัน', 'Priority AI response'],
   },
   {
-    name: 'pro', label: '🔥 Pro', minMonthly: 5_000,
+    name: 'pro', label: 'ลูกค้าระดับ 🔥 Pro', minMonthly: 5_000,
     color: '#3b82f6', bgColor: '#0c1a3d',
     tokensPerDay: { tiktok: 12, facebook: 20, instagram: 10, line: 30 },
     affectQuota: 0,
     commissionBoost: 0.05, // +5%
     badge: '🔥',
-    perks: ['ทุกอย่างใน Creator', '+5% commission', 'Content Recycler อัตโนมัติ', 'Analytics ขั้นสูง', 'Trending Alert แบบ realtime'],
+    perks: ['ทุกอย่างใน ลูกค้าระดับ ✨ Creator', '+5% commission', 'Content Recycler อัตโนมัติ', 'Analytics ขั้นสูง', 'Trending Alert แบบ realtime'],
   },
   {
-    name: 'elite', label: '💜 Elite', minMonthly: 10_000,
+    name: 'elite', label: 'ลูกค้าระดับ 💜 Elite', minMonthly: 10_000,
     color: '#8b5cf6', bgColor: '#1e0a3c',
     tokensPerDay: { tiktok: 20, facebook: 35, instagram: 18, line: 60 },
-    affectQuota: 10,       // can affect 10 members/day
+    affectQuota: 10,       // can affect 10 customers/day
     commissionBoost: 0.08, // +8%
     badge: '💜',
     perks: [
-      'ทุกอย่างใน Pro',
+      'ทุกอย่างใน ลูกค้าระดับ 🔥 Pro',
       '+8% commission',
-      '⭐ Affect Network: ช่วย boost สมาชิกอื่น 10 คน/วัน',
-      'รับ 3% bonus จากยอดที่ affected members ขายได้',
+      '⭐ Affect Network: ช่วย boost ลูกค้าคนอื่น 10 คน/วัน',
+      'รับ 3% bonus จากยอดที่ลูกค้าระดับอื่นขายได้',
       'Elite badge บน leaderboard',
       'ช่องทาง LINE support ตรง',
     ],
   },
   {
-    name: 'champion', label: '🏆 Champion', minMonthly: 30_000,
+    name: 'champion', label: 'ลูกค้าระดับ 🏆 Champion', minMonthly: 30_000,
     color: '#f59e0b', bgColor: '#2d1a00',
     tokensPerDay: { tiktok: 35, facebook: 60, instagram: 30, line: 120 },
-    affectQuota: 30,       // can affect 30 members/day
+    affectQuota: 30,       // can affect 30 customers/day
     commissionBoost: 0.12, // +12%
     badge: '🏆',
     perks: [
-      'ทุกอย่างใน Elite',
+      'ทุกอย่างใน ลูกค้าระดับ 💜 Elite',
       '+12% commission',
-      '⭐ Affect Network: boost 30 คน/วัน',
+      '⭐ Affect Network: boost ลูกค้าคนอื่น 30 คน/วัน',
       'Radius ขยาย: รับ 5% จาก affected + 2% จาก sub-affected',
       'Champion badge + featured บน platform',
       'Priority listing ใน amplifier network',
     ],
   },
   {
-    name: 'legend', label: '👑 Legend', minMonthly: 100_000,
+    name: 'legend', label: 'ลูกค้าระดับ 👑 Legend', minMonthly: 100_000,
     color: '#fe2c55', bgColor: '#1a0010',
     tokensPerDay: { tiktok: 80, facebook: 150, instagram: 70, line: 300 },
-    affectQuota: 100,      // can affect 100 members/day
+    affectQuota: 100,      // can affect 100 customers/day
     commissionBoost: 0.20, // +20%
     badge: '👑',
     perks: [
-      'ทุกอย่างใน Champion',
+      'ทุกอย่างใน ลูกค้าระดับ 🏆 Champion',
       '+20% commission (สูงสุด)',
       '👑 Affect Network: boost ไม่จำกัด (100 คน/วัน)',
       '3-layer radius: direct 5% + indirect 2% + extended 1%',
