@@ -8,15 +8,15 @@
     return true;
   });
 
-  async function autoFill({ platform, content, affLink, autoSubmit }) {
-    if (platform === 'tiktok')    return fillTikTok(content, affLink, autoSubmit);
-    if (platform === 'instagram') return fillInstagram(content, affLink, autoSubmit);
-    if (platform === 'facebook')  return fillFacebook(content, affLink, autoSubmit);
+  async function autoFill({ platform, content, affLink, autoSubmit, showCredit }) {
+    if (platform === 'tiktok')    return fillTikTok(content, affLink, autoSubmit, showCredit);
+    if (platform === 'instagram') return fillInstagram(content, affLink, autoSubmit, showCredit);
+    if (platform === 'facebook')  return fillFacebook(content, affLink, autoSubmit, showCredit);
     return { ok: false, error: 'Unknown platform' };
   }
 
   // ── TikTok Studio ─────────────────────────────────────────────────────────
-  async function fillTikTok(c, link, autoSubmit) {
+  async function fillTikTok(c, link, autoSubmit, showCredit) {
     const captionSel = [
       '[data-e2e="caption-input"] [contenteditable]',
       'div[contenteditable="true"][class*="caption"]',
@@ -28,7 +28,7 @@
     const el = document.querySelector(captionSel);
     if (!el) return { ok: false, error: 'TikTok caption field not found' };
 
-    injectText(el, buildCaption(c, link, 'tiktok'));
+    injectText(el, buildCaption(c, link, 'tiktok', showCredit));
     if (!autoSubmit) return { ok: true };
 
     // Auto-click Post button
@@ -41,7 +41,7 @@
   }
 
   // ── Instagram ─────────────────────────────────────────────────────────────
-  async function fillInstagram(c, link, autoSubmit) {
+  async function fillInstagram(c, link, autoSubmit, showCredit) {
     // IG web: click "+" to open Create flow
     const plusBtn = document.querySelector('[aria-label="New post"], [aria-label="Create"], svg[aria-label="New post"]')
       ?.closest('a, button');
@@ -52,7 +52,7 @@
     const el = document.querySelector(captionSel);
     if (!el) return { ok: false, error: 'Instagram caption field not found' };
 
-    injectText(el, buildCaption(c, link, 'instagram'));
+    injectText(el, buildCaption(c, link, 'instagram', showCredit));
     if (!autoSubmit) return { ok: true };
 
     const posted = await clickButton([
@@ -63,13 +63,13 @@
   }
 
   // ── Facebook Composer ─────────────────────────────────────────────────────
-  async function fillFacebook(c, link, autoSubmit) {
+  async function fillFacebook(c, link, autoSubmit, showCredit) {
     const composerSel = '[contenteditable][role="textbox"], [data-testid="status-attachment-mentions-input"]';
     await waitFor(composerSel, 6_000);
     const el = document.querySelector(composerSel);
     if (!el) return { ok: false, error: 'Facebook composer not found' };
 
-    injectText(el, buildCaption(c, link, 'facebook'));
+    injectText(el, buildCaption(c, link, 'facebook', showCredit));
     if (!autoSubmit) return { ok: true };
 
     const posted = await clickButton([
@@ -80,16 +80,17 @@
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  function buildCaption(c, link, platform) {
+  function buildCaption(c, link, platform, showCredit) {
     const tags   = (c.hashtags || []).join(' ');
     const script = Array.isArray(c.script) ? c.script.join('\n') : (c.script || '');
     const linkLine = link ? `\n\n🔗 สั่งซื้อ: ${link}` : '';
+    const credit = showCredit ? '\n\n🤖 สร้างด้วย @openthai.ai' : '';
 
     if (platform === 'tiktok')
-      return `${c.hook}\n\n${script}${linkLine}\n\n${c.caption}\n\n${tags}`;
+      return `${c.hook}\n\n${script}${linkLine}\n\n${c.caption}\n\n${tags}${credit}`;
     if (platform === 'instagram')
-      return `${c.hook}\n\n${c.caption}${linkLine}\n\n${tags}`;
-    return `${c.hook}\n\n${c.caption}${linkLine}\n\n${tags}`;
+      return `${c.hook}\n\n${c.caption}${linkLine}\n\n${tags}${credit}`;
+    return `${c.hook}\n\n${c.caption}${linkLine}\n\n${tags}${credit}`;
   }
 
   function injectText(el, text) {

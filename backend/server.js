@@ -26,6 +26,7 @@ import {
 } from './omise-payment.js';
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { createPRSystem } from './pr-communications.js';
+import { handleLineWebhook } from './line-bot.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -1011,6 +1012,48 @@ app.get('/api/news-rag', async (req, res) => {
   newsCache.data = fallback; newsCache.ts = Date.now();
   return res.json(fallback);
 });
+
+// ── LINE Webhook (Messaging API) ──────────────────────────────────────────────
+app.post('/api/line/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    await handleLineWebhook(req, res, {
+      generateFn: (params) => smartGenerate(params),
+      trendingFn: async () => {
+        // Use in-process trending data (avoid network round-trip)
+        if (trendCache.data && Date.now() - trendCache.ts < TREND_TTL) return trendCache.data;
+        // Regenerate trending synchronously using the same logic
+        if (gemini) {
+          try {
+            const r = await gemini.generateContent(
+              `สร้าง trending hashtags สำหรับ TikTok ไทย ณ วันที่ ${new Date().toLocaleDateString('th-TH')} ตอบ JSON เท่านั้น:\n{"hashtags":[{"tag":"#xxx","views":"xxM","hot":true}],"topics":[{"topic":"ชื่อ","momentum":"+xx%"}]}`
+            );
+            const text = r.response.text().trim();
+            const m = text.match(/\{[\s\S]*\}/);
+            if (m) {
+              const payload = { ...JSON.parse(m[0]), ts: new Date().toISOString(), source: 'gemini' };
+              trendCache.data = payload; trendCache.ts = Date.now();
+              return payload;
+            }
+          } catch (_) {}
+        }
+        return trendCache.data || {
+          hashtags: [
+            { tag: '#OTOP', views: '2.8B', hot: true }, { tag: '#สินค้าไทย', views: '1.2B', hot: true },
+            { tag: '#TikTokShop', views: '4.1B', hot: true }, { tag: '#รีวิวสินค้า', views: '3.2B', hot: true },
+            { tag: '#แม่ค้าออนไลน์', views: '650M', hot: false }, { tag: '#ขายออนไลน์', views: '1.5B', hot: false },
+          ],
+          ts: new Date().toISOString(), source: 'curated',
+        };
+      },
+      affiliateFn: (productUrl) => {
+        const ref = process.env.DEFAULT_AFFILIATE_REF || 'openthai';
+        const base = process.env.FRONTEND_URL || 'https://openthai-ai.vercel.app';
+        return `${base}/go?ref=${encodeURIComponent(ref)}&url=${encodeURIComponent(productUrl)}&utm_source=line_bot&utm_medium=affiliate`;
+      },
+    });
+  }
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  LINE OA SEND
@@ -2600,122 +2643,8 @@ async function saveLINEUserId(userId, displayName, pictureUrl) {
   }
 }
 
-// POST /api/line/webhook — LINE OA incoming events
-app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  // LINE always expects 200 OK immediately
-  res.status(200).json({ received: true });
-
-  const signature = req.headers['x-line-signature'] || '';
-  const rawBody   = req.body;
-
-  // ── Normalise rawBody → Buffer (Vercel may pre-parse as Object) ──────────────
-  let rawBodyBuf;
-  let body;
-  if (Buffer.isBuffer(rawBody)) {
-    rawBodyBuf = rawBody;
-    try { body = JSON.parse(rawBody.toString()); } catch { return; }
-  } else if (typeof rawBody === 'string') {
-    rawBodyBuf = Buffer.from(rawBody, 'utf8');
-    try { body = JSON.parse(rawBody); } catch { return; }
-  } else if (rawBody && typeof rawBody === 'object') {
-    // Vercel already parsed — convert back for HMAC, body is ready
-    rawBodyBuf = Buffer.from(JSON.stringify(rawBody), 'utf8');
-    body = rawBody;
-  } else {
-    return;
-  }
-
-  // Signature check (skip if no secret configured — dev mode)
-  if (process.env.LINE_CHANNEL_SECRET && signature) {
-    const expected = createHmac('sha256', process.env.LINE_CHANNEL_SECRET).update(rawBodyBuf).digest('base64');
-    if (signature !== expected) {
-      addLog('warn', 'LINE', 'Webhook signature mismatch — ignored');
-      return;
-    }
-  }
-
-  const token = process.env.LINE_CHANNEL_TOKEN;
-
-  for (const event of (body.events || [])) {
-    const userId      = event.source?.userId;
-    const replyToken  = event.replyToken;
-    const eventType   = event.type;
-
-    addLog('info', 'LINE', `Event: ${eventType} userId=${userId}`);
-
-    // ── บันทึก userId ก่อน แล้วค่อย enrich ด้วย profile ─────────────────────
-    if (userId) {
-      // Save immediately with just userId (guarantee capture even if profile fails)
-      await saveLINEUserId(userId, null, null);
-
-      if (token) {
-        try {
-          const profileRes = await fetch(`https://api.line.me/v2/bot/profile/${userId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: AbortSignal.timeout(5000),
-          });
-          if (profileRes.ok) {
-            const profile = await profileRes.json();
-            await saveLINEUserId(userId, profile.displayName, profile.pictureUrl);
-            addLog('info', 'LINE', `✅ Saved LINE userId: ${userId} (${profile.displayName})`);
-          } else {
-            addLog('info', 'LINE', `✅ Saved LINE userId: ${userId} (profile ${profileRes.status})`);
-          }
-        } catch (e) {
-          addLog('warn', 'LINE', `Profile fetch error: ${e.message}`);
-          addLog('info', 'LINE', `✅ Saved LINE userId: ${userId} (no profile)`);
-        }
-      }
-    }
-
-    // ── Reply to messages ─────────────────────────────────────────────────────
-    if (eventType === 'message' && replyToken && token) {
-      const userMsg = event.message?.text || '';
-      let replyText = `สวัสดีครับ! 👋 ขอบคุณที่ติดต่อ Openthai.ai\nเราได้รับข้อความของคุณแล้ว\n\n🌐 openthai-ai.com`;
-
-      // Auto-reply with AI if message is a question
-      if (userMsg.length > 3 && (gemini || anthropic)) {
-        try {
-          const aiRes = await smartGenerate({
-            product: userMsg,
-            platform: 'line',
-            style: 'friendly',
-            lang: 'th',
-            audience: 'SME',
-            prompt_override: `ผู้ใช้ส่งข้อความใน LINE OA: "${userMsg}"\nตอบสั้นๆ กระชับ เป็นมิตร ภาษาไทย ไม่เกิน 200 ตัวอักษร (Openthai.ai assistant)`,
-          });
-          if (aiRes?.content) replyText = aiRes.content.slice(0, 4000);
-        } catch { /* fallback to default reply */ }
-      }
-
-      try {
-        await fetch('https://api.line.me/v2/bot/message/reply', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ replyToken, messages: [{ type: 'text', text: replyText }] }),
-        });
-      } catch (e) {
-        addLog('warn', 'LINE', `Reply error: ${e.message}`);
-      }
-    }
-
-    // ── Follow event (เพิ่มเพื่อน) ────────────────────────────────────────────
-    if (eventType === 'follow' && replyToken && token) {
-      try {
-        await fetch('https://api.line.me/v2/bot/message/reply', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            replyToken,
-            messages: [{ type: 'text', text: '🎉 ยินดีต้อนรับสู่ Openthai.ai!\n\nเราช่วย SME ไทยสร้างคอนเทนต์ TikTok ด้วย AI ครบ 241+ platforms\n\n🌐 openthai-ai.com\n#Openthai.ai' }],
-          }),
-        });
-      } catch (e) {
-        addLog('warn', 'LINE', `Follow reply error: ${e.message}`);
-      }
-    }
-  }
-});
+// NOTE: /api/line/webhook is registered above (before LINE OA SEND section)
+// using handleLineWebhook from line-bot.js with AI content generation support.
 
 // GET /api/line/users — list captured LINE User IDs (admin)
 app.get('/api/line/users', requireAuth, async (req, res) => {
