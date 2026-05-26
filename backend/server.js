@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from '
 import nodemailer from 'nodemailer';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createAIRouter } from './ai-router.js';
 import cron from 'node-cron';
 import https from 'https';
 import { createHmac } from 'node:crypto';
@@ -177,31 +178,12 @@ async function generateWithGemini(form) {
   return data;
 }
 
-// ── Smart AI Router: Claude → Gemini → Mock ─────────────────────────────────
+// ── Spider-Web AI Router (initialised after mockGenerate is defined below) ───
+// Declared here; assigned after mockGenerate is available.
+let aiRouter = null;
+
 async function smartGenerate(form) {
-  // 1️⃣ ลอง Claude ก่อน (ถ้ามี ANTHROPIC_API_KEY)
-  if (anthropic) {
-    try {
-      const result = await generateWithClaude(form);
-      console.log(`[AI] Claude ✅ — ${form.product}`);
-      return result;
-    } catch (err) {
-      console.warn(`[AI] Claude failed: ${err.message} — trying Gemini`);
-    }
-  }
-  // 2️⃣ fallback → Gemini (ถ้ามี GEMINI_API_KEY)
-  if (gemini) {
-    try {
-      const result = await generateWithGemini(form);
-      console.log(`[AI] Gemini ✅ — ${form.product}`);
-      return result;
-    } catch (err) {
-      console.warn(`[AI] Gemini failed: ${err.message} — using mock`);
-    }
-  }
-  // 3️⃣ last resort → mock
-  console.log(`[AI] Mock — no API keys configured`);
-  return mockGenerate(form);
+  return aiRouter.generate(form);
 }
 
 // ─── Mock fallback (ใช้เมื่อไม่มี API Key) ───────────────────────────────────
@@ -262,6 +244,15 @@ function buildPrompt(form) {
   "criticScore": "คะแนน 0.0-10.0 ตามคุณภาพของคอนเทนต์ที่คุณสร้าง"
 }`;
 }
+
+// ── Init Spider-Web AI Router (after mockGenerate is defined) ────────────────
+aiRouter = createAIRouter({
+  claudeFn: anthropic ? generateWithClaude : null,
+  geminiFn: gemini    ? generateWithGemini : null,
+  mockFn:   mockGenerate,
+  onLog: (layer, provider, product) =>
+    console.log(`[AIRouter] ${layer}:${provider} — ${product}`),
+});
 
 // ─── POST /api/generate ───────────────────────────────────────────────────────
 app.post('/api/generate', generateLimiter, async (req, res) => {
@@ -1421,7 +1412,25 @@ app.get('/api/health', (req, res) => {
       webhook_system:     `✅ Active (${webhooks.list().length} registered)`,
       multi_tenant:       `✅ Active (${tenants.listAll().length} tenants)`,
     },
+    ai_router: aiRouter.status(),
   });
+});
+
+// ── POST /api/system/router/reset — Manual circuit breaker reset ──────────────
+app.post('/api/system/router/reset', (req, res) => {
+  const { provider } = req.body || {};
+  if (provider) {
+    aiRouter.resetBreaker(provider);
+    return res.json({ success: true, reset: provider });
+  }
+  ['claude', 'gemini'].forEach(p => aiRouter.resetBreaker(p));
+  return res.json({ success: true, reset: 'all' });
+});
+
+// ── DELETE /api/system/router/cache — Flush AI response cache ────────────────
+app.delete('/api/system/router/cache', (req, res) => {
+  aiRouter.cache.clear();
+  res.json({ success: true, message: 'AI router cache cleared' });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
