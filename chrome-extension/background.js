@@ -1,64 +1,73 @@
 // background.js — Service Worker
-// จัดการ: API calls, Affiliate links, Auto-post (LINE Notify / Facebook API)
+// Auto-post pipeline: 0-click API → auto-click share dialog → auto-fill SPA
 
 const DEFAULT_API = 'https://openthai-ai.vercel.app';
 
-// ── Affiliate Link Builder ────────────────────────────────────────────────────
-function buildAffiliateLink(product, settings) {
+// ── Affiliate Link ────────────────────────────────────────────────────────────
+function buildAffiliateLink(product, s) {
   const { url, platform, shopId, itemId } = product;
-  const { shopeeSmtt, lazadaCC, myRef, apiUrl } = settings;
+  const { shopeeSmtt, lazadaCC, myRef, apiUrl } = s;
   const base = (apiUrl || DEFAULT_API).replace(/\/$/, '');
   const enc  = encodeURIComponent;
-
-  if (platform === 'shopee' && shopId && itemId && shopeeSmtt) {
+  if (platform === 'shopee' && shopId && itemId && shopeeSmtt)
     return `${url.split('?')[0]}?smtt=${enc(shopeeSmtt)}`;
-  }
-  if (platform === 'lazada' && lazadaCC) {
+  if (platform === 'lazada' && lazadaCC)
     return `${url.split('?')[0]}?cc=${enc(lazadaCC)}`;
-  }
-  // OpenThai tracked link (works for all platforms)
   const ref = myRef || shopeeSmtt || lazadaCC || 'openthai';
   return `${base}/go?ref=${enc(ref)}&url=${enc(url)}&utm_source=chrome_ext&utm_medium=affiliate`;
 }
 
-// ── Open tab + wait for load + send message ───────────────────────────────────
-async function openAndFill(url, message) {
+// ── Open tab → wait load → inject & execute click function ───────────────────
+// clickFn: serialisable function (no closures) injected into the tab
+function openAndAutoSubmit(url, clickFn, delayMs = 2500) {
   return new Promise((resolve) => {
-    chrome.tabs.create({ url, active: false }, (tab) => {
-      const listener = (tabId, info) => {
+    chrome.tabs.create({ url, active: true }, (tab) => {
+      function onUpdated(tabId, info) {
         if (tabId !== tab.id || info.status !== 'complete') return;
-        chrome.tabs.onUpdated.removeListener(listener);
-        // Wait a bit for React/SPA to mount
+        chrome.tabs.onUpdated.removeListener(onUpdated);
         setTimeout(() => {
-          chrome.tabs.sendMessage(tab.id, message, (resp) => {
-            resolve({ tabId: tab.id, result: resp || {} });
-          });
-        }, 2000);
-      };
-      chrome.tabs.onUpdated.addListener(listener);
+          chrome.scripting.executeScript(
+            { target: { tabId: tab.id }, func: clickFn },
+            (results) => resolve({ tabId: tab.id, result: results?.[0]?.result })
+          );
+        }, delayMs);
+      }
+      chrome.tabs.onUpdated.addListener(onUpdated);
     });
   });
 }
 
-// ── LINE Notify Direct Post (ไม่ต้องกดอะไร — โพสต์ตรงเข้า LINE ทันที) ─────────
-// ต้องมี LINE Notify Token จาก notify-bot.line.me (ฟรี สมัครครั้งเดียว)
+// Same but sends a message to the content script (for SPA fill + click)
+function openAndFill(url, message, delayMs = 2500) {
+  return new Promise((resolve) => {
+    chrome.tabs.create({ url, active: true }, (tab) => {
+      function onUpdated(tabId, info) {
+        if (tabId !== tab.id || info.status !== 'complete') return;
+        chrome.tabs.onUpdated.removeListener(onUpdated);
+        setTimeout(() => {
+          chrome.tabs.sendMessage(tab.id, message, (resp) =>
+            resolve({ tabId: tab.id, result: resp || {} })
+          );
+        }, delayMs);
+      }
+      chrome.tabs.onUpdated.addListener(onUpdated);
+    });
+  });
+}
+
+// ── LINE Notify API (0-click, requires token) ─────────────────────────────────
 async function postToLineNotify(token, text) {
-  const params = new URLSearchParams({ message: text });
   const res = await fetch('https://notify-api.line.me/api/notify', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: params.toString(),
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ message: text }).toString(),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || `LINE Notify error ${res.status}`);
+  if (!res.ok) throw new Error(data.message || `LINE Notify ${res.status}`);
   return data;
 }
 
-// ── Facebook Graph API Direct Post (โพสต์ตรงเข้า Page ทันที) ─────────────────
-// ต้องมี Page Access Token จาก developers.facebook.com
+// ── Facebook Graph API (0-click, requires Page token) ────────────────────────
 async function postToFacebook(pageId, token, message) {
   const res = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
     method: 'POST',
@@ -66,22 +75,52 @@ async function postToFacebook(pageId, token, message) {
     body: JSON.stringify({ message, access_token: token }),
   });
   const data = await res.json();
-  if (!res.ok || data.error) throw new Error(data.error?.message || `FB API error ${res.status}`);
+  if (!res.ok || data.error) throw new Error(data.error?.message || `FB API ${res.status}`);
   return data;
+}
+
+// ── Auto-click functions (injected into share pages) ─────────────────────────
+// NOTE: these must be self-contained (no outer scope references)
+
+function clickLineSharePage() {
+  // LINE Social Plugin share page
+  const candidates = [
+    document.querySelector('.MdBtnBlk'),            // LINE share button (common)
+    document.querySelector('[class*="share"] button'),
+    document.querySelector('button[type="submit"]'),
+    document.querySelector('input[type="submit"]'),
+    [...document.querySelectorAll('button, a')].find(
+      b => /share|send|แชร์|ส่ง|送信/i.test(b.textContent)
+    ),
+  ].filter(Boolean);
+  if (candidates[0]) { candidates[0].click(); return 'clicked'; }
+  return 'button_not_found';
+}
+
+function clickFbSharePage() {
+  // Facebook sharer.php dialog
+  const candidates = [
+    document.querySelector('[data-testid="react-composer-post-button"]'),
+    document.querySelector('[aria-label="Share now"]'),
+    document.querySelector('[aria-label="Post"]'),
+    document.querySelector('button[name="post"]'),
+    document.querySelector('._54bb button'),
+    [...document.querySelectorAll('button')].find(
+      b => /post|share now|share to facebook/i.test(b.textContent)
+    ),
+  ].filter(Boolean);
+  if (candidates[0]) { candidates[0].click(); return 'clicked'; }
+  return 'button_not_found';
 }
 
 // ── Message Dispatcher ────────────────────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
 
-  // ── สร้าง Affiliate Link ──────────────────────────────────────────────────
   if (msg.type === 'BUILD_AFFILIATE') {
-    chrome.storage.sync.get(null, (s) => {
-      reply({ link: buildAffiliateLink(msg.product, s) });
-    });
+    chrome.storage.sync.get(null, (s) => reply({ link: buildAffiliateLink(msg.product, s) }));
     return true;
   }
 
-  // ── Generate Content จาก API ──────────────────────────────────────────────
   if (msg.type === 'GENERATE_CONTENT') {
     chrome.storage.sync.get(null, async (s) => {
       const base = (s.apiUrl || DEFAULT_API).replace(/\/$/, '');
@@ -94,70 +133,71 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
         const data = await res.json();
-        const affLink = buildAffiliateLink(msg.product, s);
-        reply({ ok: true, data, affiliateLink: affLink });
-      } catch (e) {
-        reply({ ok: false, error: e.message });
-      }
-    });
-    return true;
-  }
-
-  // ── Auto-Post: LINE Share URL (1-tap confirm) ─────────────────────────────
-  if (msg.type === 'SHARE_LINE') {
-    const text = encodeURIComponent(msg.text);
-    const url  = encodeURIComponent(msg.affLink || '');
-    chrome.tabs.create({ url: `https://social-plugins.line.me/lineit/share?url=${url}&text=${text}` });
-    reply({ ok: true });
-    return true;
-  }
-
-  // ── Auto-Post: LINE Notify DIRECT (0-click ถ้ามี token) ───────────────────
-  if (msg.type === 'POST_LINE_NOTIFY') {
-    chrome.storage.sync.get(['lineNotifyToken'], async ({ lineNotifyToken }) => {
-      if (!lineNotifyToken) { reply({ ok: false, error: 'ไม่มี LINE Notify Token — ตั้งค่าก่อน' }); return; }
-      try {
-        await postToLineNotify(lineNotifyToken, msg.text);
-        reply({ ok: true });
+        reply({ ok: true, data, affiliateLink: buildAffiliateLink(msg.product, s) });
       } catch (e) { reply({ ok: false, error: e.message }); }
     });
     return true;
   }
 
-  // ── Auto-Post: Facebook Share Dialog (1-click confirm) ───────────────────
-  if (msg.type === 'SHARE_FACEBOOK') {
-    const u = encodeURIComponent(msg.affLink || '');
-    const q = encodeURIComponent(msg.text.slice(0, 500));
-    chrome.tabs.create({ url: `https://www.facebook.com/sharer/sharer.php?u=${u}&quote=${q}` });
-    reply({ ok: true });
-    return true;
-  }
-
-  // ── Auto-Post: Facebook Page API DIRECT (0-click ถ้ามี token) ────────────
-  if (msg.type === 'POST_FACEBOOK_API') {
-    chrome.storage.sync.get(['fbPageId', 'fbPageToken'], async ({ fbPageId, fbPageToken }) => {
-      if (!fbPageId || !fbPageToken) { reply({ ok: false, error: 'ไม่มี Facebook Page Token — ตั้งค่าก่อน' }); return; }
+  // ── LINE ──────────────────────────────────────────────────────────────────
+  if (msg.type === 'POST_LINE') {
+    chrome.storage.sync.get(null, async (s) => {
       try {
-        const r = await postToFacebook(fbPageId, fbPageToken, msg.text);
-        reply({ ok: true, postId: r.id });
+        if (s.lineNotifyToken) {
+          // 0-click: LINE Notify API
+          const text = `${msg.text}\n\n🔗 ${msg.affLink}`;
+          await postToLineNotify(s.lineNotifyToken, text);
+          reply({ ok: true, method: 'notify_api' });
+        } else {
+          // auto-click: เปิด LINE Share dialog + กดปุ่มอัตโนมัติ
+          const enc  = encodeURIComponent;
+          const url  = `https://social-plugins.line.me/lineit/share?url=${enc(msg.affLink || '')}&text=${enc(msg.text)}`;
+          const r    = await openAndAutoSubmit(url, clickLineSharePage, 3000);
+          reply({ ok: true, method: 'share_dialog', result: r.result });
+        }
       } catch (e) { reply({ ok: false, error: e.message }); }
     });
     return true;
   }
 
-  // ── Auto-Post: TikTok Studio (auto-fill caption) ─────────────────────────
-  if (msg.type === 'FILL_TIKTOK') {
-    openAndFill('https://www.tiktok.com/tiktok-web-upload', {
-      type: 'AUTO_FILL', platform: 'tiktok', content: msg.content, affLink: msg.affLink,
-    }).then(r => reply({ ok: true, ...r })).catch(e => reply({ ok: false, error: e.message }));
+  // ── Facebook ──────────────────────────────────────────────────────────────
+  if (msg.type === 'POST_FACEBOOK') {
+    chrome.storage.sync.get(null, async (s) => {
+      try {
+        if (s.fbPageId && s.fbPageToken) {
+          // 0-click: Graph API
+          const text = `${msg.text}\n\n🔗 ${msg.affLink}`;
+          const r = await postToFacebook(s.fbPageId, s.fbPageToken, text);
+          reply({ ok: true, method: 'graph_api', postId: r.id });
+        } else {
+          // auto-click: เปิด Share dialog + กดปุ่มอัตโนมัติ
+          const enc  = encodeURIComponent;
+          const url  = `https://www.facebook.com/sharer/sharer.php?u=${enc(msg.affLink || '')}&quote=${enc(msg.text.slice(0, 500))}`;
+          const r    = await openAndAutoSubmit(url, clickFbSharePage, 3000);
+          reply({ ok: true, method: 'share_dialog', result: r.result });
+        }
+      } catch (e) { reply({ ok: false, error: e.message }); }
+    });
     return true;
   }
 
-  // ── Auto-Post: Instagram (auto-fill caption) ──────────────────────────────
-  if (msg.type === 'FILL_INSTAGRAM') {
-    openAndFill('https://www.instagram.com/', {
-      type: 'AUTO_FILL', platform: 'instagram', content: msg.content, affLink: msg.affLink,
-    }).then(r => reply({ ok: true, ...r })).catch(e => reply({ ok: false, error: e.message }));
+  // ── TikTok Studio (fill caption + auto-click Post) ────────────────────────
+  if (msg.type === 'POST_TIKTOK') {
+    openAndFill(
+      'https://www.tiktok.com/tiktok-web-upload',
+      { type: 'AUTO_FILL', platform: 'tiktok', content: msg.content, affLink: msg.affLink, autoSubmit: true },
+      3000
+    ).then(r => reply({ ok: true, ...r })).catch(e => reply({ ok: false, error: e.message }));
+    return true;
+  }
+
+  // ── Instagram (fill caption + auto-click Share) ───────────────────────────
+  if (msg.type === 'POST_INSTAGRAM') {
+    openAndFill(
+      'https://www.instagram.com/',
+      { type: 'AUTO_FILL', platform: 'instagram', content: msg.content, affLink: msg.affLink, autoSubmit: true },
+      3000
+    ).then(r => reply({ ok: true, ...r })).catch(e => reply({ ok: false, error: e.message }));
     return true;
   }
 

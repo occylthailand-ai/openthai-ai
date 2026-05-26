@@ -240,42 +240,28 @@ async function _doPost(platform) {
   const s = await new Promise(r => chrome.storage.sync.get(null, r));
 
   if (platform === 'line') {
-    if (s.lineNotifyToken) {
-      // 0-click: LINE Notify API
-      const text = `${c.hook}\n\n${c.caption}\n\n🔗 ${aff}\n\n${tags}`;
-      const r = await chrome.runtime.sendMessage({ type: 'POST_LINE_NOTIFY', text });
-      if (!r?.ok) throw new Error(r?.error || 'LINE Notify failed');
-    } else {
-      // 1-tap: LINE Share dialog
-      const text = `${c.hook}\n\n${c.caption}`;
-      await chrome.runtime.sendMessage({ type: 'SHARE_LINE', text, affLink: aff });
-    }
+    const text = `${c.hook}\n\n${c.caption}\n\n🔗 ${aff}\n\n${tags}`;
+    const r = await chrome.runtime.sendMessage({ type: 'POST_LINE', text, affLink: aff });
+    if (!r?.ok) throw new Error(r?.error || 'LINE post failed');
     return;
   }
 
   if (platform === 'facebook') {
-    if (s.fbPageId && s.fbPageToken) {
-      // 0-click: Facebook Graph API
-      const text = `${c.hook}\n\n${c.caption}\n\n🔗 ${aff}\n\n${tags}`;
-      const r = await chrome.runtime.sendMessage({ type: 'POST_FACEBOOK_API', text });
-      if (!r?.ok) throw new Error(r?.error || 'Facebook API failed');
-    } else {
-      // 1-click: Facebook Share Dialog
-      const text = `${c.hook}\n\n${c.caption}`;
-      await chrome.runtime.sendMessage({ type: 'SHARE_FACEBOOK', text, affLink: aff });
-    }
+    const text = `${c.hook}\n\n${c.caption}\n\n🔗 ${aff}\n\n${tags}`;
+    const r = await chrome.runtime.sendMessage({ type: 'POST_FACEBOOK', text, affLink: aff });
+    if (!r?.ok) throw new Error(r?.error || 'Facebook post failed');
     return;
   }
 
   if (platform === 'tiktok') {
-    const r = await chrome.runtime.sendMessage({ type: 'FILL_TIKTOK', content: c, affLink: aff });
-    if (!r?.ok) throw new Error(r?.error || 'TikTok auto-fill failed');
+    const r = await chrome.runtime.sendMessage({ type: 'POST_TIKTOK', content: c, affLink: aff });
+    if (!r?.ok) throw new Error(r?.error || 'TikTok post failed');
     return;
   }
 
   if (platform === 'instagram') {
-    const r = await chrome.runtime.sendMessage({ type: 'FILL_INSTAGRAM', content: c, affLink: aff });
-    if (!r?.ok) throw new Error(r?.error || 'Instagram auto-fill failed');
+    const r = await chrome.runtime.sendMessage({ type: 'POST_INSTAGRAM', content: c, affLink: aff });
+    if (!r?.ok) throw new Error(r?.error || 'Instagram post failed');
     return;
   }
 }
