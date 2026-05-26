@@ -124,12 +124,33 @@ const gemini = process.env.GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({ model: 'gemini-flash-latest' })
   : null;
 
+// Sanitize messages before sending to Anthropic API.
+// SDK ≥0.30 may inject cache_control automatically; the API rejects it on empty text blocks.
+function sanitizeMessages(messages) {
+  return messages.map(msg => {
+    if (!Array.isArray(msg.content)) return msg;
+    const cleaned = msg.content
+      .map(block => {
+        if (block.type !== 'text') return block;
+        if (!block.text?.trim()) return null;           // drop empty text blocks
+        if (block.cache_control && !block.text.trim()) {
+          const { cache_control, ...rest } = block;    // strip cache_control if text is empty
+          return rest;
+        }
+        return block;
+      })
+      .filter(Boolean);
+    return cleaned.length ? { ...msg, content: cleaned } : msg;
+  });
+}
+
 // ── Generate with Claude Haiku 4.5 (fast + affordable) ──────────────────────
 async function generateWithClaude(form) {
+  const rawMessages = [{ role: 'user', content: buildPrompt(form) }];
   const msg = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 1024,
-    messages: [{ role: 'user', content: buildPrompt(form) }],
+    messages: sanitizeMessages(rawMessages),
   });
   const text = msg.content[0]?.text?.trim() || '';
   const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -563,13 +584,13 @@ app.post('/api/analyze-image', express.json({ limit: '5mb' }), generateLimiter, 
       const msg = await anthropic.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 512,
-        messages: [{
+        messages: sanitizeMessages([{
           role: 'user',
           content: [
             { type: 'image', source: { type: 'base64', media_type: mimeType || 'image/jpeg', data: base64 } },
             { type: 'text', text: imagePrompt },
           ],
-        }],
+        }]),
       });
       const text = msg.content[0]?.text?.trim() || '';
       const m = text.match(/\{[\s\S]*\}/);
@@ -938,7 +959,7 @@ app.get('/api/news-rag', async (req, res) => {
 
       let text = '';
       if (anthropic) {
-        const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 512, messages: [{ role: 'user', content: prompt }] });
+        const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 512, messages: sanitizeMessages([{ role: 'user', content: prompt }]) });
         text = msg.content[0]?.text?.trim() || '';
       } else {
         const r = await gemini.generateContent(prompt);
@@ -1048,7 +1069,7 @@ app.post('/api/competitor-analyze', competitorLimiter, async (req, res) => {
   try {
     let text = '';
     if (anthropic) {
-      const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, messages: [{ role: 'user', content: prompt }] });
+      const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 1024, messages: sanitizeMessages([{ role: 'user', content: prompt }]) });
       text = msg.content[0]?.text?.trim() || '';
     } else if (gemini) {
       const r = await gemini.generateContent(prompt);
@@ -1343,7 +1364,7 @@ Warnings: ${recentWarns.slice(0,3).map(w=>w.message).join(' | ') || 'ไม่�
   try {
     let text = '';
     if (anthropic) {
-      const msg = await anthropic.messages.create({ model:'claude-haiku-4-5-20251001', max_tokens:512, messages:[{role:'user',content:prompt}] });
+      const msg = await anthropic.messages.create({ model:'claude-haiku-4-5-20251001', max_tokens:512, messages:sanitizeMessages([{role:'user',content:prompt}]) });
       text = msg.content[0]?.text?.trim() || '';
     } else {
       const r = await gemini.generateContent(prompt);
