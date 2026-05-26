@@ -29,6 +29,7 @@ import { createPRSystem } from './pr-communications.js';
 import { handleLineWebhook } from './line-bot.js';
 import { TIERS, getTierForEarnings, getNextTier, calcProgress, TokenManager, AffectLedger } from './tier-system.js';
 import { NetworkAmplifier, VelocityTracker, getNextPeakTime, injectTrendingHashtags, calcViralScore } from './viral-amplifier.js';
+import { QuantumReadySystem } from './quantum-ready.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -385,6 +386,20 @@ const _vn = loadJson(VIRAL_FILE);
 const _vt = loadJson(VELOCITY_FILE);
 const viralNetwork  = new NetworkAmplifier({ pool: _vn.pool || [], queue: _vn.queue || [], save: () => saveJson(VIRAL_FILE, { pool: viralNetwork.pool, queue: viralNetwork.queue }) });
 const velocityTrack = new VelocityTracker({ posts: _vt.posts || [], save: () => saveJson(VELOCITY_FILE, { posts: velocityTrack.posts }) });
+
+// ── Quantum-Ready System ──────────────────────────────────────────────────────
+const QUANTUM_FILE = join(WRITE_DATA_DIR, 'quantum_status.json');
+const _qs = loadJson(QUANTUM_FILE);
+const quantumSystem = new QuantumReadySystem({
+  storage: { status: _qs.status, save: () => saveJson(QUANTUM_FILE, { status: quantumSystem.status }) },
+  onUpgrade: ({ from, to, era }) => {
+    try { addLog('info', 'Quantum', `🔬 AUTO-UPGRADE: ${from} → ${to.name} (${to.qubits} qubits) era=${era}`); } catch(_) {}
+    console.log('\n' + '='.repeat(60));
+    console.log(`🔬 QUANTUM AUTO-UPGRADE ACTIVATED: ${to.name} | ${to.qubits} qubits | era: ${era}`);
+    console.log('='.repeat(60) + '\n');
+  },
+});
+
 
 app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
   try {
@@ -2513,6 +2528,38 @@ app.get('/api/viral/stats', (req, res) => {
   });
 });
 
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  QUANTUM-READY SYSTEM — Auto-upgrade เมื่อ Quantum พร้อม
+// ════════════════════════════════════════════════════════════════════════════════
+
+// GET /api/quantum/status — สถานะ quantum providers + era + upgrade history
+app.get('/api/quantum/status', (_req, res) => {
+  res.json({ success: true, ...quantumSystem.getStatus() });
+});
+
+// POST /api/quantum/scan — force scan ทุก provider ทันที (admin)
+app.post('/api/quantum/scan', async (_req, res) => {
+  const result = await quantumSystem.scan();
+  const available = Object.values(result.providers).filter(p => p.available);
+  res.json({
+    success: true,
+    message: available.length
+      ? `🔬 พบ Quantum provider ${available.length} ตัว — auto-upgrade ทำงาน`
+      : `⏳ ยังไม่มี Quantum provider พร้อม — ติดตามต่อ (ตรวจรายวัน)`,
+    era: result.era,
+    available,
+    next_check: result.last_check,
+  });
+});
+
+// PATCH /api/quantum/auto-upgrade — เปิด/ปิด auto-upgrade
+app.patch('/api/quantum/auto-upgrade', (req, res) => {
+  const { enabled } = req.body || {};
+  quantumSystem.setAutoUpgrade(!!enabled);
+  res.json({ success: true, auto_upgrade: !!enabled });
+});
+
 // Helper — สร้าง ready-to-copy text สำหรับแชร์พร้อม affiliate link
 function buildShareText(content, refCode) {
   const tags = (content.hashtags || []).join(' ');
@@ -2522,6 +2569,19 @@ function buildShareText(content, refCode) {
 
 // ── Cron: ทุก 5 นาที ตรวจ queue ที่ถึงเวลา (local only) ─────────────────────
 if (!IS_VERCEL) {
+  // Quantum provider scan — รายวัน เที่ยงคืน Bangkok time
+  cron.schedule('0 17 * * *', async () => { // 17:00 UTC = 00:00 BKK
+    try {
+      const result = await quantumSystem.scan();
+      const ready = Object.values(result.providers).filter(p => p.available);
+      if (ready.length > 0) {
+        addLog('info', 'Quantum', `🔬 Scan: ${ready.length} provider พร้อม | era: ${result.era}`);
+      }
+    } catch (e) {
+      addLog('warn', 'Quantum', `Scan ไม่สำเร็จ: ${e.message}`);
+    }
+  });
+
   cron.schedule('*/5 * * * *', async () => {
     const now = Date.now();
     const pending = autopostQueue.filter(i => i.status === 'queued' && new Date(i.schedule_at).getTime() <= now);
