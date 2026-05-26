@@ -58,14 +58,27 @@
   .btn-copy:hover{background:#3730a3;color:#fff}
   .btn-copy.copied{background:#065f46;color:#6ee7b7}
 
-  /* Platform copy row */
-  .platform-row{display:flex;gap:6px;padding:0 14px 12px;flex-wrap:wrap}
-  .btn-platform{flex:1;min-width:70px;padding:7px 4px;border:1px solid #2a2a40;background:#1e1e30;color:#f1f5f9;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;transition:.1s;text-align:center}
-  .btn-platform:hover{background:#2a2a40}
-  .btn-platform.tiktok{border-color:#fe2c55;color:#fe2c55}
-  .btn-platform.facebook{border-color:#1877f2;color:#60a5fa}
-  .btn-platform.line{border-color:#06c755;color:#4ade80}
-  .btn-platform.instagram{border-color:#e1306c;color:#f472b6}
+  /* Auto-post panel */
+  .autopost{padding:10px 14px 14px;border-top:1px solid #2a2a40}
+  .autopost-title{font-size:11px;color:#94a3b8;margin-bottom:8px;font-weight:600}
+  .btn-autopost-all{width:100%;padding:10px;background:linear-gradient(135deg,#7c3aed,#2563eb);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;transition:.15s}
+  .btn-autopost-all:hover{opacity:.9}
+  .btn-autopost-all:disabled{opacity:.5;cursor:not-allowed}
+  .platform-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .platform-item{background:#1e1e30;border:1px solid #2a2a40;border-radius:8px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .platform-name{font-size:11px;font-weight:600}
+  .platform-status{font-size:10px;border-radius:10px;padding:2px 7px;flex-shrink:0}
+  .status-ready{background:#064e3b;color:#6ee7b7}
+  .status-api{background:#1e3a5f;color:#93c5fd}
+  .status-wait{background:#292524;color:#a8a29e}
+  .btn-post{padding:3px 8px;font-size:10px;border:none;border-radius:5px;cursor:pointer;font-weight:600;transition:.1s}
+  .btn-post.tiktok{background:#3f0f15;color:#fe2c55;border:1px solid #fe2c55}
+  .btn-post.facebook{background:#0f1a2e;color:#60a5fa;border:1px solid #1877f2}
+  .btn-post.line{background:#052e16;color:#4ade80;border:1px solid #06c755}
+  .btn-post.instagram{background:#2d0a15;color:#f472b6;border:1px solid #e1306c}
+  .btn-post:hover{opacity:.8}
+  .btn-post.posting{opacity:.5;cursor:not-allowed}
+  .btn-post.done{background:#064e3b;color:#6ee7b7;border-color:#065f46}
 
   /* Settings */
   .settings{padding:10px 14px;border-top:1px solid #2a2a40}
@@ -177,13 +190,33 @@
     </div>
   </div>
 
-  <!-- Copy to Platform -->
-  <div style="padding:4px 0 6px;font-size:11px;color:#64748b;text-align:center">คัดลอกพร้อมลิงก์ไปยัง:</div>
-  <div class="platform-row">
-    <button class="btn-platform tiktok"    onclick="copyPlatform('TikTok')">📱 TikTok</button>
-    <button class="btn-platform facebook"  onclick="copyPlatform('Facebook')">👥 Facebook</button>
-    <button class="btn-platform line"      onclick="copyPlatform('LINE')">💬 LINE</button>
-    <button class="btn-platform instagram" onclick="copyPlatform('Instagram')">📸 IG</button>
+  <!-- Auto-Post Panel -->
+  <div class="autopost">
+    <div class="autopost-title">🚀 โพสต์อัตโนมัติทุก Platform</div>
+    <button class="btn-autopost-all" id="btnPostAll" onclick="postAll()">
+      ⚡ โพสต์ทุก Platform ในคลิกเดียว
+    </button>
+    <div class="platform-grid">
+      <div class="platform-item">
+        <span class="platform-name">📱 TikTok</span>
+        <button class="btn-post tiktok" id="postTikTok" onclick="postOne('tiktok')">โพสต์</button>
+      </div>
+      <div class="platform-item">
+        <span class="platform-name">👥 Facebook</span>
+        <button class="btn-post facebook" id="postFacebook" onclick="postOne('facebook')">โพสต์</button>
+      </div>
+      <div class="platform-item">
+        <span class="platform-name">💬 LINE</span>
+        <button class="btn-post line" id="postLine" onclick="postOne('line')">โพสต์</button>
+      </div>
+      <div class="platform-item">
+        <span class="platform-name">📸 Instagram</span>
+        <button class="btn-post instagram" id="postInstagram" onclick="postOne('instagram')">โพสต์</button>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#64748b;text-align:center;margin-top:6px" id="postNote">
+      LINE/Facebook: ยืนยัน 1 ครั้ง &nbsp;|&nbsp; ตั้งค่า API Token → โพสต์ 0 คลิก
+    </div>
   </div>
 
 </div>
@@ -193,15 +226,31 @@
 
 <!-- Settings -->
 <details class="settings" id="settingsSection" style="display:none">
-  <summary>⚙️ ตั้งค่า API & Affiliate</summary>
+  <summary>⚙️ ตั้งค่า — API, Affiliate & Auto-Post Token</summary>
   <div class="settings-body">
-    <label>API URL (backend ของคุณ)</label>
+    <label>🌐 API URL (backend)</label>
     <input type="text" id="inApiUrl" placeholder="https://openthai-ai.vercel.app">
-    <label>Shopee Affiliate SMTT Code (จาก affiliate.shopee.co.th)</label>
-    <input type="text" id="inRefCode" placeholder="เช่น 0.123456789">
-    <label>ชื่อ / Ref ของคุณ (สำหรับ tracked link)</label>
+
+    <label>🛒 Shopee Affiliate SMTT (จาก affiliate.shopee.co.th)</label>
+    <input type="text" id="inShopeeSmtt" placeholder="เช่น 0.123456789">
+
+    <label>🛒 Lazada Affiliate CC (จาก affiliate.lazada.co.th)</label>
+    <input type="text" id="inLazadaCC" placeholder="เช่น abc123">
+
+    <label>🪪 ชื่อ Ref ของคุณ (สำหรับ tracked link)</label>
     <input type="text" id="inMyRef" placeholder="เช่น myshop2024">
-    <button class="btn-save" onclick="saveSettings()">💾 บันทึก</button>
+
+    <label>💚 LINE Notify Token (notify-bot.line.me) — โพสต์ LINE 0 คลิก</label>
+    <input type="text" id="inLineToken" placeholder="token จาก notify-bot.line.me/my">
+
+    <label>💙 Facebook Page ID + Page Token — โพสต์ Facebook 0 คลิก</label>
+    <input type="text" id="inFbPageId" placeholder="Facebook Page ID เช่น 1234567890">
+    <input type="text" id="inFbToken" placeholder="Page Access Token จาก developers.facebook.com">
+
+    <button class="btn-save" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
+    <div style="margin-top:6px;font-size:10px;color:#64748b">
+      Token ถูกเก็บใน Chrome local storage — ไม่ส่งออกไปที่อื่น
+    </div>
   </div>
 </details>
 

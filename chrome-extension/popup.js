@@ -196,22 +196,117 @@ function copyToClipboard(text, btn) {
   });
 }
 
+// ── Auto-Post ─────────────────────────────────────────────────────────────────
+async function postAll() {
+  if (!currentResult) return;
+  const btn = document.getElementById('btnPostAll');
+  btn.disabled = true;
+  btn.textContent = '⏳ กำลังโพสต์...';
+
+  const platforms = ['tiktok', 'facebook', 'line', 'instagram'];
+  const results = await Promise.allSettled(platforms.map(p => postOne(p, true)));
+
+  btn.disabled = false;
+  const ok = results.filter(r => r.status === 'fulfilled').length;
+  btn.textContent = `✅ โพสต์แล้ว ${ok}/${platforms.length} platform`;
+  setTimeout(() => { btn.textContent = '⚡ โพสต์ทุก Platform ในคลิกเดียว'; }, 3000);
+}
+
+async function postOne(platform, silent = false) {
+  if (!currentResult) return;
+  const btnId = { tiktok:'postTikTok', facebook:'postFacebook', line:'postLine', instagram:'postInstagram' }[platform];
+  const btn = document.getElementById(btnId);
+  if (btn) { btn.classList.add('posting'); btn.textContent = '⏳'; }
+
+  try {
+    await _doPost(platform);
+    if (btn) { btn.classList.remove('posting'); btn.classList.add('done'); btn.textContent = '✅'; }
+    setTimeout(() => { if (btn) { btn.classList.remove('done'); btn.textContent = 'โพสต์'; } }, 3000);
+  } catch (e) {
+    if (btn) { btn.classList.remove('posting'); btn.textContent = '❌'; }
+    setTimeout(() => { if (btn) btn.textContent = 'โพสต์'; }, 2000);
+    if (!silent) showError(`${platform}: ${e.message}`);
+    throw e;
+  }
+}
+
+async function _doPost(platform) {
+  if (!currentResult) throw new Error('ยังไม่มีคอนเทนต์');
+  const c = currentResult;
+  const aff = currentAffLink;
+  const tags = (c.hashtags || []).join(' ');
+  const script = Array.isArray(c.script) ? c.script.join('\n') : (c.script || '');
+
+  const s = await new Promise(r => chrome.storage.sync.get(null, r));
+
+  if (platform === 'line') {
+    if (s.lineNotifyToken) {
+      // 0-click: LINE Notify API
+      const text = `${c.hook}\n\n${c.caption}\n\n🔗 ${aff}\n\n${tags}`;
+      const r = await chrome.runtime.sendMessage({ type: 'POST_LINE_NOTIFY', text });
+      if (!r?.ok) throw new Error(r?.error || 'LINE Notify failed');
+    } else {
+      // 1-tap: LINE Share dialog
+      const text = `${c.hook}\n\n${c.caption}`;
+      await chrome.runtime.sendMessage({ type: 'SHARE_LINE', text, affLink: aff });
+    }
+    return;
+  }
+
+  if (platform === 'facebook') {
+    if (s.fbPageId && s.fbPageToken) {
+      // 0-click: Facebook Graph API
+      const text = `${c.hook}\n\n${c.caption}\n\n🔗 ${aff}\n\n${tags}`;
+      const r = await chrome.runtime.sendMessage({ type: 'POST_FACEBOOK_API', text });
+      if (!r?.ok) throw new Error(r?.error || 'Facebook API failed');
+    } else {
+      // 1-click: Facebook Share Dialog
+      const text = `${c.hook}\n\n${c.caption}`;
+      await chrome.runtime.sendMessage({ type: 'SHARE_FACEBOOK', text, affLink: aff });
+    }
+    return;
+  }
+
+  if (platform === 'tiktok') {
+    const r = await chrome.runtime.sendMessage({ type: 'FILL_TIKTOK', content: c, affLink: aff });
+    if (!r?.ok) throw new Error(r?.error || 'TikTok auto-fill failed');
+    return;
+  }
+
+  if (platform === 'instagram') {
+    const r = await chrome.runtime.sendMessage({ type: 'FILL_INSTAGRAM', content: c, affLink: aff });
+    if (!r?.ok) throw new Error(r?.error || 'Instagram auto-fill failed');
+    return;
+  }
+}
+
 // ── Settings ──────────────────────────────────────────────────────────────────
 async function loadSettings() {
-  const s = await chrome.storage.sync.get(['apiUrl', 'refCode', 'myRef']);
-  if (s.apiUrl)  document.getElementById('inApiUrl').value  = s.apiUrl;
-  if (s.refCode) document.getElementById('inRefCode').value = s.refCode;
-  if (s.myRef)   document.getElementById('inMyRef').value   = s.myRef;
+  const s = await chrome.storage.sync.get(null);
+  const set = (id, val) => { if (val && document.getElementById(id)) document.getElementById(id).value = val; };
+  set('inApiUrl',    s.apiUrl);
+  set('inShopeeSmtt', s.shopeeSmtt);
+  set('inLazadaCC',  s.lazadaCC);
+  set('inMyRef',     s.myRef);
+  set('inLineToken', s.lineNotifyToken);
+  set('inFbPageId',  s.fbPageId);
+  set('inFbToken',   s.fbPageToken);
 }
 
 function saveSettings() {
-  const apiUrl  = document.getElementById('inApiUrl').value.trim();
-  const refCode = document.getElementById('inRefCode').value.trim();
-  const myRef   = document.getElementById('inMyRef').value.trim();
-  chrome.storage.sync.set({ apiUrl, refCode, myRef }, () => {
+  const g = id => document.getElementById(id)?.value?.trim() || '';
+  chrome.storage.sync.set({
+    apiUrl:          g('inApiUrl'),
+    shopeeSmtt:      g('inShopeeSmtt'),
+    lazadaCC:        g('inLazadaCC'),
+    myRef:           g('inMyRef'),
+    lineNotifyToken: g('inLineToken'),
+    fbPageId:        g('inFbPageId'),
+    fbPageToken:     g('inFbToken'),
+  }, () => {
     const btn = event.currentTarget;
     btn.textContent = '✅ บันทึกแล้ว';
-    setTimeout(() => btn.textContent = '💾 บันทึก', 1500);
+    setTimeout(() => btn.textContent = '💾 บันทึกการตั้งค่า', 1500);
   });
 }
 

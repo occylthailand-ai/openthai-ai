@@ -417,6 +417,39 @@ app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
   }
 });
 
+// ─── GET /go — Affiliate redirect tracker ────────────────────────────────────
+// ใช้โดย Chrome Extension: /go?ref=CODE&url=PRODUCT_URL&utm_*=...
+// บันทึก click → redirect ไป product จริง
+
+app.get('/go', (req, res) => {
+  const { ref, url: dest } = req.query;
+  if (!dest) return res.status(400).send('Missing url parameter');
+
+  // ตรวจสอบ URL ปลอดภัย — อนุญาตเฉพาะ http/https
+  try {
+    const target = new URL(dest);
+    if (!['http:', 'https:'].includes(target.protocol)) {
+      return res.status(400).send('Invalid URL');
+    }
+
+    // บันทึก click stats (ถ้ามี ref code)
+    if (ref) {
+      const aff = affiliates.find(a => a.ref_code === ref);
+      if (aff) {
+        aff.total_clicks = (aff.total_clicks || 0) + 1;
+        aff.last_click   = new Date().toISOString();
+        aff.last_product = target.hostname + target.pathname.slice(0, 60);
+        saveAffiliates(affiliates);
+        addLog('info', 'Affiliate', `Click: ${ref} → ${target.hostname}`);
+      }
+    }
+
+    return res.redirect(302, dest);
+  } catch {
+    return res.status(400).send('Invalid URL');
+  }
+});
+
 // ─── GET /api/affiliate/stats/:ref_code — ดูสถิติ ────────────────────────────
 app.get('/api/affiliate/stats/:ref_code', (req, res) => {
   const aff = affiliates.find((a) => a.ref_code === req.params.ref_code);
