@@ -27,6 +27,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { createPRSystem } from './pr-communications.js';
 import { handleLineWebhook } from './line-bot.js';
+import { TIERS, getTierForEarnings, getNextTier, calcProgress, TokenManager, AffectLedger } from './tier-system.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -367,6 +368,15 @@ function saveAffiliates(data) {
 // ─── POST /api/affiliate/apply — รับสมัคร Affiliate ──────────────────────────
 const affiliates = loadAffiliates(); // persistent JSON file store
 
+// ── Tier / Token / Affect storage ────────────────────────────────────────────
+const TOKEN_FILE  = join(WRITE_DATA_DIR, 'token_usage.json');
+const AFFECT_FILE = join(WRITE_DATA_DIR, 'affect_ledger.json');
+function loadJson(file) { try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return {}; } }
+function saveJson(file, data) { try { writeFileSync(file, JSON.stringify(data, null, 2), 'utf8'); } catch (_) {} }
+
+const tokenMgr  = new TokenManager({ usage: loadJson(TOKEN_FILE),  save: () => saveJson(TOKEN_FILE,  tokenMgr.usage) });
+const affectLgr = new AffectLedger({ records: (loadJson(AFFECT_FILE).records || []), save: () => saveJson(AFFECT_FILE, { records: affectLgr.records }) });
+
 app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
   try {
     const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link, referred_by } = req.body;
@@ -525,8 +535,113 @@ app.post('/api/affiliate/record-sale', (req, res) => {
     }
   }
 
+  // Affect bonus — Elite+ affectors receive layer-1/2/3 bonus
+  const affectBonuses = affectLgr.calcAffectBonus(ref_code, Number(amount), affiliates);
+  for (const bonus of affectBonuses) {
+    const affector = affiliates.find(a => a.ref_code === bonus.ref);
+    if (affector) {
+      affector.total_earned   = (affector.total_earned   || 0) + bonus.amount;
+      affector.affect_earned  = (affector.affect_earned  || 0) + bonus.amount;
+    }
+  }
+
+  // Auto-upgrade tier based on monthly earned
+  const prevTier = aff.tier;
+  const newTier  = getTierForEarnings(aff.monthly_earned || aff.total_earned);
+  if (newTier.name !== prevTier) {
+    aff.tier = newTier.name;
+    aff.commission_rate = 0.20 + newTier.commissionBoost;
+    addLog('info', 'Tier', `🎉 ${aff.name} อัพเลเวล ${prevTier} → ${newTier.label}`);
+  }
+
   saveAffiliates(affiliates);
-  res.json({ success: true, earned, referrerBonus });
+  res.json({ success: true, earned, referrerBonus, affectBonuses, tier: aff.tier, tierUpgraded: newTier.name !== prevTier });
+});
+
+// ── Tier System Endpoints ─────────────────────────────────────────────────────
+
+// GET /api/tier/list — ดู tier ทั้งหมดพร้อม perks
+app.get('/api/tier/list', (_req, res) => {
+  res.json({ success: true, tiers: TIERS.map(t => ({
+    name: t.name, label: t.label, minMonthly: t.minMonthly, color: t.color,
+    tokensPerDay: t.tokensPerDay, affectQuota: t.affectQuota,
+    commissionBoost: t.commissionBoost, perks: t.perks, badge: t.badge,
+  })) });
+});
+
+// GET /api/tier/status/:ref_code — สถานะ tier + tokens + progress ของสมาชิก
+app.get('/api/tier/status/:ref_code', (req, res) => {
+  const aff = affiliates.find(a => a.ref_code === req.params.ref_code);
+  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบสมาชิก' });
+
+  const monthlyEarned = aff.monthly_earned || aff.total_earned || 0;
+  const tier     = getTierForEarnings(monthlyEarned);
+  const progress = calcProgress(monthlyEarned, tier.name);
+  const tokens   = tokenMgr.summary(aff.ref_code, tier.name);
+  const affect   = affectLgr.stats(aff.ref_code);
+
+  res.json({
+    success: true,
+    member: { name: aff.name, ref_code: aff.ref_code },
+    tier: { ...tier, progress },
+    tokens,
+    affect,
+    earnings: { total: aff.total_earned || 0, monthly: monthlyEarned, referral_bonus: aff.referral_bonus || 0, affect_bonus: aff.affect_earned || 0 },
+  });
+});
+
+// POST /api/tier/use-token — ใช้ token สำหรับโพสต์บน platform
+app.post('/api/tier/use-token', (req, res) => {
+  const { ref_code, platform } = req.body || {};
+  if (!ref_code || !platform) return res.status(400).json({ success: false, message: 'ต้องการ ref_code และ platform' });
+  const aff  = affiliates.find(a => a.ref_code === ref_code);
+  if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบสมาชิก' });
+  const tier = getTierForEarnings(aff.monthly_earned || aff.total_earned || 0);
+  const result = tokenMgr.useToken(ref_code, platform, tier.name);
+  res.json({ success: result.ok, ...result, tier: tier.label });
+});
+
+// POST /api/tier/affect — Elite+ affect สมาชิกคนอื่น (ขยายวงกว้าง)
+app.post('/api/tier/affect', (req, res) => {
+  const { affector_ref, target_ref, post_id } = req.body || {};
+  if (!affector_ref || !target_ref) return res.status(400).json({ success: false, message: 'ต้องการ affector_ref และ target_ref' });
+  if (affector_ref === target_ref) return res.status(400).json({ success: false, message: 'ไม่สามารถ affect ตัวเองได้' });
+
+  const affector = affiliates.find(a => a.ref_code === affector_ref);
+  if (!affector) return res.status(404).json({ success: false, message: 'ไม่พบสมาชิก' });
+
+  const tier     = getTierForEarnings(affector.monthly_earned || affector.total_earned || 0);
+  const useResult = tokenMgr.useAffect(affector_ref, tier.name);
+  if (!useResult.ok) return res.status(429).json({ success: false, ...useResult });
+
+  affectLgr.record(affector_ref, target_ref, post_id || `post_${Date.now()}`);
+  addLog('info', 'Affect', `${tier.badge} ${affector.name} affected → ${target_ref}`);
+  res.json({ success: true, affectRemaining: useResult.affectRemaining, tier: tier.label, message: `${tier.badge} Affect สำเร็จ! คุณจะได้รับ bonus เมื่อ ${target_ref} ขายได้` });
+});
+
+// GET /api/tier/leaderboard — Top 20 by tier + earnings + affect power
+app.get('/api/tier/leaderboard', (_req, res) => {
+  const board = affiliates
+    .filter(a => a.status === 'active')
+    .map(a => {
+      const tier     = getTierForEarnings(a.monthly_earned || a.total_earned || 0);
+      const affected = affectLgr.stats(a.ref_code);
+      return {
+        name:          a.name.slice(0, 1) + '***',
+        ref_code:      a.ref_code,
+        tier:          tier.label,
+        badge:         tier.badge,
+        color:         tier.color,
+        total_earned:  a.total_earned  || 0,
+        monthly_earned:a.monthly_earned || 0,
+        affect_given:  affected.given,
+        affect_earned: a.affect_earned || 0,
+        referral_count:affiliates.filter(x => x.referred_by === a.ref_code).length,
+      };
+    })
+    .sort((a, b) => b.total_earned - a.total_earned)
+    .slice(0, 20);
+  res.json({ success: true, data: board });
 });
 
 // ─── POST /api/contact — ติดต่อทีมงาน ───────────────────────────────────────
