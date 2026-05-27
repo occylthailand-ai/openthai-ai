@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/user/openthai-ai/docs/session-end.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

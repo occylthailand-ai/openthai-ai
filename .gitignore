@@ -29,7 +29,8 @@ backend/data/waitlist.json
 # หมายเหตุ: backend/data/system_charter.json ไม่ include ตรงนี้ — commit ได้ (static config)
 
 # IDE / Editor folders
-.claude/
+.claude/*
+!.claude/settings.json
 .cursor/
 .history/
 .snapshots/
