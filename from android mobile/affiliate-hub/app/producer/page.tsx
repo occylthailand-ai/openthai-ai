@@ -2,6 +2,7 @@
 // app/producer/page.tsx — Producer Landing + Auth Modal
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
 const CATEGORIES = [
@@ -63,10 +64,10 @@ function ProducerContent() {
     <>
       {/* NAV */}
       <nav className="nav">
-        <span className="nav-logo"><span className="nav-dot"/>Producer Hub</span>
+        <Link href="/" className="nav-logo"><span className="nav-dot"/>พันธมิตร Hub</Link>
         <div className="nav-links">
-          <a href="/" className="nav-link">Affiliate Hub</a>
-          <button className="nav-link" onClick={() => openModal("login")}>Producer Login</button>
+          <Link href="/" className="nav-link">← กลับ</Link>
+          <button className="nav-link" onClick={() => openModal("login")}>เข้าสู่ระบบ</button>
         </div>
         <button className="btn-gold" style={{ padding:"9px 22px", fontSize:"14px" }} onClick={() => openModal("register")}>
           นำสินค้าเข้าแพลตฟอร์ม

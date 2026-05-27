@@ -85,7 +85,7 @@ export default function Dashboard() {
     <>
       {/* NAV */}
       <nav className="nav">
-        <Link href="/dashboard" className="nav-logo"><span className="nav-dot"/>Affiliate Hub</Link>
+        <Link href="/dashboard" className="nav-logo"><span className="nav-dot"/>พันธมิตร Hub</Link>
         <div className="nav-links">
           <Link href="/dashboard"         className="nav-link active">Dashboard</Link>
           <Link href="/dashboard/history" className="nav-link">History</Link>
@@ -148,7 +148,7 @@ export default function Dashboard() {
 
             {/* MY LINK */}
             <div className="card">
-              <div className="card-head">My Affiliate Link</div>
+              <div className="card-head">ลิงก์พันธมิตรของฉัน</div>
 
               <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"2px",padding:"14px 16px",marginBottom:"12px"}}>
                 <div className="tag" style={{display:"block",marginBottom:"7px"}}>Your URL</div>
@@ -217,7 +217,7 @@ export default function Dashboard() {
               <div className="card" style={{cursor:"pointer",textAlign:"center",padding:"20px"}}>
                 <div style={{fontSize:"28px",marginBottom:"8px"}}>🏆</div>
                 <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"16px",fontWeight:600,marginBottom:"4px"}}>Leaderboard</div>
-                <div style={{fontSize:"12px",color:"var(--muted2)"}}>ดูอันดับ Top Affiliates</div>
+                <div style={{fontSize:"12px",color:"var(--muted2)"}}>ดูอันดับพันธมิตรชั้นนำ</div>
               </div>
             </Link>
             <Link href="/media-kit" style={{textDecoration:"none"}}>

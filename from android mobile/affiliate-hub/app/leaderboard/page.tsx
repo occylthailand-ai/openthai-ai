@@ -36,7 +36,7 @@ export default function Leaderboard() {
   return (
     <>
       <nav className="nav">
-        <Link href="/" className="nav-logo"><span className="nav-dot"/>Affiliate Hub</Link>
+        <Link href="/" className="nav-logo"><span className="nav-dot"/>พันธมิตร Hub</Link>
         <div className="nav-links">
           <Link href="/dashboard"   className="nav-link">Dashboard</Link>
           <Link href="/leaderboard" className="nav-link active">Leaderboard</Link>

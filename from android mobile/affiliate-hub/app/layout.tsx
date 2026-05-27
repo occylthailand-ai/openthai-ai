@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title:       "Affiliate Hub — รายได้ที่ทำงานแทนคุณ",
-  description: "แชร์ลิงก์ รับ commission 35% ทุกยอดขาย โอนเข้า PromptPay อัตโนมัติ",
-  keywords:    "affiliate, commission, PromptPay, passive income, รายได้เสริม",
+  title:       "พันธมิตร Hub — Openthai.ai",
+  description: "ร่วมเป็นพันธมิตรกับ Openthai.ai — พันธมิตรขาย ผู้ผลิต นักพัฒนา และคอนเทนต์ครีเอเตอร์",
+  keywords:    "พันธมิตร, affiliate, commission, PromptPay, passive income, รายได้เสริม, Openthai",
   openGraph: {
-    title:       "Affiliate Hub",
-    description: "แชร์ลิงก์ รับ commission 35%",
+    title:       "พันธมิตร Hub — Openthai.ai",
+    description: "4 ประเภทพันธมิตร ร่วมสร้างระบบนิเวศ AI ไทย",
     type:        "website",
   },
 };
