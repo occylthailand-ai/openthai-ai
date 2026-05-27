@@ -58,7 +58,7 @@ export default function Leaderboard() {
               <div style={{height:"1px",width:"32px",background:"var(--border)"}}/>
             </div>
             <h1 style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"clamp(32px,5vw,54px)",fontWeight:300,marginBottom:"8px"}}>
-              Top <em style={{fontStyle:"italic",color:"var(--gold)",fontWeight:600}}>Affiliates</em>
+              Top <em style={{fontStyle:"italic",color:"var(--gold)",fontWeight:600}}>พันธมิตร</em>
             </h1>
             <p style={{fontSize:"13px",color:"var(--muted2)"}}>
               อัปเดตทุก 10 นาที · อันดับที่ 1–10 ของเดือนนี้
@@ -79,7 +79,7 @@ export default function Leaderboard() {
                 return (
                   <div key={r.rank} style={{flex:1,textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:"8px"}}>
                     <div style={{fontSize:isFirst?"28px":"22px"}}>{RANK_ICON[r.rank - 1]}</div>
-                    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isFirst?"16px":"14px",fontWeight:700,color:LEVEL_COLOR[r.level]???"var(--text)"}}>{r.name}</div>
+                    <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isFirst?"16px":"14px",fontWeight:700,color:LEVEL_COLOR[r.level]??"var(--text)"}}>{r.name}</div>
                     <div className="badge badge-gold" style={{color:LEVEL_COLOR[r.level],borderColor:LEVEL_COLOR[r.level]+"44",background:LEVEL_COLOR[r.level]+"11"}}>{r.level}</div>
                     <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:isFirst?"22px":"18px",fontWeight:700,color:"var(--gold)"}}>
                       ฿{r.total_earned.toLocaleString()}
