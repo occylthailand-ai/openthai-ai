@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 export async function GET(req: NextRequest) {
   const ref      = req.nextUrl.searchParams.get("ref") ?? "";
   const redirect = req.nextUrl.searchParams.get("redirect") ?? process.env.NEXT_PUBLIC_APP_URL ?? "/";
+  const channel  = req.nextUrl.searchParams.get("ch") ?? "direct";
 
   if (ref) {
     const db = supabaseAdmin();
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
       ref_code:   ref,
       ip:         req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown",
       user_agent: req.headers.get("user-agent") ?? "",
+      channel,
     }).then(() => {});
 
     // เซต cookie เก็บ ref สำหรับ conversion tracking (30 วัน)

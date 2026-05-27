@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS public.aff_clicks (
   ref_code    TEXT NOT NULL REFERENCES public.aff_users(ref_code) ON DELETE CASCADE,
   ip          TEXT,
   user_agent  TEXT,
+  channel     TEXT DEFAULT 'direct',
   converted   BOOLEAN DEFAULT FALSE,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
@@ -99,5 +100,33 @@ FROM public.aff_users u
 LEFT JOIN public.aff_clicks      cl ON cl.ref_code = u.ref_code
 LEFT JOIN public.aff_commissions c  ON c.user_id   = u.id
 GROUP BY u.id, u.ref_code, u.level, u.name, u.email;
+
+-- Channel breakdown view — คลิกแยกตาม channel (TikTok/LINE/Facebook ฯลฯ)
+CREATE OR REPLACE VIEW public.aff_channel_stats AS
+SELECT
+  u.id                AS user_id,
+  u.ref_code,
+  cl.channel,
+  COUNT(cl.id)        AS clicks,
+  COUNT(cl.id) FILTER (WHERE cl.converted = TRUE) AS conversions
+FROM public.aff_users u
+LEFT JOIN public.aff_clicks cl ON cl.ref_code = u.ref_code
+GROUP BY u.id, u.ref_code, cl.channel;
+
+-- Leaderboard view (public — ชื่อไม่ถูก mask ที่นี่ mask ที่ API แทน)
+CREATE OR REPLACE VIEW public.aff_leaderboard AS
+SELECT
+  u.name,
+  u.level,
+  COALESCE(SUM(c.commission) FILTER (WHERE c.status IN ('approved','paid')), 0) AS total_earned,
+  COUNT(DISTINCT c.id) AS total_referrals
+FROM public.aff_users u
+LEFT JOIN public.aff_commissions c ON c.user_id = u.id
+GROUP BY u.id, u.name, u.level
+ORDER BY total_earned DESC
+LIMIT 10;
+
+-- Migration helper: เพิ่ม channel column ถ้า deploy บน DB เก่า
+-- ALTER TABLE public.aff_clicks ADD COLUMN IF NOT EXISTS channel TEXT DEFAULT 'direct';
 
 SELECT 'Affiliate schema created successfully' AS result;

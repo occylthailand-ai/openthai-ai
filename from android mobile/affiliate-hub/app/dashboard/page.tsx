@@ -90,7 +90,8 @@ export default function Dashboard() {
           <Link href="/dashboard"         className="nav-link active">Dashboard</Link>
           <Link href="/dashboard/history" className="nav-link">History</Link>
           <Link href="/dashboard/withdraw"className="nav-link">Withdraw</Link>
-          <Link href="/affiliate"         className="nav-link">My Links</Link>
+          <Link href="/leaderboard"       className="nav-link">Leaderboard</Link>
+          <Link href="/media-kit"         className="nav-link">Media Kit</Link>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:"16px"}}>
           <div className="nav-balance">Balance <strong>฿{(stats?.balance ?? 0).toLocaleString()}</strong></div>
@@ -208,6 +209,24 @@ export default function Dashboard() {
                 </Link>
               )}
             </div>
+          </div>
+
+          {/* QUICK ACTIONS */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"20px",marginTop:"20px"}}>
+            <Link href="/leaderboard" style={{textDecoration:"none"}}>
+              <div className="card" style={{cursor:"pointer",textAlign:"center",padding:"20px"}}>
+                <div style={{fontSize:"28px",marginBottom:"8px"}}>🏆</div>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"16px",fontWeight:600,marginBottom:"4px"}}>Leaderboard</div>
+                <div style={{fontSize:"12px",color:"var(--muted2)"}}>ดูอันดับ Top Affiliates</div>
+              </div>
+            </Link>
+            <Link href="/media-kit" style={{textDecoration:"none"}}>
+              <div className="card" style={{cursor:"pointer",textAlign:"center",padding:"20px"}}>
+                <div style={{fontSize:"28px",marginBottom:"8px"}}>📦</div>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"16px",fontWeight:600,marginBottom:"4px"}}>Media Kit</div>
+                <div style={{fontSize:"12px",color:"var(--muted2)"}}>Copy สำเร็จรูป TikTok / LINE / Facebook</div>
+              </div>
+            </Link>
           </div>
 
           {/* SHARE CHANNELS */}
