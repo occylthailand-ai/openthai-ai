@@ -39,6 +39,39 @@ const PLANS = [
   },
 ];
 
+// ช่องทางการชำระเงิน → ป้ายภาษาไทย
+const METHOD_LABELS = {
+  promptpay:    'พร้อมเพย์ (PromptPay QR)',
+  card:         'บัตรเครดิต/เดบิต',
+  subscription: 'ตัดบัตรอัตโนมัติรายเดือน',
+};
+
+// แปลงเวลาเป็นรูปแบบไทย เช่น "1 มิถุนายน 2569 12:37"
+function formatThaiDateTime(iso) {
+  const d = iso ? new Date(iso) : new Date();
+  if (isNaN(d.getTime())) return '-';
+  try {
+    return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
+      day: 'numeric', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(d).replace(' เวลา ', ' ');
+  } catch (_) {
+    return d.toLocaleString('th-TH');
+  }
+}
+
+// รวบรวมข้อมูลใบเสร็จจาก response ของ backend (status / create)
+function buildReceipt(data = {}) {
+  return {
+    chargeId:  data.charge_id || null,
+    amount:    typeof data.amount_thb === 'number' ? data.amount_thb : null,
+    paidAt:    data.paid_at || data.created_at || null,
+    method:    data.method || 'promptpay',
+    plan:      data.plan || null,
+    reference: data.reference || data.promptpay_ref || null,
+  };
+}
+
 const PaymentPage = () => {
   const navigate = useNavigate();
   const [selectedPlan, setSelectedPlan] = useState('pro');
@@ -49,6 +82,7 @@ const PaymentPage = () => {
   const [chargeId, setChargeId] = useState(null);
   const [pollCount, setPollCount] = useState(0);
   const [error, setError] = useState('');
+  const [receipt, setReceipt] = useState(null);
 
   const plan = PLANS.find(p => p.key === selectedPlan);
 
@@ -59,7 +93,7 @@ const PaymentPage = () => {
       try {
         const res = await fetch(apiUrl(`/api/payment/status/${chargeId}`));
         const data = await res.json();
-        if (data.status === 'successful') { clearInterval(timer); setStep('success'); }
+        if (data.status === 'successful') { clearInterval(timer); setReceipt(buildReceipt(data)); setStep('success'); }
         if (data.status === 'failed' || data.status === 'expired') { clearInterval(timer); setError('การชำระเงินล้มเหลว กรุณาลองใหม่'); setStep('select'); }
         setPollCount(c => c + 1);
       } catch (_) {}
@@ -86,6 +120,8 @@ const PaymentPage = () => {
         setChargeId(data.charge_id);
         setStep('pay');
       } else {
+        setChargeId(data.charge_id || null);
+        setReceipt(buildReceipt({ ...data, paid_at: new Date().toISOString() }));
         setStep('success');
       }
     } catch (e) {
@@ -195,22 +231,61 @@ const PaymentPage = () => {
           </div>
         )}
 
-        {/* Step: Success */}
-        {step === 'success' && (
-          <div style={{ maxWidth: '480px', margin: '0 auto', textAlign: 'center' }}>
-            <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '20px', padding: '48px 32px' }}>
-              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
-              <h2 style={{ color: '#6ee7b7', marginBottom: '8px' }}>ชำระเงินสำเร็จ!</h2>
-              <p style={{ color: '#a0a0b0', marginBottom: '24px' }}>
-                คุณได้อัพเกรดเป็นแผน <strong style={{ color: '#fff' }}>{plan.name}</strong> เรียบร้อยแล้ว
-              </p>
-              <button onClick={() => navigate('/dashboard')}
-                style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', padding: '14px 32px', borderRadius: '12px', fontSize: '16px', fontWeight: 700, cursor: 'pointer' }}>
-                ไปที่ Dashboard →
-              </button>
+        {/* Step: Success — ใบเสร็จยืนยันการชำระเงิน */}
+        {step === 'success' && (() => {
+          const r = receipt || {};
+          const amount = (r.amount != null ? r.amount : plan.price);
+          const fmtBaht = (n) => `${Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
+          const rows = [
+            { icon: '🧾', label: 'สรุปการชำระเงิน', value: 'สำเร็จ', valueColor: '#6ee7b7',
+              sub: `แผน ${plan.name} (รายเดือน) · ${fmtBaht(amount)}` },
+            { icon: '📅', label: 'วันที่ชำระเงินสำเร็จ', value: formatThaiDateTime(r.paidAt) },
+            { icon: '฿',  label: 'ยอดที่ชำระทั้งหมด', value: fmtBaht(amount) },
+            { icon: '💳', label: 'ช่องทางการชำระเงิน', value: METHOD_LABELS[r.method] || 'พร้อมเพย์ (PromptPay QR)' },
+            { icon: '🔖', label: 'เลขที่รายการ', value: r.chargeId || r.reference || '-', mono: true },
+          ];
+          return (
+          <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+            <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '20px', overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ textAlign: 'center', padding: '36px 32px 24px', background: 'rgba(16,185,129,0.08)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '56px', marginBottom: '8px' }}>✅</div>
+                <h2 style={{ color: '#6ee7b7', margin: '0 0 4px', fontSize: '24px' }}>ขอบคุณ</h2>
+                <p style={{ color: '#a0a0b0', margin: 0, fontSize: '14px' }}>ชำระเงินสำเร็จ — บัญชีของคุณถูกอัพเกรดเป็นแผน <strong style={{ color: '#fff' }}>{plan.name}</strong> แล้ว</p>
+              </div>
+
+              {/* Receipt rows */}
+              <div style={{ padding: '8px 24px 24px' }}>
+                {rows.map((row, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '14px', padding: '16px 0', borderBottom: i < rows.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                    <div style={{ width: '36px', height: '36px', flexShrink: 0, borderRadius: '10px', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>{row.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '12px', color: '#a0a0b0', marginBottom: '3px' }}>{row.label}</div>
+                      <div style={{ fontSize: '15px', fontWeight: 700, color: row.valueColor || '#fff', wordBreak: 'break-all', fontFamily: row.mono ? 'monospace' : 'inherit' }}>{row.value}</div>
+                      {row.sub && <div style={{ fontSize: '12px', color: '#8a8a9a', marginTop: '3px' }}>{row.sub}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Action */}
+              <div style={{ padding: '0 24px 28px' }}>
+                <button onClick={() => navigate('/dashboard')}
+                  style={{ width: '100%', background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', padding: '15px', borderRadius: '12px', fontSize: '16px', fontWeight: 700, cursor: 'pointer' }}>
+                  ไปที่ Dashboard →
+                </button>
+                <button onClick={() => navigate('/')}
+                  style={{ width: '100%', marginTop: '10px', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', color: '#a0a0b0', padding: '12px', borderRadius: '12px', fontSize: '14px', cursor: 'pointer' }}>
+                  กลับหน้าหลัก
+                </button>
+              </div>
             </div>
+            <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '12px', marginTop: '16px' }}>
+              ใบเสร็จถูกส่งไปยังอีเมลของคุณแล้ว · เก็บเลขที่รายการไว้สำหรับอ้างอิง
+            </p>
           </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

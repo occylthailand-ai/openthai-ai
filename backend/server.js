@@ -2307,13 +2307,21 @@ app.get('/api/payment/status/:chargeId', async (req, res) => {
   }
   try {
     const status = await getChargeStatus(req.params.chargeId);
+    const rec = payments.find(p => p.charge_id === req.params.chargeId);
     // If paid → update payment record
     if (status.paid) {
-      const rec = payments.find(p => p.charge_id === req.params.chargeId);
       if (rec && !rec.paid_at) { rec.paid_at = status.paid_at; rec.status = 'successful'; savePayments(payments); }
       webhooks.dispatch('payment.completed', { charge_id: req.params.chargeId, amount_thb: status.amount_thb, plan: rec?.plan }, null);
     }
-    res.json({ success: true, ...status });
+    // Enrich response with stored record so the client can render a full receipt
+    res.json({
+      success: true,
+      ...status,
+      plan:      rec?.plan || null,
+      method:    rec?.method || null,
+      reference: rec?.promptpay_ref || null,
+      created_at: rec?.createdAt || null,
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
