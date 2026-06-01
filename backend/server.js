@@ -2349,8 +2349,12 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       return res.json({ success: true, ...charge, plan });
     }
 
-    if (method === 'subscription' && email) {
-      const customer = await createOrGetCustomer({ email, name: name || email });
+    if (method === 'subscription') {
+      if (!email) return res.status(400).json({ error: 'ต้องการอีเมลสำหรับการสมัครสมาชิกรายเดือน' });
+      if (!token) return res.status(400).json({ error: 'ต้องการ card token (tokenize บัตรด้วย Omise.js ก่อน)' });
+      if (!planDef.omise_plan_id) return res.status(400).json({ error: `แผน ${plan} ยังไม่ได้ตั้งค่า Omise plan ID — รัน ensureOmisePlans หรือกำหนด OMISE_PLAN_${plan.toUpperCase()}` });
+      // แนบบัตรเข้ากับ customer เพื่อให้ Omise ตัดเงินอัตโนมัติทุกเดือน
+      const customer = await createOrGetCustomer({ email, name: name || email, card_token: token });
       const sub = await createSubscription({ customer_id: customer.customer_id, plan_key: plan });
       payments.unshift({ ...sub, method, email, createdAt: new Date().toISOString() });
       savePayments(payments);
@@ -2414,6 +2418,46 @@ app.get('/api/payment/plans', (req, res) => {
 app.get('/api/payment/history', requireAuth, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 200);
   res.json({ success: true, data: payments.slice(0, limit), total: payments.length });
+});
+
+// GET /api/payment/admin/summary — สรุปยอดขาย (ใช้ Admin Key header เหมือน affiliate)
+app.get('/api/payment/admin/summary', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  const adminKey = process.env.ADMIN_KEY || 'openthai-admin-2026';
+  if (key !== adminKey) return res.status(401).json({ success: false, message: 'Unauthorized — ต้องการ Admin Key' });
+
+  const isPaid = (p) => p.paid || p.status === 'successful' || p.paid_at;
+  const paid = payments.filter(isPaid);
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const sum = (arr) => arr.reduce((t, p) => t + (Number(p.amount_thb) || 0), 0);
+  const paidThisMonth = paid.filter(p => new Date(p.paid_at || p.createdAt) >= monthStart);
+
+  // นับแยกตามแผน
+  const byPlan = {};
+  for (const p of paid) {
+    const k = p.plan || 'unknown';
+    byPlan[k] = byPlan[k] || { count: 0, revenue: 0 };
+    byPlan[k].count += 1;
+    byPlan[k].revenue += Number(p.amount_thb) || 0;
+  }
+
+  res.json({
+    success: true,
+    stats: {
+      revenue_total: sum(paid),
+      revenue_month: sum(paidThisMonth),
+      paid_count:    paid.length,
+      pending_count: payments.length - paid.length,
+      total_count:   payments.length,
+    },
+    by_plan: byPlan,
+    recent: payments.slice(0, 20).map(p => ({
+      charge_id: p.charge_id, plan: p.plan, method: p.method,
+      amount_thb: p.amount_thb, status: isPaid(p) ? 'successful' : (p.status || 'pending'),
+      email: p.email || null, paid_at: p.paid_at || null, created_at: p.createdAt || null,
+    })),
+  });
 });
 
 // POST /api/payment/webhook — Omise webhook (signed)

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 
 const PLANS = [
@@ -8,34 +8,25 @@ const PLANS = [
     name: 'Free',
     price: 0,
     color: '#6b7280',
-    features: ['สร้างคอนเทนต์ 10 ชิ้น/วัน', 'AI Generator พื้นฐาน', 'Trending Hashtags', 'ไม่มีโฆษณา'],
-    limits: '10 content/day',
-  },
-  {
-    key: 'starter',
-    name: 'Starter',
-    price: 299,
-    color: '#10b981',
-    popular: false,
-    features: ['สร้างคอนเทนต์ 100 ชิ้น/วัน', 'AI Generator ทุกฟีเจอร์', 'Video Script AI', 'Brand Memory 500 slots', 'Webhook 3 endpoints', 'รองรับ 3 แพลตฟอร์ม'],
-    limits: '100 content/day',
+    features: ['สร้างคอนเทนต์ 3 ชิ้น/วัน', 'AI Generator พื้นฐาน', 'TikTok + Facebook', 'Trending Hashtags 5 อัน'],
+    limits: '3 content/day',
   },
   {
     key: 'pro',
     name: 'Pro',
-    price: 799,
+    price: 20,
     color: '#6366f1',
     popular: true,
-    features: ['สร้างคอนเทนต์ไม่จำกัด', 'AI Video Generator (RunwayML/Pika)', 'Voice Commander ทุกภาษา', 'Brand Memory ไม่จำกัด', 'Webhook ไม่จำกัด', 'API Access + SDK', 'AI Agent 24/7', 'Priority Support'],
+    features: ['สร้างคอนเทนต์ไม่จำกัด', 'AI Generator ทุกฟีเจอร์', 'ทุกแพลตฟอร์ม 241+', 'AI Critic เต็มรูปแบบ', 'แฮชแท็ก 20+ อัน', 'ประวัติคอนเทนต์ 30 วัน', 'Priority Support'],
     limits: 'Unlimited',
   },
   {
-    key: 'enterprise',
-    name: 'Enterprise',
-    price: 2499,
+    key: 'premier',
+    name: 'Premier',
+    price: 30,
     color: '#f59e0b',
-    features: ['ทุกอย่างใน Pro', 'Custom AI Model', 'Dedicated Infrastructure', 'White-label Solution', 'SLA 99.9%', 'Custom Integration', 'Team Management', 'Onboarding Support'],
-    limits: 'Custom',
+    features: ['ทุกอย่างใน Pro', 'ทีม 5 คน', 'API Access + SDK', 'White-label Solution', 'AI Video Generator', 'Dedicated Manager', 'SLA 99.9%'],
+    limits: 'Team + API',
   },
 ];
 
@@ -63,18 +54,21 @@ function formatThaiDateTime(iso) {
 // รวบรวมข้อมูลใบเสร็จจาก response ของ backend (status / create)
 function buildReceipt(data = {}) {
   return {
-    chargeId:  data.charge_id || null,
+    chargeId:  data.charge_id || data.subscription_id || null,
     amount:    typeof data.amount_thb === 'number' ? data.amount_thb : null,
     paidAt:    data.paid_at || data.created_at || null,
-    method:    data.method || 'promptpay',
+    method:    data.method || (data.subscription_id ? 'subscription' : 'promptpay'),
     plan:      data.plan || null,
-    reference: data.reference || data.promptpay_ref || null,
+    reference: data.reference || data.promptpay_ref || data.subscription_id || null,
+    nextChargeAt: data.next_charge_at || null,
   };
 }
 
 const PaymentPage = () => {
   const navigate = useNavigate();
-  const [selectedPlan, setSelectedPlan] = useState('pro');
+  const [searchParams] = useSearchParams();
+  const initialPlan = PLANS.some(p => p.key === searchParams.get('plan')) ? searchParams.get('plan') : 'pro';
+  const [selectedPlan, setSelectedPlan] = useState(initialPlan);
   const [step, setStep] = useState('select'); // select | pay | success
   const [payMethod, setPayMethod] = useState('promptpay');
   const [loading, setLoading] = useState(false);
@@ -87,6 +81,7 @@ const PaymentPage = () => {
   const [card, setCard] = useState({ name: '', number: '', exp: '', cvc: '' });
   const [omiseReady, setOmiseReady] = useState(false);
   const [pubKey, setPubKey] = useState(null);
+  const [autoRenew, setAutoRenew] = useState(true);  // ต่ออายุอัตโนมัติทุกเดือน (บัตร)
 
   const plan = PLANS.find(p => p.key === selectedPlan);
 
@@ -172,7 +167,9 @@ const PaymentPage = () => {
     try {
       localStorage.setItem('user_email', email);
       const authToken = localStorage.getItem('auth_token');
-      const body = { plan: selectedPlan, method: payMethod, email };
+      // บัตร + ต่ออายุอัตโนมัติ → ใช้ subscription (Omise ตัดเงินทุกเดือนเอง)
+      const effectiveMethod = (payMethod === 'card' && autoRenew) ? 'subscription' : payMethod;
+      const body = { plan: selectedPlan, method: effectiveMethod, email };
 
       // บัตรเครดิต → tokenize ก่อนส่ง + ตั้ง return_uri สำหรับ 3-D Secure
       if (payMethod === 'card') {
@@ -231,7 +228,7 @@ const PaymentPage = () => {
           <>
             <p style={{ textAlign: 'center', color: '#a0a0b0', marginBottom: '32px' }}>เลือกแผนที่เหมาะกับธุรกิจของคุณ — ยกเลิกได้ทุกเมื่อ</p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '32px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '32px' }}>
               {PLANS.map(p => (
                 <div key={p.key} onClick={() => setSelectedPlan(p.key)}
                   style={{ background: selectedPlan === p.key ? `${p.color}15` : 'rgba(255,255,255,0.04)', border: `2px solid ${selectedPlan === p.key ? p.color : 'rgba(255,255,255,0.1)'}`, borderRadius: '16px', padding: '20px', cursor: 'pointer', position: 'relative', transition: 'all 0.2s' }}>
@@ -303,6 +300,10 @@ const PaymentPage = () => {
                           placeholder="123" style={inputStyle} />
                       </div>
                     </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', color: '#d0d0e0', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '12px 14px' }}>
+                      <input type="checkbox" checked={autoRenew} onChange={e => setAutoRenew(e.target.checked)} style={{ width: '18px', height: '18px', accentColor: '#6366f1' }} />
+                      <span>🔁 ต่ออายุอัตโนมัติทุกเดือน <span style={{ color: '#a5b4fc' }}>(แนะนำ)</span> — ยกเลิกได้ทุกเมื่อ</span>
+                    </label>
                     <div style={{ fontSize: '11px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       🔒 ข้อมูลบัตรเข้ารหัสและส่งตรงถึง Omise — ไม่ผ่านเซิร์ฟเวอร์ของเรา
                       {!omiseReady && <span style={{ color: '#fbbf24' }}>· กำลังโหลดระบบบัตร…</span>}
@@ -377,6 +378,7 @@ const PaymentPage = () => {
             { icon: '📅', label: 'วันที่ชำระเงินสำเร็จ', value: formatThaiDateTime(r.paidAt) },
             { icon: '฿',  label: 'ยอดที่ชำระทั้งหมด', value: fmtBaht(amount) },
             { icon: '💳', label: 'ช่องทางการชำระเงิน', value: METHOD_LABELS[r.method] || 'พร้อมเพย์ (PromptPay QR)' },
+            ...(r.nextChargeAt ? [{ icon: '🔁', label: 'ต่ออายุครั้งถัดไป', value: formatThaiDateTime(r.nextChargeAt) }] : []),
             { icon: '🔖', label: 'เลขที่รายการ', value: r.chargeId || r.reference || '-', mono: true },
           ];
           return (

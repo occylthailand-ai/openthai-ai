@@ -17,7 +17,7 @@ const PLANS = [
     cta: 'ใช้ฟรีเลย',
   },
   {
-    id: 'pro', name: 'Pro', thb: 149, usd: 4,
+    id: 'pro', name: 'Pro', thb: 20, usd: 1,
     color: '#6366f1', unit: '/เดือน', desc: 'สำหรับ Creator จริงจัง', hot: true,
     features: [
       { ok: true, t: 'ไม่จำกัดจำนวน' },
@@ -28,10 +28,10 @@ const PLANS = [
       { ok: true, t: 'Priority Support' },
       { ok: false, t: 'API Access' },
     ],
-    cta: 'เริ่ม Pro ฟรี 7 วัน',
+    cta: 'เริ่ม Pro ฿20/เดือน',
   },
   {
-    id: 'business', name: 'Business', thb: 299, usd: 8,
+    id: 'premier', name: 'Premier', thb: 30, usd: 1,
     color: '#f59e0b', unit: '/เดือน', desc: 'สำหรับทีมและธุรกิจ',
     features: [
       { ok: true, t: 'ทุกอย่างใน Pro' },
@@ -42,30 +42,23 @@ const PLANS = [
       { ok: true, t: 'SLA 99.9%' },
       { ok: true, t: 'Custom integration' },
     ],
-    cta: 'ติดต่อทีมงาน',
+    cta: 'เริ่ม Premier ฿30/เดือน',
   },
 ];
 
 const FAQ_ITEMS = [
   ['ทดลองฟรีได้กี่ครั้ง?', '3 ครั้งต่อวัน ไม่ต้องสมัคร ไม่ต้องใส่บัตรเครดิต'],
   ['ยกเลิกได้เมื่อไหร่?', 'ยกเลิกได้ทุกเมื่อ ไม่มีค่าปรับ ไม่มีสัญญาผูกมัด'],
-  ['จ่ายด้วยอะไรได้บ้าง?', 'PromptPay, QR Code, บัตรเครดิต/เดบิต, LINE Pay, TrueMoney'],
-  ['Pro กับ Business ต่างกันอย่างไร?', 'Business เพิ่ม Team 5 คน, API Access, White-label และ Dedicated Manager'],
+  ['จ่ายด้วยอะไรได้บ้าง?', 'PromptPay QR และบัตรเครดิต/เดบิต (Visa, Mastercard, JCB) ชำระอัตโนมัติผ่านระบบ Omise'],
+  ['Pro กับ Premier ต่างกันอย่างไร?', 'Premier เพิ่ม Team 5 คน, API Access, White-label และ Dedicated Manager'],
   ['มี Affiliate Program ไหม?', 'มี! แชร์ให้เพื่อนรับคอมมิชชั่นสูงสุด 40% ทุกออเดอร์ที่ผ่านลิงก์คุณ'],
 ];
-
-// ── PromptPay QR section ──────────────────────────────────────────────────────
-const PROMPTPAY_NUMBER = '0972560801';
 
 export default function PricingPage() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState('pro');
-  const [showPay, setShowPay] = useState(false);
   useEffect(() => { document.title = 'แผนราคา — Openthai.ai'; }, []);
-  const [payStep, setPayStep] = useState('select'); // select | qr | confirm
   const [openFaq, setOpenFaq] = useState(null);
-
-  const plan = PLANS.find((p) => p.id === selected);
 
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif" }}>
@@ -107,7 +100,7 @@ export default function PricingPage() {
                 ))}
               </ul>
               <button
-                onClick={(e) => { e.stopPropagation(); if (p.id === 'free') { navigate('/ai-generator'); } else { setSelected(p.id); setShowPay(true); setPayStep('select'); } }}
+                onClick={(e) => { e.stopPropagation(); if (p.id === 'free') { navigate('/ai-generator'); } else { navigate(`/payment?plan=${p.id}`); } }}
                 style={{ width: '100%', padding: '13px', borderRadius: 50, fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none', background: p.id === 'free' ? 'rgba(255,255,255,0.07)' : `linear-gradient(135deg,${p.color},#fe2c55)`, color: '#fff' }}>
                 {p.cta}
               </button>
@@ -115,80 +108,6 @@ export default function PricingPage() {
           ))}
         </div>
       </section>
-
-      {/* PAYMENT MODAL */}
-      {showPay && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 24 }}>
-          <div style={{ ...card, maxWidth: 460, width: '100%', position: 'relative' }}>
-            <button onClick={() => setShowPay(false)} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', color: '#64748b', fontSize: 20, cursor: 'pointer' }}>✕</button>
-
-            {payStep === 'select' && (
-              <>
-                <h3 style={{ margin: '0 0 4px', fontWeight: 800 }}>ชำระเงิน — {plan.name} ฿{plan.thb}/เดือน</h3>
-                <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>เลือกช่องทางชำระเงิน</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[
-                    { id: 'promptpay', icon: '📱', label: 'PromptPay / QR Code', desc: 'สแกน QR ได้เลยทันที', color: '#10b981' },
-                    { id: 'card', icon: '💳', label: 'บัตรเครดิต / เดบิต', desc: 'Visa, Mastercard, JCB', color: '#6366f1' },
-                    { id: 'truemoney', icon: '🟠', label: 'TrueMoney Wallet', desc: 'โอนผ่าน TrueMoney', color: '#f59e0b' },
-                  ].map((m) => (
-                    <button key={m.id} onClick={() => setPayStep('qr')}
-                      style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(255,255,255,0.04)', border: `1px solid rgba(255,255,255,0.08)`, borderRadius: 12, padding: '14px 16px', cursor: 'pointer', color: '#f8fafc', textAlign: 'left', transition: 'border-color .2s' }}>
-                      <span style={{ fontSize: 28 }}>{m.icon}</span>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14 }}>{m.label}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{m.desc}</div>
-                      </div>
-                      <span style={{ marginLeft: 'auto', color: '#64748b' }}>→</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {payStep === 'qr' && (
-              <div style={{ textAlign: 'center' }}>
-                <h3 style={{ margin: '0 0 4px', fontWeight: 800 }}>สแกน QR PromptPay</h3>
-                <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>แพ็กเกจ {plan.name} — ฿{plan.thb}/เดือน</p>
-                {/* QR placeholder — replace with real PromptPay QR image */}
-                <div style={{ width: 200, height: 200, background: 'rgba(255,255,255,0.95)', margin: '0 auto 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ fontSize: 48 }}>📱</div>
-                  <div style={{ fontSize: 11, color: '#334155', fontWeight: 600 }}>PromptPay QR</div>
-                  <div style={{ fontSize: 12, color: '#6366f1', fontWeight: 700 }}>{PROMPTPAY_NUMBER}</div>
-                </div>
-                <div style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: 14, marginBottom: 16, fontSize: 13, color: '#94a3b8', lineHeight: 1.7 }}>
-                  1. เปิดแอปธนาคาร → สแกน QR<br />
-                  2. ยอด: <strong style={{ color: '#f8fafc' }}>฿{plan.thb}</strong><br />
-                  3. กดยืนยัน → แคปหน้าจอสลิป<br />
-                  4. ส่งสลิปมาที่ LINE: <strong style={{ color: '#6366f1' }}>@Openthai.ai</strong>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => setPayStep('select')} style={{ flex: 1, ...outlineBtn }}>← ย้อนกลับ</button>
-                  <button onClick={() => setPayStep('confirm')} style={{ flex: 2, ...primaryBtn }}>📸 ส่งสลิปแล้ว →</button>
-                </div>
-              </div>
-            )}
-
-            {payStep === 'confirm' && (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 56, marginBottom: 12 }}>🎉</div>
-                <h3 style={{ fontWeight: 900, fontSize: 22, marginBottom: 8, color: '#10b981' }}>ขอบคุณ!</h3>
-                <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
-                  ทีมงานจะตรวจสอบสลิปและเปิดใช้งาน<br />
-                  <strong style={{ color: '#f8fafc' }}>ภายใน 30 นาที</strong> ในเวลาทำการ (9:00–21:00)
-                </p>
-                <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>
-                  📧 ยืนยันจะส่งไปที่อีเมลของคุณ<br />
-                  💬 LINE: <strong style={{ color: '#6366f1' }}>@Openthai.ai</strong>
-                </p>
-                <button onClick={() => { setShowPay(false); navigate('/ai-generator'); }} style={{ ...primaryBtn, width: '100%' }}>
-                  🚀 เริ่มใช้งานได้เลย →
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* FAQ */}
       <section style={{ maxWidth: 680, margin: '0 auto', padding: '0 5% 80px' }}>
@@ -234,4 +153,3 @@ const card = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255
 const badge = { display: 'inline-block', background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 20, padding: '5px 16px', fontSize: 13, color: '#a5b4fc', fontWeight: 600, marginBottom: 8 };
 const navBtn = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '7px 14px', color: '#94a3b8', fontSize: 13, cursor: 'pointer' };
 const primaryBtn = { background: 'linear-gradient(135deg,#fe2c55,#6366f1)', color: '#fff', border: 'none', borderRadius: 50, padding: '13px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer' };
-const outlineBtn = { background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 50, padding: '12px 20px', color: '#94a3b8', fontSize: 14, cursor: 'pointer' };
