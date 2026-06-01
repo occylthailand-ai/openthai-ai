@@ -19,7 +19,7 @@ import { createTenantManager, requireTenant, PLANS } from './tenant-manager.js';
 import { processVoiceCommand } from './voice-commander.js';
 import { generateVideoScript, submitToVideoAPI, pollVideoJob } from './video-generator.js';
 import {
-  createPromptPayCharge, getChargeStatus, createOrGetCustomer,
+  createPromptPayCharge, createCardCharge, getChargeStatus, createOrGetCustomer,
   createSubscription, cancelSubscription, verifyOmiseWebhook,
   SUBSCRIPTION_PLANS,
 } from './omise-payment.js';
@@ -329,6 +329,45 @@ async function sendAffiliateWelcome(to, name, refCode, refLink) {
     console.log(`📧 Welcome email ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
     console.error('Email error:', err.message);
+  }
+}
+
+// ─── ใบเสร็จการชำระเงิน (ส่งอีเมลอัตโนมัติเมื่อชำระสำเร็จ) ──────────────────────
+async function sendPaymentReceipt(to, { plan, amount_thb, charge_id, paid_at, method }) {
+  if (!mailer || !to) return;
+  const planName = SUBSCRIPTION_PLANS[plan]?.name || plan || 'Subscription';
+  const baht = Number(amount_thb || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const when = paid_at ? new Date(paid_at).toLocaleString('th-TH') : new Date().toLocaleString('th-TH');
+  const channel = method === 'card' ? 'บัตรเครดิต/เดบิต' : method === 'subscription' ? 'ตัดบัตรอัตโนมัติรายเดือน' : 'พร้อมเพย์ (PromptPay)';
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to,
+      subject: `🧾 ใบเสร็จการชำระเงิน Openthai.ai — แผน ${planName}`,
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#10b981,#059669);padding:32px;text-align:center;">
+          <h1 style="margin:0;font-size:26px;">✅ ขอบคุณสำหรับการชำระเงิน</h1>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);">บัญชีของคุณถูกอัพเกรดเป็นแผน ${planName} แล้ว</p>
+        </div>
+        <div style="padding:28px;">
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <tr><td style="padding:10px 0;color:#94a3b8;">สรุปการชำระเงิน</td><td style="padding:10px 0;text-align:right;color:#10b981;font-weight:700;">สำเร็จ</td></tr>
+            <tr><td style="padding:10px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">แผน</td><td style="padding:10px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${planName} (รายเดือน)</td></tr>
+            <tr><td style="padding:10px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ยอดที่ชำระทั้งหมด</td><td style="padding:10px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-weight:700;">${baht} บาท</td></tr>
+            <tr><td style="padding:10px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">วันที่ชำระเงิน</td><td style="padding:10px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${when}</td></tr>
+            <tr><td style="padding:10px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ช่องทางการชำระเงิน</td><td style="padding:10px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${channel}</td></tr>
+            <tr><td style="padding:10px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เลขที่รายการ</td><td style="padding:10px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-family:monospace;font-size:12px;">${charge_id || '-'}</td></tr>
+          </table>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
+          Openthai.ai • <a href="https://www.openthai-ai.com" style="color:#6366f1;">openthai-ai.com</a>
+        </div>
+      </div>`,
+    });
+    console.log(`📧 Receipt email ส่งให้ ${to} เรียบร้อย`);
+  } catch (err) {
+    console.error('Receipt email error:', err.message);
   }
 }
 
@@ -2249,26 +2288,28 @@ const payments = loadPayments();
 
 const paymentLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'Payment rate limit' } });
 
-// POST /api/payment/create — สร้าง PromptPay charge หรือ subscription
+// POST /api/payment/create — สร้าง charge แบบ PromptPay / บัตรเครดิต / subscription
 app.post('/api/payment/create', paymentLimiter, async (req, res) => {
-  const { plan = 'pro', method = 'promptpay', email, name } = req.body || {};
+  const { plan = 'pro', method = 'promptpay', email, name, token, return_uri } = req.body || {};
   const planDef = SUBSCRIPTION_PLANS[plan];
   if (!planDef) return res.status(400).json({ error: 'Invalid plan' });
   if (planDef.price_thb === 0) return res.json({ success: true, plan, status: 'free', message: 'ไม่ต้องชำระเงิน' });
 
   if (!process.env.OMISE_SECRET_KEY) {
-    // Mock mode — Omise ยังไม่ได้ตั้ง
+    // Mock mode — Omise ยังไม่ได้ตั้ง. บัตรเครดิตถือว่าสำเร็จทันที (ไม่มี QR ให้รอ)
+    const isCard = method === 'card';
     const mock = {
       charge_id:     `mock_charge_${Date.now()}`,
-      status:        'pending',
+      status:        isCard ? 'successful' : 'pending',
+      paid:          isCard,
       amount_thb:    planDef.price_thb,
       qr_image_url:  null,
       expires_at:    new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      promptpay_ref: 'MOCKREF001',
+      promptpay_ref: isCard ? null : 'MOCKREF001',
       plan,
       message:       'OMISE_SECRET_KEY ยังไม่ได้ตั้งค่า — นี่คือ mock response',
     };
-    payments.unshift({ ...mock, method, createdAt: new Date().toISOString() });
+    payments.unshift({ ...mock, method, paid_at: isCard ? new Date().toISOString() : null, createdAt: new Date().toISOString() });
     savePayments(payments);
     return res.json({ success: true, ...mock });
   }
@@ -2280,24 +2321,57 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
         description: `Openthai.ai ${planDef.name} Plan`,
         metadata: { plan, email: email || '', method },
       });
-      payments.unshift({ ...charge, plan, method, createdAt: new Date().toISOString() });
+      payments.unshift({ ...charge, plan, method, email: email || null, createdAt: new Date().toISOString() });
       savePayments(payments);
+      return res.json({ success: true, ...charge, plan });
+    }
+
+    if (method === 'card') {
+      if (!token) return res.status(400).json({ error: 'ต้องการ card token (tokenize ด้วย Omise.js ก่อน)' });
+      const charge = await createCardCharge({
+        amount_thb: planDef.price_thb,
+        token,
+        description: `Openthai.ai ${planDef.name} Plan`,
+        metadata: { plan, email: email || '', method },
+        return_uri: return_uri || undefined,
+      });
+      const paidAt = charge.paid ? new Date().toISOString() : null;
+      payments.unshift({ ...charge, plan, method, email: email || null, paid_at: paidAt, createdAt: new Date().toISOString() });
+      savePayments(payments);
+      if (charge.status === 'failed') {
+        return res.status(402).json({ error: charge.failure_message || 'บัตรถูกปฏิเสธ กรุณาลองบัตรอื่น', charge_id: charge.charge_id });
+      }
+      // ชำระสำเร็จทันที (ไม่ต้องทำ 3-D Secure) → ส่งใบเสร็จ + dispatch webhook
+      if (charge.paid) {
+        webhooks.dispatch('payment.completed', { charge_id: charge.charge_id, amount_thb: charge.amount_thb, plan }, null);
+        sendPaymentReceipt(email, { plan, amount_thb: charge.amount_thb, charge_id: charge.charge_id, paid_at: paidAt, method });
+      }
       return res.json({ success: true, ...charge, plan });
     }
 
     if (method === 'subscription' && email) {
       const customer = await createOrGetCustomer({ email, name: name || email });
       const sub = await createSubscription({ customer_id: customer.customer_id, plan_key: plan });
-      payments.unshift({ ...sub, method, createdAt: new Date().toISOString() });
+      payments.unshift({ ...sub, method, email, createdAt: new Date().toISOString() });
       savePayments(payments);
       return res.json({ success: true, ...sub });
     }
 
-    return res.status(400).json({ error: 'method must be promptpay or subscription' });
+    return res.status(400).json({ error: 'method must be promptpay, card or subscription' });
   } catch (e) {
     addLog('error', 'Payment', e.message);
     res.status(500).json({ error: e.message });
   }
+});
+
+// GET /api/payment/config — public key สำหรับ Omise.js (tokenize บัตรฝั่ง client)
+app.get('/api/payment/config', (req, res) => {
+  res.json({
+    success: true,
+    public_key: process.env.OMISE_PUBLIC_KEY || null,
+    configured: Boolean(process.env.OMISE_SECRET_KEY),
+    currency: 'thb',
+  });
 });
 
 // GET /api/payment/status/:chargeId — poll charge status
@@ -2308,10 +2382,14 @@ app.get('/api/payment/status/:chargeId', async (req, res) => {
   try {
     const status = await getChargeStatus(req.params.chargeId);
     const rec = payments.find(p => p.charge_id === req.params.chargeId);
-    // If paid → update payment record
+    // If paid → update payment record (ส่งใบเสร็จเฉพาะครั้งแรกที่เปลี่ยนเป็น paid)
     if (status.paid) {
-      if (rec && !rec.paid_at) { rec.paid_at = status.paid_at; rec.status = 'successful'; savePayments(payments); }
+      const firstTime = rec && !rec.paid_at;
+      if (firstTime) { rec.paid_at = status.paid_at; rec.status = 'successful'; savePayments(payments); }
       webhooks.dispatch('payment.completed', { charge_id: req.params.chargeId, amount_thb: status.amount_thb, plan: rec?.plan }, null);
+      if (firstTime && rec?.email) {
+        sendPaymentReceipt(rec.email, { plan: rec.plan, amount_thb: status.amount_thb, charge_id: req.params.chargeId, paid_at: status.paid_at, method: rec.method });
+      }
     }
     // Enrich response with stored record so the client can render a full receipt
     res.json({

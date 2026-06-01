@@ -83,34 +83,107 @@ const PaymentPage = () => {
   const [pollCount, setPollCount] = useState(0);
   const [error, setError] = useState('');
   const [receipt, setReceipt] = useState(null);
+  const [email, setEmail] = useState(() => localStorage.getItem('user_email') || '');
+  const [card, setCard] = useState({ name: '', number: '', exp: '', cvc: '' });
+  const [omiseReady, setOmiseReady] = useState(false);
+  const [pubKey, setPubKey] = useState(null);
 
   const plan = PLANS.find(p => p.key === selectedPlan);
 
-  // Poll PromptPay status
+  // โหลด config (Omise public key) + สคริปต์ Omise.js สำหรับ tokenize บัตร
   useEffect(() => {
-    if (step !== 'pay' || !chargeId || payMethod !== 'promptpay') return;
+    let cancelled = false;
+    fetch(apiUrl('/api/payment/config'))
+      .then(r => r.json())
+      .then(cfg => { if (!cancelled) setPubKey(cfg.public_key || null); })
+      .catch(() => {});
+    if (!window.Omise && !document.getElementById('omise-js')) {
+      const s = document.createElement('script');
+      s.id = 'omise-js';
+      s.src = 'https://cdn.omise.co/omise.js';
+      s.async = true;
+      s.onload = () => !cancelled && setOmiseReady(true);
+      document.body.appendChild(s);
+    } else if (window.Omise) {
+      setOmiseReady(true);
+    }
+    return () => { cancelled = true; };
+  }, []);
+
+  // กลับมาจาก 3-D Secure → ตรวจสถานะ charge ที่ค้างไว้
+  useEffect(() => {
+    const pending = localStorage.getItem('pending_charge');
+    if (pending) {
+      setChargeId(pending);
+      setPayMethod('card');
+      setStep('pay');
+    }
+  }, []);
+
+  // Poll สถานะการชำระเงิน (ทั้ง PromptPay และบัตรที่รอ 3-D Secure)
+  useEffect(() => {
+    if (step !== 'pay' || !chargeId) return;
     const timer = setInterval(async () => {
       try {
         const res = await fetch(apiUrl(`/api/payment/status/${chargeId}`));
         const data = await res.json();
-        if (data.status === 'successful') { clearInterval(timer); setReceipt(buildReceipt(data)); setStep('success'); }
-        if (data.status === 'failed' || data.status === 'expired') { clearInterval(timer); setError('การชำระเงินล้มเหลว กรุณาลองใหม่'); setStep('select'); }
+        if (data.status === 'successful') {
+          clearInterval(timer); localStorage.removeItem('pending_charge');
+          setReceipt(buildReceipt(data)); setStep('success');
+        }
+        if (data.status === 'failed' || data.status === 'expired') {
+          clearInterval(timer); localStorage.removeItem('pending_charge');
+          setError('การชำระเงินล้มเหลว กรุณาลองใหม่'); setStep('select');
+        }
         setPollCount(c => c + 1);
       } catch (_) {}
     }, 5000);
     return () => clearInterval(timer);
-  }, [step, chargeId, payMethod]);
+  }, [step, chargeId]);
+
+  // Tokenize บัตรด้วย Omise.js (เลขบัตรไม่ผ่าน server ของเรา — PCI compliant)
+  const tokenizeCard = () => new Promise((resolve, reject) => {
+    if (!window.Omise) return reject(new Error('ระบบบัตรเครดิตยังโหลดไม่เสร็จ กรุณารอสักครู่'));
+    if (!pubKey) return reject(new Error('ยังไม่ได้ตั้งค่า Omise public key'));
+    const [expMonth, expYear] = (card.exp || '').split('/').map(s => s.trim());
+    window.Omise.setPublicKey(pubKey);
+    window.Omise.createToken('card', {
+      name: card.name,
+      number: (card.number || '').replace(/\s+/g, ''),
+      expiration_month: expMonth,
+      expiration_year: expYear?.length === 2 ? `20${expYear}` : expYear,
+      security_code: card.cvc,
+    }, (statusCode, response) => {
+      if (statusCode === 200) resolve(response.id);
+      else reject(new Error(response.message || 'ข้อมูลบัตรไม่ถูกต้อง'));
+    });
+  });
 
   const handleProceedToPayment = async () => {
     if (plan.price === 0) { navigate('/dashboard'); return; }
-    setError(''); setLoading(true);
+    setError('');
+
+    // Validation
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('กรุณากรอกอีเมลให้ถูกต้อง (สำหรับส่งใบเสร็จ)'); return;
+    }
+    setLoading(true);
 
     try {
-      const token = localStorage.getItem('auth_token');
+      localStorage.setItem('user_email', email);
+      const authToken = localStorage.getItem('auth_token');
+      const body = { plan: selectedPlan, method: payMethod, email };
+
+      // บัตรเครดิต → tokenize ก่อนส่ง + ตั้ง return_uri สำหรับ 3-D Secure
+      if (payMethod === 'card') {
+        body.token = await tokenizeCard();
+        body.return_uri = `${window.location.origin}/payment`;
+      }
+
       const res = await fetch(apiUrl('/api/payment/create'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ plan: selectedPlan, method: payMethod }),
+        headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'ไม่สามารถสร้าง payment ได้');
@@ -119,9 +192,16 @@ const PaymentPage = () => {
         setQrData(data);
         setChargeId(data.charge_id);
         setStep('pay');
-      } else {
+      } else if (payMethod === 'card') {
+        // ต้องทำ 3-D Secure → จำ charge ไว้แล้ว redirect ไปหน้า authorize
+        if (data.authorize_uri) {
+          localStorage.setItem('pending_charge', data.charge_id);
+          window.location.href = data.authorize_uri;
+          return;
+        }
+        // ชำระสำเร็จทันที
         setChargeId(data.charge_id || null);
-        setReceipt(buildReceipt({ ...data, paid_at: new Date().toISOString() }));
+        setReceipt(buildReceipt({ ...data, paid_at: data.paid_at || new Date().toISOString() }));
         setStep('success');
       }
     } catch (e) {
@@ -132,6 +212,9 @@ const PaymentPage = () => {
   };
 
   const bg = 'linear-gradient(135deg, #0f0f1a 0%, #1a0a2e 50%, #0a1628 100%)';
+  const inputStyle = { width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '15px', outline: 'none' };
+  const labelStyle = { fontSize: '12px', color: '#a0a0b0', display: 'block', marginBottom: '6px' };
+  const cardBlocked = payMethod === 'card' && !omiseReady;
 
   return (
     <div style={{ minHeight: '100vh', background: bg, color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
@@ -185,16 +268,68 @@ const PaymentPage = () => {
                     </button>
                   ))}
                 </div>
+
+                {/* อีเมลสำหรับใบเสร็จ */}
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ fontSize: '12px', color: '#a0a0b0', display: 'block', marginBottom: '6px' }}>อีเมล (สำหรับส่งใบเสร็จ)</label>
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email"
+                    style={inputStyle} />
+                </div>
+
+                {/* ฟอร์มบัตรเครดิต */}
+                {payMethod === 'card' && (
+                  <div style={{ marginTop: '16px', display: 'grid', gap: '12px' }}>
+                    <div>
+                      <label style={labelStyle}>ชื่อบนบัตร</label>
+                      <input value={card.name} onChange={e => setCard({ ...card, name: e.target.value })} placeholder="SOMCHAI JAIDEE" autoComplete="cc-name" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>หมายเลขบัตร</label>
+                      <input value={card.number} inputMode="numeric" autoComplete="cc-number"
+                        onChange={e => setCard({ ...card, number: e.target.value.replace(/[^\d]/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19) })}
+                        placeholder="4242 4242 4242 4242" style={inputStyle} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={labelStyle}>วันหมดอายุ (MM/YY)</label>
+                        <input value={card.exp} inputMode="numeric" autoComplete="cc-exp"
+                          onChange={e => { let v = e.target.value.replace(/[^\d]/g, '').slice(0, 4); if (v.length > 2) v = `${v.slice(0, 2)}/${v.slice(2)}`; setCard({ ...card, exp: v }); }}
+                          placeholder="12/28" style={inputStyle} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={labelStyle}>CVC</label>
+                        <input value={card.cvc} inputMode="numeric" autoComplete="cc-csc"
+                          onChange={e => setCard({ ...card, cvc: e.target.value.replace(/[^\d]/g, '').slice(0, 4) })}
+                          placeholder="123" style={inputStyle} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      🔒 ข้อมูลบัตรเข้ารหัสและส่งตรงถึง Omise — ไม่ผ่านเซิร์ฟเวอร์ของเรา
+                      {!omiseReady && <span style={{ color: '#fbbf24' }}>· กำลังโหลดระบบบัตร…</span>}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '12px', color: '#fca5a5', marginBottom: '16px', fontSize: '14px' }}>{error}</div>}
 
-            <button onClick={handleProceedToPayment} disabled={loading}
-              style={{ width: '100%', maxWidth: '400px', display: 'block', margin: '0 auto', padding: '16px', borderRadius: '12px', border: 'none', background: loading ? '#374151' : `linear-gradient(135deg, ${plan.color}, ${plan.color}cc)`, color: '#fff', fontSize: '16px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
-              {loading ? '⏳ กำลังดำเนินการ...' : plan.price === 0 ? '✅ เริ่มใช้งานฟรี' : `ชำระ ฿${plan.price.toLocaleString()}/เดือน →`}
+            <button onClick={handleProceedToPayment} disabled={loading || cardBlocked}
+              style={{ width: '100%', maxWidth: '400px', display: 'block', margin: '0 auto', padding: '16px', borderRadius: '12px', border: 'none', background: (loading || cardBlocked) ? '#374151' : `linear-gradient(135deg, ${plan.color}, ${plan.color}cc)`, color: '#fff', fontSize: '16px', fontWeight: 700, cursor: (loading || cardBlocked) ? 'not-allowed' : 'pointer' }}>
+              {loading ? '⏳ กำลังดำเนินการ...' : plan.price === 0 ? '✅ เริ่มใช้งานฟรี' : payMethod === 'card' ? `ชำระด้วยบัตร ฿${plan.price.toLocaleString()} →` : `ชำระ ฿${plan.price.toLocaleString()}/เดือน →`}
             </button>
           </>
+        )}
+
+        {/* Step: Pay — Card verifying (กลับมาจาก 3-D Secure) */}
+        {step === 'pay' && payMethod === 'card' && !qrData && (
+          <div style={{ maxWidth: '480px', margin: '0 auto', textAlign: 'center' }}>
+            <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '48px 32px' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔐</div>
+              <h2 style={{ marginBottom: '8px' }}>กำลังยืนยันการชำระเงิน</h2>
+              <p style={{ color: '#a0a0b0', fontSize: '14px' }}>กรุณารอสักครู่ — กำลังตรวจสอบผลการชำระเงินกับธนาคาร{pollCount > 0 ? ` (${pollCount})` : ''}</p>
+            </div>
+          </div>
         )}
 
         {/* Step: Pay — PromptPay QR */}

@@ -65,6 +65,30 @@ export async function createPromptPayCharge({ amount_thb, description, metadata 
   };
 }
 
+// ── Credit / Debit Card Charge ────────────────────────────────────────────────
+// `token` มาจาก Omise.js ฝั่ง client (tokenize บัตรแบบ PCI-compliant — เลขบัตร
+// ไม่เคยผ่าน server ของเรา). รองรับ 3-D Secure ผ่าน authorize_uri + return_uri.
+export async function createCardCharge({ amount_thb, token, description, metadata = {}, return_uri = null }) {
+  const charge = await omise('POST', '/charges', {
+    amount: amount_thb * 100,   // Omise ใช้สตางค์
+    currency: 'thb',
+    card: token,
+    description,
+    metadata,
+    ...(return_uri ? { return_uri } : {}),
+  });
+
+  return {
+    charge_id:     charge.id,
+    status:        charge.status,        // pending | successful | failed
+    paid:          charge.paid,
+    amount_thb,
+    authorize_uri: charge.authorize_uri || null,  // ถ้าต้องทำ 3-D Secure
+    authorized:    charge.authorized,
+    failure_message: charge.failure_message || null,
+  };
+}
+
 // ── Create / Get Omise Customer ───────────────────────────────────────────────
 export async function createOrGetCustomer({ email, name, card_token = null }) {
   const customer = await omise('POST', '/customers', {
