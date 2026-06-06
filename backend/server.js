@@ -30,6 +30,19 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── Vercel serverless detection ──────────────────────────────────────────────
 const IS_VERCEL = !!process.env.VERCEL;
+// Admin key — ใน production (serverless) ห้าม fallback ค่า default สาธารณะ
+// ต้องตั้ง ADMIN_KEY เท่านั้น; โหมด local ยังใช้ default เพื่อความสะดวกตอน dev
+function resolveAdminKey() {
+  if (process.env.ADMIN_KEY) return process.env.ADMIN_KEY;
+  return IS_VERCEL ? null : 'openthai-admin-2026';
+}
+function checkAdminKey(provided) {
+  const key = resolveAdminKey();
+  return !!key && provided === key;
+}
+function adminDenyMessage() {
+  return resolveAdminKey() ? 'Unauthorized — ต้องการ Admin Key' : 'ระบบยังไม่ได้ตั้งค่า ADMIN_KEY ใน production';
+}
 
 // บน Vercel: ไฟล์ static อ่านได้จาก repo, ไฟล์ writable ต้องใช้ /tmp
 // Local: ทุกอย่างอยู่ใน backend/data/
@@ -480,9 +493,8 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
 // ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
 app.get('/api/affiliate/list', (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
-  const adminKey = process.env.ADMIN_KEY || 'openthai-admin-2026';
-  if (key !== adminKey) {
-    return res.status(401).json({ success: false, message: 'Unauthorized — ต้องการ Admin Key' });
+  if (!checkAdminKey(key)) {
+    return res.status(401).json({ success: false, message: adminDenyMessage() });
   }
   // ซ่อน sensitive fields ก่อนส่ง
   const safeData = affiliates.map(({ email, phone, ...rest }) => ({
@@ -2548,8 +2560,7 @@ app.get('/api/payment/history', requireAuth, (req, res) => {
 // GET /api/payment/admin/summary — สรุปยอดขาย (ใช้ Admin Key header เหมือน affiliate)
 app.get('/api/payment/admin/summary', (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
-  const adminKey = process.env.ADMIN_KEY || 'openthai-admin-2026';
-  if (key !== adminKey) return res.status(401).json({ success: false, message: 'Unauthorized — ต้องการ Admin Key' });
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
 
   const isPaid = (p) => p.paid || p.status === 'successful' || p.paid_at;
   const paid = payments.filter(isPaid);

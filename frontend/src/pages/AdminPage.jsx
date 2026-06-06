@@ -35,7 +35,8 @@ const TIER_COLOR = { starter: '#10b981', pro: '#6366f1', elite: '#f59e0b' };
 const STATUS_COLOR = { active: '#10b981', suspended: '#ef4444', inactive: '#64748b' };
 
 // ── Admin password gate ───────────────────────────────────────────────────────
-const ADMIN_KEY = 'openthai-admin-2026'; // เปลี่ยนใน production
+// ตั้ง VITE_ADMIN_KEY ตอน build สำหรับ production (การป้องกันจริงอยู่ที่ backend ADMIN_KEY)
+const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY || 'openthai-admin-2026';
 
 export default function AdminPage() {
   const navigate = useNavigate();
