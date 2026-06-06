@@ -17,7 +17,17 @@
 
 ## ติดตั้ง
 
-### 1) เตรียมค่า
+### ⚡ ทางลัด: ตัวช่วยตั้งค่าอัตโนมัติ (แนะนำ)
+```bash
+cd boot-alert
+node setup.js        # หรือ  npm run setup
+```
+ถาม-ตอบทีละขั้น → เขียน `.env` ให้เอง → หา Telegram chat_id ให้เอง → ยิงทดสอบให้
+คุณแค่วางโทเค็นจาก @BotFather แล้วกด `/start` ในแอป เท่านั้น
+
+> ถ้าอยากตั้งเองแบบ manual ทำตามด้านล่างได้
+
+### 1) เตรียมค่า (manual)
 ```bash
 cd boot-alert
 cp .env.example .env

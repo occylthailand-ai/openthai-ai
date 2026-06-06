@@ -5,6 +5,7 @@
   "type": "module",
   "bin": { "boot-alert": "notify.js" },
   "scripts": {
+    "setup": "node setup.js",
     "test-sms": "node notify.js --test",
     "once": "node notify.js --once",
     "start": "node notify.js"
