@@ -256,15 +256,31 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   form.audience = sanitize(form.audience);
   form.price    = sanitize(form.price);
 
+  // บังคับโควต้ารายวันตามแผน (Free = 3/วัน, Pro/Premier = ไม่จำกัด)
+  const quota = checkQuota(req);
+  if (!quota.allowed) {
+    return res.status(429).json({
+      error: `ใช้สิทธิ์ฟรีครบ ${quota.limit} ชิ้นแล้ววันนี้ — อัพเกรดเป็น Pro (฿20/เดือน) เพื่อสร้างไม่จำกัด`,
+      code: 'QUOTA_EXCEEDED', plan: 'free', used: quota.used, limit: quota.limit, upgrade_url: '/payment?plan=pro',
+    });
+  }
+
   try {
     const data = await smartGenerate(form);
-    return res.json(data);
+    const u = consumeQuota(req);
+    return res.json({ ...data, usage: { plan: u.plan, used: u.used ?? null, limit: u.limit ?? null, remaining: u.remaining ?? null, unlimited: !!u.unlimited } });
   } catch (err) {
     console.error('[generate error]', err.message);
     const fallback = mockGenerate(form);
     fallback.source = 'mock-fallback';
     return res.json(fallback);
   }
+});
+
+// GET /api/usage — โควต้าคงเหลือวันนี้ (ไม่หักโควต้า)
+app.get('/api/usage', (req, res) => {
+  const q = checkQuota(req);
+  res.json({ success: true, plan: q.plan, unlimited: !!q.unlimited, used: q.used ?? 0, limit: q.unlimited ? null : q.limit, remaining: q.unlimited ? null : q.remaining });
 });
 
 // ─── Nodemailer transporter ───────────────────────────────────────────────────
@@ -2325,6 +2341,39 @@ function getEntitlement(email) {
     ent.status = 'expired'; saveEntitlements(entitlements);
   }
   return ent.status === 'active' ? ent : { ...ent, plan: 'free' };
+}
+
+// ─── Usage quota — บังคับโควต้ารายวันตามแผน ───────────────────────────────────
+const FREE_DAILY_LIMIT = 3;          // Free = 3 ชิ้น/วัน (ตรงกับหน้า Pricing)
+const PAID_PLANS = new Set(['pro', 'premier']);
+const _usage = new Map();            // key: "YYYY-MM-DD:identity" → count
+const today = () => new Date().toISOString().slice(0, 10);
+
+// อ่านอีเมล user จาก header/body (frontend เก็บไว้ใน localStorage แล้วแนบมา)
+function userEmailFrom(req) {
+  return (req.headers['x-user-email'] || req.body?.email || req.query?.email || '').toString().trim().toLowerCase();
+}
+
+// เช็คโควต้า — paid = ไม่จำกัด, free = จำกัดต่อวันตาม IP+email
+function checkQuota(req) {
+  const email = userEmailFrom(req);
+  const plan = getEntitlement(email).plan;
+  if (PAID_PLANS.has(plan)) return { allowed: true, plan, unlimited: true };
+
+  const ip = (req.headers['x-forwarded-for'] || req.ip || '').toString().split(',')[0].trim();
+  const key = `${today()}:${email || ip}`;
+  const used = _usage.get(key) || 0;
+  return { allowed: used < FREE_DAILY_LIMIT, plan: 'free', unlimited: false, used, limit: FREE_DAILY_LIMIT, remaining: Math.max(0, FREE_DAILY_LIMIT - used), key };
+}
+
+// บันทึกการใช้ 1 ครั้ง (เรียกหลัง generate สำเร็จ)
+function consumeQuota(req) {
+  const q = checkQuota(req);
+  if (q.unlimited) return q;
+  // กันคีย์เก่าบวม — ลบ entry ของวันก่อนหน้าเป็นครั้งคราว
+  if (_usage.size > 5000) for (const k of _usage.keys()) if (!k.startsWith(today())) _usage.delete(k);
+  _usage.set(q.key, (q.used || 0) + 1);
+  return { ...q, used: q.used + 1, remaining: Math.max(0, FREE_DAILY_LIMIT - (q.used + 1)) };
 }
 
 const paymentLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'Payment rate limit' } });

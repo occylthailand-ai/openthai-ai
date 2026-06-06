@@ -32,6 +32,22 @@ const PLATFORMS = ['TikTok','Facebook','Instagram Reels','YouTube Shorts','LINE'
 const LANGS     = ['ภาษาไทย','English','ไทย + อังกฤษ'];
 
 // ── API helpers ───────────────────────────────────────────────────────────────
+// แนบ email + plan ที่เก็บไว้ เพื่อให้ backend เช็คโควต้าตามแผน
+function authHeaders() {
+  const email = localStorage.getItem('user_email') || '';
+  return { 'Content-Type': 'application/json', ...(email ? { 'x-user-email': email } : {}) };
+}
+
+// แปลง response 429 เป็น error พิเศษ (มี .quota) เพื่อให้ UI ชวนอัพเกรด
+async function throwIfQuota(res) {
+  if (res.status === 429) {
+    const d = await res.json().catch(() => ({}));
+    const err = new Error(d.error || 'ใช้สิทธิ์ฟรีครบแล้ววันนี้');
+    err.quota = { ...d, exceeded: true };
+    throw err;
+  }
+}
+
 async function generateContent(form) {
   // ลอง n8n webhook ก่อน (เฉพาะ local dev — ถ้า N8N_WEBHOOK ว่างข้ามไป BACKEND_API เลย)
   if (N8N_WEBHOOK) {
@@ -40,13 +56,15 @@ async function generateContent(form) {
       if (r.ok) { const d = await r.json(); if (d.hook) return d; }
     } catch (_) {}
   }
-  const res = await fetch(BACKEND_API(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+  const res = await fetch(BACKEND_API(), { method: 'POST', headers: authHeaders(), body: JSON.stringify(form) });
+  await throwIfQuota(res);
   if (!res.ok) throw new Error(`API error ${res.status}`);
   return res.json();
 }
 
 async function generateAB(form) {
-  const res = await fetch(AB_API(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+  const res = await fetch(AB_API(), { method: 'POST', headers: authHeaders(), body: JSON.stringify(form) });
+  await throwIfQuota(res);
   if (!res.ok) throw new Error(`AB API error ${res.status}`);
   return res.json();
 }
@@ -428,6 +446,15 @@ const AIGeneratorPage = () => {
   const [imgLoading, setImgLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [brandLoaded, setBrandLoaded] = useState(false);
+  const [usage, setUsage] = useState(null);  // โควต้ารายวันตามแผน
+
+  // โหลดโควต้าคงเหลือ
+  const refreshUsage = () => {
+    const email = localStorage.getItem('user_email') || '';
+    fetch(apiUrl(`/api/usage${email ? `?email=${encodeURIComponent(email)}` : ''}`))
+      .then(r => r.json()).then(d => { if (d.success) setUsage(d); }).catch(() => {});
+  };
+  useEffect(() => { refreshUsage(); }, []);
 
   // ใช้ idea จาก Competitor/News → กรอก form + สลับ tab
   const handleUseIdea = (productOrHook, category = 'ทั่วไป') => {
@@ -469,12 +496,19 @@ const AIGeneratorPage = () => {
       } else {
         const data = await generateContent(form);
         setResult(data);
+        if (data.usage) setUsage({ success: true, ...data.usage });
         const score = parseFloat(data.criticScore);
         toast.success(`✨ สร้างสำเร็จ! Score: ${data.criticScore}/10${score >= 9 ? ' 🔥' : score >= 7 ? ' 👍' : ''}`);
         pushHistory(data);
       }
+      refreshUsage();
     } catch (err) {
-      toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่');
+      if (err.quota?.exceeded) {
+        toast.error(err.message || 'ใช้สิทธิ์ฟรีครบแล้ววันนี้ — กำลังพาไปอัพเกรด');
+        setTimeout(() => navigate(err.quota.upgrade_url || '/payment?plan=pro'), 1200);
+      } else {
+        toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่');
+      }
     } finally {
       setLoading(false);
     }
@@ -684,6 +718,19 @@ const AIGeneratorPage = () => {
             {loading ? <><span className="gen-spinner">⚡</span> AI กำลังสร้าง...</>
               : abMode ? '🆚 สร้าง A/B 2 แบบ' : '⚡ สร้างคอนเทนต์ AI'}
           </button>
+
+          {/* โควต้ารายวัน */}
+          {usage && (usage.unlimited ? (
+            <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: '#10b981', fontWeight: 600 }}>
+              ✨ แผน {usage.plan === 'premier' ? 'Premier' : 'Pro'} — สร้างได้ไม่จำกัด
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: usage.remaining > 0 ? '#94a3b8' : '#fca5a5' }}>
+              {usage.remaining > 0
+                ? <>เหลือสิทธิ์ฟรีวันนี้ <strong style={{ color: '#f8fafc' }}>{usage.remaining}/{usage.limit}</strong> ชิ้น</>
+                : <>ใช้ครบแล้ววันนี้ · <span onClick={() => navigate('/payment?plan=pro')} style={{ color: '#a5b4fc', cursor: 'pointer', textDecoration: 'underline' }}>อัพเกรด Pro ฿20/เดือน สร้างไม่จำกัด →</span></>}
+            </div>
+          ))}
 
           {/* History toggle */}
           {history.length > 0 && (
