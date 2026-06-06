@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 // Openthai.ai — Migrate Vector Memory: JSON files → Supabase pgvector
 // Usage: SUPABASE_URL=... SUPABASE_SERVICE_KEY=... GEMINI_API_KEY=... node migrate-memory.js
 //
