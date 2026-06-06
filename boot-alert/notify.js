@@ -98,17 +98,28 @@ async function sendOne(to, message) {
 
   if (CONFIG.provider === 'thsms') {
     // THSMS (thsms.com) — REST + Bearer token
-    const res = await fetch('https://thsms.com/api/rest', {
+    // endpoint override ได้ผ่าน THSMS_API_URL เผื่อ dashboard ของคุณใช้ path ต่าง
+    const url = process.env.THSMS_API_URL || 'https://thsms.com/api/rest';
+    if (!process.env.THSMS_API_KEY) throw new Error('ยังไม่ได้ตั้ง THSMS_API_KEY ใน .env');
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.THSMS_API_KEY || ''}`,
+        'Authorization': `Bearer ${process.env.THSMS_API_KEY}`,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({ sender: CONFIG.sender, to: intl, message }),
     });
-    const text = await res.text();
-    if (!res.ok) throw new Error(`THSMS HTTP ${res.status}: ${text}`);
-    return text;
+    const raw = await res.text();
+    let data = null;
+    try { data = JSON.parse(raw); } catch (_) {}
+    // THSMS แจ้ง error เป็น { error: { name, message } }
+    if (!res.ok || data?.error) {
+      const msg = data?.error?.message || data?.message || raw || `HTTP ${res.status}`;
+      throw new Error(`THSMS: ${msg}`);
+    }
+    const d = data?.data || data || {};
+    return { uuid: d.uuid || null, status: d.status || 'sent', credit: d.credit_balance ?? d.credit ?? null };
   }
 
   if (CONFIG.provider === 'smsmkt') {
@@ -152,8 +163,15 @@ async function sendToAll(kind) {
   log(`ส่ง ${kind} → ${CONFIG.numbers.join(', ')}`);
   const results = await Promise.allSettled(CONFIG.numbers.map(n => sendOne(n, message)));
   results.forEach((r, i) => {
-    if (r.status === 'fulfilled') log(`  ✓ ${CONFIG.numbers[i]} OK`);
-    else log(`  ✗ ${CONFIG.numbers[i]} FAIL: ${r.reason?.message || r.reason}`);
+    if (r.status === 'fulfilled') {
+      const v = r.value;
+      const info = v && typeof v === 'object'
+        ? ' (' + [v.status, v.uuid && `uuid=${v.uuid}`, v.credit != null && `credit=${v.credit}`].filter(Boolean).join(', ') + ')'
+        : '';
+      log(`  ✓ ${CONFIG.numbers[i]} OK${info}`);
+    } else {
+      log(`  ✗ ${CONFIG.numbers[i]} FAIL: ${r.reason?.message || r.reason}`);
+    }
   });
   return results;
 }
