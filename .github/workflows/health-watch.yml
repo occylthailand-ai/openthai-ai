@@ -1,0 +1,62 @@
+name: ❤️ Health Watch (24/7)
+
+# ตรวจสุขภาพ production อัตโนมัติทุก 10 นาที — รู้ทันทีถ้าเว็บล่ม/ช้า
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+env:
+  PROD_URL: https://www.openthai-ai.com
+  THRESHOLD_MS: 4000
+
+jobs:
+  health:
+    name: 🌡️ Production Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping /api/health
+        id: health
+        run: |
+          echo "🏥 $(date -u '+%Y-%m-%d %H:%M:%S UTC') — checking ${PROD_URL}/api/health"
+          START=$(date +%s%3N)
+          CODE=$(curl -s -o /tmp/body.json -w "%{http_code}" --max-time 15 "${PROD_URL}/api/health" || echo 000)
+          END=$(date +%s%3N)
+          ELAPSED=$((END - START))
+          echo "code=$CODE"        >> "$GITHUB_OUTPUT"
+          echo "elapsed=$ELAPSED"  >> "$GITHUB_OUTPUT"
+          echo "📡 HTTP $CODE — ${ELAPSED}ms"
+          if [ -f /tmp/body.json ]; then
+            STATUS=$(python3 -c "import sys,json; print(json.load(open('/tmp/body.json')).get('status','?'))" 2>/dev/null || echo "?")
+            VERSION=$(python3 -c "import sys,json; print(json.load(open('/tmp/body.json')).get('version','?'))" 2>/dev/null || echo "?")
+            echo "   status=$STATUS version=$VERSION"
+          fi
+
+      - name: Evaluate result
+        run: |
+          CODE="${{ steps.health.outputs.code }}"
+          ELAPSED="${{ steps.health.outputs.elapsed }}"
+          if [ "$CODE" != "200" ]; then
+            echo "🚨 DOWN — /api/health คืน HTTP $CODE (คาดหวัง 200)"
+            exit 1
+          fi
+          if [ "$ELAPSED" -gt "${THRESHOLD_MS}" ]; then
+            echo "⚠️ SLOW — ${ELAPSED}ms > ${THRESHOLD_MS}ms (อาจเป็น cold start)"
+          else
+            echo "✅ Healthy — ${ELAPSED}ms"
+          fi
+
+      - name: 🔔 LINE Notify on failure
+        if: failure()
+        env:
+          LINE_NOTIFY_TOKEN: ${{ secrets.LINE_NOTIFY_TOKEN }}
+        run: |
+          if [ -n "$LINE_NOTIFY_TOKEN" ]; then
+            curl -s -X POST https://notify-api.line.me/api/notify \
+              -H "Authorization: Bearer $LINE_NOTIFY_TOKEN" \
+              --data-urlencode "message=🚨 Openthai.ai DOWN — /api/health คืน HTTP ${{ steps.health.outputs.code }} ($(date -u '+%H:%M UTC'))" \
+              && echo "📱 LINE แจ้งเตือนแล้ว"
+          else
+            echo "⏭️ ไม่ได้ตั้ง LINE_NOTIFY_TOKEN — ข้ามการแจ้งเตือน (workflow ยัง fail ให้เห็นใน Actions)"
+          fi

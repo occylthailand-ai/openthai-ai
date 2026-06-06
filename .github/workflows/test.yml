@@ -1,0 +1,89 @@
+name: 🧪 CI — Tests & Build
+
+# รันอัตโนมัติทุก push และทุก PR — จับ error ก่อนขึ้น production
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # ── Frontend: tests + build ────────────────────────────────────────────────
+  frontend:
+    name: 🎨 Frontend Tests + Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install deps
+        working-directory: frontend
+        run: npm ci
+      - name: Run tests (vitest)
+        working-directory: frontend
+        run: npm test -- --run
+        env:
+          CI: true
+      - name: Build check
+        working-directory: frontend
+        run: npm run build
+
+  # ── Backend: syntax + boot smoke test (server ต้องตอบ /api/health) ──────────
+  backend:
+    name: ⚙️ Backend Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      - name: Install deps
+        working-directory: backend
+        run: npm ci
+      - name: Syntax check
+        working-directory: backend
+        run: node --check server.js
+      - name: Boot + health smoke test
+        working-directory: backend
+        run: |
+          PORT=8899 node server.js > /tmp/server.log 2>&1 &
+          SERVER_PID=$!
+          # รอ server พร้อม (สูงสุด 20 วิ)
+          for i in $(seq 1 20); do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8899/api/health || echo 000)
+            if [ "$CODE" = "200" ]; then
+              echo "✅ /api/health → 200 (boot OK)"
+              kill $SERVER_PID 2>/dev/null || true
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "❌ server ไม่ตอบ /api/health ภายใน 20 วิ"
+          echo "─── server.log ───"; cat /tmp/server.log
+          kill $SERVER_PID 2>/dev/null || true
+          exit 1
+
+  # ── Quality: ตรวจ hardcoded secrets ────────────────────────────────────────
+  quality:
+    name: 🔒 Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for hardcoded secrets
+        run: |
+          if grep -rEn "(api_key|apikey|secret_key|password)\s*[:=]\s*['\"][a-zA-Z0-9_-]{20,}['\"]" \
+               frontend/src backend \
+               --include="*.js" --include="*.jsx" --include="*.ts" \
+               | grep -vE "process\.env|import\.meta\.env|example|placeholder|YOUR_|xxx"; then
+            echo "❌ พบ secret แบบ hardcode — ย้ายไปใช้ env var"
+            exit 1
+          fi
+          echo "✅ ไม่พบ hardcoded secret"
