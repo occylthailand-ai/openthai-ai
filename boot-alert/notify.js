@@ -33,14 +33,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 })();
 
 const CONFIG = {
-  provider: (process.env.SMS_PROVIDER || 'thsms').toLowerCase(), // thsms | smsmkt | custom
+  // ช่องทางที่จะแจ้งเตือน — ใส่หลายอันคั่น comma ได้ เช่น "telegram,thsms"
+  // (ถ้าไม่ตั้ง CHANNELS จะ fallback ไป SMS_PROVIDER เดิมเพื่อความเข้ากันได้)
+  channels: (process.env.CHANNELS || process.env.SMS_PROVIDER || 'thsms')
+              .toLowerCase().split(',').map(s => s.trim()).filter(Boolean),
   sender:   process.env.SMS_SENDER || '',
   numbers:  (process.env.ALERT_NUMBERS || '0972560801,0658714008')
+              .split(',').map(s => s.trim()).filter(Boolean),
+  // Telegram
+  tgToken:  process.env.TELEGRAM_BOT_TOKEN || '',
+  tgChats:  (process.env.TELEGRAM_CHAT_IDS || '')
               .split(',').map(s => s.trim()).filter(Boolean),
   heartbeatHours: Number(process.env.HEARTBEAT_HOURS || 0), // 0 = ปิด
   stateFile: process.env.STATE_FILE || path.join(__dirname, '.boot-state.json'),
   logFile:   process.env.LOG_FILE   || path.join(__dirname, 'boot-alert.log'),
 };
+const SMS_CHANNELS = new Set(['thsms', 'smsmkt', 'custom']);
 
 // ─── utils ─────────────────────────────────────────────────────────────────────
 function log(msg) {
@@ -93,10 +101,10 @@ function buildMessage(kind = 'boot') {
 // ─── SMS providers ──────────────────────────────────────────────────────────────
 // หมายเหตุ: endpoint/รูปแบบ payload ของแต่ละเจ้าอาจเปลี่ยน — ตรวจกับเอกสารผู้ให้บริการ
 // แล้วปรับใน .env (โดยเฉพาะ provider=custom ที่ตั้งค่าได้ทุกอย่าง)
-async function sendOne(to, message) {
+async function sendSms(provider, to, message) {
   const intl = toIntlTH(to);
 
-  if (CONFIG.provider === 'thsms') {
+  if (provider === 'thsms') {
     // THSMS (thsms.com) — REST + Bearer token
     // endpoint override ได้ผ่าน THSMS_API_URL เผื่อ dashboard ของคุณใช้ path ต่าง
     const url = process.env.THSMS_API_URL || 'https://thsms.com/api/rest';
@@ -122,7 +130,7 @@ async function sendOne(to, message) {
     return { uuid: d.uuid || null, status: d.status || 'sent', credit: d.credit_balance ?? d.credit ?? null };
   }
 
-  if (CONFIG.provider === 'smsmkt') {
+  if (provider === 'smsmkt') {
     // SMSMKT (smsmkt.com) — api_key/secret_key
     const res = await fetch('https://portal-otp.smsmkt.com/api/send-message', {
       method: 'POST',
@@ -138,7 +146,7 @@ async function sendOne(to, message) {
     return text;
   }
 
-  if (CONFIG.provider === 'custom') {
+  if (provider === 'custom') {
     // ตั้งค่าได้ทุกอย่างผ่าน .env — ใช้กับ gateway ไหนก็ได้
     // SMS_URL, SMS_METHOD, SMS_HEADERS (JSON), SMS_BODY (template มี {to} {message} {sender})
     const url = process.env.SMS_URL;
@@ -155,22 +163,53 @@ async function sendOne(to, message) {
     return text;
   }
 
-  throw new Error(`ไม่รู้จัก SMS_PROVIDER: ${CONFIG.provider}`);
+  throw new Error(`ไม่รู้จัก SMS provider: ${provider}`);
 }
 
+// ─── Telegram ─────────────────────────────────────────────────────────────────
+// ฟรี เด้งเข้าแอปทันที — ต้องมี TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_IDS
+async function sendTelegramOne(chatId, message) {
+  if (!CONFIG.tgToken) throw new Error('ยังไม่ได้ตั้ง TELEGRAM_BOT_TOKEN ใน .env');
+  const res = await fetch(`${process.env.TELEGRAM_API_BASE || 'https://api.telegram.org'}/bot${CONFIG.tgToken}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text: message, disable_web_page_preview: true }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.ok === false) {
+    throw new Error(`Telegram: ${data?.description || `HTTP ${res.status}`}`);
+  }
+  return { status: 'sent', message_id: data?.result?.message_id || null };
+}
+
+// ─── dispatch ทุก channel + ทุกผู้รับ ─────────────────────────────────────────
 async function sendToAll(kind) {
   const message = buildMessage(kind);
-  log(`ส่ง ${kind} → ${CONFIG.numbers.join(', ')}`);
-  const results = await Promise.allSettled(CONFIG.numbers.map(n => sendOne(n, message)));
+  // สร้างรายการงาน: [label, promiseFactory]
+  const jobs = [];
+  for (const ch of CONFIG.channels) {
+    if (SMS_CHANNELS.has(ch)) {
+      for (const n of CONFIG.numbers) jobs.push([`${ch}:${n}`, () => sendSms(ch, n, message)]);
+    } else if (ch === 'telegram') {
+      if (CONFIG.tgChats.length === 0) jobs.push(['telegram', () => { throw new Error('ยังไม่ได้ตั้ง TELEGRAM_CHAT_IDS'); }]);
+      for (const c of CONFIG.tgChats) jobs.push([`telegram:${c}`, () => sendTelegramOne(c, message)]);
+    } else {
+      jobs.push([ch, () => { throw new Error(`ไม่รู้จัก channel: ${ch}`); }]);
+    }
+  }
+
+  log(`ส่ง ${kind} ผ่าน [${CONFIG.channels.join(', ')}] → ${jobs.length} ปลายทาง`);
+  const results = await Promise.allSettled(jobs.map(([, fn]) => fn()));
   results.forEach((r, i) => {
+    const label = jobs[i][0];
     if (r.status === 'fulfilled') {
       const v = r.value;
       const info = v && typeof v === 'object'
-        ? ' (' + [v.status, v.uuid && `uuid=${v.uuid}`, v.credit != null && `credit=${v.credit}`].filter(Boolean).join(', ') + ')'
+        ? ' (' + [v.status, v.uuid && `uuid=${v.uuid}`, v.message_id && `msg=${v.message_id}`, v.credit != null && `credit=${v.credit}`].filter(Boolean).join(', ') + ')'
         : '';
-      log(`  ✓ ${CONFIG.numbers[i]} OK${info}`);
+      log(`  ✓ ${label} OK${info}`);
     } else {
-      log(`  ✗ ${CONFIG.numbers[i]} FAIL: ${r.reason?.message || r.reason}`);
+      log(`  ✗ ${label} FAIL: ${r.reason?.message || r.reason}`);
     }
   });
   return results;
@@ -180,7 +219,26 @@ async function sendToAll(kind) {
 const args = process.argv.slice(2);
 const isTest   = args.includes('--test') || args.includes('--force');
 const isOnce   = args.includes('--once'); // ส่งครั้งเดียวแล้วจบ (สำหรับ cron @reboot)
-const isDaemon = !isOnce && !isTest;
+const isTgId   = args.includes('--tg-chatid'); // ช่วยหา chat_id ของ Telegram
+
+// ดึง chat_id จาก getUpdates (ทักบอทก่อน แล้วรันคำสั่งนี้)
+async function showTelegramChatIds() {
+  if (!CONFIG.tgToken) { log('ตั้ง TELEGRAM_BOT_TOKEN ใน .env ก่อน'); return; }
+  const res = await fetch(`${process.env.TELEGRAM_API_BASE || 'https://api.telegram.org'}/bot${CONFIG.tgToken}/getUpdates`);
+  const data = await res.json();
+  if (!data.ok) { log('Telegram error: ' + (data.description || res.status)); return; }
+  const chats = new Map();
+  for (const u of data.result || []) {
+    const c = u.message?.chat || u.channel_post?.chat;
+    if (c) chats.set(c.id, c.title || `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.username || c.type);
+  }
+  if (chats.size === 0) {
+    log('ยังไม่พบแชท — เปิด Telegram ทักบอทของคุณ (พิมพ์ /start) แล้วรันคำสั่งนี้อีกครั้ง');
+  } else {
+    log('พบ chat_id ต่อไปนี้ — ใส่ใน TELEGRAM_CHAT_IDS:');
+    for (const [id, name] of chats) log(`  ${id}  (${name})`);
+  }
+}
 
 async function checkAndAlert() {
   const sig = bootSignature();
@@ -197,8 +255,10 @@ async function checkAndAlert() {
 
 (async () => {
   try {
+    if (isTgId) { await showTelegramChatIds(); return; }
+
     if (isTest) {
-      log('โหมดทดสอบ — ส่ง SMS ทันที');
+      log('โหมดทดสอบ — ส่งแจ้งเตือนทันที');
       await sendToAll('boot');
       log('เสร็จสิ้นการทดสอบ');
       return;
