@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiUrl } from '../apiBase';
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 const MOCK = {
@@ -29,12 +30,13 @@ const MOCK = {
   ],
 };
 
-const PLAN_COLOR = { free: '#64748b', pro: '#6366f1', business: '#f59e0b' };
+const PLAN_COLOR = { free: '#64748b', pro: '#6366f1', premier: '#f59e0b', business: '#f59e0b' };
 const TIER_COLOR = { starter: '#10b981', pro: '#6366f1', elite: '#f59e0b' };
 const STATUS_COLOR = { active: '#10b981', suspended: '#ef4444', inactive: '#64748b' };
 
 // ── Admin password gate ───────────────────────────────────────────────────────
-const ADMIN_KEY = 'openthai-admin-2026'; // เปลี่ยนใน production
+// ตั้ง VITE_ADMIN_KEY ตอน build สำหรับ production (การป้องกันจริงอยู่ที่ backend ADMIN_KEY)
+const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY || 'openthai-admin-2026';
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -44,14 +46,28 @@ export default function AdminPage() {
   const [tab, setTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [data] = useState(MOCK);
+  const [sales, setSales] = useState(null);     // ยอดขายจริงจาก backend
+  const [salesErr, setSalesErr] = useState('');
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
+  // ดึงสรุปยอดขายจริงเมื่อล็อกอินแล้ว (ใช้ admin key เป็น x-admin-key header)
+  useEffect(() => {
+    if (!authed) return;
+    const key = sessionStorage.getItem('admin_key') || ADMIN_KEY;
+    fetch(apiUrl('/api/payment/admin/summary'), { headers: { 'x-admin-key': key } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setSales(d); else setSalesErr(d.message || 'โหลดยอดขายไม่สำเร็จ'); })
+      .catch(() => setSalesErr('เชื่อมต่อ backend ไม่ได้'));
+  }, [authed]);
+
   const handleLogin = (e) => {
     e.preventDefault();
-    if (pw === ADMIN_KEY) { sessionStorage.setItem('admin_ok', '1'); setAuthed(true); }
+    if (pw === ADMIN_KEY) { sessionStorage.setItem('admin_ok', '1'); sessionStorage.setItem('admin_key', pw); setAuthed(true); }
     else { setPwErr('รหัสผ่านไม่ถูกต้อง'); }
   };
+
+  const baht = (n) => `฿${Number(n || 0).toLocaleString('th-TH')}`;
 
   // ── Password gate ──────────────────────────────────────────────────────────
   if (!authed) return (
@@ -95,7 +111,7 @@ export default function AdminPage() {
             { icon: '👥', label: 'ผู้ใช้ทั้งหมด', v: data.stats.users.toLocaleString(), sub: `+${data.stats.users_today} วันนี้`, c: '#6366f1' },
             { icon: '⚡', label: 'คอนเทนต์สร้างแล้ว', v: data.stats.content.toLocaleString(), sub: `+${data.stats.content_today} วันนี้`, c: '#10b981' },
             { icon: '🤝', label: 'Affiliates', v: data.stats.affiliates, sub: `${data.stats.affiliates_active} active`, c: '#f59e0b' },
-            { icon: '💰', label: 'รายได้รวม (฿)', v: `฿${data.stats.revenue.toLocaleString()}`, sub: `฿${data.stats.revenue_month.toLocaleString()} เดือนนี้`, c: '#fe2c55' },
+            { icon: '💰', label: 'รายได้รวม (฿)', v: baht(sales ? sales.stats.revenue_total : data.stats.revenue), sub: `${baht(sales ? sales.stats.revenue_month : data.stats.revenue_month)} เดือนนี้`, c: '#fe2c55' },
           ].map((s) => (
             <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
               <div style={{ fontSize: 26, marginBottom: 4 }}>{s.icon}</div>
@@ -108,7 +124,7 @@ export default function AdminPage() {
 
         {/* TABS */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-          {[['overview','📊 ภาพรวม'],['users','👥 Users'],['affiliates','🤝 Affiliates'],['content','⚡ Content'],['settings','⚙️ Settings']].map(([id, label]) => (
+          {[['overview','📊 ภาพรวม'],['sales','💰 ยอดขาย'],['users','👥 Users'],['affiliates','🤝 Affiliates'],['content','⚡ Content'],['settings','⚙️ Settings']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{ ...tabBtn, background: tab === id ? 'rgba(99,102,241,0.2)' : 'transparent', border: `1px solid ${tab === id ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.07)'}`, color: tab === id ? '#a5b4fc' : '#64748b' }}>
               {label}
             </button>
@@ -148,6 +164,80 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* TAB: SALES — ยอดขายจริงจาก Omise */}
+        {tab === 'sales' && (
+          <div>
+            {salesErr && <div style={{ ...glass, color: '#fca5a5', marginBottom: 16 }}>⚠️ {salesErr}</div>}
+            {!sales && !salesErr && <div style={{ ...glass, color: '#64748b' }}>กำลังโหลดยอดขาย…</div>}
+            {sales && (
+              <>
+                {/* สรุปยอด */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 20 }}>
+                  {[
+                    { label: 'รายได้รวม', v: baht(sales.stats.revenue_total), c: '#10b981' },
+                    { label: 'เดือนนี้', v: baht(sales.stats.revenue_month), c: '#6366f1' },
+                    { label: 'ชำระสำเร็จ', v: sales.stats.paid_count, c: '#f59e0b' },
+                    { label: 'รอชำระ', v: sales.stats.pending_count, c: '#64748b' },
+                  ].map((s) => (
+                    <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
+                      <div style={{ fontSize: 22, fontWeight: 900, color: s.c }}>{s.v}</div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* แยกตามแผน */}
+                {Object.keys(sales.by_plan || {}).length > 0 && (
+                  <div style={{ ...glass, marginBottom: 20 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 12 }}>📦 รายได้ตามแพ็กเกจ</div>
+                    {Object.entries(sales.by_plan).map(([plan, v]) => (
+                      <div key={plan} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                        <span style={{ color: PLAN_COLOR[plan] || '#94a3b8', fontWeight: 600, textTransform: 'capitalize' }}>{plan}</span>
+                        <span style={{ color: '#64748b' }}>{v.count} ออเดอร์</span>
+                        <span style={{ color: '#10b981', fontWeight: 700 }}>{baht(v.revenue)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* รายการล่าสุด */}
+                <div style={glass}>
+                  <div style={{ fontWeight: 700, marginBottom: 12 }}>🧾 รายการล่าสุด</div>
+                  {sales.recent.length === 0 ? (
+                    <div style={{ color: '#64748b', fontSize: 13, padding: '12px 0' }}>ยังไม่มีรายการชำระเงิน</div>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                        <thead>
+                          <tr>{['วันที่','แพ็กเกจ','ช่องทาง','อีเมล','ยอด','สถานะ'].map((h) => (
+                            <th key={h} style={{ textAlign: 'left', padding: '8px', color: '#64748b', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.08)', whiteSpace: 'nowrap' }}>{h}</th>
+                          ))}</tr>
+                        </thead>
+                        <tbody>
+                          {sales.recent.map((r, i) => (
+                            <tr key={r.charge_id || i}>
+                              <td style={{ padding: '8px', color: '#94a3b8', whiteSpace: 'nowrap' }}>{r.paid_at || r.created_at ? new Date(r.paid_at || r.created_at).toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</td>
+                              <td style={{ padding: '8px', color: PLAN_COLOR[r.plan] || '#94a3b8', textTransform: 'capitalize' }}>{r.plan || '-'}</td>
+                              <td style={{ padding: '8px', color: '#94a3b8' }}>{r.method === 'card' ? '💳 บัตร' : r.method === 'subscription' ? '🔁 Subscription' : '📱 PromptPay'}</td>
+                              <td style={{ padding: '8px', color: '#94a3b8', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.email || '-'}</td>
+                              <td style={{ padding: '8px', fontWeight: 700 }}>{baht(r.amount_thb)}</td>
+                              <td style={{ padding: '8px' }}>
+                                <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 6, background: r.status === 'successful' ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)', color: r.status === 'successful' ? '#10b981' : '#94a3b8' }}>
+                                  {r.status === 'successful' ? 'สำเร็จ' : r.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         )}
 

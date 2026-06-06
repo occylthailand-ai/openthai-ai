@@ -30,10 +30,9 @@ async function omise(method, path, body = null, usePublicKey = false) {
 
 // ── Plans ─────────────────────────────────────────────────────────────────────
 export const SUBSCRIPTION_PLANS = {
-  free:       { name: 'Free',       price_thb: 0,     interval: null,    omise_plan_id: null },
-  starter:    { name: 'Starter',    price_thb: 299,   interval: 'month', omise_plan_id: process.env.OMISE_PLAN_STARTER  || null },
-  pro:        { name: 'Pro',        price_thb: 799,   interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PRO      || null },
-  enterprise: { name: 'Enterprise', price_thb: 2499,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_ENTERPRISE || null },
+  free:    { name: 'Free',    price_thb: 0,   interval: null,    omise_plan_id: null },
+  pro:     { name: 'Pro',     price_thb: 20,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PRO     || null },
+  premier: { name: 'Premier', price_thb: 30,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PREMIER || null },
 };
 
 // ── PromptPay QR Charge ───────────────────────────────────────────────────────
@@ -62,6 +61,30 @@ export async function createPromptPayCharge({ amount_thb, description, metadata 
     qr_image_url: charge.source?.scannable_code?.image?.download_uri || null,
     expires_at:  charge.expires_at,
     promptpay_ref: charge.source?.reference || null,
+  };
+}
+
+// ── Credit / Debit Card Charge ────────────────────────────────────────────────
+// `token` มาจาก Omise.js ฝั่ง client (tokenize บัตรแบบ PCI-compliant — เลขบัตร
+// ไม่เคยผ่าน server ของเรา). รองรับ 3-D Secure ผ่าน authorize_uri + return_uri.
+export async function createCardCharge({ amount_thb, token, description, metadata = {}, return_uri = null }) {
+  const charge = await omise('POST', '/charges', {
+    amount: amount_thb * 100,   // Omise ใช้สตางค์
+    currency: 'thb',
+    card: token,
+    description,
+    metadata,
+    ...(return_uri ? { return_uri } : {}),
+  });
+
+  return {
+    charge_id:     charge.id,
+    status:        charge.status,        // pending | successful | failed
+    paid:          charge.paid,
+    amount_thb,
+    authorize_uri: charge.authorize_uri || null,  // ถ้าต้องทำ 3-D Secure
+    authorized:    charge.authorized,
+    failure_message: charge.failure_message || null,
   };
 }
 

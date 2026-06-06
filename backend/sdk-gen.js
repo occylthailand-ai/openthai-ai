@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 // Openthai.ai — SDK Generator (Stainless-style)
 //
 // Reads openapi.js and auto-generates frontend/src/sdk/openthaiClient.js
