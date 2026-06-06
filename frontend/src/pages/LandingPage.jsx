@@ -1,7 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogoEmblem } from '../components/Logo';
 import { apiUrl } from '../apiBase';
+import { useLang } from '../i18n';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 const FEATURES = [
@@ -84,7 +86,9 @@ function useBlink(interval = 530) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const navigate = useNavigate();
-  const typed = useTyping(['ผ้าไหมอุบล', 'น้ำพริกป้าแดง', 'เซรั่มข้าวหอม', 'กาแฟดอยช้าง', 'สบู่มะขาม']);
+  const { t, lang } = useLang();
+  const typingWords = useMemo(() => t('typing'), [lang]); // eslint-disable-line react-hooks/exhaustive-deps
+  const typed = useTyping(typingWords);
   const cursorOn = useBlink();
   const [email, setEmail] = useState('');
   const [joined, setJoined] = useState(false);
@@ -123,11 +127,12 @@ export default function LandingPage() {
           <span style={{ fontWeight: 900, fontSize: 18, background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Openthai.ai</span>
           <span style={{ fontSize: 11, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 20, padding: '2px 8px', color: '#a5b4fc' }}>v9.0</span>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => navigate('/affiliate')} style={ghostBtn}>💰 Affiliate</button>
-          <button onClick={() => navigate('/pricing')} style={ghostBtn}>ราคา</button>
-          <button onClick={() => navigate('/login')} style={ghostBtn}>Login</button>
-          <button onClick={handleFreeStart} style={ctaPrimary}>ใช้ฟรีตอนนี้ →</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <LanguageSwitcher />
+          <button onClick={() => navigate('/affiliate')} style={ghostBtn}>{t('nav.affiliate')}</button>
+          <button onClick={() => navigate('/pricing')} style={ghostBtn}>{t('nav.pricing')}</button>
+          <button onClick={() => navigate('/login')} style={ghostBtn}>{t('nav.login')}</button>
+          <button onClick={handleFreeStart} style={ctaPrimary}>{t('nav.freeCta')}</button>
         </div>
       </nav>
 
@@ -138,31 +143,31 @@ export default function LandingPage() {
         <div style={{ position: 'absolute', top: '20%', right: '10%', width: 350, height: 350, background: 'rgba(99,102,241,0.12)', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(254,44,85,0.1)', border: '1px solid rgba(254,44,85,0.3)', borderRadius: 20, padding: '6px 16px', fontSize: 13, marginBottom: 24, color: '#fca5a5' }}>
-          🔥 คนไทยกว่า 1,200 คนใช้แล้ว — ทดลองฟรีวันนี้!
+          {t('hero.badge')}
         </div>
 
         <h1 style={{ fontSize: 'clamp(36px,7vw,76px)', fontWeight: 900, lineHeight: 1.15, margin: '0 0 20px' }}>
-          สร้างคอนเทนต์ TikTok ปัง<br />
+          {t('hero.line1')}<br />
           <span style={{ background: 'linear-gradient(90deg,#fe2c55,#ff5722,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             "{typed}<span style={{ opacity: cursorOn ? 1 : 0, transition: 'opacity 0.1s' }}>|</span>"
           </span>
           <br />
           <span style={{ background: 'linear-gradient(90deg,#6366f1,#06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            ใน 10 วินาที ด้วย AI ไทยแท้
+            {t('hero.line3')}
           </span>
         </h1>
 
         <p style={{ fontSize: 'clamp(15px,2vw,20px)', color: '#94a3b8', maxWidth: 620, margin: '0 auto 36px', lineHeight: 1.7 }}>
-          ไม่ต้องคิดสคริปต์ ไม่ต้องเขียนแคปชั่น ไม่ต้องหาแฮชแท็ก<br />
-          Openthai.ai สร้างครบเซ็ตพร้อมโพสต์ทันที ภาษาไทยธรรมชาติ
+          {t('hero.sub1')}<br />
+          {t('hero.sub2')}
         </p>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 48 }}>
           <button onClick={handleFreeStart} style={{ ...ctaPrimary, fontSize: 17, padding: '16px 36px' }}>
-            🎁 ใช้ฟรี 3 ครั้ง — ไม่ต้องสมัคร!
+            {t('hero.ctaFree')}
           </button>
           <button onClick={() => navigate('/pricing')} style={{ ...ghostBtn, fontSize: 15, padding: '14px 28px', borderColor: 'rgba(255,255,255,0.15)' }}>
-            ดูราคา →
+            {t('hero.ctaPricing')}
           </button>
         </div>
 
