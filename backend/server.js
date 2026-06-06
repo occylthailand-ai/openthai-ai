@@ -2286,6 +2286,47 @@ function savePayments(data) {
 }
 const payments = loadPayments();
 
+// ─── Entitlements — แผนที่ user มีสิทธิ์ใช้ (key by email) ────────────────────
+const ENTITLEMENTS_FILE = join(WRITE_DATA_DIR, 'entitlements.json');
+function loadEntitlements() {
+  try { if (existsSync(ENTITLEMENTS_FILE)) return JSON.parse(readFileSync(ENTITLEMENTS_FILE, 'utf8')); } catch (_) {}
+  return {};
+}
+function saveEntitlements(data) {
+  try { writeFileSync(ENTITLEMENTS_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (_) {}
+}
+const entitlements = loadEntitlements();
+
+// เปิดสิทธิ์ใช้งานแผนให้ user (เรียกเมื่อชำระเงินสำเร็จ)
+function grantEntitlement(email, plan, { source = 'payment', subscription_id = null } = {}) {
+  if (!email || !plan || plan === 'free') return null;
+  const now = new Date();
+  const expires = new Date(now); expires.setMonth(expires.getMonth() + 1);  // +1 เดือน
+  const key = email.toLowerCase();
+  const ent = {
+    email: key, plan, status: 'active', source,
+    subscription_id: subscription_id || entitlements[key]?.subscription_id || null,
+    started_at: entitlements[key]?.started_at || now.toISOString(),
+    updated_at: now.toISOString(),
+    expires_at: expires.toISOString(),
+  };
+  entitlements[key] = ent;
+  saveEntitlements(entitlements);
+  addLog('info', 'Entitlement', `เปิดสิทธิ์ ${plan} ให้ ${key} (${source})`);
+  return ent;
+}
+
+// คืนสิทธิ์ปัจจุบัน (เช็ควันหมดอายุ) — ถ้าหมดอายุถือเป็น free
+function getEntitlement(email) {
+  if (!email) return { plan: 'free', status: 'none' };
+  const ent = entitlements[email.toLowerCase()];
+  if (!ent) return { plan: 'free', status: 'none' };
+  if (ent.status === 'active' && ent.expires_at && new Date(ent.expires_at) < new Date()) {
+    ent.status = 'expired'; saveEntitlements(entitlements);
+  }
+  return ent.status === 'active' ? ent : { ...ent, plan: 'free' };
+}
+
 const paymentLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'Payment rate limit' } });
 
 // POST /api/payment/create — สร้าง charge แบบ PromptPay / บัตรเครดิต / subscription
@@ -2309,8 +2350,9 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       plan,
       message:       'OMISE_SECRET_KEY ยังไม่ได้ตั้งค่า — นี่คือ mock response',
     };
-    payments.unshift({ ...mock, method, paid_at: isCard ? new Date().toISOString() : null, createdAt: new Date().toISOString() });
+    payments.unshift({ ...mock, method, email: email || null, paid_at: isCard ? new Date().toISOString() : null, createdAt: new Date().toISOString() });
     savePayments(payments);
+    if (isCard && email) grantEntitlement(email, plan, { source: 'mock-card' });
     return res.json({ success: true, ...mock });
   }
 
@@ -2343,6 +2385,7 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       }
       // ชำระสำเร็จทันที (ไม่ต้องทำ 3-D Secure) → ส่งใบเสร็จ + dispatch webhook
       if (charge.paid) {
+        grantEntitlement(email, plan, { source: 'card' });
         webhooks.dispatch('payment.completed', { charge_id: charge.charge_id, amount_thb: charge.amount_thb, plan }, null);
         sendPaymentReceipt(email, { plan, amount_thb: charge.amount_thb, charge_id: charge.charge_id, paid_at: paidAt, method });
       }
@@ -2358,6 +2401,8 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       const sub = await createSubscription({ customer_id: customer.customer_id, plan_key: plan });
       payments.unshift({ ...sub, method, email, createdAt: new Date().toISOString() });
       savePayments(payments);
+      grantEntitlement(email, plan, { source: 'subscription', subscription_id: sub.subscription_id });
+      sendPaymentReceipt(email, { plan, amount_thb: sub.amount_thb, charge_id: sub.subscription_id, paid_at: new Date().toISOString(), method });
       return res.json({ success: true, ...sub });
     }
 
@@ -2378,6 +2423,36 @@ app.get('/api/payment/config', (req, res) => {
   });
 });
 
+// GET /api/payment/entitlement?email= — เช็คแผนที่ user มีสิทธิ์ใช้ตอนนี้
+app.get('/api/payment/entitlement', (req, res) => {
+  const email = (req.query.email || '').trim();
+  if (!email) return res.status(400).json({ error: 'ต้องการ email' });
+  const ent = getEntitlement(email);
+  res.json({ success: true, ...ent });
+});
+
+// POST /api/payment/cancel — ยกเลิก subscription (ใช้สิทธิ์ได้จนถึงวันหมดอายุ)
+app.post('/api/payment/cancel', async (req, res) => {
+  const email = (req.body?.email || '').trim();
+  if (!email) return res.status(400).json({ error: 'ต้องการ email' });
+  const ent = entitlements[email.toLowerCase()];
+  if (!ent) return res.status(404).json({ error: 'ไม่พบสิทธิ์การใช้งานสำหรับอีเมลนี้' });
+
+  try {
+    if (ent.subscription_id && process.env.OMISE_SECRET_KEY) {
+      await cancelSubscription(ent.subscription_id);
+    }
+    ent.status = 'cancelled';
+    ent.updated_at = new Date().toISOString();
+    saveEntitlements(entitlements);
+    addLog('info', 'Entitlement', `ยกเลิก subscription ของ ${email}`);
+    res.json({ success: true, message: `ยกเลิกแล้ว — ใช้งานแผน ${ent.plan} ได้จนถึง ${new Date(ent.expires_at).toLocaleDateString('th-TH')}`, ...ent });
+  } catch (e) {
+    addLog('error', 'Payment', `Cancel failed: ${e.message}`);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/payment/status/:chargeId — poll charge status
 app.get('/api/payment/status/:chargeId', async (req, res) => {
   if (!process.env.OMISE_SECRET_KEY) {
@@ -2392,6 +2467,7 @@ app.get('/api/payment/status/:chargeId', async (req, res) => {
       if (firstTime) { rec.paid_at = status.paid_at; rec.status = 'successful'; savePayments(payments); }
       webhooks.dispatch('payment.completed', { charge_id: req.params.chargeId, amount_thb: status.amount_thb, plan: rec?.plan }, null);
       if (firstTime && rec?.email) {
+        grantEntitlement(rec.email, rec.plan, { source: rec.method || 'promptpay' });
         sendPaymentReceipt(rec.email, { plan: rec.plan, amount_thb: status.amount_thb, charge_id: req.params.chargeId, paid_at: status.paid_at, method: rec.method });
       }
     }
@@ -2473,7 +2549,14 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
     addLog('info', 'OmiseWebhook', `Event: ${key} — charge: ${data?.id}`);
     if (key === 'charge.complete' && data?.paid) {
       const rec = payments.find(p => p.charge_id === data.id);
-      if (rec) { rec.status = 'successful'; rec.paid_at = data.paid_at; savePayments(payments); }
+      if (rec && !rec.paid_at) {
+        rec.status = 'successful'; rec.paid_at = data.paid_at; savePayments(payments);
+        const email = rec.email || data.metadata?.email;
+        if (email && rec.plan) {
+          grantEntitlement(email, rec.plan, { source: 'webhook' });
+          sendPaymentReceipt(email, { plan: rec.plan, amount_thb: data.amount / 100, charge_id: data.id, paid_at: data.paid_at, method: rec.method });
+        }
+      }
       webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
     }
     res.json({ received: true });

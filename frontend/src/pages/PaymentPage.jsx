@@ -82,6 +82,8 @@ const PaymentPage = () => {
   const [omiseReady, setOmiseReady] = useState(false);
   const [pubKey, setPubKey] = useState(null);
   const [autoRenew, setAutoRenew] = useState(true);  // ต่ออายุอัตโนมัติทุกเดือน (บัตร)
+  const [entitlement, setEntitlement] = useState(null);  // แผนที่ใช้อยู่ตอนนี้
+  const [cancelling, setCancelling] = useState(false);
 
   const plan = PLANS.find(p => p.key === selectedPlan);
 
@@ -153,6 +155,41 @@ const PaymentPage = () => {
       else reject(new Error(response.message || 'ข้อมูลบัตรไม่ถูกต้อง'));
     });
   });
+
+  // ดึงแผนที่ใช้อยู่ตอนนี้ (ตามอีเมล)
+  const refreshEntitlement = (mail) => {
+    const e = (mail || email || '').trim();
+    if (!e) return;
+    fetch(apiUrl(`/api/payment/entitlement?email=${encodeURIComponent(e)}`))
+      .then(r => r.json())
+      .then(d => { if (d.success) { setEntitlement(d); if (d.plan && d.plan !== 'free') localStorage.setItem('user_plan', d.plan); } })
+      .catch(() => {});
+  };
+  useEffect(() => { if (email) refreshEntitlement(email); }, []);  // eslint-disable-line
+
+  // เก็บแผนที่จ่ายสำเร็จไว้ + รีเฟรชสิทธิ์
+  useEffect(() => {
+    if (step === 'success') { localStorage.setItem('user_plan', selectedPlan); refreshEntitlement(); }
+  }, [step]);  // eslint-disable-line
+
+  const handleCancelSubscription = async () => {
+    if (!window.confirm('ยืนยันยกเลิกการต่ออายุอัตโนมัติ? คุณยังใช้งานได้จนถึงวันหมดอายุ')) return;
+    setCancelling(true); setError('');
+    try {
+      const res = await fetch(apiUrl('/api/payment/cancel'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'ยกเลิกไม่สำเร็จ');
+      setEntitlement(data);
+      window.alert(data.message || 'ยกเลิกเรียบร้อย');
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const handleProceedToPayment = async () => {
     if (plan.price === 0) { navigate('/dashboard'); return; }
@@ -226,6 +263,25 @@ const PaymentPage = () => {
         {/* Step: Select Plan */}
         {step === 'select' && (
           <>
+            {/* แผนที่ใช้อยู่ตอนนี้ */}
+            {entitlement && entitlement.plan && entitlement.plan !== 'free' && (
+              <div style={{ maxWidth: '600px', margin: '0 auto 24px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#a0a0b0' }}>แผนปัจจุบันของคุณ</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#6ee7b7', textTransform: 'capitalize' }}>
+                    {entitlement.plan} {entitlement.status === 'cancelled' && <span style={{ color: '#fbbf24', fontSize: '12px' }}>(ยกเลิกแล้ว)</span>}
+                  </div>
+                  {entitlement.expires_at && <div style={{ fontSize: '12px', color: '#6b7280' }}>{entitlement.status === 'cancelled' ? 'ใช้ได้ถึง' : 'ต่ออายุ'} {formatThaiDateTime(entitlement.expires_at)}</div>}
+                </div>
+                {entitlement.subscription_id && entitlement.status === 'active' && (
+                  <button onClick={handleCancelSubscription} disabled={cancelling}
+                    style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', cursor: cancelling ? 'not-allowed' : 'pointer' }}>
+                    {cancelling ? 'กำลังยกเลิก…' : 'ยกเลิกการต่ออายุ'}
+                  </button>
+                )}
+              </div>
+            )}
+
             <p style={{ textAlign: 'center', color: '#a0a0b0', marginBottom: '32px' }}>เลือกแผนที่เหมาะกับธุรกิจของคุณ — ยกเลิกได้ทุกเมื่อ</p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '32px' }}>
