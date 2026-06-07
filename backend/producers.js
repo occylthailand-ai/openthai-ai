@@ -70,6 +70,30 @@ export function createProducers(dataDir) {
     return Object.values(store).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
   }
 
+  // อัปเดตสถานะผู้ผลิต (admin อนุมัติ/ปฏิเสธ)
+  async function setStatus(email, status) {
+    const e = (email || '').toString().trim().toLowerCase();
+    const ok = ['pending', 'approved', 'rejected', 'suspended'];
+    if (!ok.includes(status)) return { ok: false, error: 'invalid status' };
+    if (useSB) {
+      try {
+        await sbReq('PATCH', '/producers', { body: { status }, params: { email: `eq.${e}` }, prefer: 'return=minimal' });
+        return { ok: true, email: e, status };
+      } catch (err) { console.warn('[producers] Supabase patch failed, using file:', err.message); }
+    }
+    if (!store[e]) return { ok: false, error: 'not found' };
+    store[e].status = status; saveFile();
+    return { ok: true, email: e, status };
+  }
+
+  // catalog สาธารณะ — เฉพาะผู้ผลิตที่อนุมัติแล้ว + มีสินค้า
+  async function catalog() {
+    const list = await all();
+    return list
+      .filter((p) => p.status === 'approved' && p.product_name)
+      .map((p) => ({ producer: p.company, email: p.email, product_name: p.product_name, price: p.price, category: p.category, description: p.description, website: p.website }));
+  }
+
   async function summary() {
     const list = await all();
     const byStatus = {}; const byCategory = {};
@@ -87,11 +111,16 @@ export function createProducers(dataDir) {
 
   router.get('/api/producers/categories', (req, res) => res.json({ success: true, categories: CATEGORIES }));
 
+  // catalog สาธารณะ — สินค้าจากผู้ผลิตที่อนุมัติแล้ว
+  router.get('/api/catalog', wrap(async (req, res) => {
+    res.json({ success: true, products: await catalog() });
+  }));
+
   router.post('/api/producers/apply', applyLimiter, wrap(async (req, res) => {
     const r = await register(req.body || {});
     if (!r.ok) return res.status(400).json({ success: false, error: r.error });
     res.json({ success: true, status: r.status, message: 'รับใบสมัครแล้ว ทีมงานจะติดต่อกลับเพื่อยืนยันการเข้าร่วม' });
   }));
 
-  return { router, register, all, summary, CATEGORIES };
+  return { router, register, all, summary, setStatus, catalog, CATEGORIES };
 }
