@@ -10,6 +10,7 @@ import AffiliatePage from './pages/AffiliatePage';
 import AffiliateDashboard from './pages/AffiliateDashboard';
 import LandingPage from './pages/LandingPage';
 import PricingPage from './pages/PricingPage';
+import ProducerJoinPage from './pages/ProducerJoinPage';
 import AdminPage from './pages/AdminPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -93,6 +94,8 @@ function App() {
             {/* Public pages — ไม่ต้อง login */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/join" element={<ProducerJoinPage />} />
+            <Route path="/producers" element={<ProducerJoinPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/affiliate" element={<AffiliatePage />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />

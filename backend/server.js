@@ -26,6 +26,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
+import { createProducers } from './producers.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -57,6 +58,7 @@ const tenants   = createTenantManager(WRITE_DATA_DIR);
 const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
+const producers = createProducers(WRITE_DATA_DIR);
 
 import {
   signToken, verifyToken, requireAuth,
@@ -78,6 +80,8 @@ app.use((req, res, next) => {
 
 // Credit ledger routes — /api/credits, /credits/checkin, /credits/spin, /credits/claim
 app.use(credits.router);
+// Producer onboarding routes — /api/producers/apply, /producers/categories
+app.use(producers.router);
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({
@@ -306,6 +310,22 @@ app.get('/api/credits/admin/summary', async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, ...(await credits.adminSummary()) }); }
+  catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/producers/admin/summary — สรุปผู้ผลิตที่สมัคร (Admin Key)
+app.get('/api/producers/admin/summary', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try { res.json({ success: true, ...(await producers.summary()) }); }
+  catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/producers/admin/list — รายชื่อผู้ผลิตทั้งหมด (Admin Key)
+app.get('/api/producers/admin/list', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try { res.json({ success: true, producers: await producers.all() }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
