@@ -25,6 +25,7 @@ import {
 } from './omise-payment.js';
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { createPRSystem } from './pr-communications.js';
+import { createCredits } from './credits.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -55,6 +56,7 @@ const webhooks  = createWebhookSystem(WRITE_DATA_DIR);
 const tenants   = createTenantManager(WRITE_DATA_DIR);
 const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
+const credits   = createCredits(WRITE_DATA_DIR);
 
 import {
   signToken, verifyToken, requireAuth,
@@ -73,6 +75,9 @@ app.use((req, res, next) => {
   express.json({ limit: '50kb' })(req, res, next);
 });
 // image endpoint uses its own larger limit (see /api/analyze-image)
+
+// Credit ledger routes — /api/credits, /credits/checkin, /credits/spin, /credits/claim
+app.use(credits.router);
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({
@@ -281,7 +286,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   try {
     const data = await smartGenerate(form);
     const u = consumeQuota(req);
-    return res.json({ ...data, usage: { plan: u.plan, used: u.used ?? null, limit: u.limit ?? null, remaining: u.remaining ?? null, unlimited: !!u.unlimited } });
+    return res.json({ ...data, usage: { plan: u.plan, used: u.used ?? null, limit: u.limit ?? null, remaining: u.remaining ?? null, unlimited: !!u.unlimited, viaCredit: !!u.viaCredit, creditBalance: u.creditBalance ?? null } });
   } catch (err) {
     console.error('[generate error]', err.message);
     const fallback = mockGenerate(form);
@@ -2375,13 +2380,27 @@ function checkQuota(req) {
   const ip = (req.headers['x-forwarded-for'] || req.ip || '').toString().split(',')[0].trim();
   const key = `${today()}:${email || ip}`;
   const used = _usage.get(key) || 0;
-  return { allowed: used < FREE_DAILY_LIMIT, plan: 'free', unlimited: false, used, limit: FREE_DAILY_LIMIT, remaining: Math.max(0, FREE_DAILY_LIMIT - used), key };
+  if (used < FREE_DAILY_LIMIT) {
+    return { allowed: true, plan: 'free', unlimited: false, used, limit: FREE_DAILY_LIMIT, remaining: Math.max(0, FREE_DAILY_LIMIT - used), key };
+  }
+  // โควต้าฟรีหมดแล้ว → ใช้เครดิตโบนัส (จากรางวัล spin/streak) แทนได้
+  const cid = credits.identityFrom(req);
+  if (credits.hasCredit(cid)) {
+    return { allowed: true, plan: 'free', unlimited: false, used, limit: FREE_DAILY_LIMIT, remaining: 0, key, viaCredit: true, creditBalance: credits.pub(cid).balance };
+  }
+  return { allowed: false, plan: 'free', unlimited: false, used, limit: FREE_DAILY_LIMIT, remaining: 0, key };
 }
 
 // บันทึกการใช้ 1 ครั้ง (เรียกหลัง generate สำเร็จ)
 function consumeQuota(req) {
   const q = checkQuota(req);
   if (q.unlimited) return q;
+  // ถ้าเกินโควต้าฟรี แต่ผ่านได้ด้วยเครดิตโบนัส → หักเครดิต 1 หน่วย (ไม่แตะโควต้ารายวัน)
+  if (q.viaCredit) {
+    const cid = credits.identityFrom(req);
+    credits.consumeCredit(cid);
+    return { ...q, viaCredit: true, creditBalance: credits.pub(cid).balance };
+  }
   // กันคีย์เก่าบวม — ลบ entry ของวันก่อนหน้าเป็นครั้งคราว
   if (_usage.size > 5000) for (const k of _usage.keys()) if (!k.startsWith(today())) _usage.delete(k);
   _usage.set(q.key, (q.used || 0) + 1);

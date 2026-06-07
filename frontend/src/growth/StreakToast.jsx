@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLang } from '../i18n';
+import { apiFetch } from '../apiBase';
 import { strings, fill, loadGrowth, saveGrowth, todayStr } from './core';
 
 // Habit loop: นับวันที่กลับมาใช้ติดต่อกัน + ให้เครดิตโบนัส
@@ -23,11 +24,24 @@ export default function StreakToast() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    const s = computeStreak();
-    setState(s);
-    const t1 = setTimeout(() => setShow(true), 1200);
-    const t2 = setTimeout(() => setShow(false), 8000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    let alive = true;
+    const timers = [];
+    (async () => {
+      let s;
+      try {
+        // server-authoritative streak (ข้ามอุปกรณ์ถ้า login); fallback เป็น local
+        const res = await apiFetch('/api/credits/checkin', { method: 'POST' });
+        const d = await res.json();
+        s = { days: d.streakDays || 1, credits: d.awarded || d.streakDays || 1 };
+      } catch {
+        s = computeStreak();
+      }
+      if (!alive) return;
+      setState(s);
+      timers.push(setTimeout(() => setShow(true), 1200));
+      timers.push(setTimeout(() => setShow(false), 8000));
+    })();
+    return () => { alive = false; timers.forEach(clearTimeout); };
   }, []);
 
   if (!state) return null;

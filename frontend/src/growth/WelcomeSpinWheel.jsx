@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../i18n';
+import { apiFetch } from '../apiBase';
 import { strings, loadGrowth, saveGrowth } from './core';
 
 const SEG_COLORS = ['#fe2c55', '#6366f1', '#f59e0b', '#10b981', '#06b6d4', '#a855f7'];
@@ -23,13 +24,19 @@ export default function WelcomeSpinWheel() {
 
   const close = () => { setOpen(false); window.__otaiModalOpen = false; };
 
-  const doSpin = () => {
+  const doSpin = async () => {
     if (spinning || prize !== null) return;
     const n = S.prizes.length;
-    const i = Math.floor(Math.random() * n);
+    setSpinning(true);
+    // ให้ backend สุ่มรางวัล (server-authoritative + เติมเครดิตจริง); ถ้าพลาดใช้สุ่ม local
+    let i = Math.floor(Math.random() * n);
+    try {
+      const res = await apiFetch('/api/credits/spin', { method: 'POST' });
+      const data = await res.json();
+      if (typeof data.index === 'number' && data.index >= 0 && data.index < n) i = data.index;
+    } catch { /* offline → local random */ }
     const seg = 360 / n;
     const target = 6 * 360 + (360 - (i * seg + seg / 2)); // ให้ช่อง i หยุดตรงตัวชี้ (ด้านบน)
-    setSpinning(true);
     setRot(target);
     setTimeout(() => {
       setSpinning(false);
