@@ -6,54 +6,11 @@ import { useLang } from '../i18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 // ── Data ─────────────────────────────────────────────────────────────────────
-const FEATURES = [
-  { icon: '⚡', title: 'สร้างใน 10 วินาที', desc: 'กรอกชื่อสินค้า กด Generate — ได้สคริปต์+แคปชั่น+แฮชแท็กพร้อมโพสต์ทันที' },
-  { icon: '🇹🇭', title: 'AI ไทยแท้ 100%', desc: 'เข้าใจวัฒนธรรม ภาษา และเทรนด์คนไทย ไม่ใช่แค่แปลมาจากภาษาอังกฤษ' },
-  { icon: '🎯', title: 'โดนใจทุก Gen', desc: 'ปรับสไตล์ได้ตั้งแต่ Gen Z ไปถึงผู้ใหญ่ — ภาษาธรรมชาติ อ่านแล้วอยากกด Like' },
-  { icon: '📊', title: 'AI Critic 9.0', desc: 'ให้คะแนนคอนเทนต์ 0-10 พร้อมคำแนะนำปรับปรุง ก่อนโพสต์จริง' },
-  { icon: '🛒', title: 'ครอบคลุม 241 แพลตฟอร์ม', desc: 'TikTok, Facebook, Instagram, Shopee, Lazada และอีกกว่า 200 ช่องทาง' },
-  { icon: '💰', title: 'Affiliate Program', desc: 'แชร์ให้เพื่อน — ได้คอมมิชชั่นสูงสุด 40% ทุกออเดอร์ที่ผ่านลิงก์คุณ' },
-];
-
-const STEPS = [
-  { n: '1', title: 'กรอกชื่อสินค้า', desc: 'เช่น "ผ้าไหมอุบล", "น้ำพริกป้าแดง", "เซรั่มข้าวหอม"' },
-  { n: '2', title: 'เลือกสไตล์', desc: 'Educational, Entertainment, Sales — เลือกให้ตรงจุดประสงค์' },
-  { n: '3', title: 'กด Generate', desc: 'AI สร้างสคริปต์ + แคปชั่น + แฮชแท็กให้ครบใน 10 วินาที' },
-  { n: '4', title: 'โพสต์ได้เลย', desc: 'คัดลอกแล้วแปะลง TikTok / Facebook / Instagram ได้ทันที' },
-];
-
-const PLANS = [
-  {
-    id: 'free', name: 'Free', price: '0', unit: '/วัน',
-    color: '#10b981', desc: 'ทดลองใช้ฟรี ไม่ต้องสมัคร',
-    features: ['สร้างคอนเทนต์ 3 ครั้ง/วัน', 'TikTok + Facebook', 'AI Critic พื้นฐาน', 'แฮชแท็ก 5 อัน'],
-    cta: 'เริ่มใช้ฟรี', ctaStyle: 'outline',
-  },
-  {
-    id: 'pro', name: 'Pro', price: '149', unit: '/เดือน',
-    color: '#6366f1', desc: 'สำหรับ Creator จริงจัง', recommended: true,
-    features: ['ไม่จำกัดจำนวนครั้ง', 'ทุกแพลตฟอร์ม 241+', 'AI Critic เต็มรูปแบบ', 'แฮชแท็ก 20+ อัน', 'ประวัติคอนเทนต์ 30 วัน', 'Priority Support'],
-    cta: 'เริ่ม Pro ฟรี 7 วัน', ctaStyle: 'primary',
-  },
-  {
-    id: 'business', name: 'Business', price: '299', unit: '/เดือน',
-    color: '#f59e0b', desc: 'สำหรับทีมและธุรกิจ',
-    features: ['ทุกอย่างใน Pro', 'ทีม 5 คน', 'API Access', 'White-label', 'Dedicated Manager', 'SLA 99.9%'],
-    cta: 'ติดต่อทีมงาน', ctaStyle: 'gold',
-  },
-];
-
-const REVIEWS = [
-  { name: 'คุณแพร', role: 'เจ้าของร้าน OTOP ขอนแก่น', stars: 5, text: 'ก่อนหน้านี้เขียนแคปชั่นนึงใช้เวลา 30 นาที ตอนนี้ 10 วินาที ยอดขายดีขึ้น 3 เท่า!' },
-  { name: 'คุณมิน', role: 'TikTok Creator 50k followers', stars: 5, text: 'สคริปต์ที่ได้เป็นภาษาไทยธรรมชาติมาก ไม่ได้ดูออกว่า AI เขียน คนดูรู้สึกจริง' },
-  { name: 'คุณโจ', role: 'SME เชียงใหม่', stars: 5, text: 'ทดลองฟรี 3 ครั้งแล้วสมัคร Pro ทันที คุ้มมากครับ ใช้ทุกวัน' },
-];
-
-const STATS_HERO = [
-  { v: '1,200+', l: 'Creator ใช้แล้ว' },
-  { v: '3x', l: 'คอนเทนต์โตไว' },
-  { v: '10 วิ', l: 'สร้างเสร็จ' },
-  { v: '241', l: 'แพลตฟอร์ม' },
+// ข้อมูลโครงสร้างที่ไม่ขึ้นกับภาษา (ราคา/สี/ลำดับ) — ข้อความแปลดึงจาก i18n ผ่าน t('plans')
+const PLAN_META = [
+  { id: 'free', price: '0', color: '#10b981' },
+  { id: 'pro', price: '149', color: '#6366f1', recommended: true },
+  { id: 'business', price: '299', color: '#f59e0b' },
 ];
 
 // ── Typing animation hook ────────────────────────────────────────────────────
@@ -90,6 +47,16 @@ export default function LandingPage() {
   const typingWords = useMemo(() => t('typing'), [lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const typed = useTyping(typingWords);
   const cursorOn = useBlink();
+
+  // เนื้อหาที่แปลตามภาษา
+  const stats = t('stats');
+  const steps = t('steps');
+  const features = t('features');
+  const reviews = t('reviews');
+  const plans = t('plans');
+  const demoHashtags = t('demo.hashtags');
+  // ข้อความหลายบรรทัด: คั่นด้วย "||"
+  const lines = (key) => String(t(key)).split('||');
   const [email, setEmail] = useState('');
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -173,7 +140,7 @@ export default function LandingPage() {
 
         {/* Stats row */}
         <div style={{ display: 'flex', gap: 32, justifyContent: 'center', flexWrap: 'wrap' }}>
-          {STATS_HERO.map((s) => (
+          {stats.map((s) => (
             <div key={s.l} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 28, fontWeight: 900, color: '#fe2c55' }}>{s.v}</div>
               <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{s.l}</div>
@@ -190,27 +157,27 @@ export default function LandingPage() {
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#fe2c55' }} />
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b' }} />
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981' }} />
-            <span style={{ fontSize: 12, color: '#475569', marginLeft: 8 }}>Openthai.ai Generator — ผ้าไหมอุบล</span>
+            <span style={{ fontSize: 12, color: '#475569', marginLeft: 8 }}>{t('demo.title')}</span>
           </div>
           <div style={{ padding: 24 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
               <div style={demoBox}>
-                <div style={demoLabel}>🎣 Hook</div>
-                <div style={demoText}>ทำไมผ้าไหมอุบลถึงแพงกว่าที่อื่น? เฉลยตอนท้าย!</div>
+                <div style={demoLabel}>{t('demo.hook.label')}</div>
+                <div style={demoText}>{t('demo.hook.text')}</div>
               </div>
               <div style={demoBox}>
-                <div style={demoLabel}>📊 AI Score</div>
+                <div style={demoLabel}>{t('demo.score.label')}</div>
                 <div style={{ fontSize: 36, fontWeight: 900, color: '#10b981', textAlign: 'center', padding: '8px 0' }}>9.2 <span style={{ fontSize: 14, color: '#64748b' }}>/10</span></div>
               </div>
             </div>
             <div style={demoBox}>
-              <div style={demoLabel}>📝 Caption พร้อมโพสต์</div>
-              <div style={demoText}>✨ ผ้าไหมอุบล — สิ่งทอไทยที่ UNESCO รับรอง<br />💯 ทออย่างพิถีพิถัน ใช้ได้หลายร้อยปี<br />🚚 ส่งฟรีทั่วไทย • สั่งได้ใน Bio!</div>
+              <div style={demoLabel}>{t('demo.caption.label')}</div>
+              <div style={demoText}>{lines('demo.caption.text').map((ln, i) => <React.Fragment key={i}>{i > 0 && <br />}{ln}</React.Fragment>)}</div>
             </div>
             <div style={{ ...demoBox, marginTop: 12 }}>
-              <div style={demoLabel}>#️⃣ Hashtags</div>
+              <div style={demoLabel}>{t('demo.hashtags.label')}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                {['#ผ้าไหม', '#OTOP', '#สินค้าไทย', '#ของดีบ้านเรา', '#TikTokShop', '#ภูมิปัญญาไทย', '#Openthai.ai'].map((h) => (
+                {demoHashtags.map((h) => (
                   <span key={h} style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 20, padding: '3px 10px', fontSize: 12, color: '#a5b4fc' }}>{h}</span>
                 ))}
               </div>
@@ -221,10 +188,10 @@ export default function LandingPage() {
 
       {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
       <section style={{ maxWidth: 960, margin: '0 auto', padding: '0 5% 80px', textAlign: 'center' }}>
-        <SectionBadge>วิธีใช้งาน</SectionBadge>
-        <SectionTitle>สร้างคอนเทนต์ใน 4 ขั้นตอน</SectionTitle>
+        <SectionBadge>{t('how.badge')}</SectionBadge>
+        <SectionTitle>{t('how.title')}</SectionTitle>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginTop: 32 }}>
-          {STEPS.map((s) => (
+          {steps.map((s) => (
             <div key={s.n} style={{ ...glassCard, textAlign: 'center' }}>
               <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#fe2c55,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontWeight: 900, fontSize: 18 }}>{s.n}</div>
               <div style={{ fontWeight: 700, marginBottom: 6 }}>{s.title}</div>
@@ -237,11 +204,11 @@ export default function LandingPage() {
       {/* ── FEATURES ─────────────────────────────────────────────────────── */}
       <section style={{ maxWidth: 1000, margin: '0 auto', padding: '0 5% 80px' }}>
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <SectionBadge>ฟีเจอร์</SectionBadge>
-          <SectionTitle>ทำไมต้อง Openthai.ai?</SectionTitle>
+          <SectionBadge>{t('features.badge')}</SectionBadge>
+          <SectionTitle>{t('features.title')}</SectionTitle>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 20 }}>
-          {FEATURES.map((f) => (
+          {features.map((f) => (
             <div key={f.title} style={{ ...glassCard, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
               <span style={{ fontSize: 28, flexShrink: 0 }}>{f.icon}</span>
               <div>
@@ -255,10 +222,10 @@ export default function LandingPage() {
 
       {/* ── REVIEWS ──────────────────────────────────────────────────────── */}
       <section style={{ maxWidth: 960, margin: '0 auto', padding: '0 5% 80px', textAlign: 'center' }}>
-        <SectionBadge>รีวิว</SectionBadge>
-        <SectionTitle>Creator ไทยพูดว่า...</SectionTitle>
+        <SectionBadge>{t('reviews.badge')}</SectionBadge>
+        <SectionTitle>{t('reviews.title')}</SectionTitle>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 20, marginTop: 32 }}>
-          {REVIEWS.map((r) => (
+          {reviews.map((r) => (
             <div key={r.name} style={{ ...glassCard, textAlign: 'left' }}>
               <div style={{ color: '#f59e0b', marginBottom: 10, fontSize: 18 }}>{'★'.repeat(r.stars)}</div>
               <p style={{ fontSize: 14, color: '#cbd5e1', lineHeight: 1.7, margin: '0 0 16px' }}>"{r.text}"</p>
@@ -271,28 +238,31 @@ export default function LandingPage() {
 
       {/* ── PRICING PREVIEW ──────────────────────────────────────────────── */}
       <section style={{ maxWidth: 960, margin: '0 auto', padding: '0 5% 80px', textAlign: 'center' }}>
-        <SectionBadge>ราคา</SectionBadge>
-        <SectionTitle>เลือกแพ็กเกจที่ใช่</SectionTitle>
+        <SectionBadge>{t('pricing.badge')}</SectionBadge>
+        <SectionTitle>{t('pricing.title')}</SectionTitle>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 20, marginTop: 32 }}>
-          {PLANS.map((p) => (
-            <div key={p.id} style={{ ...glassCard, border: `1.5px solid ${p.recommended ? p.color + '55' : 'rgba(255,255,255,0.08)'}`, background: p.recommended ? `${p.color}0d` : undefined, position: 'relative', textAlign: 'left' }}>
-              {p.recommended && <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: `linear-gradient(90deg,${p.color},#fe2c55)`, borderRadius: 20, padding: '4px 16px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>⭐ แนะนำ</div>}
-              <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 4, color: p.color }}>{p.name}</div>
+          {PLAN_META.map((m) => {
+            const p = plans[m.id];
+            return (
+            <div key={m.id} style={{ ...glassCard, border: `1.5px solid ${m.recommended ? m.color + '55' : 'rgba(255,255,255,0.08)'}`, background: m.recommended ? `${m.color}0d` : undefined, position: 'relative', textAlign: 'left' }}>
+              {m.recommended && <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: `linear-gradient(90deg,${m.color},#fe2c55)`, borderRadius: 20, padding: '4px 16px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{t('pricing.recommended')}</div>}
+              <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 4, color: m.color }}>{p.name}</div>
               <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>{p.desc}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 20 }}>
-                <span style={{ fontSize: 40, fontWeight: 900 }}>฿{p.price}</span>
+                <span style={{ fontSize: 40, fontWeight: 900 }}>฿{m.price}</span>
                 <span style={{ fontSize: 13, color: '#64748b' }}>{p.unit}</span>
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {p.features.map((f) => <li key={f} style={{ fontSize: 13, color: '#cbd5e1', display: 'flex', gap: 8 }}><span style={{ color: p.color }}>✓</span>{f}</li>)}
+                {p.features.map((f) => <li key={f} style={{ fontSize: 13, color: '#cbd5e1', display: 'flex', gap: 8 }}><span style={{ color: m.color }}>✓</span>{f}</li>)}
               </ul>
               <button
-                onClick={() => p.id === 'free' ? navigate('/ai-generator') : navigate('/pricing')}
-                style={{ width: '100%', padding: '12px', borderRadius: 50, fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none', background: p.id === 'free' ? 'rgba(255,255,255,0.06)' : p.id === 'pro' ? 'linear-gradient(135deg,#6366f1,#fe2c55)' : `linear-gradient(135deg,${p.color},#ff5722)`, color: '#fff' }}>
+                onClick={() => m.id === 'free' ? navigate('/ai-generator') : navigate('/pricing')}
+                style={{ width: '100%', padding: '12px', borderRadius: 50, fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none', background: m.id === 'free' ? 'rgba(255,255,255,0.06)' : m.id === 'pro' ? 'linear-gradient(135deg,#6366f1,#fe2c55)' : `linear-gradient(135deg,${m.color},#ff5722)`, color: '#fff' }}>
                 {p.cta}
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -300,15 +270,15 @@ export default function LandingPage() {
       <section style={{ maxWidth: 560, margin: '0 auto', padding: '0 5% 80px', textAlign: 'center' }}>
         <div style={{ ...glassCard, background: 'linear-gradient(135deg,rgba(254,44,85,0.08),rgba(99,102,241,0.08))', border: '1.5px solid rgba(99,102,241,0.2)' }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>📬</div>
-          <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>รับ Tips สร้างคอนเทนต์ฟรี</h3>
-          <p style={{ color: '#64748b', fontSize: 14, marginBottom: 20 }}>เคล็ดลับ TikTok + แนวโน้มเทรนด์ไทย ส่งทุกอาทิตย์</p>
+          <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>{t('email.title')}</h3>
+          <p style={{ color: '#64748b', fontSize: 14, marginBottom: 20 }}>{t('email.desc')}</p>
           {joined ? (
-            <div style={{ color: '#10b981', fontWeight: 700, fontSize: 15 }}>✅ ขอบคุณ! จะส่งข้อมูลให้ที่อีเมลเร็ว ๆ นี้</div>
+            <div style={{ color: '#10b981', fontWeight: 700, fontSize: 15 }}>{t('email.joined')}</div>
           ) : (
             <form onSubmit={handleJoin} style={{ display: 'flex', gap: 8 }}>
-              <input type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} required style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 16px', color: '#f8fafc', fontSize: 14, outline: 'none' }} />
+              <input type="email" placeholder={t('email.placeholder')} value={email} onChange={(e) => setEmail(e.target.value)} required style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 16px', color: '#f8fafc', fontSize: 14, outline: 'none' }} />
               <button type="submit" disabled={joining} style={{ ...ctaPrimary, whiteSpace: 'nowrap', opacity: joining ? 0.7 : 1 }}>
-                {joining ? '⏳ กำลังส่ง...' : 'สมัคร →'}
+                {joining ? t('email.submitting') : t('email.submit')}
               </button>
             </form>
           )}
@@ -325,20 +295,20 @@ export default function LandingPage() {
               <span style={{ fontWeight: 900, fontSize: 16, color: '#f8fafc' }}>Openthai.ai</span>
             </div>
             <p style={{ color: '#475569', fontSize: 12, margin: 0, maxWidth: 220, lineHeight: 1.6 }}>
-              AI ไทยแท้ สร้างคอนเทนต์ TikTok<br />ใน 10 วินาที รองรับ 241 แพลตฟอร์ม
+              {lines('footer.tagline').map((ln, i) => <React.Fragment key={i}>{i > 0 && <br />}{ln}</React.Fragment>)}
             </p>
           </div>
           {/* Links */}
           <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>บริการ</div>
-              {[['AI Generator', '/ai-generator'], ['ราคา', '/pricing'], ['Affiliate', '/affiliate']].map(([l, r]) => (
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.services')}</div>
+              {[[t('footer.link.generator'), '/ai-generator'], [t('footer.link.pricing'), '/pricing'], [t('footer.link.affiliate'), '/affiliate']].map(([l, r]) => (
                 <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
               ))}
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>ข้อมูล</div>
-              {[['นโยบายความเป็นส่วนตัว', '/privacy'], ['ข้อกำหนดการใช้งาน', '/terms'], ['ติดต่อเรา', 'mailto:support@openthai.ai']].map(([l, r]) => (
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.info')}</div>
+              {[[t('footer.link.privacy'), '/privacy'], [t('footer.link.terms'), '/terms'], [t('footer.link.contact'), 'mailto:support@openthai.ai']].map(([l, r]) => (
                 r.startsWith('mailto')
                   ? <a key={r} href={r} style={{ display: 'block', color: '#94a3b8', fontSize: 13, textDecoration: 'none', marginBottom: 6 }}>{l}</a>
                   : <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
@@ -347,8 +317,8 @@ export default function LandingPage() {
           </div>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <span style={{ fontSize: 12, color: '#334155' }}>© 2026 Openthai.ai — สงวนลิขสิทธิ์</span>
-          <span style={{ fontSize: 12, color: '#334155' }}>🇹🇭 Made in Thailand · Powered by Gemini AI</span>
+          <span style={{ fontSize: 12, color: '#334155' }}>{t('footer.copyright')}</span>
+          <span style={{ fontSize: 12, color: '#334155' }}>{t('footer.made')}</span>
         </div>
       </footer>
     </div>
