@@ -2418,6 +2418,14 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
   if (!planDef) return res.status(400).json({ error: 'Invalid plan' });
   if (planDef.price_thb === 0) return res.json({ success: true, plan, status: 'free', message: 'ไม่ต้องชำระเงิน' });
 
+  // ส่วนลดจากรางวัลวงล้อ (spin "X% off") — ใช้ได้กับ one-time charge (ไม่รวม subscription)
+  let amount = planDef.price_thb;
+  let discountPct = 0;
+  if (method !== 'subscription') {
+    discountPct = await credits.consumeDiscount(credits.identityFrom(req));
+    if (discountPct > 0) amount = Math.max(1, Math.round(planDef.price_thb * (100 - discountPct) / 100));
+  }
+
   if (!process.env.OMISE_SECRET_KEY) {
     // Mock mode — Omise ยังไม่ได้ตั้ง. บัตรเครดิตถือว่าสำเร็จทันที (ไม่มี QR ให้รอ)
     const isCard = method === 'card';
@@ -2425,7 +2433,9 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       charge_id:     `mock_charge_${Date.now()}`,
       status:        isCard ? 'successful' : 'pending',
       paid:          isCard,
-      amount_thb:    planDef.price_thb,
+      amount_thb:    amount,
+      original_thb:  planDef.price_thb,
+      discount_pct:  discountPct,
       qr_image_url:  null,
       expires_at:    new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       promptpay_ref: isCard ? null : 'MOCKREF001',
@@ -2441,22 +2451,22 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
   try {
     if (method === 'promptpay') {
       const charge = await createPromptPayCharge({
-        amount_thb: planDef.price_thb,
-        description: `Openthai.ai ${planDef.name} Plan`,
-        metadata: { plan, email: email || '', method },
+        amount_thb: amount,
+        description: `Openthai.ai ${planDef.name} Plan${discountPct ? ` (-${discountPct}%)` : ''}`,
+        metadata: { plan, email: email || '', method, discount_pct: discountPct },
       });
       payments.unshift({ ...charge, plan, method, email: email || null, createdAt: new Date().toISOString() });
       savePayments(payments);
-      return res.json({ success: true, ...charge, plan });
+      return res.json({ success: true, ...charge, plan, original_thb: planDef.price_thb, discount_pct: discountPct });
     }
 
     if (method === 'card') {
       if (!token) return res.status(400).json({ error: 'ต้องการ card token (tokenize ด้วย Omise.js ก่อน)' });
       const charge = await createCardCharge({
-        amount_thb: planDef.price_thb,
+        amount_thb: amount,
         token,
-        description: `Openthai.ai ${planDef.name} Plan`,
-        metadata: { plan, email: email || '', method },
+        description: `Openthai.ai ${planDef.name} Plan${discountPct ? ` (-${discountPct}%)` : ''}`,
+        metadata: { plan, email: email || '', method, discount_pct: discountPct },
         return_uri: return_uri || undefined,
       });
       const paidAt = charge.paid ? new Date().toISOString() : null;
@@ -2471,7 +2481,7 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
         webhooks.dispatch('payment.completed', { charge_id: charge.charge_id, amount_thb: charge.amount_thb, plan }, null);
         sendPaymentReceipt(email, { plan, amount_thb: charge.amount_thb, charge_id: charge.charge_id, paid_at: paidAt, method });
       }
-      return res.json({ success: true, ...charge, plan });
+      return res.json({ success: true, ...charge, plan, original_thb: planDef.price_thb, discount_pct: discountPct });
     }
 
     if (method === 'subscription') {
