@@ -88,9 +88,22 @@ export function createCredits(dataDir) {
     return `i:${ip || 'unknown'}`;
   }
 
+  // ส่วนลดที่ยังไม่ได้ใช้ (จากรางวัล spin "X% off") เก็บใน claims._discount
+  const discOf = (a) => (a.claims && a.claims._discount && !a.claims._discount.used) ? (a.claims._discount.pct || 0) : 0;
+
   async function pub(id) {
     const a = await getAcct(id);
-    return { balance: a.balance, streakDays: a.streakDays, streakDate: a.streakDate, spun: a.spun, prize: a.prize };
+    return { balance: a.balance, streakDays: a.streakDays, streakDate: a.streakDate, spun: a.spun, prize: a.prize, discountPct: discOf(a) };
+  }
+
+  async function peekDiscount(id) { return discOf(await getAcct(id)); }
+
+  // ใช้ส่วนลด 1 ครั้ง (mark used) — คืน % ที่ใช้ (0 ถ้าไม่มี)
+  async function consumeDiscount(id) {
+    const a = await getAcct(id);
+    const d = a.claims && a.claims._discount;
+    if (d && !d.used) { d.used = true; await putAcct(id, a); return d.pct || 0; }
+    return 0;
   }
 
   async function addCredits(id, amount, source) {
@@ -136,6 +149,7 @@ export function createCredits(dataDir) {
     a.spun = true;
     a.prize = p.label;
     if (p.credits) a.balance = clamp(a.balance + p.credits, 0, MAX_BALANCE);
+    if (p.discount) { a.claims = a.claims || {}; a.claims._discount = { pct: p.discount, used: false }; }
     await putAcct(id, a);
     return { already: false, index: i, prize: p.label, credits: p.credits || 0, discount: p.discount || 0, proDays: p.proDays || 0, balance: a.balance };
   }
@@ -161,5 +175,5 @@ export function createCredits(dataDir) {
   }));
 
   console.log(`[credits] ledger mode: ${useSB ? 'Supabase' : 'file'}`);
-  return { router, identityFrom, hasCredit, consumeCredit, pub, SPIN_PRIZES };
+  return { router, identityFrom, hasCredit, consumeCredit, pub, peekDiscount, consumeDiscount, SPIN_PRIZES };
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { apiUrl } from '../apiBase';
+import { apiUrl, authHeaders } from '../apiBase';
+import { useToast } from '../components/ToastContext';
 
 const PLANS = [
   {
@@ -66,6 +67,7 @@ function buildReceipt(data = {}) {
 
 const PaymentPage = () => {
   const navigate = useNavigate();
+  const toast = useToast();
   const [searchParams] = useSearchParams();
   const initialPlan = PLANS.some(p => p.key === searchParams.get('plan')) ? searchParams.get('plan') : 'pro';
   const [selectedPlan, setSelectedPlan] = useState(initialPlan);
@@ -216,11 +218,13 @@ const PaymentPage = () => {
 
       const res = await fetch(apiUrl('/api/payment/create'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+        // authHeaders() แนบ x-device-id/x-user-email → backend หาเครดิต+ส่วนลดของผู้ใช้เจอ
+        headers: authHeaders({ 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) }),
         body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'ไม่สามารถสร้าง payment ได้');
+      if (data.discount_pct > 0) toast?.success?.(`🎁 ใช้ส่วนลด ${data.discount_pct}% จากวงล้อ! จ่ายเพียง ฿${data.amount_thb}`);
 
       if (payMethod === 'promptpay') {
         setQrData(data);
