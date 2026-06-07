@@ -4,6 +4,7 @@ import { LogoEmblem } from '../components/Logo';
 import { useToast } from '../components/ToastContext';
 import CreditChip from '../components/CreditChip';
 import { apiUrl, getDeviceId } from '../apiBase';
+import { useLang } from '../i18n';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 // n8n webhook: ใช้ได้เฉพาะ local dev (localhost) — production จะ fallback ไป BACKEND_API อัตโนมัติ
@@ -431,6 +432,7 @@ function NewsRagTab({ toast, onIdeaSelect }) {
 const AIGeneratorPage = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { t } = useLang();
   const fileRef = useRef(null);
 
   const [genTab, setGenTab]     = useState('generate'); // generate | competitor | news
@@ -586,7 +588,7 @@ const AIGeneratorPage = () => {
           <LogoEmblem size="sm" />
           <div>
             <div className="gen-title">AI Content Generator</div>
-            <div className="gen-subtitle">สร้างคอนเทนต์ระดับมืออาชีพ · รองรับทุกแพลตฟอร์ม</div>
+            <div className="gen-subtitle">{t('gen.subtitle')}</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -599,10 +601,10 @@ const AIGeneratorPage = () => {
 
       {/* ── Tab Bar ── */}
       <div style={{ background:'rgba(8,8,18,0.9)', backdropFilter:'blur(10px)', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', gap:2, padding:'0 24px', overflowX:'auto' }}>
-        {GEN_TABS.map(t => (
-          <button key={t.id} onClick={() => setGenTab(t.id)}
-            style={{ padding:'12px 18px', background:'none', border:'none', borderBottom:`2px solid ${genTab===t.id?'#6366f1':'transparent'}`, color:genTab===t.id?'#a5b4fc':'#475569', cursor:'pointer', fontSize:13, fontWeight:genTab===t.id?700:400, whiteSpace:'nowrap', transition:'all .2s' }}>
-            {t.icon} {t.label}
+        {GEN_TABS.map(tb => (
+          <button key={tb.id} onClick={() => setGenTab(tb.id)}
+            style={{ padding:'12px 18px', background:'none', border:'none', borderBottom:`2px solid ${genTab===tb.id?'#6366f1':'transparent'}`, color:genTab===tb.id?'#a5b4fc':'#475569', cursor:'pointer', fontSize:13, fontWeight:genTab===tb.id?700:400, whiteSpace:'nowrap', transition:'all .2s' }}>
+            {tb.icon} {t('gen.tab.' + tb.id)}
           </button>
         ))}
       </div>
@@ -621,12 +623,12 @@ const AIGeneratorPage = () => {
       {genTab === 'generate' && <div className="gen-layout">
         {/* ── LEFT: Form ── */}
         <div className="gen-form-panel glass-panel">
-          <div className="gen-form-title">📝 ข้อมูลสินค้า</div>
+          <div className="gen-form-title">{t('gen.form.title')}</div>
 
           {/* Image Upload */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              📷 อัพโหลดรูปสินค้า (AI วิเคราะห์อัตโนมัติ)
+              {t('gen.upload')}
             </div>
             <div onClick={() => fileRef.current?.click()}
               onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#6366f1'; }}
@@ -634,7 +636,7 @@ const AIGeneratorPage = () => {
               onDrop={e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleImageFile(f); e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
               style={{ border: '2px dashed rgba(255,255,255,0.1)', borderRadius: 12, padding: imgPreview ? 0 : '20px', textAlign: 'center', cursor: 'pointer', overflow: 'hidden', transition: 'border-color .2s', background: 'rgba(255,255,255,0.02)' }}>
               {imgLoading ? (
-                <div style={{ padding: 20, color: '#a5b4fc', fontSize: 13 }}>⏳ AI กำลังวิเคราะห์รูป...</div>
+                <div style={{ padding: 20, color: '#a5b4fc', fontSize: 13 }}>{t('gen.upload.analyzing')}</div>
               ) : imgPreview ? (
                 <div style={{ position: 'relative' }}>
                   <img src={imgPreview} alt="preview" style={{ width: '100%', maxHeight: 140, objectFit: 'cover', display: 'block' }} />
@@ -644,8 +646,8 @@ const AIGeneratorPage = () => {
               ) : (
                 <div style={{ color: '#475569', fontSize: 13 }}>
                   <div style={{ fontSize: 28, marginBottom: 6 }}>📷</div>
-                  คลิกหรือลากรูปสินค้ามาวางที่นี่<br/>
-                  <span style={{ fontSize: 11 }}>AI จะวิเคราะห์และกรอกชื่อให้อัตโนมัติ</span>
+                  {t('gen.upload.hint')}<br/>
+                  <span style={{ fontSize: 11 }}>{t('gen.upload.sub')}</span>
                 </div>
               )}
             </div>
@@ -653,33 +655,33 @@ const AIGeneratorPage = () => {
           </div>
 
           <div className="gen-field">
-            <label>ชื่อสินค้า <span className="gen-required">*</span></label>
-            <input className="gen-input" placeholder="เช่น ผ้าไหมมัดหมี่อุบลราชธานี"
+            <label>{t('gen.f.product')} <span className="gen-required">*</span></label>
+            <input className="gen-input" placeholder={t('gen.f.product.ph')}
               value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))}
               onKeyDown={e => e.key === 'Enter' && handleGenerate()} />
           </div>
 
           <div className="gen-field-row">
             <div className="gen-field">
-              <label>หมวดหมู่</label>
+              <label>{t('gen.f.category')}</label>
               <select className="gen-select" value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
                 {CATEGORIES.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
             <div className="gen-field">
-              <label>ราคา (ไม่บังคับ)</label>
+              <label>{t('gen.f.price')}</label>
               <input className="gen-input" placeholder="฿590" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
             </div>
           </div>
 
           <div className="gen-field">
-            <label>กลุ่มเป้าหมาย</label>
-            <input className="gen-input" placeholder="เช่น แม่บ้าน, นักศึกษา, คนรักสุขภาพ"
+            <label>{t('gen.f.audience')}</label>
+            <input className="gen-input" placeholder={t('gen.f.audience.ph')}
               value={form.audience} onChange={e => setForm(f => ({ ...f, audience: e.target.value }))} />
           </div>
 
           <div className="gen-field">
-            <label>แพลตฟอร์ม</label>
+            <label>{t('gen.f.platform')}</label>
             <div className="gen-platform-btns">
               {PLATFORMS.map(p => (
                 <button key={p} className={`gen-platform-btn ${form.platform === p ? 'active' : ''}`}
@@ -689,7 +691,7 @@ const AIGeneratorPage = () => {
           </div>
 
           <div className="gen-field">
-            <label>สไตล์คอนเทนต์</label>
+            <label>{t('gen.f.style')}</label>
             <div className="gen-style-cards">
               {STYLES.map(s => (
                 <div key={s.id} className={`gen-style-card ${form.style === s.id ? 'active' : ''}`}
@@ -702,7 +704,7 @@ const AIGeneratorPage = () => {
           </div>
 
           <div className="gen-field">
-            <label>ภาษาคอนเทนต์</label>
+            <label>{t('gen.f.lang')}</label>
             <div className="gen-lang-btns">
               {LANGS.map(l => (
                 <button key={l} className={`gen-lang-btn ${form.lang === l ? 'active' : ''}`}
@@ -719,25 +721,25 @@ const AIGeneratorPage = () => {
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: abMode ? '#a5b4fc' : '#94a3b8' }}>🆚 A/B Testing</div>
-              <div style={{ fontSize: 11, color: '#475569' }}>สร้าง 2 แบบพร้อมกัน เปรียบเทียบผล</div>
+              <div style={{ fontSize: 11, color: '#475569' }}>{t('gen.ab')}</div>
             </div>
           </div>
 
           <button className="gen-generate-btn" onClick={handleGenerate} disabled={loading || !form.product.trim()}>
-            {loading ? <><span className="gen-spinner">⚡</span> AI กำลังสร้าง...</>
-              : abMode ? '🆚 สร้าง A/B 2 แบบ' : '⚡ สร้างคอนเทนต์ AI'}
+            {loading ? <><span className="gen-spinner">⚡</span> {t('gen.btn.loading')}</>
+              : abMode ? t('gen.btn.ab') : t('gen.btn')}
           </button>
 
           {/* โควต้ารายวัน */}
           {usage && (usage.unlimited ? (
             <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: '#10b981', fontWeight: 600 }}>
-              ✨ แผน {usage.plan === 'premier' ? 'Premier' : 'Pro'} — สร้างได้ไม่จำกัด
+              ✨ {usage.plan === 'premier' ? 'Premier' : 'Pro'} — {t('gen.quota.unlimited')}
             </div>
           ) : (
             <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: usage.remaining > 0 ? '#94a3b8' : '#fca5a5' }}>
               {usage.remaining > 0
-                ? <>เหลือสิทธิ์ฟรีวันนี้ <strong style={{ color: '#f8fafc' }}>{usage.remaining}/{usage.limit}</strong> ชิ้น</>
-                : <>ใช้ครบแล้ววันนี้ · ใช้เครดิตโบนัสต่อได้ หรือ <span onClick={() => navigate('/payment?plan=pro')} style={{ color: '#a5b4fc', cursor: 'pointer', textDecoration: 'underline' }}>อัพเกรด Pro ฿20/เดือน →</span></>}
+                ? <>{t('gen.quota.left')} <strong style={{ color: '#f8fafc' }}>{usage.remaining}/{usage.limit}</strong> {t('gen.quota.unit')}</>
+                : <>{t('gen.quota.used')} <span onClick={() => navigate('/payment?plan=pro')} style={{ color: '#a5b4fc', cursor: 'pointer', textDecoration: 'underline' }}>{t('gen.quota.upgrade')}</span></>}
             </div>
           ))}
 
