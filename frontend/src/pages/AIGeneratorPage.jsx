@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { LogoEmblem } from '../components/Logo';
 import { useToast } from '../components/ToastContext';
+import CreditChip from '../components/CreditChip';
 import { apiUrl, getDeviceId } from '../apiBase';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -497,7 +498,14 @@ const AIGeneratorPage = () => {
       } else {
         const data = await generateContent(form);
         setResult(data);
-        if (data.usage) setUsage({ success: true, ...data.usage });
+        if (data.usage) {
+          setUsage({ success: true, ...data.usage });
+          // ถ้าใช้เครดิตโบนัส → แจ้ง + รีเฟรช CreditChip
+          if (data.usage.viaCredit) {
+            toast.info(`🎁 ใช้เครดิตโบนัส · เหลือ ${data.usage.creditBalance ?? '—'} เครดิต`);
+            window.dispatchEvent(new Event('otai:credits-changed'));
+          }
+        }
         const score = parseFloat(data.criticScore);
         toast.success(`✨ สร้างสำเร็จ! Score: ${data.criticScore}/10${score >= 9 ? ' 🔥' : score >= 7 ? ' 👍' : ''}`);
         pushHistory(data);
@@ -729,9 +737,12 @@ const AIGeneratorPage = () => {
             <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: usage.remaining > 0 ? '#94a3b8' : '#fca5a5' }}>
               {usage.remaining > 0
                 ? <>เหลือสิทธิ์ฟรีวันนี้ <strong style={{ color: '#f8fafc' }}>{usage.remaining}/{usage.limit}</strong> ชิ้น</>
-                : <>ใช้ครบแล้ววันนี้ · <span onClick={() => navigate('/payment?plan=pro')} style={{ color: '#a5b4fc', cursor: 'pointer', textDecoration: 'underline' }}>อัพเกรด Pro ฿20/เดือน สร้างไม่จำกัด →</span></>}
+                : <>ใช้ครบแล้ววันนี้ · ใช้เครดิตโบนัสต่อได้ หรือ <span onClick={() => navigate('/payment?plan=pro')} style={{ color: '#a5b4fc', cursor: 'pointer', textDecoration: 'underline' }}>อัพเกรด Pro ฿20/เดือน →</span></>}
             </div>
           ))}
+
+          {/* เครดิตโบนัส + เช็คอินรายวัน (habit loop) */}
+          {!usage?.unlimited && <CreditChip />}
 
           {/* History toggle */}
           {history.length > 0 && (
