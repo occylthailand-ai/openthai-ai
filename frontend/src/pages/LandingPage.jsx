@@ -306,7 +306,7 @@ export default function LandingPage() {
           <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.services')}</div>
-              {[[t('footer.link.generator'), '/ai-generator'], [t('footer.link.pricing'), '/pricing'], [t('footer.link.affiliate'), '/affiliate'], [t('footer.link.producer'), '/join']].map(([l, r]) => (
+              {[[t('footer.link.generator'), '/ai-generator'], [t('footer.link.pricing'), '/pricing'], [t('footer.link.catalog'), '/catalog'], [t('footer.link.affiliate'), '/affiliate'], [t('footer.link.producer'), '/join']].map(([l, r]) => (
                 <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
               ))}
             </div>
