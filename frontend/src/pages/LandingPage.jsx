@@ -4,6 +4,7 @@ import { LogoEmblem } from '../components/Logo';
 import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import GrowthHooks from '../growth/GrowthHooks';
 
 // ── Data ─────────────────────────────────────────────────────────────────────
 // ข้อมูลโครงสร้างที่ไม่ขึ้นกับภาษา (ราคา/สี/ลำดับ) — ข้อความแปลดึงจาก i18n ผ่าน t('plans')
@@ -86,6 +87,9 @@ export default function LandingPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif", overflowX: 'hidden' }}>
+
+      {/* Growth hooks: spin wheel · exit-intent · streak · live social proof */}
+      <GrowthHooks />
 
       {/* ── NAV ─────────────────────────────────────────────────────────── */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(8,8,18,0.85)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '14px 5%', display: 'flex', alignItems: 'center', gap: 16 }}>
