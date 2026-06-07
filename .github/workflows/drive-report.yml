@@ -1,0 +1,142 @@
+name: 📤 Drive Report (Test + Health → Google Drive)
+
+# รันเทส + health อัตโนมัติ แล้วเขียนผลเข้า Google Drive ทุก 6 ชั่วโมง
+#   - ถ้ายังไม่ได้ตั้ง secret DRIVE_WEBHOOK_URL จะข้ามขั้นอัปโหลด (report ยังเก็บเป็น artifact)
+#   - ดูวิธีตั้งค่าใน docs/DRIVE_REPORTS_SETUP.md
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PROD_URL: https://www.openthai-ai.com
+
+jobs:
+  report:
+    name: 🧪 Checks → 📤 Google Drive
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: 🎨 Frontend tests + build
+        id: fe
+        continue-on-error: true
+        working-directory: frontend
+        run: |
+          npm ci
+          npm test -- --run
+          npm run build
+
+      - name: ⚙️ Backend smoke test (/api/health)
+        id: be
+        continue-on-error: true
+        working-directory: backend
+        run: |
+          npm ci
+          node --check server.js
+          PORT=8899 node server.js > /tmp/server.log 2>&1 &
+          PID=$!; rc=1
+          for i in $(seq 1 20); do
+            C=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8899/api/health || echo 000)
+            [ "$C" = "200" ] && { rc=0; break; }
+            sleep 1
+          done
+          kill $PID 2>/dev/null || true
+          [ $rc -ne 0 ] && { echo "─── server.log ───"; cat /tmp/server.log; }
+          exit $rc
+
+      - name: ❤️ Production health
+        id: prod
+        continue-on-error: true
+        run: |
+          C=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${PROD_URL}/api/health" || echo 000)
+          echo "code=$C" >> "$GITHUB_OUTPUT"
+          echo "📡 production /api/health → HTTP $C"
+          [ "$C" = "200" ]
+
+      - name: 📝 Compose report
+        if: always()
+        id: compose
+        run: |
+          FE='${{ steps.fe.outcome }}'
+          BE='${{ steps.be.outcome }}'
+          PR='${{ steps.prod.outcome }}'
+          CODE='${{ steps.prod.outputs.code }}'
+          TS=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          FN=$(echo "$TS" | tr ':' '-')
+          icon() { [ "$1" = "success" ] && echo "✅ ผ่าน" || echo "❌ ล้มเหลว"; }
+          OVERALL=PASS
+          { [ "$FE" = success ] && [ "$BE" = success ] && [ "$PR" = success ]; } || OVERALL=FAIL
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          mkdir -p report
+          {
+            echo "# Openthai.ai — รายงานเทส & Health อัตโนมัติ"
+            echo ""
+            echo "- 🕒 เวลา (UTC): $TS"
+            echo "- 📦 commit: ${GITHUB_SHA:0:7}"
+            echo "- 🔁 run: $RUN_URL"
+            echo "- 🟢 สรุปรวม: **$OVERALL**"
+            echo ""
+            echo "| รายการ | ผล |"
+            echo "|--------|-----|"
+            echo "| 🎨 Frontend tests + build | $(icon "$FE") |"
+            echo "| ⚙️ Backend smoke (/api/health) | $(icon "$BE") |"
+            echo "| ❤️ Production health (HTTP ${CODE:-?}) | $(icon "$PR") |"
+          } > "report/report-$FN.md"
+          jq -n \
+            --arg ts "$TS" --arg overall "$OVERALL" \
+            --arg fe "$FE" --arg be "$BE" --arg pr "$PR ($CODE)" \
+            --arg commit "${GITHUB_SHA:0:7}" --arg run "$RUN_URL" \
+            --rawfile md "report/report-$FN.md" \
+            '{timestamp:$ts, overall:$overall, frontend:$fe, backend:$be, prod_health:$pr, commit:$commit, run_url:$run, markdown:$md}' \
+            > report/payload.json
+          echo "overall=$OVERALL" >> "$GITHUB_OUTPUT"
+          echo "── report ──"; cat "report/report-$FN.md"
+
+      - name: 📤 เขียนผลเข้า Google Drive (Apps Script web app)
+        if: always()
+        env:
+          DRIVE_WEBHOOK_URL: ${{ secrets.DRIVE_WEBHOOK_URL }}
+          DRIVE_WEBHOOK_SECRET: ${{ secrets.DRIVE_WEBHOOK_SECRET }}
+        run: |
+          if [ -z "$DRIVE_WEBHOOK_URL" ]; then
+            echo "⏭️ ยังไม่ได้ตั้ง secret DRIVE_WEBHOOK_URL — ข้ามการอัปโหลด (report เก็บเป็น artifact)"
+            echo "   ดูวิธีตั้งค่า: docs/DRIVE_REPORTS_SETUP.md"
+            exit 0
+          fi
+          jq --arg s "${DRIVE_WEBHOOK_SECRET:-}" '. + {secret:$s}' report/payload.json > report/payload-final.json
+          HTTP=$(curl -s -o /tmp/resp.txt -w "%{http_code}" -L \
+            -X POST "$DRIVE_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            --data @report/payload-final.json || echo 000)
+          echo "Drive webhook → HTTP $HTTP"
+          cat /tmp/resp.txt 2>/dev/null || true
+          if [ "$HTTP" = "200" ]; then
+            echo "✅ เขียนผลเข้า Google Drive แล้ว"
+          else
+            echo "⚠️ อัปโหลด Drive ไม่สำเร็จ (HTTP $HTTP) — report ยังเก็บเป็น artifact"
+          fi
+
+      - name: 📦 เก็บ report เป็น artifact เสมอ (สำรอง)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-report
+          path: report/
+          retention-days: 30
+
+      - name: 🚦 Fail run ถ้ามี check ล้มเหลว
+        if: always()
+        run: |
+          if [ "${{ steps.compose.outputs.overall }}" != "PASS" ]; then
+            echo "❌ มี check ล้มเหลว — ดูรายละเอียดด้านบน"
+            exit 1
+          fi
+          echo "✅ ทุก check ผ่าน — ผลถูกเขียนเข้า Drive แล้ว"
