@@ -51,6 +51,7 @@ export default function AdminPage() {
   const [creds, setCreds] = useState(null);     // สรุปเครดิต/รางวัลจาก backend
   const [credsErr, setCredsErr] = useState('');
   const [prods, setProds] = useState(null);     // ผู้ผลิตที่สมัคร
+  const [prodQ, setProdQ] = useState('');       // ค้นหาผู้ผลิต (รวม pending)
   const [ords, setOrds] = useState(null);       // คำสั่งซื้อ
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
@@ -152,7 +153,7 @@ export default function AdminPage() {
 
         {/* TABS */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-          {[['overview','📊 ภาพรวม'],['sales','💰 ยอดขาย'],['credits','🎁 เครดิต'],['producers','🏭 ผู้ผลิต'],['orders','📦 ออเดอร์'],['users','👥 Users'],['affiliates','🤝 Affiliates'],['content','⚡ Content'],['settings','⚙️ Settings']].map(([id, label]) => (
+          {[['overview','📊 ภาพรวม'],['sales','💰 ยอดขาย'],['credits','🎁 เครดิต'],['producers','🏭 ผู้ผลิต'],['invite','📨 เชิญผู้ผลิต'],['orders','📦 ออเดอร์'],['users','👥 Users'],['affiliates','🤝 Affiliates'],['content','⚡ Content'],['settings','⚙️ Settings']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{ ...tabBtn, background: tab === id ? 'rgba(99,102,241,0.2)' : 'transparent', border: `1px solid ${tab === id ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.07)'}`, color: tab === id ? '#a5b4fc' : '#64748b' }}>
               {label}
             </button>
@@ -311,12 +312,21 @@ export default function AdminPage() {
         )}
 
         {/* TAB: PRODUCERS */}
-        {tab === 'producers' && (
+        {tab === 'producers' && (() => {
+          const q = prodQ.trim().toLowerCase();
+          const list = (prods || []).filter((p) => !q || [p.company, p.email, p.contact_name, p.product_name, p.category, p.status].some((f) => (f || '').toString().toLowerCase().includes(q)));
+          return (
           <div style={glass}>
-            <div style={{ fontWeight: 700, marginBottom: 12 }}>🏭 ผู้ผลิตที่สมัคร {prods ? `(${prods.length})` : ''}</div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+              <div style={{ fontWeight: 700 }}>🏭 ผู้ผลิต {prods ? `(${list.length}/${prods.length})` : ''}</div>
+              <span style={{ flex: 1 }} />
+              <input value={prodQ} onChange={(e) => setProdQ(e.target.value)} placeholder="🔍 ค้นหา (ชื่อ/อีเมล/สินค้า/สถานะ — รวม pending)"
+                style={{ ...inputSt, padding: '8px 12px', fontSize: 13, minWidth: 240, flex: 1, maxWidth: 360 }} />
+            </div>
             {!prods && <div style={{ color: '#64748b', fontSize: 13 }}>กำลังโหลด…</div>}
             {prods && prods.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีผู้สมัคร</div>}
-            {prods && prods.map((p) => (
+            {prods && prods.length > 0 && list.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ไม่พบผู้ผลิตที่ตรงกับ "{prodQ}"</div>}
+            {list.map((p) => (
               <div key={p.email} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <div style={{ fontWeight: 700 }}>{p.company} <span style={{ color: '#64748b', fontWeight: 400 }}>· {p.category}</span></div>
@@ -329,7 +339,11 @@ export default function AdminPage() {
               </div>
             ))}
           </div>
-        )}
+          );
+        })()}
+
+        {/* TAB: INVITE PRODUCERS */}
+        {tab === 'invite' && <InvitePanel />}
 
         {/* TAB: ORDERS */}
         {tab === 'orders' && (
@@ -495,6 +509,54 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Invite Panel — ชุดเชิญผู้ผลิต (ลิงก์ + QR + ข้อความสำเร็จรูป) ────────────────
+function InvitePanel() {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.openthai-ai.com';
+  const link = `${origin}/join`;
+  const qr = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(link)}`;
+  const [copied, setCopied] = useState('');
+  const copy = (text, id) => { navigator.clipboard?.writeText(text).then(() => { setCopied(id); setTimeout(() => setCopied(''), 1500); }); };
+
+  const templates = [
+    { id: 'tiktok', label: '🎵 TikTok / Reels caption', text:
+`📣 ร้านไหน OTOP/แบรนด์ไทยอยากขายดีขึ้น?\nเอาสินค้ามาลงฟรีกับ Openthai.ai — ครีเอเตอร์ 1,200+ คนช่วยทำคอนเทนต์ + ดันยอดขาย\nจ่ายค่าคอมเฉพาะตอนขายได้ 💸\nสมัครฟรี 👉 ${link}\n#OTOP #สินค้าไทย #ขายของออนไลน์` },
+    { id: 'fb', label: '📘 Facebook post', text:
+`เปิดรับผู้ผลิต/แบรนด์ไทย เข้าร่วม Openthai.ai ฟรี! 🇹🇭\n✅ ครีเอเตอร์ช่วยโปรโมตสินค้าคุณ\n✅ จ่ายค่าคอมเฉพาะเมื่อขายได้\n✅ ไม่มีค่าแรกเข้า\nสมัครเลย: ${link}` },
+    { id: 'line', label: '💬 LINE / ข้อความตรง', text:
+`สวัสดีค่ะ 🙏 ทาง Openthai.ai เปิดให้ผู้ผลิต/ร้านค้าเอาสินค้ามาขายกับครีเอเตอร์ทั่วไทย ฟรีไม่มีค่าแรกเข้า จ่ายค่าคอมเฉพาะตอนขายได้ สนใจสมัครที่ลิงก์นี้เลยค่ะ: ${link}` },
+  ];
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, alignItems: 'start' }}>
+      <div style={glass}>
+        <div style={{ fontWeight: 700, marginBottom: 12 }}>🔗 ลิงก์เชิญผู้ผลิต</div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <input readOnly value={link} style={{ ...inputSt, flex: 1, fontSize: 13 }} onFocus={(e) => e.target.select()} />
+          <button onClick={() => copy(link, 'link')} style={miniBtn('#6366f1')}>{copied === 'link' ? '✅' : 'คัดลอก'}</button>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <img src={qr} alt="QR เชิญผู้ผลิต" width={180} height={180} style={{ borderRadius: 12, background: '#fff', padding: 6 }} />
+          <div style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>ให้ผู้ผลิตสแกน QR เพื่อสมัคร</div>
+          <a href={qr} download="openthai-invite-qr.png" style={{ ...miniBtn('#10b981'), display: 'inline-block', marginTop: 8, textDecoration: 'none' }}>⬇️ ดาวน์โหลด QR</a>
+        </div>
+      </div>
+      <div style={glass}>
+        <div style={{ fontWeight: 700, marginBottom: 6 }}>📨 ข้อความเชิญสำเร็จรูป</div>
+        <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>คัดลอกไปโพสต์/ส่งหาผู้ผลิตได้เลย</div>
+        {templates.map((tp) => (
+          <div key={tp.id} style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#cbd5e1', flex: 1 }}>{tp.label}</span>
+              <button onClick={() => copy(tp.text, tp.id)} style={miniBtn('#6366f1')}>{copied === tp.id ? '✅ คัดลอกแล้ว' : '📋 คัดลอก'}</button>
+            </div>
+            <pre style={{ ...inputSt, whiteSpace: 'pre-wrap', fontSize: 12, lineHeight: 1.6, color: '#94a3b8', margin: 0, fontFamily: 'inherit' }}>{tp.text}</pre>
+          </div>
+        ))}
       </div>
     </div>
   );
