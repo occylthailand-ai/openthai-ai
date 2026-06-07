@@ -116,6 +116,19 @@ export function createProducers(dataDir) {
     res.json({ success: true, products: await catalog() });
   }));
 
+  // ค้นหาผู้ผลิต (เฉพาะที่อนุมัติแล้ว) — q (ชื่อ/สินค้า/รายละเอียด) + category
+  router.get('/api/producers/search', wrap(async (req, res) => {
+    const q = (req.query.q || '').toString().trim().toLowerCase();
+    const cat = (req.query.category || '').toString().trim();
+    const list = (await all()).filter((p) => p.status === 'approved');
+    const matched = list.filter((p) => {
+      if (cat && cat !== 'ทั้งหมด' && p.category !== cat) return false;
+      if (!q) return true;
+      return [p.company, p.product_name, p.description, p.category].some((f) => (f || '').toString().toLowerCase().includes(q));
+    }).map((p) => ({ company: p.company, category: p.category, product_name: p.product_name, price: p.price, description: p.description, website: p.website, email: p.email }));
+    res.json({ success: true, count: matched.length, producers: matched });
+  }));
+
   router.post('/api/producers/apply', applyLimiter, wrap(async (req, res) => {
     const r = await register(req.body || {});
     if (!r.ok) return res.status(400).json({ success: false, error: r.error });
