@@ -12,6 +12,7 @@ import LandingPage from './pages/LandingPage';
 import PricingPage from './pages/PricingPage';
 import ProducerJoinPage from './pages/ProducerJoinPage';
 import CatalogPage from './pages/CatalogPage';
+import ProducerDirectoryPage from './pages/ProducerDirectoryPage';
 import AdminPage from './pages/AdminPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -99,6 +100,8 @@ function App() {
             <Route path="/producers" element={<ProducerJoinPage />} />
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/shop" element={<CatalogPage />} />
+            <Route path="/find-producers" element={<ProducerDirectoryPage />} />
+            <Route path="/find" element={<ProducerDirectoryPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/affiliate" element={<AffiliatePage />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
