@@ -1,2 +1,7 @@
 node_modules
 .env
+
+# runtime data ledgers (not committed)
+data/credits.json
+data/entitlements.json
+data/payments.json
