@@ -275,7 +275,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   form.price    = sanitize(form.price);
 
   // บังคับโควต้ารายวันตามแผน (Free = 3/วัน, Pro/Premier = ไม่จำกัด)
-  const quota = checkQuota(req);
+  const quota = await checkQuota(req);
   if (!quota.allowed) {
     return res.status(429).json({
       error: `ใช้สิทธิ์ฟรีครบ ${quota.limit} ชิ้นแล้ววันนี้ — อัพเกรดเป็น Pro (฿20/เดือน) เพื่อสร้างไม่จำกัด`,
@@ -285,7 +285,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
 
   try {
     const data = await smartGenerate(form);
-    const u = consumeQuota(req);
+    const u = await consumeQuota(req);
     return res.json({ ...data, usage: { plan: u.plan, used: u.used ?? null, limit: u.limit ?? null, remaining: u.remaining ?? null, unlimited: !!u.unlimited, viaCredit: !!u.viaCredit, creditBalance: u.creditBalance ?? null } });
   } catch (err) {
     console.error('[generate error]', err.message);
@@ -296,8 +296,8 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
 });
 
 // GET /api/usage — โควต้าคงเหลือวันนี้ (ไม่หักโควต้า)
-app.get('/api/usage', (req, res) => {
-  const q = checkQuota(req);
+app.get('/api/usage', async (req, res) => {
+  const q = await checkQuota(req);
   res.json({ success: true, plan: q.plan, unlimited: !!q.unlimited, used: q.used ?? 0, limit: q.unlimited ? null : q.limit, remaining: q.unlimited ? null : q.remaining });
 });
 
@@ -2372,7 +2372,7 @@ function userEmailFrom(req) {
 }
 
 // เช็คโควต้า — paid = ไม่จำกัด, free = จำกัดต่อวันตาม IP+email
-function checkQuota(req) {
+async function checkQuota(req) {
   const email = userEmailFrom(req);
   const plan = getEntitlement(email).plan;
   if (PAID_PLANS.has(plan)) return { allowed: true, plan, unlimited: true };
@@ -2385,21 +2385,23 @@ function checkQuota(req) {
   }
   // โควต้าฟรีหมดแล้ว → ใช้เครดิตโบนัส (จากรางวัล spin/streak) แทนได้
   const cid = credits.identityFrom(req);
-  if (credits.hasCredit(cid)) {
-    return { allowed: true, plan: 'free', unlimited: false, used, limit: FREE_DAILY_LIMIT, remaining: 0, key, viaCredit: true, creditBalance: credits.pub(cid).balance };
+  if (await credits.hasCredit(cid)) {
+    const bal = (await credits.pub(cid)).balance;
+    return { allowed: true, plan: 'free', unlimited: false, used, limit: FREE_DAILY_LIMIT, remaining: 0, key, viaCredit: true, creditBalance: bal };
   }
   return { allowed: false, plan: 'free', unlimited: false, used, limit: FREE_DAILY_LIMIT, remaining: 0, key };
 }
 
 // บันทึกการใช้ 1 ครั้ง (เรียกหลัง generate สำเร็จ)
-function consumeQuota(req) {
-  const q = checkQuota(req);
+async function consumeQuota(req) {
+  const q = await checkQuota(req);
   if (q.unlimited) return q;
   // ถ้าเกินโควต้าฟรี แต่ผ่านได้ด้วยเครดิตโบนัส → หักเครดิต 1 หน่วย (ไม่แตะโควต้ารายวัน)
   if (q.viaCredit) {
     const cid = credits.identityFrom(req);
-    credits.consumeCredit(cid);
-    return { ...q, viaCredit: true, creditBalance: credits.pub(cid).balance };
+    await credits.consumeCredit(cid);
+    const bal = (await credits.pub(cid)).balance;
+    return { ...q, viaCredit: true, creditBalance: bal };
   }
   // กันคีย์เก่าบวม — ลบ entry ของวันก่อนหน้าเป็นครั้งคราว
   if (_usage.size > 5000) for (const k of _usage.keys()) if (!k.startsWith(today())) _usage.delete(k);
