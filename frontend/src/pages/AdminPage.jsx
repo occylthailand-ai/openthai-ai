@@ -32,7 +32,7 @@ const MOCK = {
 
 const PLAN_COLOR = { free: '#64748b', pro: '#6366f1', premier: '#f59e0b', business: '#f59e0b' };
 const TIER_COLOR = { starter: '#10b981', pro: '#6366f1', elite: '#f59e0b' };
-const STATUS_COLOR = { active: '#10b981', suspended: '#ef4444', inactive: '#64748b' };
+const STATUS_COLOR = { active: '#10b981', suspended: '#ef4444', inactive: '#64748b', approved: '#10b981', pending: '#f59e0b', rejected: '#ef4444' };
 
 // ── Admin password gate ───────────────────────────────────────────────────────
 // ตั้ง VITE_ADMIN_KEY ตอน build สำหรับ production (การป้องกันจริงอยู่ที่ backend ADMIN_KEY)
@@ -50,8 +50,24 @@ export default function AdminPage() {
   const [salesErr, setSalesErr] = useState('');
   const [creds, setCreds] = useState(null);     // สรุปเครดิต/รางวัลจาก backend
   const [credsErr, setCredsErr] = useState('');
+  const [prods, setProds] = useState(null);     // ผู้ผลิตที่สมัคร
+  const [ords, setOrds] = useState(null);       // คำสั่งซื้อ
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
+
+  const adminKey = () => sessionStorage.getItem('admin_key') || ADMIN_KEY;
+  const loadProducers = () => fetch(apiUrl('/api/producers/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setProds(d.producers); }).catch(() => {});
+  const loadOrders = () => fetch(apiUrl('/api/orders/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setOrds(d.orders); }).catch(() => {});
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const approveProducer = async (email, status) => {
+    await fetch(apiUrl('/api/producers/admin/status'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ email, status }) });
+    loadProducers();
+  };
+  const setOrderStatus = async (id, status) => {
+    await fetch(apiUrl('/api/orders/admin/status'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, status }) });
+    loadOrders();
+  };
 
   // ดึงสรุปยอดขายจริงเมื่อล็อกอินแล้ว (ใช้ admin key เป็น x-admin-key header)
   useEffect(() => {
@@ -136,7 +152,7 @@ export default function AdminPage() {
 
         {/* TABS */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-          {[['overview','📊 ภาพรวม'],['sales','💰 ยอดขาย'],['credits','🎁 เครดิต'],['users','👥 Users'],['affiliates','🤝 Affiliates'],['content','⚡ Content'],['settings','⚙️ Settings']].map(([id, label]) => (
+          {[['overview','📊 ภาพรวม'],['sales','💰 ยอดขาย'],['credits','🎁 เครดิต'],['producers','🏭 ผู้ผลิต'],['orders','📦 ออเดอร์'],['users','👥 Users'],['affiliates','🤝 Affiliates'],['content','⚡ Content'],['settings','⚙️ Settings']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{ ...tabBtn, background: tab === id ? 'rgba(99,102,241,0.2)' : 'transparent', border: `1px solid ${tab === id ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.07)'}`, color: tab === id ? '#a5b4fc' : '#64748b' }}>
               {label}
             </button>
@@ -294,6 +310,48 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* TAB: PRODUCERS */}
+        {tab === 'producers' && (
+          <div style={glass}>
+            <div style={{ fontWeight: 700, marginBottom: 12 }}>🏭 ผู้ผลิตที่สมัคร {prods ? `(${prods.length})` : ''}</div>
+            {!prods && <div style={{ color: '#64748b', fontSize: 13 }}>กำลังโหลด…</div>}
+            {prods && prods.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีผู้สมัคร</div>}
+            {prods && prods.map((p) => (
+              <div key={p.email} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontWeight: 700 }}>{p.company} <span style={{ color: '#64748b', fontWeight: 400 }}>· {p.category}</span></div>
+                  <div style={{ color: '#64748b', fontSize: 12 }}>{p.contact_name} · {p.email} · {p.phone || '-'}</div>
+                  <div style={{ color: '#94a3b8', fontSize: 12 }}>{p.product_name}{p.price ? ` · ฿${Number(p.price).toLocaleString('th-TH')}` : ''}</div>
+                </div>
+                <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', color: STATUS_COLOR[p.status] || '#94a3b8' }}>{p.status}</span>
+                {p.status !== 'approved' && <button onClick={() => approveProducer(p.email, 'approved')} style={miniBtn('#10b981')}>อนุมัติ</button>}
+                {p.status !== 'rejected' && <button onClick={() => approveProducer(p.email, 'rejected')} style={miniBtn('#ef4444')}>ปฏิเสธ</button>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* TAB: ORDERS */}
+        {tab === 'orders' && (
+          <div style={glass}>
+            <div style={{ fontWeight: 700, marginBottom: 12 }}>📦 คำสั่งซื้อ {ords ? `(${ords.length})` : ''}</div>
+            {!ords && <div style={{ color: '#64748b', fontSize: 13 }}>กำลังโหลด…</div>}
+            {ords && ords.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีคำสั่งซื้อ</div>}
+            {ords && ords.map((o) => (
+              <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontWeight: 700 }}>{o.product_name} <span style={{ color: '#10b981' }}>×{o.qty}</span> {o.amount ? `· ฿${Number(o.amount).toLocaleString('th-TH')}` : ''}</div>
+                  <div style={{ color: '#64748b', fontSize: 12 }}>{o.customer_name} · {o.contact} · ผู้ผลิต {o.producer_email}</div>
+                  {o.note && <div style={{ color: '#94a3b8', fontSize: 12 }}>📝 {o.note}</div>}
+                </div>
+                <select value={o.status} onChange={(e) => setOrderStatus(o.id, e.target.value)} style={{ ...inputSt, width: 'auto', padding: '5px 10px', fontSize: 12 }}>
+                  {['new', 'contacted', 'confirmed', 'shipped', 'cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* TAB: USERS */}
         {tab === 'users' && (
           <div style={glass}>
@@ -448,4 +506,5 @@ const primaryBtn = { background: 'linear-gradient(135deg,#fe2c55,#6366f1)', colo
 const smallBtn = { background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '6px 12px', color: '#a5b4fc', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
 const navBtn = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '7px 14px', color: '#94a3b8', fontSize: 13, cursor: 'pointer' };
 const tabBtn = { borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer' };
+const miniBtn = (c) => ({ background: `${c}22`, border: `1px solid ${c}66`, color: c, borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' });
 const inputSt = { background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#f8fafc', fontSize: 14, outline: 'none' };
