@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
+import { useLang } from '../i18n';
 
 export default function CatalogPage() {
   const navigate = useNavigate();
+  const { t } = useLang();
   const [products, setProducts] = useState(null);
-  const [order, setOrder] = useState(null);     // สินค้าที่กำลังสั่ง (เปิด modal)
+  const [order, setOrder] = useState(null);
 
   useEffect(() => {
     document.title = 'ตลาดสินค้าไทย — Openthai.ai';
@@ -15,25 +17,26 @@ export default function CatalogPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif" }}>
       <nav style={{ padding: '14px 5%', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <button onClick={() => navigate('/')} style={navBtn}>← หน้าหลัก</button>
+        <button onClick={() => navigate('/')} style={navBtn}>{t('mk.nav.home')}</button>
         <span style={{ flex: 1 }} />
-        <button onClick={() => navigate('/join')} style={navBtn}>🏭 ขายกับเรา</button>
+        <button onClick={() => navigate('/find-producers')} style={navBtn}>{t('mk.nav.find')}</button>
+        <button onClick={() => navigate('/join')} style={navBtn}>{t('mk.nav.sell')}</button>
       </nav>
 
       <section style={{ textAlign: 'center', padding: '48px 5% 24px' }}>
-        <div style={badge}>🛒 ตลาดสินค้าไทย</div>
-        <h1 style={{ fontSize: 'clamp(26px,5vw,44px)', fontWeight: 900, margin: '12px 0 8px' }}>สินค้าไทยจากผู้ผลิตโดยตรง</h1>
-        <p style={{ color: '#94a3b8', fontSize: 15 }}>เลือกสินค้า → สั่งซื้อ → ผู้ผลิตติดต่อกลับเพื่อยืนยันและจัดส่ง</p>
+        <div style={badge}>{t('mk.cat.badge')}</div>
+        <h1 style={{ fontSize: 'clamp(26px,5vw,44px)', fontWeight: 900, margin: '12px 0 8px' }}>{t('mk.cat.title')}</h1>
+        <p style={{ color: '#94a3b8', fontSize: 15 }}>{t('mk.cat.sub')}</p>
       </section>
 
       <section style={{ maxWidth: 1000, margin: '0 auto', padding: '0 5% 80px' }}>
-        {products === null && <div style={{ ...card, color: '#64748b', textAlign: 'center' }}>กำลังโหลดสินค้า…</div>}
+        {products === null && <div style={{ ...card, color: '#64748b', textAlign: 'center' }}>{t('mk.cat.loading')}</div>}
         {products && products.length === 0 && (
           <div style={{ ...card, textAlign: 'center', padding: 40 }}>
             <div style={{ fontSize: 44, marginBottom: 10 }}>🏭</div>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>ยังไม่มีสินค้าในตลาด</div>
-            <p style={{ color: '#64748b', fontSize: 14, marginBottom: 18 }}>เป็นผู้ผลิตรายแรกที่เอาสินค้ามาขายกับครีเอเตอร์ทั่วไทย</p>
-            <button onClick={() => navigate('/join')} style={primaryBtn}>🏭 สมัครเป็นผู้ผลิต →</button>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>{t('mk.cat.empty.title')}</div>
+            <p style={{ color: '#64748b', fontSize: 14, marginBottom: 18 }}>{t('mk.cat.empty.desc')}</p>
+            <button onClick={() => navigate('/join')} style={primaryBtn}>{t('mk.cat.empty.cta')}</button>
           </div>
         )}
         {products && products.length > 0 && (
@@ -42,11 +45,11 @@ export default function CatalogPage() {
               <div key={p.email + i} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category || 'สินค้าไทย'}</div>
                 <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{p.product_name}</div>
-                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>โดย {p.producer}</div>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>{t('mk.cat.by')} {p.producer}</div>
                 {p.description && <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, marginBottom: 12, flex: 1 }}>{p.description}</div>}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                  <span style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : 'สอบถาม'}</span>
-                  <button onClick={() => setOrder(p)} style={{ ...primaryBtn, padding: '9px 18px', fontSize: 13 }}>สั่งซื้อ</button>
+                  <span style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : t('mk.cat.ask')}</span>
+                  <button onClick={() => setOrder(p)} style={{ ...primaryBtn, padding: '9px 18px', fontSize: 13 }}>{t('mk.cat.order')}</button>
                 </div>
               </div>
             ))}
@@ -54,12 +57,12 @@ export default function CatalogPage() {
         )}
       </section>
 
-      {order && <OrderModal product={order} onClose={() => setOrder(null)} />}
+      {order && <OrderModal product={order} onClose={() => setOrder(null)} t={t} />}
     </div>
   );
 }
 
-function OrderModal({ product, onClose }) {
+function OrderModal({ product, onClose, t }) {
   const [form, setForm] = useState({ customer_name: '', contact: '', qty: 1, note: '' });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -70,7 +73,7 @@ function OrderModal({ product, onClose }) {
   const submit = async (e) => {
     e.preventDefault();
     if (busy) return;
-    if (!form.customer_name.trim() || !form.contact.trim()) { setErr('กรอกชื่อและช่องทางติดต่อ'); return; }
+    if (!form.customer_name.trim() || !form.contact.trim()) { setErr(t('mk.ord.err')); return; }
     setBusy(true); setErr('');
     try {
       const res = await fetch(apiUrl('/api/orders'), {
@@ -78,7 +81,7 @@ function OrderModal({ product, onClose }) {
         body: JSON.stringify({ producer_email: product.email, product_name: product.product_name, price: product.price, ...form }),
       });
       const d = await res.json();
-      if (d.success) setDone(true); else setErr(d.error || 'สั่งซื้อไม่สำเร็จ');
+      if (d.success) setDone(true); else setErr(d.error || t('mk.ord.err'));
     } catch { setErr('เชื่อมต่อไม่ได้ ลองใหม่'); }
     finally { setBusy(false); }
   };
@@ -90,25 +93,25 @@ function OrderModal({ product, onClose }) {
         {done ? (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <div style={{ fontSize: 44, marginBottom: 8 }}>🎉</div>
-            <h3 style={{ fontWeight: 900, marginBottom: 6 }}>สั่งซื้อสำเร็จ!</h3>
-            <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.6 }}>ผู้ผลิต ({product.producer}) จะติดต่อกลับเพื่อยืนยันและจัดส่ง</p>
-            <button onClick={onClose} style={{ ...primaryBtn, marginTop: 18 }}>ปิด</button>
+            <h3 style={{ fontWeight: 900, marginBottom: 6 }}>{t('mk.ord.ok.title')}</h3>
+            <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.6 }}>{product.producer} {t('mk.ord.ok.desc')}</p>
+            <button onClick={onClose} style={{ ...primaryBtn, marginTop: 18 }}>{t('mk.ord.close')}</button>
           </div>
         ) : (
           <form onSubmit={submit}>
-            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>สั่งซื้อ: {product.product_name}</div>
-            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>โดย {product.producer}{product.price ? ` · ฿${Number(product.price).toLocaleString('th-TH')}/ชิ้น` : ''}</div>
-            <label style={lab}>ชื่อผู้สั่ง *</label>
-            <input style={inp} value={form.customer_name} onChange={set('customer_name')} placeholder="ชื่อ-นามสกุล" />
-            <label style={lab}>ช่องทางติดต่อ * (โทร/LINE/อีเมล)</label>
-            <input style={inp} value={form.contact} onChange={set('contact')} placeholder="08x... หรือ @line" />
-            <label style={lab}>จำนวน</label>
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{t('mk.ord.title')}: {product.product_name}</div>
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>{t('mk.ord.by')} {product.producer}{product.price ? ` · ฿${Number(product.price).toLocaleString('th-TH')}` : ''}</div>
+            <label style={lab}>{t('mk.ord.name')}</label>
+            <input style={inp} value={form.customer_name} onChange={set('customer_name')} placeholder={t('mk.ord.name.ph')} />
+            <label style={lab}>{t('mk.ord.contact')}</label>
+            <input style={inp} value={form.contact} onChange={set('contact')} placeholder={t('mk.ord.contact.ph')} />
+            <label style={lab}>{t('mk.ord.qty')}</label>
             <input style={inp} type="number" min="1" value={form.qty} onChange={set('qty')} />
-            <label style={lab}>หมายเหตุ</label>
-            <textarea style={{ ...inp, minHeight: 56, resize: 'vertical' }} value={form.note} onChange={set('note')} placeholder="ที่อยู่จัดส่ง / รายละเอียดเพิ่มเติม" />
-            {total != null && <div style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', margin: '4px 0 12px' }}>รวม ฿{total.toLocaleString('th-TH')}</div>}
+            <label style={lab}>{t('mk.ord.note')}</label>
+            <textarea style={{ ...inp, minHeight: 56, resize: 'vertical' }} value={form.note} onChange={set('note')} placeholder={t('mk.ord.note.ph')} />
+            {total != null && <div style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', margin: '4px 0 12px' }}>{t('mk.ord.total')} ฿{total.toLocaleString('th-TH')}</div>}
             {err && <div style={{ color: '#fca5a5', fontSize: 13, marginBottom: 8 }}>⚠️ {err}</div>}
-            <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', opacity: busy ? 0.7 : 1 }}>{busy ? 'กำลังส่ง...' : '🛒 ยืนยันสั่งซื้อ'}</button>
+            <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', opacity: busy ? 0.7 : 1 }}>{busy ? t('mk.ord.submitting') : t('mk.ord.submit')}</button>
           </form>
         )}
       </div>
