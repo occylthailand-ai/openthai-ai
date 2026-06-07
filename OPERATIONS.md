@@ -42,6 +42,7 @@
 | `test.yml` | push / PR | จับ error ก่อนขึ้น production |
 | `health-watch.yml` | cron ทุก 10 นาที | ตรวจ uptime production 24/7 |
 | `auto-recovery.yml` | เมื่อ health-watch fail (+ กดมือได้) | กู้คืนเอง → เปิดเคส+เตือนถ้ากู้ไม่ได้ |
+| `drive-report.yml` | cron ทุก 6 ชม. (+ กดมือได้) | รันเทส+health → เขียนผลเข้า Google Drive ([ตั้งค่า](docs/DRIVE_REPORTS_SETUP.md)) |
 
 ### การ deploy
 Production deploy จัดการโดย **Vercel GitHub git integration** (auto-deploy เมื่อ push เข้า `main`) — ไม่ใช้ GitHub Actions deploy workflow
