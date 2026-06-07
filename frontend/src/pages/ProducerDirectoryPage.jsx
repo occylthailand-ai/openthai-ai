@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
+import { useLang } from '../i18n';
 
 const CATS = ['ทั้งหมด', 'OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อื่นๆ'];
 
 export default function ProducerDirectoryPage() {
   const navigate = useNavigate();
+  const { t } = useLang();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('ทั้งหมด');
   const [items, setItems] = useState(null);
@@ -27,7 +29,6 @@ export default function ProducerDirectoryPage() {
 
   useEffect(() => { document.title = 'ค้นหาผู้ผลิต — Openthai.ai'; search('', 'ทั้งหมด'); }, [search]);
 
-  // debounce การพิมพ์
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => search(q, cat), 350);
@@ -37,39 +38,37 @@ export default function ProducerDirectoryPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif" }}>
       <nav style={{ padding: '14px 5%', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <button onClick={() => navigate('/')} style={navBtn}>← หน้าหลัก</button>
+        <button onClick={() => navigate('/')} style={navBtn}>{t('mk.nav.home')}</button>
         <span style={{ flex: 1 }} />
-        <button onClick={() => navigate('/catalog')} style={navBtn}>🛒 ตลาดสินค้า</button>
-        <button onClick={() => navigate('/join')} style={navBtn}>🏭 ขายกับเรา</button>
+        <button onClick={() => navigate('/catalog')} style={navBtn}>{t('mk.nav.market')}</button>
+        <button onClick={() => navigate('/join')} style={navBtn}>{t('mk.nav.sell')}</button>
       </nav>
 
       <section style={{ textAlign: 'center', padding: '44px 5% 18px' }}>
-        <div style={badge}>🔎 ค้นหาผู้ผลิต</div>
-        <h1 style={{ fontSize: 'clamp(24px,4.5vw,40px)', fontWeight: 900, margin: '12px 0 8px' }}>หาผู้ผลิตสินค้าไทยที่ใช่</h1>
-        <p style={{ color: '#94a3b8', fontSize: 14 }}>ครีเอเตอร์หาสินค้ามาโปรโมต · ลูกค้าหาของจากผู้ผลิตโดยตรง</p>
+        <div style={badge}>{t('mk.find.badge')}</div>
+        <h1 style={{ fontSize: 'clamp(24px,4.5vw,40px)', fontWeight: 900, margin: '12px 0 8px' }}>{t('mk.find.title')}</h1>
+        <p style={{ color: '#94a3b8', fontSize: 14 }}>{t('mk.find.sub')}</p>
       </section>
 
-      {/* Search bar */}
       <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 5% 16px' }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 ค้นหาชื่อผู้ผลิต / สินค้า / คำอธิบาย…"
-            style={{ ...inp, flex: 1, minWidth: 220 }} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('mk.find.search.ph')} style={{ ...inp, flex: 1, minWidth: 220 }} />
           <select value={cat} onChange={(e) => setCat(e.target.value)} style={{ ...inp, maxWidth: 180 }}>
-            {CATS.map((c) => <option key={c} value={c}>{c}</option>)}
+            {CATS.map((c) => <option key={c} value={c}>{c === 'ทั้งหมด' ? t('mk.find.all') : c}</option>)}
           </select>
         </div>
       </section>
 
       <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 5% 80px' }}>
         <div style={{ fontSize: 12, color: '#64748b', margin: '8px 2px 14px' }}>
-          {loading ? 'กำลังค้นหา…' : items ? `พบ ${items.length} ผู้ผลิต` : ''}
+          {loading ? t('mk.find.searching') : items ? t('mk.find.found').replace('{n}', items.length) : ''}
         </div>
         {items && items.length === 0 && !loading && (
           <div style={{ ...card, textAlign: 'center', padding: 36 }}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>🔎</div>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>ไม่พบผู้ผลิตที่ตรงกับการค้นหา</div>
-            <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>ลองคำอื่น หรือชวนผู้ผลิตมาสมัครเพิ่ม</p>
-            <button onClick={() => navigate('/join')} style={primaryBtn}>🏭 ชวนผู้ผลิตมาสังกัด →</button>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>{t('mk.find.empty.title')}</div>
+            <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>{t('mk.find.empty.desc')}</p>
+            <button onClick={() => navigate('/join')} style={primaryBtn}>{t('mk.find.empty.cta')}</button>
           </div>
         )}
         {items && items.length > 0 && (
@@ -81,8 +80,8 @@ export default function ProducerDirectoryPage() {
                 <div style={{ fontSize: 13, color: '#cbd5e1', marginTop: 2 }}>{p.product_name}</div>
                 {p.description && <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6, margin: '8px 0', flex: 1 }}>{p.description}</div>}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: 10 }}>
-                  <span style={{ fontWeight: 900, color: '#10b981' }}>{p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : 'สอบถาม'}</span>
-                  <button onClick={() => navigate('/catalog')} style={{ ...primaryBtn, padding: '8px 16px', fontSize: 13 }}>สั่งซื้อ →</button>
+                  <span style={{ fontWeight: 900, color: '#10b981' }}>{p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : t('mk.cat.ask')}</span>
+                  <button onClick={() => navigate('/catalog')} style={{ ...primaryBtn, padding: '8px 16px', fontSize: 13 }}>{t('mk.find.order')}</button>
                 </div>
                 {p.website && <a href={p.website.startsWith('http') ? p.website : `https://${p.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#64748b', marginTop: 8, textDecoration: 'none' }}>🔗 {p.website}</a>}
               </div>

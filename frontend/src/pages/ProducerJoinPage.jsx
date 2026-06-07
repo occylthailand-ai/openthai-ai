@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
+import { useLang } from '../i18n';
 
 const FALLBACK_CATS = ['OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อื่นๆ'];
 
 export default function ProducerJoinPage() {
   const navigate = useNavigate();
+  const { t } = useLang();
   const [cats, setCats] = useState(FALLBACK_CATS);
   const [form, setForm] = useState({ company: '', contact_name: '', email: '', phone: '', website: '', category: 'OTOP', product_name: '', price: '', description: '' });
   const [busy, setBusy] = useState(false);
@@ -23,13 +25,13 @@ export default function ProducerJoinPage() {
     e.preventDefault();
     if (busy) return;
     setErr('');
-    if (!form.company.trim() || !form.contact_name.trim() || !form.email.trim()) { setErr('กรอกชื่อบริษัท ชื่อผู้ติดต่อ และอีเมล'); return; }
+    if (!form.company.trim() || !form.contact_name.trim() || !form.email.trim()) { setErr(t('mk.join.err')); return; }
     setBusy(true);
     try {
       const res = await fetch(apiUrl('/api/producers/apply'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
       const d = await res.json();
       if (d.success) setDone(true);
-      else setErr(d.error || 'สมัครไม่สำเร็จ ลองใหม่อีกครั้ง');
+      else setErr(d.error || t('mk.join.err'));
     } catch { setErr('เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'); }
     finally { setBusy(false); }
   };
@@ -37,22 +39,18 @@ export default function ProducerJoinPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif" }}>
       <nav style={{ padding: '14px 5%', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <button onClick={() => navigate('/')} style={navBtn}>← หน้าหลัก</button>
+        <button onClick={() => navigate('/')} style={navBtn}>{t('mk.nav.home')}</button>
         <span style={{ flex: 1 }} />
-        <button onClick={() => navigate('/affiliate')} style={navBtn}>💰 Affiliate</button>
+        <button onClick={() => navigate('/affiliate')} style={navBtn}>{t('mk.nav.aff')}</button>
       </nav>
 
       <section style={{ textAlign: 'center', padding: '52px 5% 24px' }}>
-        <div style={badge}>🏭 สำหรับผู้ผลิต / แบรนด์ / OTOP</div>
-        <h1 style={{ fontSize: 'clamp(26px,5vw,46px)', fontWeight: 900, margin: '12px 0 10px' }}>เอาสินค้าคุณมาขายกับครีเอเตอร์ทั่วไทย</h1>
-        <p style={{ color: '#94a3b8', fontSize: 15, maxWidth: 620, margin: '0 auto', lineHeight: 1.7 }}>
-          สังกัด Openthai.ai ฟรี — ให้ครีเอเตอร์กว่า 1,200 คนช่วยสร้างคอนเทนต์ + ดันยอดขายสินค้าคุณ
-          จ่ายค่าคอมเฉพาะเมื่อขายได้
-        </p>
-        {/* value props */}
+        <div style={badge}>{t('mk.join.badge')}</div>
+        <h1 style={{ fontSize: 'clamp(26px,5vw,46px)', fontWeight: 900, margin: '12px 0 10px' }}>{t('mk.join.title')}</h1>
+        <p style={{ color: '#94a3b8', fontSize: 15, maxWidth: 620, margin: '0 auto', lineHeight: 1.7 }}>{t('mk.join.sub')}</p>
         <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', marginTop: 22 }}>
-          {[['📣', 'ครีเอเตอร์ช่วยโปรโมต'], ['🤝', 'จ่ายคอมเมื่อขายได้'], ['🇹🇭', 'ลูกค้าคนไทยพร้อมซื้อ']].map(([i, t]) => (
-            <div key={t} style={{ ...card, padding: '12px 18px', fontSize: 13, color: '#cbd5e1' }}>{i} {t}</div>
+          {[t('mk.join.vp1'), t('mk.join.vp2'), t('mk.join.vp3')].map((v) => (
+            <div key={v} style={{ ...card, padding: '12px 18px', fontSize: 13, color: '#cbd5e1' }}>{v}</div>
           ))}
         </div>
       </section>
@@ -61,36 +59,36 @@ export default function ProducerJoinPage() {
         {done ? (
           <div style={{ ...card, textAlign: 'center', padding: 36 }}>
             <div style={{ fontSize: 48, marginBottom: 10 }}>🎉</div>
-            <h2 style={{ fontWeight: 900, marginBottom: 8 }}>รับใบสมัครแล้ว!</h2>
-            <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7 }}>ทีมงานจะติดต่อกลับทางอีเมลเพื่อยืนยันการเข้าร่วมและเปิดร้านให้คุณเร็วๆ นี้</p>
-            <button onClick={() => navigate('/')} style={{ ...primaryBtn, marginTop: 20 }}>กลับหน้าหลัก →</button>
+            <h2 style={{ fontWeight: 900, marginBottom: 8 }}>{t('mk.join.ok.title')}</h2>
+            <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7 }}>{t('mk.join.ok.desc')}</p>
+            <button onClick={() => navigate('/')} style={{ ...primaryBtn, marginTop: 20 }}>{t('mk.join.ok.back')}</button>
           </div>
         ) : (
           <form onSubmit={submit} style={card}>
-            <Field label="ชื่อบริษัท / แบรนด์ *"><input style={inp} value={form.company} onChange={set('company')} placeholder="เช่น ไหมอุบลฟาร์ม" /></Field>
+            <Field label={t('mk.join.f.company')}><input style={inp} value={form.company} onChange={set('company')} placeholder={t('mk.join.f.company.ph')} /></Field>
             <Row>
-              <Field label="ชื่อผู้ติดต่อ *"><input style={inp} value={form.contact_name} onChange={set('contact_name')} placeholder="ชื่อ-นามสกุล" /></Field>
-              <Field label="เบอร์โทร"><input style={inp} value={form.phone} onChange={set('phone')} placeholder="08x-xxx-xxxx" /></Field>
+              <Field label={t('mk.join.f.contact')}><input style={inp} value={form.contact_name} onChange={set('contact_name')} placeholder={t('mk.join.f.contact.ph')} /></Field>
+              <Field label={t('mk.join.f.phone')}><input style={inp} value={form.phone} onChange={set('phone')} placeholder="08x-xxx-xxxx" /></Field>
             </Row>
             <Row>
-              <Field label="อีเมล *"><input style={inp} type="email" value={form.email} onChange={set('email')} placeholder="you@email.com" /></Field>
-              <Field label="เว็บไซต์ / เพจ"><input style={inp} value={form.website} onChange={set('website')} placeholder="facebook.com/..." /></Field>
+              <Field label={t('mk.join.f.email')}><input style={inp} type="email" value={form.email} onChange={set('email')} placeholder="you@email.com" /></Field>
+              <Field label={t('mk.join.f.web')}><input style={inp} value={form.website} onChange={set('website')} placeholder="facebook.com/..." /></Field>
             </Row>
             <Row>
-              <Field label="หมวดสินค้า">
+              <Field label={t('mk.join.f.cat')}>
                 <select style={inp} value={form.category} onChange={set('category')}>
                   {cats.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </Field>
-              <Field label="ราคาสินค้า (฿)"><input style={inp} type="number" value={form.price} onChange={set('price')} placeholder="เช่น 1200" /></Field>
+              <Field label={t('mk.join.f.price')}><input style={inp} type="number" value={form.price} onChange={set('price')} placeholder={t('mk.join.f.price.ph')} /></Field>
             </Row>
-            <Field label="สินค้าหลัก"><input style={inp} value={form.product_name} onChange={set('product_name')} placeholder="เช่น ผ้าไหมมัดหมี่" /></Field>
-            <Field label="รายละเอียด / จุดเด่นสินค้า"><textarea style={{ ...inp, minHeight: 80, resize: 'vertical' }} value={form.description} onChange={set('description')} placeholder="เล่าสั้นๆ ว่าสินค้าคุณดียังไง" /></Field>
+            <Field label={t('mk.join.f.product')}><input style={inp} value={form.product_name} onChange={set('product_name')} placeholder={t('mk.join.f.product.ph')} /></Field>
+            <Field label={t('mk.join.f.desc')}><textarea style={{ ...inp, minHeight: 80, resize: 'vertical' }} value={form.description} onChange={set('description')} placeholder={t('mk.join.f.desc.ph')} /></Field>
             {err && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 4 }}>⚠️ {err}</div>}
             <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', marginTop: 14, opacity: busy ? 0.7 : 1 }}>
-              {busy ? 'กำลังส่ง...' : '🚀 สมัครเข้าร่วมฟรี'}
+              {busy ? t('mk.join.submitting') : t('mk.join.submit')}
             </button>
-            <p style={{ color: '#475569', fontSize: 12, textAlign: 'center', marginTop: 12 }}>ฟรี ไม่มีค่าแรกเข้า • จ่ายค่าคอมเฉพาะเมื่อมีคำสั่งซื้อผ่านแพลตฟอร์ม</p>
+            <p style={{ color: '#475569', fontSize: 12, textAlign: 'center', marginTop: 12 }}>{t('mk.join.note')}</p>
           </form>
         )}
       </section>
