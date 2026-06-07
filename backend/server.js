@@ -27,6 +27,7 @@ import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
+import { createOrders } from './orders.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -59,6 +60,7 @@ const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
+const orders    = createOrders(WRITE_DATA_DIR);
 
 import {
   signToken, verifyToken, requireAuth,
@@ -80,8 +82,10 @@ app.use((req, res, next) => {
 
 // Credit ledger routes — /api/credits, /credits/checkin, /credits/spin, /credits/claim
 app.use(credits.router);
-// Producer onboarding routes — /api/producers/apply, /producers/categories
+// Producer onboarding routes — /api/producers/apply, /producers/categories, /api/catalog
 app.use(producers.router);
+// Order routes — /api/orders
+app.use(orders.router);
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({
@@ -327,6 +331,36 @@ app.get('/api/producers/admin/list', async (req, res) => {
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, producers: await producers.all() }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/producers/admin/status — อนุมัติ/เปลี่ยนสถานะผู้ผลิต (Admin Key)
+app.post('/api/producers/admin/status', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const r = await producers.setStatus(req.body?.email, req.body?.status);
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  res.json({ success: true, ...r });
+});
+
+// GET /api/orders/admin/summary + /list, POST /api/orders/admin/status (Admin Key)
+app.get('/api/orders/admin/summary', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try { res.json({ success: true, ...(await orders.summary()) }); }
+  catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/orders/admin/list', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try { res.json({ success: true, orders: await orders.all() }); }
+  catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/orders/admin/status', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const r = await orders.setStatus(req.body?.id, req.body?.status);
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  res.json({ success: true, ...r });
 });
 
 // ─── Nodemailer transporter ───────────────────────────────────────────────────
