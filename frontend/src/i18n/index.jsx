@@ -97,7 +97,7 @@ const translations = {
     'plans': {
       free: { name: 'Free', unit: '/วัน', desc: 'ทดลองใช้ฟรี ไม่ต้องสมัคร', cta: 'เริ่มใช้ฟรี', features: ['สร้างคอนเทนต์ 3 ครั้ง/วัน', 'TikTok + Facebook', 'AI Critic พื้นฐาน', 'แฮชแท็ก 5 อัน'] },
       pro: { name: 'Pro', unit: '/เดือน', desc: 'สำหรับ Creator จริงจัง', cta: 'เริ่ม Pro ฟรี 7 วัน', features: ['ไม่จำกัดจำนวนครั้ง', 'ทุกแพลตฟอร์ม 241+', 'AI Critic เต็มรูปแบบ', 'แฮชแท็ก 20+ อัน', 'ประวัติคอนเทนต์ 30 วัน', 'Priority Support'] },
-      business: { name: 'Business', unit: '/เดือน', desc: 'สำหรับทีมและธุรกิจ', cta: 'ติดต่อทีมงาน', features: ['ทุกอย่างใน Pro', 'ทีม 5 คน', 'API Access', 'White-label', 'Dedicated Manager', 'SLA 99.9%'] },
+      premier: { name: 'Premier', unit: '/เดือน', desc: 'สำหรับทีมและธุรกิจ', cta: 'เริ่ม Premier', features: ['ทุกอย่างใน Pro', 'ทีม 5 คน', 'API Access', 'White-label', 'Dedicated Manager', 'SLA 99.9%'] },
     },
     // email capture
     'email.title': 'รับ Tips สร้างคอนเทนต์ฟรี',
@@ -200,7 +200,7 @@ const translations = {
     'plans': {
       free: { name: 'Free', unit: '/day', desc: 'Free trial, no signup', cta: 'Start free', features: ['3 generations/day', 'TikTok + Facebook', 'Basic AI Critic', '5 hashtags'] },
       pro: { name: 'Pro', unit: '/mo', desc: 'For serious creators', cta: 'Start Pro — 7 days free', features: ['Unlimited generations', 'All 241+ platforms', 'Full AI Critic', '20+ hashtags', '30-day content history', 'Priority Support'] },
-      business: { name: 'Business', unit: '/mo', desc: 'For teams & businesses', cta: 'Contact us', features: ['Everything in Pro', '5 team seats', 'API Access', 'White-label', 'Dedicated Manager', 'SLA 99.9%'] },
+      premier: { name: 'Premier', unit: '/mo', desc: 'For teams & businesses', cta: 'Start Premier', features: ['Everything in Pro', '5 team seats', 'API Access', 'White-label', 'Dedicated Manager', 'SLA 99.9%'] },
     },
     'email.title': 'Get free content tips',
     'email.desc': 'TikTok tips + Thai trend insights, every week',
@@ -301,7 +301,7 @@ const translations = {
     'plans': {
       free: { name: 'Free', unit: '/天', desc: '免费试用，无需注册', cta: '免费开始', features: ['每天生成 3 次', 'TikTok + Facebook', '基础 AI 评论家', '5 个标签'] },
       pro: { name: 'Pro', unit: '/月', desc: '为认真的创作者', cta: 'Pro 免费试用 7 天', features: ['无限次生成', '全部 241+ 平台', '完整 AI 评论家', '20+ 个标签', '30 天内容记录', '优先支持'] },
-      business: { name: 'Business', unit: '/月', desc: '为团队与企业', cta: '联系我们', features: ['Pro 全部功能', '5 个团队席位', 'API 接入', '白标', '专属客户经理', 'SLA 99.9%'] },
+      premier: { name: 'Premier', unit: '/月', desc: '为团队与企业', cta: '开通 Premier', features: ['Pro 全部功能', '5 个团队席位', 'API 接入', '白标', '专属客户经理', 'SLA 99.9%'] },
     },
     'email.title': '免费获取内容技巧',
     'email.desc': 'TikTok 技巧 + 泰国潮流洞察，每周发送',
