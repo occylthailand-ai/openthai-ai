@@ -301,6 +301,14 @@ app.get('/api/usage', async (req, res) => {
   res.json({ success: true, plan: q.plan, unlimited: !!q.unlimited, used: q.used ?? 0, limit: q.unlimited ? null : q.limit, remaining: q.unlimited ? null : q.remaining });
 });
 
+// GET /api/credits/admin/summary — สรุปเศรษฐกิจเครดิต (Admin Key)
+app.get('/api/credits/admin/summary', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try { res.json({ success: true, ...(await credits.adminSummary()) }); }
+  catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ─── Nodemailer transporter ───────────────────────────────────────────────────
 const mailer = process.env.SMTP_USER
   ? nodemailer.createTransport({

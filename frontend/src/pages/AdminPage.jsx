@@ -48,6 +48,8 @@ export default function AdminPage() {
   const [data] = useState(MOCK);
   const [sales, setSales] = useState(null);     // ยอดขายจริงจาก backend
   const [salesErr, setSalesErr] = useState('');
+  const [creds, setCreds] = useState(null);     // สรุปเครดิต/รางวัลจาก backend
+  const [credsErr, setCredsErr] = useState('');
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
@@ -59,6 +61,16 @@ export default function AdminPage() {
       .then(r => r.json())
       .then(d => { if (d.success) setSales(d); else setSalesErr(d.message || 'โหลดยอดขายไม่สำเร็จ'); })
       .catch(() => setSalesErr('เชื่อมต่อ backend ไม่ได้'));
+  }, [authed]);
+
+  // ดึงสรุปเครดิต/รางวัลจริงเมื่อล็อกอินแล้ว
+  useEffect(() => {
+    if (!authed) return;
+    const key = sessionStorage.getItem('admin_key') || ADMIN_KEY;
+    fetch(apiUrl('/api/credits/admin/summary'), { headers: { 'x-admin-key': key } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setCreds(d); else setCredsErr(d.message || 'โหลดเครดิตไม่สำเร็จ'); })
+      .catch(() => setCredsErr('เชื่อมต่อ backend ไม่ได้'));
   }, [authed]);
 
   const handleLogin = (e) => {
@@ -124,7 +136,7 @@ export default function AdminPage() {
 
         {/* TABS */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-          {[['overview','📊 ภาพรวม'],['sales','💰 ยอดขาย'],['users','👥 Users'],['affiliates','🤝 Affiliates'],['content','⚡ Content'],['settings','⚙️ Settings']].map(([id, label]) => (
+          {[['overview','📊 ภาพรวม'],['sales','💰 ยอดขาย'],['credits','🎁 เครดิต'],['users','👥 Users'],['affiliates','🤝 Affiliates'],['content','⚡ Content'],['settings','⚙️ Settings']].map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{ ...tabBtn, background: tab === id ? 'rgba(99,102,241,0.2)' : 'transparent', border: `1px solid ${tab === id ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.07)'}`, color: tab === id ? '#a5b4fc' : '#64748b' }}>
               {label}
             </button>
@@ -236,6 +248,47 @@ export default function AdminPage() {
                     </div>
                   )}
                 </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* TAB: CREDITS */}
+        {tab === 'credits' && (
+          <div>
+            {credsErr && <div style={{ ...glass, color: '#fca5a5', marginBottom: 16 }}>⚠️ {credsErr}</div>}
+            {!creds && !credsErr && <div style={{ ...glass, color: '#64748b' }}>กำลังโหลดเครดิต…</div>}
+            {creds && (
+              <>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                  โหมดเก็บข้อมูล: <strong style={{ color: creds.mode === 'supabase' ? '#10b981' : '#f59e0b' }}>{creds.mode === 'supabase' ? '🗄️ Supabase (ถาวร)' : '📄 File (ชั่วคราว)'}</strong>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 20 }}>
+                  {[
+                    { label: 'บัญชีทั้งหมด', v: creds.accounts, c: '#6366f1' },
+                    { label: 'เครดิตคงเหลือรวม', v: creds.totalBalance, c: '#10b981' },
+                    { label: 'หมุนวงล้อแล้ว', v: creds.spun, c: '#fe2c55' },
+                    { label: 'streak ต่อเนื่อง', v: creds.activeStreaks, c: '#f59e0b' },
+                    { label: 'streak สูงสุด (วัน)', v: creds.maxStreak, c: '#a5b4fc' },
+                    { label: 'ส่วนลดรอใช้', v: creds.pendingDiscounts, c: '#06b6d4' },
+                  ].map((s) => (
+                    <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
+                      <div style={{ fontSize: 22, fontWeight: 900, color: s.c }}>{s.v}</div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {Object.keys(creds.prizes || {}).length > 0 && (
+                  <div style={glass}>
+                    <div style={{ fontWeight: 700, marginBottom: 12 }}>🎡 รางวัลที่แจกไปแล้ว</div>
+                    {Object.entries(creds.prizes).sort((a, b) => b[1] - a[1]).map(([prize, count]) => (
+                      <div key={prize} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                        <span style={{ color: '#cbd5e1' }}>{prize}</span>
+                        <span style={{ color: '#a5b4fc', fontWeight: 700 }}>{count} ครั้ง</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </div>

@@ -174,6 +174,28 @@ export function createCredits(dataDir) {
     res.json({ success: true, ...(await addCredits(identityFrom(req), ALLOWED_CLAIMS[source], source)) });
   }));
 
+  // สรุปภาพรวมเศรษฐกิจเครดิต (สำหรับ admin)
+  async function adminSummary() {
+    let accounts = [];
+    if (useSB) {
+      try { const rows = await sbReq('GET', '/credits', { params: { select: '*', limit: '5000' } }); accounts = (rows || []).map(fromRow); }
+      catch (e) { console.warn('[credits] admin Supabase read failed, using file:', e.message); accounts = Object.values(store); }
+    } else {
+      accounts = Object.values(store);
+    }
+    const prizes = {};
+    let totalBalance = 0, spun = 0, activeStreaks = 0, maxStreak = 0, pendingDiscounts = 0;
+    for (const a of accounts) {
+      totalBalance += a.balance || 0;
+      if (a.spun) spun += 1;
+      if (a.prize) prizes[a.prize] = (prizes[a.prize] || 0) + 1;
+      if ((a.streakDays || 0) > 0) activeStreaks += 1;
+      if ((a.streakDays || 0) > maxStreak) maxStreak = a.streakDays;
+      if (a.claims && a.claims._discount && !a.claims._discount.used) pendingDiscounts += 1;
+    }
+    return { mode: useSB ? 'supabase' : 'file', accounts: accounts.length, totalBalance, spun, activeStreaks, maxStreak, pendingDiscounts, prizes };
+  }
+
   console.log(`[credits] ledger mode: ${useSB ? 'Supabase' : 'file'}`);
-  return { router, identityFrom, hasCredit, consumeCredit, pub, peekDiscount, consumeDiscount, SPIN_PRIZES };
+  return { router, identityFrom, hasCredit, consumeCredit, pub, peekDiscount, consumeDiscount, adminSummary, SPIN_PRIZES };
 }
