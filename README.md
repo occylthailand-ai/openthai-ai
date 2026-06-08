@@ -1,4 +1,4 @@
-﻿# 🇹🇭 Openthai.ai
+﻿# 🇹🇭 OpenThaiAi
 
 **AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก**
 
@@ -78,12 +78,12 @@ openthai-ai/
 
 ## 📞 Contact
 
-- **Website**: [openthai-ai.vercel.app](https://openthai-ai.vercel.app)
-- **Email**: contact@openthai.ai
-- **LINE**: @openthai-ai
+- **Website**: [OpenThaiAi.com](https://OpenThaiAi.com)
+- **Email**: contact@OpenThaiAi.com
+- **LINE**: @OpenThaiAi
 
 ---
 
 ## 📜 License
 
-© 2026 Openthai.ai — Made with ❤️ in Thailand
+© 2026 OpenThaiAi — Made with ❤️ in Thailand

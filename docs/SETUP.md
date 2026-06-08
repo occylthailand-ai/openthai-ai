@@ -1,4 +1,4 @@
-﻿# 🇹🇭 Openthai.ai — Complete Setup Guide
+﻿# 🇹🇭 OpenThaiAi — Complete Setup Guide
 
 > AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก
 
@@ -43,14 +43,14 @@ openthai-ai/
 # 1. Push to GitHub
 git init
 git add .
-git commit -m "Initial commit: Openthai.ai"
+git commit -m "Initial commit: OpenThaiAi"
 git remote add origin https://github.com/YOUR_USERNAME/openthai-ai.git
 git push -u origin main
 
 # 2. ไปที่ vercel.com
 # 3. Import project จาก GitHub
 # 4. Deploy!
-# 5. URL: https://openthai-ai.vercel.app
+# 5. URL: https://OpenThaiAi.com
 ```
 
 ### ขั้นตอนที่ 2: Setup Google Sheets Waitlist (5 นาที)
@@ -231,15 +231,15 @@ GOOGLE_SHEETS_ID=xxxxx
 
 ## 📞 Support
 
-- **Email**: contact@openthai.ai
-- **LINE**: @openthai-ai
+- **Email**: contact@OpenThaiAi.com
+- **LINE**: @OpenThaiAi
 - **GitHub Issues**: [Report bugs](https://github.com/YOUR_USERNAME/openthai-ai/issues)
 
 ---
 
 ## 📜 License
 
-© 2026 Openthai.ai — Made with ❤️ in Thailand
+© 2026 OpenThaiAi — Made with ❤️ in Thailand
 
 ---
 

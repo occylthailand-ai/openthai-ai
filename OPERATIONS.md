@@ -1,4 +1,4 @@
-# 🤖 Operations & Automation — Openthai.ai
+# 🤖 Operations & Automation — OpenThaiAi
 
 ระบบอัตโนมัติ 24/7 ที่ดูแล production ให้เอง: **ทดสอบ → ตรวจจับ → กู้คืน → แจ้งเตือน**
 
@@ -18,7 +18,7 @@
 ┌──────────────────────────────────────────────────────────────┐
 │  ❤️ Health Watch  (.github/workflows/health-watch.yml)  [DETECT]│
 │     ทริกเกอร์: cron ทุก 10 นาที (24/7)                         │
-│     • ping https://www.openthai-ai.com/api/health             │
+│     • ping https://www.OpenThaiAi.com/api/health             │
 │     • fail ถ้า HTTP != 200  /  เตือนถ้าช้า > 4000ms            │
 └───────────────────────────────┬──────────────────────────────┘
                   ตรวจพบล่ม ─────┘
@@ -66,7 +66,7 @@ Production deploy จัดการโดย **Vercel GitHub git integration** 
 1. ระบบ **กู้คืนเองอัตโนมัติ** ก่อน (warm + retry) — รอ ~1-2 นาที
 2. ถ้ากู้ไม่สำเร็จ จะมี **GitHub issue** ชื่อ `🚨 Production incident` เปิดอัตโนมัติ
 3. เช็ค: Vercel dashboard → Deployments / Functions logs
-4. เช็คตรง: `https://www.openthai-ai.com/api/health`
+4. เช็คตรง: `https://www.OpenThaiAi.com/api/health`
 
 **อยากทดสอบ auto-recovery เอง**
 - ไป GitHub → Actions → "🔧 Auto-Recovery" → **Run workflow**

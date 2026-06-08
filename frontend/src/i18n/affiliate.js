@@ -2,8 +2,8 @@
 export const AF = {
   th: {
     nav: { back: '← กลับหน้าหลัก', hub: '💰 Affiliate Hub' },
-    badge: '🇹🇭 Openthai.ai Affiliate Program',
-    hero: { l1: 'แชร์ → ได้เงิน', l2: 'คอมมิชชั่นสูงสุด 40%', sub: 'แชร์ Openthai.ai ให้เพื่อน Creator ไทย — ทุกครั้งที่เขาสมัคร คุณได้เงิน ไม่ต้องลงทุนอะไรเลย' },
+    badge: '🇹🇭 OpenThaiAi Affiliate Program',
+    hero: { l1: 'แชร์ → ได้เงิน', l2: 'คอมมิชชั่นสูงสุด 40%', sub: 'แชร์ OpenThaiAi ให้เพื่อน Creator ไทย — ทุกครั้งที่เขาสมัคร คุณได้เงิน ไม่ต้องลงทุนอะไรเลย' },
     stats: [['1,200+', 'Creator ใช้แล้ว'], ['3x', 'คอนเทนต์โตไว'], ['40%', 'คอมมิชชั่นสูงสุด'], ['24ชม.', 'จ่ายทุกสัปดาห์']],
     how: { title: 'วิธีเริ่มต้น 4 ขั้นตอน' },
     steps: [
@@ -28,9 +28,9 @@ export const AF = {
     ],
     tpl: { title: '✏️ ข้อความพร้อมแชร์ (คัดลอกได้เลย)', copy: '📋 คัดลอก', copied: '✅ คัดลอกแล้ว!' },
     tpls: [
-      { key: 'tiktok', label: '📱 TikTok Caption', text: 'สร้างคอนเทนต์ TikTok ปัง ๆ ด้วย AI ไทยแท้ ใน 10 วินาที! ⚡\nไม่ต้องคิดสคริปต์ ไม่ต้องเขียนแคปชั่น ไม่ต้องหาแฮชแท็กอีกต่อไป 🔥\nใช้ฟรี 3 ครั้งวันนี้ ไม่ต้องสมัคร!\n👉 openthai-ai.com\n#Openthai.ai #AIไทย #TikTokContent #ContentCreator' },
-      { key: 'fb', label: '📘 Facebook Post', text: '🚀 AI ไทยแท้ ช่วยสร้างคอนเทนต์ให้ครบเซ็ตใน 10 วินาที!\n✅ สคริปต์ ✅ แคปชั่น ✅ แฮชแท็ก\nคนไทยกว่า 1,200 คนใช้แล้ว คอนเทนต์โตไวขึ้น 3 เท่า 📈\nทดลองใช้ฟรีที่ openthai-ai.com' },
-      { key: 'x', label: '🐦 Twitter/X', text: 'AI ไทยแท้ สร้างคอนเทนต์ TikTok ใน 10 วินาที 🤯\nใช้ฟรี 3 ครั้ง ไม่ต้องสมัคร 👇\nopenthai-ai.com\n#AI #Thailand #ContentCreator' },
+      { key: 'tiktok', label: '📱 TikTok Caption', text: 'สร้างคอนเทนต์ TikTok ปัง ๆ ด้วย AI ไทยแท้ ใน 10 วินาที! ⚡\nไม่ต้องคิดสคริปต์ ไม่ต้องเขียนแคปชั่น ไม่ต้องหาแฮชแท็กอีกต่อไป 🔥\nใช้ฟรี 3 ครั้งวันนี้ ไม่ต้องสมัคร!\n👉 OpenThaiAi.com\n#OpenThaiAi #AIไทย #TikTokContent #ContentCreator' },
+      { key: 'fb', label: '📘 Facebook Post', text: '🚀 AI ไทยแท้ ช่วยสร้างคอนเทนต์ให้ครบเซ็ตใน 10 วินาที!\n✅ สคริปต์ ✅ แคปชั่น ✅ แฮชแท็ก\nคนไทยกว่า 1,200 คนใช้แล้ว คอนเทนต์โตไวขึ้น 3 เท่า 📈\nทดลองใช้ฟรีที่ OpenThaiAi.com' },
+      { key: 'x', label: '🐦 Twitter/X', text: 'AI ไทยแท้ สร้างคอนเทนต์ TikTok ใน 10 วินาที 🤯\nใช้ฟรี 3 ครั้ง ไม่ต้องสมัคร 👇\nOpenThaiAi.com\n#AI #Thailand #ContentCreator' },
     ],
     form: { title: '🚀 สมัคร Affiliate — ฟรี ไม่มีค่าใช้จ่าย' },
     f: { name: 'ชื่อ-นามสกุล *', name_ph: 'สมชาย ใจดี', email: 'อีเมล *', phone: 'เบอร์โทร', platform: 'Platform หลัก', followers: 'จำนวน Followers', channel: 'ลิงก์ช่องหรือโปรไฟล์ (ถ้ามี)', channel_ph: 'https://tiktok.com/@yourhandle', note: 'แนะนำตัวสั้น ๆ (ไม่บังคับ)', note_ph: 'ทำคอนเทนต์ OTOP มา 3 ปี ...' },
@@ -51,8 +51,8 @@ export const AF = {
 
   en: {
     nav: { back: '← Back home', hub: '💰 Affiliate Hub' },
-    badge: '🇹🇭 Openthai.ai Affiliate Program',
-    hero: { l1: 'Share → earn', l2: 'up to 40% commission', sub: 'Share Openthai.ai with fellow Thai creators — every signup through your link earns you money, with zero investment' },
+    badge: '🇹🇭 OpenThaiAi Affiliate Program',
+    hero: { l1: 'Share → earn', l2: 'up to 40% commission', sub: 'Share OpenThaiAi with fellow Thai creators — every signup through your link earns you money, with zero investment' },
     stats: [['1,200+', 'creators using it'], ['3x', 'faster content growth'], ['40%', 'max commission'], ['24h', 'weekly payouts']],
     how: { title: 'Get started in 4 steps' },
     steps: [
@@ -77,9 +77,9 @@ export const AF = {
     ],
     tpl: { title: '✏️ Ready-to-share copy', copy: '📋 Copy', copied: '✅ Copied!' },
     tpls: [
-      { key: 'tiktok', label: '📱 TikTok Caption', text: 'Create viral TikTok content with authentic Thai AI in 10 seconds! ⚡\nNo scripts, no captions, no hashtag hunting 🔥\n3 free tries today, no signup!\n👉 openthai-ai.com\n#Openthai.ai #ThaiAI #TikTokContent #ContentCreator' },
-      { key: 'fb', label: '📘 Facebook Post', text: '🚀 Authentic Thai AI builds a full content set in 10 seconds!\n✅ script ✅ caption ✅ hashtags\n1,200+ Thai creators already growing 3x faster 📈\nTry free at openthai-ai.com' },
-      { key: 'x', label: '🐦 Twitter/X', text: 'Authentic Thai AI makes TikTok content in 10 seconds 🤯\n3 free tries, no signup 👇\nopenthai-ai.com\n#AI #Thailand #ContentCreator' },
+      { key: 'tiktok', label: '📱 TikTok Caption', text: 'Create viral TikTok content with authentic Thai AI in 10 seconds! ⚡\nNo scripts, no captions, no hashtag hunting 🔥\n3 free tries today, no signup!\n👉 OpenThaiAi.com\n#OpenThaiAi #ThaiAI #TikTokContent #ContentCreator' },
+      { key: 'fb', label: '📘 Facebook Post', text: '🚀 Authentic Thai AI builds a full content set in 10 seconds!\n✅ script ✅ caption ✅ hashtags\n1,200+ Thai creators already growing 3x faster 📈\nTry free at OpenThaiAi.com' },
+      { key: 'x', label: '🐦 Twitter/X', text: 'Authentic Thai AI makes TikTok content in 10 seconds 🤯\n3 free tries, no signup 👇\nOpenThaiAi.com\n#AI #Thailand #ContentCreator' },
     ],
     form: { title: '🚀 Become an Affiliate — free' },
     f: { name: 'Full name *', name_ph: 'John Doe', email: 'Email *', phone: 'Phone', platform: 'Main platform', followers: 'Followers', channel: 'Channel / profile link (optional)', channel_ph: 'https://tiktok.com/@yourhandle', note: 'Short intro (optional)', note_ph: '3 years making OTOP content ...' },
@@ -100,8 +100,8 @@ export const AF = {
 
   zh: {
     nav: { back: '← 返回首页', hub: '💰 联盟中心' },
-    badge: '🇹🇭 Openthai.ai 联盟计划',
-    hero: { l1: '分享 → 赚钱', l2: '最高 40% 佣金', sub: '把 Openthai.ai 分享给泰国创作者 — 每次通过你的链接注册你都能赚钱，零投入' },
+    badge: '🇹🇭 OpenThaiAi 联盟计划',
+    hero: { l1: '分享 → 赚钱', l2: '最高 40% 佣金', sub: '把 OpenThaiAi 分享给泰国创作者 — 每次通过你的链接注册你都能赚钱，零投入' },
     stats: [['1,200+', '创作者在用'], ['3x', '内容增长更快'], ['40%', '最高佣金'], ['24h', '每周结算']],
     how: { title: '4 步开始' },
     steps: [
@@ -126,9 +126,9 @@ export const AF = {
     ],
     tpl: { title: '✏️ 现成分享文案', copy: '📋 复制', copied: '✅ 已复制！' },
     tpls: [
-      { key: 'tiktok', label: '📱 TikTok 文案', text: '用正宗泰国 AI，10 秒做出爆款 TikTok 内容！⚡\n无需脚本、无需文案、无需找标签 🔥\n今天免费试 3 次，无需注册！\n👉 openthai-ai.com\n#Openthai.ai #泰国AI #TikTok内容' },
-      { key: 'fb', label: '📘 Facebook 帖子', text: '🚀 正宗泰国 AI，10 秒生成整套内容！\n✅ 脚本 ✅ 文案 ✅ 标签\n超过 1,200 位泰国创作者已在用，增长快 3 倍 📈\n免费试用：openthai-ai.com' },
-      { key: 'x', label: '🐦 Twitter/X', text: '正宗泰国 AI，10 秒生成 TikTok 内容 🤯\n免费试 3 次，无需注册 👇\nopenthai-ai.com\n#AI #泰国 #内容创作' },
+      { key: 'tiktok', label: '📱 TikTok 文案', text: '用正宗泰国 AI，10 秒做出爆款 TikTok 内容！⚡\n无需脚本、无需文案、无需找标签 🔥\n今天免费试 3 次，无需注册！\n👉 OpenThaiAi.com\n#OpenThaiAi #泰国AI #TikTok内容' },
+      { key: 'fb', label: '📘 Facebook 帖子', text: '🚀 正宗泰国 AI，10 秒生成整套内容！\n✅ 脚本 ✅ 文案 ✅ 标签\n超过 1,200 位泰国创作者已在用，增长快 3 倍 📈\n免费试用：OpenThaiAi.com' },
+      { key: 'x', label: '🐦 Twitter/X', text: '正宗泰国 AI，10 秒生成 TikTok 内容 🤯\n免费试 3 次，无需注册 👇\nOpenThaiAi.com\n#AI #泰国 #内容创作' },
     ],
     form: { title: '🚀 加入联盟 — 免费' },
     f: { name: '姓名 *', name_ph: '张三', email: '邮箱 *', phone: '电话', platform: '主要平台', followers: '粉丝数', channel: '频道 / 主页链接（选填）', channel_ph: 'https://tiktok.com/@yourhandle', note: '简短介绍（选填）', note_ph: '做 OTOP 内容 3 年 ...' },

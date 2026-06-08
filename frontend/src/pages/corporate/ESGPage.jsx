@@ -111,7 +111,7 @@ const ESGPage = () => {
       {/* UN SDGs */}
       {tab === 'sdg' && (
         <div>
-          <p style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '16px' }}>Openthai.ai มุ่งมั่นต่อเป้าหมายการพัฒนาอย่างยั่งยืนของสหประชาชาติ (UN SDGs) ดังต่อไปนี้</p>
+          <p style={{ color: '#9ca3af', fontSize: '13px', marginBottom: '16px' }}>OpenThaiAi มุ่งมั่นต่อเป้าหมายการพัฒนาอย่างยั่งยืนของสหประชาชาติ (UN SDGs) ดังต่อไปนี้</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
             {sdg_alignment.map((s, i) => {
               const sdgColors = { 4: '#c5192d', 8: '#a21942', 9: '#fd6925', 10: '#dd1367', 17: '#19486a' };

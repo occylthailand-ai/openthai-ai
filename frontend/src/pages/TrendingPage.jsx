@@ -12,7 +12,7 @@ export default function TrendingPage() {
   const [activeTab, setActiveTab] = useState('hashtags');
 
   useEffect(() => {
-    document.title = '🔥 Trending Now — Openthai.ai';
+    document.title = '🔥 Trending Now — OpenThaiAi';
     fetch(apiUrl('/api/trending'))
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false); })

@@ -67,7 +67,7 @@ export default function AdminPage() {
   const [salesRep, setSalesRep] = useState(null); // ยอดขาย (ขายแล้ว/เหลือ/แพลตฟอร์ม)
   const [prodEdit, setProdEdit] = useState(null); // สินค้าที่กำลังแก้ (object) / null
 
-  useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
+  useEffect(() => { document.title = 'Admin Panel — OpenThaiAi'; }, []);
 
   const adminKey = () => sessionStorage.getItem('admin_key') || ADMIN_KEY;
   const loadProducers = () => fetch(apiUrl('/api/producers/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setProds(d.producers); }).catch(() => {});
@@ -779,7 +779,7 @@ export default function AdminPage() {
 
 // ── Invite Panel — ชุดเชิญผู้ผลิต (ลิงก์ + QR + ข้อความสำเร็จรูป) ────────────────
 function InvitePanel() {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.openthai-ai.com';
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://www.OpenThaiAi.com';
   const link = `${origin}/join`;
   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(link)}`;
   const [copied, setCopied] = useState('');
@@ -787,11 +787,11 @@ function InvitePanel() {
 
   const templates = [
     { id: 'tiktok', label: '🎵 TikTok / Reels caption', text:
-`📣 ร้านไหน OTOP/แบรนด์ไทยอยากขายดีขึ้น?\nเอาสินค้ามาลงฟรีกับ Openthai.ai — ครีเอเตอร์ 1,200+ คนช่วยทำคอนเทนต์ + ดันยอดขาย\nจ่ายค่าคอมเฉพาะตอนขายได้ 💸\nสมัครฟรี 👉 ${link}\n#OTOP #สินค้าไทย #ขายของออนไลน์` },
+`📣 ร้านไหน OTOP/แบรนด์ไทยอยากขายดีขึ้น?\nเอาสินค้ามาลงฟรีกับ OpenThaiAi — ครีเอเตอร์ 1,200+ คนช่วยทำคอนเทนต์ + ดันยอดขาย\nจ่ายค่าคอมเฉพาะตอนขายได้ 💸\nสมัครฟรี 👉 ${link}\n#OTOP #สินค้าไทย #ขายของออนไลน์` },
     { id: 'fb', label: '📘 Facebook post', text:
-`เปิดรับผู้ผลิต/แบรนด์ไทย เข้าร่วม Openthai.ai ฟรี! 🇹🇭\n✅ ครีเอเตอร์ช่วยโปรโมตสินค้าคุณ\n✅ จ่ายค่าคอมเฉพาะเมื่อขายได้\n✅ ไม่มีค่าแรกเข้า\nสมัครเลย: ${link}` },
+`เปิดรับผู้ผลิต/แบรนด์ไทย เข้าร่วม OpenThaiAi ฟรี! 🇹🇭\n✅ ครีเอเตอร์ช่วยโปรโมตสินค้าคุณ\n✅ จ่ายค่าคอมเฉพาะเมื่อขายได้\n✅ ไม่มีค่าแรกเข้า\nสมัครเลย: ${link}` },
     { id: 'line', label: '💬 LINE / ข้อความตรง', text:
-`สวัสดีค่ะ 🙏 ทาง Openthai.ai เปิดให้ผู้ผลิต/ร้านค้าเอาสินค้ามาขายกับครีเอเตอร์ทั่วไทย ฟรีไม่มีค่าแรกเข้า จ่ายค่าคอมเฉพาะตอนขายได้ สนใจสมัครที่ลิงก์นี้เลยค่ะ: ${link}` },
+`สวัสดีค่ะ 🙏 ทาง OpenThaiAi เปิดให้ผู้ผลิต/ร้านค้าเอาสินค้ามาขายกับครีเอเตอร์ทั่วไทย ฟรีไม่มีค่าแรกเข้า จ่ายค่าคอมเฉพาะตอนขายได้ สนใจสมัครที่ลิงก์นี้เลยค่ะ: ${link}` },
   ];
 
   return (

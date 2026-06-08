@@ -5,7 +5,7 @@
 
 ```
 GitHub Actions (drive-report.yml)  ──POST──▶  Apps Script Web App  ──เขียน──▶  Google Drive
-   รันเทส + health ทุก 6 ชม.                    (รันด้วยบัญชีคุณ)            📁 Openthai.ai Reports
+   รันเทส + health ทุก 6 ชม.                    (รันด้วยบัญชีคุณ)            📁 OpenThaiAi Reports
 ```
 
 > ทำไมใช้ Apps Script web app: ไฟล์ที่สร้างเป็น **ของบัญชี Gmail ของคุณเอง** จึงไม่ติดปัญหา
@@ -15,7 +15,7 @@ GitHub Actions (drive-report.yml)  ──POST──▶  Apps Script Web App  ─
 
 ## สิ่งที่ตั้งให้แล้ว ✅
 
-- 📁 โฟลเดอร์ **`Openthai.ai Reports`** ใน Google Drive (มีรายงานแรก + `Health_Log` แล้ว)
+- 📁 โฟลเดอร์ **`OpenThaiAi Reports`** ใน Google Drive (มีรายงานแรก + `Health_Log` แล้ว)
 - ⚙️ Workflow **`.github/workflows/drive-report.yml`** (ตารางทุก 6 ชม. + กดรันเองได้)
 - 📜 สคริปต์ **`scripts/openthai-health-to-drive.gs`** (สำหรับวางใน Apps Script)
 
@@ -47,16 +47,16 @@ GitHub Actions (drive-report.yml)  ──POST──▶  Apps Script Web App  ─
    - เพิ่ม secret `DRIVE_WEBHOOK_SECRET` = รหัสเดียวกัน
 
 เสร็จแล้ว 🎉 — ทดสอบได้โดยไปที่ **Actions → 📤 Drive Report → Run workflow**
-แล้วเปิดดูโฟลเดอร์ `Openthai.ai Reports` ใน Drive จะเห็นรายงานใหม่โผล่ทันที
+แล้วเปิดดูโฟลเดอร์ `OpenThaiAi Reports` ใน Drive จะเห็นรายงานใหม่โผล่ทันที
 
 ---
 
 ## ปรับแต่ง
 - **ความถี่:** แก้ `cron` ใน `drive-report.yml` (ปัจจุบัน `0 */6 * * *` = ทุก 6 ชม.)
-- **ปลายทาง:** แก้ `FOLDER_NAME` ใน `.gs` (ค่าเริ่มต้น `Openthai.ai Reports`)
+- **ปลายทาง:** แก้ `FOLDER_NAME` ใน `.gs` (ค่าเริ่มต้น `OpenThaiAi Reports`)
 
 ## รายงานเก็บที่ไหนบ้าง
 | ที่เก็บ | เนื้อหา |
 |--------|---------|
-| 📁 Google Drive `Openthai.ai Reports` | ไฟล์ `report-<เวลา>.md` + สเปรดชีต `Health_Log` |
+| 📁 Google Drive `OpenThaiAi Reports` | ไฟล์ `report-<เวลา>.md` + สเปรดชีต `Health_Log` |
 | 📦 GitHub Actions artifact `drive-report` | สำเนา report (เก็บ 30 วัน) — สำรองเสมอแม้ Drive ล่ม |

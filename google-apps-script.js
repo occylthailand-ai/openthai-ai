@@ -1,5 +1,5 @@
 ﻿/**
- * Openthai.ai — Google Sheets Automation
+ * OpenThaiAi — Google Sheets Automation
  * วางไว้ใน Google Sheets → Extensions → Apps Script
  * 
  * ทำหน้าที่:
@@ -260,7 +260,7 @@ function sendDailyReport() {
   const mrrStatus = totalMRR >= 1500 ? '✅' : `🎯 ${totalMRR}/฿1,500`;
   
   const report = `
-📊 Openthai.ai Daily Report
+📊 OpenThaiAi Daily Report
 📅 ${today}
 
 👥 Leads วันนี้: ${todaySignups} ${w1Target}
@@ -330,7 +330,7 @@ function setupTriggers() {
 // ============================================================
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('🤖 Openthai.ai')
+    .createMenu('🤖 OpenThaiAi')
     .addItem('⚙️ Setup Sheets', 'setupSheets')
     .addItem('⏰ Setup Triggers', 'setupTriggers')
     .addSeparator()

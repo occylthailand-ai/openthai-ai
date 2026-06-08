@@ -109,7 +109,7 @@ const HRPage = () => {
             </div>
           ))}
           <div style={{ textAlign: 'center', padding: '16px', color: '#6b7280', fontSize: '13px' }}>
-            สนใจร่วมงาน: <a href="mailto:hr@Openthai.ai.com" style={{ color: '#a5b4fc' }}>hr@Openthai.ai.com</a>
+            สนใจร่วมงาน: <a href="mailto:hr@OpenThaiAi.com" style={{ color: '#a5b4fc' }}>hr@OpenThaiAi.com</a>
           </div>
         </div>
       )}

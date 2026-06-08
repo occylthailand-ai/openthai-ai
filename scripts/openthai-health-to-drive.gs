@@ -1,5 +1,5 @@
 /**
- * Openthai.ai — Health/Test Report → Google Drive (Web App)
+ * OpenThaiAi — Health/Test Report → Google Drive (Web App)
  * ───────────────────────────────────────────────────────────
  * รับผลการเทส/health จาก GitHub Actions แล้วเขียนเข้า Google Drive ของคุณเอง
  * (ไฟล์เป็นของบัญชีคุณ ไม่ติดปัญหา quota ของ service account)
@@ -18,7 +18,7 @@
  * เสร็จแล้ว workflow `drive-report.yml` จะเขียนผลเข้า Drive อัตโนมัติทุก 6 ชม.
  */
 
-const FOLDER_NAME   = 'Openthai.ai Reports'; // โฟลเดอร์ปลายทางใน Drive
+const FOLDER_NAME   = 'OpenThaiAi Reports'; // โฟลเดอร์ปลายทางใน Drive
 const LOG_SHEET_NAME = 'Health_Log';         // สเปรดชีตบันทึกผลต่อเนื่อง
 const SHARED_SECRET  = '';                    // เว้นว่าง = ไม่ตรวจ; ถ้าตั้ง ต้องตรงกับ DRIVE_WEBHOOK_SECRET
 

@@ -12,7 +12,7 @@ const Section = ({ title, children }) => (
 
 export default function PrivacyPage() {
   const navigate = useNavigate();
-  useEffect(() => { document.title = 'นโยบายความเป็นส่วนตัว — Openthai.ai'; }, []);
+  useEffect(() => { document.title = 'นโยบายความเป็นส่วนตัว — OpenThaiAi'; }, []);
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif", padding: '0 0 80px' }}>
       {/* Header */}
@@ -22,7 +22,7 @@ export default function PrivacyPage() {
         </button>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>นโยบายความเป็นส่วนตัว</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>Privacy Policy — Openthai.ai</div>
+          <div style={{ fontSize: 11, color: '#64748b' }}>Privacy Policy — OpenThaiAi</div>
         </div>
       </header>
 
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
 
         {/* Notice box */}
         <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 12, padding: '16px 20px', marginBottom: 40, fontSize: 13, color: '#a5b4fc', lineHeight: 1.7 }}>
-          🛡️ <strong>Openthai.ai</strong> เคารพความเป็นส่วนตัวของคุณและปฏิบัติตาม <strong>พระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)</strong> อย่างเคร่งครัด นโยบายนี้อธิบายว่าเราเก็บ ใช้ และปกป้องข้อมูลของคุณอย่างไร
+          🛡️ <strong>OpenThaiAi</strong> เคารพความเป็นส่วนตัวของคุณและปฏิบัติตาม <strong>พระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)</strong> อย่างเคร่งครัด นโยบายนี้อธิบายว่าเราเก็บ ใช้ และปกป้องข้อมูลของคุณอย่างไร
         </div>
 
         <Section title="1. ข้อมูลที่เราเก็บรวบรวม">
@@ -114,7 +114,7 @@ export default function PrivacyPage() {
             ))}
           </div>
           <p style={{ marginTop: 16, fontSize: 13 }}>
-            ติดต่อขอใช้สิทธิได้ที่ <a href="mailto:privacy@openthai.ai" style={{ color: '#6366f1' }}>privacy@openthai.ai</a> — เราจะตอบกลับภายใน 30 วัน
+            ติดต่อขอใช้สิทธิได้ที่ <a href="mailto:privacy@OpenThaiAi.com" style={{ color: '#6366f1' }}>privacy@OpenThaiAi.com</a> — เราจะตอบกลับภายใน 30 วัน
           </p>
         </Section>
 
@@ -130,10 +130,10 @@ export default function PrivacyPage() {
 
         <Section title="8. ติดต่อ DPO (Data Protection Officer)">
           <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '20px 24px' }}>
-            <div style={{ fontWeight: 800, marginBottom: 8, color: '#f8fafc' }}>Openthai.ai — ฝ่ายคุ้มครองข้อมูล</div>
+            <div style={{ fontWeight: 800, marginBottom: 8, color: '#f8fafc' }}>OpenThaiAi — ฝ่ายคุ้มครองข้อมูล</div>
             <div style={{ fontSize: 13, lineHeight: 2 }}>
-              📧 Email: <a href="mailto:privacy@openthai.ai" style={{ color: '#6366f1' }}>privacy@openthai.ai</a><br />
-              🌐 Website: <a href="https://www.openthai-ai.com" style={{ color: '#6366f1' }}>www.openthai-ai.com</a><br />
+              📧 Email: <a href="mailto:privacy@OpenThaiAi.com" style={{ color: '#6366f1' }}>privacy@OpenThaiAi.com</a><br />
+              🌐 Website: <a href="https://www.OpenThaiAi.com" style={{ color: '#6366f1' }}>www.OpenThaiAi.com</a><br />
               🕐 เวลาทำการ: จันทร์–ศุกร์ 9:00–18:00 น.
             </div>
           </div>

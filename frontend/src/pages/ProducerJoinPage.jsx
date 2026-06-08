@@ -15,7 +15,7 @@ export default function ProducerJoinPage() {
   const [err, setErr] = useState('');
 
   useEffect(() => {
-    document.title = 'ผู้ผลิต/แบรนด์ มาสังกัด — Openthai.ai';
+    document.title = 'ผู้ผลิต/แบรนด์ มาสังกัด — OpenThaiAi';
     fetch(apiUrl('/api/producers/categories')).then(r => r.json()).then(d => { if (d.success) setCats(d.categories); }).catch(() => {});
   }, []);
 

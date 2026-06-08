@@ -1,4 +1,4 @@
--- Openthai.ai — Orders table (Supabase / Postgres)
+-- OpenThaiAi — Orders table (Supabase / Postgres)
 -- รันใน Supabase SQL editor เพื่อเก็บคำสั่งซื้อถาวร
 -- backend ใช้ตารางนี้อัตโนมัติเมื่อ SUPABASE_URL + SUPABASE_SERVICE_KEY ถูกตั้ง
 

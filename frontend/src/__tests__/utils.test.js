@@ -1,5 +1,5 @@
 ﻿/**
- * Openthai.ai — Unit Tests
+ * OpenThaiAi — Unit Tests
  * Run: npm test
  */
 
@@ -14,7 +14,7 @@ function truncate(text, maxLen = 100) {
 }
 
 /** Build affiliate ref link */
-function buildRefLink(refCode, base = 'https://www.openthai-ai.com') {
+function buildRefLink(refCode, base = 'https://www.OpenThaiAi.com') {
   if (!refCode) return base;
   return `${base}/?ref=${refCode.toUpperCase()}`;
 }
@@ -78,12 +78,12 @@ describe('truncate()', () => {
 
 describe('buildRefLink()', () => {
   it('returns base URL when refCode is empty', () => {
-    expect(buildRefLink('')).toBe('https://www.openthai-ai.com');
-    expect(buildRefLink(null)).toBe('https://www.openthai-ai.com');
+    expect(buildRefLink('')).toBe('https://www.OpenThaiAi.com');
+    expect(buildRefLink(null)).toBe('https://www.OpenThaiAi.com');
   });
 
   it('uppercases the refCode', () => {
-    expect(buildRefLink('praekh1')).toBe('https://www.openthai-ai.com/?ref=PRAEKH1');
+    expect(buildRefLink('praekh1')).toBe('https://www.OpenThaiAi.com/?ref=PRAEKH1');
   });
 
   it('uses custom base URL', () => {

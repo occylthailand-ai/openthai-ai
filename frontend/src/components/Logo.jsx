@@ -2,7 +2,7 @@
 import logoSvg from '../assets/logo.svg';
 
 /**
- * Openthai.ai Logo Component
+ * OpenThaiAi Logo Component
  *
  * Props:
  *   size   — "sm" | "md" | "lg" | "xl"  (default: "md")
@@ -28,7 +28,7 @@ export const Logo = ({ size = 'md', style = {} }) => {
   return (
     <img
       src={logoSvg}
-      alt="Openthai.ai"
+      alt="OpenThaiAi"
       width={width}
       height={height}
       style={{ display: 'block', ...style }}
