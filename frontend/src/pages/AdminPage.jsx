@@ -58,13 +58,17 @@ export default function AdminPage() {
   const [prods, setProds] = useState(null);     // ผู้ผลิตที่สมัคร
   const [prodQ, setProdQ] = useState('');       // ค้นหาผู้ผลิต (รวม pending)
   const [ords, setOrds] = useState(null);       // คำสั่งซื้อ
+  const [leads, setLeads] = useState(null);     // ลูกค้า/ลีดรวมทุกแหล่ง
+  const [leadQ, setLeadQ] = useState('');
+  const [leadType, setLeadType] = useState('all');
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
   const adminKey = () => sessionStorage.getItem('admin_key') || ADMIN_KEY;
   const loadProducers = () => fetch(apiUrl('/api/producers/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setProds(d.producers); }).catch(() => {});
   const loadOrders = () => fetch(apiUrl('/api/orders/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setOrds(d.orders); }).catch(() => {});
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadLeads = () => fetch(apiUrl('/api/leads/admin/search'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setLeads(d); }).catch(() => {});
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const approveProducer = async (email, status) => {
     await fetch(apiUrl('/api/producers/admin/status'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ email, status }) });
@@ -371,6 +375,60 @@ export default function AdminPage() {
             ))}
           </div>
         )}
+
+        {/* TAB: LEADS / CUSTOMERS */}
+        {tab === 'leads' && (() => {
+          const q = leadQ.trim().toLowerCase();
+          const all = leads?.leads || [];
+          const list = all.filter((l) => (leadType === 'all' || l.type === leadType) && (!q || [l.name, l.contact, l.detail].some((f) => (f || '').toLowerCase().includes(q))));
+          const TYPE_C = { waitlist: '#06b6d4', affiliate: '#f59e0b', order: '#10b981' };
+          const exportCsv = () => {
+            const rows = [['type', 'name', 'contact', 'detail', 'date'], ...list.map((l) => [l.type, l.name, l.contact, l.detail, l.date])];
+            const csv = rows.map((r) => r.map((c) => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+            const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+            const a = document.createElement('a'); a.href = url; a.download = `openthai-leads-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
+          };
+          return (
+          <div style={glass}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 14 }}>
+              <div style={{ fontWeight: 700 }}>🎯 ลูกค้า/ลีด {leads ? `(${list.length}/${leads.counts.all})` : ''}</div>
+              <span style={{ flex: 1 }} />
+              <input value={leadQ} onChange={(e) => setLeadQ(e.target.value)} placeholder="🔍 ค้นหาชื่อ/อีเมล/เบอร์/รายละเอียด" style={{ ...inputSt, padding: '8px 12px', fontSize: 13, minWidth: 200, flex: 1, maxWidth: 300 }} />
+              <select value={leadType} onChange={(e) => setLeadType(e.target.value)} style={{ ...inputSt, padding: '8px 12px', fontSize: 13, width: 'auto' }}>
+                <option value="all">ทั้งหมด</option><option value="waitlist">Waitlist</option><option value="affiliate">Affiliate</option><option value="order">ลูกค้าสั่งซื้อ</option>
+              </select>
+              <button onClick={exportCsv} disabled={!list.length} style={miniBtn('#10b981')}>⬇️ CSV</button>
+            </div>
+            {leads && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, fontSize: 12 }}>
+                {[['waitlist', leads.counts.waitlist], ['affiliate', leads.counts.affiliate], ['order', leads.counts.order]].map(([t, n]) => (
+                  <span key={t} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: '4px 10px', color: TYPE_C[t] }}>{t}: <strong>{n}</strong></span>
+                ))}
+              </div>
+            )}
+            {!leads && <div style={{ color: '#64748b', fontSize: 13 }}>{T.loading}</div>}
+            {leads && list.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ไม่พบลูกค้า/ลีดที่ตรงกับการค้นหา</div>}
+            {list.length > 0 && (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead><tr style={{ color: '#475569' }}>{['ประเภท', 'ชื่อ', 'ติดต่อ', 'รายละเอียด', 'วันที่'].map((h) => <th key={h} style={{ textAlign: 'left', padding: '8px', fontWeight: 600, fontSize: 11, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {list.slice(0, 500).map((l, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '8px' }}><span style={{ fontSize: 11, color: TYPE_C[l.type] || '#94a3b8', fontWeight: 700 }}>{l.type}</span></td>
+                        <td style={{ padding: '8px', fontWeight: 600 }}>{l.name || '-'}</td>
+                        <td style={{ padding: '8px', color: '#a5b4fc' }}>{l.contact}</td>
+                        <td style={{ padding: '8px', color: '#94a3b8' }}>{l.detail}</td>
+                        <td style={{ padding: '8px', color: '#64748b', fontSize: 11, whiteSpace: 'nowrap' }}>{l.date ? new Date(l.date).toLocaleDateString() : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          );
+        })()}
 
         {/* TAB: USERS */}
         {tab === 'users' && (

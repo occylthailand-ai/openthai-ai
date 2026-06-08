@@ -363,6 +363,28 @@ app.post('/api/orders/admin/status', async (req, res) => {
   res.json({ success: true, ...r });
 });
 
+// GET /api/leads/admin/search — รวมลูกค้า/ลีดทุกแหล่ง (waitlist + affiliate + order) + ค้นหา/กรอง
+app.get('/api/leads/admin/search', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try {
+    const q = (req.query.q || '').toString().trim().toLowerCase();
+    const type = (req.query.type || '').toString().trim();
+    const leads = [];
+    for (const w of waitlist) leads.push({ type: 'waitlist', name: '', contact: w.email || '', detail: `source: ${w.source || 'landing'}`, date: w.joined_at || w.createdAt || '' });
+    for (const a of affiliates) leads.push({ type: 'affiliate', name: a.name || '', contact: a.email || '', detail: `${a.platform || ''} · ${a.ref_code || ''}`.trim(), date: a.created_at || a.joined_at || '' });
+    const ords = await orders.all();
+    for (const o of ords) leads.push({ type: 'order', name: o.customer_name || '', contact: o.contact || '', detail: `${o.product_name || ''}${o.amount ? ` · ฿${o.amount}` : ''}`, date: o.created_at || '' });
+
+    let out = leads;
+    if (type && type !== 'all') out = out.filter((l) => l.type === type);
+    if (q) out = out.filter((l) => [l.name, l.contact, l.detail].some((f) => (f || '').toString().toLowerCase().includes(q)));
+    out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    const counts = { all: leads.length, waitlist: leads.filter((l) => l.type === 'waitlist').length, affiliate: leads.filter((l) => l.type === 'affiliate').length, order: leads.filter((l) => l.type === 'order').length };
+    res.json({ success: true, counts, total: out.length, leads: out.slice(0, 2000) });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ─── Nodemailer transporter ───────────────────────────────────────────────────
 const mailer = process.env.SMTP_USER
   ? nodemailer.createTransport({
