@@ -9,7 +9,7 @@ export default function ProducerJoinPage() {
   const navigate = useNavigate();
   const { t } = useLang();
   const [cats, setCats] = useState(FALLBACK_CATS);
-  const [form, setForm] = useState({ company: '', contact_name: '', email: '', phone: '', website: '', category: 'OTOP', product_name: '', price: '', description: '' });
+  const [form, setForm] = useState({ company: '', contact_name: '', email: '', phone: '', website: '', category: 'OTOP', product_name: '', price: '', stock: '', description: '' });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState('');
@@ -82,7 +82,10 @@ export default function ProducerJoinPage() {
               </Field>
               <Field label={t('mk.join.f.price')}><input style={inp} type="number" value={form.price} onChange={set('price')} placeholder={t('mk.join.f.price.ph')} /></Field>
             </Row>
-            <Field label={t('mk.join.f.product')}><input style={inp} value={form.product_name} onChange={set('product_name')} placeholder={t('mk.join.f.product.ph')} /></Field>
+            <Row>
+              <Field label={t('mk.join.f.product')}><input style={inp} value={form.product_name} onChange={set('product_name')} placeholder={t('mk.join.f.product.ph')} /></Field>
+              <Field label={t('mk.join.f.stock')}><input style={inp} type="number" min="0" value={form.stock} onChange={set('stock')} placeholder="—" /></Field>
+            </Row>
             <Field label={t('mk.join.f.desc')}><textarea style={{ ...inp, minHeight: 80, resize: 'vertical' }} value={form.description} onChange={set('description')} placeholder={t('mk.join.f.desc.ph')} /></Field>
             {err && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 4 }}>⚠️ {err}</div>}
             <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', marginTop: 14, opacity: busy ? 0.7 : 1 }}>

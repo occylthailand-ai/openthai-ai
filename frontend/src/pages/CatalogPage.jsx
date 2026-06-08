@@ -19,6 +19,7 @@ export default function CatalogPage() {
       <nav style={{ padding: '14px 5%', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <button onClick={() => navigate('/')} style={navBtn}>{t('mk.nav.home')}</button>
         <span style={{ flex: 1 }} />
+        <button onClick={() => navigate('/track')} style={navBtn}>{t('mk.nav.track')}</button>
         <button onClick={() => navigate('/find-producers')} style={navBtn}>{t('mk.nav.find')}</button>
         <button onClick={() => navigate('/join')} style={navBtn}>{t('mk.nav.sell')}</button>
       </nav>
@@ -63,9 +64,10 @@ export default function CatalogPage() {
 }
 
 function OrderModal({ product, onClose, t }) {
-  const [form, setForm] = useState({ customer_name: '', contact: '', qty: 1, note: '' });
+  const [form, setForm] = useState({ customer_name: '', contact: '', qty: 1, address: '', note: '' });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [orderId, setOrderId] = useState('');
   const [err, setErr] = useState('');
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const total = product.price ? Number(product.price) * (parseInt(form.qty, 10) || 1) : null;
@@ -81,7 +83,7 @@ function OrderModal({ product, onClose, t }) {
         body: JSON.stringify({ producer_email: product.email, product_name: product.product_name, price: product.price, ...form }),
       });
       const d = await res.json();
-      if (d.success) setDone(true); else setErr(d.error || t('mk.ord.err'));
+      if (d.success) { setOrderId(d.id || ''); setDone(true); } else setErr(d.error || t('mk.ord.err'));
     } catch { setErr('เชื่อมต่อไม่ได้ ลองใหม่'); }
     finally { setBusy(false); }
   };
@@ -95,7 +97,14 @@ function OrderModal({ product, onClose, t }) {
             <div style={{ fontSize: 44, marginBottom: 8 }}>🎉</div>
             <h3 style={{ fontWeight: 900, marginBottom: 6 }}>{t('mk.ord.ok.title')}</h3>
             <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.6 }}>{product.producer} {t('mk.ord.ok.desc')}</p>
-            <button onClick={onClose} style={{ ...primaryBtn, marginTop: 18 }}>{t('mk.ord.close')}</button>
+            {orderId && (
+              <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: 12, marginTop: 14, fontSize: 12 }}>
+                <div style={{ color: '#64748b' }}>{t('mk.track.id')}</div>
+                <div style={{ fontFamily: 'monospace', color: '#a5b4fc', wordBreak: 'break-all', marginBottom: 8 }}>{orderId}</div>
+                <a href={`/track?id=${encodeURIComponent(orderId)}&contact=${encodeURIComponent(form.contact)}`} style={{ ...primaryBtn, display: 'inline-block', textDecoration: 'none', padding: '8px 18px', fontSize: 13 }}>{t('mk.nav.track')}</a>
+              </div>
+            )}
+            <button onClick={onClose} style={{ ...primaryBtn, marginTop: 14 }}>{t('mk.ord.close')}</button>
           </div>
         ) : (
           <form onSubmit={submit}>
@@ -107,6 +116,8 @@ function OrderModal({ product, onClose, t }) {
             <input style={inp} value={form.contact} onChange={set('contact')} placeholder={t('mk.ord.contact.ph')} />
             <label style={lab}>{t('mk.ord.qty')}</label>
             <input style={inp} type="number" min="1" value={form.qty} onChange={set('qty')} />
+            <label style={lab}>{t('mk.ord.address')}</label>
+            <textarea style={{ ...inp, minHeight: 52, resize: 'vertical' }} value={form.address} onChange={set('address')} placeholder={t('mk.ord.address.ph')} />
             <label style={lab}>{t('mk.ord.note')}</label>
             <textarea style={{ ...inp, minHeight: 56, resize: 'vertical' }} value={form.note} onChange={set('note')} placeholder={t('mk.ord.note.ph')} />
             {total != null && <div style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', margin: '4px 0 12px' }}>{t('mk.ord.total')} ฿{total.toLocaleString('th-TH')}</div>}
