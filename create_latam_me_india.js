@@ -151,7 +151,7 @@ platforms.forEach(p => {
   fs.writeFileSync(dir + '/' + p.id + '-roadmap-section.html', html);
 
   // HTML Guide
-  const guide = `<html><head><meta charset="utf-8"><style>body{font-family:Sarabun,sans-serif;max-width:700px;margin:0 auto;padding:20px;line-height:1.6}h1{color:${p.color};border-bottom:3px solid ${p.color}}h3{margin-top:16px}</style></head><body><h1>${p.name} Roadmap</h1><p>${p.desc}</p><p><strong>${p.steps} ขั้นตอน | ${p.sections} ส่วน | ${p.users}</strong></p>${p.phases.map((ph,i) => `<h3>ส่วนที่ ${i+1} — ${ph}</h3>`).join('')}<hr><p><em>สร้างโดย Openthai.ai — www.Openthai.ai.com</em></p></body></html>`;
+  const guide = `<html><head><meta charset="utf-8"><style>body{font-family:Sarabun,sans-serif;max-width:700px;margin:0 auto;padding:20px;line-height:1.6}h1{color:${p.color};border-bottom:3px solid ${p.color}}h3{margin-top:16px}</style></head><body><h1>${p.name} Roadmap</h1><p>${p.desc}</p><p><strong>${p.steps} ขั้นตอน | ${p.sections} ส่วน | ${p.users}</strong></p>${p.phases.map((ph,i) => `<h3>ส่วนที่ ${i+1} — ${ph}</h3>`).join('')}<hr><p><em>สร้างโดย Openthai.ai — www.OpenThaiAi.com</em></p></body></html>`;
   fs.writeFileSync(dir + '/Openthai.ai_' + p.name + '_Roadmap.html', guide);
 
   created++;

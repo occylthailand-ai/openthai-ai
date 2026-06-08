@@ -8,8 +8,8 @@ function getResend(): Resend {
   return new Resend(process.env.RESEND_API_KEY);
 }
 
-const FROM = process.env.EMAIL_FROM ?? "noreply@openthai.ai";
-const APP  = process.env.NEXT_PUBLIC_APP_URL ?? "https://openthai.ai";
+const FROM = process.env.EMAIL_FROM ?? "noreply@OpenThaiAi.com";
+const APP  = process.env.NEXT_PUBLIC_APP_URL ?? "https://OpenThaiAi.com";
 
 /* ── 1. Email Verification ───────────────────────────── */
 export async function sendVerificationEmail(
@@ -143,7 +143,7 @@ export async function sendWithdrawConfirmation(
               <td style="padding:14px 20px;font-size:13px;color:#06D6A0;text-align:right;">ภายใน 24 ชั่วโมง</td>
             </tr>
           </table>
-          <p style="font-size:12px;color:#3A4258;line-height:1.7;margin:0;">หากมีคำถาม ติดต่อ <a href="mailto:support@openthai.ai" style="color:#F0B429;">support@openthai.ai</a></p>
+          <p style="font-size:12px;color:#3A4258;line-height:1.7;margin:0;">หากมีคำถาม ติดต่อ <a href="mailto:support@OpenThaiAi.com" style="color:#F0B429;">support@OpenThaiAi.com</a></p>
         </td></tr>
       </table>
     </td></tr>

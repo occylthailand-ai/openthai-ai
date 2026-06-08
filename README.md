@@ -78,9 +78,9 @@ openthai-ai/
 
 ## 📞 Contact
 
-- **Website**: [openthai-ai.vercel.app](https://openthai-ai.vercel.app)
-- **Email**: contact@openthai.ai
-- **LINE**: @openthai-ai
+- **Website**: [OpenThaiAi.com](https://OpenThaiAi.com)
+- **Email**: contact@OpenThaiAi.com
+- **LINE**: @OpenThaiAi
 
 ---
 

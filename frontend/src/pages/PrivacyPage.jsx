@@ -114,7 +114,7 @@ export default function PrivacyPage() {
             ))}
           </div>
           <p style={{ marginTop: 16, fontSize: 13 }}>
-            ติดต่อขอใช้สิทธิได้ที่ <a href="mailto:privacy@openthai.ai" style={{ color: '#6366f1' }}>privacy@openthai.ai</a> — เราจะตอบกลับภายใน 30 วัน
+            ติดต่อขอใช้สิทธิได้ที่ <a href="mailto:privacy@OpenThaiAi.com" style={{ color: '#6366f1' }}>privacy@OpenThaiAi.com</a> — เราจะตอบกลับภายใน 30 วัน
           </p>
         </Section>
 
@@ -132,8 +132,8 @@ export default function PrivacyPage() {
           <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '20px 24px' }}>
             <div style={{ fontWeight: 800, marginBottom: 8, color: '#f8fafc' }}>Openthai.ai — ฝ่ายคุ้มครองข้อมูล</div>
             <div style={{ fontSize: 13, lineHeight: 2 }}>
-              📧 Email: <a href="mailto:privacy@openthai.ai" style={{ color: '#6366f1' }}>privacy@openthai.ai</a><br />
-              🌐 Website: <a href="https://www.openthai-ai.com" style={{ color: '#6366f1' }}>www.openthai-ai.com</a><br />
+              📧 Email: <a href="mailto:privacy@OpenThaiAi.com" style={{ color: '#6366f1' }}>privacy@OpenThaiAi.com</a><br />
+              🌐 Website: <a href="https://www.OpenThaiAi.com" style={{ color: '#6366f1' }}>www.OpenThaiAi.com</a><br />
               🕐 เวลาทำการ: จันทร์–ศุกร์ 9:00–18:00 น.
             </div>
           </div>

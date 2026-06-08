@@ -408,7 +408,7 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
     const amount = (p.price || 0) * qty;
 
     // สร้างออเดอร์ (ติดตามได้ในระบบเดียวกับ marketplace)
-    const ord = await orders.place({ producer_email: 'store@openthai-ai.com', product_name: p.name, price: p.price, qty, customer_name, contact, address, note: `ร้าน Openthai · SKU ${p.sku}` });
+    const ord = await orders.place({ producer_email: 'store@OpenThaiAi.com', product_name: p.name, price: p.price, qty, customer_name, contact, address, note: `ร้าน Openthai · SKU ${p.sku}` });
     const orderId = ord.id;
 
     const finalizePaid = async (charge) => {

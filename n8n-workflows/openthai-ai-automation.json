@@ -107,7 +107,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "noreply@Openthai.ai.com",
+        "fromEmail": "noreply@OpenThaiAi.com",
         "toEmail": "={{$env[\"ADMIN_EMAIL\"]}}",
         "subject": "=🤖 Agent รัน: {{$json[\"agentId\"]}} — {{$json[\"status\"]}}",
         "text": "=Agent: {{$json[\"agentId\"]}}\nStatus: {{$json[\"status\"]}}\nTime: {{$json[\"ts\"]}}\n\nDetails:\n{{JSON.stringify($json, null, 2)}}"

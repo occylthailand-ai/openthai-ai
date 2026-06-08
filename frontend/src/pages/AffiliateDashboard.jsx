@@ -289,7 +289,7 @@ export default function AffiliateDashboard() {
                 📅 <strong style={{ color: '#f8fafc' }}>จ่ายทุกวันจันทร์</strong> ผ่าน PromptPay หรือ Bank Transfer<br />
                 💳 ขั้นต่ำ ฿100 ต่อครั้ง<br />
                 ⏱ ยอดขายจะ confirm ภายใน 3 วัน<br />
-                📩 แจ้งช่องทางรับเงินได้ที่ <a href="mailto:affiliate@openthai.ai" style={{ color: '#6366f1' }}>affiliate@openthai.ai</a>
+                📩 แจ้งช่องทางรับเงินได้ที่ <a href="mailto:affiliate@OpenThaiAi.com" style={{ color: '#6366f1' }}>affiliate@OpenThaiAi.com</a>
               </div>
             </div>
           </div>

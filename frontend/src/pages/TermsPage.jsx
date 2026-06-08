@@ -122,8 +122,8 @@ export default function TermsPage() {
         <Section num="9" title="ติดต่อเรา">
           <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '20px 24px' }}>
             <div style={{ fontSize: 13, lineHeight: 2 }}>
-              📧 Email: <a href="mailto:support@openthai.ai" style={{ color: '#6366f1' }}>support@openthai.ai</a><br />
-              🌐 Website: <a href="https://www.openthai-ai.com" style={{ color: '#6366f1' }}>www.openthai-ai.com</a>
+              📧 Email: <a href="mailto:support@OpenThaiAi.com" style={{ color: '#6366f1' }}>support@OpenThaiAi.com</a><br />
+              🌐 Website: <a href="https://www.OpenThaiAi.com" style={{ color: '#6366f1' }}>www.OpenThaiAi.com</a>
             </div>
           </div>
         </Section>

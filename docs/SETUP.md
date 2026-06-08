@@ -231,8 +231,8 @@ GOOGLE_SHEETS_ID=xxxxx
 
 ## 📞 Support
 
-- **Email**: contact@openthai.ai
-- **LINE**: @openthai-ai
+- **Email**: contact@OpenThaiAi.com
+- **LINE**: @OpenThaiAi
 - **GitHub Issues**: [Report bugs](https://github.com/YOUR_USERNAME/openthai-ai/issues)
 
 ---

@@ -248,7 +248,7 @@ ${catHtml}
 <p>${c.desc}</p>
 <p><strong>${c.categories.length} หมวด | ${productCount} รายการสินค้า</strong></p>
 ${c.categories.map(cat => `<h3>${cat.name} (${cat.items.length})</h3><p>${cat.items.map(i => `<span>${i}</span>`).join(' ')}</p>`).join('')}
-<hr><p><em>สร้างโดย Openthai.ai — www.Openthai.ai.com</em></p></body></html>`;
+<hr><p><em>สร้างโดย Openthai.ai — www.OpenThaiAi.com</em></p></body></html>`;
   fs.writeFileSync(dir + '/Openthai.ai_' + c.name + '_Catalog.html', guide);
 
   // JSON Product Database
