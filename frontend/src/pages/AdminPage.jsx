@@ -1,6 +1,9 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
+import { useLang } from '../i18n';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import { ADM } from '../i18n/admin';
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
 const MOCK = {
@@ -40,6 +43,8 @@ const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY || 'openthai-admin-2026';
 
 export default function AdminPage() {
   const navigate = useNavigate();
+  const { lang } = useLang();
+  const T = ADM[lang] || ADM.th;
   const [authed, setAuthed] = useState(() => sessionStorage.getItem('admin_ok') === '1');
   const [pw, setPw] = useState('');
   const [pwErr, setPwErr] = useState('');
@@ -93,7 +98,7 @@ export default function AdminPage() {
   const handleLogin = (e) => {
     e.preventDefault();
     if (pw === ADMIN_KEY) { sessionStorage.setItem('admin_ok', '1'); sessionStorage.setItem('admin_key', pw); setAuthed(true); }
-    else { setPwErr('รหัสผ่านไม่ถูกต้อง'); }
+    else { setPwErr(T.gate.err); }
   };
 
   const baht = (n) => `฿${Number(n || 0).toLocaleString('th-TH')}`;
@@ -104,12 +109,12 @@ export default function AdminPage() {
       <div style={{ ...glass, maxWidth: 380, width: '100%', textAlign: 'center' }}>
         <div style={{ fontSize: 44, marginBottom: 12 }}>🔐</div>
         <h2 style={{ margin: '0 0 4px', fontWeight: 900 }}>Admin Panel</h2>
-        <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>Openthai.ai — เฉพาะผู้ดูแลระบบ</p>
+        <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>{T.gate.sub}</p>
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <input type="password" placeholder="Admin Password" value={pw} onChange={(e) => setPw(e.target.value)}
             style={{ ...inputSt, textAlign: 'center', letterSpacing: 4 }} />
           {pwErr && <div style={{ color: '#ef4444', fontSize: 13 }}>{pwErr}</div>}
-          <button type="submit" style={primaryBtn}>เข้าสู่ระบบ Admin →</button>
+          <button type="submit" style={primaryBtn}>{T.gate.btn}</button>
         </form>
       </div>
     </div>
@@ -128,7 +133,8 @@ export default function AdminPage() {
         <button onClick={() => navigate('/')} style={navBtn}>← Site</button>
         <span style={{ fontWeight: 800, fontSize: 15 }}>🛠️ Admin Panel</span>
         <span style={{ flex: 1 }} />
-        <span style={{ fontSize: 12, color: '#64748b' }}>🟢 Live — {new Date().toLocaleDateString('th-TH')}</span>
+        <LanguageSwitcher />
+        <span style={{ fontSize: 12, color: '#64748b' }}>🟢 {T.live} — {new Date().toLocaleDateString()}</span>
         <button onClick={() => { sessionStorage.removeItem('admin_ok'); setAuthed(false); }} style={{ ...navBtn, color: '#ef4444', borderColor: 'rgba(239,68,68,0.3)' }}>Logout</button>
       </nav>
 
@@ -137,10 +143,10 @@ export default function AdminPage() {
         {/* OVERVIEW STATS */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 28 }}>
           {[
-            { icon: '👥', label: 'ผู้ใช้ทั้งหมด', v: data.stats.users.toLocaleString(), sub: `+${data.stats.users_today} วันนี้`, c: '#6366f1' },
-            { icon: '⚡', label: 'คอนเทนต์สร้างแล้ว', v: data.stats.content.toLocaleString(), sub: `+${data.stats.content_today} วันนี้`, c: '#10b981' },
-            { icon: '🤝', label: 'Affiliates', v: data.stats.affiliates, sub: `${data.stats.affiliates_active} active`, c: '#f59e0b' },
-            { icon: '💰', label: 'รายได้รวม (฿)', v: baht(sales ? sales.stats.revenue_total : data.stats.revenue), sub: `${baht(sales ? sales.stats.revenue_month : data.stats.revenue_month)} เดือนนี้`, c: '#fe2c55' },
+            { icon: '👥', label: T.stat.users, v: data.stats.users.toLocaleString(), sub: `+${data.stats.users_today} ${T.stat.today}`, c: '#6366f1' },
+            { icon: '⚡', label: T.stat.content, v: data.stats.content.toLocaleString(), sub: `+${data.stats.content_today} ${T.stat.today}`, c: '#10b981' },
+            { icon: '🤝', label: T.stat.aff, v: data.stats.affiliates, sub: `${data.stats.affiliates_active} active`, c: '#f59e0b' },
+            { icon: '💰', label: T.stat.revenue, v: baht(sales ? sales.stats.revenue_total : data.stats.revenue), sub: `${baht(sales ? sales.stats.revenue_month : data.stats.revenue_month)} ${T.stat.month}`, c: '#fe2c55' },
           ].map((s) => (
             <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
               <div style={{ fontSize: 26, marginBottom: 4 }}>{s.icon}</div>
@@ -153,7 +159,7 @@ export default function AdminPage() {
 
         {/* TABS */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-          {[['overview','📊 ภาพรวม'],['sales','💰 ยอดขาย'],['credits','🎁 เครดิต'],['producers','🏭 ผู้ผลิต'],['invite','📨 เชิญผู้ผลิต'],['orders','📦 ออเดอร์'],['users','👥 Users'],['affiliates','🤝 Affiliates'],['content','⚡ Content'],['settings','⚙️ Settings']].map(([id, label]) => (
+          {Object.keys(T.tabs).map((id) => [id, T.tabs[id]]).map(([id, label]) => (
             <button key={id} onClick={() => setTab(id)} style={{ ...tabBtn, background: tab === id ? 'rgba(99,102,241,0.2)' : 'transparent', border: `1px solid ${tab === id ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.07)'}`, color: tab === id ? '#a5b4fc' : '#64748b' }}>
               {label}
             </button>
@@ -164,7 +170,7 @@ export default function AdminPage() {
         {tab === 'overview' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             <div style={glass}>
-              <div style={{ fontWeight: 700, marginBottom: 14 }}>⚡ คอนเทนต์ล่าสุด</div>
+              <div style={{ fontWeight: 700, marginBottom: 14 }}>{T.ov.recent}</div>
               {data.content.map((c) => (
                 <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
                   <div>
@@ -179,7 +185,7 @@ export default function AdminPage() {
               ))}
             </div>
             <div style={glass}>
-              <div style={{ fontWeight: 700, marginBottom: 14 }}>💰 Top Affiliates</div>
+              <div style={{ fontWeight: 700, marginBottom: 14 }}>{T.ov.topaff}</div>
               {data.affiliates.map((a) => (
                 <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
                   <div>
@@ -200,7 +206,7 @@ export default function AdminPage() {
         {tab === 'sales' && (
           <div>
             {salesErr && <div style={{ ...glass, color: '#fca5a5', marginBottom: 16 }}>⚠️ {salesErr}</div>}
-            {!sales && !salesErr && <div style={{ ...glass, color: '#64748b' }}>กำลังโหลดยอดขาย…</div>}
+            {!sales && !salesErr && <div style={{ ...glass, color: '#64748b' }}>{T.loading}</div>}
             {sales && (
               <>
                 {/* สรุปยอด */}
@@ -274,7 +280,7 @@ export default function AdminPage() {
         {tab === 'credits' && (
           <div>
             {credsErr && <div style={{ ...glass, color: '#fca5a5', marginBottom: 16 }}>⚠️ {credsErr}</div>}
-            {!creds && !credsErr && <div style={{ ...glass, color: '#64748b' }}>กำลังโหลดเครดิต…</div>}
+            {!creds && !credsErr && <div style={{ ...glass, color: '#64748b' }}>{T.loading}</div>}
             {creds && (
               <>
                 <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
