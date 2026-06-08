@@ -62,6 +62,9 @@ export default function AdminPage() {
   const [leadQ, setLeadQ] = useState('');
   const [leadType, setLeadType] = useState('all');
   const [bcOpen, setBcOpen] = useState(false);  // broadcast email modal
+  const [inv, setInv] = useState(null);         // คลังสินค้า (products)
+  const [invSum, setInvSum] = useState(null);   // สรุปคลัง
+  const [prodEdit, setProdEdit] = useState(null); // สินค้าที่กำลังแก้ (object) / null
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
@@ -69,7 +72,28 @@ export default function AdminPage() {
   const loadProducers = () => fetch(apiUrl('/api/producers/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setProds(d.producers); }).catch(() => {});
   const loadOrders = () => fetch(apiUrl('/api/orders/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setOrds(d.orders); }).catch(() => {});
   const loadLeads = () => fetch(apiUrl('/api/leads/admin/search'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setLeads(d); }).catch(() => {});
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadInventory = () => {
+    fetch(apiUrl('/api/inventory/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInv(d.products); }).catch(() => {});
+    fetch(apiUrl('/api/inventory/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInvSum(d); }).catch(() => {});
+  };
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveProduct = async (data) => {
+    const r = await fetch(apiUrl('/api/inventory/admin/upsert'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(data) }).then(x => x.json());
+    if (r.success) { setProdEdit(null); loadInventory(); } else alert(r.error || 'บันทึกไม่สำเร็จ');
+  };
+  const adjustStock = async (id) => {
+    const v = window.prompt('ปรับสต๊อก: ใส่ +จำนวน (เติม) หรือ -จำนวน (ตัด)'); if (!v) return;
+    const delta = parseInt(v, 10); if (!delta) return;
+    const reason = window.prompt('เหตุผล (เช่น เติมของ, ของเสีย):') || '';
+    await fetch(apiUrl('/api/inventory/admin/adjust'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, delta, type: delta > 0 ? 'restock' : 'adjust', reason }) });
+    loadInventory();
+  };
+  const removeProduct = async (id) => {
+    if (!window.confirm('ลบสินค้านี้?')) return;
+    await fetch(apiUrl('/api/inventory/admin/remove'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id }) });
+    loadInventory();
+  };
 
   const approveProducer = async (email, status) => {
     await fetch(apiUrl('/api/producers/admin/status'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ email, status }) });
@@ -463,6 +487,72 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* TAB: INVENTORY / คลังสินค้า */}
+        {tab === 'inventory' && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            {invSum && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12 }}>
+                {[
+                  { label: 'สินค้า (active)', v: `${invSum.active}/${invSum.products}`, c: '#6366f1' },
+                  { label: 'สต๊อกรวม (ชิ้น)', v: invSum.totalUnits, c: '#10b981' },
+                  { label: 'มูลค่าขาย', v: baht(invSum.valueRetail), c: '#34d399' },
+                  { label: 'มูลค่าต้นทุน', v: baht(invSum.valueCost), c: '#f59e0b' },
+                  { label: 'ขายไปแล้ว', v: invSum.unitsSold, c: '#a5b4fc' },
+                  { label: 'สต๊อกต่ำ', v: invSum.lowStock.length, c: invSum.lowStock.length ? '#ef4444' : '#64748b' },
+                ].map((s) => (
+                  <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: s.c }}>{s.v}</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={glass}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ fontWeight: 700 }}>📦 สินค้าในคลัง {inv ? `(${inv.length})` : ''}</div>
+                <span style={{ flex: 1 }} />
+                <button onClick={() => setProdEdit({})} style={miniBtn('#10b981')}>＋ เพิ่มสินค้า</button>
+              </div>
+              {!inv && <div style={{ color: '#64748b', fontSize: 13 }}>{T.loading}</div>}
+              {inv && inv.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีสินค้า — กด "เพิ่มสินค้า"</div>}
+              {inv && inv.length > 0 && (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead><tr style={{ color: '#475569' }}>{['SKU', 'ชื่อ', 'ราคา', 'ต้นทุน', 'สต๊อก', 'สถานะ', ''].map((h) => <th key={h} style={{ textAlign: 'left', padding: '8px', fontWeight: 600, fontSize: 11, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {inv.map((p) => {
+                        const low = (p.stock || 0) <= (p.low_stock ?? 0);
+                        return (
+                          <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                            <td style={{ padding: '8px', fontFamily: 'monospace', color: '#64748b', fontSize: 11 }}>{p.sku}</td>
+                            <td style={{ padding: '8px', fontWeight: 600 }}>{p.name}<div style={{ fontSize: 11, color: '#475569' }}>{p.category}</div></td>
+                            <td style={{ padding: '8px' }}>{baht(p.price)}</td>
+                            <td style={{ padding: '8px', color: '#64748b' }}>{baht(p.cost)}</td>
+                            <td style={{ padding: '8px', fontWeight: 700, color: low ? '#ef4444' : '#10b981' }}>{p.stock}{low && ' ⚠️'}</td>
+                            <td style={{ padding: '8px' }}><span style={{ fontSize: 11, color: p.status === 'active' ? '#10b981' : '#64748b' }}>● {p.status}</span></td>
+                            <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
+                              <button onClick={() => adjustStock(p.id)} style={{ ...miniBtn('#06b6d4'), marginRight: 4 }}>±สต๊อก</button>
+                              <button onClick={() => setProdEdit(p)} style={{ ...miniBtn('#6366f1'), marginRight: 4 }}>แก้ไข</button>
+                              <button onClick={() => removeProduct(p.id)} style={miniBtn('#ef4444')}>ลบ</button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            {invSum && invSum.lowStock.length > 0 && (
+              <div style={{ ...glass, border: '1px solid rgba(239,68,68,0.25)' }}>
+                <div style={{ fontWeight: 700, marginBottom: 8, color: '#fca5a5' }}>⚠️ สต๊อกใกล้หมด</div>
+                {invSum.lowStock.map((l) => <div key={l.id} style={{ fontSize: 13, color: '#94a3b8', padding: '3px 0' }}>{l.name} ({l.sku}) — เหลือ <strong style={{ color: '#ef4444' }}>{l.stock}</strong> (เตือนที่ {l.low_stock})</div>)}
+              </div>
+            )}
+          </div>
+        )}
+        {prodEdit !== null && <ProductFormModal product={prodEdit} onSave={saveProduct} onClose={() => setProdEdit(null)} />}
+
         {/* TAB: LEADS / CUSTOMERS */}
         {tab === 'leads' && (() => {
           const q = leadQ.trim().toLowerCase();
@@ -763,6 +853,31 @@ function BroadcastModal({ adminKey, counts, onClose }) {
     </div>
   );
 }
+
+// ── Product Form Modal — เพิ่ม/แก้ไขสินค้าในคลัง ──────────────────────────────
+function ProductFormModal({ product, onSave, onClose }) {
+  const [f, setF] = useState({ id: product.id, sku: product.sku || '', name: product.name || '', category: product.category || '', price: product.price ?? '', cost: product.cost ?? '', stock: product.stock ?? '', low_stock: product.low_stock ?? 5, status: product.status || 'active', image_url: product.image_url || '', description: product.description || '' });
+  const set = (k) => (e) => setF(s => ({ ...s, [k]: e.target.value }));
+  const num = (k, ph) => <input type="number" value={f[k]} onChange={set(k)} placeholder={ph} style={inputSt} />;
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9500, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ ...glass, width: '100%', maxWidth: 460, maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#475569', fontSize: 22, cursor: 'pointer' }}>×</button>
+        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 14 }}>{product.id ? '✏️ แก้ไขสินค้า' : '＋ เพิ่มสินค้า'}</div>
+        <L t="ชื่อสินค้า *"><input value={f.name} onChange={set('name')} placeholder="เช่น เสื้อยืด Openthai" style={inputSt} /></L>
+        <Two><L t="SKU"><input value={f.sku} onChange={set('sku')} placeholder="auto" style={inputSt} /></L><L t="หมวด"><input value={f.category} onChange={set('category')} placeholder="ทั่วไป" style={inputSt} /></L></Two>
+        <Two><L t="ราคาขาย (฿)">{num('price', '0')}</L><L t="ต้นทุน (฿)">{num('cost', '0')}</L></Two>
+        <Two><L t="สต๊อก">{num('stock', '0')}</L><L t="เตือนเมื่อต่ำกว่า">{num('low_stock', '5')}</L></Two>
+        <L t="สถานะ"><select value={f.status} onChange={set('status')} style={inputSt}><option value="active">active (ขายได้)</option><option value="inactive">inactive (ซ่อน)</option></select></L>
+        <L t="ลิงก์รูป (ถ้ามี)"><input value={f.image_url} onChange={set('image_url')} placeholder="https://..." style={inputSt} /></L>
+        <L t="รายละเอียด"><textarea value={f.description} onChange={set('description')} style={{ ...inputSt, minHeight: 60, resize: 'vertical' }} /></L>
+        <button onClick={() => f.name.trim() && onSave(f)} disabled={!f.name.trim()} style={{ ...primaryBtn, marginTop: 12, opacity: f.name.trim() ? 1 : 0.6 }}>💾 บันทึก</button>
+      </div>
+    </div>
+  );
+}
+const L = ({ t, children }) => <div style={{ marginBottom: 10 }}><label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 4, fontWeight: 600 }}>{t}</label>{children}</div>;
+const Two = ({ children }) => <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>{children}</div>;
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 const glass = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 20 };

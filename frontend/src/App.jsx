@@ -14,6 +14,7 @@ import ProducerJoinPage from './pages/ProducerJoinPage';
 import CatalogPage from './pages/CatalogPage';
 import ProducerDirectoryPage from './pages/ProducerDirectoryPage';
 import TrackOrderPage from './pages/TrackOrderPage';
+import StorePage from './pages/StorePage';
 import AdminPage from './pages/AdminPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -104,6 +105,7 @@ function App() {
             <Route path="/find-producers" element={<ProducerDirectoryPage />} />
             <Route path="/find" element={<ProducerDirectoryPage />} />
             <Route path="/track" element={<TrackOrderPage />} />
+            <Route path="/store" element={<StorePage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/affiliate" element={<AffiliatePage />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
