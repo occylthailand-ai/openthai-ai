@@ -76,7 +76,8 @@ function BuyModal({ product, t, onClose }) {
     if (!form.customer_name.trim() || !form.contact.trim()) { setErr(t('mk.ord.err')); return; }
     setBusy(true); setErr('');
     try {
-      const r = await fetch(apiUrl('/api/shop/checkout'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: product.id, ...form }) }).then(x => x.json());
+      const ref = (() => { try { return localStorage.getItem('otai_ref') || ''; } catch { return ''; } })();
+      const r = await fetch(apiUrl('/api/shop/checkout'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: product.id, ref, ...form }) }).then(x => x.json());
       if (r.success) setRes(r); else setErr(r.error || t('mk.ord.err'));
     } catch { setErr('เชื่อมต่อไม่ได้'); }
     finally { setBusy(false); }
