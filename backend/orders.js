@@ -8,7 +8,7 @@ import { join } from 'path';
 const ORDER_STATUS = ['new', 'contacted', 'confirmed', 'shipped', 'cancelled'];
 const clip = (s, n = 300) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 
-export function createOrders(dataDir) {
+export function createOrders(dataDir, opts = {}) {
   const SB_URL = process.env.SUPABASE_URL;
   const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
   const useSB = !!(SB_URL && SB_KEY);
@@ -49,11 +49,14 @@ export function createOrders(dataDir) {
     if (!rec.product_name || !rec.customer_name || !rec.contact) {
       return { ok: false, error: 'กรอกสินค้า ชื่อผู้สั่ง และช่องทางติดต่อให้ครบ' };
     }
+    let saved = false;
     if (useSB) {
-      try { await sbReq('POST', '/orders', { body: [rec], prefer: 'return=minimal' }); return { ok: true, id: rec.id }; }
+      try { await sbReq('POST', '/orders', { body: [rec], prefer: 'return=minimal' }); saved = true; }
       catch (e) { console.warn('[orders] Supabase write failed, using file:', e.message); }
     }
-    store[rec.id] = rec; saveFile();
+    if (!saved) { store[rec.id] = rec; saveFile(); }
+    // แจ้งเตือนผู้ผลิต (email) — fire-and-forget, ไม่ให้กระทบการสั่งซื้อ
+    try { await opts.onNewOrder?.(rec); } catch (e) { console.warn('[orders] notify failed:', e.message); }
     return { ok: true, id: rec.id };
   }
 

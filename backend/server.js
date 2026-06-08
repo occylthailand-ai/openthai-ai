@@ -60,7 +60,7 @@ const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
-const orders    = createOrders(WRITE_DATA_DIR);
+const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: (order) => sendOrderNotification(order) });
 
 import {
   signToken, verifyToken, requireAuth,
@@ -464,6 +464,46 @@ async function sendPaymentReceipt(to, { plan, amount_thb, charge_id, paid_at, me
     console.log(`📧 Receipt email ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
     console.error('Receipt email error:', err.message);
+  }
+}
+
+// แจ้งเตือนผู้ผลิตทางอีเมลเมื่อมีคำสั่งซื้อใหม่ (+ สำเนาถึงเจ้าของระบบ)
+async function sendOrderNotification(order) {
+  const to = order?.producer_email || process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  if (!mailer || !to) return; // ไม่มี SMTP → ข้ามเงียบๆ (mock/dev)
+  const baht = (n) => (n == null ? '-' : `฿${Number(n).toLocaleString('th-TH')}`);
+  const owner = process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to,
+      cc: owner && owner !== to ? owner : undefined,
+      subject: `🛒 คำสั่งซื้อใหม่ — ${order.product_name} ×${order.qty}`,
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:28px;text-align:center;">
+          <h1 style="margin:0;font-size:24px;">🛒 คุณมีคำสั่งซื้อใหม่!</h1>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);">รีบติดต่อลูกค้าเพื่อยืนยันและจัดส่ง</p>
+        </div>
+        <div style="padding:24px;">
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <tr><td style="padding:9px 0;color:#94a3b8;">สินค้า</td><td style="padding:9px 0;text-align:right;font-weight:700;">${order.product_name}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">จำนวน</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${order.qty}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ยอดรวม</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);color:#10b981;font-weight:700;">${baht(order.amount)}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ชื่อลูกค้า</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${order.customer_name}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ติดต่อลูกค้า</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-weight:700;color:#a5b4fc;">${order.contact}</td></tr>
+            ${order.note ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">หมายเหตุ</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${order.note}</td></tr>` : ''}
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เลขที่ออเดอร์</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-family:monospace;font-size:12px;">${order.id}</td></tr>
+          </table>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
+          Openthai.ai • <a href="https://www.openthai-ai.com/admin" style="color:#6366f1;">จัดการออเดอร์ใน Admin</a>
+        </div>
+      </div>`,
+    });
+    console.log(`📧 Order notification ส่งให้ ${to} เรียบร้อย`);
+  } catch (err) {
+    console.error('Order email error:', err.message);
   }
 }
 
