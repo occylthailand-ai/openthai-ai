@@ -106,7 +106,7 @@ export function createPRSystem(writeDir) {
       contacts: [
         { role: 'PR Lead',       name: 'TBD', phone: '+66-xxx', email: 'pr@Openthai.ai.com' },
         { role: 'Legal Counsel', name: 'TBD', phone: '+66-xxx', email: 'legal@Openthai.ai.com' },
-        { role: 'CEO',           name: 'Zuejai', phone: 'Direct', email: 'ceo@Openthai.ai.com' },
+        { role: 'CEO',           name: 'Zuejai Saeyang (ซื่อใจ แซ่หย่าง)', phone: 'Direct', email: 'ceo@Openthai.ai.com' },
       ],
       holding_statements: {
         th: 'บริษัทได้รับทราบสถานการณ์ดังกล่าวแล้ว และกำลังดำเนินการตรวจสอบอย่างเร่งด่วน ขอยืนยันว่าความปลอดภัยของลูกค้าคือสิ่งสำคัญสูงสุดของเรา',

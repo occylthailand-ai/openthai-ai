@@ -26,7 +26,7 @@
 - **AI Critic** — ระบบให้คะแนนคอนเทนต์อัตโนมัติ โดยส่งมอบเฉพาะงานที่ได้คะแนนตั้งแต่ 7 จาก 10 ขึ้นไป
 - **Learning Layer** — อธิบายให้ผู้ใช้เข้าใจว่า "ทำไม" Hook นั้นถึงเวิร์ก เพื่อให้ผู้ค้าเก่งขึ้นในระยะยาว ไม่ใช่แค่ได้คอนเทนต์ไปใช้
 
-"เครื่องมือ AI ส่วนใหญ่สร้างคอนเทนต์ให้เสร็จแล้วจบ แต่ผู้ประกอบการไทยไม่ได้ต้องการแค่ข้อความ — เขาต้องการขายของได้" **คุณซึ้ใจ ประธานกรรมการและซีอีโอ Openthai.ai** กล่าว "เราจึงสร้างแพลตฟอร์มที่ทั้งสร้างคอนเทนต์ ให้คะแนน และสอนเหตุผลไปพร้อมกัน เป้าหมายของเราคือทำให้คนไทยใช้ AI ขายของเป็นจริง ๆ ไม่ใช่แค่มีเครื่องมือไว้ในมือ"
+"เครื่องมือ AI ส่วนใหญ่สร้างคอนเทนต์ให้เสร็จแล้วจบ แต่ผู้ประกอบการไทยไม่ได้ต้องการแค่ข้อความ — เขาต้องการขายของได้" **คุณซื่อใจ แซ่หย่าง ประธานกรรมการและซีอีโอ Openthai.ai** กล่าว "เราจึงสร้างแพลตฟอร์มที่ทั้งสร้างคอนเทนต์ ให้คะแนน และสอนเหตุผลไปพร้อมกัน เป้าหมายของเราคือทำให้คนไทยใช้ AI ขายของเป็นจริง ๆ ไม่ใช่แค่มีเครื่องมือไว้ในมือ"
 
 ### ครบวงจรในแพลตฟอร์มเดียว — ตั้งแต่สร้างคอนเทนต์ถึงเก็บเงิน
 
@@ -80,7 +80,7 @@ Two features set Openthai.ai apart from every competitor on the market:
 - **AI Critic** — automatically scores each piece of content and delivers only work that scores 7 out of 10 or higher.
 - **Learning Layer** — explains *why* a given hook works, so sellers improve over time rather than simply receiving content.
 
-"Most AI tools generate content and stop there. But Thai entrepreneurs don't just want text — they want to make sales," said **Zuejai, Chairman and CEO of Openthai.ai.** "So we built a platform that creates, scores, and teaches at the same time. Our goal is for Thai people to genuinely learn to sell with AI — not just hold a tool in their hands."
+"Most AI tools generate content and stop there. But Thai entrepreneurs don't just want text — they want to make sales," said **Zuejai Saeyang, Chairman and CEO of Openthai.ai.** "So we built a platform that creates, scores, and teaches at the same time. Our goal is for Thai people to genuinely learn to sell with AI — not just hold a tool in their hands."
 
 ### One platform, end to end — from content to checkout
 
