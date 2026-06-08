@@ -28,6 +28,7 @@ import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
+import { createInventory } from './inventory.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -61,6 +62,7 @@ const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
 const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
+const inventory = createInventory(WRITE_DATA_DIR);
 
 import {
   signToken, verifyToken, requireAuth,
@@ -86,6 +88,8 @@ app.use(credits.router);
 app.use(producers.router);
 // Order routes — /api/orders
 app.use(orders.router);
+// Inventory / first-party shop routes — /api/shop/products
+app.use(inventory.router);
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({
@@ -377,6 +381,57 @@ app.post('/api/orders/admin/deliver', async (req, res) => {
   const r = await orders.deliver(req.body?.id, req.body || {});
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
+});
+
+// ─── Inventory admin (Admin Key) ──────────────────────────────────────────────
+const invAuth = (req, res) => { const key = req.headers['x-admin-key'] || req.query.key; if (!checkAdminKey(key)) { res.status(401).json({ success: false, message: adminDenyMessage() }); return false; } return true; };
+app.get('/api/inventory/admin/list', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, products: await inventory.list() }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.get('/api/inventory/admin/summary', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.summary()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.get('/api/inventory/admin/movements', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, movements: await inventory.movements(req.query.product_id) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.post('/api/inventory/admin/upsert', async (req, res) => { if (!invAuth(req, res)) return; const r = await inventory.upsert(req.body || {}); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.post('/api/inventory/admin/adjust', async (req, res) => { if (!invAuth(req, res)) return; const { id, delta, type, reason } = req.body || {}; const r = await inventory.adjust(id, delta, type, reason); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.post('/api/inventory/admin/remove', async (req, res) => { if (!invAuth(req, res)) return; res.json({ success: true, ...(await inventory.remove(req.body?.id)) }); });
+
+// POST /api/shop/checkout — ซื้อสินค้าร้านเรา + รับชำระเงิน (Omise) + ตัดสต๊อก + สร้างออเดอร์ติดตามได้
+const shopLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 12, message: { success: false, error: 'สั่งซื้อบ่อยเกินไป' } });
+app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
+  try {
+    const { product_id, qty: rawQty, customer_name, contact, address, method = 'card', token } = req.body || {};
+    const p = await inventory.get(product_id);
+    if (!p || p.status !== 'active') return res.status(404).json({ success: false, error: 'ไม่พบสินค้า' });
+    if (!customer_name?.trim() || !contact?.trim()) return res.status(400).json({ success: false, error: 'กรอกชื่อและช่องทางติดต่อ' });
+    const qty = Math.max(1, Math.min(999, parseInt(rawQty, 10) || 1));
+    if ((p.stock || 0) < qty) return res.status(409).json({ success: false, error: `สต๊อกไม่พอ (เหลือ ${p.stock})` });
+    const amount = (p.price || 0) * qty;
+
+    // สร้างออเดอร์ (ติดตามได้ในระบบเดียวกับ marketplace)
+    const ord = await orders.place({ producer_email: 'store@openthai-ai.com', product_name: p.name, price: p.price, qty, customer_name, contact, address, note: `ร้าน Openthai · SKU ${p.sku}` });
+    const orderId = ord.id;
+
+    const finalizePaid = async (charge) => {
+      await inventory.adjust(product_id, -qty, 'sale', `ขายผ่านร้าน (ออเดอร์ ${orderId})`, orderId);
+      await orders.setStatus(orderId, 'confirmed', 'ชำระเงินสำเร็จ');
+      return res.json({ success: true, paid: true, order_id: orderId, amount, stock_left: Math.max(0, (p.stock || 0) - qty), ...(charge || {}) });
+    };
+
+    // Mock mode (ยังไม่ตั้ง Omise) — บัตร/ม็อค ถือว่าจ่ายสำเร็จทันที
+    if (!process.env.OMISE_SECRET_KEY) {
+      if (method === 'promptpay') return res.json({ success: true, paid: false, order_id: orderId, amount, mock: true, message: 'mock mode — ยังไม่ตั้ง Omise (สต๊อกจะตัดเมื่อชำระจริง)' });
+      return finalizePaid({ charge_id: `mock_${Date.now()}`, mock: true });
+    }
+    if (method === 'card') {
+      if (!token) return res.status(400).json({ success: false, error: 'ต้องการ card token' });
+      const charge = await createCardCharge({ amount_thb: amount, token, description: `Openthai Store — ${p.name} ×${qty}`, metadata: { order_id: orderId, product_id, qty } });
+      if (charge.status === 'failed') return res.status(402).json({ success: false, error: charge.failure_message || 'บัตรถูกปฏิเสธ', order_id: orderId });
+      if (charge.paid) return finalizePaid({ charge_id: charge.charge_id });
+      return res.json({ success: true, paid: false, order_id: orderId, amount, ...charge });
+    }
+    if (method === 'promptpay') {
+      const charge = await createPromptPayCharge({ amount_thb: amount, description: `Openthai Store — ${p.name} ×${qty}`, metadata: { order_id: orderId, product_id, qty } });
+      return res.json({ success: true, paid: false, order_id: orderId, amount, ...charge, note: 'สแกนจ่ายแล้วสต๊อกจะตัดเมื่อยืนยันการชำระ' });
+    }
+    return res.status(400).json({ success: false, error: 'method ต้องเป็น card หรือ promptpay' });
+  } catch (e) { addLog('error', 'Shop', e.message); res.status(500).json({ success: false, error: e.message }); }
 });
 
 // GET /api/leads/admin/search — รวมลูกค้า/ลีดทุกแหล่ง (waitlist + affiliate + order) + ค้นหา/กรอง
