@@ -79,6 +79,18 @@ export default function AdminPage() {
     await fetch(apiUrl('/api/orders/admin/status'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, status }) });
     loadOrders();
   };
+  const shipOrder = async (id) => {
+    const carrier = window.prompt('ขนส่ง (เช่น Kerry, Flash, ไปรษณีย์ไทย):'); if (carrier === null) return;
+    const tracking_no = window.prompt('เลขพัสดุ (tracking number):'); if (tracking_no === null) return;
+    await fetch(apiUrl('/api/orders/admin/ship'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, carrier, tracking_no }) });
+    loadOrders();
+  };
+  const deliverOrder = async (id) => {
+    const received_by = window.prompt('เซ็นรับโดย (ชื่อผู้รับ) — เว้นว่างถ้าฝากพัสดุ:'); if (received_by === null) return;
+    const drop_off = received_by ? '' : (window.prompt('จุดฝากพัสดุ (เช่น ตู้ล็อกเกอร์, รปภ.):') || '');
+    await fetch(apiUrl('/api/orders/admin/deliver'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, received_by, drop_off }) });
+    loadOrders();
+  };
 
   // ดึงสรุปยอดขายจริงเมื่อล็อกอินแล้ว (ใช้ admin key เป็น x-admin-key header)
   useEffect(() => {
@@ -427,15 +439,25 @@ export default function AdminPage() {
             {!ords && <div style={{ color: '#64748b', fontSize: 13 }}>กำลังโหลด…</div>}
             {ords && ords.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีคำสั่งซื้อ</div>}
             {ords && ords.map((o) => (
-              <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
-                <div style={{ flex: 1, minWidth: 180 }}>
+              <div key={o.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ fontWeight: 700 }}>{o.product_name} <span style={{ color: '#10b981' }}>×{o.qty}</span> {o.amount ? `· ฿${Number(o.amount).toLocaleString('th-TH')}` : ''}</div>
                   <div style={{ color: '#64748b', fontSize: 12 }}>{o.customer_name} · {o.contact} · ผู้ผลิต {o.producer_email}</div>
+                  {o.address && <div style={{ color: '#94a3b8', fontSize: 12 }}>📍 {o.address}</div>}
+                  {(o.carrier || o.tracking_no) && <div style={{ color: '#a5b4fc', fontSize: 12 }}>🚚 {o.carrier} {o.tracking_no}</div>}
+                  {o.received_by && <div style={{ color: '#6ee7b7', fontSize: 12 }}>✍️ เซ็นรับ: {o.received_by}</div>}
+                  {o.drop_off && <div style={{ color: '#6ee7b7', fontSize: 12 }}>📦 ฝากที่: {o.drop_off}</div>}
                   {o.note && <div style={{ color: '#94a3b8', fontSize: 12 }}>📝 {o.note}</div>}
                 </div>
-                <select value={o.status} onChange={(e) => setOrderStatus(o.id, e.target.value)} style={{ ...inputSt, width: 'auto', padding: '5px 10px', fontSize: 12 }}>
-                  {['new', 'contacted', 'confirmed', 'shipped', 'cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                  <select value={o.status} onChange={(e) => setOrderStatus(o.id, e.target.value)} style={{ ...inputSt, width: 'auto', padding: '5px 10px', fontSize: 12 }}>
+                    {['new', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={() => shipOrder(o.id)} style={miniBtn('#6366f1')}>🚚 ส่ง</button>
+                    {o.status !== 'delivered' && <button onClick={() => deliverOrder(o.id)} style={miniBtn('#10b981')}>✅ ถึงแล้ว</button>}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
