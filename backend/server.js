@@ -60,7 +60,7 @@ const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
-const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: (order) => sendOrderNotification(order) });
+const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
 
 import {
   signToken, verifyToken, requireAuth,
@@ -358,7 +358,23 @@ app.get('/api/orders/admin/list', async (req, res) => {
 app.post('/api/orders/admin/status', async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
-  const r = await orders.setStatus(req.body?.id, req.body?.status);
+  const r = await orders.setStatus(req.body?.id, req.body?.status, req.body?.note);
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  res.json({ success: true, ...r });
+});
+// POST /api/orders/admin/ship — บันทึกเลขพัสดุ + ขนส่ง (Admin Key)
+app.post('/api/orders/admin/ship', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const r = await orders.ship(req.body?.id, req.body || {});
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  res.json({ success: true, ...r });
+});
+// POST /api/orders/admin/deliver — ยืนยันถึงปลายทาง + หลักฐาน (เซ็นรับ/จุดฝาก) (Admin Key)
+app.post('/api/orders/admin/deliver', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const r = await orders.deliver(req.body?.id, req.body || {});
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
 });

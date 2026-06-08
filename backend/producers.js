@@ -44,6 +44,7 @@ export function createProducers(dataDir) {
       description: clip(input.description, 500),
       product_name: clip(input.product_name, 120),
       price: Number(input.price) > 0 ? Number(input.price) : null,
+      stock: (input.stock === '' || input.stock == null) ? null : Math.max(0, parseInt(input.stock, 10) || 0),
       status: 'pending',
       created_at: new Date().toISOString(),
     };
@@ -91,7 +92,7 @@ export function createProducers(dataDir) {
     const list = await all();
     return list
       .filter((p) => p.status === 'approved' && p.product_name)
-      .map((p) => ({ producer: p.company, email: p.email, product_name: p.product_name, price: p.price, category: p.category, description: p.description, website: p.website }));
+      .map((p) => ({ producer: p.company, email: p.email, product_name: p.product_name, price: p.price, category: p.category, description: p.description, website: p.website, stock: (p.stock == null ? null : p.stock) }));
   }
 
   async function summary() {
@@ -125,7 +126,7 @@ export function createProducers(dataDir) {
       if (cat && cat !== 'ทั้งหมด' && p.category !== cat) return false;
       if (!q) return true;
       return [p.company, p.product_name, p.description, p.category].some((f) => (f || '').toString().toLowerCase().includes(q));
-    }).map((p) => ({ company: p.company, category: p.category, product_name: p.product_name, price: p.price, description: p.description, website: p.website, email: p.email }));
+    }).map((p) => ({ company: p.company, category: p.category, product_name: p.product_name, price: p.price, description: p.description, website: p.website, email: p.email, stock: (p.stock == null ? null : p.stock) }));
     res.json({ success: true, count: matched.length, producers: matched });
   }));
 
@@ -135,5 +136,21 @@ export function createProducers(dataDir) {
     res.json({ success: true, status: r.status, message: 'รับใบสมัครแล้ว ทีมงานจะติดต่อกลับเพื่อยืนยันการเข้าร่วม' });
   }));
 
-  return { router, register, all, summary, setStatus, catalog, CATEGORIES };
+  // ลดสต๊อกเมื่อมีออเดอร์ (เฉพาะผู้ผลิตที่ตั้งสต๊อกไว้ — stock != null)
+  async function decrementStock(email, qty) {
+    const e = (email || '').toString().trim().toLowerCase();
+    const n = Math.max(0, parseInt(qty, 10) || 0);
+    if (!e || !n) return;
+    if (useSB) {
+      try {
+        const rows = await sbReq('GET', '/producers', { params: { email: `eq.${e}`, select: 'stock', limit: '1' } });
+        const cur = rows?.[0]?.stock;
+        if (cur != null) await sbReq('PATCH', '/producers', { body: { stock: Math.max(0, cur - n) }, params: { email: `eq.${e}` }, prefer: 'return=minimal' });
+        return;
+      } catch (err) { console.warn('[producers] stock SB failed, using file:', err.message); }
+    }
+    if (store[e] && store[e].stock != null) { store[e].stock = Math.max(0, store[e].stock - n); saveFile(); }
+  }
+
+  return { router, register, all, summary, setStatus, catalog, decrementStock, CATEGORIES };
 }
