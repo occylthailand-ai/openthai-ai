@@ -21,6 +21,7 @@ create table if not exists public.stock_movements (
   type       text not null check (type in ('restock','sale','adjust')),
   reason     text,
   ref        text,
+  platform   text,
   at         timestamptz not null default now()
 );
 create index if not exists stock_mv_product_idx on public.stock_movements (product_id);

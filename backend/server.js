@@ -62,7 +62,7 @@ const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
 const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
-const inventory = createInventory(WRITE_DATA_DIR);
+const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
 
 import {
   signToken, verifyToken, requireAuth,
@@ -391,12 +391,15 @@ app.get('/api/inventory/admin/movements', async (req, res) => { if (!invAuth(req
 app.post('/api/inventory/admin/upsert', async (req, res) => { if (!invAuth(req, res)) return; const r = await inventory.upsert(req.body || {}); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
 app.post('/api/inventory/admin/adjust', async (req, res) => { if (!invAuth(req, res)) return; const { id, delta, type, reason } = req.body || {}; const r = await inventory.adjust(id, delta, type, reason); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
 app.post('/api/inventory/admin/remove', async (req, res) => { if (!invAuth(req, res)) return; res.json({ success: true, ...(await inventory.remove(req.body?.id)) }); });
+app.get('/api/inventory/admin/sales', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.productSales(req.query.product_id)) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.get('/api/inventory/admin/sales-report', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.salesReport()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
 
 // POST /api/shop/checkout — ซื้อสินค้าร้านเรา + รับชำระเงิน (Omise) + ตัดสต๊อก + สร้างออเดอร์ติดตามได้
 const shopLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 12, message: { success: false, error: 'สั่งซื้อบ่อยเกินไป' } });
 app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
   try {
-    const { product_id, qty: rawQty, customer_name, contact, address, method = 'card', token } = req.body || {};
+    const { product_id, qty: rawQty, customer_name, contact, address, method = 'card', token, ref, platform } = req.body || {};
+    const channel = (ref ? `ref:${String(ref).slice(0, 20)}` : (platform ? String(platform).slice(0, 30) : 'store'));
     const p = await inventory.get(product_id);
     if (!p || p.status !== 'active') return res.status(404).json({ success: false, error: 'ไม่พบสินค้า' });
     if (!customer_name?.trim() || !contact?.trim()) return res.status(400).json({ success: false, error: 'กรอกชื่อและช่องทางติดต่อ' });
@@ -409,7 +412,7 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
     const orderId = ord.id;
 
     const finalizePaid = async (charge) => {
-      await inventory.adjust(product_id, -qty, 'sale', `ขายผ่านร้าน (ออเดอร์ ${orderId})`, orderId);
+      await inventory.adjust(product_id, -qty, 'sale', `ขายผ่านร้าน (ออเดอร์ ${orderId})`, orderId, channel);
       await orders.setStatus(orderId, 'confirmed', 'ชำระเงินสำเร็จ');
       return res.json({ success: true, paid: true, order_id: orderId, amount, stock_left: Math.max(0, (p.stock || 0) - qty), ...(charge || {}) });
     };
@@ -635,6 +638,32 @@ async function sendOrderNotification(order) {
     console.log(`📧 Order notification ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
     console.error('Order email error:', err.message);
+  }
+}
+
+// แจ้งเตือนเติมสต๊อกเมื่อสินค้าใกล้หมด — อีเมล + LINE + log (ทุกช่องทาง)
+async function sendLowStockAlert(product) {
+  const line = `⚠️ สต๊อกใกล้หมด: ${product.name} (${product.sku}) เหลือ ${product.stock} ชิ้น (จุดเตือน ${product.low_stock}) — ควรเติมสต๊อก`;
+  addLog('warn', 'Inventory', line);
+  const to = process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  if (mailer && to) {
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to,
+        subject: `⚠️ เติมสต๊อก: ${product.name} เหลือ ${product.stock}`,
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">⚠️ สต๊อกใกล้หมด</h1></div>
+          <div style="padding:24px;font-size:15px;line-height:1.7;">
+            <b>${product.name}</b> (SKU ${product.sku})<br>เหลือ <b style="color:#ef4444;">${product.stock}</b> ชิ้น · จุดเตือน ${product.low_stock}<br><br>
+            👉 ควรเติมสต๊อกที่ <a href="https://www.openthai-ai.com/admin" style="color:#6366f1;">Admin → คลังสินค้า</a>
+          </div></div>`,
+      });
+    } catch (e) { console.error('Low-stock email error:', e.message); }
+  }
+  const token = process.env.LINE_NOTIFY_TOKEN;
+  if (token) {
+    try { await fetch('https://notify-api.line.me/api/notify', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ message: `\n${line}` }).toString() }); }
+    catch (e) { console.error('Low-stock LINE error:', e.message); }
   }
 }
 
