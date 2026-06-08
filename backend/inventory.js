@@ -7,7 +7,7 @@ import { join } from 'path';
 const clip = (s, n = 300) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 const num = (v, d = null) => (v === '' || v == null ? d : (Number.isFinite(Number(v)) ? Number(v) : d));
 
-export function createInventory(dataDir) {
+export function createInventory(dataDir, opts = {}) {
   const SB_URL = process.env.SUPABASE_URL;
   const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
   const useSB = !!(SB_URL && SB_KEY);
@@ -80,8 +80,8 @@ export function createInventory(dataDir) {
   }
 
   // ── stock movements ───────────────────────────────────────────────────────────
-  async function record(product_id, delta, type, reason, ref) {
-    const m = { id: `mv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, product_id, delta: Number(delta) || 0, type, reason: clip(reason, 120), ref: clip(ref, 80), at: new Date().toISOString() };
+  async function record(product_id, delta, type, reason, ref, platform) {
+    const m = { id: `mv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, product_id, delta: Number(delta) || 0, type, reason: clip(reason, 120), ref: clip(ref, 80), platform: clip(platform, 40) || 'direct', at: new Date().toISOString() };
     if (useSB) { try { await sbReq('POST', '/stock_movements', { body: [m], prefer: 'return=minimal' }); return; } catch (e) { console.warn('[inventory] SB move:', e.message); } }
     moves.push(m); saveM();
   }
@@ -92,17 +92,47 @@ export function createInventory(dataDir) {
   }
 
   // ปรับสต๊อก (เติม/ตัด/ปรับ) + อัปเดตยอด — type: restock|sale|adjust
-  async function adjust(id, delta, type = 'adjust', reason = '', ref = '') {
+  async function adjust(id, delta, type = 'adjust', reason = '', ref = '', platform = 'direct') {
     const p = await get(id);
     if (!p) return { ok: false, error: 'ไม่พบสินค้า' };
     const d = Math.trunc(Number(delta) || 0);
     if (!d) return { ok: false, error: 'จำนวนต้องไม่เป็นศูนย์' };
-    const next = Math.max(0, (p.stock || 0) + d);
-    if (type === 'sale' && (p.stock || 0) + d < 0) return { ok: false, error: 'สต๊อกไม่พอ', stock: p.stock };
-    p.stock = next; p.updated_at = new Date().toISOString();
+    const before = p.stock || 0;
+    if (type === 'sale' && before + d < 0) return { ok: false, error: 'สต๊อกไม่พอ', stock: before };
+    p.stock = Math.max(0, before + d);
+    p.updated_at = new Date().toISOString();
+    const lowNow = p.stock <= (p.low_stock ?? 0);
+    // แจ้งเตือนเติมสต๊อกเมื่อลดลงต่ำกว่าจุดเตือน (ครั้งเดียว/รอบ — กันสแปม)
+    const crossed = d < 0 && lowNow && !p.low_alerted;
+    p.low_alerted = lowNow ? true : false; // reset เมื่อเติมกลับเหนือจุดเตือน
     await persist(p);
-    await record(id, d, type, reason, ref);
-    return { ok: true, stock: p.stock };
+    await record(id, d, type, reason, ref, platform);
+    if (crossed) { try { await opts.onLowStock?.(p); } catch (e) { console.warn('[inventory] onLowStock:', e.message); } }
+    return { ok: true, stock: p.stock, low: lowNow };
+  }
+
+  // ยอดขายต่อสินค้า — ขายแล้ว / คงเหลือ / แยกตามแพลตฟอร์ม (affiliate hub)
+  async function productSales(id) {
+    const p = await get(id);
+    const mv = (await movements(id)).filter((m) => m.type === 'sale');
+    const byPlatform = {};
+    let sold = 0;
+    for (const m of mv) { const q = Math.abs(m.delta); sold += q; const k = m.platform || 'direct'; byPlatform[k] = (byPlatform[k] || 0) + q; }
+    return { id, name: p?.name, sku: p?.sku, sold, remaining: p?.stock ?? 0, low_stock: p?.low_stock ?? 0, low: (p?.stock ?? 0) <= (p?.low_stock ?? 0), byPlatform };
+  }
+
+  // รายงานยอดขายทุกสินค้า + รวมตามแพลตฟอร์ม
+  async function salesReport() {
+    const items = await list();
+    const mv = (await movements()).filter((m) => m.type === 'sale');
+    const soldByProduct = {}; const byPlatform = {};
+    for (const m of mv) {
+      const q = Math.abs(m.delta);
+      soldByProduct[m.product_id] = (soldByProduct[m.product_id] || 0) + q;
+      const k = m.platform || 'direct'; byPlatform[k] = (byPlatform[k] || 0) + q;
+    }
+    const rows = items.map((p) => ({ id: p.id, name: p.name, sku: p.sku, sold: soldByProduct[p.id] || 0, remaining: p.stock || 0, low_stock: p.low_stock ?? 0, low: (p.stock || 0) <= (p.low_stock ?? 0) }));
+    return { mode: useSB ? 'supabase' : 'file', rows, byPlatform, totalSold: Object.values(soldByProduct).reduce((a, b) => a + b, 0) };
   }
 
   async function summary() {
@@ -128,5 +158,5 @@ export function createInventory(dataDir) {
     res.json({ success: true, products: items.map((p) => ({ id: p.id, sku: p.sku, name: p.name, category: p.category, price: p.price, image_url: p.image_url, description: p.description, in_stock: (p.stock || 0) > 0, stock: p.stock })) });
   }));
 
-  return { router, list, get, upsert, remove, adjust, record, movements, summary };
+  return { router, list, get, upsert, remove, adjust, record, movements, summary, productSales, salesReport };
 }
