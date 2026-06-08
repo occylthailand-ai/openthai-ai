@@ -34,11 +34,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── Vercel serverless detection ──────────────────────────────────────────────
 const IS_VERCEL = !!process.env.VERCEL;
-// Admin key — ใน production (serverless) ห้าม fallback ค่า default สาธารณะ
-// ต้องตั้ง ADMIN_KEY เท่านั้น; โหมด local ยังใช้ default เพื่อความสะดวกตอน dev
+// Production = Vercel หรือ NODE_ENV=production — ห้าม fallback ค่า default สาธารณะ
+const IS_PROD = IS_VERCEL || process.env.NODE_ENV === 'production';
+// Admin key — ใน production ต้องตั้ง ADMIN_KEY เท่านั้น; โหมด local เท่านั้นที่ใช้ default ได้
 function resolveAdminKey() {
   if (process.env.ADMIN_KEY) return process.env.ADMIN_KEY;
-  return IS_VERCEL ? null : 'openthai-admin-2026';
+  return IS_PROD ? null : 'openthai-admin-2026';
 }
 function checkAdminKey(provided) {
   const key = resolveAdminKey();
@@ -74,7 +75,20 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-app.use(cors({ origin: true, credentials: true })); // allow all origins (file://, localhost, Vercel)
+// ── CORS — dev: เปิดกว้าง / production: whitelist เท่านั้น ───────────────────
+const CORS_ALLOWLIST = new Set([
+  FRONTEND_URL,
+  'http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000',
+  ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(s => s.trim()).filter(Boolean) : []),
+]);
+app.use(cors({
+  origin(origin, cb) {
+    if (!origin) return cb(null, true);            // เครื่องมือ server-to-server / file:// / curl
+    if (!IS_PROD) return cb(null, true);           // local dev: อนุญาตทุก origin เพื่อความสะดวก
+    return cb(null, CORS_ALLOWLIST.has(origin));    // production: เฉพาะที่อยู่ใน allowlist
+  },
+  credentials: true,
+}));
 // Skip global JSON parser for LINE webhook — needs raw buffer for HMAC signature verification
 app.use((req, res, next) => {
   if (req.path === '/api/line/webhook') return next();
@@ -2220,12 +2234,17 @@ app.get('/api/auth/google/callback', async (req, res) => {
 
     if (!profile.email) throw new Error('ไม่ได้รับ email จาก Google');
 
-    // ตรวจ whitelist (ถ้าตั้ง GOOGLE_ALLOWED_EMAILS ใน .env)
+    // ตรวจ whitelist — ⚠️ fail-closed: ถ้าไม่ตั้ง GOOGLE_ALLOWED_EMAILS จะไม่ให้
+    // role admin กับใครเลย (กันบัญชี Google ใดก็ได้กลายเป็น admin)
     const allowedEmails = process.env.GOOGLE_ALLOWED_EMAILS
-      ? process.env.GOOGLE_ALLOWED_EMAILS.split(',').map(e => e.trim())
+      ? process.env.GOOGLE_ALLOWED_EMAILS.split(',').map(e => e.trim().toLowerCase()).filter(Boolean)
       : [];
 
-    if (allowedEmails.length > 0 && !allowedEmails.includes(profile.email)) {
+    if (allowedEmails.length === 0) {
+      console.warn('[google oauth] ⚠️  ไม่ได้ตั้ง GOOGLE_ALLOWED_EMAILS — ปฏิเสธ (fail-closed)');
+      return res.redirect(`${FRONTEND_URL}/login?error=not_configured`);
+    }
+    if (!allowedEmails.includes(profile.email.toLowerCase())) {
       return res.redirect(`${FRONTEND_URL}/login?error=not_allowed`);
     }
 
@@ -2943,7 +2962,12 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
 // POST /api/n8n/trigger — n8n calls this to trigger actions in Openthai.ai
 app.post('/api/n8n/trigger', async (req, res) => {
   const { action, payload, secret } = req.body || {};
-  if (secret !== (process.env.N8N_WEBHOOK_SECRET || 'openthai-n8n-secret')) {
+  // ⚠️ Fail-closed ใน production: ต้องตั้ง N8N_WEBHOOK_SECRET เท่านั้น (ไม่มี default)
+  const expectedSecret = process.env.N8N_WEBHOOK_SECRET || (IS_PROD ? null : 'openthai-n8n-secret');
+  if (!expectedSecret) {
+    return res.status(503).json({ error: 'N8N_WEBHOOK_SECRET ยังไม่ได้ตั้งค่า' });
+  }
+  if (secret !== expectedSecret) {
     return res.status(401).json({ error: 'Invalid secret' });
   }
   addLog('info', 'n8n', `Trigger: ${action}`);

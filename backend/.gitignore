@@ -1,5 +1,6 @@
 node_modules
 .env
+.used-recovery-codes.json
 
 # runtime data ledgers (not committed)
 data/credits.json

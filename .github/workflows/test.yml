@@ -30,6 +30,9 @@ jobs:
         run: npm test -- --run
         env:
           CI: true
+      - name: Audit — production deps must be clean
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
       - name: Build check
         working-directory: frontend
         run: npm run build
@@ -51,6 +54,12 @@ jobs:
       - name: Syntax check
         working-directory: backend
         run: node --check server.js
+      - name: Unit + integration tests (node:test)
+        working-directory: backend
+        run: npm test
+      - name: Audit — production deps must be clean
+        working-directory: backend
+        run: npm audit --omit=dev --audit-level=high
       - name: Boot + health smoke test
         working-directory: backend
         run: |

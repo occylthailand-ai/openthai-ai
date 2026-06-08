@@ -2,5 +2,10 @@
   "name": "openthai-ai",
   "version": "1.0.0",
   "type": "module",
-  "description": "Openthai.ai — TikTok content engine with AI, Agents, Affiliate"
+  "description": "Openthai.ai — TikTok content engine with AI, Agents, Affiliate",
+  "scripts": {
+    "test": "bash scripts/autotest.sh --once",
+    "test:loop": "bash scripts/autotest.sh",
+    "test:watch": "bash scripts/autotest.sh --watch"
+  }
 }
