@@ -61,6 +61,7 @@ export default function AdminPage() {
   const [leads, setLeads] = useState(null);     // ลูกค้า/ลีดรวมทุกแหล่ง
   const [leadQ, setLeadQ] = useState('');
   const [leadType, setLeadType] = useState('all');
+  const [bcOpen, setBcOpen] = useState(false);  // broadcast email modal
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
@@ -398,7 +399,9 @@ export default function AdminPage() {
                 <option value="all">ทั้งหมด</option><option value="waitlist">Waitlist</option><option value="affiliate">Affiliate</option><option value="order">ลูกค้าสั่งซื้อ</option>
               </select>
               <button onClick={exportCsv} disabled={!list.length} style={miniBtn('#10b981')}>⬇️ CSV</button>
+              <button onClick={() => setBcOpen(true)} style={miniBtn('#6366f1')}>📨 ส่งอีเมล</button>
             </div>
+            {bcOpen && <BroadcastModal adminKey={adminKey} counts={leads?.counts} onClose={() => setBcOpen(false)} />}
             {leads && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, fontSize: 12 }}>
                 {[['waitlist', leads.counts.waitlist], ['affiliate', leads.counts.affiliate], ['order', leads.counts.order]].map(([t, n]) => (
@@ -621,6 +624,55 @@ function InvitePanel() {
             <pre style={{ ...inputSt, whiteSpace: 'pre-wrap', fontSize: 12, lineHeight: 1.6, color: '#94a3b8', margin: 0, fontFamily: 'inherit' }}>{tp.text}</pre>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Broadcast Email Modal — ส่ง newsletter หาลีด ──────────────────────────────
+function BroadcastModal({ adminKey, counts, onClose }) {
+  const [form, setForm] = useState({ subject: '', message: '', audience: 'all' });
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const aud = [['all', `ทั้งหมด (${counts?.all ?? '—'})`], ['waitlist', `Waitlist (${counts?.waitlist ?? '—'})`], ['affiliate', `Affiliate (${counts?.affiliate ?? '—'})`], ['order', `ลูกค้าสั่งซื้อ (${counts?.order ?? '—'})`]];
+  const send = async () => {
+    if (busy || !form.subject.trim() || !form.message.trim()) return;
+    setBusy(true); setResult(null);
+    try {
+      const r = await fetch(apiUrl('/api/leads/admin/broadcast'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(form) });
+      setResult(await r.json());
+    } catch { setResult({ success: false, error: 'เชื่อมต่อไม่ได้' }); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9500, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ ...glass, width: '100%', maxWidth: 480, position: 'relative' }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#475569', fontSize: 22, cursor: 'pointer' }}>×</button>
+        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 14 }}>📨 ส่งอีเมล Broadcast</div>
+        {result ? (
+          <div style={{ textAlign: 'center', padding: '10px 0' }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>{result.sent > 0 ? '✅' : '⚠️'}</div>
+            {result.sent > 0
+              ? <div style={{ fontWeight: 700 }}>ส่งสำเร็จ {result.sent}/{result.recipients} คน</div>
+              : <div style={{ color: '#fca5a5', fontSize: 13, lineHeight: 1.6 }}>{result.error || result.message || 'ส่งไม่สำเร็จ'}</div>}
+            <button onClick={onClose} style={{ ...primaryBtn, width: 'auto', padding: '10px 24px', marginTop: 16 }}>ปิด</button>
+          </div>
+        ) : (
+          <>
+            <label style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>กลุ่มผู้รับ</label>
+            <select value={form.audience} onChange={(e) => setForm(f => ({ ...f, audience: e.target.value }))} style={{ ...inputSt, marginTop: 4, marginBottom: 12 }}>
+              {aud.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+            <label style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>หัวข้ออีเมล</label>
+            <input value={form.subject} onChange={(e) => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="เช่น ฟีเจอร์ใหม่มาแล้ว! 🎉" style={{ ...inputSt, marginTop: 4, marginBottom: 12 }} />
+            <label style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>ข้อความ</label>
+            <textarea value={form.message} onChange={(e) => setForm(f => ({ ...f, message: e.target.value }))} placeholder="พิมพ์ข้อความ… (ขึ้นบรรทัดใหม่ได้)" style={{ ...inputSt, marginTop: 4, minHeight: 120, resize: 'vertical' }} />
+            <div style={{ fontSize: 11, color: '#64748b', margin: '8px 0 14px' }}>ส่งแบบ BCC (ผู้รับไม่เห็นกันและกัน) · ต้องตั้ง SMTP ใน env</div>
+            <button onClick={send} disabled={busy || !form.subject.trim() || !form.message.trim()} style={{ ...primaryBtn, opacity: busy || !form.subject.trim() || !form.message.trim() ? 0.6 : 1 }}>
+              {busy ? 'กำลังส่ง...' : '📨 ส่งเลย'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
