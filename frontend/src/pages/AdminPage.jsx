@@ -64,6 +64,7 @@ export default function AdminPage() {
   const [bcOpen, setBcOpen] = useState(false);  // broadcast email modal
   const [inv, setInv] = useState(null);         // คลังสินค้า (products)
   const [invSum, setInvSum] = useState(null);   // สรุปคลัง
+  const [salesRep, setSalesRep] = useState(null); // ยอดขาย (ขายแล้ว/เหลือ/แพลตฟอร์ม)
   const [prodEdit, setProdEdit] = useState(null); // สินค้าที่กำลังแก้ (object) / null
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
@@ -75,6 +76,7 @@ export default function AdminPage() {
   const loadInventory = () => {
     fetch(apiUrl('/api/inventory/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInv(d.products); }).catch(() => {});
     fetch(apiUrl('/api/inventory/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInvSum(d); }).catch(() => {});
+    fetch(apiUrl('/api/inventory/admin/sales-report'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setSalesRep(d); }).catch(() => {});
   };
   useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -143,6 +145,7 @@ export default function AdminPage() {
   };
 
   const baht = (n) => `฿${Number(n || 0).toLocaleString('th-TH')}`;
+  const soldMap = {}; (salesRep?.rows || []).forEach((r) => { soldMap[r.id] = r; });
 
   // ── Password gate ──────────────────────────────────────────────────────────
   if (!authed) return (
@@ -518,16 +521,17 @@ export default function AdminPage() {
               {inv && inv.length > 0 && (
                 <div style={{ overflowX: 'auto' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                    <thead><tr style={{ color: '#475569' }}>{['SKU', 'ชื่อ', 'ราคา', 'ต้นทุน', 'สต๊อก', 'สถานะ', ''].map((h) => <th key={h} style={{ textAlign: 'left', padding: '8px', fontWeight: 600, fontSize: 11, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>{h}</th>)}</tr></thead>
+                    <thead><tr style={{ color: '#475569' }}>{['SKU', 'ชื่อ', 'ราคา', 'ขายแล้ว', 'คงเหลือ', 'สถานะ', ''].map((h) => <th key={h} style={{ textAlign: 'left', padding: '8px', fontWeight: 600, fontSize: 11, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>{h}</th>)}</tr></thead>
                     <tbody>
                       {inv.map((p) => {
                         const low = (p.stock || 0) <= (p.low_stock ?? 0);
+                        const sold = soldMap[p.id]?.sold ?? 0;
                         return (
                           <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                             <td style={{ padding: '8px', fontFamily: 'monospace', color: '#64748b', fontSize: 11 }}>{p.sku}</td>
-                            <td style={{ padding: '8px', fontWeight: 600 }}>{p.name}<div style={{ fontSize: 11, color: '#475569' }}>{p.category}</div></td>
+                            <td style={{ padding: '8px', fontWeight: 600 }}>{p.name}<div style={{ fontSize: 11, color: '#475569' }}>{p.category} · ต้นทุน {baht(p.cost)}</div></td>
                             <td style={{ padding: '8px' }}>{baht(p.price)}</td>
-                            <td style={{ padding: '8px', color: '#64748b' }}>{baht(p.cost)}</td>
+                            <td style={{ padding: '8px', fontWeight: 700, color: '#a5b4fc' }}>{sold}</td>
                             <td style={{ padding: '8px', fontWeight: 700, color: low ? '#ef4444' : '#10b981' }}>{p.stock}{low && ' ⚠️'}</td>
                             <td style={{ padding: '8px' }}><span style={{ fontSize: 11, color: p.status === 'active' ? '#10b981' : '#64748b' }}>● {p.status}</span></td>
                             <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
@@ -545,8 +549,24 @@ export default function AdminPage() {
             </div>
             {invSum && invSum.lowStock.length > 0 && (
               <div style={{ ...glass, border: '1px solid rgba(239,68,68,0.25)' }}>
-                <div style={{ fontWeight: 700, marginBottom: 8, color: '#fca5a5' }}>⚠️ สต๊อกใกล้หมด</div>
+                <div style={{ fontWeight: 700, marginBottom: 8, color: '#fca5a5' }}>⚠️ สต๊อกใกล้หมด — ควรเติม</div>
                 {invSum.lowStock.map((l) => <div key={l.id} style={{ fontSize: 13, color: '#94a3b8', padding: '3px 0' }}>{l.name} ({l.sku}) — เหลือ <strong style={{ color: '#ef4444' }}>{l.stock}</strong> (เตือนที่ {l.low_stock})</div>)}
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 6 }}>📨 ระบบส่งแจ้งเตือนทางอีเมล + LINE อัตโนมัติแล้วตอนสต๊อกแตะจุดเตือน</div>
+              </div>
+            )}
+            {salesRep && Object.keys(salesRep.byPlatform || {}).length > 0 && (
+              <div style={glass}>
+                <div style={{ fontWeight: 700, marginBottom: 12 }}>🌐 ยอดขายตามแพลตฟอร์ม / Affiliate (รวม {salesRep.totalSold} ชิ้น)</div>
+                {Object.entries(salesRep.byPlatform).sort((a, b) => b[1] - a[1]).map(([plat, n]) => {
+                  const pct = salesRep.totalSold ? Math.round((n / salesRep.totalSold) * 100) : 0;
+                  const label = plat.startsWith('ref:') ? `🤝 Affiliate ${plat.slice(4)}` : plat === 'store' ? '🛍️ หน้าร้าน' : `📣 ${plat}`;
+                  return (
+                    <div key={plat} style={{ marginBottom: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 3 }}><span style={{ color: '#cbd5e1' }}>{label}</span><span style={{ fontWeight: 700 }}>{n} ({pct}%)</span></div>
+                      <div style={{ height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 4 }}><div style={{ width: `${Math.max(3, pct)}%`, height: '100%', background: '#6366f1', borderRadius: 4 }} /></div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

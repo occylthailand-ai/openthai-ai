@@ -4,6 +4,9 @@ import App from './App.jsx'
 import { LanguageProvider } from './i18n'
 import './index.css'
 
+// เก็บ affiliate ref จาก ?ref= เพื่อ attribute ยอดขายให้แพลตฟอร์ม/affiliate ที่แนะนำ
+try { const r = new URLSearchParams(window.location.search).get('ref'); if (r) localStorage.setItem('otai_ref', r.slice(0, 20)); } catch { /* ignore */ }
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <LanguageProvider>
