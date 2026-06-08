@@ -467,7 +467,7 @@ const AIGeneratorPage = () => {
     toast.info(`💡 โหลด "${productOrHook}" เข้า form แล้ว`);
   };
 
-  useEffect(() => { document.title = 'AI Content Generator — Openthai.ai'; }, []);
+  useEffect(() => { document.title = 'AI Content Generator — OpenThaiAi'; }, []);
 
   // Auto-load brand memory
   useEffect(() => {

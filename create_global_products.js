@@ -1,5 +1,5 @@
 ﻿const fs = require('fs');
-const dir = 'C:/Openthai.ai/all-platform-files';
+const dir = 'C:/OpenThaiAi/all-platform-files';
 
 // ========================================
 // GLOBAL PRODUCT CATALOG - ALL CONTINENTS
@@ -229,14 +229,14 @@ continents.forEach(c => {
     ).join('')}</div></div>`
   ).join('\n');
 
-  const html = `<!-- Openthai.ai - ${c.name} Product Catalog -->
+  const html = `<!-- OpenThaiAi - ${c.name} Product Catalog -->
 <section id="${c.id}" style="max-width:900px;margin:2rem auto;padding:2rem;font-family:'Sarabun',sans-serif;background:#f8f9fa;border-radius:16px;">
 <h2 style="text-align:center;color:${c.color};font-size:2rem;">${c.icon} ${c.country} — ${productCount} สินค้า</h2>
 <p style="text-align:center;color:#666;">${c.desc}</p>
 <p style="text-align:center;"><strong>${c.categories.length} หมวด | ${productCount} รายการ | พร้อมขายบนทุกแพลตฟอร์ม</strong></p>
 ${catHtml}
 <div style="text-align:center;margin-top:2rem;padding:1rem;background:${c.color};border-radius:12px;">
-<p style="color:#fff;margin:0;">🤖 Openthai.ai ช่วยเขียน Product Description ทุกภาษา ทุกแพลตฟอร์ม</p>
+<p style="color:#fff;margin:0;">🤖 OpenThaiAi ช่วยเขียน Product Description ทุกภาษา ทุกแพลตฟอร์ม</p>
 <a href="/generate" style="display:inline-block;margin-top:8px;padding:10px 24px;background:#fff;color:${c.color};border-radius:20px;text-decoration:none;font-weight:bold;">สร้าง Product Content →</a>
 </div>
 </section>`;
@@ -248,8 +248,8 @@ ${catHtml}
 <p>${c.desc}</p>
 <p><strong>${c.categories.length} หมวด | ${productCount} รายการสินค้า</strong></p>
 ${c.categories.map(cat => `<h3>${cat.name} (${cat.items.length})</h3><p>${cat.items.map(i => `<span>${i}</span>`).join(' ')}</p>`).join('')}
-<hr><p><em>สร้างโดย Openthai.ai — www.OpenThaiAi.com</em></p></body></html>`;
-  fs.writeFileSync(dir + '/Openthai.ai_' + c.name + '_Catalog.html', guide);
+<hr><p><em>สร้างโดย OpenThaiAi — www.OpenThaiAi.com</em></p></body></html>`;
+  fs.writeFileSync(dir + '/OpenThaiAi_' + c.name + '_Catalog.html', guide);
 
   // JSON Product Database
   const json = JSON.stringify({

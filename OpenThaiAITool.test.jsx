@@ -1,6 +1,6 @@
 ﻿/**
- * Openthai.aiTool.test.jsx
- * Unit Tests สำหรับ React Frontend ของ Openthai.ai
+ * OpenThaiAiTool.test.jsx
+ * Unit Tests สำหรับ React Frontend ของ OpenThaiAi
  *
  * Stack: Vitest + React Testing Library
  * คำสั่งติดตั้ง:
@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
-import Openthai.aiTool from "./Openthai.aiTool";
+import OpenThaiAiTool from "./OpenThaiAiTool";
 
 // ─────────────────────────────────────────────
 // MOCK — จำลอง fetch (Claude API / n8n webhook)
@@ -60,13 +60,13 @@ afterEach(() => {
 describe("1. Rendering — แสดงผลเริ่มต้น", () => {
 
   it("แสดง input ชื่อสินค้า", () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     const input = screen.getByPlaceholderText(/ชื่อสินค้า|product name/i);
     expect(input).toBeInTheDocument();
   });
 
   it("แสดง dropdown ประเภทสินค้า (5 ประเภท OTOP + Global)", () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     const select = screen.getByLabelText(/ประเภทสินค้า|category/i);
     expect(select).toBeInTheDocument();
     // ตรวจ option ครบ
@@ -77,7 +77,7 @@ describe("1. Rendering — แสดงผลเริ่มต้น", () => {
   });
 
   it("แสดง dropdown ประเภท Hook (5 แบบ)", () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     const hookSelect = screen.getByLabelText(/hook|ประเภทฮุค/i);
     expect(hookSelect).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /story/i })).toBeInTheDocument();
@@ -88,13 +88,13 @@ describe("1. Rendering — แสดงผลเริ่มต้น", () => {
   });
 
   it("ปุ่ม Generate ต้อง disabled เมื่อ input ชื่อสินค้าว่างเปล่า", () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     const btn = screen.getByRole("button", { name: /generate|สร้าง/i });
     expect(btn).toBeDisabled();
   });
 
   it("ไม่แสดงผลลัพธ์ตอนเริ่มต้น (output section ยังว่าง)", () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     expect(screen.queryByTestId("output-section")).not.toBeInTheDocument();
   });
 });
@@ -105,28 +105,28 @@ describe("1. Rendering — แสดงผลเริ่มต้น", () => {
 describe("2. User Interaction — กรอกข้อมูล", () => {
 
   it("กรอกชื่อสินค้าแล้ว state อัปเดต (input value เปลี่ยน)", async () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     const input = screen.getByPlaceholderText(/ชื่อสินค้า|product name/i);
     await userEvent.type(input, "ผ้าไหมอีสานแท้");
     expect(input).toHaveValue("ผ้าไหมอีสานแท้");
   });
 
   it("เลือก dropdown ประเภทสินค้า → category state เปลี่ยน", async () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     const select = screen.getByLabelText(/ประเภทสินค้า|category/i);
     await userEvent.selectOptions(select, "textile");
     expect(select).toHaveValue("textile");
   });
 
   it("เลือก Hook type → hookType state เปลี่ยน", async () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     const hookSelect = screen.getByLabelText(/hook|ประเภทฮุค/i);
     await userEvent.selectOptions(hookSelect, "contrast");
     expect(hookSelect).toHaveValue("contrast");
   });
 
   it("ปุ่ม Generate ต้อง enable หลังกรอกชื่อสินค้า", async () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     const input = screen.getByPlaceholderText(/ชื่อสินค้า|product name/i);
     const btn = screen.getByRole("button", { name: /generate|สร้าง/i });
     await userEvent.type(input, "ผ้าไหม");
@@ -140,7 +140,7 @@ describe("2. User Interaction — กรอกข้อมูล", () => {
 describe("3. API Call — เรียก backend", () => {
 
   it("เรียก fetch หลังกด Generate", async () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     await userEvent.type(
       screen.getByPlaceholderText(/ชื่อสินค้า|product name/i),
       "ผ้าไหม"
@@ -150,7 +150,7 @@ describe("3. API Call — เรียก backend", () => {
   });
 
   it("ส่ง payload ถูกต้อง (productName, category, hookType)", async () => {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     await userEvent.type(
       screen.getByPlaceholderText(/ชื่อสินค้า|product name/i),
       "ผ้าไหมสุรินทร์"
@@ -177,7 +177,7 @@ describe("3. API Call — เรียก backend", () => {
   it("แสดง loading spinner ระหว่างรอ API", async () => {
     // ทำให้ fetch ช้า (pending)
     fetch.mockImplementationOnce(() => new Promise(() => {}));
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     await userEvent.type(
       screen.getByPlaceholderText(/ชื่อสินค้า|product name/i),
       "ผ้าไหม"
@@ -192,7 +192,7 @@ describe("3. API Call — เรียก backend", () => {
 
   it("ปุ่ม Generate ต้อง disable ระหว่าง loading (ป้องกัน double submit)", async () => {
     fetch.mockImplementationOnce(() => new Promise(() => {}));
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     await userEvent.type(
       screen.getByPlaceholderText(/ชื่อสินค้า|product name/i),
       "ผ้าไหม"
@@ -209,7 +209,7 @@ describe("3. API Call — เรียก backend", () => {
 describe("4. Output Display — แสดงผลจาก API", () => {
 
   async function generateContent() {
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     await userEvent.type(
       screen.getByPlaceholderText(/ชื่อสินค้า|product name/i),
       "ผ้าไหม"
@@ -264,7 +264,7 @@ describe("5. Error Handling — จัดการ error", () => {
 
   it("แสดง error message เมื่อ API ตอบ 500", async () => {
     fetch.mockResolvedValueOnce({ ok: false, status: 500 });
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     await userEvent.type(
       screen.getByPlaceholderText(/ชื่อสินค้า|product name/i),
       "ผ้าไหม"
@@ -277,7 +277,7 @@ describe("5. Error Handling — จัดการ error", () => {
 
   it("แสดง error message เมื่อ network timeout / fetch throw", async () => {
     fetch.mockRejectedValueOnce(new Error("Network error"));
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     await userEvent.type(
       screen.getByPlaceholderText(/ชื่อสินค้า|product name/i),
       "ผ้าไหม"
@@ -293,7 +293,7 @@ describe("5. Error Handling — จัดการ error", () => {
   it("error message หายไปเมื่อ generate ใหม่สำเร็จ", async () => {
     // ครั้งแรก error
     fetch.mockRejectedValueOnce(new Error("Network error"));
-    render(<Openthai.aiTool />);
+    render(<OpenThaiAiTool />);
     const input = screen.getByPlaceholderText(/ชื่อสินค้า|product name/i);
     await userEvent.type(input, "ผ้าไหม");
     await userEvent.click(screen.getByRole("button", { name: /generate|สร้าง/i }));

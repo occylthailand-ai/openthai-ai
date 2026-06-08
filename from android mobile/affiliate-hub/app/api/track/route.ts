@@ -1,6 +1,6 @@
 // app/api/track/route.ts
 // บันทึก click เมื่อมีคนคลิกลิงก์ affiliate
-// ใช้ URL: /api/track?ref=SOMCHAI99&redirect=https://openthai.ai/product
+// ใช้ URL: /api/track?ref=SOMCHAI99&redirect=https://OpenThaiAi.com/product
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";

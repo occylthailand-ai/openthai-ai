@@ -1,5 +1,5 @@
 """
-OpenThai AI — Cowork Desktop Automation
+OpenThaiAi — Cowork Desktop Automation
 ใช้กับ Claude Cowork สำหรับ batch content generation
 
 วิธีใช้งาน:
@@ -144,7 +144,7 @@ def log_activity(action: str, details: dict):
 # ================== COWORK PROMPT TEMPLATES ==================
 
 COWORK_SYSTEM_PROMPT = """
-คุณคือ OpenThai AI Content Generator ที่ทำงานผ่าน Claude Cowork
+คุณคือ OpenThaiAi Content Generator ที่ทำงานผ่าน Claude Cowork
 
 เมื่อได้รับไฟล์สินค้า ให้:
 1. อ่านและ parse ข้อมูลสินค้า
@@ -183,7 +183,7 @@ BATCH_INSTRUCTION = """
 
 def main():
     """Main execution for Cowork automation"""
-    print("🇹🇭 OpenThai AI Cowork Automation Ready")
+    print("🇹🇭 OpenThaiAi Cowork Automation Ready")
     print("=" * 50)
     print("Drop files into input/ folder to start processing")
     print("Supported formats: .csv, .json, .txt")

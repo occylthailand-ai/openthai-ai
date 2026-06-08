@@ -30,7 +30,7 @@ Commit 7beb74f ✅
 👆 Zuejai ทำเองใน browser — เรียงตามลำดับ
 ขั้นที่ 1 — เปิด /setup แล้วทำตามนั้นได้เลยครับ
 
-https://www.openthai-ai.com/setup
+https://www.OpenThaiAi.com/setup
 หน้านี้มีทุกอย่างพร้อม:
 
 SQL ให้ copy-paste → รันใน Supabase ได้เลย
@@ -175,7 +175,7 @@ TikTok Thailand: GMV $5.9B, 3M sellers, โต 52% YoY — เราอยู่
 Thai SME: 3.2M ราย อยากขายออนไลน์ 73% — ตลาดรอเราอยู่
 AI Market: 114B THB ปี 2030 — วิสัยทัศน์ถูกต้อง 100%
 PDPA: มีโทษจริงแล้ว THB 21.5M — Themis เตรียมพร้อมแล้ว
-Kronos Health Watch — ตรวจสอบสถานะ API: fetch https://www.openthai-ai.com/api/health ถ้า status ไม่ใช่ "ok" หรือ response time > 3000ms ให้รายงานทันทีพร้อม error details เพื่อให้ Hermes แจ้งเตือนผ่าน LINE
+Kronos Health Watch — ตรวจสอบสถานะ API: fetch https://www.OpenThaiAi.com/api/health ถ้า status ไม่ใช่ "ok" หรือ response time > 3000ms ให้รายงานทันทีพร้อม error details เพื่อให้ Hermes แจ้งเตือนผ่าน LINE
 
 Plutus Daily Revenue Check — ตรวจสอบ payment status ประจำวัน: (1) อ่าน backend/data/ ดู payment records, (2) นับจำนวน pending payments ที่ยังไม่ยืนยัน, (3) สรุป MRR estimate, (4) แจ้งเตือนถ้ามี payment ที่ค้างนานเกิน 24 ชั่วโมง. รายงานเป็นภาษาไทย
 
@@ -318,7 +318,7 @@ Fixes ทั้งหมดพร้อมแล้วใน local — แต่
 # 1. สร้าง repo ที่ github.com/new
 
 # 2. เพิ่ม remote (รันใน terminal):
-cd "C:\Openthai.ai"
+cd "C:\OpenThaiAi"
 git remote add origin https://github.com/YOUR_USERNAME/openthai-ai.git
 git push -u origin master
 
@@ -344,7 +344,7 @@ Vercel CLI login แล้ว — ตรวจ projects ที่มีอยู
 
 Ran
 List Vercel projects
-เจอแล้ว — openthai-ai คือ production site ที่ www.openthai-ai.com — deploy ทันที:
+เจอแล้ว — openthai-ai คือ production site ที่ www.OpenThaiAi.com — deploy ทันที:
 
 
 Ran 2 commands
@@ -360,7 +360,7 @@ Ran 6 commands, edited a file
 ✅ DEPLOYMENT READY
 ────────────────────────────────────────────────
 Deployment ID:  dpl_Bb53cGUNfhDxJkCF8djnJ98aswQg
-Production URL: https://www.openthai-ai.com
+Production URL: https://www.OpenThaiAi.com
 Status:         READY ✅
 Build time:     27s
 Modules:        116 transformed

@@ -29,7 +29,7 @@ export default function TrackOrderPage() {
     finally { setBusy(false); }
   };
 
-  useEffect(() => { document.title = 'Track — Openthai.ai'; if (sp.get('id') && sp.get('contact')) track(); }, []); // eslint-disable-line
+  useEffect(() => { document.title = 'Track — OpenThaiAi'; if (sp.get('id') && sp.get('contact')) track(); }, []); // eslint-disable-line
 
   const stLabel = (s) => t('mk.track.st.' + s);
   const curIdx = order ? FLOW.indexOf(order.status) : -1;

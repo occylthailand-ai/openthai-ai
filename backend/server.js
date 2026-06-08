@@ -131,8 +131,8 @@ const anthropic = (() => {
             headers: {
               'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
               'Content-Type': 'application/json',
-              'HTTP-Referer': 'https://www.openthai-ai.com',
-              'X-Title': 'Openthai.ai',
+              'HTTP-Referer': 'https://www.OpenThaiAi.com',
+              'X-Title': 'OpenThaiAi',
             },
             body: JSON.stringify({
               model: ({'claude-haiku-4-5-20251001':'anthropic/claude-haiku-4-5','claude-haiku-4-5':'anthropic/claude-haiku-4-5','claude-sonnet-4-5':'anthropic/claude-sonnet-4-5','claude-3-haiku-20240307':'anthropic/claude-3-haiku'})[model] || (model.startsWith('claude') ? `anthropic/${model}` : model),
@@ -165,8 +165,8 @@ async function generateWithClaude(form) {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Claude did not return valid JSON');
   const data = JSON.parse(jsonMatch[0]);
-  if (Array.isArray(data.hashtags) && !data.hashtags.includes('#Openthai.ai')) {
-    data.hashtags.push('#Openthai.ai');
+  if (Array.isArray(data.hashtags) && !data.hashtags.includes('#OpenThaiAi')) {
+    data.hashtags.push('#OpenThaiAi');
   }
   data.source = 'claude';
   return data;
@@ -179,8 +179,8 @@ async function generateWithGemini(form) {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Gemini did not return valid JSON');
   const data = JSON.parse(jsonMatch[0]);
-  if (Array.isArray(data.hashtags) && !data.hashtags.includes('#Openthai.ai')) {
-    data.hashtags.push('#Openthai.ai');
+  if (Array.isArray(data.hashtags) && !data.hashtags.includes('#OpenThaiAi')) {
+    data.hashtags.push('#OpenThaiAi');
   }
   data.source = 'gemini';
   return data;
@@ -234,7 +234,7 @@ function mockGenerate(form) {
       `🎯 CTA: "กดลิงก์ด้านล่างสั่งได้เลย ส่งฟรีทั่วไทย"`,
     ],
     caption: `✨ ${form.product} — สินค้าไทยแท้คุณภาพพรีเมียม\n💰 ราคาพิเศษ${form.price ? ` ${form.price}` : ''}\n🚚 ส่งฟรีทั่วไทย\n⭐ รีวิวจริงกว่า 5,000 คำสั่งซื้อ\n📩 DM หรือกดลิงก์ใน Bio`,
-    hashtags: ['#OTOP', '#สินค้าไทย', '#ของดีบ้านเรา', '#ขายออนไลน์', '#TikTokShop', `#${form.product.replace(/\s+/g, '')}`, '#Openthai.ai'],
+    hashtags: ['#OTOP', '#สินค้าไทย', '#ของดีบ้านเรา', '#ขายออนไลน์', '#TikTokShop', `#${form.product.replace(/\s+/g, '')}`, '#OpenThaiAi'],
     criticScore: (7 + Math.random() * 2.8).toFixed(1),
     source: 'mock',
   };
@@ -479,17 +479,17 @@ app.post('/api/leads/admin/broadcast', broadcastLimiter, async (req, res) => {
 
   const safe = String(message).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
   const html = `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
-    <div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">Openthai.ai</h1></div>
+    <div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">OpenThaiAi</h1></div>
     <div style="padding:26px;font-size:15px;line-height:1.7;color:#e2e8f0;">${safe}</div>
     <div style="padding:16px;text-align:center;font-size:12px;color:#64748b;border-top:1px solid rgba(255,255,255,0.08);">
-      <a href="https://www.openthai-ai.com" style="color:#6366f1;">openthai-ai.com</a> · ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ Openthai.ai
+      <a href="https://www.OpenThaiAi.com" style="color:#6366f1;">OpenThaiAi.com</a> · ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ OpenThaiAi
     </div></div>`;
 
   let sent = 0;
   for (let i = 0; i < recipients.length; i += 50) {
     const batch = recipients.slice(i, i + 50);
     try {
-      await mailer.sendMail({ from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to: process.env.SMTP_USER, bcc: batch, subject: subject.slice(0, 200), html });
+      await mailer.sendMail({ from: `"OpenThaiAi" <${process.env.SMTP_USER}>`, to: process.env.SMTP_USER, bcc: batch, subject: subject.slice(0, 200), html });
       sent += batch.length;
     } catch (e) { console.error('[broadcast] batch error:', e.message); }
   }
@@ -511,14 +511,14 @@ async function sendAffiliateWelcome(to, name, refCode, refLink) {
   if (!mailer) return;
   try {
     await mailer.sendMail({
-      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      from: `"OpenThaiAi" <${process.env.SMTP_USER}>`,
       to,
-      subject: '🎉 ยินดีต้อนรับสู่ Openthai.ai Affiliate Program!',
+      subject: '🎉 ยินดีต้อนรับสู่ OpenThaiAi Affiliate Program!',
       html: `
       <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
         <div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:32px;text-align:center;">
           <h1 style="margin:0;font-size:26px;">🎉 ยินดีด้วย ${name}!</h1>
-          <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);">คุณเป็น Affiliate ของ Openthai.ai แล้ว</p>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);">คุณเป็น Affiliate ของ OpenThaiAi แล้ว</p>
         </div>
         <div style="padding:28px;">
           <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
@@ -548,11 +548,11 @@ async function sendAffiliateWelcome(to, name, refCode, refLink) {
             </tr>
           </table>
           <div style="text-align:center;">
-            <a href="https://www.openthai-ai.com/affiliate/dashboard?ref=${refCode}" style="display:inline-block;background:linear-gradient(135deg,#fe2c55,#6366f1);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">📊 เปิด Dashboard ของฉัน</a>
+            <a href="https://www.OpenThaiAi.com/affiliate/dashboard?ref=${refCode}" style="display:inline-block;background:linear-gradient(135deg,#fe2c55,#6366f1);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">📊 เปิด Dashboard ของฉัน</a>
           </div>
         </div>
         <div style="padding:16px;text-align:center;border-top:1px solid rgba(255,255,255,0.08);font-size:12px;color:#475569;">
-          Openthai.ai • <a href="https://www.openthai-ai.com" style="color:#6366f1;">openthai-ai.com</a>
+          OpenThaiAi • <a href="https://www.OpenThaiAi.com" style="color:#6366f1;">OpenThaiAi.com</a>
         </div>
       </div>`,
     });
@@ -571,9 +571,9 @@ async function sendPaymentReceipt(to, { plan, amount_thb, charge_id, paid_at, me
   const channel = method === 'card' ? 'บัตรเครดิต/เดบิต' : method === 'subscription' ? 'ตัดบัตรอัตโนมัติรายเดือน' : 'พร้อมเพย์ (PromptPay)';
   try {
     await mailer.sendMail({
-      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      from: `"OpenThaiAi" <${process.env.SMTP_USER}>`,
       to,
-      subject: `🧾 ใบเสร็จการชำระเงิน Openthai.ai — แผน ${planName}`,
+      subject: `🧾 ใบเสร็จการชำระเงิน OpenThaiAi — แผน ${planName}`,
       html: `
       <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
         <div style="background:linear-gradient(135deg,#10b981,#059669);padding:32px;text-align:center;">
@@ -591,7 +591,7 @@ async function sendPaymentReceipt(to, { plan, amount_thb, charge_id, paid_at, me
           </table>
         </div>
         <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
-          Openthai.ai • <a href="https://www.openthai-ai.com" style="color:#6366f1;">openthai-ai.com</a>
+          OpenThaiAi • <a href="https://www.OpenThaiAi.com" style="color:#6366f1;">OpenThaiAi.com</a>
         </div>
       </div>`,
     });
@@ -609,7 +609,7 @@ async function sendOrderNotification(order) {
   const owner = process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
   try {
     await mailer.sendMail({
-      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      from: `"OpenThaiAi" <${process.env.SMTP_USER}>`,
       to,
       cc: owner && owner !== to ? owner : undefined,
       subject: `🛒 คำสั่งซื้อใหม่ — ${order.product_name} ×${order.qty}`,
@@ -631,7 +631,7 @@ async function sendOrderNotification(order) {
           </table>
         </div>
         <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
-          Openthai.ai • <a href="https://www.openthai-ai.com/admin" style="color:#6366f1;">จัดการออเดอร์ใน Admin</a>
+          OpenThaiAi • <a href="https://www.OpenThaiAi.com/admin" style="color:#6366f1;">จัดการออเดอร์ใน Admin</a>
         </div>
       </div>`,
     });
@@ -649,13 +649,13 @@ async function sendLowStockAlert(product) {
   if (mailer && to) {
     try {
       await mailer.sendMail({
-        from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to,
+        from: `"OpenThaiAi" <${process.env.SMTP_USER}>`, to,
         subject: `⚠️ เติมสต๊อก: ${product.name} เหลือ ${product.stock}`,
         html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
           <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">⚠️ สต๊อกใกล้หมด</h1></div>
           <div style="padding:24px;font-size:15px;line-height:1.7;">
             <b>${product.name}</b> (SKU ${product.sku})<br>เหลือ <b style="color:#ef4444;">${product.stock}</b> ชิ้น · จุดเตือน ${product.low_stock}<br><br>
-            👉 ควรเติมสต๊อกที่ <a href="https://www.openthai-ai.com/admin" style="color:#6366f1;">Admin → คลังสินค้า</a>
+            👉 ควรเติมสต๊อกที่ <a href="https://www.OpenThaiAi.com/admin" style="color:#6366f1;">Admin → คลังสินค้า</a>
           </div></div>`,
       });
     } catch (e) { console.error('Low-stock email error:', e.message); }
@@ -707,7 +707,7 @@ app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
       channel_url: channel_url || '',
       note: note || '',
       ref_code: ref_code || `AFF${Date.now().toString().slice(-6)}`,
-      ref_link: ref_link || `https://www.openthai-ai.com/?ref=${ref_code}`,
+      ref_link: ref_link || `https://www.OpenThaiAi.com/?ref=${ref_code}`,
       tier: 'starter',
       commission_rate: 0.20,
       total_sales: 0,
@@ -794,7 +794,7 @@ app.post('/api/contact', contactLimiter, (req, res) => {
     if (mailer) {
       // แจ้งทีมงาน
       mailer.sendMail({
-        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        from: `"OpenThaiAi" <${process.env.SMTP_USER}>`,
         to: process.env.SMTP_USER,
         replyTo: safe(email, 254),
         subject: `[Contact] ${safe(subject, 100) || 'ข้อความจากผู้ใช้'}`,
@@ -802,10 +802,10 @@ app.post('/api/contact', contactLimiter, (req, res) => {
       }).catch(console.error);
       // ยืนยันให้ผู้ส่ง
       mailer.sendMail({
-        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        from: `"OpenThaiAi" <${process.env.SMTP_USER}>`,
         to: safe(email, 254),
-        subject: '✅ ได้รับข้อความของคุณแล้ว — Openthai.ai',
-        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:500px;margin:0 auto;border-radius:16px;overflow:hidden;"><div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:24px;text-align:center;"><h2 style="margin:0;">✅ ได้รับข้อความแล้ว!</h2></div><div style="padding:24px;font-size:14px;color:#cbd5e1;"><p>สวัสดีคุณ ${safe(name)},</p><p>เราได้รับข้อความของคุณแล้ว ทีมงานจะตอบกลับภายใน <strong style="color:#10b981;">1–2 วันทำการ</strong></p><p style="margin-top:20px;">ขอบคุณที่ติดต่อ Openthai.ai 🙏</p></div></div>`,
+        subject: '✅ ได้รับข้อความของคุณแล้ว — OpenThaiAi',
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:500px;margin:0 auto;border-radius:16px;overflow:hidden;"><div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:24px;text-align:center;"><h2 style="margin:0;">✅ ได้รับข้อความแล้ว!</h2></div><div style="padding:24px;font-size:14px;color:#cbd5e1;"><p>สวัสดีคุณ ${safe(name)},</p><p>เราได้รับข้อความของคุณแล้ว ทีมงานจะตอบกลับภายใน <strong style="color:#10b981;">1–2 วันทำการ</strong></p><p style="margin-top:20px;">ขอบคุณที่ติดต่อ OpenThaiAi 🙏</p></div></div>`,
       }).catch(console.error);
     }
 
@@ -864,10 +864,10 @@ app.post('/api/waitlist', waitlistLimiter, (req, res) => {
     // ส่ง confirmation email (async)
     if (mailer) {
       mailer.sendMail({
-        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        from: `"OpenThaiAi" <${process.env.SMTP_USER}>`,
         to: sanitizedEmail,
-        subject: '🎉 ยืนยันการลงทะเบียน Openthai.ai',
-        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:500px;margin:0 auto;border-radius:16px;overflow:hidden;"><div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:28px;text-align:center;"><h1 style="margin:0;font-size:22px;">🎉 ยินดีต้อนรับ!</h1></div><div style="padding:24px;"><p style="font-size:14px;color:#cbd5e1;">ขอบคุณที่สนใจ <strong>Openthai.ai</strong> เราจะแจ้งเตือนคุณทันทีที่มีสิทธิพิเศษ</p><div style="text-align:center;margin:20px 0;"><a href="https://www.openthai-ai.com" style="background:linear-gradient(135deg,#fe2c55,#6366f1);color:#fff;text-decoration:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;">🚀 ลองใช้ฟรีตอนนี้เลย</a></div></div></div>`,
+        subject: '🎉 ยืนยันการลงทะเบียน OpenThaiAi',
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:500px;margin:0 auto;border-radius:16px;overflow:hidden;"><div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:28px;text-align:center;"><h1 style="margin:0;font-size:22px;">🎉 ยินดีต้อนรับ!</h1></div><div style="padding:24px;"><p style="font-size:14px;color:#cbd5e1;">ขอบคุณที่สนใจ <strong>OpenThaiAi</strong> เราจะแจ้งเตือนคุณทันทีที่มีสิทธิพิเศษ</p><div style="text-align:center;margin:20px 0;"><a href="https://www.OpenThaiAi.com" style="background:linear-gradient(135deg,#fe2c55,#6366f1);color:#fff;text-decoration:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;">🚀 ลองใช้ฟรีตอนนี้เลย</a></div></div></div>`,
       }).catch(console.error);
     }
 
@@ -1025,7 +1025,7 @@ function getSystemCharter() {
   }
   return {
     version: 0,
-    title: 'Openthai.ai — System charter (embedded fallback)',
+    title: 'OpenThaiAi — System charter (embedded fallback)',
     summary: 'ตั้งค่าไฟล์ backend/data/system_charter.json เพื่อล็อกนโยบายถาวร',
     pillars: [
       { id: 'integrity', title: 'ความสมบูรณ์', text: 'แก้ความไม่เข้ากัน ข้อบกพร่อง หรือชำรุดทันทีให้สมบูรณ์' },
@@ -1097,7 +1097,7 @@ async function runAgent(agent) {
     // ส่ง LINE แยก try — อย่าให้ push LINE ล้มทำให้ทั้งรันถูกมองว่า error (คอนเทนต์บันทึกแล้ว)
     if (agent.lineEnabled && agent.lineUserId && process.env.LINE_CHANNEL_TOKEN) {
       try {
-        const msg = `🤖 Openthai.ai Agent: "${agent.name}"\n\n🎣 Hook:\n${result.hook}\n\n📝 Caption:\n${result.caption}\n\n${result.hashtags?.join(' ')}`;
+        const msg = `🤖 OpenThaiAi Agent: "${agent.name}"\n\n🎣 Hook:\n${result.hook}\n\n📝 Caption:\n${result.caption}\n\n${result.hashtags?.join(' ')}`;
         await sendLine(agent.lineUserId, msg);
       } catch (lineErr) {
         try { addLog('warn', 'Agent', `LINE push ไม่สำเร็จ "${agent.name}": ${lineErr.message}`); } catch (_) {}
@@ -1491,7 +1491,7 @@ if (!IS_VERCEL) {
   });
 }
 // Log startup
-addLog('info', 'System', `🚀 Openthai.ai backend started — AI:${anthropic?'Claude':gemini?'Gemini':'Mock'}`);
+addLog('info', 'System', `🚀 OpenThaiAi backend started — AI:${anthropic?'Claude':gemini?'Gemini':'Mock'}`);
 (() => { const c = getSystemCharter(); addLog('info', 'Charter', `📜 นโยบายถาวร v${c.version} — ${c.title}`); })();
 
 // ── TEST: GET /api/test-gemini ────────────────────────────────────────────────
@@ -1563,10 +1563,10 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S9', name:'Learning Layer',   pct:78, color:'#06b6d4', category:'learning',    status:'⚠️' },
     ],
     benchmark: [
-      { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
-      { name:'OTOP/Local Context',  ours:98, industry:40, leader:'Openthai.ai 🏆' },
-      { name:'Content Generation',  ours:95, industry:88, leader:'Openthai.ai 🏆' },
-      { name:'Auto-scheduling',     ours:82, industry:80, leader:'Openthai.ai 🏆' },
+      { name:'Thai Language NLP',   ours:97, industry:68, leader:'OpenThaiAi 🏆' },
+      { name:'OTOP/Local Context',  ours:98, industry:40, leader:'OpenThaiAi 🏆' },
+      { name:'Content Generation',  ours:95, industry:88, leader:'OpenThaiAi 🏆' },
+      { name:'Auto-scheduling',     ours:82, industry:80, leader:'OpenThaiAi 🏆' },
       { name:'Real-time Learning',  ours:78, industry:88, leader:'Industry ⚡'   },
       { name:'Video Auto-gen',      ours:10, industry:85, leader:'Industry ⚡'   },
       { name:'Multi-modal Vision',  ours:85, industry:95, leader:'Industry ⚡'   },
@@ -1665,7 +1665,7 @@ app.post('/api/system/diagnose', diagnoseLimiter, async (req, res) => {
     return res.json(entry);
   }
 
-  const prompt = `วิเคราะห์ระบบ Openthai.ai และแนะนำการแก้ไข ตอบ JSON เท่านั้น:
+  const prompt = `วิเคราะห์ระบบ OpenThaiAi และแนะนำการแก้ไข ตอบ JSON เท่านั้น:
 
 สถานะ: AI=${sysInfo.ai} | Agents=${sysInfo.agents} | Errors=${sysInfo.errors} | Warns=${sysInfo.warns} | Uptime=${sysInfo.uptime} | Memory=${sysInfo.memory} | Auto-healed=${sysInfo.healed}
 
@@ -1823,7 +1823,7 @@ app.get('/api/privacy/policy', (req, res) => {
   res.json({
     version:     '1.1',
     effective:   '2026-05-15',
-    controller:  'Openthai.ai (DATATAN.NET)',
+    controller:  'OpenThaiAi (DATATAN.NET)',
     contact:     'occylthailand@gmail.com',
     purposes: [
       { id: 'service',    name: 'ให้บริการ AI Generator',   legal_basis: 'สัญญา (มาตรา 24(3))',     required: true  },
@@ -1867,14 +1867,14 @@ app.get('/api-docs', (req, res) => {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Openthai.ai — API Docs</title>
+  <title>OpenThaiAi — API Docs</title>
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"/>
   <style>
     body { margin:0; background:#0f0f1a; }
     .swagger-ui .topbar { background: linear-gradient(135deg,#fe2c55,#6366f1); }
     .swagger-ui .topbar .download-url-wrapper input[type=text] { display:none; }
     .swagger-ui .topbar-wrapper .link { pointer-events:none; }
-    .swagger-ui .topbar-wrapper img { content:url('https://www.openthai-ai.com/logo.png'); height:32px; }
+    .swagger-ui .topbar-wrapper img { content:url('https://www.OpenThaiAi.com/logo.png'); height:32px; }
   </style>
 </head>
 <body>
@@ -1900,7 +1900,7 @@ app.get('/api-docs', (req, res) => {
 });
 
 // ── POST /mcp — MCP Server (Model Context Protocol) ──────────────────────────
-// Lets Claude agents and other AI systems discover and call Openthai.ai tools.
+// Lets Claude agents and other AI systems discover and call OpenThaiAi tools.
 // Implements JSON-RPC 2.0 + MCP spec (2024-11-05).
 //   node sdk:  new Client({ name:'x', version:'1' })  →  transport POST /mcp
 //   methods:   initialize | tools/list | tools/call
@@ -1954,7 +1954,7 @@ app.get('/mcp', (req, res) => {
   res.json({
     name:        'openthai-ai',
     version:     '2.0.0',
-    description: 'Openthai.ai — Thai social media content generation. POST /mcp for JSON-RPC.',
+    description: 'OpenThaiAi — Thai social media content generation. POST /mcp for JSON-RPC.',
     protocol:    'mcp/2024-11-05',
     tools_count: 9,
     docs:        '/api-docs',
@@ -2732,7 +2732,7 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
     if (method === 'promptpay') {
       const charge = await createPromptPayCharge({
         amount_thb: amount,
-        description: `Openthai.ai ${planDef.name} Plan${discountPct ? ` (-${discountPct}%)` : ''}`,
+        description: `OpenThaiAi ${planDef.name} Plan${discountPct ? ` (-${discountPct}%)` : ''}`,
         metadata: { plan, email: email || '', method, discount_pct: discountPct },
       });
       payments.unshift({ ...charge, plan, method, email: email || null, createdAt: new Date().toISOString() });
@@ -2745,7 +2745,7 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       const charge = await createCardCharge({
         amount_thb: amount,
         token,
-        description: `Openthai.ai ${planDef.name} Plan${discountPct ? ` (-${discountPct}%)` : ''}`,
+        description: `OpenThaiAi ${planDef.name} Plan${discountPct ? ` (-${discountPct}%)` : ''}`,
         metadata: { plan, email: email || '', method, discount_pct: discountPct },
         return_uri: return_uri || undefined,
       });
@@ -2940,7 +2940,7 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
 //  n8n AUTOMATION — Webhook receiver + workflow trigger
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// POST /api/n8n/trigger — n8n calls this to trigger actions in Openthai.ai
+// POST /api/n8n/trigger — n8n calls this to trigger actions in OpenThaiAi
 app.post('/api/n8n/trigger', async (req, res) => {
   const { action, payload, secret } = req.body || {};
   if (secret !== (process.env.N8N_WEBHOOK_SECRET || 'openthai-n8n-secret')) {
@@ -3192,7 +3192,7 @@ app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (
     // ── Reply to messages ─────────────────────────────────────────────────────
     if (eventType === 'message' && replyToken && token) {
       const userMsg = event.message?.text || '';
-      let replyText = `สวัสดีครับ! 👋 ขอบคุณที่ติดต่อ Openthai.ai\nเราได้รับข้อความของคุณแล้ว\n\n🌐 openthai-ai.com`;
+      let replyText = `สวัสดีครับ! 👋 ขอบคุณที่ติดต่อ OpenThaiAi\nเราได้รับข้อความของคุณแล้ว\n\n🌐 OpenThaiAi.com`;
 
       // Auto-reply with AI if message is a question
       if (userMsg.length > 3 && (gemini || anthropic)) {
@@ -3203,7 +3203,7 @@ app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (
             style: 'friendly',
             lang: 'th',
             audience: 'SME',
-            prompt_override: `ผู้ใช้ส่งข้อความใน LINE OA: "${userMsg}"\nตอบสั้นๆ กระชับ เป็นมิตร ภาษาไทย ไม่เกิน 200 ตัวอักษร (Openthai.ai assistant)`,
+            prompt_override: `ผู้ใช้ส่งข้อความใน LINE OA: "${userMsg}"\nตอบสั้นๆ กระชับ เป็นมิตร ภาษาไทย ไม่เกิน 200 ตัวอักษร (OpenThaiAi assistant)`,
           });
           if (aiRes?.content) replyText = aiRes.content.slice(0, 4000);
         } catch { /* fallback to default reply */ }
@@ -3228,7 +3228,7 @@ app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             replyToken,
-            messages: [{ type: 'text', text: '🎉 ยินดีต้อนรับสู่ Openthai.ai!\n\nเราช่วย SME ไทยสร้างคอนเทนต์ TikTok ด้วย AI ครบ 241+ platforms\n\n🌐 openthai-ai.com\n#Openthai.ai' }],
+            messages: [{ type: 'text', text: '🎉 ยินดีต้อนรับสู่ OpenThaiAi!\n\nเราช่วย SME ไทยสร้างคอนเทนต์ TikTok ด้วย AI ครบ 241+ platforms\n\n🌐 OpenThaiAi.com\n#OpenThaiAi' }],
           }),
         });
       } catch (e) {
@@ -3310,7 +3310,7 @@ async function startServer() {
   }
 
   app.listen(PORT, () => {
-    console.log(`\n🚀 Openthai.ai Backend running on http://localhost:${PORT}`);
+    console.log(`\n🚀 OpenThaiAi Backend running on http://localhost:${PORT}`);
     console.log(`   AI Primary  : ${anthropic ? '✅ Claude Haiku 4.5' : '⚠️  ใส่ ANTHROPIC_API_KEY ใน .env'}`);
     console.log(`   AI Fallback : ${gemini    ? '✅ Gemini Flash Latest' : '⚠️  ใส่ GEMINI_API_KEY ใน .env'}`);
     console.log(`   AI Mode     : ${anthropic ? 'Claude' : gemini ? 'Gemini' : '⚠️  Mock (ไม่มี API key)'}`);

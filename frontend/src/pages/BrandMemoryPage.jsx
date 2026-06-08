@@ -29,7 +29,7 @@ export default function BrandMemoryPage() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    document.title = 'Brand Memory — Openthai.ai';
+    document.title = 'Brand Memory — OpenThaiAi';
     try {
       const stored = localStorage.getItem(BRAND_KEY);
       if (stored) setBrand(JSON.parse(stored));

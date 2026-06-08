@@ -1,4 +1,4 @@
-﻿// Openthai.ai — Video Generator
+﻿// OpenThaiAi — Video Generator
 // รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only)
 //
 // Flow: สร้าง Script+Storyboard ด้วย AI → ส่งไปยัง Video API → คืน job_id + preview
@@ -84,7 +84,7 @@ export async function generateVideoScript(form, { anthropic, gemini }) {
       try {
         const data = JSON.parse(m[0]);
         data.source = source;
-        if (!data.hashtags?.includes('#Openthai.ai')) data.hashtags = [...(data.hashtags || []), '#Openthai.ai'];
+        if (!data.hashtags?.includes('#OpenThaiAi')) data.hashtags = [...(data.hashtags || []), '#OpenThaiAi'];
         return data;
       } catch (_) {}
     }
@@ -108,7 +108,7 @@ function mockVideoScript(form) {
     background_music: 'upbeat',
     video_prompt_en: `Professional product video for ${p}, Thai style, vibrant colors, smooth transitions, 4K quality`,
     caption: `✨ ${p} — สินค้าไทยคุณภาพพรีเมียม\n💰 ราคาพิเศษ ส่งฟรีทั่วไทย\n🛒 กดลิงก์ใน Bio`,
-    hashtags: ['#OTOP', '#สินค้าไทย', '#TikTokShop', `#${p.replace(/\s+/g,'')}`, '#Openthai.ai'],
+    hashtags: ['#OTOP', '#สินค้าไทย', '#TikTokShop', `#${p.replace(/\s+/g,'')}`, '#OpenThaiAi'],
     cta: 'กดลิงก์ใน Bio สั่งซื้อได้เลยครับ',
     estimated_views: '10K-50K',
     criticScore: (7.5 + Math.random() * 2).toFixed(1),

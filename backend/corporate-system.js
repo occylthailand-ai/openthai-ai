@@ -1,4 +1,4 @@
-﻿// Openthai.ai — Corporate System (Public Company / บริษัทมหาชน)
+﻿// OpenThaiAi — Corporate System (Public Company / บริษัทมหาชน)
 // Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -72,7 +72,7 @@ export function createCorporateSystem(writeDir) {
 
     // ── IR Data ─────────────────────────────────────────────────────────────
     getIR: () => load('corp_ir.json', {
-      company: { name: 'Openthai.ai Public Company Limited', ticker: 'OTAI', market: 'MAI (planned)', founded: '2024', hq: 'Bangkok, Thailand', business: 'AI Content Generation Platform — Global' },
+      company: { name: 'OpenThaiAi Public Company Limited', ticker: 'OTAI', market: 'MAI (planned)', founded: '2024', hq: 'Bangkok, Thailand', business: 'AI Content Generation Platform — Global' },
       financials: {
         fiscal_year: '2025',
         revenue_thb: 0,
@@ -165,10 +165,10 @@ export function createCorporateSystem(writeDir) {
       languages_supported: ['ไทย','中文','English','日本語','한국어','Bahasa','Tiếng Việt','हिंदी'],
       platforms_count: 241,
       entities: [
-        { name: 'Openthai.ai Co., Ltd.',               country: 'Thailand', type: 'Headquarters', status: 'active'  },
-        { name: 'Openthai.ai Singapore Pte. Ltd.',     country: 'Singapore',type: 'Regional Hub', status: 'planned' },
-        { name: 'Openthai.ai HK Ltd.',                 country: 'HongKong', type: 'Greater China',status: 'planned' },
-        { name: 'Openthai.ai USA Inc.',                country: 'USA',      type: 'Americas',    status: 'planned' },
+        { name: 'OpenThaiAi Co., Ltd.',               country: 'Thailand', type: 'Headquarters', status: 'active'  },
+        { name: 'OpenThaiAi Singapore Pte. Ltd.',     country: 'Singapore',type: 'Regional Hub', status: 'planned' },
+        { name: 'OpenThaiAi HK Ltd.',                 country: 'HongKong', type: 'Greater China',status: 'planned' },
+        { name: 'OpenThaiAi USA Inc.',                country: 'USA',      type: 'Americas',    status: 'planned' },
       ],
       updatedAt: new Date().toISOString(),
     }),

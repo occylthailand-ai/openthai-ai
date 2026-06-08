@@ -1,4 +1,4 @@
-﻿// Openthai.ai — Webhook / Event System
+﻿// OpenThaiAi — Webhook / Event System
 // Push events to registered subscriber endpoints instead of polling.
 //
 // Event types:
@@ -59,7 +59,7 @@ async function deliverOnce(url, payload, sig, timeoutMs = 8000) {
         'Content-Type':          'application/json',
         'X-OpenThai-Signature':  sig,
         'X-OpenThai-Event':      JSON.parse(payload).event,
-        'User-Agent':            'Openthai.ai-Webhook/2.0',
+        'User-Agent':            'OpenThaiAi-Webhook/2.0',
       },
       body: payload,
     });
@@ -204,7 +204,7 @@ export function createWebhookSystem(writeDir) {
         event:    'webhook.test',
         tenantId: hook.tenantId,
         ts:       new Date().toISOString(),
-        data:     { message: '✅ Openthai.ai Webhook test — connection verified!' },
+        data:     { message: '✅ OpenThaiAi Webhook test — connection verified!' },
       });
 
       const sig    = sign(hook.secret, payload);

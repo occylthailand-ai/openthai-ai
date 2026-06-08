@@ -1,4 +1,4 @@
--- Openthai.ai — Credit ledger table (Supabase / Postgres)
+-- OpenThaiAi — Credit ledger table (Supabase / Postgres)
 -- รันครั้งเดียวใน Supabase SQL editor เพื่อเปิดเครดิตถาวรข้าม instance
 -- backend จะใช้ตารางนี้อัตโนมัติเมื่อ SUPABASE_URL + SUPABASE_SERVICE_KEY ถูกตั้ง
 

@@ -1,5 +1,5 @@
 """
-OpenThai AI Backend — FastAPI + Claude API
+OpenThaiAi Backend — FastAPI + Claude API
 สร้างคอนเทนต์ TikTok อัตโนมัติสำหรับสินค้าไทยและสินค้าทั่วโลก
 
 วิธีรัน:
@@ -23,7 +23,7 @@ load_dotenv()
 
 # Initialize FastAPI
 app = FastAPI(
-    title="OpenThai AI API",
+    title="OpenThaiAi API",
     description="AI-powered TikTok content generator for Thai and global products",
     version="1.0.0"
 )

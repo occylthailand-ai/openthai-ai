@@ -24,7 +24,7 @@ const DEFI_POOLS = [
 
 /* ── AFFILIATE DATA ── */
 const AFF_CODE = "OTAI-3F9A-D4E2";
-const AFF_LINK = "https://openthai.ai/ref/OTAI-3F9A-D4E2";
+const AFF_LINK = "https://OpenThaiAi.com/ref/OTAI-3F9A-D4E2";
 const AFF_TIERS = [
   { tier:"Bronze",  icon:"🥉", minRef:0,   comm:"5%",  bonus:"0 OTAI",    color:"#cd7f32", myTier:false },
   { tier:"Silver",  icon:"🥈", minRef:10,  comm:"8%",  bonus:"500 OTAI",  color:"#c0c0c0", myTier:false },
@@ -48,7 +48,7 @@ const AFF_PAYOUTS = [
   { date:"01 มิ.ย. 2026", amount:"฿14,200", asset:"USDT", tx:"—",          status:"pending" },
 ];
 
-const AI_SYS = `คุณคือ Openthai.ai FinAdvisor — ผู้เชี่ยวชาญการเงิน FinTech, Blockchain และ Affiliate Marketing ตลาดไทย/ASEAN ตอบเป็นภาษาไทยเสมอ ใส่ตัวเลขจริง เตือนความเสี่ยง ระบุว่าข้อมูลเพื่อการศึกษา`;
+const AI_SYS = `คุณคือ OpenThaiAi FinAdvisor — ผู้เชี่ยวชาญการเงิน FinTech, Blockchain และ Affiliate Marketing ตลาดไทย/ASEAN ตอบเป็นภาษาไทยเสมอ ใส่ตัวเลขจริง เตือนความเสี่ยง ระบุว่าข้อมูลเพื่อการศึกษา`;
 
 const fmt = n => n.toLocaleString("th-TH");
 const totalP = () => PORTFOLIO.reduce((s,t)=>s+t.amount*t.price,0);
@@ -66,7 +66,7 @@ export default function App() {
   const [sendAddr, setSendAddr] = useState("");
   const [sendAmt,  setSendAmt]  = useState("");
   const [sendAsset,setSendAsset]= useState("USDT");
-  const [msgs,     setMsgs]     = useState([{ role:"assistant", content:"🤖 สวัสดี! ฉันคือ **Openthai.ai FinAdvisor**\n\nถามได้ทุกเรื่อง Crypto · DeFi · Blockchain · Affiliate Program\nรองรับ ไทย · 中文 · English" }]);
+  const [msgs,     setMsgs]     = useState([{ role:"assistant", content:"🤖 สวัสดี! ฉันคือ **OpenThaiAi FinAdvisor**\n\nถามได้ทุกเรื่อง Crypto · DeFi · Blockchain · Affiliate Program\nรองรับ ไทย · 中文 · English" }]);
   const [aiIn,     setAiIn]     = useState("");
   const [aiLoad,   setAiLoad]   = useState(false);
   const [px,       setPx]       = useState({ btc:3180000, eth:112400, otai:4.85 });
@@ -620,7 +620,7 @@ export default function App() {
           {tab==="ai" && (
             <div className="fade" style={{display:"flex",flexDirection:"column",height:"calc(100vh - 106px)"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:9}}>
-                <div style={{fontSize:9,color:"#d4a017",letterSpacing:3,textTransform:"uppercase"}}>✦ Openthai.ai FinAdvisor</div>
+                <div style={{fontSize:9,color:"#d4a017",letterSpacing:3,textTransform:"uppercase"}}>✦ OpenThaiAi FinAdvisor</div>
                 <div style={{fontSize:8,color:"#2a5a3a",background:"rgba(212,160,23,.07)",padding:"3px 10px",borderRadius:4,border:"1px solid rgba(212,160,23,.2)"}}>
                   ฿{fmt(Math.round(pTotal))} · {PORTFOLIO.length} Assets · Affiliate Gold
                 </div>

@@ -1,4 +1,4 @@
-﻿# 🇹🇭 Openthai.ai
+﻿# 🇹🇭 OpenThaiAi
 
 **AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก**
 
@@ -86,4 +86,4 @@ openthai-ai/
 
 ## 📜 License
 
-© 2026 Openthai.ai — Made with ❤️ in Thailand
+© 2026 OpenThaiAi — Made with ❤️ in Thailand

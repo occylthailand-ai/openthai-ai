@@ -26,7 +26,7 @@ SUPABASE_SERVICE_KEY=<service_role key>   # Settings → API → service_role (s
 ### 3. redeploy
 หลัง deploy เครดิตจะถูกอ่าน/เขียนที่ Supabase อัตโนมัติ — ทดสอบ:
 ```
-curl -s https://www.openthai-ai.com/api/credits -H "x-device-id: test123"
+curl -s https://www.OpenThaiAi.com/api/credits -H "x-device-id: test123"
 # → {"success":true,"mode":"supabase", ...}
 ```
 

@@ -26,7 +26,7 @@ export default function ContentCalendarPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ product: '', platform: 'TikTok', note: '', done: false });
 
-  useEffect(() => { document.title = 'Content Calendar — Openthai.ai'; }, []);
+  useEffect(() => { document.title = 'Content Calendar — OpenThaiAi'; }, []);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();

@@ -11,4 +11,4 @@ Disallow: /facebook
 Disallow: /login
 Disallow: /api/
 
-Sitemap: https://www.openthai-ai.com/sitemap.xml
+Sitemap: https://www.OpenThaiAi.com/sitemap.xml

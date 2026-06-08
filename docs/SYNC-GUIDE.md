@@ -1,4 +1,4 @@
-﻿# Openthai.ai — 3-Way Sync Guide
+﻿# OpenThaiAi — 3-Way Sync Guide
 วันที่ตั้งระบบ: 21 พฤษภาคม 2569
 
 ---
@@ -9,8 +9,8 @@
 
 | # | ปลายทาง | เข้าถึงจาก |
 |---|---------|-----------|
-| 1 | Local `C:\Openthai.ai\docs\` | คอมเครื่องนี้ |
-| 2 | OneDrive `> Openthai.ai > docs` | มือถือ (OneDrive app) |
+| 1 | Local `C:\OpenThaiAi\docs\` | คอมเครื่องนี้ |
+| 2 | OneDrive `> OpenThaiAi > docs` | มือถือ (OneDrive app) |
 | 3 | GitHub `occylthailand-ai/openthai-ai` | ทุกที่ผ่าน browser |
 
 ---
@@ -24,7 +24,7 @@ Desktop > OpenThai-Sync (shortcut)
 
 ### วิธีที่ 2 — PowerShell
 ```powershell
-cd "C:\Openthai.ai"
+cd "C:\OpenThaiAi"
 .\sync-all.ps1
 # หรือระบุ message
 .\sync-all.ps1 -Message "docs: add executive summary"

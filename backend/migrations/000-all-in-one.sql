@@ -1,4 +1,4 @@
--- Openthai.ai — ALL-IN-ONE migration (รันครั้งเดียวใน Supabase SQL Editor)
+-- OpenThaiAi — ALL-IN-ONE migration (รันครั้งเดียวใน Supabase SQL Editor)
 -- เปิดใช้ persistence ถาวรของ: เครดิต/รางวัล · ผู้ผลิต · คำสั่งซื้อ
 -- backend จะใช้ตารางเหล่านี้อัตโนมัติเมื่อ SUPABASE_URL + SUPABASE_SERVICE_KEY ถูกตั้ง
 

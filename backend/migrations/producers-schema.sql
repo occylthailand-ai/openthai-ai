@@ -1,4 +1,4 @@
--- Openthai.ai — Producer onboarding table (Supabase / Postgres)
+-- OpenThaiAi — Producer onboarding table (Supabase / Postgres)
 -- รันใน Supabase SQL editor เพื่อเก็บใบสมัครผู้ผลิตถาวร
 -- backend ใช้ตารางนี้อัตโนมัติเมื่อ SUPABASE_URL + SUPABASE_SERVICE_KEY ถูกตั้ง
 -- (โครงเบา — แยกจาก aff_producers ที่ผูกกับ Supabase auth)

@@ -54,7 +54,7 @@ export default function AffiliatePage() {
     setLoading(true); setError('');
     try {
       const code = genRefCode(form.name);
-      const link = `https://www.openthai-ai.com/?ref=${code}`;
+      const link = `https://www.OpenThaiAi.com/?ref=${code}`;
       try {
         const res = await fetch(apiUrl('/api/affiliate/apply'), {
           method: 'POST', headers: { 'Content-Type': 'application/json' },

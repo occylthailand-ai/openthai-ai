@@ -101,7 +101,7 @@ const LoginPage = ({ onLogin }) => {
           <Logo size="lg" />
         </div>
         <p style={{ textAlign: 'center', color: 'var(--text-secondary)', margin: 0, fontSize: 14 }}>
-          ยินดีต้อนรับสู่ Openthai.ai Platform
+          ยินดีต้อนรับสู่ OpenThaiAi Platform
         </p>
 
         {/* ── Tabs ── */}

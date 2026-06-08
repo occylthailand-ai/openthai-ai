@@ -1,5 +1,5 @@
 {
-  "name": "Openthai.ai — Gemini Content Engine v2",
+  "name": "OpenThaiAi — Gemini Content Engine v2",
   "nodes": [
     {
       "parameters": {
@@ -57,7 +57,7 @@
     },
     {
       "parameters": {
-        "functionCode": "// Parse Gemini response + add metadata\nconst raw = $input.first().json;\nlet result;\n\ntry {\n  const text = raw.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\n  result = JSON.parse(text);\n} catch (e) {\n  // Fallback mock\n  const ctx = $('S7 Context Card').first().json.ctx;\n  result = {\n    hook: `${ctx.product} ดีจริงหรือ? เฉลยตอนท้าย!`,\n    script: [\n      `เปิดด้วยคำถาม: \"${ctx.product} คืออะไร?\"\",\n      'อธิบายที่มาและความพิเศษ',\n      'แสดง 3 ข้อดีหลัก',\n      'Social proof จากลูกค้าจริง',\n      'CTA: กดลิงก์ด้านล่าง ส่งฟรีทั่วไทย!'\n    ],\n    caption: `✨ ${ctx.product} — คุณภาพพรีเมียม\\n💰 ราคาพิเศษ ${ctx.price}\\n🚚 ส่งฟรีทั่วไทย\\n📩 DM หรือกดลิงก์ใน Bio`,\n    hashtags: [`#${ctx.product.replace(/\\s/g,'')}`, '#สินค้าไทย', '#OTOP', '#TikTokShop', '#Openthai.ai'],\n    criticScore: (7 + Math.random() * 2.5).toFixed(1),\n    criticFeedback: 'เพิ่ม Social Proof และ Urgency จะช่วยเพิ่ม Conversion'\n  };\n}\n\nresult.source = raw.candidates ? 'gemini' : 'mock';\nresult.model = 'gemini-1.5-flash';\nresult.timestamp = new Date().toISOString();\n\nreturn [{ json: result }];"
+        "functionCode": "// Parse Gemini response + add metadata\nconst raw = $input.first().json;\nlet result;\n\ntry {\n  const text = raw.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\n  result = JSON.parse(text);\n} catch (e) {\n  // Fallback mock\n  const ctx = $('S7 Context Card').first().json.ctx;\n  result = {\n    hook: `${ctx.product} ดีจริงหรือ? เฉลยตอนท้าย!`,\n    script: [\n      `เปิดด้วยคำถาม: \"${ctx.product} คืออะไร?\"\",\n      'อธิบายที่มาและความพิเศษ',\n      'แสดง 3 ข้อดีหลัก',\n      'Social proof จากลูกค้าจริง',\n      'CTA: กดลิงก์ด้านล่าง ส่งฟรีทั่วไทย!'\n    ],\n    caption: `✨ ${ctx.product} — คุณภาพพรีเมียม\\n💰 ราคาพิเศษ ${ctx.price}\\n🚚 ส่งฟรีทั่วไทย\\n📩 DM หรือกดลิงก์ใน Bio`,\n    hashtags: [`#${ctx.product.replace(/\\s/g,'')}`, '#สินค้าไทย', '#OTOP', '#TikTokShop', '#OpenThaiAi'],\n    criticScore: (7 + Math.random() * 2.5).toFixed(1),\n    criticFeedback: 'เพิ่ม Social Proof และ Urgency จะช่วยเพิ่ม Conversion'\n  };\n}\n\nresult.source = raw.candidates ? 'gemini' : 'mock';\nresult.model = 'gemini-1.5-flash';\nresult.timestamp = new Date().toISOString();\n\nreturn [{ json: result }];"
       },
       "id": "parse-response",
       "name": "📦 Parse & Format",

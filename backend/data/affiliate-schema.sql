@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════
 --  AFFILIATE HUB — Supabase Schema
---  OpenThai AI — Affiliate System
+--  OpenThaiAi — Affiliate System
 --  Run in: Supabase → SQL Editor
 --  Note: Tables prefixed with "aff_" to avoid conflicts
 -- ═══════════════════════════════════════════════════════════

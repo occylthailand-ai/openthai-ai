@@ -29,7 +29,7 @@
 
   <!-- Badge pill -->
   <rect x="80" y="72" width="300" height="44" rx="22" fill="url(#pill)" stroke="#fe2c55" stroke-opacity="0.4" stroke-width="1"/>
-  <text x="230" y="100" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#fca5a5" text-anchor="middle">🇹🇭 AI ไทยแท้ • OpenThai AI</text>
+  <text x="230" y="100" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#fca5a5" text-anchor="middle">🇹🇭 AI ไทยแท้ • OpenThaiAi</text>
 
   <!-- Main headline -->
   <text x="80" y="200" font-family="Arial,'Sarabun',sans-serif" font-size="72" font-weight="900" fill="white">สร้างคอนเทนต์ TikTok</text>
@@ -58,7 +58,7 @@
 
   <!-- CTA -->
   <rect x="80" y="530" width="340" height="64" rx="32" fill="url(#accent)"/>
-  <text x="250" y="571" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="white" text-anchor="middle">ใช้ฟรีวันนี้ → openthai-ai.com</text>
+  <text x="250" y="571" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="white" text-anchor="middle">ใช้ฟรีวันนี้ → OpenThaiAi.com</text>
 
   <!-- Right side: mock UI card -->
   <g transform="translate(680, 80)">

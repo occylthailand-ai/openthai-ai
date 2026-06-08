@@ -15,7 +15,7 @@ export default function PricingPage() {
   const { t } = useLang();
   const [selected, setSelected] = useState('pro');
   const [openFaq, setOpenFaq] = useState(null);
-  useEffect(() => { document.title = 'Openthai.ai — Pricing'; }, []);
+  useEffect(() => { document.title = 'OpenThaiAi — Pricing'; }, []);
 
   const plans = t('pp.plans');
   const faq = t('pp.faq');

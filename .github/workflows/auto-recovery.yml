@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  PROD_URL: https://www.openthai-ai.com
+  PROD_URL: https://www.OpenThaiAi.com
 
 jobs:
   self-heal:
@@ -52,7 +52,7 @@ jobs:
           if [ -n "$LINE_NOTIFY_TOKEN" ]; then
             curl -s -X POST https://notify-api.line.me/api/notify \
               -H "Authorization: Bearer $LINE_NOTIFY_TOKEN" \
-              --data-urlencode "message=✅ Openthai.ai กู้คืนอัตโนมัติสำเร็จ ($(date -u '+%H:%M UTC'))"
+              --data-urlencode "message=✅ OpenThaiAi กู้คืนอัตโนมัติสำเร็จ ($(date -u '+%H:%M UTC'))"
           fi
 
       - name: 🚨 Escalate — open/refresh incident issue
@@ -88,5 +88,5 @@ jobs:
           if [ -n "$LINE_NOTIFY_TOKEN" ]; then
             curl -s -X POST https://notify-api.line.me/api/notify \
               -H "Authorization: Bearer $LINE_NOTIFY_TOKEN" \
-              --data-urlencode "message=🚨 Openthai.ai ล่ม — auto-recovery ไม่สำเร็จ เปิด GitHub issue แล้ว ต้องเช็คด่วน ($(date -u '+%H:%M UTC'))"
+              --data-urlencode "message=🚨 OpenThaiAi ล่ม — auto-recovery ไม่สำเร็จ เปิด GitHub issue แล้ว ต้องเช็คด่วน ($(date -u '+%H:%M UTC'))"
           fi

@@ -20,7 +20,7 @@ export default function ContactPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
-  useEffect(() => { document.title = 'ติดต่อเรา — Openthai.ai'; }, []);
+  useEffect(() => { document.title = 'ติดต่อเรา — OpenThaiAi'; }, []);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -67,7 +67,7 @@ export default function ContactPage() {
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← กลับ</button>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>ติดต่อเรา</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>Contact — Openthai.ai</div>
+          <div style={{ fontSize: 11, color: '#64748b' }}>Contact — OpenThaiAi</div>
         </div>
       </header>
 
@@ -77,7 +77,7 @@ export default function ContactPage() {
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <div style={{ fontSize: 56, marginBottom: 12 }}>💬</div>
           <h1 style={{ fontSize: 'clamp(24px,5vw,38px)', fontWeight: 900, margin: '0 0 12px', background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            ติดต่อทีมงาน Openthai.ai
+            ติดต่อทีมงาน OpenThaiAi
           </h1>
           <p style={{ color: '#64748b', fontSize: 14 }}>ตอบกลับภายใน <strong style={{ color: '#10b981' }}>1–2 วันทำการ</strong> · เปิดให้บริการทุกวัน</p>
         </div>

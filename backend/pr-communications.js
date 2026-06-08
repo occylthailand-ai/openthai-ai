@@ -1,4 +1,4 @@
-﻿// Openthai.ai — PR & Global Communications System
+﻿// OpenThaiAi — PR & Global Communications System
 // Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
@@ -19,16 +19,16 @@ export function createPRSystem(writeDir) {
     // ── Press Releases ────────────────────────────────────────────────────────
     getPressReleases: () => load('pr_releases.json', [
       {
-        id: 'pr001', title: 'Openthai.ai เปิดตัวระบบ AI Content Generator สำหรับ SME ไทย',
-        titleEN: 'Openthai.ai Launches AI Content Generator for Thai SMEs',
+        id: 'pr001', title: 'OpenThaiAi เปิดตัวระบบ AI Content Generator สำหรับ SME ไทย',
+        titleEN: 'OpenThaiAi Launches AI Content Generator for Thai SMEs',
         date: '2026-05-20', status: 'published', category: 'product',
         languages: ['th', 'en', 'zh'],
-        summary: 'Openthai.ai เปิดตัวแพลตฟอร์ม AI สร้างคอนเทนต์ครบวงจร รองรับ 241 แพลตฟอร์มทั่วโลก',
+        summary: 'OpenThaiAi เปิดตัวแพลตฟอร์ม AI สร้างคอนเทนต์ครบวงจร รองรับ 241 แพลตฟอร์มทั่วโลก',
         content: '', views: 0, media_picked_up: [],
       },
       {
-        id: 'pr002', title: 'Openthai.ai ประกาศแผน IPO บน MAI ภายในปี 2027',
-        titleEN: 'Openthai.ai Announces IPO Plans on MAI by 2027',
+        id: 'pr002', title: 'OpenThaiAi ประกาศแผน IPO บน MAI ภายในปี 2027',
+        titleEN: 'OpenThaiAi Announces IPO Plans on MAI by 2027',
         date: '2026-06-01', status: 'draft', category: 'corporate',
         languages: ['th', 'en'],
         summary: 'บริษัทตั้งเป้า Market Cap ฿1,000M+ ก่อนเข้าจดทะเบียนใน MAI/SET',
@@ -58,7 +58,7 @@ export function createPRSystem(writeDir) {
         region: 'TH', status: 'active',
         channels: ['LINE', 'Facebook', 'TikTok', 'Press Release'],
         audience: 'Thai SME owners, OTOP sellers',
-        message: 'AI ไม่ใช่เรื่องยาก — Openthai.ai ทำให้ทุกคนเข้าถึงได้',
+        message: 'AI ไม่ใช่เรื่องยาก — OpenThaiAi ทำให้ทุกคนเข้าถึงได้',
         kpi: { reach: 0, engagement: 0, leads: 0, target_reach: 1000000 },
         startDate: '2026-05-01', endDate: '2026-08-31',
       },
@@ -68,13 +68,13 @@ export function createPRSystem(writeDir) {
         region: 'SEA', status: 'planning',
         channels: ['LinkedIn', 'Tech Media', 'Conference'],
         audience: 'SEA entrepreneurs, investors',
-        message: 'Openthai.ai — The First AI Platform Built for Southeast Asia',
+        message: 'OpenThaiAi — The First AI Platform Built for Southeast Asia',
         kpi: { reach: 0, engagement: 0, leads: 0, target_reach: 5000000 },
         startDate: '2026-09-01', endDate: '2026-12-31',
       },
       {
         id: 'camp003', name: '泰国AI平台 — 进军中国市场',
-        nameLocal: 'Openthai.ai 进中国',
+        nameLocal: 'OpenThaiAi 进中国',
         region: 'CN', status: 'planning',
         channels: ['WeChat', 'Weibo', 'Xiaohongshu', '36Kr Media'],
         audience: '中国出海品牌, 跨境电商',

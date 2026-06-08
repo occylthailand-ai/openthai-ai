@@ -1,5 +1,5 @@
 {
-  "name": "Openthai.ai — Full Automation",
+  "name": "OpenThaiAi — Full Automation",
   "nodes": [
     {
       "parameters": {
@@ -39,7 +39,7 @@
     },
     {
       "parameters": {
-        "url": "=https://openthai-ai.vercel.app/api/memory",
+        "url": "=https://OpenThaiAi.com/api/memory",
         "method": "POST",
         "sendBody": true,
         "bodyParameters": {
@@ -66,7 +66,7 @@
     },
     {
       "parameters": {
-        "url": "https://openthai-ai.vercel.app/api/agent/run",
+        "url": "https://OpenThaiAi.com/api/agent/run",
         "method": "POST",
         "authentication": "headerAuth",
         "sendHeaders": true,
@@ -97,7 +97,7 @@
     },
     {
       "parameters": {
-        "url": "=https://openthai-ai.vercel.app/api/trending",
+        "url": "=https://OpenThaiAi.com/api/trending",
         "method": "GET"
       },
       "name": "Fetch Trending",

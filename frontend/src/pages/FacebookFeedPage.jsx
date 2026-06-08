@@ -214,7 +214,7 @@ const FacebookFeedPage = () => {
             <span className="fb-search-icon">🔍</span>
             <input
               className="fb-search-input"
-              placeholder="ค้นหาใน Openthai.ai"
+              placeholder="ค้นหาใน OpenThaiAi"
               value={searchText}
               onChange={e => setSearchText(e.target.value)}
             />
