@@ -385,6 +385,44 @@ app.get('/api/leads/admin/search', async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// POST /api/leads/admin/broadcast — ส่งอีเมล newsletter หาลีดทั้งหมด (Admin Key)
+const broadcastLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 6, message: { success: false, error: 'ส่ง broadcast บ่อยเกินไป' } });
+app.post('/api/leads/admin/broadcast', broadcastLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const { subject, message, audience = 'all' } = req.body || {};
+  if (!subject?.trim() || !message?.trim()) return res.status(400).json({ success: false, error: 'ต้องการหัวข้อและข้อความ' });
+
+  const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
+  const set = new Set();
+  if (audience === 'all' || audience === 'waitlist') for (const w of waitlist) if (isEmail(w.email)) set.add(w.email.toLowerCase());
+  if (audience === 'all' || audience === 'affiliate') for (const a of affiliates) if (isEmail(a.email)) set.add(a.email.toLowerCase());
+  if (audience === 'all' || audience === 'order') { const ords = await orders.all(); for (const o of ords) if (isEmail(o.contact)) set.add(o.contact.toLowerCase()); }
+  const recipients = [...set];
+
+  if (!mailer) return res.json({ success: false, sent: 0, recipients: recipients.length, error: 'ยังไม่ได้ตั้ง SMTP — ตั้ง SMTP_USER/SMTP_PASS ใน env เพื่อส่งจริง (พบผู้รับ ' + recipients.length + ' คน)' });
+  if (!recipients.length) return res.json({ success: true, sent: 0, recipients: 0, message: 'ไม่มีอีเมลผู้รับในกลุ่มนี้' });
+
+  const safe = String(message).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+  const html = `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">Openthai.ai</h1></div>
+    <div style="padding:26px;font-size:15px;line-height:1.7;color:#e2e8f0;">${safe}</div>
+    <div style="padding:16px;text-align:center;font-size:12px;color:#64748b;border-top:1px solid rgba(255,255,255,0.08);">
+      <a href="https://www.openthai-ai.com" style="color:#6366f1;">openthai-ai.com</a> · ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ Openthai.ai
+    </div></div>`;
+
+  let sent = 0;
+  for (let i = 0; i < recipients.length; i += 50) {
+    const batch = recipients.slice(i, i + 50);
+    try {
+      await mailer.sendMail({ from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to: process.env.SMTP_USER, bcc: batch, subject: subject.slice(0, 200), html });
+      sent += batch.length;
+    } catch (e) { console.error('[broadcast] batch error:', e.message); }
+  }
+  addLog('info', 'Broadcast', `ส่ง newsletter "${subject.slice(0, 40)}" → ${sent}/${recipients.length} คน`);
+  res.json({ success: true, sent, recipients: recipients.length });
+});
+
 // ─── Nodemailer transporter ───────────────────────────────────────────────────
 const mailer = process.env.SMTP_USER
   ? nodemailer.createTransport({
