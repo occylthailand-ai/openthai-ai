@@ -207,6 +207,70 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* TAB: ANALYTICS — funnel รวมจากข้อมูลจริง */}
+        {tab === 'analytics' && (() => {
+          const orderCount = ords ? ords.length : (leads?.counts.order ?? 0);
+          const revenue = ords ? ords.filter(o => o.status !== 'cancelled').reduce((t, o) => t + (Number(o.amount) || 0), 0) : (sales?.stats.revenue_total ?? 0);
+          const prodTotal = prods ? prods.length : 0;
+          const prodApproved = prods ? prods.filter(p => p.status === 'approved').length : 0;
+          // funnel: ความสนใจ → มีส่วนร่วม → ซื้อ
+          const funnel = [
+            { label: '📧 Waitlist (สนใจ)', v: leads?.counts.waitlist ?? 0, c: '#06b6d4' },
+            { label: '🎁 บัญชีเครดิต (ใช้งาน)', v: creds?.accounts ?? 0, c: '#6366f1' },
+            { label: '🎡 หมุนวงล้อ (มีส่วนร่วม)', v: creds?.spun ?? 0, c: '#fe2c55' },
+            { label: '📦 ลูกค้าสั่งซื้อ (ซื้อ)', v: orderCount, c: '#10b981' },
+          ];
+          const max = Math.max(1, ...funnel.map(f => f.v));
+          const conv = (a, b) => (b > 0 ? `${Math.round((a / b) * 100)}%` : '—');
+          const cards = [
+            { label: 'รายได้รวม', v: baht(revenue), c: '#10b981' },
+            { label: 'ออเดอร์ทั้งหมด', v: orderCount, c: '#34d399' },
+            { label: 'ผู้ผลิต (อนุมัติ/สมัคร)', v: `${prodApproved}/${prodTotal}`, c: '#f59e0b' },
+            { label: 'Affiliate', v: leads?.counts.affiliate ?? 0, c: '#a5b4fc' },
+            { label: 'เครดิตแจกไปแล้ว', v: creds ? creds.totalBalance : 0, c: '#06b6d4' },
+            { label: 'ส่วนลดรอใช้', v: creds?.pendingDiscounts ?? 0, c: '#fe2c55' },
+          ];
+          return (
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div style={glass}>
+              <div style={{ fontWeight: 700, marginBottom: 16 }}>📈 Funnel — เส้นทางลูกค้า</div>
+              {funnel.map((f, i) => (
+                <div key={f.label} style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                    <span style={{ color: '#cbd5e1' }}>{f.label}</span>
+                    <span style={{ fontWeight: 700 }}>{f.v.toLocaleString()}{i > 0 && <span style={{ color: '#64748b', fontWeight: 400, fontSize: 11 }}> · แปลงจากบนสุด {conv(f.v, funnel[0].v)}</span>}</span>
+                  </div>
+                  <div style={{ height: 14, background: 'rgba(255,255,255,0.05)', borderRadius: 7, overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.max(3, (f.v / max) * 100)}%`, height: '100%', background: f.c, borderRadius: 7, transition: 'width .5s' }} />
+                  </div>
+                </div>
+              ))}
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 8 }}>* รวมจากข้อมูลจริง — ยิ่งทำการตลาดดึงคนเข้ามามาก funnel ยิ่งกว้าง</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14 }}>
+              {cards.map((s) => (
+                <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: s.c }}>{s.v}</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {sales && Object.keys(sales.by_plan || {}).length > 0 && (
+              <div style={glass}>
+                <div style={{ fontWeight: 700, marginBottom: 12 }}>💳 รายได้ตามแพ็กเกจ</div>
+                {Object.entries(sales.by_plan).map(([plan, v]) => (
+                  <div key={plan} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                    <span style={{ color: PLAN_COLOR[plan] || '#94a3b8', fontWeight: 600, textTransform: 'capitalize' }}>{plan}</span>
+                    <span style={{ color: '#64748b' }}>{v.count} ออเดอร์</span>
+                    <span style={{ color: '#10b981', fontWeight: 700 }}>{baht(v.revenue)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          );
+        })()}
+
         {/* TAB: SALES — ยอดขายจริงจาก Omise */}
         {tab === 'sales' && (
           <div>
