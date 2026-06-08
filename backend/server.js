@@ -3170,13 +3170,18 @@ app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (
     return;
   }
 
-  // Signature check (skip if no secret configured — dev mode)
-  if (process.env.LINE_CHANNEL_SECRET && signature) {
+  // Signature check — fail-closed ใน production
+  if (process.env.LINE_CHANNEL_SECRET) {
+    if (!signature) { addLog('warn', 'LINE', 'Missing signature — ignored'); return; }
     const expected = createHmac('sha256', process.env.LINE_CHANNEL_SECRET).update(rawBodyBuf).digest('base64');
     if (signature !== expected) {
       addLog('warn', 'LINE', 'Webhook signature mismatch — ignored');
       return;
     }
+  } else if (IS_PROD) {
+    // ไม่มี secret ใน production = ปฏิเสธ (กัน webhook ปลอม) — dev เท่านั้นที่ข้ามได้
+    addLog('warn', 'LINE', 'LINE_CHANNEL_SECRET ไม่ได้ตั้งใน production — webhook ถูกปฏิเสธ');
+    return;
   }
 
   const token = process.env.LINE_CHANNEL_TOKEN;
@@ -3326,11 +3331,16 @@ async function startServer() {
   await getAdminUsers();
 
   // แจ้งเตือนถ้ายังไม่มี Recovery Codes
+  // ⚠️ ไม่พิมพ์ codes ลง log ใน production (log อาจถูกเก็บ/เห็นโดยบุคคลที่สาม)
   if (!process.env.RECOVERY_CODES) {
-    const codes = generateRecoveryCodes(8);
-    console.log('\n⚠️  ยังไม่มี RECOVERY_CODES ใน .env — สร้างให้อัตโนมัติ:');
-    console.log('   ใส่บรรทัดนี้ใน backend/.env และเก็บไว้ในที่ปลอดภัย!\n');
-    console.log(`   RECOVERY_CODES=${codes.join(',')}\n`);
+    if (IS_PROD) {
+      console.warn('[auth] ⚠️  ยังไม่ได้ตั้ง RECOVERY_CODES ใน production — สร้างเองแล้วใส่ใน env (ดู POST /api/auth/recovery-codes/generate)');
+    } else {
+      const codes = generateRecoveryCodes(8);
+      console.log('\n⚠️  ยังไม่มี RECOVERY_CODES ใน .env — สร้างให้อัตโนมัติ (dev เท่านั้น):');
+      console.log('   ใส่บรรทัดนี้ใน backend/.env และเก็บไว้ในที่ปลอดภัย!\n');
+      console.log(`   RECOVERY_CODES=${codes.join(',')}\n`);
+    }
   }
 
   app.listen(PORT, () => {

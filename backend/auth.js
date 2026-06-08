@@ -13,7 +13,14 @@ const USED_CODES_FILE = path.join(__dirname, '.used-recovery-codes.json');
 export const IS_PROD = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
 
 // ─── JWT ─────────────────────────────────────────────────────────────────────
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+// ⚠️ production ต้องตั้ง JWT_SECRET เอง — ถ้าใช้ค่าสุ่ม token จะใช้ไม่ได้หลัง restart
+// และ instance แต่ละตัว (serverless) จะ verify ข้ามกันไม่ได้
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (IS_PROD) {
+    console.error('[auth] ⛔ production: ไม่ได้ตั้ง JWT_SECRET — token จะไม่เสถียร! โปรดตั้งใน env');
+  }
+  return crypto.randomBytes(32).toString('hex');
+})();
 const JWT_EXPIRES = '7d';
 
 export function signToken(payload) {

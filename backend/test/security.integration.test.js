@@ -51,6 +51,10 @@ test('[prod] CORS ต้องไม่สะท้อน origin แปลกป
   assert.notEqual(acao, 'https://evil.example.com', 'production ต้องไม่ reflect origin ที่ไม่อยู่ใน allowlist');
 });
 
+test('[prod] ต้องไม่พิมพ์ recovery codes ลง log', () => {
+  assert.ok(!/RECOVERY_CODES=[0-9A-F]/.test(prod.log()), 'production ห้ามพิมพ์ recovery codes ลง log');
+});
+
 // ─── DEV MODE — ความสะดวกตอน local ต้องยังทำงาน ────────────────────────────────
 let dev;
 before(async () => { dev = await startServer({ port: 8912, env: { NODE_ENV: '', VERCEL: '' } }); });
