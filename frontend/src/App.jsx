@@ -15,6 +15,9 @@ import CatalogPage from './pages/CatalogPage';
 import ProducerDirectoryPage from './pages/ProducerDirectoryPage';
 import TrackOrderPage from './pages/TrackOrderPage';
 import StorePage from './pages/StorePage';
+import CarrierJoinPage from './pages/CarrierJoinPage';
+import DeliveryPage from './pages/DeliveryPage';
+import CarrierDirectoryPage from './pages/CarrierDirectoryPage';
 import AdminPage from './pages/AdminPage';
 import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -106,6 +109,11 @@ function App() {
             <Route path="/find" element={<ProducerDirectoryPage />} />
             <Route path="/track" element={<TrackOrderPage />} />
             <Route path="/store" element={<StorePage />} />
+            <Route path="/carrier" element={<CarrierJoinPage />} />
+            <Route path="/drivers" element={<CarrierJoinPage />} />
+            <Route path="/delivery" element={<DeliveryPage />} />
+            <Route path="/ship" element={<DeliveryPage />} />
+            <Route path="/carriers" element={<CarrierDirectoryPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/affiliate" element={<AffiliatePage />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />

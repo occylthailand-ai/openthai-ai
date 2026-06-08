@@ -66,6 +66,9 @@ export default function AdminPage() {
   const [invSum, setInvSum] = useState(null);   // สรุปคลัง
   const [salesRep, setSalesRep] = useState(null); // ยอดขาย (ขายแล้ว/เหลือ/แพลตฟอร์ม)
   const [prodEdit, setProdEdit] = useState(null); // สินค้าที่กำลังแก้ (object) / null
+  const [cars, setCars] = useState(null);         // ผู้จัดส่ง (carriers)
+  const [jobs, setJobs] = useState(null);         // งานจัดส่ง (delivery jobs)
+  const [logiSum, setLogiSum] = useState(null);   // สรุปขนส่ง
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
@@ -78,7 +81,12 @@ export default function AdminPage() {
     fetch(apiUrl('/api/inventory/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInvSum(d); }).catch(() => {});
     fetch(apiUrl('/api/inventory/admin/sales-report'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setSalesRep(d); }).catch(() => {});
   };
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadLogistics = () => {
+    fetch(apiUrl('/api/logistics/admin/carriers'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setCars(d.carriers); }).catch(() => {});
+    fetch(apiUrl('/api/logistics/admin/jobs'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setJobs(d.jobs); }).catch(() => {});
+    fetch(apiUrl('/api/logistics/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setLogiSum(d); }).catch(() => {});
+  };
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadInventory(); loadLogistics(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveProduct = async (data) => {
     const r = await fetch(apiUrl('/api/inventory/admin/upsert'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(data) }).then(x => x.json());
@@ -116,6 +124,35 @@ export default function AdminPage() {
     const drop_off = received_by ? '' : (window.prompt('จุดฝากพัสดุ (เช่น ตู้ล็อกเกอร์, รปภ.):') || '');
     await fetch(apiUrl('/api/orders/admin/deliver'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, received_by, drop_off }) });
     loadOrders();
+  };
+
+  // ── Logistics handlers ──────────────────────────────────────────────────────
+  const carrierStatus = async (id, status) => {
+    await fetch(apiUrl('/api/logistics/admin/carrier-status'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, status }) });
+    loadLogistics();
+  };
+  const carrierAvail = async (id, available) => {
+    await fetch(apiUrl('/api/logistics/admin/carrier-availability'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, available }) });
+    loadLogistics();
+  };
+  const assignJob = async (id) => {
+    const ready = (cars || []).filter((c) => ['approved', 'verified'].includes(c.status));
+    if (!ready.length) { alert('ยังไม่มีผู้จัดส่งที่อนุมัติแล้ว — อนุมัติผู้จัดส่งก่อน'); return; }
+    const list = ready.map((c, i) => `${i + 1}. ${c.business_name || c.contact_name} (${(c.vehicles || []).join(',')})`).join('\n');
+    const pick = window.prompt(`จ่ายงานให้ผู้จัดส่ง — พิมพ์หมายเลข:\n${list}`); if (!pick) return;
+    const c = ready[parseInt(pick, 10) - 1]; if (!c) return;
+    await fetch(apiUrl('/api/logistics/admin/job-assign'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, carrier_id: c.id }) });
+    loadLogistics();
+  };
+  const jobStatus = async (id, status) => {
+    await fetch(apiUrl('/api/logistics/admin/job-status'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, status }) });
+    loadLogistics();
+  };
+  const jobDeliver = async (id) => {
+    const received_by = window.prompt('เซ็นรับโดย (ชื่อผู้รับ) — เว้นว่างถ้าฝากพัสดุ:'); if (received_by === null) return;
+    const drop_off = received_by ? '' : (window.prompt('จุดฝากพัสดุ (เช่น ตู้ล็อกเกอร์, รปภ.):') || '');
+    await fetch(apiUrl('/api/logistics/admin/job-deliver'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, received_by, drop_off }) });
+    loadLogistics();
   };
 
   // ดึงสรุปยอดขายจริงเมื่อล็อกอินแล้ว (ใช้ admin key เป็น x-admin-key header)
@@ -572,6 +609,102 @@ export default function AdminPage() {
           </div>
         )}
         {prodEdit !== null && <ProductFormModal product={prodEdit} onSave={saveProduct} onClose={() => setProdEdit(null)} />}
+
+        {/* TAB: LOGISTICS / ขนส่ง */}
+        {tab === 'logistics' && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            {logiSum && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12 }}>
+                {[
+                  { label: 'ผู้จัดส่ง', v: logiSum.carriers, c: '#6366f1' },
+                  { label: 'ยืนยันตัวตนแล้ว', v: logiSum.verified, c: '#10b981' },
+                  { label: 'พร้อมรับงาน', v: logiSum.available, c: '#34d399' },
+                  { label: 'งานจัดส่ง', v: logiSum.jobs, c: '#a5b4fc' },
+                  { label: 'ส่งสำเร็จ', v: logiSum.delivered, c: '#10b981' },
+                  { label: 'มูลค่าค่าส่ง (GMV)', v: baht(logiSum.gmv), c: '#f59e0b' },
+                ].map((s) => (
+                  <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: s.c }}>{s.v}</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Carriers */}
+            <div style={glass}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>🚚 ผู้จัดส่ง / กิจการขนส่ง {cars ? `(${cars.length})` : ''}</div>
+              {!cars && <div style={{ color: '#64748b', fontSize: 13 }}>{T.loading}</div>}
+              {cars && cars.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีผู้สมัคร — แชร์ลิงก์ /carrier เพื่อรับสมัคร</div>}
+              {cars && cars.map((c) => {
+                const sc = { pending: '#f59e0b', verified: '#06b6d4', approved: '#10b981', rejected: '#ef4444', suspended: '#94a3b8' }[c.status] || '#64748b';
+                return (
+                  <div key={c.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                    <div style={{ flex: 1, minWidth: 220 }}>
+                      <div style={{ fontWeight: 700 }}>{c.business_name || c.contact_name} <span style={{ fontSize: 11, color: '#475569' }}>· {c.type}</span> {c.verified && <span style={{ color: '#06b6d4' }}>✔ ยืนยันแล้ว</span>}</div>
+                      <div style={{ color: '#64748b', fontSize: 12 }}>☎️ {c.phone}{c.email ? ` · ✉️ ${c.email}` : ''}{c.line_id ? ` · LINE ${c.line_id}` : ''}</div>
+                      <div style={{ color: '#94a3b8', fontSize: 12 }}>🚗 {(c.vehicles || []).join(', ')} · 📍 {(c.zones || []).join(', ')}</div>
+                      <div style={{ color: '#64748b', fontSize: 11 }}>{c.cod_supported ? '💵 COD ' : ''}{c.express_supported ? '⚡ ด่วน ' : ''}{c.refrigerated ? '❄️ ห้องเย็น ' : ''}{c.license_plate ? `· ทะเบียน ${c.license_plate}` : ''} · ⭐ {c.rating_avg || 0} ({c.rating_count || 0}) · งานสำเร็จ {c.jobs_done || 0}</div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                      <select value={c.status} onChange={(e) => carrierStatus(c.id, e.target.value)} style={{ ...inputSt, width: 'auto', padding: '5px 10px', fontSize: 12, color: sc }}>
+                        {['pending', 'verified', 'approved', 'rejected', 'suspended'].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <button onClick={() => carrierAvail(c.id, !c.available)} style={miniBtn(c.available ? '#10b981' : '#64748b')}>{c.available ? '🟢 พร้อมรับงาน' : '⚪ พักรับงาน'}</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Jobs */}
+            <div style={glass}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>📦 งานจัดส่ง {jobs ? `(${jobs.length})` : ''}</div>
+              {!jobs && <div style={{ color: '#64748b', fontSize: 13 }}>{T.loading}</div>}
+              {jobs && jobs.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีงานจัดส่ง</div>}
+              {jobs && jobs.map((j) => {
+                const car = (cars || []).find((c) => c.id === j.carrier_id);
+                return (
+                  <div key={j.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                    <div style={{ flex: 1, minWidth: 220 }}>
+                      <div style={{ fontWeight: 700 }}>{j.pickup_zone || '-'} → {j.dropoff_zone || '-'} <span style={{ color: '#10b981' }}>฿{Number(j.quote_price).toLocaleString('th-TH')}</span> <span style={{ fontSize: 11, color: '#475569' }}>· {j.vehicle}{j.express ? ' ⚡' : ''}</span></div>
+                      <div style={{ color: '#94a3b8', fontSize: 12 }}>📤 {j.pickup_address}</div>
+                      <div style={{ color: '#94a3b8', fontSize: 12 }}>📥 {j.dropoff_address} · {j.dropoff_contact}</div>
+                      <div style={{ color: '#64748b', fontSize: 11 }}>{j.parcel_desc ? `📦 ${j.parcel_desc} · ` : ''}{j.weight_kg ? `${j.weight_kg} กก. · ` : ''}{j.distance_km ? `${j.distance_km} กม. · ` : ''}{j.cod_amount ? `COD ฿${j.cod_amount} · ` : ''}{j.tracking_no ? `🔖 ${j.tracking_no}` : ''}</div>
+                      <div style={{ color: car ? '#a5b4fc' : '#f59e0b', fontSize: 12 }}>{car ? `🚚 ${car.business_name || car.contact_name}` : '⏳ ยังไม่จ่ายงาน'}{j.received_by ? ` · ✍️ ${j.received_by}` : ''}{j.drop_off ? ` · 📦 ${j.drop_off}` : ''}{j.rating ? ` · ⭐ ${j.rating}` : ''}</div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+                      <select value={j.status} onChange={(e) => jobStatus(j.id, e.target.value)} style={{ ...inputSt, width: 'auto', padding: '5px 10px', fontSize: 12 }}>
+                        {['requested', 'quoted', 'assigned', 'accepted', 'picked_up', 'in_transit', 'delivered', 'failed', 'cancelled'].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => assignJob(j.id)} style={miniBtn('#6366f1')}>🚚 จ่ายงาน</button>
+                        {j.status !== 'delivered' && <button onClick={() => jobDeliver(j.id)} style={miniBtn('#10b981')}>✅ ส่งถึง</button>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {logiSum && Object.keys(logiSum.byZone || {}).length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 12 }}>
+                <div style={glass}>
+                  <div style={{ fontWeight: 700, marginBottom: 10 }}>📍 ผู้จัดส่งตามโซน</div>
+                  {Object.entries(logiSum.byZone).sort((a, b) => b[1] - a[1]).map(([z, n]) => (
+                    <div key={z} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0', color: '#cbd5e1' }}><span>{z}</span><span style={{ fontWeight: 700 }}>{n}</span></div>
+                  ))}
+                </div>
+                <div style={glass}>
+                  <div style={{ fontWeight: 700, marginBottom: 10 }}>🚗 ตามยานพาหนะ</div>
+                  {Object.entries(logiSum.byVehicle).sort((a, b) => b[1] - a[1]).map(([v, n]) => (
+                    <div key={v} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0', color: '#cbd5e1' }}><span>{v}</span><span style={{ fontWeight: 700 }}>{n}</span></div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* TAB: LEADS / CUSTOMERS */}
         {tab === 'leads' && (() => {
