@@ -1,0 +1,125 @@
+# ── Deploy Mirror — ช่องทางสำรอง (ไม่พึ่ง Vercel) ───────────────────────────────
+# Build frontend → เก็บเป็น artifact เสมอ (มี dist พร้อม deploy แม้ Vercel ล่ม)
+# แล้ว publish ไป Cloudflare Pages / Netlify / GitHub Pages "เฉพาะเมื่อ" ตั้ง secrets ไว้
+# (ถ้าไม่ตั้ง secrets → step นั้นถูกข้าม ไม่ทำให้ workflow ล้ม)
+#
+# Secrets ที่ต้องใส่ใน repo Settings → Secrets and variables → Actions:
+#   Cloudflare : CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID  (+ var CF_PAGES_PROJECT)
+#   Netlify    : NETLIFY_AUTH_TOKEN, NETLIFY_SITE_ID
+#   GitHub Pages: เปิด Settings → Pages → Source = GitHub Actions (ใช้ GITHUB_TOKEN อัตโนมัติ)
+#   ปลายทาง API: var VITE_API_URL (default https://www.openthai-ai.com)
+
+name: 🌐 Deploy Mirror (backup channels)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  # ── Build ครั้งเดียว ใช้ artifact ร่วมกัน ─────────────────────────────────────
+  build:
+    name: 🏗️ Build frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Install + build
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://www.openthai-ai.com' }}
+        run: |
+          npm ci
+          npm run build
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 14
+
+  # ── Cloudflare Pages ────────────────────────────────────────────────────────
+  cloudflare:
+    name: ☁️ Cloudflare Pages
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+      - name: Check secrets
+        id: gate
+        run: |
+          if [ -n "${{ secrets.CLOUDFLARE_API_TOKEN }}" ] && [ -n "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"; echo "⏭️ ข้าม Cloudflare — ยังไม่ตั้ง secrets"
+          fi
+      - name: Publish to Cloudflare Pages
+        if: steps.gate.outputs.ok == 'true'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=${{ vars.CF_PAGES_PROJECT || 'openthai-ai' }}
+
+  # ── Netlify ─────────────────────────────────────────────────────────────────
+  netlify:
+    name: 🔷 Netlify
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+      - name: Check secrets
+        id: gate
+        run: |
+          if [ -n "${{ secrets.NETLIFY_AUTH_TOKEN }}" ] && [ -n "${{ secrets.NETLIFY_SITE_ID }}" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"; echo "⏭️ ข้าม Netlify — ยังไม่ตั้ง secrets"
+          fi
+      - name: Publish to Netlify
+        if: steps.gate.outputs.ok == 'true'
+        run: npx --yes netlify-cli@17 deploy --dir=dist --prod --site="${{ secrets.NETLIFY_SITE_ID }}" --auth="${{ secrets.NETLIFY_AUTH_TOKEN }}"
+
+  # ── GitHub Pages (ฟรีถาวร — ไม่ต้องบัญชีนอก) ─────────────────────────────────
+  github-pages:
+    name: 📄 GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    if: vars.ENABLE_GH_PAGES == 'true'
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Build with Pages base path
+        working-directory: frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://www.openthai-ai.com' }}
+          VITE_BASE: ${{ vars.GH_PAGES_BASE || '/openthai-ai/' }}
+        run: |
+          npm ci
+          npm run build
+          cp dist/index.html dist/404.html   # SPA fallback บน GitHub Pages
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+      - name: Deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
