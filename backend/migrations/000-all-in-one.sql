@@ -27,6 +27,7 @@ create table if not exists public.producers (
   description  text,
   product_name text,
   price        numeric,
+  stock        integer,
   status       text not null default 'pending'
                     check (status in ('pending','approved','rejected','suspended')),
   created_at   timestamptz not null default now()
@@ -44,6 +45,14 @@ create table if not exists public.orders (
   qty            integer not null default 1,
   amount         numeric,
   note           text,
+  address        text,
+  tracking_no    text,
+  carrier        text,
+  delivered_at   timestamptz,
+  received_by    text,
+  drop_off       text,
+  proof_note     text,
+  history        jsonb       not null default '[]'::jsonb,
   status         text not null default 'new'
                       check (status in ('new','contacted','confirmed','shipped','cancelled')),
   created_at     timestamptz not null default now()
