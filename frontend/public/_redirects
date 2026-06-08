@@ -1,0 +1,4 @@
+# SPA fallback — ทุก path ที่ไม่ใช่ไฟล์จริง ให้เสิร์ฟ index.html (client-side routing)
+# อ่านได้ทั้ง Cloudflare Pages และ Netlify
+# หมายเหตุ: เรียก backend ผ่าน VITE_API_URL (cross-origin, backend เปิด CORS แล้ว) ไม่ต้อง proxy /api ที่นี่
+/*    /index.html    200

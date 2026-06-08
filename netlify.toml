@@ -1,0 +1,19 @@
+# ── Netlify — มิเรอร์ frontend สำรอง ────────────────────────────────────────────
+# ต่อใช้: Netlify → Add new site → Import repo นี้ → ค่าด้านล่างถูกอ่านอัตโนมัติ
+# ตั้ง env VITE_API_URL ให้ชี้ backend (ค่า default = prod บน Vercel)
+
+[build]
+  base = "frontend"
+  command = "npm install && npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # ปลายทาง backend (เปลี่ยนเป็น Render URL ได้ถ้าย้าย API)
+  VITE_API_URL = "https://www.openthai-ai.com"
+
+# SPA fallback (สำรองจาก public/_redirects)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

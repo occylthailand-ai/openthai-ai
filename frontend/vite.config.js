@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // base path — '/' ปกติ (Vercel/Cloudflare/Netlify/custom domain);
+  // GitHub Pages แบบ project ตั้ง VITE_BASE=/openthai-ai/ ตอน build
+  base: process.env.VITE_BASE || '/',
   build: {
     target: 'es2019',          // baseline ที่เบราว์เซอร์ทั่วโลกรองรับ → บันเดิลเล็กลง
     cssCodeSplit: true,        // แยก CSS ตามหน้า โหลดเฉพาะที่ใช้
