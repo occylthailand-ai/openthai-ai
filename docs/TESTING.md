@@ -38,6 +38,13 @@
 ## หมายเหตุความปลอดภัย (fail-closed ใน production)
 
 ในโหมด production (`NODE_ENV=production` หรือบน Vercel) ระบบจะ **ไม่** ใช้ค่า default สาธารณะ:
-ต้องตั้ง `ADMIN_USERS`/`ADMIN_PASSWORD_PLAIN`, `ADMIN_KEY`, `N8N_WEBHOOK_SECRET`,
-`OMISE_WEBHOOK_SECRET`, `GOOGLE_ALLOWED_EMAILS`, `CORS_ORIGINS` (ดู `backend/.env.example`)
-มิฉะนั้นช่องทางนั้น ๆ จะถูกปิดไว้แทนที่จะเปิดโล่ง
+ต้องตั้ง `ADMIN_USERS`/`ADMIN_PASSWORD_PLAIN`, `ADMIN_KEY`, `JWT_SECRET`, `N8N_WEBHOOK_SECRET`,
+`OMISE_WEBHOOK_SECRET`, `LINE_CHANNEL_SECRET`, `GOOGLE_ALLOWED_EMAILS`, `CORS_ORIGINS`
+(ดู `backend/.env.example`) มิฉะนั้นช่องทางนั้น ๆ จะถูกปิดไว้แทนที่จะเปิดโล่ง
+
+## Durable storage (กันข้อมูลหายบน serverless)
+
+บน Vercel ไฟล์ `/tmp` หายเมื่อ cold start — `backend/kv-store.js` จึงมิเรอร์ ledger สำคัญ
+(`payments`, `entitlements`) ไปเก็บถาวรใน Supabase ตาราง `kv_store` และดึงกลับ (hydrate)
+ตอน boot เมื่อไฟล์ว่าง เปิดใช้โดยตั้ง `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` แล้วรัน
+`backend/migrations/005_kv_store.sql` (ไม่ตั้ง = ใช้ไฟล์ตามเดิม + เตือนตอน boot บน Vercel)

@@ -29,6 +29,7 @@ import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
 import { createInventory } from './inventory.js';
+import { createKVStore } from './kv-store.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -64,6 +65,11 @@ const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
 const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
+// Durable KV — มิเรอร์ ledger สำคัญ (payments/entitlements) ไป Supabase กัน /tmp หายบน serverless
+const kv = createKVStore();
+if (IS_VERCEL && !kv.useSB) {
+  console.warn('[kv] ⚠️  บน Vercel แต่ไม่ได้ตั้ง SUPABASE_URL/SUPABASE_SERVICE_KEY — payments/entitlements จะหายเมื่อ cold start! ดู backend/migrations/005_kv_store.sql');
+}
 
 import {
   signToken, verifyToken, requireAuth,
@@ -2614,7 +2620,9 @@ function loadPayments() {
   return [];
 }
 function savePayments(data) {
-  try { writeFileSync(PAYMENTS_FILE, JSON.stringify(data.slice(0, 500), null, 2), 'utf8'); } catch (_) {}
+  const trimmed = data.slice(0, 500);
+  try { writeFileSync(PAYMENTS_FILE, JSON.stringify(trimmed, null, 2), 'utf8'); } catch (_) {}
+  kv.push('payments', trimmed);   // มิเรอร์ไป Supabase (best-effort)
 }
 const payments = loadPayments();
 
@@ -2626,8 +2634,31 @@ function loadEntitlements() {
 }
 function saveEntitlements(data) {
   try { writeFileSync(ENTITLEMENTS_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (_) {}
+  kv.push('entitlements', data);   // มิเรอร์ไป Supabase (best-effort)
 }
 const entitlements = loadEntitlements();
+
+// ── Cold-start hydration ──────────────────────────────────────────────────────
+// ถ้าไฟล์ local ว่าง (เช่น /tmp ใหม่บน serverless) แต่มีข้อมูลใน Supabase → ดึงกลับ
+// มาเติมในหน่วยความจำ เพื่อไม่ให้ payments/entitlements หายหลัง cold start
+if (kv.useSB) {
+  (async () => {
+    try {
+      const [p, e] = await Promise.all([kv.pull('payments'), kv.pull('entitlements')]);
+      if (Array.isArray(p) && p.length && payments.length === 0) {
+        payments.push(...p);
+        try { writeFileSync(PAYMENTS_FILE, JSON.stringify(payments, null, 2), 'utf8'); } catch (_) {}
+      }
+      if (e && typeof e === 'object' && Object.keys(entitlements).length === 0) {
+        Object.assign(entitlements, e);
+        try { writeFileSync(ENTITLEMENTS_FILE, JSON.stringify(entitlements, null, 2), 'utf8'); } catch (_) {}
+      }
+      addLog('info', 'KV', `hydrated payments=${payments.length} entitlements=${Object.keys(entitlements).length}`);
+    } catch (err) {
+      console.warn('[kv] hydrate', err.message);
+    }
+  })();
+}
 
 // เปิดสิทธิ์ใช้งานแผนให้ user (เรียกเมื่อชำระเงินสำเร็จ)
 function grantEntitlement(email, plan, { source = 'payment', subscription_id = null } = {}) {
