@@ -2,7 +2,11 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import { LanguageProvider } from './i18n'
+import { initDisplayAcceleration } from './perf'
 import './index.css'
+
+// เร่งการแสดงผล: ตรวจอุปกรณ์/เครือข่าย แล้วปรับโหมดเรนเดอร์ก่อนวาดเฟรมแรก
+initDisplayAcceleration()
 
 // เก็บ affiliate ref จาก ?ref= เพื่อ attribute ยอดขายให้แพลตฟอร์ม/affiliate ที่แนะนำ
 try { const r = new URLSearchParams(window.location.search).get('ref'); if (r) localStorage.setItem('otai_ref', r.slice(0, 20)); } catch { /* ignore */ }

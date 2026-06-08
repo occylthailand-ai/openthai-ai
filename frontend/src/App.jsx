@@ -1,51 +1,56 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import TikTokFeedPage from './pages/TikTokFeedPage';
-import FacebookFeedPage from './pages/FacebookFeedPage';
-import AIGeneratorPage from './pages/AIGeneratorPage';
-import AIToolsHub from './pages/AIToolsHub';
-import AffiliatePage from './pages/AffiliatePage';
-import AffiliateDashboard from './pages/AffiliateDashboard';
+// Landing เป็นหน้าแรกสุด → โหลดตรง (eager) เพื่อ first paint ทันที, ที่เหลือ lazy-load แยก chunk
 import LandingPage from './pages/LandingPage';
-import PricingPage from './pages/PricingPage';
-import ProducerJoinPage from './pages/ProducerJoinPage';
-import CatalogPage from './pages/CatalogPage';
-import ProducerDirectoryPage from './pages/ProducerDirectoryPage';
-import TrackOrderPage from './pages/TrackOrderPage';
-import StorePage from './pages/StorePage';
-import CarrierJoinPage from './pages/CarrierJoinPage';
-import DeliveryPage from './pages/DeliveryPage';
-import CarrierDirectoryPage from './pages/CarrierDirectoryPage';
-import AdminPage from './pages/AdminPage';
-import NotFoundPage from './pages/NotFoundPage';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsPage from './pages/TermsPage';
-import ContactPage from './pages/ContactPage';
-import BrandMemoryPage from './pages/BrandMemoryPage';
-import AgentPage from './pages/AgentPage';
-import TrendingPage from './pages/TrendingPage';
-import ContentCalendarPage from './pages/ContentCalendarPage';
 import PDPABanner from './components/PDPABanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
 import ScrollToTop from './components/ScrollToTop';
+import RouteFallback from './components/RouteFallback';
 import { apiUrl } from './apiBase';
-import VoiceCommander from './components/VoiceCommander';
-import VoiceCommandPage from './pages/VoiceCommandPage';
-import VideoGeneratorPage from './pages/VideoGeneratorPage';
-import PaymentPage from './pages/PaymentPage';
-import CorporateDashboard from './pages/corporate/CorporateDashboard';
-import InvestorRelationsPage from './pages/corporate/InvestorRelationsPage';
-import CompliancePage from './pages/corporate/CompliancePage';
-import ESGPage from './pages/corporate/ESGPage';
-import HRPage from './pages/corporate/HRPage';
-import GlobalOpsPage from './pages/corporate/GlobalOpsPage';
-import FinancePage from './pages/corporate/FinancePage';
-import BoardPage from './pages/corporate/BoardPage';
-import PRCommsPage from './pages/corporate/PRCommsPage';
-import CommandCenterPage from './pages/corporate/CommandCenterPage';
+import { prefetchWhenIdle } from './perf';
+
+// ── Lazy routes — แต่ละหน้าแยกเป็น chunk ของตัวเอง โหลดเมื่อเข้าหน้านั้นเท่านั้น ──────
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const TikTokFeedPage = lazy(() => import('./pages/TikTokFeedPage'));
+const FacebookFeedPage = lazy(() => import('./pages/FacebookFeedPage'));
+const AIGeneratorPage = lazy(() => import('./pages/AIGeneratorPage'));
+const AIToolsHub = lazy(() => import('./pages/AIToolsHub'));
+const AffiliatePage = lazy(() => import('./pages/AffiliatePage'));
+const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
+const ProducerJoinPage = lazy(() => import('./pages/ProducerJoinPage'));
+const CatalogPage = lazy(() => import('./pages/CatalogPage'));
+const ProducerDirectoryPage = lazy(() => import('./pages/ProducerDirectoryPage'));
+const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'));
+const StorePage = lazy(() => import('./pages/StorePage'));
+const CarrierJoinPage = lazy(() => import('./pages/CarrierJoinPage'));
+const DeliveryPage = lazy(() => import('./pages/DeliveryPage'));
+const CarrierDirectoryPage = lazy(() => import('./pages/CarrierDirectoryPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const BrandMemoryPage = lazy(() => import('./pages/BrandMemoryPage'));
+const AgentPage = lazy(() => import('./pages/AgentPage'));
+const TrendingPage = lazy(() => import('./pages/TrendingPage'));
+const ContentCalendarPage = lazy(() => import('./pages/ContentCalendarPage'));
+const VoiceCommander = lazy(() => import('./components/VoiceCommander'));
+const VoiceCommandPage = lazy(() => import('./pages/VoiceCommandPage'));
+const VideoGeneratorPage = lazy(() => import('./pages/VideoGeneratorPage'));
+const PaymentPage = lazy(() => import('./pages/PaymentPage'));
+const CorporateDashboard = lazy(() => import('./pages/corporate/CorporateDashboard'));
+const InvestorRelationsPage = lazy(() => import('./pages/corporate/InvestorRelationsPage'));
+const CompliancePage = lazy(() => import('./pages/corporate/CompliancePage'));
+const ESGPage = lazy(() => import('./pages/corporate/ESGPage'));
+const HRPage = lazy(() => import('./pages/corporate/HRPage'));
+const GlobalOpsPage = lazy(() => import('./pages/corporate/GlobalOpsPage'));
+const FinancePage = lazy(() => import('./pages/corporate/FinancePage'));
+const BoardPage = lazy(() => import('./pages/corporate/BoardPage'));
+const PRCommsPage = lazy(() => import('./pages/corporate/PRCommsPage'));
+const CommandCenterPage = lazy(() => import('./pages/corporate/CommandCenterPage'));
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -70,6 +75,14 @@ function App() {
     localStorage.removeItem('auth_token');
   };
 
+  // หลัง first paint + ตอนเบราว์เซอร์ว่าง: ดึงโค้ดหน้าที่ผู้ใช้น่าจะไปต่อไว้ล่วงหน้า
+  // (เฉพาะเน็ตดี/ไม่ Save-Data) → กดแล้วเปลี่ยนหน้าแทบจะทันที
+  useEffect(() => {
+    prefetchWhenIdle(isAuthenticated
+      ? [() => import('./pages/AIGeneratorPage'), () => import('./pages/DashboardPage'), () => import('./pages/AIToolsHub')]
+      : [() => import('./pages/LoginPage'), () => import('./pages/PricingPage'), () => import('./pages/StorePage')]);
+  }, [isAuthenticated]);
+
   // รอตรวจ token ก่อน render เพื่อป้องกัน flash
   if (!authChecked) return null;
 
@@ -78,6 +91,7 @@ function App() {
       <ToastProvider>
         <Router>
           <ScrollToTop />
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route
               path="/login"
@@ -140,9 +154,10 @@ function App() {
             <Route path="/corporate/command"     element={isAuthenticated ? <CommandCenterPage />     : <Navigate to="/login" />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          </Suspense>
           <PDPABanner />
           {/* Voice Commander Widget — ปรากฏทุกหน้าหลัง login */}
-          {isAuthenticated && <VoiceCommander mode="widget" />}
+          {isAuthenticated && <Suspense fallback={null}><VoiceCommander mode="widget" /></Suspense>}
         </Router>
       </ToastProvider>
     </ErrorBoundary>
