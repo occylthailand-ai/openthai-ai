@@ -1,7 +1,12 @@
 node_modules
 .env
+.used-recovery-codes.json
 
 # runtime data ledgers (not committed)
+data/invite_program.json
+data/affiliate_conversions.json
+data/mythos_heartbeat.json
+data/pr_content_calendar.json
 data/credits.json
 data/entitlements.json
 data/payments.json

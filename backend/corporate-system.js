@@ -39,7 +39,7 @@ export function createCorporateSystem(writeDir) {
   return {
     // ── Board Members ───────────────────────────────────────────────────────
     getBoard: () => load('corp_board.json', [
-      { id: 'b1', name: 'Zuejai (ซึ้ใจ)', title: 'Chairman & CEO', titleT: 'ประธานกรรมการและซีอีโอ', type: 'executive', tenure: '2024-Present', nationality: 'Thai', expertise: ['AI', 'Strategy', 'Technology'], independent: false },
+      { id: 'b1', name: 'Zuejai Saeyang (ซื่อใจ แซ่หย่าง)', title: 'Chairman & CEO', titleT: 'ประธานกรรมการและซีอีโอ', type: 'executive', tenure: '2024-Present', nationality: 'Thai', expertise: ['AI', 'Strategy', 'Technology'], independent: false },
       { id: 'b2', name: 'Board Member 2',  title: 'Independent Director', titleT: 'กรรมการอิสระ', type: 'independent', tenure: '2024-Present', nationality: 'Thai', expertise: ['Finance', 'Audit'], independent: true },
       { id: 'b3', name: 'Board Member 3',  title: 'Independent Director', titleT: 'กรรมการอิสระ', type: 'independent', tenure: '2024-Present', nationality: 'Thai', expertise: ['Legal', 'Compliance'], independent: true },
     ]),

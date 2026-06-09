@@ -4,8 +4,12 @@ import App from './App.jsx'
 import { LanguageProvider } from './i18n'
 import './index.css'
 
-// เก็บ affiliate ref จาก ?ref= เพื่อ attribute ยอดขายให้แพลตฟอร์ม/affiliate ที่แนะนำ
-try { const r = new URLSearchParams(window.location.search).get('ref'); if (r) localStorage.setItem('otai_ref', r.slice(0, 20)); } catch { /* ignore */ }
+// เก็บ affiliate ref (?ref=) + invite code (?invite=) เพื่อ attribute ยอดขาย/ให้รางวัลผู้ชวน
+try {
+  const q = new URLSearchParams(window.location.search);
+  const r = q.get('ref'); if (r) localStorage.setItem('otai_ref', r.slice(0, 20));
+  const iv = q.get('invite'); if (iv) localStorage.setItem('otai_invite', iv.slice(0, 12));
+} catch { /* ignore */ }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
