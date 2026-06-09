@@ -31,6 +31,7 @@ import { createOrders } from './orders.js';
 import { createInventory } from './inventory.js';
 import { createKVStore } from './kv-store.js';
 import { createMythos } from './mythos.js';
+import { createPRAutopilot } from './pr-autopilot.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -129,6 +130,23 @@ const mythos = createMythos({
   readFile:     () => { try { if (existsSync(MYTHOS_HB_FILE)) return JSON.parse(readFileSync(MYTHOS_HB_FILE, 'utf8')); } catch (_) {} return null; },
 });
 app.use(mythos.router);
+
+// ─── PR Autopilot — ผลิตสื่อประชาสัมพันธ์อัตโนมัติ วันเว้นวัน (จากอัปเดตแพลตฟอร์ม) ─
+const PR_CAL_FILE = join(WRITE_DATA_DIR, 'pr_content_calendar.json');
+const prAutopilot = createPRAutopilot({
+  express,
+  generate:     (form) => smartGenerate(form),
+  listProducts: () => inventory.list(),
+  getReleases:  () => pr.getPressReleases(),
+  getTrending:  async () => { try { const d = trendCache.data; return (d && (d.hashtags || d.trends || d.tags)) || []; } catch (_) { return []; } },
+  version:      '2.0.0',
+  kvPush:       (k, v) => kv.push(k, v),
+  writeFile:    (data) => { try { writeFileSync(PR_CAL_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (_) {} },
+  readFile:     () => { try { if (existsSync(PR_CAL_FILE)) return JSON.parse(readFileSync(PR_CAL_FILE, 'utf8')); } catch (_) {} return null; },
+  adminCheck:   (req) => checkAdminKey(req.headers['x-admin-key'] || req.query.key),
+  addLog:       (lvl, src, msg) => addLog(lvl, src, msg),
+});
+app.use(prAutopilot.router);
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({
@@ -3382,6 +3400,8 @@ async function startServer() {
 
   // Mythos heartbeat — เดินจริงทุก 15 นาทีขณะ process ทำงาน (unref → ไม่ขวาง exit)
   mythos.start();
+  // PR Autopilot — ผลิตสื่ออัตโนมัติวันเว้นวัน (local; บน Vercel ใช้ Vercel Cron เรียก /run)
+  if (!IS_VERCEL) prAutopilot.start(cron);
 
   // แจ้งเตือนถ้ายังไม่มี Recovery Codes
   // ⚠️ ไม่พิมพ์ codes ลง log ใน production (log อาจถูกเก็บ/เห็นโดยบุคคลที่สาม)
