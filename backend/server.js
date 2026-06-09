@@ -55,7 +55,8 @@ function adminDenyMessage() {
 // บน Vercel: ไฟล์ static อ่านได้จาก repo, ไฟล์ writable ต้องใช้ /tmp
 // Local: ทุกอย่างอยู่ใน backend/data/
 const STATIC_DATA_DIR = join(__dirname, 'data');
-const WRITE_DATA_DIR  = IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR;
+// OPENTHAI_DATA_DIR override → ใช้ชี้ที่เก็บข้อมูล (เช่น เทส/persistent volume) ได้
+const WRITE_DATA_DIR  = process.env.OPENTHAI_DATA_DIR || (IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR);
 // ── Infrastructure Layer — Vector Memory · Webhooks · Multi-tenant ────────────
 // Initialized after WRITE_DATA_DIR is known
 const memory    = createMemorySystem(WRITE_DATA_DIR, () => gemini ? { _googleAI: { getGenerativeModel: (o) => new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel(o) } } : null);
@@ -464,13 +465,15 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
     if ((p.stock || 0) < qty) return res.status(409).json({ success: false, error: `สต๊อกไม่พอ (เหลือ ${p.stock})` });
     const amount = (p.price || 0) * qty;
 
-    // สร้างออเดอร์ (ติดตามได้ในระบบเดียวกับ marketplace)
-    const ord = await orders.place({ producer_email: 'store@openthai-ai.com', product_name: p.name, price: p.price, qty, customer_name, contact, address, note: `ร้าน Openthai · SKU ${p.sku}` });
+    // สร้างออเดอร์ (ติดตามได้ในระบบเดียวกับ marketplace) — เก็บ ref ของ affiliate ไว้บนออเดอร์
+    const ord = await orders.place({ producer_email: 'store@openthai-ai.com', product_name: p.name, price: p.price, qty, customer_name, contact, address, ref: ref || '', note: `ร้าน Openthai · SKU ${p.sku}` });
     const orderId = ord.id;
 
     const finalizePaid = async (charge) => {
       await inventory.adjust(product_id, -qty, 'sale', `ขายผ่านร้าน (ออเดอร์ ${orderId})`, orderId, channel);
       await orders.setStatus(orderId, 'confirmed', 'ชำระเงินสำเร็จ');
+      // 🎯 attribute การขายที่ "จ่ายสำเร็จ" → affiliate (ข้อมูลลูกค้าจริงจาก affiliate)
+      if (ref) { try { await recordConversion(String(ref), { id: orderId, amount, product_name: p.name, customer_name, contact }); } catch (e) { console.warn('[affiliate] conversion:', e.message); } }
       return res.json({ success: true, paid: true, order_id: orderId, amount, stock_left: Math.max(0, (p.stock || 0) - qty), ...(charge || {}) });
     };
 
@@ -743,6 +746,51 @@ function saveAffiliates(data) {
   } catch (e) { console.error('Save affiliates error:', e.message); }
 }
 
+// ─── Affiliate Conversions — attribute การขายจริง → affiliate ที่พาลูกค้ามา ────
+const AFF_CONV_FILE = join(WRITE_DATA_DIR, 'affiliate_conversions.json');
+function loadConversions() {
+  try { if (existsSync(AFF_CONV_FILE)) return JSON.parse(readFileSync(AFF_CONV_FILE, 'utf8')); } catch (_) {}
+  return [];
+}
+function saveConversions(data) {
+  try {
+    const dir = AFF_CONV_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(AFF_CONV_FILE, JSON.stringify(data.slice(0, 2000), null, 2), 'utf8');
+  } catch (e) { console.error('Save conversions error:', e.message); }
+}
+const conversions = loadConversions();
+
+// บันทึก conversion เมื่อมี order ที่มาจาก ref ของ affiliate (เรียกจาก onNewOrder)
+function maskContact(c) { const s = String(c || ''); return s.length > 4 ? s.slice(0, 2) + '***' + s.slice(-2) : '***'; }
+async function recordConversion(refCode, order) {
+  const aff = affiliates.find((a) => a.ref_code === refCode);
+  if (!aff) { addLog('warn', 'Affiliate', `conversion ref ไม่พบ: ${refCode}`); return null; }
+  if (conversions.find((c) => c.order_id === order.id)) return null; // กันซ้ำ
+  const amount = Number(order.amount) || 0;
+  const commission = Math.round(amount * (aff.commission_rate || 0.20) * 100) / 100;
+  const isFirst = conversions.length === 0;
+  const conv = {
+    id: `conv_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    ref_code: refCode, affiliate_name: aff.name, affiliate_email: aff.email,
+    order_id: order.id, product_name: order.product_name,
+    customer_name: order.customer_name, customer_contact_masked: maskContact(order.contact),
+    amount, commission, at: new Date().toISOString(),
+    first_ever: isFirst,
+  };
+  conversions.unshift(conv);
+  saveConversions(conversions);
+  // อัปเดตยอดสะสมของ affiliate
+  aff.total_sales = (aff.total_sales || 0) + 1;
+  aff.total_revenue = (aff.total_revenue || 0) + amount;
+  aff.total_earned = Math.round(((aff.total_earned || 0) + commission) * 100) / 100;
+  saveAffiliates(affiliates);
+  try { await kv.push('affiliate_conversions', conversions.slice(0, 500)); } catch (_) {}
+  webhooks.dispatch('affiliate.conversion', { ref_code: refCode, amount, commission, first_ever: isFirst, order_id: order.id });
+  addLog('info', 'Affiliate', `${isFirst ? '🎉 FIRST ' : ''}conversion: ${refCode} +฿${commission} (order ${order.id})`);
+  return conv;
+}
+
 // ─── POST /api/affiliate/apply — รับสมัคร Affiliate ──────────────────────────
 const affiliates = loadAffiliates(); // persistent JSON file store
 
@@ -811,6 +859,22 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
       total_earned: aff.total_earned,
       joined_at: aff.joined_at,
     },
+  });
+});
+
+// ─── GET /api/affiliate/conversions — admin: การขายจริงที่ attribute ให้ affiliate ─
+app.get('/api/affiliate/conversions', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const total_revenue = conversions.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const total_commission = Math.round(conversions.reduce((s, c) => s + (Number(c.commission) || 0), 0) * 100) / 100;
+  const first = conversions.length ? conversions[conversions.length - 1] : null; // unshift → ตัวแรกสุดอยู่ท้าย
+  res.json({
+    success: true,
+    count: conversions.length,
+    total_revenue, total_commission,
+    first_conversion: first,            // 🎯 "ลูกค้าคนแรกจาก affiliate" — ใช้ทำ PR case study
+    data: conversions.slice(0, 100),
   });
 });
 

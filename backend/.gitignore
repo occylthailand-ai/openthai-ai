@@ -3,6 +3,7 @@ node_modules
 .used-recovery-codes.json
 
 # runtime data ledgers (not committed)
+data/affiliate_conversions.json
 data/mythos_heartbeat.json
 data/pr_content_calendar.json
 data/credits.json

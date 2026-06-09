@@ -62,6 +62,7 @@ export function createOrders(dataDir, opts = {}) {
       customer_name: clip(input.customer_name, 80),
       contact: clip(input.contact, 120),
       address: clip(input.address, 400),
+      ref: clip(input.ref, 40),   // affiliate ref_code ที่พาลูกค้ามา (จาก ?ref=CODE) — ใช้ attribute การขาย
       qty,
       amount: price ? price * qty : null,
       note: clip(input.note, 400),
