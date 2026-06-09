@@ -32,6 +32,7 @@ import { createInventory } from './inventory.js';
 import { createKVStore } from './kv-store.js';
 import { createMythos } from './mythos.js';
 import { createPRAutopilot } from './pr-autopilot.js';
+import { createInvite } from './invite.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -148,6 +149,19 @@ const prAutopilot = createPRAutopilot({
   addLog:       (lvl, src, msg) => addLog(lvl, src, msg),
 });
 app.use(prAutopilot.router);
+
+// ─── Invite Program — ลูกค้าชวนลูกค้า → ผู้ชวนได้เครดิตอัตโนมัติเมื่อเพื่อนซื้อสำเร็จ ─
+const INVITE_FILE = join(WRITE_DATA_DIR, 'invite_program.json');
+const invite = createInvite({
+  express,
+  grantCredits: (id, amount, source) => credits.grant(id, amount, source),
+  baseUrl: FRONTEND_URL,
+  kvPush: (k, v) => kv.push(k, v),
+  writeFile: (data) => { try { writeFileSync(INVITE_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (_) {} },
+  readFile: () => { try { if (existsSync(INVITE_FILE)) return JSON.parse(readFileSync(INVITE_FILE, 'utf8')); } catch (_) {} return null; },
+  addLog: (lvl, src, msg) => addLog(lvl, src, msg),
+});
+app.use(invite.router);
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({
@@ -456,7 +470,7 @@ app.get('/api/inventory/admin/sales-report', async (req, res) => { if (!invAuth(
 const shopLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 12, message: { success: false, error: 'สั่งซื้อบ่อยเกินไป' } });
 app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
   try {
-    const { product_id, qty: rawQty, customer_name, contact, address, method = 'card', token, ref, platform } = req.body || {};
+    const { product_id, qty: rawQty, customer_name, contact, address, method = 'card', token, ref, invite: inviteCode, platform } = req.body || {};
     const channel = (ref ? `ref:${String(ref).slice(0, 20)}` : (platform ? String(platform).slice(0, 30) : 'store'));
     const p = await inventory.get(product_id);
     if (!p || p.status !== 'active') return res.status(404).json({ success: false, error: 'ไม่พบสินค้า' });
@@ -474,6 +488,8 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
       await orders.setStatus(orderId, 'confirmed', 'ชำระเงินสำเร็จ');
       // 🎯 attribute การขายที่ "จ่ายสำเร็จ" → affiliate (ข้อมูลลูกค้าจริงจาก affiliate)
       if (ref) { try { await recordConversion(String(ref), { id: orderId, amount, product_name: p.name, customer_name, contact }); } catch (e) { console.warn('[affiliate] conversion:', e.message); } }
+      // 🎁 โปรแกรมเชิญชวน: เพื่อนที่ถูกเชิญซื้อสำเร็จ → ผู้ชวนได้เครดิตอัตโนมัติ
+      if (inviteCode) { try { await invite.reward(String(inviteCode), { order_id: orderId, amount, customer_name }); } catch (e) { console.warn('[invite] reward:', e.message); } }
       return res.json({ success: true, paid: true, order_id: orderId, amount, stock_left: Math.max(0, (p.stock || 0) - qty), ...(charge || {}) });
     };
 
