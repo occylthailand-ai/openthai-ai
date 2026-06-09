@@ -30,6 +30,7 @@ import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
 import { createInventory } from './inventory.js';
 import { createKVStore } from './kv-store.js';
+import { createMythos } from './mythos.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -110,6 +111,24 @@ app.use(producers.router);
 app.use(orders.router);
 // Inventory / first-party shop routes — /api/shop/products
 app.use(inventory.router);
+
+// ─── Mythos — Real Orchestration Layer (เทพ → ระบบจริง, สถานะสด, heartbeat) ───
+const MYTHOS_HB_FILE = join(WRITE_DATA_DIR, 'mythos_heartbeat.json');
+const mythos = createMythos({
+  express,
+  aiActive:     () => (anthropic ? 'claude' : gemini ? 'gemini' : 'mock'),
+  persistence:  () => (kv.useSB ? 'supabase' : 'file'),
+  paymentsLive: () => !!process.env.OMISE_SECRET_KEY,
+  webhooksCount: () => webhooks.list().length,
+  agentsCount:  () => (Array.isArray(agents) ? agents.length : 0),
+  schedulerOn:  () => !IS_VERCEL,   // node-cron รัน local; บน Vercel ใช้ health-watch.yml (external)
+  isProd:       () => IS_PROD,
+  prodHardened: () => (!IS_PROD || (!!process.env.ADMIN_KEY && !!process.env.JWT_SECRET)),
+  kvPush:       (k, v) => kv.push(k, v),
+  writeFile:    (data) => { try { writeFileSync(MYTHOS_HB_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (_) {} },
+  readFile:     () => { try { if (existsSync(MYTHOS_HB_FILE)) return JSON.parse(readFileSync(MYTHOS_HB_FILE, 'utf8')); } catch (_) {} return null; },
+});
+app.use(mythos.router);
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({
@@ -3360,6 +3379,9 @@ process.on('unhandledRejection', (reason) => {
 async function startServer() {
   // Warm up admin users (hashes passwords on first run)
   await getAdminUsers();
+
+  // Mythos heartbeat — เดินจริงทุก 15 นาทีขณะ process ทำงาน (unref → ไม่ขวาง exit)
+  mythos.start();
 
   // แจ้งเตือนถ้ายังไม่มี Recovery Codes
   // ⚠️ ไม่พิมพ์ codes ลง log ใน production (log อาจถูกเก็บ/เห็นโดยบุคคลที่สาม)
