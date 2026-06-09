@@ -3,6 +3,7 @@ node_modules
 .used-recovery-codes.json
 
 # runtime data ledgers (not committed)
+data/mythos_heartbeat.json
 data/credits.json
 data/entitlements.json
 data/payments.json
