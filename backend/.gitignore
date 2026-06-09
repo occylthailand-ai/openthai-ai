@@ -4,6 +4,7 @@ node_modules
 
 # runtime data ledgers (not committed)
 data/mythos_heartbeat.json
+data/pr_content_calendar.json
 data/credits.json
 data/entitlements.json
 data/payments.json
