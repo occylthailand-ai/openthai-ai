@@ -20,6 +20,8 @@ import NotFoundPage from './pages/NotFoundPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import ContactPage from './pages/ContactPage';
+import AboutPage from './pages/AboutPage';
+import PressPage from './pages/PressPage';
 import BrandMemoryPage from './pages/BrandMemoryPage';
 import AgentPage from './pages/AgentPage';
 import TrendingPage from './pages/TrendingPage';
@@ -112,6 +114,8 @@ function App() {
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/press" element={<PressPage />} />
             {/* New feature pages — public */}
             <Route path="/trending" element={<TrendingPage />} />
             <Route path="/calendar" element={<ContentCalendarPage />} />

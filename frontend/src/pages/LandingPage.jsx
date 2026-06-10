@@ -100,6 +100,7 @@ export default function LandingPage() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <LanguageSwitcher />
+          <button onClick={() => navigate('/about')} style={ghostBtn}>{t('nav.about')}</button>
           <button onClick={() => navigate('/affiliate')} style={ghostBtn}>{t('nav.affiliate')}</button>
           <button onClick={() => navigate('/pricing')} style={ghostBtn}>{t('nav.pricing')}</button>
           <button onClick={() => navigate('/login')} style={ghostBtn}>{t('nav.login')}</button>
@@ -187,6 +188,43 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── TRUSTED BY / MEDIA ──────────────────────────────────────────── */}
+      <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 5% 60px', textAlign: 'center' }}>
+        <div style={{ fontSize: 12, color: '#334155', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 20 }}>
+          {t('trust.label')}
+        </div>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          {(t('trust.logos')).map((m) => (
+            <div key={m.name} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>{m.icon}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>{m.name}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── WHO IS IT FOR ────────────────────────────────────────────────── */}
+      <section style={{ maxWidth: 1000, margin: '0 auto', padding: '0 5% 80px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <SectionBadge>{t('personas.badge')}</SectionBadge>
+          <SectionTitle>{t('personas.title')}</SectionTitle>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 20 }}>
+          {(t('personas')).map((p) => (
+            <div key={p.title} style={{ ...glassCard, background: `${p.color}08`, border: `1.5px solid ${p.color}25`, textAlign: 'left' }}>
+              <div style={{ fontSize: 36, marginBottom: 14 }}>{p.icon}</div>
+              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8, color: p.color }}>{p.title}</div>
+              <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.7, marginBottom: 14 }}>{p.desc}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {p.tags.map((tag) => (
+                  <span key={tag} style={{ background: `${p.color}15`, border: `1px solid ${p.color}30`, borderRadius: 20, padding: '3px 10px', fontSize: 11, color: p.color, fontWeight: 600 }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -290,33 +328,58 @@ export default function LandingPage() {
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
-      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '40px 5% 32px' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '48px 5% 32px' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 32, justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 40 }}>
           {/* Brand */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <LogoEmblem size={28} />
-              <span style={{ fontWeight: 900, fontSize: 16, color: '#f8fafc' }}>Openthai.ai</span>
+          <div style={{ maxWidth: 260 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <LogoEmblem size={32} />
+              <div>
+                <span style={{ fontWeight: 900, fontSize: 16, color: '#f8fafc', display: 'block' }}>Openthai.ai</span>
+                <span style={{ fontSize: 10, color: '#475569' }}>v9.0 · Made in Thailand 🇹🇭</span>
+              </div>
             </div>
-            <p style={{ color: '#475569', fontSize: 12, margin: 0, maxWidth: 220, lineHeight: 1.6 }}>
+            <p style={{ color: '#475569', fontSize: 12, margin: '0 0 16px', lineHeight: 1.7 }}>
               {lines('footer.tagline').map((ln, i) => <React.Fragment key={i}>{i > 0 && <br />}{ln}</React.Fragment>)}
             </p>
+            {/* Social links */}
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {[
+                { icon: '🎵', label: 'TikTok', href: 'https://tiktok.com/@openthai.ai' },
+                { icon: '📘', label: 'Facebook', href: 'https://facebook.com/openthaiai' },
+                { icon: '📸', label: 'Instagram', href: 'https://instagram.com/openthai.ai' },
+                { icon: '✉️', label: 'Email', href: 'mailto:support@openthai.ai' },
+              ].map((s) => (
+                <a key={s.label} href={s.href} target={s.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer"
+                  title={s.label}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 16, textDecoration: 'none', transition: 'border-color 0.2s' }}>
+                  {s.icon}
+                </a>
+              ))}
+            </div>
           </div>
           {/* Links */}
           <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.services')}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>{t('footer.services')}</div>
               {[[t('footer.link.generator'), '/ai-generator'], [t('footer.link.pricing'), '/pricing'], [t('mk.nav.store'), '/store'], [t('footer.link.catalog'), '/catalog'], [t('footer.link.find'), '/find-producers'], [t('footer.link.affiliate'), '/affiliate'], [t('footer.link.producer'), '/join']].map(([l, r]) => (
-                <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
+                <div key={r} onClick={() => navigate(r)} style={{ color: '#64748b', fontSize: 13, cursor: 'pointer', marginBottom: 8, transition: 'color 0.15s' }}
+                  onMouseEnter={(e) => e.target.style.color = '#94a3b8'}
+                  onMouseLeave={(e) => e.target.style.color = '#64748b'}>{l}</div>
               ))}
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.info')}</div>
-              {[[t('footer.link.privacy'), '/privacy'], [t('footer.link.terms'), '/terms'], [t('footer.link.contact'), 'mailto:support@openthai.ai']].map(([l, r]) => (
-                r.startsWith('mailto')
-                  ? <a key={r} href={r} style={{ display: 'block', color: '#94a3b8', fontSize: 13, textDecoration: 'none', marginBottom: 6 }}>{l}</a>
-                  : <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>{t('footer.company')}</div>
+              {[[t('footer.link.about'), '/about'], [t('footer.link.press'), '/press'], [t('footer.link.contact'), '/contact']].map(([l, r]) => (
+                <div key={r} onClick={() => navigate(r)} style={{ color: '#64748b', fontSize: 13, cursor: 'pointer', marginBottom: 8 }}>{l}</div>
               ))}
+            </div>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>{t('footer.info')}</div>
+              {[[t('footer.link.privacy'), '/privacy'], [t('footer.link.terms'), '/terms']].map(([l, r]) => (
+                <div key={r} onClick={() => navigate(r)} style={{ color: '#64748b', fontSize: 13, cursor: 'pointer', marginBottom: 8 }}>{l}</div>
+              ))}
+              <a href="mailto:support@openthai.ai" style={{ display: 'block', color: '#64748b', fontSize: 13, textDecoration: 'none', marginBottom: 8 }}>support@openthai.ai</a>
             </div>
           </div>
         </div>

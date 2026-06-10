@@ -253,7 +253,54 @@ const translations = {
     'mk.track.st.cancelled': 'ยกเลิก',
 
     'footer.copyright': '© 2026 Openthai.ai — สงวนลิขสิทธิ์',
-    'footer.made': '🇹🇭 Made in Thailand · Powered by Gemini AI',
+    'footer.made': '🇹🇭 Made in Thailand · Powered by Claude AI',
+    'footer.company': 'บริษัท',
+    'footer.link.about': 'เกี่ยวกับเรา',
+    'footer.link.press': 'สื่อมวลชน',
+    // nav
+    'nav.about': 'เกี่ยวกับเรา',
+    // trust bar
+    'trust.label': 'ได้รับความไว้วางใจจาก',
+    'trust.logos': [
+      { name: 'Positioning Mag', icon: '📰' },
+      { name: 'Techsauce', icon: '💻' },
+      { name: 'The Standard', icon: '📋' },
+      { name: 'Brand Inside', icon: '🎯' },
+      { name: 'Blognone', icon: '🔵' },
+    ],
+    // personas
+    'personas.badge': 'เหมาะสำหรับใคร?',
+    'personas.title': 'ออกแบบมาเพื่อทุกคนที่ขายของออนไลน์',
+    'personas': [
+      {
+        icon: '🎬',
+        title: 'TikTok Creator',
+        color: '#fe2c55',
+        desc: 'สร้างคอนเทนต์ Review, Unboxing และ Hook ที่ดึงดูดสายตาใน Feed ได้เร็วกว่าเดิม 10 เท่า',
+        tags: ['#TikTokShop', '#ยอดไลก์พุ่ง', '#Viral Hook'],
+      },
+      {
+        icon: '🏭',
+        title: 'ผู้ผลิต / OTOP',
+        color: '#f59e0b',
+        desc: 'ไม่มีทีม Marketing? ไม่เป็นไร ให้ AI เขียนสคริปต์ขายของให้ทุกวัน ภาษาไทยธรรมชาติ',
+        tags: ['#สินค้าไทย', '#OTOP', '#ชุมชน'],
+      },
+      {
+        icon: '🛒',
+        title: 'เจ้าของร้านออนไลน์',
+        color: '#10b981',
+        desc: 'โพสต์ Facebook, Shopee, Lazada ได้ครบทุกวัน ด้วยแคปชั่น+แฮชแท็กพร้อมใช้ใน 10 วินาที',
+        tags: ['#Shopee', '#Lazada', '#Line OA'],
+      },
+      {
+        icon: '🏢',
+        title: 'ทีม Marketing SME',
+        color: '#6366f1',
+        desc: 'API Access สำหรับทีม สร้างคอนเทนต์ Scale ได้ทุก SKU ทุกแคมเปญ ทุกวัน',
+        tags: ['#API', '#White-label', '#5 Seats'],
+      },
+    ],
   },
 
   en: {
@@ -490,7 +537,54 @@ const translations = {
     'mk.track.st.cancelled': 'Cancelled',
 
     'footer.copyright': '© 2026 Openthai.ai — All rights reserved',
-    'footer.made': '🇹🇭 Made in Thailand · Powered by Gemini AI',
+    'footer.made': '🇹🇭 Made in Thailand · Powered by Claude AI',
+    'footer.company': 'Company',
+    'footer.link.about': 'About us',
+    'footer.link.press': 'Press & Media',
+    // nav
+    'nav.about': 'About',
+    // trust bar
+    'trust.label': 'Featured in',
+    'trust.logos': [
+      { name: 'Positioning Mag', icon: '📰' },
+      { name: 'Techsauce', icon: '💻' },
+      { name: 'The Standard', icon: '📋' },
+      { name: 'Brand Inside', icon: '🎯' },
+      { name: 'Blognone', icon: '🔵' },
+    ],
+    // personas
+    'personas.badge': 'Who is it for?',
+    'personas.title': 'Built for everyone who sells online',
+    'personas': [
+      {
+        icon: '🎬',
+        title: 'TikTok Creator',
+        color: '#fe2c55',
+        desc: 'Create review, unboxing and hook content that stops the scroll — 10× faster than writing by hand.',
+        tags: ['#TikTokShop', '#ViralHook', '#Engagement'],
+      },
+      {
+        icon: '🏭',
+        title: 'Producer / OTOP',
+        color: '#f59e0b',
+        desc: 'No marketing team? No problem. Let AI write your product scripts every day in natural Thai.',
+        tags: ['#ThaiProducts', '#OTOP', '#Local'],
+      },
+      {
+        icon: '🛒',
+        title: 'Online Shop Owner',
+        color: '#10b981',
+        desc: 'Post to Facebook, Shopee, and Lazada daily — caption + hashtags ready in 10 seconds flat.',
+        tags: ['#Shopee', '#Lazada', '#Line OA'],
+      },
+      {
+        icon: '🏢',
+        title: 'SME Marketing Team',
+        color: '#6366f1',
+        desc: 'API access for teams. Scale content across every SKU and every campaign, every day.',
+        tags: ['#API', '#White-label', '#5 Seats'],
+      },
+    ],
   },
 
   zh: {
