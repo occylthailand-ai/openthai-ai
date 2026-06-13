@@ -313,3 +313,74 @@ class ExecutiveTask(Base):
     progress_note: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+# ── Mythos Goal Tracker ───────────────────────────────────────────────────────
+
+class MythosGoal(Base):
+    """Objective ระดับ CEO — เป้าหมายใหญ่ของ Mythos"""
+    __tablename__ = "mythos_goals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    objective: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str] = mapped_column(Text, default="")
+    owner: Mapped[str] = mapped_column(String(30), index=True)        # cto, cfo, th_director …
+    owner_title: Mapped[str] = mapped_column(String(100))
+    period: Mapped[str] = mapped_column(String(10), index=True)       # 2026-Q2
+    category: Mapped[str] = mapped_column(String(30), default="growth")  # growth, ops, product, people, financial
+    priority: Mapped[str] = mapped_column(String(10), default="high")  # critical, high, medium
+    status: Mapped[str] = mapped_column(String(20), default="active", index=True)  # active, paused, achieved, cancelled
+    health: Mapped[str] = mapped_column(String(20), default="not_started")  # on_track, at_risk, off_track, achieved
+    health_reason: Mapped[str] = mapped_column(String(300), default="")
+    progress_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    last_checked: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    last_alerted: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class MythosKeyResult(Base):
+    """Key Result ย่อยใต้ Objective"""
+    __tablename__ = "mythos_key_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    goal_id: Mapped[int] = mapped_column(Integer, index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str] = mapped_column(Text, default="")
+    metric_type: Mapped[str] = mapped_column(String(20), default="number")  # number, percentage, boolean, currency
+    start_value: Mapped[float] = mapped_column(Float, default=0.0)
+    current_value: Mapped[float] = mapped_column(Float, default=0.0)
+    target_value: Mapped[float] = mapped_column(Float, default=100.0)
+    unit: Mapped[str] = mapped_column(String(30), default="")         # %, ราย, บาท, ครั้ง, ดาว
+    status: Mapped[str] = mapped_column(String(20), default="active")
+    last_updated: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_by: Mapped[str] = mapped_column(String(100), default="system")
+
+
+class MythosCheckIn(Base):
+    """บันทึกการอัปเดตความคืบหน้าของ Key Result"""
+    __tablename__ = "mythos_checkins"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    goal_id: Mapped[int] = mapped_column(Integer, index=True)
+    kr_id: Mapped[int] = mapped_column(Integer, index=True)
+    value: Mapped[float] = mapped_column(Float)
+    note: Mapped[str] = mapped_column(Text, default="")
+    checked_by: Mapped[str] = mapped_column(String(100), default="system")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class MythosGoalAnalysis(Base):
+    """AI วิเคราะห์สุขภาพเป้าหมาย — ประวัติ 90 วัน"""
+    __tablename__ = "mythos_goal_analyses"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    goal_id: Mapped[int] = mapped_column(Integer, index=True)
+    health: Mapped[str] = mapped_column(String(20))
+    confidence: Mapped[float] = mapped_column(Float, default=0.5)
+    recommendation: Mapped[str] = mapped_column(Text, default="")
+    blockers: Mapped[str] = mapped_column(Text, default="[]")         # JSON list
+    next_actions: Mapped[str] = mapped_column(Text, default="[]")     # JSON list
+    pace_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    avg_progress_pct: Mapped[float] = mapped_column(Float, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

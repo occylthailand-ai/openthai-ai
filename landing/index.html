@@ -1061,8 +1061,120 @@ EMAIL_MYTHOS=mythos@openthai-ai.com</pre>
       </div>
     </div>
 
+    <!-- ── GOAL TRACKER ─────────────────────────────────────────── -->
+    <div style="border-top:1px solid var(--border);margin-top:2.5rem;padding-top:2.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+        <div>
+          <h3 style="margin:0 0 0.2rem;font-size:1.1rem;font-weight:800;">🎯 Goal Tracker — OKR 24/7</h3>
+          <p style="margin:0;font-size:0.83rem;color:var(--text-muted);">ติดตามเป้าหมายอัตโนมัติ · AI วิเคราะห์ทุก 4 ชม. · Weekly Report วันจันทร์ 08:05</p>
+        </div>
+        <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+          <button onclick="loadGoals()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:0.4rem 0.9rem;font-size:0.82rem;cursor:pointer;font-family:inherit;">🔄 รีเฟรช</button>
+          <button onclick="openGoalModal()" style="background:var(--primary);color:white;border:none;border-radius:8px;padding:0.4rem 1rem;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">＋ เพิ่มเป้าหมาย</button>
+        </div>
+      </div>
+
+      <!-- Health summary bar -->
+      <div id="goalSummaryBar" style="display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:100px;background:rgba(39,174,96,0.12);border:1px solid rgba(39,174,96,0.3);border-radius:10px;padding:0.75rem;text-align:center;">
+          <div id="gs-ontrack" style="font-size:1.5rem;font-weight:700;color:#27AE60;">—</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">🟢 On Track</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:rgba(243,156,18,0.12);border:1px solid rgba(243,156,18,0.3);border-radius:10px;padding:0.75rem;text-align:center;">
+          <div id="gs-atrisk" style="font-size:1.5rem;font-weight:700;color:#F39C12;">—</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">🟡 At Risk</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);border-radius:10px;padding:0.75rem;text-align:center;">
+          <div id="gs-offtrack" style="font-size:1.5rem;font-weight:700;color:#e74c3c;">—</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">🔴 Off Track</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);border-radius:10px;padding:0.75rem;text-align:center;">
+          <div id="gs-achieved" style="font-size:1.5rem;font-weight:700;color:#FFD700;">—</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">🏆 Achieved</div>
+        </div>
+      </div>
+
+      <!-- Goal cards -->
+      <div id="goalList" style="display:flex;flex-direction:column;gap:1rem;">
+        <div style="text-align:center;color:var(--text-muted);padding:2rem;">กำลังโหลด...</div>
+      </div>
+    </div>
+
   </div>
 </section>
+
+<!-- ===== GOAL CREATE MODAL ===== -->
+<div id="goalModalBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:3000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1a1a2e;border:1px solid var(--border);border-radius:18px;padding:2rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h3 style="margin:0;font-size:1.1rem;font-weight:800;">🎯 เพิ่ม Objective ใหม่</h3>
+      <button onclick="closeGoalModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.9rem;">
+      <div>
+        <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">เป้าหมาย (Objective) *</label>
+        <textarea id="gm-objective" placeholder="เช่น: ขยายฐานผู้ใช้ในตลาด SEA ให้ถึง 10,000 ราย ภายใน Q2 2026" style="width:100%;min-height:70px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:0.75rem;font-family:inherit;font-size:0.9rem;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Owner *</label>
+          <select id="gm-owner" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.65rem;font-family:inherit;font-size:0.88rem;">
+            <optgroup label="C-Suite"><option value="cfo">💰 CFO</option><option value="cto">⚙️ CTO</option><option value="coo">🔄 COO</option><option value="cmo">📣 CMO</option><option value="clo">⚖️ CLO</option></optgroup>
+            <optgroup label="Regional"><option value="th_director">🇹🇭 TH Director</option><option value="sea_director">🌏 SEA Director</option><option value="global_director">🌍 Global Director</option></optgroup>
+            <optgroup label="Department"><option value="dev">🔧 Dev</option><option value="sales">💼 Sales</option><option value="finance">📊 Finance</option><option value="legal">📜 Legal</option><option value="hr">👥 HR</option><option value="ops">🏭 Ops</option></optgroup>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Quarter</label>
+          <select id="gm-period" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.65rem;font-family:inherit;font-size:0.88rem;">
+            <option value="2026-Q2">2026-Q2 (current)</option>
+            <option value="2026-Q3">2026-Q3</option>
+            <option value="2026-Q4">2026-Q4</option>
+            <option value="2026-H1">2026-H1</option>
+            <option value="2026">2026 Annual</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Category</label>
+          <select id="gm-category" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.65rem;font-family:inherit;font-size:0.88rem;">
+            <option value="growth">📈 Growth</option><option value="product">🚀 Product</option>
+            <option value="ops">⚙️ Operations</option><option value="people">👥 People</option>
+            <option value="financial">💰 Financial</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Priority</label>
+          <select id="gm-priority" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.65rem;font-family:inherit;font-size:0.88rem;">
+            <option value="critical">🚨 Critical</option><option value="high" selected>🔴 High</option><option value="medium">🟡 Medium</option>
+          </select>
+        </div>
+      </div>
+      <!-- Key Results builder -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+          <label style="font-size:0.8rem;color:var(--text-muted);">Key Results (1-5 ข้อ)</label>
+          <button onclick="addKRRow()" style="background:rgba(78,205,196,0.12);border:1px solid rgba(78,205,196,0.3);color:var(--secondary);border-radius:6px;padding:0.2rem 0.7rem;font-size:0.78rem;cursor:pointer;font-family:inherit;">＋ เพิ่ม KR</button>
+        </div>
+        <div id="krRows" style="display:flex;flex-direction:column;gap:0.5rem;">
+          <!-- injected by addKRRow() -->
+        </div>
+      </div>
+      <button onclick="submitGoal()" id="goalSubmitBtn" style="background:var(--primary);color:white;border:none;border-radius:10px;padding:0.85rem;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:0.5rem;">🎯 สร้างเป้าหมาย</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CHECK-IN MODAL ===== -->
+<div id="checkinModalBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:3000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1a1a2e;border:1px solid var(--border);border-radius:18px;padding:2rem;width:100%;max-width:460px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+      <h3 style="margin:0;font-size:1rem;font-weight:800;" id="checkinTitle">📊 อัปเดตความคืบหน้า</h3>
+      <button onclick="closeCheckin()" style="background:none;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="checkinKRList" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+    <button onclick="submitCheckin()" id="checkinSubmitBtn" style="background:var(--primary);color:white;border:none;border-radius:10px;padding:0.8rem;font-size:0.92rem;font-weight:700;cursor:pointer;font-family:inherit;width:100%;margin-top:1rem;">💾 บันทึก Check-in</button>
+  </div>
+</div>
 
 <!-- ===== FOOTER ===== -->
 <footer>
@@ -2008,9 +2120,267 @@ async function loadMythosDirectives() {
   }
 }
 
+// ===== GOAL TRACKER =====
+const HEALTH_COLOR = { on_track:'#27AE60', at_risk:'#F39C12', off_track:'#e74c3c', achieved:'#FFD700', not_started:'#888' };
+const HEALTH_ICON2 = { on_track:'🟢', at_risk:'🟡', off_track:'🔴', achieved:'🏆', not_started:'⚪' };
+const CAT_ICON = { growth:'📈', product:'🚀', ops:'⚙️', people:'👥', financial:'💰' };
+
+let _activeGoalId = null;
+let _activeGoalKRs = [];
+let _krRowCount = 0;
+
+function openGoalModal() {
+  document.getElementById('goalModalBg').style.display = 'flex';
+  document.getElementById('krRows').innerHTML = '';
+  _krRowCount = 0;
+  addKRRow(); addKRRow(); // default 2 KRs
+}
+function closeGoalModal() { document.getElementById('goalModalBg').style.display = 'none'; }
+function closeCheckin() {
+  document.getElementById('checkinModalBg').style.display = 'none';
+  _activeGoalId = null; _activeGoalKRs = [];
+}
+
+function addKRRow() {
+  if (_krRowCount >= 5) return;
+  const i = _krRowCount++;
+  const row = document.createElement('div');
+  row.id = 'kr-row-' + i;
+  row.style.cssText = 'background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:0.65rem;display:flex;flex-direction:column;gap:0.4rem;';
+  row.innerHTML = `
+    <div style="display:flex;gap:0.4rem;align-items:center;">
+      <input placeholder="Key Result เช่น: ยอดผู้ใช้ใหม่ SEA" style="flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.5rem 0.65rem;font-size:0.85rem;font-family:inherit;" id="kr-title-${i}">
+      <button onclick="document.getElementById('kr-row-${i}').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;">
+      <input type="number" placeholder="เป้าหมาย" id="kr-target-${i}" style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.45rem;font-size:0.83rem;font-family:inherit;">
+      <input placeholder="หน่วย เช่น ราย,%" id="kr-unit-${i}" style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.45rem;font-size:0.83rem;font-family:inherit;">
+      <select id="kr-type-${i}" style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.45rem;font-size:0.83rem;font-family:inherit;">
+        <option value="number">ตัวเลข</option><option value="percentage">%</option>
+        <option value="currency">บาท</option><option value="boolean">ทำ/ไม่ทำ</option>
+      </select>
+    </div>`;
+  document.getElementById('krRows').appendChild(row);
+}
+
+async function submitGoal() {
+  const obj = document.getElementById('gm-objective').value.trim();
+  const owner = document.getElementById('gm-owner').value;
+  if (!obj) { alert('กรุณาระบุเป้าหมาย'); return; }
+
+  // Collect KRs
+  const krs = [];
+  for (let i = 0; i < _krRowCount; i++) {
+    const titleEl = document.getElementById('kr-title-' + i);
+    if (!titleEl) continue;
+    const title = titleEl.value.trim();
+    const target = parseFloat(document.getElementById('kr-target-' + i)?.value) || 0;
+    if (!title || !target) continue;
+    krs.push({
+      title, target_value: target,
+      unit: document.getElementById('kr-unit-' + i)?.value || '',
+      metric_type: document.getElementById('kr-type-' + i)?.value || 'number',
+    });
+  }
+  if (!krs.length) { alert('กรุณาเพิ่มอย่างน้อย 1 Key Result'); return; }
+
+  const btn = document.getElementById('goalSubmitBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง...';
+  try {
+    const r = await fetch(API_URL + '/mythos/goals', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        objective: obj, owner,
+        period: document.getElementById('gm-period').value,
+        category: document.getElementById('gm-category').value,
+        priority: document.getElementById('gm-priority').value,
+      })
+    });
+    const goal = await r.json();
+    if (!r.ok) throw new Error(goal.detail || 'Error');
+
+    // Add KRs sequentially
+    for (const kr of krs) {
+      await fetch(API_URL + '/mythos/goals/' + goal.id + '/kr', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(kr)
+      });
+    }
+    closeGoalModal();
+    await loadGoals();
+  } catch(e) {
+    alert('❌ ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '🎯 สร้างเป้าหมาย';
+}
+
+async function loadGoals() {
+  const el = document.getElementById('goalList');
+  if (!el) return;
+  try {
+    const r = await fetch(API_URL + '/mythos/goals?status=active');
+    const data = await r.json();
+    const goals = data.goals || [];
+
+    // Update summary bar
+    const counts = { on_track:0, at_risk:0, off_track:0, achieved:0 };
+    goals.forEach(g => { if (counts[g.health] !== undefined) counts[g.health]++; });
+    ['ontrack','atrisk','offtrack','achieved'].forEach((k,i) => {
+      const key = ['on_track','at_risk','off_track','achieved'][i];
+      const el2 = document.getElementById('gs-'+k);
+      if (el2) el2.textContent = counts[key];
+    });
+
+    if (!goals.length) {
+      el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:3rem;border:1px dashed var(--border);border-radius:14px;">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">🎯</div>
+        <p>ยังไม่มีเป้าหมาย · คลิก "เพิ่มเป้าหมาย" เพื่อเริ่มต้น</p>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = goals.map(g => renderGoalCard(g)).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:2rem;font-size:0.85rem;">ไม่สามารถโหลดได้ · ตรวจสอบ API</div>`;
+  }
+}
+
+function renderGoalCard(g) {
+  const hc = HEALTH_COLOR[g.health] || '#888';
+  const hi = HEALTH_ICON2[g.health] || '⚪';
+  const ci = CAT_ICON[g.category] || '🎯';
+  const krs = (g.key_results || []).map(kr => {
+    const pct = Math.min(100, kr.progress_pct);
+    const bar_color = pct >= 80 ? '#27AE60' : pct >= 50 ? '#F39C12' : '#e74c3c';
+    return `<div style="display:flex;flex-direction:column;gap:0.2rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:0.82rem;">${kr.title}</span>
+        <span style="font-size:0.78rem;color:var(--text-muted);">${kr.current_value}/${kr.target_value} ${kr.unit}</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.07);border-radius:3px;height:5px;overflow:hidden;">
+        <div style="width:${pct}%;height:100%;background:${bar_color};transition:width 0.5s;border-radius:3px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-size:0.72rem;color:var(--text-muted);">${pct.toFixed(0)}%</span>
+        <button onclick="openCheckin(${g.id},'${encodeURIComponent(g.objective)}')" style="background:none;border:none;color:rgba(78,205,196,0.8);font-size:0.72rem;cursor:pointer;padding:0;font-family:inherit;">✏️ อัปเดต</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const overallPct = Math.min(100, g.progress_pct);
+  return `<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-left:3px solid ${hc};border-radius:14px;padding:1.25rem;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.3rem;">
+          <span style="font-size:1rem;">${hi}</span>
+          <strong style="font-size:0.92rem;">${g.objective}</strong>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <span style="background:rgba(255,255,255,0.06);border-radius:6px;padding:0.15rem 0.5rem;font-size:0.73rem;">${ci} ${g.category}</span>
+          <span style="background:rgba(255,255,255,0.06);border-radius:6px;padding:0.15rem 0.5rem;font-size:0.73rem;">📅 ${g.period}</span>
+          <span style="background:rgba(255,255,255,0.06);border-radius:6px;padding:0.15rem 0.5rem;font-size:0.73rem;">👤 ${g.owner_title}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:1.4rem;font-weight:800;color:${hc};">${overallPct.toFixed(0)}%</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">${g.health.replace('_',' ')}</div>
+      </div>
+    </div>
+    <div style="background:rgba(0,0,0,0.3);border-radius:4px;height:6px;margin-bottom:0.75rem;overflow:hidden;">
+      <div style="width:${overallPct}%;height:100%;background:${hc};border-radius:4px;transition:width 0.6s;"></div>
+    </div>
+    ${g.health_reason ? `<p style="font-size:0.78rem;color:var(--text-muted);margin:0 0 0.6rem;">${g.health_reason}</p>` : ''}
+    <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:0.5rem;">${krs}</div>
+    <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;">
+      <button onclick="analyzeGoal(${g.id})" style="background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.3);color:var(--secondary);border-radius:7px;padding:0.3rem 0.8rem;font-size:0.78rem;cursor:pointer;font-family:inherit;">🤖 AI วิเคราะห์</button>
+      <button onclick="openCheckin(${g.id},'${encodeURIComponent(g.objective)}')" style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);color:var(--primary);border-radius:7px;padding:0.3rem 0.8rem;font-size:0.78rem;cursor:pointer;font-family:inherit;">📊 Check-in</button>
+      <button onclick="deleteGoal(${g.id})" style="background:none;border:1px solid rgba(255,255,255,0.1);color:var(--text-muted);border-radius:7px;padding:0.3rem 0.8rem;font-size:0.78rem;cursor:pointer;font-family:inherit;">✕ ยกเลิก</button>
+    </div>
+    <div id="analysis-${g.id}" style="display:none;margin-top:0.75rem;background:rgba(0,0,0,0.3);border-radius:10px;padding:0.9rem;font-size:0.82rem;"></div>
+  </div>`;
+}
+
+async function analyzeGoal(goalId) {
+  const el = document.getElementById('analysis-' + goalId);
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML = '<span style="color:var(--text-muted);">🤖 AI กำลังวิเคราะห์...</span>';
+  try {
+    const r = await fetch(API_URL + '/mythos/goals/' + goalId + '/analysis');
+    const d = await r.json();
+    const a = d.analysis || {};
+    const blockers = (a.blockers||[]).map(b=>`<li>${b}</li>`).join('');
+    const actions = (a.next_actions||[]).map(x=>`<li>${x}</li>`).join('');
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+        <strong>${HEALTH_ICON2[a.health]||'🟡'} ${(a.health||'').replace('_',' ').toUpperCase()}</strong>
+        <span style="color:var(--text-muted);font-size:0.75rem;">· Confidence ${((a.confidence||0)*100).toFixed(0)}%</span>
+        <span style="color:var(--text-muted);font-size:0.75rem;">· Pace ${d.pace_pct}% ผ่านไป</span>
+      </div>
+      <p style="margin:0 0 0.4rem;">${a.recommendation||''}</p>
+      ${blockers ? `<strong style="font-size:0.78rem;">⛔ Blockers:</strong><ul style="margin:0.2rem 0 0.4rem;padding-left:1.2rem;font-size:0.78rem;">${blockers}</ul>` : ''}
+      ${actions ? `<strong style="font-size:0.78rem;">▶ Next Actions:</strong><ul style="margin:0.2rem 0 0;padding-left:1.2rem;font-size:0.78rem;">${actions}</ul>` : ''}`;
+  } catch(e) {
+    el.innerHTML = '<span style="color:#e74c3c;">❌ ไม่สามารถวิเคราะห์ได้</span>';
+  }
+}
+
+async function openCheckin(goalId, encodedTitle) {
+  _activeGoalId = goalId;
+  document.getElementById('checkinTitle').textContent = '📊 Check-in: ' + decodeURIComponent(encodedTitle).slice(0,40);
+  const listEl = document.getElementById('checkinKRList');
+  listEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.85rem;">กำลังโหลด KR...</span>';
+  document.getElementById('checkinModalBg').style.display = 'flex';
+  try {
+    const r = await fetch(API_URL + '/mythos/goals?status=active');
+    const data = await r.json();
+    const goal = (data.goals||[]).find(g => g.id === goalId);
+    _activeGoalKRs = goal?.key_results || [];
+    listEl.innerHTML = _activeGoalKRs.map((kr,i) => `
+      <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:0.75rem;">
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.4rem;">${kr.title}</div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <input type="number" id="ci-val-${kr.id}" value="${kr.current_value}" style="width:100px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.4rem 0.6rem;font-family:inherit;font-size:0.85rem;">
+          <span style="color:var(--text-muted);font-size:0.82rem;">/ ${kr.target_value} ${kr.unit}</span>
+          <span style="font-size:0.78rem;color:var(--text-muted);">(${kr.progress_pct}%)</span>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    listEl.innerHTML = '<span style="color:#e74c3c;">❌ โหลดไม่ได้</span>';
+  }
+}
+
+async function submitCheckin() {
+  const btn = document.getElementById('checkinSubmitBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+  try {
+    for (const kr of _activeGoalKRs) {
+      const valEl = document.getElementById('ci-val-' + kr.id);
+      if (!valEl) continue;
+      const val = parseFloat(valEl.value);
+      if (isNaN(val)) continue;
+      await fetch(API_URL + '/mythos/goals/' + _activeGoalId + '/kr/' + kr.id + '/checkin', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ value: val, checked_by: 'Mythos' })
+      });
+    }
+    closeCheckin();
+    await loadGoals();
+  } catch(e) {
+    alert('❌ ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '💾 บันทึก Check-in';
+}
+
+async function deleteGoal(goalId) {
+  if (!confirm('ยืนยันยกเลิกเป้าหมาย?')) return;
+  await fetch(API_URL + '/mythos/goals/' + goalId, { method: 'DELETE' });
+  await loadGoals();
+}
+
 // Auto-load Mythos dashboard when section is visible
 const _mythosObserver = new IntersectionObserver(entries => {
-  if (entries[0].isIntersecting) { loadMythosDashboard(); _mythosObserver.disconnect(); }
+  if (entries[0].isIntersecting) { loadMythosDashboard(); loadGoals(); _mythosObserver.disconnect(); }
 }, { threshold: 0.1 });
 const _mythosSection = document.getElementById('mythos');
 if (_mythosSection) _mythosObserver.observe(_mythosSection);

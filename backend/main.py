@@ -90,8 +90,11 @@ async def startup_event():
         logger.info("News monitor started")
         try:
             from mythos_command import register_mythos_jobs
-            register_mythos_jobs(get_scheduler())
-            logger.info("Mythos Command System started")
+            from mythos_goals import register_goal_jobs
+            sched = get_scheduler()
+            register_mythos_jobs(sched)
+            register_goal_jobs(sched)
+            logger.info("Mythos Command System + Goal Tracker started")
         except Exception as e2:
             logger.warning(f"Mythos scheduler skipped: {e2}")
     except Exception as e:
@@ -1013,6 +1016,205 @@ async def mythos_get_org():
     """ดูโครงสร้างองค์กรทั้งหมด"""
     from mythos_command import ORG, TIERS
     return {"org": ORG, "tiers": TIERS}
+
+# ================== MYTHOS GOAL TRACKER ENDPOINTS ==================
+
+class GoalCreateRequest(BaseModel):
+    objective: str
+    description: Optional[str] = ""
+    owner: str                           # cto, cmo, th_director …
+    period: Optional[str] = None         # 2026-Q2  (auto-detect if omitted)
+    category: Optional[str] = "growth"  # growth, ops, product, people, financial
+    priority: Optional[str] = "high"
+
+class KeyResultRequest(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    metric_type: Optional[str] = "number"  # number, percentage, boolean, currency
+    start_value: Optional[float] = 0.0
+    target_value: float
+    unit: Optional[str] = ""
+
+class CheckInRequest(BaseModel):
+    value: float
+    note: Optional[str] = ""
+    checked_by: Optional[str] = "Mythos"
+
+@app.post("/mythos/goals")
+async def create_goal(req: GoalCreateRequest):
+    """Mythos สร้าง Objective ใหม่"""
+    from db import AsyncSessionLocal, MythosGoal
+    from mythos_command import ORG
+    from mythos_goals import current_quarter
+    exec_info = ORG.get(req.owner, {})
+    period = req.period or current_quarter()
+    async with AsyncSessionLocal() as db:
+        goal = MythosGoal(
+            objective=req.objective, description=req.description or "",
+            owner=req.owner, owner_title=exec_info.get("title", req.owner),
+            period=period, category=req.category or "growth",
+            priority=req.priority or "high", status="active", health="not_started",
+        )
+        db.add(goal)
+        await db.commit()
+        await db.refresh(goal)
+    return {"id": goal.id, "objective": goal.objective, "owner": goal.owner,
+            "owner_title": goal.owner_title, "period": period, "status": "active"}
+
+@app.post("/mythos/goals/{goal_id}/kr")
+async def add_key_result(goal_id: int, req: KeyResultRequest):
+    """เพิ่ม Key Result เข้า Objective"""
+    from db import AsyncSessionLocal, MythosKeyResult, MythosGoal
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(MythosGoal).where(MythosGoal.id == goal_id))
+        if not res.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Goal not found")
+        kr = MythosKeyResult(
+            goal_id=goal_id, title=req.title, description=req.description or "",
+            metric_type=req.metric_type or "number",
+            start_value=req.start_value or 0.0, current_value=req.start_value or 0.0,
+            target_value=req.target_value, unit=req.unit or "",
+        )
+        db.add(kr)
+        await db.commit()
+        await db.refresh(kr)
+    return {"id": kr.id, "goal_id": goal_id, "title": kr.title,
+            "target_value": kr.target_value, "unit": kr.unit}
+
+@app.post("/mythos/goals/{goal_id}/kr/{kr_id}/checkin")
+async def checkin_kr(goal_id: int, kr_id: int, req: CheckInRequest):
+    """อัปเดตค่า Key Result (check-in)"""
+    from db import AsyncSessionLocal, MythosKeyResult, MythosCheckIn
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(MythosKeyResult).where(MythosKeyResult.id == kr_id, MythosKeyResult.goal_id == goal_id))
+        kr = res.scalar_one_or_none()
+        if not kr:
+            raise HTTPException(status_code=404, detail="Key Result not found")
+        kr.current_value = req.value
+        kr.last_updated = datetime.utcnow()
+        kr.updated_by = req.checked_by or "Mythos"
+        checkin = MythosCheckIn(
+            goal_id=goal_id, kr_id=kr_id, value=req.value,
+            note=req.note or "", checked_by=req.checked_by or "Mythos",
+        )
+        db.add(checkin)
+        await db.commit()
+    pct = min(100.0, req.value / kr.target_value * 100) if kr.target_value else 0
+    return {"kr_id": kr_id, "value": req.value, "target": kr.target_value,
+            "progress_pct": round(pct, 1), "unit": kr.unit}
+
+@app.get("/mythos/goals")
+async def list_goals(
+    period: Optional[str] = None,
+    owner: Optional[str] = None,
+    health: Optional[str] = None,
+    status: Optional[str] = "active",
+):
+    """รายการ Objectives ทั้งหมด พร้อม Key Results"""
+    try:
+        from db import AsyncSessionLocal, MythosGoal, MythosKeyResult
+        from sqlalchemy import select, desc
+        import json as _json
+        async with AsyncSessionLocal() as db:
+            q = select(MythosGoal).order_by(desc(MythosGoal.created_at))
+            if status:
+                q = q.where(MythosGoal.status == status)
+            if period:
+                q = q.where(MythosGoal.period == period)
+            if owner:
+                q = q.where(MythosGoal.owner == owner)
+            if health:
+                q = q.where(MythosGoal.health == health)
+            res = await db.execute(q)
+            goals = res.scalars().all()
+
+            result = []
+            for g in goals:
+                kr_res = await db.execute(
+                    select(MythosKeyResult).where(MythosKeyResult.goal_id == g.id)
+                )
+                krs = kr_res.scalars().all()
+                result.append({
+                    "id": g.id, "objective": g.objective, "description": g.description,
+                    "owner": g.owner, "owner_title": g.owner_title,
+                    "period": g.period, "category": g.category, "priority": g.priority,
+                    "status": g.status, "health": g.health, "health_reason": g.health_reason,
+                    "progress_pct": round(g.progress_pct, 1),
+                    "last_checked": g.last_checked.isoformat() if g.last_checked else None,
+                    "created_at": g.created_at.isoformat(),
+                    "key_results": [
+                        {
+                            "id": kr.id, "title": kr.title, "metric_type": kr.metric_type,
+                            "current_value": kr.current_value, "target_value": kr.target_value,
+                            "unit": kr.unit,
+                            "progress_pct": round(
+                                min(100.0, kr.current_value / kr.target_value * 100)
+                                if kr.target_value else 0, 1
+                            ),
+                            "last_updated": kr.last_updated.isoformat(),
+                        }
+                        for kr in krs
+                    ],
+                })
+        return {"goals": result, "count": len(result)}
+    except Exception as e:
+        return {"goals": [], "error": str(e)}
+
+@app.get("/mythos/goals/{goal_id}/analysis")
+async def get_goal_analysis(goal_id: int):
+    """ขอ AI วิเคราะห์สุขภาพเป้าหมายล่าสุด"""
+    from db import AsyncSessionLocal, MythosGoal, MythosKeyResult
+    from sqlalchemy import select
+    from mythos_goals import analyze_goal_health, pace_expected, quarter_dates
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(MythosGoal).where(MythosGoal.id == goal_id))
+        goal = res.scalar_one_or_none()
+        if not goal:
+            raise HTTPException(status_code=404, detail="Goal not found")
+        kr_res = await db.execute(select(MythosKeyResult).where(MythosKeyResult.goal_id == goal_id))
+        krs = kr_res.scalars().all()
+    start, end = quarter_dates(goal.period)
+    pace = pace_expected(start, end)
+    kr_dicts = [
+        {"title": kr.title, "current_value": kr.current_value,
+         "target_value": kr.target_value, "unit": kr.unit,
+         "progress_pct": min(100.0, kr.current_value / kr.target_value * 100) if kr.target_value else 0}
+        for kr in krs
+    ]
+    analysis = await analyze_goal_health(goal.objective, kr_dicts, goal.owner, pace)
+    return {"goal_id": goal_id, "objective": goal.objective, "pace_pct": round(pace * 100, 1),
+            "analysis": analysis}
+
+@app.post("/mythos/goals/track")
+async def trigger_goal_tracker():
+    """Trigger goal tracker ด้วยตนเอง"""
+    from mythos_goals import run_goal_tracker
+    result = await run_goal_tracker()
+    return result
+
+@app.post("/mythos/goals/weekly-report")
+async def trigger_weekly_report():
+    """Trigger weekly OKR report ด้วยตนเอง"""
+    from mythos_goals import generate_weekly_goal_report
+    result = await generate_weekly_goal_report()
+    return result
+
+@app.delete("/mythos/goals/{goal_id}")
+async def delete_goal(goal_id: int):
+    """ยกเลิก / ลบ Objective"""
+    from db import AsyncSessionLocal, MythosGoal
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(MythosGoal).where(MythosGoal.id == goal_id))
+        goal = res.scalar_one_or_none()
+        if not goal:
+            raise HTTPException(status_code=404, detail="Goal not found")
+        goal.status = "cancelled"
+        goal.updated_at = datetime.utcnow()
+        await db.commit()
+    return {"id": goal_id, "status": "cancelled"}
 
 # ================== RUN SERVER ==================
 
