@@ -60,6 +60,32 @@ CHECKS = {
         "required": False,
         "envs": ["NEWS_DIGEST_EMAIL"],
     },
+    # ── Mythos Command System ───────────────────────────────────────────────
+    "mythos_ceo": {
+        "label": "👑 LINE Mythos — CEO (Daily Brief)",
+        "required": False,
+        "envs": ["LINE_MYTHOS_CEO"],
+    },
+    "mythos_csuite": {
+        "label": "🏛️ LINE Mythos — C-Suite (CFO/CTO/COO/CMO/CLO)",
+        "required": False,
+        "envs": ["LINE_MYTHOS_CTO", "LINE_MYTHOS_CFO", "LINE_MYTHOS_COO"],
+    },
+    "mythos_regional": {
+        "label": "🌏 LINE Mythos — Regional (TH/SEA/Global)",
+        "required": False,
+        "envs": ["LINE_MYTHOS_TH", "LINE_MYTHOS_SEA", "LINE_MYTHOS_GLOBAL"],
+    },
+    "mythos_dept": {
+        "label": "🔧 LINE Mythos — Departments (Dev/Sales/Finance/Legal/HR/Ops)",
+        "required": False,
+        "envs": ["LINE_MYTHOS_DEV", "LINE_MYTHOS_SALES", "LINE_MYTHOS_OPS"],
+    },
+    "mythos_email": {
+        "label": "📧 Email Mythos — Daily Brief Email",
+        "required": False,
+        "envs": ["EMAIL_MYTHOS"],
+    },
 }
 
 
@@ -85,8 +111,8 @@ async def run_setup_check() -> dict:
         status = "ok" if all_set else ("missing_required" if info["required"] else "not_configured")
         live = None
 
-        # Live ping for LINE Notify tokens
-        if all_set and key.startswith("line_notify_"):
+        # Live ping for LINE Notify tokens (task router + mythos CEO)
+        if all_set and (key.startswith("line_notify_") or key == "mythos_ceo"):
             token = list(env_vals.values())[0]
             live = await ping_line_notify(token)
             if not live:

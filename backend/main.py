@@ -84,10 +84,16 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"DB init skipped: {e}")
     try:
-        from news_monitor import start_scheduler, run_news_fetch
+        from news_monitor import start_scheduler, run_news_fetch, get_scheduler
         start_scheduler()
         asyncio.create_task(run_news_fetch())  # immediate first fetch
         logger.info("News monitor started")
+        try:
+            from mythos_command import register_mythos_jobs
+            register_mythos_jobs(get_scheduler())
+            logger.info("Mythos Command System started")
+        except Exception as e2:
+            logger.warning(f"Mythos scheduler skipped: {e2}")
     except Exception as e:
         logger.warning(f"News monitor skipped: {e}")
     logger.info(f"OpenThai AI started | env={'production' if IS_PRODUCTION else 'dev'} | origins={ALLOWED_ORIGINS}")
@@ -825,6 +831,188 @@ async def get_news_sources():
     from news_monitor import FEEDS
     return [{"source": f["source"], "label": f["label"], "emoji": f["emoji"], "priority": f["priority"]} for f in FEEDS]
 
+
+# ================== MYTHOS COMMAND ENDPOINTS ==================
+
+class MythosCommandRequest(BaseModel):
+    directive: str
+    context: Optional[str] = ""
+    issued_by: Optional[str] = "Mythos"
+
+class ExecutiveTaskUpdate(BaseModel):
+    status: str  # assigned | in_progress | done | blocked | cancelled
+    progress_note: Optional[str] = ""
+
+@app.post("/mythos/command")
+async def mythos_issue_command(req: MythosCommandRequest):
+    """Mythos ออก directive → AI แตกงาน → มอบหมาย C-Suite/Regional/Dept → แจ้ง LINE"""
+    from mythos_command import issue_directive
+    result = await issue_directive(req.directive, req.context or "", req.issued_by or "Mythos")
+    return result
+
+@app.get("/mythos/directives")
+async def mythos_get_directives(
+    status: Optional[str] = None,
+    urgency: Optional[str] = None,
+    limit: int = 20,
+):
+    """รายการ directive ทั้งหมดของ Mythos"""
+    try:
+        from db import AsyncSessionLocal, MythosDirective, ExecutiveTask
+        from sqlalchemy import select, desc
+        async with AsyncSessionLocal() as db:
+            q = select(MythosDirective).order_by(desc(MythosDirective.created_at))
+            if status:
+                q = q.where(MythosDirective.status == status)
+            if urgency:
+                q = q.where(MythosDirective.urgency == urgency)
+            q = q.limit(limit)
+            res = await db.execute(q)
+            directives = res.scalars().all()
+
+            all_ids = [d.directive_id for d in directives]
+            tasks_by_dir: dict = {}
+            if all_ids:
+                tq = select(ExecutiveTask).where(ExecutiveTask.directive_id.in_(all_ids))
+                tr = await db.execute(tq)
+                for t in tr.scalars().all():
+                    tasks_by_dir.setdefault(t.directive_id, []).append({
+                        "assignee": t.assignee, "assignee_title": t.assignee_title,
+                        "title": t.title, "status": t.status,
+                        "deadline": t.deadline.isoformat(),
+                    })
+
+        return {"directives": [
+            {
+                "directive_id": d.directive_id, "summary": d.summary,
+                "strategic_intent": d.strategic_intent, "urgency": d.urgency,
+                "status": d.status, "task_count": d.task_count,
+                "success_criteria": d.success_criteria,
+                "review_date": d.review_date.isoformat(),
+                "created_at": d.created_at.isoformat(),
+                "tasks": tasks_by_dir.get(d.directive_id, []),
+            }
+            for d in directives
+        ], "count": len(directives)}
+    except Exception as e:
+        return {"directives": [], "error": str(e)}
+
+@app.get("/mythos/dashboard")
+async def mythos_dashboard():
+    """Executive dashboard — stats ทั้งหมดสำหรับ Mythos"""
+    try:
+        from db import AsyncSessionLocal, MythosDirective, ExecutiveTask
+        from sqlalchemy import select, func, desc
+        from mythos_command import ORG
+
+        async with AsyncSessionLocal() as db:
+            # Directive counts by urgency + status
+            dr = await db.execute(
+                select(MythosDirective.urgency, MythosDirective.status, func.count().label("c"))
+                .group_by(MythosDirective.urgency, MythosDirective.status)
+            )
+            dir_stats: dict = {}
+            for urgency, status, cnt in dr.all():
+                dir_stats.setdefault(urgency, {})[status] = cnt
+
+            # Task stats by assignee
+            tr = await db.execute(
+                select(ExecutiveTask.assignee, ExecutiveTask.status, func.count().label("c"))
+                .group_by(ExecutiveTask.assignee, ExecutiveTask.status)
+            )
+            exec_stats: dict = {}
+            for assignee, status, cnt in tr.all():
+                exec_stats.setdefault(assignee, {})[status] = cnt
+
+            # Overdue
+            odr = await db.execute(
+                select(func.count()).where(
+                    ExecutiveTask.deadline < datetime.utcnow(),
+                    ExecutiveTask.status.notin_(["done", "cancelled"])
+                )
+            )
+            overdue_count = odr.scalar() or 0
+
+            # Recent directives
+            recent = await db.execute(
+                select(MythosDirective).order_by(desc(MythosDirective.created_at)).limit(5)
+            )
+            recent_list = [
+                {"directive_id": d.directive_id, "summary": d.summary,
+                 "urgency": d.urgency, "status": d.status,
+                 "created_at": d.created_at.isoformat()}
+                for d in recent.scalars().all()
+            ]
+
+        # Build exec roster with task counts
+        exec_roster = {}
+        for exec_id, info in ORG.items():
+            stats = exec_stats.get(exec_id, {})
+            total = sum(stats.values())
+            done = stats.get("done", 0)
+            exec_roster[exec_id] = {
+                "title": info["title"], "emoji": info["emoji"],
+                "tier": info["tier"], "name_th": info.get("name_th", ""),
+                "tasks_total": total, "tasks_done": done,
+                "tasks_overdue": 0,
+                "completion_pct": int(done / total * 100) if total else 0,
+            }
+
+        return {
+            "org": exec_roster,
+            "directive_stats": dir_stats,
+            "overdue_tasks": overdue_count,
+            "recent_directives": recent_list,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    except Exception as e:
+        from mythos_command import ORG
+        return {
+            "org": {k: {"title": v["title"], "emoji": v["emoji"], "tier": v["tier"],
+                        "tasks_total": 0, "tasks_done": 0, "completion_pct": 0}
+                    for k, v in ORG.items()},
+            "directive_stats": {}, "overdue_tasks": 0,
+            "recent_directives": [], "error": str(e),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+@app.patch("/mythos/task/{task_id}")
+async def mythos_update_task(task_id: int, req: ExecutiveTaskUpdate):
+    """Executive อัปเดตสถานะงาน"""
+    valid = {"assigned", "in_progress", "done", "blocked", "cancelled"}
+    if req.status not in valid:
+        raise HTTPException(status_code=400, detail=f"status must be one of {valid}")
+    try:
+        from db import AsyncSessionLocal, ExecutiveTask
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(ExecutiveTask).where(ExecutiveTask.id == task_id))
+            task = res.scalar_one_or_none()
+            if not task:
+                raise HTTPException(status_code=404, detail="Task not found")
+            task.status = req.status
+            task.updated_at = datetime.utcnow()
+            if req.progress_note:
+                task.progress_note = req.progress_note
+            await db.commit()
+        return {"id": task_id, "status": req.status, "updated": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/mythos/brief")
+async def mythos_trigger_brief():
+    """Trigger Daily Brief ด้วยตนเอง (ปกติรันอัตโนมัติ 08:00 BKK)"""
+    from mythos_command import generate_daily_brief
+    result = await generate_daily_brief()
+    return result
+
+@app.get("/mythos/org")
+async def mythos_get_org():
+    """ดูโครงสร้างองค์กรทั้งหมด"""
+    from mythos_command import ORG, TIERS
+    return {"org": ORG, "tiers": TIERS}
 
 # ================== RUN SERVER ==================
 

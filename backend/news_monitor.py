@@ -376,3 +376,13 @@ def stop_scheduler() -> None:
     if _scheduler and _scheduler.running:
         _scheduler.shutdown(wait=False)
         logger.info("News scheduler stopped")
+
+
+# expose for external registration (Mythos, etc.)
+@property
+def scheduler(self=None):
+    return _scheduler
+
+# simple module-level accessor
+def get_scheduler():
+    return _scheduler

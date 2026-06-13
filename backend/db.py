@@ -270,3 +270,46 @@ class NewsArticle(Base):
     is_notified_line: Mapped[bool] = mapped_column(Boolean, default=False)
     is_in_digest: Mapped[bool] = mapped_column(Boolean, default=False)
     priority: Mapped[int] = mapped_column(Integer, default=1, index=True)  # 3=high, 2=mid, 1=normal
+
+
+# ── Mythos Command System ─────────────────────────────────────────────────────
+
+class MythosDirective(Base):
+    """Directive จาก Mythos ระดับ CEO"""
+    __tablename__ = "mythos_directives"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    directive_id: Mapped[str] = mapped_column(String(30), unique=True, index=True)
+    issued_by: Mapped[str] = mapped_column(String(100), default="Mythos")
+    raw_text: Mapped[str] = mapped_column(Text)
+    context: Mapped[str] = mapped_column(Text, default="")
+    summary: Mapped[str] = mapped_column(Text)
+    strategic_intent: Mapped[str] = mapped_column(Text)
+    urgency: Mapped[str] = mapped_column(String(20), default="normal", index=True)
+    success_criteria: Mapped[str] = mapped_column(Text)
+    review_date: Mapped[datetime] = mapped_column(DateTime)
+    task_count: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(20), default="active", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    closed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+
+
+class ExecutiveTask(Base):
+    """งานย่อยที่ AI แตกออกจาก Directive มอบหมายให้ C-Suite/Regional/Dept"""
+    __tablename__ = "executive_tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    directive_id: Mapped[str] = mapped_column(String(30), index=True)
+    assignee: Mapped[str] = mapped_column(String(30), index=True)       # cto, cfo, th_director …
+    assignee_title: Mapped[str] = mapped_column(String(100))
+    assignee_tier: Mapped[str] = mapped_column(String(20), index=True)  # c_suite, regional, department
+    title: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str] = mapped_column(Text)
+    deliverable: Mapped[str] = mapped_column(Text, default="")
+    kpi: Mapped[str] = mapped_column(String(300), default="")
+    deadline: Mapped[datetime] = mapped_column(DateTime, index=True)
+    depends_on: Mapped[str] = mapped_column(String(200), default="")   # comma-sep exec IDs
+    status: Mapped[str] = mapped_column(String(20), default="assigned", index=True)
+    progress_note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
