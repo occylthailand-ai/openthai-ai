@@ -13,6 +13,7 @@ import os
 import json
 import logging
 import secrets
+import limits as _limits
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import anthropic
@@ -226,7 +227,7 @@ Context เพิ่มเติม: {context or 'ไม่มี'}
 
         resp = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=2000,
+            max_tokens=_limits.get("claude_max_tokens_mythos", 4000),
             system=MYTHOS_PROMPT,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -264,7 +265,7 @@ async def notify_executive(exec_id: str, message: str) -> bool:
                 "https://notify-api.line.me/api/notify",
                 headers={"Authorization": f"Bearer {token}"},
                 data={"message": message},
-                timeout=10,
+                timeout=_limits.get("timeout_line_notify", 15),
             )
             return r.status_code == 200
     except Exception as e:
@@ -283,7 +284,7 @@ async def notify_mythos(message: str) -> bool:
                 "https://notify-api.line.me/api/notify",
                 headers={"Authorization": f"Bearer {token}"},
                 data={"message": message},
-                timeout=10,
+                timeout=_limits.get("timeout_line_notify", 15),
             )
             return r.status_code == 200
     except Exception as e:

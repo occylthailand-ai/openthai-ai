@@ -13,6 +13,7 @@ import json
 import logging
 from datetime import datetime, timezone, timedelta
 from typing import Optional
+import limits as _limits
 import anthropic
 import httpx
 
@@ -92,7 +93,7 @@ Context: {context or 'ไม่มี'}
 
         resp = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=800,
+            max_tokens=_limits.get("claude_max_tokens_goal", 1500),
             system=GOAL_ANALYST_PROMPT,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -130,7 +131,7 @@ async def _line(token_env: str, msg: str) -> bool:
                 "https://notify-api.line.me/api/notify",
                 headers={"Authorization": f"Bearer {token}"},
                 data={"message": msg},
-                timeout=10,
+                timeout=_limits.get("timeout_line_notify", 15),
             )
             return r.status_code == 200
     except Exception as e:

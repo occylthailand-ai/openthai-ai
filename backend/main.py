@@ -8,7 +8,7 @@ OpenThai AI Backend — FastAPI + Claude API
 3. uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, HTTPException, Request, Depends
+from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -32,11 +32,14 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("openthai")
 
-# ── Rate limiting — DB-backed (persists across restarts) ──────────────────────
-FREE_DAILY_LIMIT = 3
+# ── Rate limiting — DB-backed via limits.py ────────────────────────────────────
+import limits as _limits
 
 async def check_rate_limit_db(ip: str) -> bool:
     """DB-backed rate limit for anonymous IPs. Returns True if allowed."""
+    free_limit = _limits.get("free_ip_daily", 50)
+    if free_limit == -1:
+        return True  # unlimited
     pseudo_key = f"ip:{ip}"
     today = str(date.today())
     try:
@@ -46,7 +49,7 @@ async def check_rate_limit_db(ip: str) -> bool:
                 select(ApiUsage).where(ApiUsage.api_key == pseudo_key, ApiUsage.date == today)
             )
             usage = res.scalar_one_or_none()
-            if usage and usage.count >= FREE_DAILY_LIMIT:
+            if usage and usage.count >= free_limit:
                 return False
             if usage:
                 usage.count += 1
@@ -55,7 +58,6 @@ async def check_rate_limit_db(ip: str) -> bool:
             await db.commit()
             return True
     except Exception:
-        # Fallback: allow on DB error (avoid blocking all requests)
         return True
 
 # Initialize FastAPI
@@ -90,6 +92,9 @@ async def startup_event():
         from db import init_db
         await init_db()
         logger.info("Database initialized")
+        # โหลด limit overrides จาก DB
+        await _limits.load_db_overrides()
+        logger.info("Limit overrides loaded")
     except Exception as e:
         logger.warning(f"DB init skipped: {e}")
     try:
@@ -280,7 +285,7 @@ async def generate_content(product: ProductInput) -> dict:
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=2000,
+            max_tokens=_limits.get("claude_max_tokens", 4000),
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}]
         )
@@ -304,7 +309,7 @@ async def critique_content(content: dict) -> dict:
     try:
         response = client.messages.create(
             model="claude-sonnet-4-6",
-            max_tokens=1000,
+            max_tokens=_limits.get("claude_max_tokens_critic", 1000),
             system=AI_CRITIC_PROMPT,
             messages=[{
                 "role": "user", 
@@ -364,13 +369,12 @@ async def generate_tiktok_content(product: ProductInput, request: Request):
     if api_key:
         try:
             from db import AsyncSessionLocal, User, ApiUsage
-            from auth import PLAN_LIMITS
             async with AsyncSessionLocal() as db:
                 res = await db.execute(select(User).where(User.api_key == api_key))
                 user = res.scalar_one_or_none()
                 if user and user.is_active:
                     is_pro = user.plan in ("pro", "business")
-                    limit = PLAN_LIMITS.get(user.plan, 10)
+                    limit = _limits.plan_daily_limit(user.plan)
                     today = str(date.today())
                     usage_res = await db.execute(
                         select(ApiUsage).where(ApiUsage.api_key == api_key, ApiUsage.date == today)
@@ -390,15 +394,16 @@ async def generate_tiktok_content(product: ProductInput, request: Request):
             logger.warning("API key check error (non-fatal): %s", e)
     else:
         if not await check_rate_limit_db(ip):
-            raise HTTPException(status_code=429, detail="ครบโควตาฟรี 3 ครั้ง/วันแล้ว — อัปเกรดเพื่อใช้งานไม่จำกัด")
+            free_lim = _limits.get("free_ip_daily", 50)
+            raise HTTPException(status_code=429, detail=f"ครบโควตาฟรี {free_lim} ครั้ง/วันแล้ว — อัปเกรดเพื่อใช้งานไม่จำกัด")
 
     t_start = time.time()
     logger.info(f"generate | product={product.product_name[:40]} | category={product.product_category} | ip={ip}")
 
-    max_iterations = 3
+    max_iterations = _limits.get("claude_max_iterations", 5)
     best_content = None
     best_score = 0
-    
+
     for iteration in range(max_iterations):
         # Generate content
         content = await generate_content(product)
@@ -510,8 +515,7 @@ async def auth_me(request: Request):
             usage_res = await db.execute(select(ApiUsage).where(ApiUsage.api_key == key, ApiUsage.date == today))
             usage = usage_res.scalar_one_or_none()
             used_today = usage.count if usage else 0
-            from auth import PLAN_LIMITS
-            limit = PLAN_LIMITS.get(user.plan, 10)
+            limit = _limits.plan_daily_limit(user.plan)
             return {"name": user.name, "email": user.email, "plan": user.plan, "api_key": key, "used_today": used_today, "daily_limit": limit, "created_at": user.created_at.isoformat()}
     except HTTPException:
         raise
@@ -686,7 +690,6 @@ async def generate_bulk(req: BulkProductInput, request: Request):
     # Verify pro/business plan
     try:
         from db import AsyncSessionLocal, User
-        from auth import PLAN_LIMITS
         async with AsyncSessionLocal() as db:
             res = await db.execute(select(User).where(User.api_key == api_key))
             user = res.scalar_one_or_none()
@@ -699,8 +702,10 @@ async def generate_bulk(req: BulkProductInput, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    products = req.products[:10]   # cap at 10
-    sem = asyncio.Semaphore(min(req.max_parallel or 3, 3))
+    bulk_cap = _limits.get("bulk_max_products", 50)
+    products = req.products[:bulk_cap]
+    max_par = _limits.get("bulk_max_parallel", 10)
+    sem = asyncio.Semaphore(min(req.max_parallel or max_par, max_par))
 
     async def _gen_one(p: ProductInput, idx: int):
         async with sem:
@@ -1570,6 +1575,65 @@ async def delete_goal(goal_id: int):
         goal.updated_at = datetime.utcnow()
         await db.commit()
     return {"id": goal_id, "status": "cancelled"}
+
+# ================== LIMIT CONTROL — Admin endpoints ==================
+
+from auth import require_admin as _require_admin
+
+@app.get("/admin/limits")
+async def get_limits(key: str = Depends(_require_admin)):
+    """ดู limits ทั้งหมดพร้อม source (default/env/override)"""
+    return _limits.all_limits()
+
+class LimitUpdateRequest(BaseModel):
+    value: int   # -1 = unlimited
+
+@app.patch("/admin/limits/{name}")
+async def update_limit(name: str, req: LimitUpdateRequest, key: str = Depends(_require_admin)):
+    """อัปเดต limit แบบ real-time — persist ข้าม restart ผ่าน DB"""
+    _limits.set_override(name, req.value)
+    await _limits.save_db_override(name, req.value)
+    return {"name": name, "value": req.value, "status": "updated"}
+
+@app.delete("/admin/limits/{name}")
+async def reset_limit(name: str, key: str = Depends(_require_admin)):
+    """รีเซต limit กลับค่า default"""
+    _limits.remove_override(name)
+    try:
+        from db import AsyncSessionLocal, SystemConfig
+        from sqlalchemy import select, delete
+        async with AsyncSessionLocal() as db:
+            await db.execute(delete(SystemConfig).where(SystemConfig.key == f"limit.{name}"))
+            await db.commit()
+    except Exception:
+        pass
+    return {"name": name, "status": "reset_to_default", "default": _limits.get(name)}
+
+@app.post("/admin/limits/unlock-all")
+async def unlock_all_limits(key: str = Depends(_require_admin)):
+    """ปลดลิมิตทุกอย่าง — สิทธิ์เต็ม 100%"""
+    unlocks = {
+        "free_ip_daily":         -1,
+        "plan_free_daily":       -1,
+        "plan_pro_daily":        -1,
+        "plan_business_daily":   -1,
+        "plan_enterprise_daily": -1,
+        "bulk_max_products":     200,
+        "bulk_max_parallel":     20,
+        "claude_max_tokens":     8096,
+        "claude_max_tokens_critic":    2000,
+        "claude_max_tokens_mythos":    8096,
+        "claude_max_tokens_goal":      2000,
+        "claude_max_iterations":       5,
+        "timeout_news_feed":     60,
+        "timeout_line_notify":   30,
+        "timeout_claude":        180,
+        "timeout_payment":       30,
+    }
+    for name, value in unlocks.items():
+        _limits.set_override(name, value)
+        await _limits.save_db_override(name, value)
+    return {"status": "all_limits_unlocked", "applied": unlocks}
 
 # ================== MASTER ORCHESTRATOR (autorun) ==================
 

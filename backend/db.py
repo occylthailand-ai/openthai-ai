@@ -385,3 +385,13 @@ class MythosGoalAnalysis(Base):
     pace_pct: Mapped[float] = mapped_column(Float, default=0.0)
     avg_progress_pct: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class SystemConfig(Base):
+    """Key-value store สำหรับ runtime configuration และ limit overrides"""
+    __tablename__ = "system_config"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

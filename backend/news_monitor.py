@@ -14,6 +14,7 @@ import httpx
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import xml.etree.ElementTree as ET
+import limits as _limits
 
 logger = logging.getLogger("openthai.news")
 
@@ -133,7 +134,7 @@ def _parse_feed_xml(xml_text: str, feed_info: dict) -> list[dict]:
 
 async def fetch_feed(feed_info: dict, client: httpx.AsyncClient) -> list[dict]:
     try:
-        r = await client.get(feed_info["url"], timeout=15, follow_redirects=True)
+        r = await client.get(feed_info["url"], timeout=_limits.get("timeout_news_feed", 30), follow_redirects=True)
         if r.status_code != 200:
             logger.warning("feed=%s status=%s", feed_info["source"], r.status_code)
             return []
@@ -201,7 +202,7 @@ async def send_line_notify(message: str) -> bool:
                 "https://notify-api.line.me/api/notify",
                 headers={"Authorization": f"Bearer {token}"},
                 data={"message": message},
-                timeout=10,
+                timeout=_limits.get("timeout_line_notify", 15),
             )
             return r.status_code == 200
     except Exception as e:
@@ -321,7 +322,7 @@ async def run_news_fetch() -> dict:
 
     async with httpx.AsyncClient(
         headers={"User-Agent": "OpenThaiAI-NewsBot/1.0 (+https://www.openthai-ai.com)"},
-        timeout=15.0,
+        timeout=float(_limits.get("timeout_news_feed", 30)),
     ) as client:
         tasks = [fetch_feed(f, client) for f in FEEDS]
         results = await asyncio.gather(*tasks, return_exceptions=True)
