@@ -215,6 +215,14 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 .footer-links a{color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.85rem;transition:color 0.2s;}
 .footer-links a:hover{color:white;}
 .copyright{color:rgba(255,255,255,0.3);font-size:0.82rem;}
+.powered-by{margin-top:0.75rem;font-size:0.75rem;color:rgba(255,255,255,0.2);line-height:1.8;}
+.powered-by span{color:rgba(255,255,255,0.35);}
+
+/* ===== LANGUAGE SWITCHER ===== */
+.lang-switcher{display:flex;align-items:center;gap:0.35rem;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:20px;padding:0.2rem 0.4rem;cursor:pointer;}
+.lang-btn{background:none;border:none;color:rgba(255,255,255,0.5);font-size:0.78rem;font-weight:600;cursor:pointer;padding:0.2rem 0.5rem;border-radius:14px;font-family:inherit;transition:all 0.2s;}
+.lang-btn.active{background:var(--primary);color:white;}
+[lang-hide]{display:none!important;}
 
 /* ===== MODAL ===== */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;align-items:center;justify-content:center;padding:1rem;}
@@ -252,11 +260,15 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
   <div class="nav-container">
     <a href="#home" class="logo">🇹🇭 OpenThai AI</a>
     <div class="nav-links">
-      <a href="#app">ใช้งาน</a>
-      <a href="#features">ฟีเจอร์</a>
-      <a href="#affiliate">ตัวแทน</a>
-      <a href="#pricing">ราคา</a>
-      <a href="#waitlist" class="nav-cta">ลงทะเบียน</a>
+      <a href="#app" data-th="ใช้งาน" data-en="App">ใช้งาน</a>
+      <a href="#features" data-th="ฟีเจอร์" data-en="Features">ฟีเจอร์</a>
+      <a href="#affiliate" data-th="ตัวแทน" data-en="Affiliate">ตัวแทน</a>
+      <a href="#pricing" data-th="ราคา" data-en="Pricing">ราคา</a>
+      <a href="#waitlist" class="nav-cta" data-th="ลงทะเบียน" data-en="Register">ลงทะเบียน</a>
+    </div>
+    <div class="lang-switcher" title="เปลี่ยนภาษา / Change Language">
+      <button class="lang-btn active" id="langTH" onclick="setLang('th')">🇹🇭 TH</button>
+      <button class="lang-btn" id="langEN" onclick="setLang('en')">🇺🇸 EN</button>
     </div>
     <button class="hamburger" id="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></button>
   </div>
@@ -272,18 +284,18 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 <!-- ===== HERO ===== -->
 <section class="hero" id="home">
   <div class="hero-content">
-    <div class="hero-badge">🚀 เปิดให้ใช้งาน Early Access แล้ว!</div>
-    <h1>สร้างคอนเทนต์ <span>TikTok</span><br>ด้วย AI สัญชาติไทย</h1>
-    <p>สคริปต์ + แคปชั่น + แฮชแท็ก สำหรับสินค้าไทย OTOP และสินค้าทั่วโลก<br>พร้อมใช้งานใน 30 วินาที — ไม่ต้องสมัคร ไม่ต้องรอ</p>
+    <div class="hero-badge" id="hero-badge">🚀 เปิดให้ใช้งาน Early Access แล้ว!</div>
+    <h1 id="hero-h1">สร้างคอนเทนต์ <span>TikTok</span><br>ด้วย AI สัญชาติไทย</h1>
+    <p id="hero-p">สคริปต์ + แคปชั่น + แฮชแท็ก สำหรับสินค้าไทย OTOP และสินค้าทั่วโลก<br>พร้อมใช้งานใน 30 วินาที — ไม่ต้องสมัคร ไม่ต้องรอ</p>
     <div class="hero-stats">
-      <div><div class="stat-num">300+</div><div class="stat-lbl">สินค้าใน Database</div></div>
-      <div><div class="stat-num">5</div><div class="stat-lbl">รูปแบบ Hook</div></div>
-      <div><div class="stat-num">35</div><div class="stat-lbl">ประเทศครอบคลุม</div></div>
-      <div><div class="stat-num">30%</div><div class="stat-lbl">ค่าคอมตัวแทน</div></div>
+      <div><div class="stat-num">300+</div><div class="stat-lbl" id="stat1">สินค้าใน Database</div></div>
+      <div><div class="stat-num">5</div><div class="stat-lbl" id="stat2">รูปแบบ Hook</div></div>
+      <div><div class="stat-num">35</div><div class="stat-lbl" id="stat3">ประเทศครอบคลุม</div></div>
+      <div><div class="stat-num">30%</div><div class="stat-lbl" id="stat4">ค่าคอมตัวแทน</div></div>
     </div>
     <div class="hero-btns">
-      <a href="#app" class="btn-primary">⚡ ลองสร้างเลย — ฟรี</a>
-      <a href="#pricing" class="btn-outline">ดูแพ็กเกจ →</a>
+      <a href="#app" class="btn-primary" id="hero-btn1">⚡ ลองสร้างเลย — ฟรี</a>
+      <a href="#pricing" class="btn-outline" id="hero-btn2">ดูแพ็กเกจ →</a>
     </div>
   </div>
 </section>
@@ -291,8 +303,8 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 <!-- ===== APP SECTION ===== -->
 <section id="app" style="background:var(--darker);padding:5rem 1.5rem;">
   <div style="text-align:center;margin-bottom:2rem;">
-    <h2 class="section-title">🎯 สร้างคอนเทนต์ TikTok ได้เลย</h2>
-    <p class="section-sub">ฟรี 3 ครั้ง/วัน · ไม่ต้องสมัคร · ผลลัพธ์ใน 30 วินาที</p>
+    <h2 class="section-title" id="app-title">🎯 สร้างคอนเทนต์ TikTok ได้เลย</h2>
+    <p class="section-sub" id="app-sub">ฟรี 3 ครั้ง/วัน · ไม่ต้องสมัคร · ผลลัพธ์ใน 30 วินาที</p>
   </div>
   <div class="app-layout">
     <!-- INPUT -->
@@ -412,8 +424,8 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 <!-- ===== FEATURES ===== -->
 <section class="section section-dark" id="features">
   <div class="container">
-    <h2 class="section-title">✨ ฟีเจอร์เด่น</h2>
-    <p class="section-sub">ทุกอย่างที่ TikTok Creator ต้องการ</p>
+    <h2 class="section-title" id="feat-title">✨ ฟีเจอร์เด่น</h2>
+    <p class="section-sub" id="feat-sub">ทุกอย่างที่ TikTok Creator ต้องการ</p>
     <div class="features-grid">
       <div class="feature-card"><div class="feature-icon">🎬</div><h3>สคริปต์ 30 วินาที</h3><p>Hook 3 วิ + Story 20 วิ + CTA 7 วิ ครบสูตร พร้อมถ่ายทันที</p></div>
       <div class="feature-card"><div class="feature-icon">📝</div><h3>แคปชั่น + แฮชแท็ก</h3><p>แคปชั่นดึงดูดพร้อม 10 แฮชแท็กเหมาะกับสินค้า คัดลอกได้ในคลิกเดียว</p></div>
@@ -428,8 +440,8 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 <!-- ===== HOW IT WORKS ===== -->
 <section class="section section-darker">
   <div class="container">
-    <h2 class="section-title">🔧 วิธีใช้งาน</h2>
-    <p class="section-sub">4 ขั้นตอน ใช้งานได้ทันที</p>
+    <h2 class="section-title" id="how-title">🔧 วิธีใช้งาน</h2>
+    <p class="section-sub" id="how-sub">4 ขั้นตอน ใช้งานได้ทันที</p>
     <div class="steps">
       <div class="step"><div class="step-num">1</div><div class="step-content"><h3>พิมพ์ชื่อสินค้า</h3><p>ใส่ชื่อสินค้าและเลือกหมวดหมู่ — ยิ่งละเอียดยิ่งได้ผลดี</p></div></div>
       <div class="step"><div class="step-num">2</div><div class="step-content"><h3>เลือกรูปแบบ Hook</h3><p>Auto ให้ AI เลือกให้ หรือเลือกเอง 5 สไตล์</p></div></div>
@@ -465,8 +477,8 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 <!-- ===== PRICING ===== -->
 <section class="section section-darker" id="pricing">
   <div class="container">
-    <h2 class="section-title">💰 แพ็กเกจราคา</h2>
-    <p class="section-sub">เริ่มต้นฟรี ไม่ต้องใส่บัตรเครดิต</p>
+    <h2 class="section-title" id="price-title">💰 แพ็กเกจราคา</h2>
+    <p class="section-sub" id="price-sub">เริ่มต้นฟรี ไม่ต้องใส่บัตรเครดิต</p>
     <div class="pricing-grid">
       <div class="pricing-card">
         <h3>Free</h3>
@@ -512,8 +524,8 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 <!-- ===== WAITLIST ===== -->
 <section class="section section-dark" id="waitlist">
   <div class="waitlist-box">
-    <h2>🎉 ลงทะเบียน Early Access</h2>
-    <p>รับสิทธิ์ใช้งานฟรี 30 วัน + ส่วนลด 50% สำหรับ 100 คนแรก!</p>
+    <h2 id="wl-title">🎉 ลงทะเบียน Early Access</h2>
+    <p id="wl-sub">รับสิทธิ์ใช้งานฟรี 30 วัน + ส่วนลด 50% สำหรับ 100 คนแรก!</p>
     <form class="wl-form" id="waitlistForm">
       <div class="wl-row">
         <input type="text" name="name" placeholder="ชื่อ-นามสกุล" required>
@@ -555,6 +567,12 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
     <a href="mailto:contact@openthai-ai.com">ติดต่อเรา</a>
   </div>
   <p class="copyright">© 2026 OpenThai AI — Made with ❤️ in Thailand</p>
+  <p class="powered-by">
+    🇹🇭 <span>Made in Thailand</span> &nbsp;·&nbsp;
+    Powered by <span>1. Gemini AI</span> (ช่วงแรก) &nbsp;+&nbsp;
+    <span>2. Grok</span> (ช่วงที่ 2) &nbsp;+&nbsp;
+    <span>3. Claude AI</span> (ช่วงท้ายและต่อเนื่อง)
+  </p>
 </footer>
 
 <!-- ===== LINE MODAL ===== -->
@@ -807,6 +825,79 @@ document.getElementById('waitlistForm').addEventListener('submit',async function
   try{await fetch('https://script.google.com/macros/s/AKfycbxxUkC-hJcDANcyL6md7x_AjodJJihHrbKvIQgaQWyRxrWQm_awjtGLLt0RJvg7KIhPSQ/exec',{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}catch{}
   this.style.display='none';document.getElementById('successMsg').style.display='block';
 });
+
+// ===== LANGUAGE =====
+const TRANSLATIONS = {
+  th: {
+    'hero-badge': '🚀 เปิดให้ใช้งาน Early Access แล้ว!',
+    'hero-h1': 'สร้างคอนเทนต์ <span>TikTok</span><br>ด้วย AI สัญชาติไทย',
+    'hero-p': 'สคริปต์ + แคปชั่น + แฮชแท็ก สำหรับสินค้าไทย OTOP และสินค้าทั่วโลก<br>พร้อมใช้งานใน 30 วินาที — ไม่ต้องสมัคร ไม่ต้องรอ',
+    'hero-btn1': '⚡ ลองสร้างเลย — ฟรี',
+    'hero-btn2': 'ดูแพ็กเกจ →',
+    'stat1': 'สินค้าใน Database', 'stat2': 'รูปแบบ Hook', 'stat3': 'ประเทศครอบคลุม', 'stat4': 'ค่าคอมตัวแทน',
+    'app-title': '🎯 สร้างคอนเทนต์ TikTok ได้เลย',
+    'app-sub': 'ฟรี 3 ครั้ง/วัน · ไม่ต้องสมัคร · ผลลัพธ์ใน 30 วินาที',
+    'feat-title': '✨ ฟีเจอร์เด่น', 'feat-sub': 'ทุกอย่างที่ TikTok Creator ต้องการ',
+    'how-title': '🔧 วิธีใช้งาน', 'how-sub': '4 ขั้นตอน ใช้งานได้ทันที',
+    'aff-title': '🤝 โปรแกรมตัวแทน', 'price-title': '💰 แพ็กเกจราคา',
+    'price-sub': 'เริ่มต้นฟรี ไม่ต้องใส่บัตรเครดิต',
+    'wl-title': '🎉 ลงทะเบียน Early Access',
+    'wl-sub': 'รับสิทธิ์ใช้งานฟรี 30 วัน + ส่วนลด 50% สำหรับ 100 คนแรก!',
+    'gen-btn': '⚡ สร้างคอนเทนต์',
+  },
+  en: {
+    'hero-badge': '🚀 Early Access is Now Open!',
+    'hero-h1': 'Create <span>TikTok</span> Content<br>with Thai-Made AI',
+    'hero-p': 'Script + Caption + Hashtags for Thai OTOP & global products<br>Ready in 30 seconds — No signup required',
+    'hero-btn1': '⚡ Try Free Now',
+    'hero-btn2': 'View Pricing →',
+    'stat1': 'Products in Database', 'stat2': 'Hook Styles', 'stat3': 'Countries Covered', 'stat4': 'Affiliate Commission',
+    'app-title': '🎯 Generate TikTok Content Now',
+    'app-sub': 'Free 3x/day · No signup · Results in 30 seconds',
+    'feat-title': '✨ Key Features', 'feat-sub': 'Everything a TikTok Creator needs',
+    'how-title': '🔧 How It Works', 'how-sub': '4 simple steps — start immediately',
+    'aff-title': '🤝 Affiliate Program', 'price-title': '💰 Pricing',
+    'price-sub': 'Start free — no credit card required',
+    'wl-title': '🎉 Register for Early Access',
+    'wl-sub': 'Get 30 days free + 50% off for the first 100 users!',
+    'gen-btn': '⚡ Generate Content',
+  }
+};
+
+function setLang(lang) {
+  const t = TRANSLATIONS[lang];
+  document.getElementById('langTH').classList.toggle('active', lang==='th');
+  document.getElementById('langEN').classList.toggle('active', lang==='en');
+  localStorage.setItem('otai_lang', lang);
+
+  // Nav links
+  document.querySelectorAll('[data-th]').forEach(el => {
+    el.textContent = lang==='th' ? el.dataset.th : el.dataset.en;
+  });
+
+  // Hero
+  safeHTML('hero-badge', t['hero-badge']);
+  safeHTML('hero-h1', t['hero-h1']);
+  safeHTML('hero-p', t['hero-p']);
+  safeText('hero-btn1', t['hero-btn1']);
+  safeText('hero-btn2', t['hero-btn2']);
+  safeText('stat1', t['stat1']); safeText('stat2', t['stat2']);
+  safeText('stat3', t['stat3']); safeText('stat4', t['stat4']);
+
+  // Sections
+  safeHTML('app-title', t['app-title']); safeText('app-sub', t['app-sub']);
+  safeHTML('feat-title', t['feat-title']); safeText('feat-sub', t['feat-sub']);
+  safeHTML('how-title', t['how-title']); safeText('how-sub', t['how-sub']);
+  safeHTML('price-title', t['price-title']); safeText('price-sub', t['price-sub']);
+  safeHTML('wl-title', t['wl-title']); safeText('wl-sub', t['wl-sub']);
+  safeText('btnText', t['gen-btn']);
+}
+
+function safeText(id, v){ const el=document.getElementById(id); if(el&&v) el.textContent=v; }
+function safeHTML(id, v){ const el=document.getElementById(id); if(el&&v) el.innerHTML=v; }
+
+// Apply saved language on load
+(function(){ const l=localStorage.getItem('otai_lang')||'th'; if(l==='en') setLang('en'); })();
 
 // ===== KEYBOARD =====
 document.addEventListener('keydown',e=>{
