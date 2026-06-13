@@ -273,6 +273,23 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 .auth-panel{display:none;}.auth-panel.active{display:block;}
 .api-key-display{background:var(--input-bg);border:1.5px solid var(--success);border-radius:10px;padding:0.9rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--success);word-break:break-all;margin:1rem 0;cursor:pointer;position:relative;}
 .api-key-display::after{content:'คลิกเพื่อคัดลอก';position:absolute;top:-8px;right:10px;background:var(--success);color:white;font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:6px;font-family:'Noto Sans Thai',sans-serif;}
+/* ===== SETUP WIZARD ===== */
+.setup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.85rem;}
+.setup-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:14px;padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:0.5rem;transition:border-color 0.2s;}
+.setup-card.s-ok{border-color:rgba(39,174,96,0.5);}
+.setup-card.s-missing{border-color:rgba(231,76,60,0.4);}
+.setup-card.s-warn{border-color:rgba(241,196,15,0.4);}
+.setup-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.dot-ok{background:#27AE60;box-shadow:0 0 6px #27AE60;}
+.dot-miss{background:#e74c3c;}
+.dot-warn{background:#F39C12;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.setup-label{font-size:0.88rem;font-weight:700;color:white;}
+.setup-detail{font-size:0.76rem;color:var(--muted);line-height:1.5;}
+.setup-action-btn{margin-top:0.4rem;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.3);color:var(--primary);border-radius:8px;padding:0.35rem 0.75rem;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block;width:fit-content;}
+.setup-action-btn:hover{background:rgba(255,107,53,0.2);}
+.setup-score-bar{height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin-bottom:1.5rem;}
+.setup-score-fill{height:100%;border-radius:4px;background:var(--gradient);transition:width 0.8s ease;}
 /* ===== TASK DASHBOARD ===== */
 .dept-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem;}
 .dept-header{display:flex;align-items:center;gap:0.75rem;}
@@ -327,6 +344,7 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
       <a href="#app" data-th="ใช้งาน" data-en="App">ใช้งาน</a>
       <a href="#features" data-th="ฟีเจอร์" data-en="Features">ฟีเจอร์</a>
       <a href="#affiliate" data-th="ตัวแทน" data-en="Affiliate">ตัวแทน</a>
+      <a href="#setup" data-th="ตั้งค่า" data-en="Setup">ตั้งค่า</a>
       <a href="#tasks" data-th="ทีมงาน" data-en="Tasks">ทีมงาน</a>
       <a href="#ai-news" data-th="ข่าว AI" data-en="AI News">ข่าว AI</a>
       <a href="#pricing" data-th="ราคา" data-en="Pricing">ราคา</a>
@@ -645,6 +663,170 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
     <div class="success-msg" id="successMsg">
       <h3>✅ ลงทะเบียนสำเร็จ!</h3>
       <p>ขอบคุณที่สนใจ OpenThai AI เราจะติดต่อกลับภายใน 24 ชั่วโมง</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SETUP WIZARD ===== -->
+<section class="section section-light" id="setup" style="padding:3.5rem 2rem;">
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h2 class="section-title" style="margin-bottom:0.25rem;text-align:left;">🛠️ Setup Wizard</h2>
+        <p style="color:var(--muted);font-size:0.85rem;">สถานะ integration ทั้งหมด — คลิก "ทดสอบ" เพื่อยืนยันการเชื่อมต่อ</p>
+      </div>
+      <div style="text-align:right;">
+        <div id="setupScore" style="font-size:2rem;font-weight:700;color:white;">—%</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Setup Complete</div>
+      </div>
+    </div>
+    <div class="setup-score-bar"><div class="setup-score-fill" id="setupScoreFill" style="width:0%"></div></div>
+
+    <div class="setup-grid" id="setupGrid">
+      <!-- Step 1: Anthropic -->
+      <div class="setup-card" id="sc-anthropic">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-anthropic"></div>
+          <div style="flex:1;">
+            <div class="setup-label">1. 🤖 Anthropic API Key</div>
+            <div class="setup-detail" id="detail-anthropic">ตรวจสอบอยู่...</div>
+            <a href="https://console.anthropic.com/settings/keys" target="_blank" class="setup-action-btn">รับ API Key →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: LINE Notify x4 -->
+      <div class="setup-card" id="sc-line-dev">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-line-dev"></div>
+          <div style="flex:1;">
+            <div class="setup-label">2a. 🔧 LINE Notify — Dev</div>
+            <div class="setup-detail" id="detail-line-dev">ตรวจสอบอยู่...</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;">
+              <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn">รับ Token →</a>
+              <button onclick="testLineNotify('dev')" class="setup-action-btn" id="test-line-dev">ทดสอบ</button>
+            </div>
+            <div id="test-line-dev-result" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-line-sales">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-line-sales"></div>
+          <div style="flex:1;">
+            <div class="setup-label">2b. 💼 LINE Notify — Sales</div>
+            <div class="setup-detail" id="detail-line-sales">ตรวจสอบอยู่...</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;">
+              <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn">รับ Token →</a>
+              <button onclick="testLineNotify('sales')" class="setup-action-btn" id="test-line-sales">ทดสอบ</button>
+            </div>
+            <div id="test-line-sales-result" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-line-support">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-line-support"></div>
+          <div style="flex:1;">
+            <div class="setup-label">2c. 🎧 LINE Notify — Support</div>
+            <div class="setup-detail" id="detail-line-support">ตรวจสอบอยู่...</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;">
+              <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn">รับ Token →</a>
+              <button onclick="testLineNotify('support')" class="setup-action-btn" id="test-line-support">ทดสอบ</button>
+            </div>
+            <div id="test-line-support-result" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-line-finance">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-line-finance"></div>
+          <div style="flex:1;">
+            <div class="setup-label">2d. 💰 LINE Notify — Finance</div>
+            <div class="setup-detail" id="detail-line-finance">ตรวจสอบอยู่...</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;">
+              <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn">รับ Token →</a>
+              <button onclick="testLineNotify('finance')" class="setup-action-btn" id="test-line-finance">ทดสอบ</button>
+            </div>
+            <div id="test-line-finance-result" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: LINE OA + GitHub -->
+      <div class="setup-card" id="sc-line-oa">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-line-oa"></div>
+          <div style="flex:1;">
+            <div class="setup-label">3. 💬 LINE OA Webhook</div>
+            <div class="setup-detail" id="detail-line-oa">ตรวจสอบอยู่...</div>
+            <div class="setup-detail" id="webhook-line-url" style="font-family:monospace;color:var(--secondary);word-break:break-all;margin-top:0.3rem;"></div>
+            <a href="https://developers.line.biz/console/" target="_blank" class="setup-action-btn" style="margin-top:0.4rem;">LINE Developers →</a>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-github">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-github"></div>
+          <div style="flex:1;">
+            <div class="setup-label">3b. 🐙 GitHub Webhook</div>
+            <div class="setup-detail" id="detail-github">ตรวจสอบอยู่...</div>
+            <div class="setup-detail" id="webhook-github-url" style="font-family:monospace;color:var(--secondary);word-break:break-all;margin-top:0.3rem;"></div>
+            <button onclick="autoRegisterGithub()" class="setup-action-btn" style="margin-top:0.4rem;" id="btn-github-register">⚡ Auto Register</button>
+            <div id="github-register-result" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Email + PromptPay -->
+      <div class="setup-card" id="sc-smtp">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-smtp"></div>
+          <div style="flex:1;">
+            <div class="setup-label">4a. 📧 Email (SMTP)</div>
+            <div class="setup-detail" id="detail-smtp">ตรวจสอบอยู่...</div>
+            <a href="https://myaccount.google.com/apppasswords" target="_blank" class="setup-action-btn" style="margin-top:0.4rem;">Gmail App Password →</a>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-promptpay">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-promptpay"></div>
+          <div style="flex:1;">
+            <div class="setup-label">4b. 💳 PromptPay QR</div>
+            <div class="setup-detail" id="detail-promptpay">ตรวจสอบอยู่...</div>
+            <div class="setup-detail" style="margin-top:0.3rem;">ตั้งค่า <code style="color:var(--primary);">PROMPTPAY_ID</code> ใน Railway</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Railway copy-paste env block -->
+    <div style="margin-top:2rem;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:1.25rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <p style="font-size:0.85rem;font-weight:700;color:white;">📋 Railway Environment Variables (copy-paste)</p>
+        <button onclick="copyEnvBlock()" style="background:rgba(78,205,196,0.12);border:1px solid rgba(78,205,196,0.3);color:var(--secondary);border-radius:8px;padding:0.3rem 0.8rem;font-size:0.75rem;cursor:pointer;font-family:inherit;font-weight:600;">📋 Copy ทั้งหมด</button>
+      </div>
+      <pre id="envBlock" style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#aaa;white-space:pre-wrap;line-height:1.8;margin:0;">ANTHROPIC_API_KEY=sk-ant-xxx
+ENVIRONMENT=production
+FRONTEND_URL=https://www.openthai-ai.com
+PROMPTPAY_ID=0812345678
+LINE_NOTIFY_DEV=xxx
+LINE_NOTIFY_SALES=xxx
+LINE_NOTIFY_SUPPORT=xxx
+LINE_NOTIFY_FINANCE=xxx
+LINE_OA_CHANNEL_SECRET=xxx
+LINE_OA_CHANNEL_TOKEN=xxx
+GITHUB_WEBHOOK_SECRET=openthai-secret-2026
+GITHUB_TOKEN=ghp_xxx
+GITHUB_REPO=occylthailand-ai/openthai-ai
+API_URL=https://api.openthai-ai.com
+NEWS_DIGEST_EMAIL=your@email.com
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@gmail.com
+SMTP_PASS=xxxx-xxxx-xxxx-xxxx
+ADMIN_API_KEY=change-this-secret</pre>
     </div>
   </div>
 </section>
@@ -1179,6 +1361,149 @@ document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter')generateContent();
   if(e.key==='Escape'){closeLineModal();closeCheckout();closeAuth();}
 });
+
+// ===== SETUP WIZARD =====
+const SETUP_MAP = {
+  anthropic:          { dot:'dot-anthropic',  card:'sc-anthropic',  detail:'detail-anthropic' },
+  line_notify_dev:    { dot:'dot-line-dev',   card:'sc-line-dev',   detail:'detail-line-dev' },
+  line_notify_sales:  { dot:'dot-line-sales', card:'sc-line-sales', detail:'detail-line-sales' },
+  line_notify_support:{ dot:'dot-line-support',card:'sc-line-support',detail:'detail-line-support' },
+  line_notify_finance:{ dot:'dot-line-finance',card:'sc-line-finance',detail:'detail-line-finance' },
+  line_oa:            { dot:'dot-line-oa',    card:'sc-line-oa',    detail:'detail-line-oa' },
+  github_webhook:     { dot:'dot-github',     card:'sc-github',     detail:'detail-github' },
+  smtp:               { dot:'dot-smtp',       card:'sc-smtp',       detail:'detail-smtp' },
+  promptpay:          { dot:'dot-promptpay',  card:'sc-promptpay',  detail:'detail-promptpay' },
+};
+
+function applySetupCard(key, check) {
+  const m = SETUP_MAP[key]; if (!m) return;
+  const dot  = document.getElementById(m.dot);
+  const card = document.getElementById(m.card);
+  const det  = document.getElementById(m.detail);
+  if (!dot || !card) return;
+
+  dot.className = 'setup-status-dot ' + (
+    check.status === 'ok'              ? 'dot-ok'   :
+    check.status === 'missing_required'? 'dot-miss'  : 'dot-warn'
+  );
+  card.className = 'setup-card ' + (
+    check.status === 'ok'              ? 's-ok'    :
+    check.status === 'missing_required'? 's-missing': 's-warn'
+  );
+  if (det) {
+    const envLines = Object.entries(check.envs||{}).map(([e,v])=>`${v} ${e}`).join('\n');
+    det.textContent = check.status === 'ok'
+      ? (check.live === false ? '⚠️ Token ตั้งแล้วแต่ ping ไม่ผ่าน' : '✅ พร้อมใช้งาน')
+      : check.status === 'not_configured'
+        ? `ยังไม่ตั้งค่า\n${envLines}` : `❌ ขาด env vars:\n${envLines}`;
+  }
+}
+
+async function loadSetupStatus() {
+  try {
+    const r = await fetch(API_URL+'/admin/setup', {signal:AbortSignal.timeout(10000)});
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+
+    // Score bar
+    const s = data.score || 0;
+    document.getElementById('setupScore').textContent = s + '%';
+    document.getElementById('setupScoreFill').style.width = s + '%';
+    document.getElementById('setupScore').style.color = s >= 80 ? '#27AE60' : s >= 50 ? '#F39C12' : '#e74c3c';
+
+    // Apply each check
+    for (const [key, check] of Object.entries(data.checks || {})) {
+      applySetupCard(key, check);
+    }
+
+    // Show webhook URLs
+    const base = API_URL;
+    const lineEl = document.getElementById('webhook-line-url');
+    const ghEl   = document.getElementById('webhook-github-url');
+    if (lineEl) lineEl.textContent = 'Webhook URL: ' + base + '/webhook/line';
+    if (ghEl)   ghEl.textContent   = 'Webhook URL: ' + base + '/webhook/github';
+
+  } catch {
+    // Backend not deployed — show static instructions
+    document.getElementById('setupScore').textContent = '—';
+    for (const key of Object.keys(SETUP_MAP)) {
+      const det = document.getElementById(SETUP_MAP[key]?.detail);
+      if (det && det.textContent === 'ตรวจสอบอยู่...')
+        det.textContent = 'Deploy backend ก่อนเพื่อตรวจสอบ';
+    }
+    const base = 'https://api.openthai-ai.com';
+    const lineEl = document.getElementById('webhook-line-url');
+    const ghEl   = document.getElementById('webhook-github-url');
+    if (lineEl) lineEl.textContent = 'Webhook URL: ' + base + '/webhook/line';
+    if (ghEl)   ghEl.textContent   = 'Webhook URL: ' + base + '/webhook/github';
+  }
+}
+
+async function testLineNotify(dept) {
+  const btn = document.getElementById('test-line-'+dept);
+  const res = document.getElementById('test-line-'+dept+'-result');
+  btn.textContent = '⏳'; btn.disabled = true;
+  try {
+    const r = await fetch(API_URL+'/admin/test-line/'+dept, {method:'POST', signal:AbortSignal.timeout(10000)});
+    const d = await r.json();
+    res.style.display = 'block';
+    if (d.status === 'ok') {
+      res.style.color = '#27AE60';
+      res.textContent = '✅ ส่ง LINE แล้ว! ตรวจสอบในกลุ่ม';
+    } else if (d.status === 'not_configured') {
+      res.style.color = '#F39C12';
+      res.textContent = '⚠️ ยังไม่ตั้งค่า ' + d.env;
+    } else {
+      res.style.color = '#e74c3c';
+      res.textContent = '❌ Token ไม่ถูกต้อง';
+    }
+  } catch {
+    res.style.display = 'block';
+    res.style.color = '#e74c3c';
+    res.textContent = '❌ Backend ยังไม่ deploy';
+  }
+  btn.textContent = 'ทดสอบ'; btn.disabled = false;
+}
+
+async function autoRegisterGithub() {
+  const btn = document.getElementById('btn-github-register');
+  const res = document.getElementById('github-register-result');
+  btn.textContent = '⏳ กำลัง register...'; btn.disabled = true;
+  try {
+    const r = await fetch(API_URL+'/admin/register-github-webhook', {method:'POST', signal:AbortSignal.timeout(15000)});
+    const d = await r.json();
+    res.style.display = 'block';
+    if (d.status === 'ok') {
+      res.style.color = '#27AE60';
+      res.textContent = '✅ GitHub webhook ลงทะเบียนแล้ว!\nEvents: issues, PR, comments';
+      document.getElementById('dot-github').className = 'setup-status-dot dot-ok';
+      document.getElementById('sc-github').className = 'setup-card s-ok';
+    } else if (d.status === 'missing_config') {
+      res.style.color = '#F39C12';
+      res.textContent = '⚠️ ต้องตั้งค่า GITHUB_TOKEN และ GITHUB_REPO ใน Railway';
+    } else {
+      res.style.color = '#e74c3c';
+      res.textContent = '❌ Error: ' + (d.detail || d.github_response);
+    }
+  } catch {
+    res.style.display = 'block';
+    res.style.color = '#e74c3c';
+    res.textContent = '❌ Backend ยังไม่ deploy';
+  }
+  btn.textContent = '⚡ Auto Register'; btn.disabled = false;
+}
+
+function copyEnvBlock() {
+  const text = document.getElementById('envBlock').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✅ คัดลอกแล้ว!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+window.addEventListener('load', () => { loadSetupStatus(); });
 
 // ===== TASK DASHBOARD =====
 const DEPT_LABELS = {

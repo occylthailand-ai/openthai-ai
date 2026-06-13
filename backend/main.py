@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 import anthropic
 import asyncio
+import httpx
 import os
 import time
 import logging
@@ -517,6 +518,62 @@ async def create_order(req: OrderRequest, request: Request):
     except Exception:
         payload = ""
     return {"order_id": order_id, "package": req.package, "price": price, "status": "pending_payment", "promptpay_payload": payload, "promptpay_id": PROMPTPAY_ID}
+
+# ================== SETUP & ADMIN ENDPOINTS ==================
+
+@app.get("/admin/setup")
+async def get_setup_status():
+    """ตรวจสอบสถานะ integration ทั้งหมด"""
+    from setup_check import run_setup_check
+    return await run_setup_check()
+
+@app.post("/admin/test-line/{department}")
+async def test_line_notify(department: str):
+    """ส่งข้อความทดสอบไป LINE Notify ของแผนก"""
+    from task_router import DEPARTMENTS, send_team_line_notify
+    if department not in DEPARTMENTS:
+        raise HTTPException(status_code=400, detail=f"department must be one of {list(DEPARTMENTS.keys())}")
+    dept = DEPARTMENTS[department]
+    token_env = dept["line_token_env"]
+    token = os.getenv(token_env, "")
+    if not token:
+        return {"status": "not_configured", "env": token_env,
+                "how_to": f"ตั้งค่า {token_env} ใน Railway environment variables"}
+    msg = f"\n✅ ทดสอบ LINE Notify — {dept['label']}\nOpenThai AI Task Router พร้อมใช้งาน!\nเวลา: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    ok = await send_team_line_notify(department, msg)
+    return {"status": "ok" if ok else "failed", "department": department, "label": dept["label"]}
+
+@app.post("/admin/register-github-webhook")
+async def register_github_webhook():
+    """Auto-register webhook ใน GitHub repo"""
+    token = os.getenv("GITHUB_TOKEN", "")
+    repo = os.getenv("GITHUB_REPO", "")
+    api_url = os.getenv("API_URL", "")
+    secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+
+    if not all([token, repo, api_url]):
+        return {
+            "status": "missing_config",
+            "required": {"GITHUB_TOKEN": bool(token), "GITHUB_REPO": bool(repo), "API_URL": bool(api_url)},
+            "how_to": "ตั้งค่า GITHUB_TOKEN (Personal Access Token), GITHUB_REPO (owner/repo), API_URL ใน Railway"
+        }
+    webhook_url = api_url.rstrip("/") + "/webhook/github"
+    payload = {
+        "name": "web",
+        "active": True,
+        "events": ["issues", "issue_comment", "pull_request"],
+        "config": {"url": webhook_url, "content_type": "json", "secret": secret or ""},
+    }
+    async with httpx.AsyncClient() as c:
+        r = await c.post(
+            f"https://api.github.com/repos/{repo}/hooks",
+            json=payload,
+            headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
+            timeout=10,
+        )
+    if r.status_code in (201, 422):  # 422 = already exists
+        return {"status": "ok", "webhook_url": webhook_url, "repo": repo, "events": ["issues", "issue_comment", "pull_request"]}
+    return {"status": "error", "github_response": r.status_code, "detail": r.text[:200]}
 
 # ================== TASK ROUTER ENDPOINTS ==================
 
