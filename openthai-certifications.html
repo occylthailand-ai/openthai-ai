@@ -1,0 +1,599 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Openthai.ai — 10 Free Certifications | Mr. Zuejai Saeyang</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Noto+Sans+Thai:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-light: #E8D48B;
+    --gold-dark: #8B6914;
+    --deep: #0A0A0F;
+    --navy: #050A1A;
+    --cream: #FDF8EE;
+    --silver: #C0C8D8;
+    --accent: #1A3A6B;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--deep);
+    font-family: 'Cormorant Garamond', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── HERO HEADER ─── */
+  .hero {
+    text-align: center;
+    padding: 60px 20px 40px;
+    position: relative;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201,168,76,0.12) 0%, transparent 70%);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 1px; height: 60px;
+    background: linear-gradient(to bottom, transparent, var(--gold));
+  }
+  .brand-badge {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05));
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 40px; padding: 8px 24px;
+    margin-bottom: 24px;
+  }
+  .brand-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+  .brand-text { font-family: 'Cinzel', serif; font-size: 12px; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; }
+
+  .hero h1 {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(28px, 5vw, 52px);
+    color: var(--cream);
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+  .hero h1 span { color: var(--gold); }
+  .hero-sub {
+    font-family: 'Cinzel', serif; font-size: 13px;
+    letter-spacing: 6px; color: var(--silver); text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .hero-desc {
+    font-size: 18px; color: rgba(253,248,238,0.6);
+    font-style: italic; max-width: 600px; margin: 0 auto 16px;
+    line-height: 1.7;
+  }
+  .tags {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+    margin-top: 16px;
+  }
+  .tag {
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px;
+    color: var(--gold-light); background: rgba(201,168,76,0.08);
+    border: 1px solid rgba(201,168,76,0.2); border-radius: 20px;
+    padding: 4px 14px;
+  }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    display: flex; align-items: center; gap: 16px;
+    max-width: 500px; margin: 30px auto;
+    padding: 0 20px;
+  }
+  .divider-line { flex: 1; height: 1px; background: linear-gradient(to right, transparent, rgba(201,168,76,0.4), transparent); }
+  .divider-diamond {
+    width: 8px; height: 8px; background: var(--gold);
+    transform: rotate(45deg); flex-shrink: 0;
+  }
+
+  /* ─── GRID ─── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+    gap: 24px; padding: 0 24px 60px;
+    max-width: 1400px; margin: 0 auto;
+  }
+
+  /* ─── CERTIFICATE CARD ─── */
+  .cert-card {
+    cursor: pointer;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94), box-shadow 0.4s;
+    animation: fadeUp 0.6s both;
+  }
+  .cert-card:hover {
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 40px rgba(201,168,76,0.15);
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .cert-card:nth-child(1) { animation-delay: 0.05s; }
+  .cert-card:nth-child(2) { animation-delay: 0.1s; }
+  .cert-card:nth-child(3) { animation-delay: 0.15s; }
+  .cert-card:nth-child(4) { animation-delay: 0.2s; }
+  .cert-card:nth-child(5) { animation-delay: 0.25s; }
+  .cert-card:nth-child(6) { animation-delay: 0.3s; }
+  .cert-card:nth-child(7) { animation-delay: 0.35s; }
+  .cert-card:nth-child(8) { animation-delay: 0.4s; }
+  .cert-card:nth-child(9) { animation-delay: 0.45s; }
+  .cert-card:nth-child(10) { animation-delay: 0.5s; }
+
+  .cert-inner {
+    width: 100%; aspect-ratio: 1.414 / 1; /* A4 landscape ratio */
+    position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 28px;
+  }
+
+  /* cert-inner backgrounds per theme */
+  .t1 { background: linear-gradient(135deg, #0D1B2A 0%, #1A2744 50%, #0D1B2A 100%); }
+  .t2 { background: linear-gradient(135deg, #1A0A00 0%, #3D1A00 50%, #1A0A00 100%); }
+  .t3 { background: linear-gradient(135deg, #050D1A 0%, #0A1F38 50%, #050D1A 100%); }
+  .t4 { background: linear-gradient(135deg, #0A0A18 0%, #1A1A3A 50%, #0A0A18 100%); }
+  .t5 { background: linear-gradient(135deg, #000D0A 0%, #002818 50%, #000D0A 100%); }
+  .t6 { background: linear-gradient(135deg, #140A1A 0%, #2D1A3A 50%, #140A1A 100%); }
+  .t7 { background: linear-gradient(135deg, #1A0A10 0%, #3A0A20 50%, #1A0A10 100%); }
+  .t8 { background: linear-gradient(135deg, #0A0A00 0%, #1A1A00 50%, #0A0A00 100%); }
+  .t9 { background: linear-gradient(135deg, #001A1A 0%, #003333 50%, #001A1A 100%); }
+  .t10 { background: linear-gradient(135deg, #1A0A0A 0%, #3A0000 50%, #1A0A0A 100%); }
+
+  /* Outer border frame */
+  .cert-frame {
+    position: absolute; inset: 10px;
+    border: 1px solid rgba(201,168,76,0.4);
+    pointer-events: none;
+  }
+  .cert-frame::before {
+    content: '';
+    position: absolute; inset: 4px;
+    border: 1px solid rgba(201,168,76,0.15);
+  }
+  /* Corner ornaments */
+  .corner {
+    position: absolute; width: 24px; height: 24px;
+    pointer-events: none;
+  }
+  .corner::before, .corner::after {
+    content: ''; position: absolute; background: var(--gold);
+  }
+  .corner::before { width: 100%; height: 1.5px; top: 0; left: 0; }
+  .corner::after { width: 1.5px; height: 100%; top: 0; left: 0; }
+  .corner.tl { top: 14px; left: 14px; }
+  .corner.tr { top: 14px; right: 14px; transform: scaleX(-1); }
+  .corner.bl { bottom: 14px; left: 14px; transform: scaleY(-1); }
+  .corner.br { bottom: 14px; right: 14px; transform: scale(-1); }
+
+  /* Cert number badge */
+  .cert-num {
+    position: absolute; top: 20px; right: 24px;
+    font-family: 'Cinzel', serif; font-size: 10px;
+    color: rgba(201,168,76,0.5); letter-spacing: 3px;
+  }
+
+  /* Icon */
+  .cert-icon {
+    font-size: 36px; margin-bottom: 10px;
+    filter: drop-shadow(0 0 12px rgba(201,168,76,0.5));
+  }
+
+  /* Logo line */
+  .cert-org {
+    font-family: 'Cinzel', serif; font-size: 9px;
+    letter-spacing: 5px; color: var(--gold);
+    text-transform: uppercase; margin-bottom: 8px;
+    opacity: 0.8;
+  }
+
+  /* Title */
+  .cert-title-label {
+    font-family: 'Cinzel', serif; font-size: 8px;
+    letter-spacing: 4px; color: var(--silver);
+    text-transform: uppercase; margin-bottom: 4px;
+    opacity: 0.6;
+  }
+  .cert-main-title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(11px, 2.5vw, 17px);
+    color: var(--gold-light);
+    text-align: center;
+    line-height: 1.25;
+    margin-bottom: 10px;
+    text-shadow: 0 0 20px rgba(201,168,76,0.3);
+  }
+
+  /* Recipient */
+  .cert-presented {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 9px; font-style: italic;
+    color: rgba(253,248,238,0.5);
+    letter-spacing: 2px; margin-bottom: 2px;
+  }
+  .cert-name {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(12px, 2.8vw, 18px);
+    color: var(--cream);
+    text-shadow: 0 2px 10px rgba(201,168,76,0.2);
+    margin-bottom: 10px;
+  }
+
+  /* Description */
+  .cert-desc {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 10px; color: rgba(253,248,238,0.45);
+    text-align: center; line-height: 1.6;
+    max-width: 260px;
+    font-style: italic;
+    margin-bottom: 12px;
+  }
+
+  /* Footer bar */
+  .cert-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 0 10px;
+    border-top: 1px solid rgba(201,168,76,0.15);
+    padding-top: 8px; margin-top: 2px;
+  }
+  .cert-date {
+    font-family: 'Cinzel', serif; font-size: 8px;
+    color: rgba(201,168,76,0.4); letter-spacing: 2px;
+  }
+  .cert-seal {
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    background: radial-gradient(circle, rgba(201,168,76,0.1), transparent);
+    box-shadow: 0 0 12px rgba(201,168,76,0.2), inset 0 0 8px rgba(201,168,76,0.05);
+  }
+  .cert-id {
+    font-family: 'Cinzel', serif; font-size: 7px;
+    color: rgba(201,168,76,0.4); letter-spacing: 1px;
+    text-align: right;
+  }
+
+  /* Glow accents */
+  .glow-orb {
+    position: absolute; border-radius: 50%;
+    filter: blur(40px); pointer-events: none; opacity: 0.12;
+  }
+
+  /* ─── MODAL ─── */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 1000; align-items: center; justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(8px);
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal-cert {
+    width: min(900px, 95vw);
+    position: relative;
+    animation: zoomIn 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .modal-close {
+    position: absolute; top: -44px; right: 0;
+    background: none; border: 1px solid rgba(201,168,76,0.3);
+    color: var(--gold); font-family: 'Cinzel', serif;
+    font-size: 11px; letter-spacing: 3px;
+    padding: 6px 20px; cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+  .modal-close:hover { background: rgba(201,168,76,0.1); }
+
+  .modal-actions {
+    position: absolute; top: -44px; left: 0;
+    display: flex; gap: 10px;
+  }
+  .btn-print {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    border: none; color: var(--deep);
+    font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 3px;
+    padding: 7px 22px; cursor: pointer; border-radius: 2px;
+    font-weight: 700; text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .btn-print:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(201,168,76,0.3); }
+
+  /* Full size cert in modal */
+  .modal-cert .cert-inner {
+    aspect-ratio: 1.414 / 1;
+    padding: 48px 60px;
+    border-radius: 4px;
+  }
+  .modal-cert .cert-main-title { font-size: clamp(18px, 3.5vw, 30px); }
+  .modal-cert .cert-name { font-size: clamp(20px, 4vw, 34px); }
+  .modal-cert .cert-icon { font-size: 60px; }
+  .modal-cert .cert-org { font-size: 12px; letter-spacing: 8px; }
+  .modal-cert .cert-desc { font-size: 15px; max-width: 500px; }
+  .modal-cert .cert-presented { font-size: 13px; }
+  .modal-cert .cert-seal { width: 60px; height: 60px; font-size: 22px; }
+  .modal-cert .cert-date { font-size: 11px; }
+  .modal-cert .cert-id { font-size: 10px; }
+  .modal-cert .cert-num { font-size: 13px; }
+  .modal-cert .corner { width: 40px; height: 40px; }
+
+  /* Print styles */
+  @media print {
+    body * { visibility: hidden; }
+    .print-target, .print-target * { visibility: visible; }
+    .print-target {
+      position: fixed; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-close, .modal-actions { display: none !important; }
+  }
+
+  /* ─── FOOTER ─── */
+  .page-footer {
+    text-align: center; padding: 30px 20px;
+    border-top: 1px solid rgba(201,168,76,0.1);
+    font-family: 'Cinzel', serif; font-size: 10px;
+    letter-spacing: 3px; color: rgba(201,168,76,0.35);
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="brand-badge">
+    <div class="brand-dot"></div>
+    <span class="brand-text">Openthai.ai · Free Certification Program</span>
+    <div class="brand-dot"></div>
+  </div>
+  <h1>10 <span>Free</span> Certifications</h1>
+  <p class="hero-sub">Awarded to · Mr. Zuejai Saeyang</p>
+  <p class="hero-desc">A comprehensive collection of AI, Data Science & Technology certifications — click any certificate to view full size and print.</p>
+  <div class="tags">
+    <span class="tag">#AI</span>
+    <span class="tag">#DataScience</span>
+    <span class="tag">#Programmer</span>
+    <span class="tag">#Technology</span>
+    <span class="tag">#Engineering</span>
+    <span class="tag">#Openthai.ai</span>
+  </div>
+</header>
+
+<div class="divider"><div class="divider-line"></div><div class="divider-diamond"></div><div class="divider-line"></div></div>
+
+<!-- GRID -->
+<section class="grid" id="certGrid"></section>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modal" onclick="closeModal(event)">
+  <div class="modal-cert" id="modalCert">
+    <div class="modal-actions">
+      <button class="btn-print" onclick="printCert()">⎙ Print / Save PDF</button>
+    </div>
+    <button class="modal-close" onclick="document.getElementById('modal').classList.remove('open')">✕ CLOSE</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- PAGE FOOTER -->
+<footer class="page-footer">
+  OPENTHAI.AI · SMART-E PLATFORM · © 2025 · ALL RIGHTS RESERVED
+</footer>
+
+<script>
+const certs = [
+  {
+    id: "OT-2025-001",
+    num: "01 / 10",
+    theme: "t1",
+    icon: "🤖",
+    title: "AI Fundamentals & Machine Learning",
+    desc: "Mastery of foundational AI concepts, supervised & unsupervised learning, model evaluation, and practical ML pipeline construction.",
+    color: "#4A90D9",
+    glowColor: "#1A4A8A",
+    tag: "ARTIFICIAL INTELLIGENCE"
+  },
+  {
+    id: "OT-2025-002",
+    num: "02 / 10",
+    theme: "t2",
+    icon: "📊",
+    title: "Data Science & Analytics",
+    desc: "Proficiency in data wrangling, exploratory analysis, statistical modeling, and business intelligence visualization using modern toolsets.",
+    color: "#E8834A",
+    glowColor: "#8A3A1A",
+    tag: "DATA SCIENCE"
+  },
+  {
+    id: "OT-2025-003",
+    num: "03 / 10",
+    theme: "t3",
+    icon: "🧠",
+    title: "Deep Learning & Neural Networks",
+    desc: "Advanced understanding of CNN, RNN, Transformer architectures, training techniques, regularization, and deployment optimization.",
+    color: "#4AC0D9",
+    glowColor: "#1A6A8A",
+    tag: "DEEP LEARNING"
+  },
+  {
+    id: "OT-2025-004",
+    num: "04 / 10",
+    theme: "t4",
+    icon: "💫",
+    title: "Natural Language Processing",
+    desc: "Comprehensive NLP skills including tokenization, embeddings, fine-tuning large language models, and multilingual AI application development.",
+    color: "#8A4AD9",
+    glowColor: "#4A1A8A",
+    tag: "NLP · LLM"
+  },
+  {
+    id: "OT-2025-005",
+    num: "05 / 10",
+    theme: "t5",
+    icon: "👁️",
+    title: "Computer Vision & Image AI",
+    desc: "Expert competency in object detection, image segmentation, optical character recognition, and real-time visual inference systems.",
+    color: "#4AD98A",
+    glowColor: "#1A8A4A",
+    tag: "COMPUTER VISION"
+  },
+  {
+    id: "OT-2025-006",
+    num: "06 / 10",
+    theme: "t6",
+    icon: "🐍",
+    title: "Python Programming for AI",
+    desc: "Advanced Python development covering NumPy, Pandas, Scikit-learn, TensorFlow, PyTorch, and production-grade software engineering practices.",
+    color: "#C04AD9",
+    glowColor: "#6A1A8A",
+    tag: "PYTHON · PROGRAMMING"
+  },
+  {
+    id: "OT-2025-007",
+    num: "07 / 10",
+    theme: "t7",
+    icon: "☁️",
+    title: "Cloud Computing & AI Deployment",
+    desc: "Proficiency in containerization, MLOps pipelines, model serving on cloud infrastructure, CI/CD automation, and scalable AI system design.",
+    color: "#D94A8A",
+    glowColor: "#8A1A4A",
+    tag: "MLOPS · CLOUD"
+  },
+  {
+    id: "OT-2025-008",
+    num: "08 / 10",
+    theme: "t8",
+    icon: "⚙️",
+    title: "Data Engineering & Pipelines",
+    desc: "Mastery of ETL pipelines, Apache Spark, data warehousing, stream processing, and building robust data infrastructure at scale.",
+    color: "#D9C04A",
+    glowColor: "#8A6A1A",
+    tag: "DATA ENGINEERING"
+  },
+  {
+    id: "OT-2025-009",
+    num: "09 / 10",
+    theme: "t9",
+    icon: "🔐",
+    title: "AI Ethics & Responsible AI",
+    desc: "Deep knowledge of bias detection, fairness metrics, privacy-preserving AI, regulatory compliance, and ethical AI governance frameworks.",
+    color: "#4AD9C0",
+    glowColor: "#1A8A6A",
+    tag: "AI ETHICS"
+  },
+  {
+    id: "OT-2025-010",
+    num: "10 / 10",
+    theme: "t10",
+    icon: "🏆",
+    title: "AI Engineering & Innovation",
+    desc: "Comprehensive engineering certification covering full-stack AI product development, system architecture, optimization, and innovation leadership.",
+    color: "#D94A4A",
+    glowColor: "#8A1A1A",
+    tag: "AI ENGINEERING"
+  }
+];
+
+function buildCert(c, modal = false) {
+  const cls = modal ? '' : 'cert-card';
+  return `
+  <div class="${cls}" onclick="${modal ? '' : `openModal(${certs.indexOf(c)})`}" style="${modal ? '' : 'cursor:pointer'}">
+    <div class="cert-inner ${c.theme}">
+      <!-- Glow orbs -->
+      <div class="glow-orb" style="width:200px;height:200px;background:${c.glowColor};top:-40px;left:-40px;opacity:0.18"></div>
+      <div class="glow-orb" style="width:150px;height:150px;background:${c.glowColor};bottom:-30px;right:-30px;opacity:0.12"></div>
+
+      <!-- Frame & corners -->
+      <div class="cert-frame"></div>
+      <div class="corner tl"></div>
+      <div class="corner tr"></div>
+      <div class="corner bl"></div>
+      <div class="corner br"></div>
+
+      <!-- Cert number -->
+      <div class="cert-num">${c.num}</div>
+
+      <!-- Content -->
+      <div class="cert-icon">${c.icon}</div>
+      <div class="cert-org">✦ OpenThai · AI Platform ✦</div>
+      <div class="cert-title-label">Certificate of Achievement</div>
+      <div class="cert-main-title">${c.title}</div>
+      <div class="cert-presented">This certificate is proudly presented to</div>
+      <div class="cert-name">Mr. Zuejai Saeyang</div>
+      <div class="cert-desc">${c.desc}</div>
+
+      <!-- Footer -->
+      <div class="cert-footer">
+        <div class="cert-date">MAY · 2025</div>
+        <div class="cert-seal">⭐</div>
+        <div class="cert-id">ID: ${c.id}<br>${c.tag}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Render grid
+const grid = document.getElementById('certGrid');
+certs.forEach(c => {
+  grid.insertAdjacentHTML('beforeend', buildCert(c));
+});
+
+// Modal
+function openModal(idx) {
+  const c = certs[idx];
+  document.getElementById('modalContent').innerHTML = buildCert(c, true);
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('modalContent').firstElementChild.className = '';
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal')) {
+    document.getElementById('modal').classList.remove('open');
+  }
+}
+
+function printCert() {
+  const content = document.getElementById('modalContent').innerHTML;
+  const w = window.open('', '_blank');
+  w.document.write(`<!DOCTYPE html><html><head>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      :root{--gold:#C9A84C;--gold-light:#E8D48B;--gold-dark:#8B6914;--deep:#0A0A0F;--cream:#FDF8EE;--silver:#C0C8D8}
+      body{background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Cormorant Garamond',serif}
+      ${document.querySelector('style').innerHTML}
+      .cert-inner{aspect-ratio:1.414/1;padding:48px 60px;width:100%;max-width:900px}
+      .cert-main-title{font-size:28px}.cert-name{font-size:32px}.cert-icon{font-size:56px}
+      .cert-org{font-size:12px;letter-spacing:8px}.cert-desc{font-size:15px;max-width:480px}
+      .cert-presented{font-size:13px}.cert-seal{width:58px;height:58px;font-size:22px}
+      .cert-date{font-size:11px}.cert-id{font-size:10px}.cert-num{font-size:13px}
+      .corner{width:40px;height:40px}
+      @page{margin:0;size:landscape}
+    </style>
+  </head><body><div style="width:900px">${content}</div></body></html>`);
+  w.document.close();
+  setTimeout(() => { w.print(); }, 800);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('modal').classList.remove('open');
+});
+</script>
+</body>
+</html>

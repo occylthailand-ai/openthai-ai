@@ -1,0 +1,97 @@
+node_modules/
+dist/
+.env
+.env.local
+.vercel/
+*.log
+.DS_Store
+Thumbs.db
+
+.vercel
+
+# Sensitive files — ห้าม commit เด็ดขาด
+recovery-codes.txt
+*.pem
+*.key
+ANTHROPIC_API_KEY.txt
+*_API_KEY.txt
+backend/.env.*
+backend/data/moltbook-credentials.json
+*.n8nexport*
+sync-all.ps1
+
+# Runtime data — ป้องกัน commit ข้อมูลผู้ใช้/log โดยไม่ตั้งใจ
+backend/data/affiliates.json
+backend/data/agents.json
+backend/data/system_log.json
+backend/data/agent_checkpoint.json
+backend/data/waitlist.json
+# หมายเหตุ: backend/data/system_charter.json ไม่ include ตรงนี้ — commit ได้ (static config)
+
+# IDE / Editor folders
+.claude/
+.cursor/
+.history/
+.snapshots/
+.vscode/
+
+# Binary installers & archives — ห้าม push
+*.exe
+*.zip
+*.msi
+*.dmg
+
+# Office documents & media (ไม่ใช่ source code)
+*.docx
+*.xlsx
+*.rtf
+*.pdf
+*.pptx
+
+# Misc files ที่ไม่ใช่ source code
+all-emails-th.html
+1111111111111111111111.txt
+"Facebook + ทดสอบ LINE Broadcast.txt"
+"Asian influencer database.rtf"
+"Platforms in Asia.rtf"
+
+# all-platform-files อาจใหญ่มาก — exclude ไว้ก่อน
+all-platform-files/
+
+# Archive files
+*.tar.gz
+*.tar.xz
+*.gz
+*.xz
+*.7z
+*.rar
+
+# Image files ที่ดาวน์โหลดมา (ไม่ใช่ project assets จริง)
+*.jfif
+images*.png
+"images*.png"
+"ดาวน์โหลด*.png"
+"ดาวน์โหลด*.jfif"
+
+# Java JDK ที่ติดตั้งไว้
+oracleJdk-25/
+
+# Output/generated folders
+outputs/
+
+# Misc non-source files
+*.skill
+pasted-text.txt
+start.bat
+*.bat
+index_1.html
+openthai-ai-studio_1.html
+openthai-commerce-engine_1.jsx
+"java-*.tar.xz"
+"java-* (1).tar.xz"
+
+# Thai-named downloaded files
+"ดาวน์โหลด*"
+"การฟอร์มทีมงาน.txt"
+"Facebook + ทดสอบ LINE Broadcast.txt"
+"logo (2).png"

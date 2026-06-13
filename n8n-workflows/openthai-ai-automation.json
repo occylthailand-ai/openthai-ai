@@ -1,0 +1,136 @@
+{
+  "name": "Openthai.ai — Full Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openthai-content-generated",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Content Generated Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "content-generated"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [{ "value1": "={{$json[\"criticScore\"]}}", "operation": "largerEqual", "value2": 8 }]
+        }
+      },
+      "name": "Score >= 8?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "chatId": "={{$env[\"LINE_NOTIFY_GROUP_ID\"]}}",
+        "text": "=✅ คอนเทนต์ใหม่ AI Score: {{$json[\"criticScore\"]}}/10\n📦 สินค้า: {{$json[\"product\"]}}\n🎯 Hook: {{$json[\"hook\"]}}\n📱 แพลตฟอร์ม: {{$json[\"platform\"]}}\n🕐 {{$json[\"ts\"]}}"
+      },
+      "name": "Send LINE Notify",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "url": "=https://openthai-ai.vercel.app/api/memory",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "text", "value": "={{$json[\"hook\"] + \" \" + $json[\"caption\"]}}" },
+            { "name": "type", "value": "content" },
+            { "name": "metadata", "value": "={{JSON.stringify({product: $json.product, score: $json.criticScore, platform: $json.platform})}}" }
+          ]
+        }
+      },
+      "name": "Save to Memory",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 6 }] }
+      },
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 600]
+    },
+    {
+      "parameters": {
+        "url": "https://openthai-ai.vercel.app/api/agent/run",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env[\"OPENTHAI_TOKEN\"]}}" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "task", "value": "auto_post" }]
+        }
+      },
+      "name": "Trigger Auto Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 600]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openthai-agent-completed",
+        "responseMode": "lastNode"
+      },
+      "name": "Agent Completed Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 900],
+      "webhookId": "agent-completed"
+    },
+    {
+      "parameters": {
+        "url": "=https://openthai-ai.vercel.app/api/trending",
+        "method": "GET"
+      },
+      "name": "Fetch Trending",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 900]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@Openthai.ai.com",
+        "toEmail": "={{$env[\"ADMIN_EMAIL\"]}}",
+        "subject": "=🤖 Agent รัน: {{$json[\"agentId\"]}} — {{$json[\"status\"]}}",
+        "text": "=Agent: {{$json[\"agentId\"]}}\nStatus: {{$json[\"status\"]}}\nTime: {{$json[\"ts\"]}}\n\nDetails:\n{{JSON.stringify($json, null, 2)}}"
+      },
+      "name": "Email Admin",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [650, 900]
+    }
+  ],
+  "connections": {
+    "Content Generated Webhook": { "main": [[{ "node": "Score >= 8?", "type": "main", "index": 0 }]] },
+    "Score >= 8?": {
+      "main": [
+        [{ "node": "Send LINE Notify", "type": "main", "index": 0 }],
+        [{ "node": "Save to Memory",   "type": "main", "index": 0 }]
+      ]
+    },
+    "Every 6 Hours":          { "main": [[{ "node": "Trigger Auto Post",  "type": "main", "index": 0 }]] },
+    "Agent Completed Webhook": { "main": [[{ "node": "Fetch Trending",    "type": "main", "index": 0 }]] },
+    "Fetch Trending":         { "main": [[{ "node": "Email Admin",        "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "saveDataErrorExecution": "all", "saveDataSuccessExecution": "last", "executionTimeout": 300 },
+  "tags": ["openthai-ai", "automation"]
+}

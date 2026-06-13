@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "effective": "2026-05-04",
+  "deployment": {
+    "frontend": "https://www.openthai-ai.com (Vercel Static)",
+    "backend": "https://www.openthai-ai.com/api/* (Vercel Serverless ESM)",
+    "cron_watchdog": "0 6 * * * — Vercel Cron ทุกวัน 06:00 UTC",
+    "cron_news_rag": "0 4 * * * — Vercel Cron ทุกวัน 04:00 UTC"
+  },
+  "summary": "ตรวจความไม่เข้ากันและข้อบกพร่องให้สมบูรณ์ · เปรียบเทียบกระแส AI กับสกิลที่ขาด · แก้ไขอัตโนมัติไม่รอผู้ใช้แจ้ง · อัปเดตข้อมูลโลก 24/7 · บันทึกก่อนพังเพื่อกันข้อมูลค้างเสียหาย",
+  "pillars": [
+    {
+      "id": "integrity",
+      "title": "ความสมบูรณ์และความเข้ากัน",
+      "text": "หากมีส่วนไม่เข้ากัน ข้อบกพร่อง หรือชำรุด ให้แก้ไขทันทีจนสมบูรณ์ ไม่ปล่อยให้ค้างเป็น technical debt โดยไม่จำเป็น"
+    },
+    {
+      "id": "skills_radar",
+      "title": "Skills gap ตามความก้าวหน้า AI",
+      "text": "นำความก้าวหน้าของ AI ในปัจจุบันมาเปรียบเทียบกับโปรแกรมของเรา ระบุสกิลที่ยังขาด แนวทางจัดการ และลำดับความสำคัญอย่างสม่ำเสมอ"
+    },
+    {
+      "id": "autonomous_remedy",
+      "title": "แก้ไขทันทีโดยไม่รอผู้ใช้แจ้ง",
+      "text": "บริหารจัดการดำเนินการแก้ไขปัญหาทันทีเมื่อตรวจพบข้อบกพร่อง ไม่ต้องรอผู้ใช้งานแจ้งความบกพร่องเข้ามา — ใช้ Watchdog, Auto-heal, Self-diagnosis, Event log และ checkpoint เป็นหลักฐานการทำงาน"
+    },
+    {
+      "id": "world_connect",
+      "title": "เชื่อมต่อโลก — อัปเดตอัตโนมัติ 24/7",
+      "text": "ให้ระบบดึงและรีเฟรชข้อมูลจากแหล่งภายนอก (เช่น News RAG, health, metrics) ตามรอบที่กำหนด ตลอด 24 ชั่วโมงทุกวัน เพื่อลดภาระผู้ใช้ในการกดรีเฟรชเอง"
+    },
+    {
+      "id": "durability",
+      "title": "ก่อนพัง — บันทึกก่อนเสมอ",
+      "text": "หากระบบพังหรือมีความเสี่ยง ให้บันทึกข้อมูลและสถานะงานที่กำลังดำเนินการทันที (event log, agent checkpoint, agents state, process-level error hooks) เพื่อไม่ให้ข้อมูลที่กำลังดำเนินการอยู่ชำรุดเสียหาย"
+    }
+  ],
+  "technical_hooks": [
+    "GET  /api/health              — ตรวจสุขภาพระบบ + AI status",
+    "GET  /api/system/charter      — นโยบายถาวร (ไฟล์นี้) v2",
+    "GET  /api/system/skills-gap   — เปรียบเทียบอุตสาหกรรม + ช่องว่าง + วิธีบริหาร",
+    "GET  /api/system/metrics      — checkpoint งานค้าง + memory + uptime",
+    "GET  /api/system/logs         — Event log 500 รายการล่าสุด",
+    "POST /api/system/auto-heal    — trigger Watchdog ด้วยตนเอง",
+    "POST /api/system/diagnose     — AI self-diagnosis วิเคราะห์ error",
+    "GET  /api/system/watchdog     — สถานะ Watchdog + cron stats",
+    "GET  /api/system/news-rag-clear — Vercel Cron: เคลียร์ cache ข่าว",
+    "Vercel Cron watchdog: ทุกวัน 06:00 UTC",
+    "Vercel Cron news-rag: ทุกวัน 04:00 UTC",
+    "process.on uncaughtException + unhandledRejection → system_log",
+    "Agent checkpoint เขียนก่อน generate / ลบเมื่อสำเร็จ"
+  ],
+  "env_required": {
+    "ANTHROPIC_API_KEY": "Claude AI primary — console.anthropic.com",
+    "GEMINI_API_KEY": "Gemini fallback — aistudio.google.com (ฟรี)",
+    "JWT_SECRET": "SET ✅ Vercel",
+    "FRONTEND_URL": "SET ✅ https://www.openthai-ai.com",
+    "SMTP_USER": "SET ✅ occylthailand@gmail.com",
+    "SMTP_PASS": "Gmail App Password — myaccount.google.com/apppasswords",
+    "ADMIN_PASSWORD": "Password สำหรับ /admin page",
+    "RECOVERY_CODES": "สร้างจาก POST /api/auth/recovery-codes/generate",
+    "LINE_CHANNEL_TOKEN": "LINE OA Messaging API — optional",
+    "ELEVENLABS_API_KEY": "TTS API — optional"
+  }
+}

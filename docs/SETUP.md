@@ -1,4 +1,4 @@
-# 🇹🇭 OpenThai AI — Complete Setup Guide
+﻿# 🇹🇭 Openthai.ai — Complete Setup Guide
 
 > AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก
 
@@ -43,7 +43,7 @@ openthai-ai/
 # 1. Push to GitHub
 git init
 git add .
-git commit -m "Initial commit: OpenThai AI"
+git commit -m "Initial commit: Openthai.ai"
 git remote add origin https://github.com/YOUR_USERNAME/openthai-ai.git
 git push -u origin main
 
@@ -231,7 +231,7 @@ GOOGLE_SHEETS_ID=xxxxx
 
 ## 📞 Support
 
-- **Email**: contact@openthai-ai.com
+- **Email**: contact@openthai.ai
 - **LINE**: @openthai-ai
 - **GitHub Issues**: [Report bugs](https://github.com/YOUR_USERNAME/openthai-ai/issues)
 
@@ -239,7 +239,7 @@ GOOGLE_SHEETS_ID=xxxxx
 
 ## 📜 License
 
-© 2026 OpenThai AI — Made with ❤️ in Thailand
+© 2026 Openthai.ai — Made with ❤️ in Thailand
 
 ---
 

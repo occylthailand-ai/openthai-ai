@@ -1,0 +1,196 @@
+{
+  "users": [
+    {
+      "id": "1",
+      "username": "admin",
+      "password": "1234",
+      "name": "System Administrator",
+      "role": "admin"
+    }
+  ],
+  "platforms": [
+    { "id": "1", "name": "Alibaba", "component": "AlibabaOnboarding" },
+    { "id": "2", "name": "TikTok Shop", "component": "TikTokShopOnboarding" },
+    { "id": "3", "name": "Shopee", "component": "ShopeeOnboarding" },
+    { "id": "4", "name": "Lazada", "component": "LazadaOnboarding" }
+  ],
+  "tiktokFeed": [
+    {
+      "id": "1",
+      "user": { "name": "ร้านผ้าไหมไทย", "handle": "@thaisilk_otop", "avatar": "🧵" },
+      "product": "ผ้าไหมมัดหมี่ อุบลราชธานี",
+      "price": "฿590",
+      "originalPrice": "฿890",
+      "caption": "ผ้าไหมแท้ 100% ทอมือจากชาวบ้าน อุบลฯ #OTOP #ผ้าไหมไทย #สินค้าไทย #ของดีบ้านเรา",
+      "hashtags": ["#OTOP", "#ผ้าไหมไทย", "#สินค้าไทย", "#ของดีบ้านเรา"],
+      "likes": 12400,
+      "comments": 843,
+      "shares": 2100,
+      "saves": 4500,
+      "gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      "emoji": "🧵",
+      "hook": "ผ้าไหมแท้ราคาโรงงาน ไม่ผ่านคนกลาง!",
+      "category": "สิ่งทอ OTOP",
+      "rating": 4.9,
+      "sold": 1289
+    },
+    {
+      "id": "2",
+      "user": { "name": "น้ำพริกป้าแดง", "handle": "@namprik_padaeng", "avatar": "🌶️" },
+      "product": "น้ำพริกปลาทู สูตรโบราณ",
+      "price": "฿89",
+      "originalPrice": "฿120",
+      "caption": "สูตรลับ 3 ชั่วอายุคน รสชาติเข้มข้น กินกับข้าวสวยร้อนๆ อร่อยมาก #อาหารไทย #น้ำพริก #OTOP",
+      "hashtags": ["#อาหารไทย", "#น้ำพริก", "#OTOP", "#อาหารโฮมเมด"],
+      "likes": 28900,
+      "comments": 1200,
+      "shares": 5600,
+      "saves": 9800,
+      "gradient": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+      "emoji": "🌶️",
+      "hook": "แม่ค้าขายมา 30 ปี สูตรไม่เคยเปิดเผย!",
+      "category": "อาหาร OTOP",
+      "rating": 4.8,
+      "sold": 5621
+    },
+    {
+      "id": "3",
+      "user": { "name": "สมุนไพรไทยแท้", "handle": "@thaiherb_organic", "avatar": "🌿" },
+      "product": "ยาดมสมุนไพร 9 ชนิด",
+      "price": "฿49",
+      "originalPrice": "฿75",
+      "caption": "ผสมจากสมุนไพรไทยแท้ 9 ชนิด ไม่มีสารเคมี ใช้ได้ทุกวัย #สมุนไพรไทย #ยาดม #ของดีไทย",
+      "hashtags": ["#สมุนไพรไทย", "#ยาดม", "#ของดีไทย", "#Organic"],
+      "likes": 45600,
+      "comments": 2300,
+      "shares": 8900,
+      "saves": 12000,
+      "gradient": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+      "emoji": "🌿",
+      "hook": "แก้วิงเวียน หายใจไม่สะดวก ดมแล้วหายทันที!",
+      "category": "สมุนไพร OTOP",
+      "rating": 5.0,
+      "sold": 8823
+    },
+    {
+      "id": "4",
+      "user": { "name": "เซรั่มข้าวไทย", "handle": "@rice_serum_thai", "avatar": "✨" },
+      "product": "เซรั่มน้ำนมข้าว Rice Glow",
+      "price": "฿299",
+      "originalPrice": "฿450",
+      "caption": "น้ำนมข้าวไทย 100% ผิวกระจ่างใส ภายใน 7 วัน ทดสอบแล้วโดยผิวคนไทย #สกินแคร์ไทย #เซรั่ม",
+      "hashtags": ["#สกินแคร์ไทย", "#เซรั่ม", "#ข้าวไทย", "#ผิวสวย"],
+      "likes": 89200,
+      "comments": 4100,
+      "shares": 15600,
+      "saves": 31000,
+      "gradient": "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+      "emoji": "✨",
+      "hook": "ลดฝ้า กระ จุดด่างดำ ใช้แค่ 7 วันเห็นผล!",
+      "category": "ความงาม",
+      "rating": 4.7,
+      "sold": 15340
+    },
+    {
+      "id": "5",
+      "user": { "name": "กาแฟดอยไทย", "handle": "@doi_coffee_th", "avatar": "☕" },
+      "product": "กาแฟอาราบิก้า ดอยอินทนนท์",
+      "price": "฿185",
+      "originalPrice": "฿250",
+      "caption": "เมล็ดกาแฟคัดพิเศษจากดอยอินทนนท์ ระดับสูง 1,500 เมตร รสชาติหอมนุ่ม #กาแฟไทย #ดอยอินทนนท์",
+      "hashtags": ["#กาแฟไทย", "#ดอยอินทนนท์", "#Arabica", "#OTOP"],
+      "likes": 34500,
+      "comments": 1890,
+      "shares": 6700,
+      "saves": 11200,
+      "gradient": "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)",
+      "emoji": "☕",
+      "hook": "กาแฟจากไร่ ไม่ผ่านนายหน้า ราคาถูกกว่า 40%!",
+      "category": "เครื่องดื่ม OTOP",
+      "rating": 4.9,
+      "sold": 7456
+    },
+    {
+      "id": "6",
+      "user": { "name": "เครื่องปั้นดินเผา", "handle": "@pottery_chiangmai", "avatar": "🏺" },
+      "product": "แก้วเซรามิกลายไทย เชียงใหม่",
+      "price": "฿220",
+      "originalPrice": "฿320",
+      "caption": "งานปั้นมือทีละใบ ลายไทยประยุกต์ ทนความร้อน ใช้ได้จริง สวยมาก #เซรามิก #งานฝีมือ #OTOP",
+      "hashtags": ["#เซรามิก", "#งานฝีมือ", "#OTOP", "#เชียงใหม่"],
+      "likes": 21300,
+      "comments": 940,
+      "shares": 3200,
+      "saves": 7800,
+      "gradient": "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
+      "emoji": "🏺",
+      "hook": "ปั้นมือทุกใบ ไม่มีใบไหนเหมือนกัน!",
+      "category": "งานหัตถกรรม OTOP",
+      "rating": 4.8,
+      "sold": 2134
+    }
+  ],
+  "facebookFeed": [
+    {
+      "id": "1",
+      "user": { "name": "ซุ้ยใจ Openthai.ai", "avatar": "👩‍💼", "time": "2 ชั่วโมงที่แล้ว", "privacy": "🌐" },
+      "type": "product",
+      "content": "🎉 เปิดตัว Openthai.ai แล้ว! เครื่องมือ AI สร้างคอนเทนต์ TikTok สำหรับสินค้าไทย OTOP ใช้ฟรี 3 คอนเทนต์/วัน ลองเลย!",
+      "product": { "name": "Openthai.ai Pro", "price": "฿149/เดือน", "emoji": "🤖", "gradient": "linear-gradient(135deg,#667eea,#764ba2)" },
+      "likes": 842, "love": 312, "haha": 45, "comments": 128, "shares": 267,
+      "topComment": { "user": "สมชาย พ่อค้า OTOP", "text": "เจ๋งมากเลยครับ รอใช้อยู่!" }
+    },
+    {
+      "id": "2",
+      "user": { "name": "ร้านผ้าไหมไทย 🧵", "avatar": "🧵", "time": "4 ชั่วโมงที่แล้ว", "privacy": "🌐" },
+      "type": "marketplace",
+      "content": "ลดราคาพิเศษ! ผ้าไหมมัดหมี่อุบลราชธานี ทอมือ 100% เหลือเพียง ฿590 จาก ฿890 วันนี้วันเดียวเท่านั้น 🔥",
+      "product": { "name": "ผ้าไหมมัดหมี่ อุบลฯ", "price": "฿590", "emoji": "🧵", "gradient": "linear-gradient(135deg,#f093fb,#f5576c)" },
+      "likes": 1240, "love": 560, "haha": 12, "comments": 389, "shares": 821,
+      "topComment": { "user": "มาลี ชอบผ้าไทย", "text": "สวยมากเลยค่ะ สั่งแล้วนะ!" }
+    },
+    {
+      "id": "3",
+      "user": { "name": "กลุ่ม OTOP ไทยแท้ 🇹🇭", "avatar": "🇹🇭", "time": "6 ชั่วโมงที่แล้ว", "privacy": "👥", "isGroup": true },
+      "type": "post",
+      "content": "📢 ประกาศ! งาน OTOP City 2026 วันที่ 15-25 เมษายนนี้ ที่อิมแพ็ค เมืองทองธานี มีสินค้า OTOP กว่า 30,000 รายการจากทั่วประเทศ เข้าฟรี! #OTOPCity #สินค้าไทย",
+      "image": { "emoji": "🏛️", "gradient": "linear-gradient(135deg,#4facfe,#00f2fe)", "caption": "OTOP City 2026" },
+      "likes": 5621, "love": 2100, "haha": 89, "comments": 1432, "shares": 3890,
+      "topComment": { "user": "วิไล แม่ค้าออนไลน์", "text": "ไปแน่นอนค่ะ พาทีมไป 5 คน!" }
+    },
+    {
+      "id": "4",
+      "user": { "name": "น้ำพริกป้าแดง 🌶️", "avatar": "🌶️", "time": "เมื่อวาน", "privacy": "🌐" },
+      "type": "marketplace",
+      "content": "น้ำพริกปลาทูสูตรโบราณ 3 ชั่วอายุคน! สั่งได้แล้ววันนี้ ส่งทั่วไทย แพ็คแน่นหนา ไม่รั่วแน่นอน มีรีวิวจริงจากลูกค้ากว่า 5,000 คน ⭐⭐⭐⭐⭐",
+      "product": { "name": "น้ำพริกปลาทู สูตรโบราณ", "price": "฿89", "emoji": "🌶️", "gradient": "linear-gradient(135deg,#fa709a,#fee140)" },
+      "likes": 2890, "love": 980, "haha": 34, "comments": 743, "shares": 1230,
+      "topComment": { "user": "อภิรดี รักอาหารไทย", "text": "อร่อยจริงๆ สั่งซ้ำมา 10 ครั้งแล้ว!" }
+    },
+    {
+      "id": "5",
+      "user": { "name": "เซรั่มข้าวไทย ✨", "avatar": "✨", "time": "2 วันที่แล้ว", "privacy": "🌐" },
+      "type": "ad",
+      "content": "✨ RICE GLOW SERUM — เซรั่มน้ำนมข้าวไทย 100% ผิวกระจ่างใสใน 7 วัน ทดสอบโดยผิวคนไทย ราคา ฿299 ส่งฟรี! มีของขวัญสุดพิเศษสำหรับ 100 คนแรก 🎁",
+      "product": { "name": "Rice Glow Serum", "price": "฿299", "emoji": "✨", "gradient": "linear-gradient(135deg,#a18cd1,#fbc2eb)" },
+      "likes": 8920, "love": 4100, "haha": 67, "comments": 2341, "shares": 5670,
+      "topComment": { "user": "ปิยะนุช หน้าสวย", "text": "ใช้แล้วหน้าใสจริงๆ ค่ะ แนะนำเลย!" }
+    },
+    {
+      "id": "6",
+      "user": { "name": "กาแฟดอยไทย ☕", "avatar": "☕", "time": "3 วันที่แล้ว", "privacy": "🌐" },
+      "type": "post",
+      "content": "เช้านี้ที่ดอยอินทนนท์ อุณหภูมิ 12 องศา ☁️ กาแฟสดจากไร่ หอมนุ่ม ความสูง 1,500 เมตรเหนือน้ำทะเล ดื่มด่ำธรรมชาติไทยแท้ ใครอยากลองสั่งได้เลยนะครับ 🌿",
+      "image": { "emoji": "🏔️", "gradient": "linear-gradient(135deg,#a8edea,#fed6e3)", "caption": "ดอยอินทนนท์ ยามเช้า" },
+      "likes": 3450, "love": 1890, "haha": 23, "comments": 567, "shares": 890,
+      "topComment": { "user": "ธนกร คอกาแฟ", "text": "สั่งเลยครับ กาแฟดีมากจริงๆ!" }
+    }
+  ],
+  "facebookStories": [
+    { "id": "1", "user": "คุณ", "avatar": "👩‍💼", "gradient": "linear-gradient(135deg,#6366f1,#8b5cf6)", "label": "สร้าง Story" },
+    { "id": "2", "user": "ร้านผ้าไหม", "avatar": "🧵", "gradient": "linear-gradient(135deg,#f093fb,#f5576c)", "label": "ร้านผ้าไหม" },
+    { "id": "3", "user": "OTOP ไทย", "avatar": "🇹🇭", "gradient": "linear-gradient(135deg,#4facfe,#00f2fe)", "label": "OTOP ไทย" },
+    { "id": "4", "user": "น้ำพริก", "avatar": "🌶️", "gradient": "linear-gradient(135deg,#fa709a,#fee140)", "label": "น้ำพริก" },
+    { "id": "5", "user": "กาแฟดอย", "avatar": "☕", "gradient": "linear-gradient(135deg,#a18cd1,#fbc2eb)", "label": "กาแฟดอย" }
+  ]
+}

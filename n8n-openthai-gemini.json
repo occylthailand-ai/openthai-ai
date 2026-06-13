@@ -1,0 +1,96 @@
+{
+  "name": "Openthai.ai — Gemini Content Engine v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openthai-generate",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "🚀 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// S7: Context Card — สรุปข้อมูลสินค้า\nconst input = $input.first().json;\n\nconst ctx = {\n  product: input.product || input.product_name || 'สินค้าไทย',\n  category: input.category || 'ทั่วไป',\n  price: input.price ? `฿${input.price}` : 'N/A',\n  platform: input.platform || 'TikTok',\n  style: input.style || 'sales',\n  lang: input.lang || 'ภาษาไทย',\n  audience: input.audience || 'ทั่วไป',\n  usp: input.usp || ''\n};\n\nconst styleDesc = {\n  sales: 'ขายตรง โน้มน้าวให้ซื้อ ใช้ urgency',\n  educational: 'ให้ความรู้ อธิบายข้อมูล น่าเชื่อถือ',\n  entertainment: 'สนุก ฮา ติดเทรนด์ ดึงดูดคนดู'\n};\n\nconst prompt = `คุณคือ AI ผู้เชี่ยวชาญด้านคอนเทนต์ TikTok สำหรับตลาดไทย\n\nสร้างคอนเทนต์ ${ctx.platform} สำหรับสินค้า \"${ctx.product}\" (หมวด: ${ctx.category}) ราคา ${ctx.price}\nสไตล์: ${styleDesc[ctx.style] || ctx.style}\nภาษา: ${ctx.lang}\n${ctx.usp ? 'จุดเด่น: ' + ctx.usp : ''}\n\nตอบเป็น JSON เท่านั้น ไม่มีข้อความอื่น:\n{\n  \"hook\": \"ประโยคเปิดดึงดูด 1-2 ประโยค\",\n  \"script\": [\"ขั้นที่ 1\", \"ขั้นที่ 2\", \"ขั้นที่ 3\", \"ขั้นที่ 4\", \"CTA\"],\n  \"caption\": \"แคปชั่นพร้อมโพสต์ พร้อม emoji\",\n  \"hashtags\": [\"#แฮชแท็ก1\", \"#แฮชแท็ก2\", \"#แฮชแท็ก3\", \"#แฮชแท็ก4\", \"#แฮชแท็ก5\"],\n  \"criticScore\": \"คะแนน 0-10 ทศนิยม 1 ตำแหน่ง\",\n  \"criticFeedback\": \"คำแนะนำปรับปรุง 1 ประโยค\"\n}`;\n\nreturn [{ json: { ctx, prompt } }];"
+      },
+      "id": "context-card",
+      "name": "S7 Context Card",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "key", "value": "={{ $env.GEMINI_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "contents",
+              "value": "=[{\"parts\":[{\"text\": {{ JSON.stringify($json.prompt) }}}]}]"
+            },
+            {
+              "name": "generationConfig",
+              "value": "={\"temperature\":0.85,\"maxOutputTokens\":1024,\"responseMimeType\":\"application/json\"}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "gemini-api",
+      "name": "🤖 Gemini 1.5 Flash",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Parse Gemini response + add metadata\nconst raw = $input.first().json;\nlet result;\n\ntry {\n  const text = raw.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\n  result = JSON.parse(text);\n} catch (e) {\n  // Fallback mock\n  const ctx = $('S7 Context Card').first().json.ctx;\n  result = {\n    hook: `${ctx.product} ดีจริงหรือ? เฉลยตอนท้าย!`,\n    script: [\n      `เปิดด้วยคำถาม: \"${ctx.product} คืออะไร?\"\",\n      'อธิบายที่มาและความพิเศษ',\n      'แสดง 3 ข้อดีหลัก',\n      'Social proof จากลูกค้าจริง',\n      'CTA: กดลิงก์ด้านล่าง ส่งฟรีทั่วไทย!'\n    ],\n    caption: `✨ ${ctx.product} — คุณภาพพรีเมียม\\n💰 ราคาพิเศษ ${ctx.price}\\n🚚 ส่งฟรีทั่วไทย\\n📩 DM หรือกดลิงก์ใน Bio`,\n    hashtags: [`#${ctx.product.replace(/\\s/g,'')}`, '#สินค้าไทย', '#OTOP', '#TikTokShop', '#Openthai.ai'],\n    criticScore: (7 + Math.random() * 2.5).toFixed(1),\n    criticFeedback: 'เพิ่ม Social Proof และ Urgency จะช่วยเพิ่ม Conversion'\n  };\n}\n\nresult.source = raw.candidates ? 'gemini' : 'mock';\nresult.model = 'gemini-1.5-flash';\nresult.timestamp = new Date().toISOString();\n\nreturn [{ json: result }];"
+      },
+      "id": "parse-response",
+      "name": "📦 Parse & Format",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [960, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}"
+      },
+      "id": "respond",
+      "name": "✅ Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1200, 300]
+    }
+  ],
+  "connections": {
+    "🚀 Webhook Trigger": {
+      "main": [[{ "node": "S7 Context Card", "type": "main", "index": 0 }]]
+    },
+    "S7 Context Card": {
+      "main": [[{ "node": "🤖 Gemini 1.5 Flash", "type": "main", "index": 0 }]]
+    },
+    "🤖 Gemini 1.5 Flash": {
+      "main": [[{ "node": "📦 Parse & Format", "type": "main", "index": 0 }]]
+    },
+    "📦 Parse & Format": {
+      "main": [[{ "node": "✅ Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "openthai-ai" }, { "name": "gemini" }, { "name": "production" }]
+}

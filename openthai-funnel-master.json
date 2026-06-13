@@ -1,0 +1,404 @@
+{
+  "name": "Openthai.ai — Master Funnel Automation",
+  "nodes": [
+
+    {
+      "id": "trigger-webhook",
+      "name": "🎯 Waitlist Signup Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [100, 300],
+      "parameters": {
+        "path": "openthai-signup",
+        "method": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "notes": "รับข้อมูลจาก landing page form submit"
+    },
+
+    {
+      "id": "validate-input",
+      "name": "✅ Validate & Clean Data",
+      "type": "n8n-nodes-base.code",
+      "position": [280, 300],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst body = data.body || data;\n\n// Clean & validate\nconst email = (body.email || '').trim().toLowerCase();\nconst name = (body.name || 'คุณ').trim();\nconst source = body.source || 'website';\nconst product = body.product || 'general';\n\nif (!email || !email.includes('@')) {\n  throw new Error('Invalid email: ' + email);\n}\n\nconst now = new Date();\nconst thaiTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));\n\nreturn [{\n  json: {\n    email,\n    name,\n    source,\n    product,\n    signup_date: thaiTime.toISOString(),\n    signup_date_display: thaiTime.toLocaleDateString('th-TH', {\n      year: 'numeric', month: 'long', day: 'numeric'\n    }),\n    lead_score: 10,\n    stage: 'new_signup',\n    trial_used: 0,\n    converted: false\n  }\n}];"
+      }
+    },
+
+    {
+      "id": "check-duplicate",
+      "name": "🔍 Check Duplicate in Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [460, 300],
+      "parameters": {
+        "operation": "lookup",
+        "spreadsheetId": "YOUR_GOOGLE_SHEET_ID",
+        "sheetName": "Leads",
+        "lookupColumn": "email",
+        "lookupValue": "={{ $json.email }}"
+      }
+    },
+
+    {
+      "id": "if-new-lead",
+      "name": "❓ New Lead?",
+      "type": "n8n-nodes-base.if",
+      "position": [640, 300],
+      "parameters": {
+        "conditions": {
+          "string": [{
+            "value1": "={{ $json.length }}",
+            "operation": "equals",
+            "value2": "0"
+          }]
+        }
+      }
+    },
+
+    {
+      "id": "save-to-sheets",
+      "name": "💾 Save Lead to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [820, 200],
+      "parameters": {
+        "operation": "append",
+        "spreadsheetId": "YOUR_GOOGLE_SHEET_ID",
+        "sheetName": "Leads",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ $json.email }}",
+            "name": "={{ $json.name }}",
+            "source": "={{ $json.source }}",
+            "product": "={{ $json.product }}",
+            "signup_date": "={{ $json.signup_date }}",
+            "lead_score": "={{ $json.lead_score }}",
+            "stage": "={{ $json.stage }}",
+            "trial_used": "0",
+            "converted": "FALSE",
+            "plan": "",
+            "mrr": "0"
+          }
+        }
+      }
+    },
+
+    {
+      "id": "send-email-1",
+      "name": "📧 Email 1: Welcome + Free Scripts",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [1020, 200],
+      "parameters": {
+        "fromEmail": "occylthailand@gmail.com",
+        "fromName": "Zuejai จาก Openthai.ai",
+        "toEmail": "={{ $json.email }}",
+        "subject": "🎉 ยินดีต้อนรับ {{ $json.name }}! Script AI 3 ตัวแรกของคุณ",
+        "emailFormat": "html",
+        "html": "<!-- Email 1 content — see email-sequences/email-01-welcome.html -->"
+      }
+    },
+
+    {
+      "id": "line-notify-new-lead",
+      "name": "📱 LINE Notify: New Lead!",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1020, 320],
+      "parameters": {
+        "method": "POST",
+        "url": "https://notify-api.line.me/api/notify",
+        "headers": {
+          "Authorization": "Bearer YOUR_LINE_NOTIFY_TOKEN"
+        },
+        "bodyParameters": {
+          "message": "\n🆕 Lead ใหม่!\n👤 {{ $json.name }}\n📧 {{ $json.email }}\n📍 Source: {{ $json.source }}\n🕐 {{ $json.signup_date_display }}"
+        }
+      }
+    },
+
+    {
+      "id": "wait-day-2",
+      "name": "⏰ Wait 1 Day",
+      "type": "n8n-nodes-base.wait",
+      "position": [1200, 200],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 1,
+        "unit": "days"
+      }
+    },
+
+    {
+      "id": "send-email-2",
+      "name": "📧 Email 2: Case Study OTOP",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [1380, 200],
+      "parameters": {
+        "toEmail": "={{ $json.email }}",
+        "subject": "🛒 แม่ค้าออนไลน์ขาย OTOP ยอดพุ่ง 3 เท่าใน 2 สัปดาห์",
+        "emailFormat": "html"
+      }
+    },
+
+    {
+      "id": "wait-day-3",
+      "name": "⏰ Wait 1 Day",
+      "type": "n8n-nodes-base.wait",
+      "position": [1560, 200],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 1,
+        "unit": "days"
+      }
+    },
+
+    {
+      "id": "send-email-3",
+      "name": "📧 Email 3: Pain + Feature",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [1740, 200],
+      "parameters": {
+        "toEmail": "={{ $json.email }}",
+        "subject": "❌ ทำไมคอนเทนต์ดีแต่ยอดขายไม่ขึ้น?",
+        "emailFormat": "html"
+      }
+    },
+
+    {
+      "id": "wait-day-4",
+      "name": "⏰ Wait 2 Days",
+      "type": "n8n-nodes-base.wait",
+      "position": [1920, 200],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 2,
+        "unit": "days"
+      }
+    },
+
+    {
+      "id": "send-email-4",
+      "name": "📧 Email 4: Social Proof + Offer",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [2100, 200],
+      "parameters": {
+        "toEmail": "={{ $json.email }}",
+        "subject": "⚡ ใช้ได้ฟรี 7 วัน — ไม่ต้องใส่บัตรเครดิต",
+        "emailFormat": "html"
+      }
+    },
+
+    {
+      "id": "wait-day-5",
+      "name": "⏰ Wait 3 Days",
+      "type": "n8n-nodes-base.wait",
+      "position": [2280, 200],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 3,
+        "unit": "days"
+      }
+    },
+
+    {
+      "id": "check-converted",
+      "name": "❓ Already Converted?",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [2460, 200],
+      "parameters": {
+        "operation": "lookup",
+        "spreadsheetId": "YOUR_GOOGLE_SHEET_ID",
+        "sheetName": "Leads",
+        "lookupColumn": "email",
+        "lookupValue": "={{ $json.email }}"
+      }
+    },
+
+    {
+      "id": "if-not-converted",
+      "name": "❓ Still Free User?",
+      "type": "n8n-nodes-base.if",
+      "position": [2640, 200],
+      "parameters": {
+        "conditions": {
+          "string": [{
+            "value1": "={{ $json[0].converted }}",
+            "operation": "equals",
+            "value2": "FALSE"
+          }]
+        }
+      }
+    },
+
+    {
+      "id": "send-email-5",
+      "name": "📧 Email 5: Last Chance",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [2820, 200],
+      "parameters": {
+        "toEmail": "={{ $json.email }}",
+        "subject": "⏳ {{ $json.name }} เหลือเวลาอีก 24 ชั่วโมง",
+        "emailFormat": "html"
+      }
+    },
+
+    {
+      "id": "update-stage-nurturing",
+      "name": "📝 Update Stage: Nurturing",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [2820, 340],
+      "parameters": {
+        "operation": "update",
+        "spreadsheetId": "YOUR_GOOGLE_SHEET_ID",
+        "sheetName": "Leads",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "stage": "nurturing_complete",
+            "last_email_date": "={{ new Date().toISOString() }}"
+          }
+        }
+      }
+    },
+
+    {
+      "id": "trigger-payment",
+      "name": "💳 Payment Success Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [100, 600],
+      "parameters": {
+        "path": "openthai-payment",
+        "method": "POST"
+      },
+      "notes": "รับจาก PromptPay/Omise เมื่อชำระเงินสำเร็จ"
+    },
+
+    {
+      "id": "process-payment",
+      "name": "⚙️ Process Payment Data",
+      "type": "n8n-nodes-base.code",
+      "position": [280, 600],
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst plan = data.plan || 'basic';\nconst mrr = plan === 'pro' ? 299 : plan === 'agent_ready' ? 499 : 149;\n\nreturn [{\n  json: {\n    email: data.email || data.customer_email,\n    name: data.name || data.customer_name,\n    plan: plan,\n    mrr: mrr,\n    payment_date: new Date().toISOString(),\n    next_billing: new Date(Date.now() + 30*24*60*60*1000).toISOString()\n  }\n}];"
+      }
+    },
+
+    {
+      "id": "update-converted",
+      "name": "✅ Update Lead: Converted!",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [460, 600],
+      "parameters": {
+        "operation": "update",
+        "spreadsheetId": "YOUR_GOOGLE_SHEET_ID",
+        "sheetName": "Leads",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "converted": "TRUE",
+            "plan": "={{ $json.plan }}",
+            "mrr": "={{ $json.mrr }}",
+            "stage": "paying_customer",
+            "conversion_date": "={{ $json.payment_date }}"
+          }
+        }
+      }
+    },
+
+    {
+      "id": "send-welcome-paid",
+      "name": "🎊 Email: Welcome Paid User",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [640, 600],
+      "parameters": {
+        "toEmail": "={{ $json.email }}",
+        "subject": "🎉 ยืนยันการสมัคร Openthai.ai {{ $json.plan | upper }} — เริ่มได้เลย!",
+        "emailFormat": "html"
+      }
+    },
+
+    {
+      "id": "line-notify-conversion",
+      "name": "📱 LINE Notify: CONVERSION! 💰",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [640, 720],
+      "parameters": {
+        "method": "POST",
+        "url": "https://notify-api.line.me/api/notify",
+        "headers": {
+          "Authorization": "Bearer YOUR_LINE_NOTIFY_TOKEN"
+        },
+        "bodyParameters": {
+          "message": "\n💰 CONVERSION!\n👤 {{ $json.name }}\n📧 {{ $json.email }}\n📦 Plan: {{ $json.plan }}\n💵 MRR +฿{{ $json.mrr }}/เดือน\n🎉 ยินดีด้วย!"
+        }
+      }
+    },
+
+    {
+      "id": "upsell-trigger",
+      "name": "⏰ Wait 7 Days → Upsell",
+      "type": "n8n-nodes-base.wait",
+      "position": [820, 600],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 7,
+        "unit": "days"
+      }
+    },
+
+    {
+      "id": "send-upsell",
+      "name": "📧 Email: Upsell Agent-Ready",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [1000, 600],
+      "parameters": {
+        "toEmail": "={{ $json.email }}",
+        "subject": "🤖 {{ $json.name }} สินค้าคุณพร้อมให้ AI จากทั่วโลก discover หรือยัง?",
+        "emailFormat": "html"
+      }
+    }
+
+  ],
+
+  "connections": {
+    "🎯 Waitlist Signup Webhook": { "main": [[{"node": "✅ Validate & Clean Data"}]] },
+    "✅ Validate & Clean Data": { "main": [[{"node": "🔍 Check Duplicate in Sheets"}]] },
+    "🔍 Check Duplicate in Sheets": { "main": [[{"node": "❓ New Lead?"}]] },
+    "❓ New Lead?": {
+      "main": [
+        [{"node": "💾 Save Lead to Google Sheets"}],
+        []
+      ]
+    },
+    "💾 Save Lead to Google Sheets": {
+      "main": [[
+        {"node": "📧 Email 1: Welcome + Free Scripts"},
+        {"node": "📱 LINE Notify: New Lead!"}
+      ]]
+    },
+    "📧 Email 1: Welcome + Free Scripts": { "main": [[{"node": "⏰ Wait 1 Day"}]] },
+    "⏰ Wait 1 Day": { "main": [[{"node": "📧 Email 2: Case Study OTOP"}]] },
+    "📧 Email 2: Case Study OTOP": { "main": [[{"node": "⏰ Wait 1 Day_2"}]] },
+    "📧 Email 3: Pain + Feature": { "main": [[{"node": "⏰ Wait 2 Days"}]] },
+    "⏰ Wait 2 Days": { "main": [[{"node": "📧 Email 4: Social Proof + Offer"}]] },
+    "📧 Email 4: Social Proof + Offer": { "main": [[{"node": "⏰ Wait 3 Days"}]] },
+    "⏰ Wait 3 Days": { "main": [[{"node": "❓ Already Converted?"}]] },
+    "❓ Already Converted?": { "main": [[{"node": "❓ Still Free User?"}]] },
+    "❓ Still Free User?": {
+      "main": [
+        [{"node": "📧 Email 5: Last Chance"}],
+        [{"node": "📝 Update Stage: Nurturing"}]
+      ]
+    },
+    "💳 Payment Success Webhook": { "main": [[{"node": "⚙️ Process Payment Data"}]] },
+    "⚙️ Process Payment Data": { "main": [[{"node": "✅ Update Lead: Converted!"}]] },
+    "✅ Update Lead: Converted!": {
+      "main": [[
+        {"node": "🎊 Email: Welcome Paid User"},
+        {"node": "📱 LINE Notify: CONVERSION! 💰"}
+      ]]
+    },
+    "🎊 Email: Welcome Paid User": { "main": [[{"node": "⏰ Wait 7 Days → Upsell"}]] },
+    "⏰ Wait 7 Days → Upsell": { "main": [[{"node": "📧 Email: Upsell Agent-Ready"}]] }
+  }
+}

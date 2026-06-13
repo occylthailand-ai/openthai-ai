@@ -1,5 +1,5 @@
-/**
- * OpenThai AI — Waitlist Google Apps Script
+﻿/**
+ * Openthai.ai — Waitlist Google Apps Script
  * 
  * วิธีใช้งาน:
  * 1. ไปที่ Google Sheets → Extensions → Apps Script
@@ -76,7 +76,7 @@ function doPost(e) {
 function doGet(e) {
   return ContentService
     .createTextOutput(JSON.stringify({ 
-      status: 'OpenThai AI Waitlist API is running',
+      status: 'Openthai.ai Waitlist API is running',
       timestamp: new Date().toISOString()
     }))
     .setMimeType(ContentService.MimeType.JSON);
@@ -88,7 +88,7 @@ function doGet(e) {
 function sendNotificationEmail(data) {
   const subject = `🎉 New Waitlist Signup: ${data.name}`;
   const body = `
-    New signup for OpenThai AI!
+    New signup for Openthai.ai!
     
     Name: ${data.name}
     Email: ${data.email}
@@ -99,7 +99,7 @@ function sendNotificationEmail(data) {
     Source: ${data.source}
     
     ---
-    OpenThai AI Waitlist System
+    Openthai.ai Waitlist System
   `;
   
   try {
@@ -144,9 +144,9 @@ function getWaitlistStats() {
  */
 function sendDailyReport() {
   const stats = getWaitlistStats();
-  const subject = `📊 OpenThai AI Daily Report - ${new Date().toLocaleDateString('th-TH')}`;
+  const subject = `📊 Openthai.ai Daily Report - ${new Date().toLocaleDateString('th-TH')}`;
   const body = `
-    OpenThai AI Waitlist Daily Report
+    Openthai.ai Waitlist Daily Report
     
     Total Signups: ${stats.total}
     
@@ -154,7 +154,7 @@ function sendDailyReport() {
     ${Object.entries(stats.byRole).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
     
     ---
-    OpenThai AI Automated Report
+    Openthai.ai Automated Report
   `;
   
   MailApp.sendEmail(NOTIFICATION_EMAIL, subject, body);

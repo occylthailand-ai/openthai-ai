@@ -1,0 +1,577 @@
+﻿<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Openthai.ai Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;width:100%;overflow:hidden;background:#0a0c10;color:#e6edf3;font-family:'Sarabun',sans-serif;font-size:13px;line-height:1.5;}
+
+/* ── TITLEBAR ── */
+#tb{height:38px;background:#0d1117;border-bottom:1px solid #30363d;display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;user-select:none;}
+.logo{display:flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#00d4ff;flex-shrink:0;}
+.orb{width:17px;height:17px;border-radius:50%;background:linear-gradient(135deg,#00d4ff,#0088cc);box-shadow:0 0 10px rgba(0,212,255,.6);animation:orb 2.5s ease-in-out infinite;flex-shrink:0;}
+@keyframes orb{0%,100%{box-shadow:0 0 6px rgba(0,212,255,.5);}50%{box-shadow:0 0 18px rgba(0,212,255,.9);}}
+.bdg{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 6px;border-radius:2px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}
+.blive{background:#ff4757;color:#fff;animation:blinkb 1.4s step-end infinite;}
+.bbeta{background:#bc8cff;color:#fff;}
+@keyframes blinkb{0%,100%{opacity:1}50%{opacity:.55}}
+.tnav{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;}
+.tnb{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b949e;padding:4px 11px;border-radius:4px;cursor:pointer;transition:all .15s;border:1px solid transparent;white-space:nowrap;}
+.tnb:hover{background:#1c2333;color:#e6edf3;}
+.tnb.on{background:rgba(0,212,255,.1);color:#00d4ff;border-color:rgba(0,212,255,.22);}
+.tnb.on2{background:rgba(188,140,255,.1);color:#bc8cff;border-color:rgba(188,140,255,.2);}
+.tr{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.ti2{width:26px;height:26px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:#8b949e;transition:all .15s;}
+.ti2:hover{background:#1c2333;color:#e6edf3;}
+.win{width:11px;height:11px;border-radius:50%;cursor:pointer;flex-shrink:0;}
+
+/* ── LAYOUT ── */
+#app{height:calc(100vh - 38px);display:flex;flex-direction:column;}
+#main{flex:1;display:flex;overflow:hidden;background:#0a0c10;}
+
+/* ── LEFT ── */
+#left{width:194px;background:#0d1117;border-right:1px solid #30363d;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
+.ps{padding:10px 10px 4px;}
+.pst{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#484f58;letter-spacing:.12em;text-transform:uppercase;padding:0 4px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;}
+.pst span{cursor:pointer;transition:color .15s;}
+.pst span:hover{color:#8b949e;}
+.ti{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;transition:background .12s;margin-bottom:1px;}
+.ti:hover{background:#1c2333;}
+.ti.on{background:rgba(0,212,255,.1);}
+.ti.on .tl{color:#00d4ff;}
+.tic{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+.tl{font-size:12px;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wfsel{width:100%;background:#1c2333;border:1px solid #30363d;color:#e6edf3;font-family:'Sarabun',sans-serif;font-size:12px;padding:6px 8px;border-radius:5px;cursor:pointer;outline:none;margin-bottom:8px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b949e'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px;}
+.wfsel:focus{border-color:#00d4ff;}
+.src{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;cursor:pointer;transition:background .12s;margin-bottom:1px;}
+.src:hover{background:#1c2333;}
+.sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:#3d4450;}
+.src.sb .sdot{background:#00d4ff;box-shadow:0 0 5px #00d4ff;}
+.src.sy .sdot{background:#e3b341;box-shadow:0 0 5px #e3b341;}
+.src.sg .sdot{background:#3fb950;box-shadow:0 0 5px #3fb950;}
+.slb{font-size:11px;color:#8b949e;}
+.src.sb .slb,.src.sy .slb,.src.sg .slb{color:#e6edf3;}
+.wfl{flex:1;overflow-y:auto;padding:0 10px;scrollbar-width:thin;scrollbar-color:#30363d transparent;}
+.wfe{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:4px;cursor:pointer;transition:background .12s;margin-bottom:1px;}
+.wfe:hover{background:#1c2333;}
+.wfe span{font-size:12px;color:#8b949e;}
+.lsw{display:flex;margin:6px 10px;border:1px solid #30363d;border-radius:5px;overflow:hidden;flex-shrink:0;}
+.lsb{flex:1;padding:5px 2px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#484f58;cursor:pointer;border-right:1px solid #30363d;transition:all .15s;line-height:1.4;}
+.lsb:last-child{border-right:none;}
+.lsb:hover{background:#1c2333;color:#8b949e;}
+.lsb.on{background:rgba(0,212,255,.1);color:#00d4ff;}
+.addwf{display:flex;align-items:center;gap:6px;padding:7px 12px;margin:4px 10px 10px;border-radius:5px;border:1px dashed #3d4450;cursor:pointer;font-size:11px;color:#484f58;transition:all .15s;flex-shrink:0;}
+.addwf:hover{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,.07);}
+.arr{display:flex;align-items:center;justify-content:center;padding:2px 0 5px;cursor:pointer;}
+.arr span{font-size:10px;color:#484f58;}
+.arr:hover span{color:#8b949e;}
+
+/* ── CENTER ── */
+#center{flex:1;background:#0a0c10;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.ctb{height:34px;background:#0d1117;border-bottom:1px solid #30363d;display:flex;align-items:center;padding:0 12px;gap:8px;flex-shrink:0;}
+.chip{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:12px;font-size:11px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:filter .15s;border:1px solid transparent;white-space:nowrap;}
+.chip:hover{filter:brightness(1.2);}
+.chy{background:rgba(227,179,65,.1);color:#e3b341;border-color:rgba(227,179,65,.22);}
+.chb{background:rgba(0,212,255,.08);color:#00d4ff;border-color:rgba(0,212,255,.2);}
+.chg{background:rgba(63,185,80,.08);color:#3fb950;border-color:rgba(63,185,80,.2);}
+.ctbr{margin-left:auto;display:flex;align-items:center;gap:5px;}
+.ib{width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;font-size:13px;color:#8b949e;border:1px solid transparent;transition:all .15s;}
+.ib:hover{background:#1c2333;color:#e6edf3;border-color:#30363d;}
+
+/* workspace */
+.ws{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#0a0c10;position:relative;}
+.ws::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background-image:linear-gradient(rgba(0,212,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.02) 1px,transparent 1px);background-size:32px 32px;}
+
+/* output panel floats above grid */
+.outp{
+  position:absolute;
+  top:14px;left:14px;right:14px;bottom:0;
+  background:#0d1117;
+  border:1px solid #3d4450;
+  border-bottom:none;
+  border-radius:8px 8px 0 0;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  z-index:1;
+}
+.otabs{height:36px;background:#161b22;border-bottom:1px solid #30363d;display:flex;align-items:center;padding:0 12px;gap:2px;flex-shrink:0;}
+.otab{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 12px;border-radius:4px 4px 0 0;cursor:pointer;color:#484f58;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;}
+.otab:hover{color:#8b949e;}
+.otab.on{color:#00d4ff;border-bottom-color:#00d4ff;background:rgba(0,212,255,.07);}
+.otabs-r{margin-left:auto;display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#484f58;}
+.otabs-r .mk{color:#3fb950;}
+
+/* output scroll body */
+.obody{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;background:#0d1117;scrollbar-width:thin;scrollbar-color:#30363d transparent;}
+
+/* output block */
+.ob{background:#161b22;border:1px solid #30363d;border-radius:6px;overflow:hidden;animation:slin .3s ease;}
+@keyframes slin{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.obh{padding:7px 14px;border-bottom:1px solid #30363d;background:#1c2333;display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#484f58;}
+.obh .done{margin-left:auto;}
+.ok{color:#3fb950;}
+.pend{color:#00d4ff;display:flex;align-items:center;gap:4px;}
+.lbdg{padding:2px 7px;border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.06em;}
+.lth{background:rgba(0,212,255,.15);color:#00d4ff;}
+.lzh{background:rgba(227,179,65,.15);color:#e3b341;}
+.len{background:rgba(63,185,80,.15);color:#3fb950;}
+.obb{padding:14px;font-size:13px;color:#8b949e;line-height:1.8;}
+.obb.thf{font-family:'Sarabun',sans-serif;}
+.obb.zhf{font-family:'Noto Sans SC',sans-serif;}
+.obb.enf{font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.7;}
+.hl{color:#e3b341;font-weight:600;}
+.cur{display:inline-block;width:2px;height:13px;background:#00d4ff;margin-left:2px;vertical-align:text-bottom;animation:blinkcur .8s step-end infinite;}
+@keyframes blinkcur{0%,100%{opacity:1}50%{opacity:0}}
+
+/* prompt bar */
+.pbar{position:relative;z-index:2;border-top:1px solid #30363d;background:#0d1117;padding:10px 14px;display:flex;align-items:flex-end;gap:8px;flex-shrink:0;}
+.piw{flex:1;background:#161b22;border:1px solid #3d4450;border-radius:6px;display:flex;align-items:flex-end;padding:8px 10px;gap:8px;transition:border-color .15s;}
+.piw:focus-within{border-color:#00d4ff;box-shadow:0 0 0 2px rgba(0,212,255,.08);}
+.pi{flex:1;background:transparent;border:none;outline:none;color:#e6edf3;font-family:'Sarabun',sans-serif;font-size:13px;resize:none;min-height:20px;max-height:100px;overflow-y:auto;scrollbar-width:thin;}
+.pi::placeholder{color:#484f58;}
+.psnd{width:32px;height:32px;background:#00d4ff;border:none;border-radius:5px;color:#000;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-weight:700;}
+.psnd:hover{background:#00aadd;transform:scale(1.06);}
+.pac{display:flex;flex-direction:column;gap:4px;}
+.pab{width:32px;height:32px;background:#1c2333;border:1px solid #30363d;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:#8b949e;transition:all .15s;}
+.pab:hover{border-color:#3d4450;color:#e6edf3;}
+
+/* ── STATUS BAR ── */
+#sb{height:26px;background:#0d1117;border-top:1px solid #30363d;display:flex;align-items:center;padding:0 14px;gap:14px;flex-shrink:0;}
+.si{display:flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#484f58;white-space:nowrap;}
+.sv{color:#8b949e;}
+.sv.g{color:#3fb950;}
+.sv.b{color:#00d4ff;}
+.sv.p{color:#bc8cff;}
+.sbw{width:44px;height:3px;background:#1c2333;border-radius:2px;overflow:hidden;}
+.sbar{height:100%;border-radius:2px;}
+.sbg{background:#3fb950;}.sbb{background:#00d4ff;}.sby{background:#e3b341;}
+.sbr{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.lvc{display:flex;align-items:center;gap:4px;padding:1px 8px;background:#ff4757;border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:#fff;letter-spacing:.08em;}
+.lvd{width:5px;height:5px;border-radius:50%;background:#fff;animation:blinkcur 1s step-end infinite;}
+.tc{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#e6edf3;padding:1px 8px;background:#1c2333;border:1px solid #3d4450;border-radius:3px;letter-spacing:.06em;}
+
+/* ── RIGHT ── */
+#right{width:268px;background:#0d1117;border-left:1px solid #30363d;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0;}
+.rs{border-bottom:1px solid #30363d;flex-shrink:0;}
+.rsh{padding:8px 12px;display:flex;align-items:center;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b949e;font-weight:600;letter-spacing:.08em;text-transform:uppercase;}
+.rsh .ri{font-size:12px;cursor:pointer;color:#484f58;transition:color .15s;}
+.rsh .ri:hover{color:#8b949e;}
+.srow{display:grid;grid-template-columns:repeat(3,1fr);padding:0 10px 10px;gap:4px;}
+.srow2{display:flex;gap:4px;padding:0 10px 10px;}
+.sc{background:#161b22;border:1px solid #30363d;border-radius:5px;padding:8px 6px;text-align:center;cursor:pointer;transition:border-color .15s;flex:1;}
+.sc:hover{border-color:#3d4450;}
+.sn{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;line-height:1;margin-bottom:3px;}
+.sl2{font-size:9px;color:#484f58;font-family:'IBM Plex Mono',monospace;letter-spacing:.04em;}
+.snb{color:#00d4ff;}.sng{color:#3fb950;}.sny{color:#e3b341;}.snp{color:#bc8cff;}
+.tul{padding:0 10px 8px;}
+.tu{display:flex;align-items:center;gap:7px;padding:5px 6px;border-radius:4px;cursor:pointer;transition:background .12s;}
+.tu:hover{background:#161b22;}
+.turk{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#484f58;width:12px;flex-shrink:0;}
+.tuav{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;border:1px solid #3d4450;}
+.tuname{flex:1;font-size:11px;color:#8b949e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tubdg{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:1px 5px;border-radius:2px;font-weight:700;letter-spacing:.04em;}
+.tutok{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;color:#e3b341;}
+.feed{flex:1;overflow-y:auto;display:flex;flex-direction:column;scrollbar-width:thin;scrollbar-color:#30363d transparent;}
+.ftop{position:sticky;top:0;background:#0d1117;z-index:1;padding:7px 12px;border-bottom:1px solid #30363d;display:flex;align-items:center;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#8b949e;font-weight:600;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0;}
+.flist{padding:4px 0;}
+.ge{padding:5px 12px;transition:background .12s;cursor:default;}
+.ge:hover{background:#161b22;}
+.ge.hi{border-left:2px solid #00d4ff;padding-left:10px;}
+.ge.hy{border-left:2px solid #e3b341;padding-left:10px;}
+.getop{display:flex;align-items:center;gap:5px;margin-bottom:2px;}
+.gav{width:20px;height:20px;border-radius:50%;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #30363d;}
+.gu{font-size:11px;font-weight:600;color:#e6edf3;}
+.gact{font-size:10px;color:#484f58;}
+.gitem{font-size:10px;color:#00d4ff;font-family:'IBM Plex Mono',monospace;}
+.gcnt{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;color:#e3b341;}
+.gmsg{margin-left:25px;font-size:11px;color:#484f58;line-height:1.55;}
+.gmsg.thf{font-family:'Sarabun',sans-serif;font-size:12px;}
+.gmsg.zhf{font-family:'Noto Sans SC',sans-serif;}
+.cbar{padding:7px 10px;border-top:1px solid #30363d;display:flex;align-items:center;gap:6px;flex-shrink:0;background:#0d1117;}
+.ci{flex:1;background:#161b22;border:1px solid #30363d;color:#e6edf3;font-family:'Sarabun',sans-serif;font-size:12px;padding:5px 9px;border-radius:4px;outline:none;transition:border-color .15s;}
+.ci::placeholder{color:#484f58;}
+.ci:focus{border-color:#00d4ff;}
+.csnd{width:27px;height:27px;background:#1c2333;border:1px solid #3d4450;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:#8b949e;transition:all .15s;}
+.csnd:hover{background:rgba(0,212,255,.1);color:#00d4ff;border-color:#00d4ff;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:2px;}
+::-webkit-scrollbar-thumb:hover{background:#3d4450;}
+</style>
+</head>
+<body>
+
+<!-- TITLEBAR -->
+<div id="tb">
+  <div class="logo">
+    <div class="orb"></div>
+    <span>OpenThai</span><span style="color:#3fb950;">.ai</span>
+    <span class="bdg blive">LIVE</span>
+    <span class="bdg bbeta">Beta</span>
+  </div>
+  <div class="tnav">
+    <div class="tnb on">🏠 Studio</div>
+    <div class="tnb">📊 Analytics</div>
+    <div class="tnb">🔗 Supply Chain</div>
+    <div class="tnb">📜 Trade</div>
+    <div class="tnb on2">⚙️ Settings</div>
+  </div>
+  <div class="tr">
+    <div class="ti2">🔔</div>
+    <div class="ti2" style="color:#e3b341;">❓</div>
+    <div class="ti2">👤</div>
+    <div style="width:1px;height:15px;background:#30363d;margin:0 2px;"></div>
+    <div class="win" style="background:#ff5f57;"></div>
+    <div class="win" style="background:#febc2e;margin:0 4px;"></div>
+    <div class="win" style="background:#28c840;"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+<div id="main">
+
+<!-- LEFT -->
+<div id="left">
+  <div class="ps">
+    <div class="pst">AI TOOLS <span>⌄</span></div>
+    <div class="ti on" onclick="selTool(this)"><span class="tic">✍️</span><span class="tl">Content Gen</span></div>
+    <div class="ti" onclick="selTool(this)"><span class="tic">🔗</span><span class="tl">Supply Chain</span></div>
+    <div class="ti" onclick="selTool(this)"><span class="tic">📊</span><span class="tl">Framework</span></div>
+    <div class="ti" onclick="selTool(this)"><span class="tic">🌐</span><span class="tl">Trade Analysis</span></div>
+    <div class="ti" onclick="selTool(this)"><span class="tic">🤖</span><span class="tl">Dev Orchestrator</span></div>
+    <div class="ti" onclick="selTool(this)"><span class="tic">🎯</span><span class="tl">Alert</span></div>
+  </div>
+  <div class="arr"><span>▲</span></div>
+  <div class="ps">
+    <div class="pst">WORKFLOWS <span>⌄</span></div>
+    <select class="wfsel">
+      <option>🏭 Supply Chain Mode</option>
+      <option>📝 Content Mode</option>
+      <option>💼 Business Mode</option>
+      <option>💻 Dev Team Mode</option>
+    </select>
+  </div>
+  <div class="ps" style="padding-top:2px;">
+    <div class="pst" style="color:#8b949e;">WORKFLOW 1</div>
+    <div class="src sb"><div class="sdot"></div><span class="slb">🇹🇭 Thai Output</span></div>
+    <div class="src sy"><div class="sdot"></div><span class="slb">🇨🇳 Chinese Output</span></div>
+    <div class="src sg"><div class="sdot"></div><span class="slb">🇬🇧 English Output</span></div>
+    <div class="src"><div class="sdot"></div><span class="slb">📊 Data Source</span></div>
+    <div class="src"><div class="sdot"></div><span class="slb">🔗 API Fetch</span></div>
+  </div>
+  <div class="wfl">
+    <div class="wfe"><span style="font-size:10px;color:#484f58;">▷</span><span>Workflow 2</span></div>
+    <div class="wfe"><span style="font-size:10px;color:#484f58;">▷</span><span>Workflow 3</span></div>
+  </div>
+  <div class="lsw">
+    <div class="lsb on" onclick="selLang(this)">🇹🇭<br>ไทย</div>
+    <div class="lsb" onclick="selLang(this)">🇨🇳<br>中文</div>
+    <div class="lsb" onclick="selLang(this)">🇬🇧<br>EN</div>
+  </div>
+  <div class="addwf">＋ Add workflow (3/30)</div>
+</div>
+
+<!-- CENTER -->
+<div id="center">
+  <div class="ctb">
+    <div class="chip chy">🔗 Supply Chain AI</div>
+    <div class="chip chb">📜 Trade 2026</div>
+    <div class="chip chg">⚡ Weekly Top</div>
+    <div class="ctbr">
+      <div class="ib">⚙️</div><div class="ib">🔍</div><div class="ib">⛶</div><div class="ib">📋</div><div class="ib">📤</div>
+    </div>
+  </div>
+
+  <div class="ws">
+    <!-- Output panel -->
+    <div class="outp">
+      <div class="otabs">
+        <div class="otab on" onclick="selTab(this)">Output</div>
+        <div class="otab" onclick="selTab(this)">Prompt</div>
+        <div class="otab" onclick="selTab(this)">Raw JSON</div>
+        <div class="otab" onclick="selTab(this)">History</div>
+        <div class="otabs-r">
+          <span><span class="mk">●</span> claude-sonnet-4-6</span>
+          <span>Tokens: <span style="color:#e6edf3;">2,847</span> / 8,000</span>
+        </div>
+      </div>
+
+      <div class="obody">
+
+        <!-- TH -->
+        <div class="ob">
+          <div class="obh">
+            <span class="lbdg lth">🇹🇭 TH</span>
+            <span>ห่วงโซ่อุปทาน AI — Supply Chain Analysis</span>
+            <span class="done ok">✓ สมบูรณ์</span>
+          </div>
+          <div class="obb thf">
+            ห่วงโซ่อุปทาน AI (AI Supply Chain) ในปี 2026 พัฒนาอย่างก้าวกระโดด NVIDIA ครองตลาด GPU ด้วย Blackwell architecture
+            ขณะที่ TSMC รับผิดชอบการผลิตชิป 3nm/2nm สำหรับ Apple, NVIDIA และ AMD
+            ไทยมีอัตราภาษีนำเข้าสหรัฐฯ <span class="hl">19%</span> ต่ำกว่า Vietnam (20%)
+            ทำให้เป็นฮับสำคัญสำหรับการย้ายฐาน Supply Chain ใน ASEAN
+          </div>
+        </div>
+
+        <!-- ZH -->
+        <div class="ob">
+          <div class="obh">
+            <span class="lbdg lzh">🇨🇳 ZH</span>
+            <span>AI 供应链分析</span>
+            <span class="done ok">✓ 完成</span>
+          </div>
+          <div class="obb zhf">
+            2026年AI供应链格局：英伟达（NVIDIA）凭借 Blackwell 架构继续主导 GPU 市场。台积电（TSMC 2330）承担苹果、英伟达、AMD 的 3nm/2nm 制程芯片生产。
+            泰国对美关税税率为 <span class="hl">19%</span>，优于越南的 20%，具备供应链迁移优势，正成为东盟关键制造中心。
+          </div>
+        </div>
+
+        <!-- EN -->
+        <div class="ob">
+          <div class="obh">
+            <span class="lbdg len">🇬🇧 EN</span>
+            <span>AI Supply Chain — English Summary</span>
+            <span class="done pend"><span style="font-size:9px;">Generating</span><span class="cur"></span></span>
+          </div>
+          <div class="obb enf">
+            In 2026, the AI supply chain is dominated by NVIDIA's Blackwell architecture GPUs, manufactured on TSMC's 3nm/2nm nodes.
+            Thailand maintains a competitive tariff advantage at <span class="hl">19%</span> vs. Vietnam's 20%,
+            positioning it as a key ASEAN hub for AI hardware supply chain diversification<span class="cur"></span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Prompt bar -->
+    <div class="pbar">
+      <div class="piw">
+        <textarea class="pi" rows="1" placeholder="พิมพ์คำสั่ง AI... (TH / 中文 / EN)"></textarea>
+        <button class="psnd">▶</button>
+      </div>
+      <div class="pac">
+        <button class="pab">📎</button>
+        <button class="pab">🎙️</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div id="right">
+  <div class="rs">
+    <div class="rsh">AI DATA <span class="ri">⚙️</span></div>
+    <div class="srow">
+      <div class="sc"><div class="sn snb">4.2K</div><div class="sl2">Req/hr</div></div>
+      <div class="sc"><div class="sn sng">98.1K</div><div class="sl2">Tokens</div></div>
+      <div class="sc"><div class="sn sny">3,826</div><div class="sl2">Outputs</div></div>
+    </div>
+    <div class="srow2">
+      <div class="sc"><div class="sn snp" style="font-size:12px;">8.3M</div><div class="sl2">Users</div></div>
+      <div class="sc"><div class="sn" style="font-size:12px;color:#e6edf3;">99.7%</div><div class="sl2">Uptime</div></div>
+      <div class="sc"><div class="sn snb" style="font-size:12px;">3</div><div class="sl2">Langs</div></div>
+    </div>
+  </div>
+
+  <div class="rs">
+    <div class="rsh">TOP USERS <span class="ri">▼</span></div>
+    <div class="tul">
+      <div class="tu">
+        <span class="turk">1</span>
+        <div class="tuav" style="background:rgba(0,212,255,.12);">🧑</div>
+        <span class="tuname">Swagtané</span>
+        <span class="tubdg" style="background:rgba(0,212,255,.15);color:#00d4ff;">AFKC</span>
+        <span class="tutok">● 444K</span>
+      </div>
+      <div class="tu">
+        <span class="turk">2</span>
+        <div class="tuav" style="background:rgba(63,185,80,.1);">👩</div>
+        <span class="tuname">hilihulo</span>
+        <span class="tubdg" style="background:rgba(63,185,80,.12);color:#3fb950;">AFKC</span>
+        <span class="tutok">● 403K</span>
+      </div>
+      <div class="tu">
+        <span class="turk">3</span>
+        <div class="tuav" style="background:rgba(227,179,65,.1);">🧑</div>
+        <span class="tuname">Mimikgao</span>
+        <span class="tubdg" style="background:rgba(227,179,65,.12);color:#e3b341;">AFKZ</span>
+        <span class="tutok">● 383K</span>
+      </div>
+    </div>
+    <div class="arr"><span>▲</span></div>
+  </div>
+
+  <div class="feed">
+    <div class="ftop">
+      LIVE ACTIVITY
+      <div style="display:flex;gap:6px;">
+        <span class="ri" style="cursor:pointer;">🔔</span>
+        <span class="ri" style="cursor:pointer;">⛶</span>
+      </div>
+    </div>
+    <div class="flist">
+      <div class="ge hi">
+        <div class="getop">
+          <div class="gav" style="background:rgba(0,212,255,.12);">🧑</div>
+          <span class="gu">Swagtané</span>
+          <span class="gact">generated</span>
+          <span class="gitem">Supply Ch...</span>
+          <span class="gcnt">×36</span>
+        </div>
+      </div>
+      <div class="ge">
+        <div class="getop">
+          <div class="gav" style="background:rgba(63,185,80,.1);">👩</div>
+          <span class="gu">hilihulo</span>
+          <span class="gact">used</span>
+          <span class="gitem">Trade Analysis</span>
+          <span class="gcnt">×4</span>
+        </div>
+      </div>
+      <div class="ge hy">
+        <div class="getop">
+          <div class="gav" style="background:rgba(227,179,65,.1);">🧑</div>
+          <span class="gu">Mimikgao</span>
+          <span class="gact">ran</span>
+          <span class="gitem">Dev Orchestrat...</span>
+          <span class="gcnt">×2</span>
+        </div>
+      </div>
+      <div class="ge">
+        <div class="getop">
+          <div class="gav" style="background:rgba(188,140,255,.1);">🧑</div>
+          <span class="gu" style="font-size:10px;">BBalii</span>
+          <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#484f58;">No.1</span>
+        </div>
+        <div class="gmsg thf">วิธีวิเคราะห์ Supply Chain ของ TSMC ดีมากเลย ขอบคุณครับ</div>
+      </div>
+      <div class="ge">
+        <div class="getop">
+          <div class="gav" style="background:rgba(0,212,255,.08);">👤</div>
+          <span class="gu" style="font-size:10px;">Robertsson</span>
+        </div>
+        <div class="gmsg">This trilingual output is way too clean to be real</div>
+      </div>
+      <div class="ge">
+        <div class="getop">
+          <div class="gav" style="background:rgba(63,185,80,.08);">👩</div>
+          <span class="gu" style="font-size:10px;">Tom Riri</span>
+          <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#00d4ff;">No.2</span>
+        </div>
+        <div class="gmsg">god geez how did it generate TH+ZH+EN simultaneously, dont know how it did it</div>
+      </div>
+      <div class="ge">
+        <div class="getop">
+          <div class="gav" style="background:rgba(255,107,53,.08);">🧑</div>
+          <span class="gu" style="font-size:10px;">Ramos</span>
+          <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#484f58;">No.1</span>
+        </div>
+        <div class="gmsg zhf">这个平台太强了，泰中英同时输出，效率超高！</div>
+      </div>
+      <div class="ge">
+        <div class="getop">
+          <div class="gav" style="background:rgba(227,179,65,.08);">👩</div>
+          <span class="gu" style="font-size:10px;">Sarah</span>
+          <span class="tubdg" style="background:rgba(0,212,255,.12);color:#00d4ff;margin-left:4px;">AFKC</span>
+        </div>
+        <div class="gmsg">@OpenThai knew this wasn't going to last LUL just too good to be true</div>
+      </div>
+      <div class="ge">
+        <div class="getop">
+          <div class="gav" style="background:rgba(188,140,255,.08);">🧑</div>
+          <span class="gu" style="font-size:10px;">DevKit_TH</span>
+        </div>
+        <div class="gmsg thf">ใช้ Dev Orchestrator + tmux แล้ว speed ขึ้นมากเลยครับ</div>
+      </div>
+      <div class="ge">
+        <div class="getop">
+          <div class="gav" style="background:rgba(0,212,255,.08);">👤</div>
+          <span class="gu" style="font-size:10px;">MarcusTH</span>
+        </div>
+        <div class="gmsg thf">Trade analysis ไทย 19% vs เวียดนาม 20% — โอกาสชัดมากเลย</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cbar">
+    <input class="ci" placeholder="พิมพ์ข้อความ..." />
+    <div class="csnd">▶</div>
+    <div class="csnd" style="font-size:15px;">😊</div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- STATUS BAR -->
+<div id="sb">
+  <div class="si">CPU <div class="sbw"><div class="sbar sbg" id="cpu-bar" style="width:18%;"></div></div><span class="sv g" id="cpu-val">18%</span></div>
+  <div class="si">RAM <div class="sbw"><div class="sbar sbb" style="width:33%;"></div></div><span class="sv">1.2 GB</span></div>
+  <div class="si">Tokens/s <div class="sbw"><div class="sbar sbb" style="width:62%;"></div></div><span class="sv b">847 t/s</span></div>
+  <div class="si">Latency <span class="sv g">210ms</span></div>
+  <div class="si">Queue <span class="sv">3</span></div>
+  <div class="si">Model <span class="sv p">sonnet-4-6</span></div>
+  <div class="si">Lang <span class="sv b">TH+ZH+EN</span></div>
+  <div class="si">FPS <span class="sv g">30</span></div>
+  <div class="sbr">
+    <div class="lvc"><div class="lvd"></div>LIVE</div>
+    <div class="tc" id="timer">00:34:55</div>
+    <div style="width:22px;height:20px;background:#1c2333;border:1px solid #3d4450;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:#8b949e;">▼</div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// Timer
+let s=34*60+55;
+setInterval(()=>{
+  s++;
+  const h=String(Math.floor(s/3600)).padStart(2,'0');
+  const m=String(Math.floor((s%3600)/60)).padStart(2,'0');
+  const sec=String(s%60).padStart(2,'0');
+  document.getElementById('timer').textContent=`${h}:${m}:${sec}`;
+},1000);
+
+// Textarea resize
+const ta=document.querySelector('.pi');
+ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px';});
+ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();}});
+
+// Tabs
+function selTab(el){document.querySelectorAll('.otab').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
+function selTool(el){document.querySelectorAll('.ti').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
+function selLang(el){document.querySelectorAll('.lsb').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
+
+// Nav
+document.querySelectorAll('.tnb').forEach(b=>{
+  b.addEventListener('click',function(){
+    document.querySelectorAll('.tnb').forEach(x=>{x.classList.remove('on','on2');});
+    this.classList.add('on');
+  });
+});
+
+// CPU fluctuation
+setInterval(()=>{
+  const v=Math.round(12+Math.random()*20);
+  const bar=document.getElementById('cpu-bar');
+  const val=document.getElementById('cpu-val');
+  if(bar)bar.style.width=v+'%';
+  if(val){val.textContent=v+'%';val.className='sv '+(v>25?'':'g');}
+},2500);
+
+// Feed auto-scroll
+const feedEl=document.querySelector('.feed');
+let dir=1;
+setInterval(()=>{
+  if(!feedEl)return;
+  feedEl.scrollTop+=dir;
+  if(feedEl.scrollTop>=feedEl.scrollHeight-feedEl.clientHeight)dir=-1;
+  if(feedEl.scrollTop<=0)dir=1;
+},70);
+</script>
+</body>
+</html>

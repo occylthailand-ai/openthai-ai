@@ -1,0 +1,17 @@
+[2026-05-21 19:10:03] feat: setup 3-way sync system (OneDrive + GitHub + Log)
+[2026-05-21 19:10:21] feat: setup 3-way sync system
+[2026-05-21 19:10:46] docs: add sync guide and 3-way sync system
+[2026-05-21 19:11:14] sync: auto-save 2026-05-21 19:11
+[2026-05-21 19:11:41] sync: auto-save 2026-05-21 19:11
+[2026-05-21 19:13:23] test: verify 3-way sync working
+[2026-05-21 19:14:12] sync: auto-save 2026-05-21 19:14
+[2026-05-21 19:14:21] sync: auto-save 2026-05-21 19:14
+[2026-05-21 19:15:25] fix: bypass credential manager for auto push
+[2026-05-21 19:19:07] sync: auto-save 2026-05-21 19:19
+[2026-05-21 19:37:14] sync: auto-save 2026-05-21 19:37
+[2026-05-21 21:50:05] docs: save pending tasks for tomorrow
+[2026-05-21 23:07:54] feat: n8n auto-post workflow active + GEMINI_API_KEY
+Fri May 22 20:26:44     2026
+[2026-05-24 17:21:25] sync: auto-save 2026-05-24 17:21
+[2026-05-24 17:21:47] sync: auto-save 2026-05-24 17:21
+[2026-05-24 17:22:24] sync: auto-save 2026-05-24 17:22
