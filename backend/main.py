@@ -1571,6 +1571,44 @@ async def delete_goal(goal_id: int):
         await db.commit()
     return {"id": goal_id, "status": "cancelled"}
 
+# ================== MASTER ORCHESTRATOR (autorun) ==================
+
+@app.post("/system/run-all")
+async def system_run_all(background_tasks: BackgroundTasks, request: Request):
+    """เริ่มทุกระบบพร้อมกัน — DB, News, Goals, Tests"""
+    from autorun import run_all_systems
+    base_url = str(request.base_url).rstrip("/")
+    background_tasks.add_task(run_all_systems, base_url)
+    return {"status": "started", "message": "Autorun initiated. Check /system/status or /system/logs for results."}
+
+@app.get("/system/status")
+async def system_status():
+    """สถานะ real-time ทุกโปรแกรม"""
+    from autorun import get_system_status
+    return get_system_status()
+
+@app.post("/system/test-all")
+async def system_test_all(request: Request):
+    """รัน endpoint test suite ทั้งหมด"""
+    from autorun import run_endpoint_tests, run_generate_test
+    base_url = str(request.base_url).rstrip("/")
+    ep = await run_endpoint_tests(base_url)
+    gen = await run_generate_test(base_url)
+    return {"endpoint_tests": ep, "generate_test": gen}
+
+@app.post("/system/restart/{job_id}")
+async def system_restart_job(job_id: str, request: Request):
+    """Restart job เฉพาะตัว — news_monitor, goal_tracker, mythos_daily_brief, db_init"""
+    from autorun import restart_job
+    base_url = str(request.base_url).rstrip("/")
+    return await restart_job(job_id, base_url)
+
+@app.get("/system/logs")
+async def system_logs(limit: int = 100):
+    """ดู orchestrator logs ล่าสุด"""
+    from autorun import get_logs
+    return {"logs": get_logs(limit)}
+
 # ================== RUN SERVER ==================
 
 if __name__ == "__main__":

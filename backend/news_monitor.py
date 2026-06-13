@@ -20,37 +20,37 @@ logger = logging.getLogger("openthai.news")
 # ── Feed registry ─────────────────────────────────────────────────────────────
 
 FEEDS = [
-    # Priority 3 — Anthropic (notify LINE immediately)
-    {"source": "anthropic",  "label": "Anthropic Blog",     "emoji": "🤖", "priority": 3,
+    # 🔴 Priority 3 — สูงสุด: แจ้ง LINE ทันทีทุกข่าว
+    {"source": "anthropic",  "label": "Anthropic Blog",     "emoji": "🔴", "priority": 3,
      "url": "https://www.anthropic.com/rss.xml"},
 
-    # Priority 2 — Major AI labs
-    {"source": "openai",     "label": "OpenAI Blog",        "emoji": "⚡", "priority": 2,
+    # 🟡 Priority 2 — สำคัญ: แจ้ง LINE แบบ batch
+    {"source": "openai",     "label": "OpenAI Blog",        "emoji": "🟡", "priority": 2,
      "url": "https://openai.com/blog/rss.xml"},
-    {"source": "google_ai",  "label": "Google AI Blog",     "emoji": "🔵", "priority": 2,
+    {"source": "google_ai",  "label": "Google AI Blog",     "emoji": "🟡", "priority": 2,
      "url": "https://blog.google/technology/ai/rss/"},
-    {"source": "deepmind",   "label": "Google DeepMind",    "emoji": "🧬", "priority": 2,
+    {"source": "deepmind",   "label": "Google DeepMind",    "emoji": "🟡", "priority": 2,
      "url": "https://deepmind.google/blog/rss.xml"},
-    {"source": "meta_ai",    "label": "Meta AI Blog",       "emoji": "📘", "priority": 2,
+    {"source": "meta_ai",    "label": "Meta AI Blog",       "emoji": "🟡", "priority": 2,
      "url": "https://ai.meta.com/blog/feed/"},
-    {"source": "huggingface","label": "Hugging Face Blog",  "emoji": "🤗", "priority": 2,
+    {"source": "huggingface","label": "Hugging Face Blog",  "emoji": "🟡", "priority": 2,
      "url": "https://huggingface.co/blog/feed.xml"},
-
-    # Priority 1 — AI news & TikTok
-    {"source": "techcrunch", "label": "TechCrunch AI",      "emoji": "📡", "priority": 1,
-     "url": "https://techcrunch.com/category/artificial-intelligence/feed/"},
-    {"source": "theverge",   "label": "The Verge AI",       "emoji": "🔺", "priority": 1,
-     "url": "https://www.theverge.com/ai-artificial-intelligence/rss/index.xml"},
-    {"source": "venturebeat","label": "VentureBeat AI",     "emoji": "💡", "priority": 1,
-     "url": "https://venturebeat.com/category/ai/feed/"},
-    {"source": "mit_review", "label": "MIT Tech Review",    "emoji": "🎓", "priority": 1,
-     "url": "https://www.technologyreview.com/feed/"},
-    {"source": "blognone",   "label": "Blognone (ไทย)",     "emoji": "🇹🇭", "priority": 2,
+    {"source": "blognone",   "label": "Blognone (ไทย)",     "emoji": "🟡", "priority": 2,
      "url": "https://www.blognone.com/node/feed"},
-    {"source": "beartai",    "label": "Beartai (ไทย)",      "emoji": "🇹🇭", "priority": 1,
-     "url": "https://www.beartai.com/feed"},
-    {"source": "tiktok_news","label": "TikTok Newsroom",    "emoji": "🎵", "priority": 2,
+    {"source": "tiktok_news","label": "TikTok Newsroom",    "emoji": "🟡", "priority": 2,
      "url": "https://newsroom.tiktok.com/feed"},
+
+    # ⚪ Priority 1 — ทั่วไป: รวมใน daily digest เท่านั้น
+    {"source": "techcrunch", "label": "TechCrunch AI",      "emoji": "⚪", "priority": 1,
+     "url": "https://techcrunch.com/category/artificial-intelligence/feed/"},
+    {"source": "theverge",   "label": "The Verge AI",       "emoji": "⚪", "priority": 1,
+     "url": "https://www.theverge.com/ai-artificial-intelligence/rss/index.xml"},
+    {"source": "venturebeat","label": "VentureBeat AI",     "emoji": "⚪", "priority": 1,
+     "url": "https://venturebeat.com/category/ai/feed/"},
+    {"source": "mit_review", "label": "MIT Tech Review",    "emoji": "⚪", "priority": 1,
+     "url": "https://www.technologyreview.com/feed/"},
+    {"source": "beartai",    "label": "Beartai (ไทย)",      "emoji": "⚪", "priority": 1,
+     "url": "https://www.beartai.com/feed"},
 ]
 
 NS = {"atom": "http://www.w3.org/2005/Atom"}
