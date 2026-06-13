@@ -270,7 +270,7 @@ async def generate_content(product: ProductInput) -> dict:
 
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-5-20251001",
+            model="claude-sonnet-4-6",
             max_tokens=2000,
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}]
@@ -294,7 +294,7 @@ async def critique_content(content: dict) -> dict:
     """Critique content using AI Critic"""
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-5-20251001",
+            model="claude-sonnet-4-6",
             max_tokens=1000,
             system=AI_CRITIC_PROMPT,
             messages=[{
@@ -347,12 +347,41 @@ async def generate_tiktok_content(product: ProductInput, request: Request):
     - **hook_type**: รูปแบบ Hook (story, process, contrast, question, transformation, auto)
     """
     
-    # Rate limiting for free tier
+    # Rate limiting — check X-API-Key first, fall back to IP-based free quota
     ip = request.client.host if request.client else "unknown"
-    auth = request.headers.get("Authorization", "")
-    is_pro = auth.startswith("Bearer ")  # Pro users bypass rate limit
-    if not is_pro and not check_rate_limit(ip):
-        raise HTTPException(status_code=429, detail="ครบโควตาฟรี 3 ครั้ง/วันแล้ว — อัปเกรดเพื่อใช้งานไม่จำกัด")
+    api_key = request.headers.get("X-API-Key", "")
+    is_pro = False
+
+    if api_key:
+        try:
+            from db import AsyncSessionLocal, User, ApiUsage
+            from auth import PLAN_LIMITS
+            async with AsyncSessionLocal() as db:
+                res = await db.execute(select(User).where(User.api_key == api_key))
+                user = res.scalar_one_or_none()
+                if user and user.is_active:
+                    is_pro = user.plan in ("pro", "business")
+                    limit = PLAN_LIMITS.get(user.plan, 10)
+                    today = str(date.today())
+                    usage_res = await db.execute(
+                        select(ApiUsage).where(ApiUsage.api_key == api_key, ApiUsage.date == today)
+                    )
+                    usage = usage_res.scalar_one_or_none()
+                    if limit != -1 and usage and usage.count >= limit:
+                        raise HTTPException(status_code=429, detail=f"เกินโควตา {limit} ครั้ง/วัน สำหรับ plan {user.plan}")
+                    # Track usage
+                    if usage:
+                        usage.count += 1
+                    else:
+                        db.add(ApiUsage(api_key=api_key, date=today, count=1))
+                    await db.commit()
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning("API key check error (non-fatal): %s", e)
+    else:
+        if not check_rate_limit(ip):
+            raise HTTPException(status_code=429, detail="ครบโควตาฟรี 3 ครั้ง/วันแล้ว — อัปเกรดเพื่อใช้งานไม่จำกัด")
 
     t_start = time.time()
     logger.info(f"generate | product={product.product_name[:40]} | category={product.product_category} | ip={ip}")
