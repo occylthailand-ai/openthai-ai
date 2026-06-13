@@ -192,6 +192,7 @@ class Commission(Base):
     commission_rate: Mapped[float] = mapped_column(Float)
     commission_amount: Mapped[float] = mapped_column(Float)
     status: Mapped[str] = mapped_column(String(20), default="pending")
+    note: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

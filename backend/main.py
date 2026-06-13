@@ -22,7 +22,6 @@ import secrets
 from dotenv import load_dotenv
 import json
 from datetime import datetime, date
-from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -33,21 +32,31 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("openthai")
 
-# ── Rate limiting (in-memory, resets on restart) ──────────────────────────────
-_rate_store: dict = defaultdict(lambda: {"count": 0, "date": str(date.today())})
+# ── Rate limiting — DB-backed (persists across restarts) ──────────────────────
 FREE_DAILY_LIMIT = 3
 
-def check_rate_limit(ip: str) -> bool:
-    """Returns True if request is allowed, False if rate limited."""
+async def check_rate_limit_db(ip: str) -> bool:
+    """DB-backed rate limit for anonymous IPs. Returns True if allowed."""
+    pseudo_key = f"ip:{ip}"
     today = str(date.today())
-    rec = _rate_store[ip]
-    if rec["date"] != today:
-        rec["count"] = 0
-        rec["date"] = today
-    if rec["count"] >= FREE_DAILY_LIMIT:
-        return False
-    rec["count"] += 1
-    return True
+    try:
+        from db import AsyncSessionLocal, ApiUsage
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(
+                select(ApiUsage).where(ApiUsage.api_key == pseudo_key, ApiUsage.date == today)
+            )
+            usage = res.scalar_one_or_none()
+            if usage and usage.count >= FREE_DAILY_LIMIT:
+                return False
+            if usage:
+                usage.count += 1
+            else:
+                db.add(ApiUsage(api_key=pseudo_key, date=today, count=1))
+            await db.commit()
+            return True
+    except Exception:
+        # Fallback: allow on DB error (avoid blocking all requests)
+        return True
 
 # Initialize FastAPI
 app = FastAPI(
@@ -380,7 +389,7 @@ async def generate_tiktok_content(product: ProductInput, request: Request):
         except Exception as e:
             logger.warning("API key check error (non-fatal): %s", e)
     else:
-        if not check_rate_limit(ip):
+        if not await check_rate_limit_db(ip):
             raise HTTPException(status_code=429, detail="ครบโควตาฟรี 3 ครั้ง/วันแล้ว — อัปเกรดเพื่อใช้งานไม่จำกัด")
 
     t_start = time.time()
@@ -556,6 +565,323 @@ async def create_order(req: OrderRequest, request: Request):
     except Exception:
         payload = ""
     return {"order_id": order_id, "package": req.package, "price": price, "status": "pending_payment", "promptpay_payload": payload, "promptpay_id": PROMPTPAY_ID}
+
+# ── ข้อ 1: Payment webhook endpoints ──────────────────────────────────────────
+
+class SlipUploadRequest(BaseModel):
+    slip_data: str          # base64 PNG/JPG ของสลิป
+    bank_code: Optional[str] = ""
+
+@app.post("/order/{order_id}/slip")
+async def upload_payment_slip(order_id: str, req: SlipUploadRequest):
+    """ลูกค้าอัปโหลดสลิปโอนเงิน → รอ admin ยืนยัน"""
+    try:
+        from db import AsyncSessionLocal, Order as OrderModel, PaymentSlip
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(OrderModel).where(OrderModel.order_id == order_id))
+            order = res.scalar_one_or_none()
+            if not order:
+                raise HTTPException(status_code=404, detail="Order not found")
+            if order.status not in ("pending_payment",):
+                raise HTTPException(status_code=400, detail=f"Order status is already '{order.status}'")
+            slip = PaymentSlip(
+                order_id=order_id,
+                bank_code=req.bank_code or "",
+                slip_data=req.slip_data,
+                verified=False,
+            )
+            db.add(slip)
+            order.status = "slip_uploaded"
+            await db.commit()
+        logger.info("slip uploaded | order=%s | bank=%s", order_id, req.bank_code)
+        # Notify admin via LINE
+        admin_token = os.getenv("LINE_NOTIFY_FINANCE", os.getenv("LINE_NOTIFY_ALL", ""))
+        if admin_token:
+            try:
+                async with httpx.AsyncClient() as c:
+                    await c.post(
+                        "https://notify-api.line.me/api/notify",
+                        headers={"Authorization": f"Bearer {admin_token}"},
+                        data={"message": f"\n💳 สลิปใหม่รอยืนยัน\nOrder: {order_id}\nBank: {req.bank_code or 'ไม่ระบุ'}\n🔗 ยืนยัน: POST /order/{order_id}/confirm"},
+                        timeout=8,
+                    )
+            except Exception:
+                pass
+        return {"order_id": order_id, "status": "slip_uploaded", "message": "อัปโหลดสลิปสำเร็จ รอ admin ยืนยัน 1-2 ชั่วโมง"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/order/{order_id}/confirm")
+async def confirm_payment(order_id: str, request: Request):
+    """Admin ยืนยันการชำระเงิน → เปลี่ยน order + user plan เป็น pro/business"""
+    admin_key = request.headers.get("X-Admin-Key", "")
+    if admin_key != os.getenv("ADMIN_API_KEY", ""):
+        raise HTTPException(status_code=403, detail="Admin key required")
+    try:
+        from db import AsyncSessionLocal, Order as OrderModel, PaymentSlip, User
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(OrderModel).where(OrderModel.order_id == order_id))
+            order = res.scalar_one_or_none()
+            if not order:
+                raise HTTPException(status_code=404, detail="Order not found")
+            # Mark slip verified
+            slip_res = await db.execute(
+                select(PaymentSlip).where(PaymentSlip.order_id == order_id)
+            )
+            slip = slip_res.scalar_one_or_none()
+            if slip:
+                slip.verified = True
+            # Upgrade order status
+            order.status = "paid"
+            # Upgrade user plan
+            user_res = await db.execute(select(User).where(User.email == order.email))
+            user = user_res.scalar_one_or_none()
+            if user:
+                user.plan = order.package  # "pro" or "business"
+                logger.info("user_plan_upgraded | email=%s | plan=%s", order.email, order.package)
+            await db.commit()
+        logger.info("payment_confirmed | order=%s", order_id)
+        return {"order_id": order_id, "status": "paid", "user_upgraded": bool(user)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/order/{order_id}/status")
+async def get_order_status(order_id: str):
+    """ลูกค้าตรวจสอบสถานะ order"""
+    try:
+        from db import AsyncSessionLocal, Order as OrderModel
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(OrderModel).where(OrderModel.order_id == order_id))
+            order = res.scalar_one_or_none()
+            if not order:
+                raise HTTPException(status_code=404, detail="Order not found")
+            return {
+                "order_id": order.order_id, "package": order.package,
+                "price": order.price, "status": order.status,
+                "created_at": order.created_at.isoformat(),
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ── ข้อ 4: Bulk generation endpoint ───────────────────────────────────────────
+
+class BulkProductInput(BaseModel):
+    products: List[ProductInput]
+    max_parallel: Optional[int] = 3   # สูงสุด 3 requests พร้อมกัน
+
+@app.post("/generate/bulk")
+async def generate_bulk(req: BulkProductInput, request: Request):
+    """สร้างคอนเทนต์ TikTok หลายสินค้าพร้อมกัน (สูงสุด 10 ชิ้น)"""
+    ip = request.client.host if request.client else "unknown"
+    api_key = request.headers.get("X-API-Key", "")
+    if not api_key:
+        raise HTTPException(status_code=401, detail="Bulk generation ต้องใช้ X-API-Key (plan pro/business)")
+
+    # Verify pro/business plan
+    try:
+        from db import AsyncSessionLocal, User
+        from auth import PLAN_LIMITS
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(User).where(User.api_key == api_key))
+            user = res.scalar_one_or_none()
+            if not user or not user.is_active:
+                raise HTTPException(status_code=401, detail="API key ไม่ถูกต้อง")
+            if user.plan not in ("pro", "business"):
+                raise HTTPException(status_code=403, detail="Bulk generation สำหรับ Pro/Business เท่านั้น")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    products = req.products[:10]   # cap at 10
+    sem = asyncio.Semaphore(min(req.max_parallel or 3, 3))
+
+    async def _gen_one(p: ProductInput, idx: int):
+        async with sem:
+            try:
+                content = await generate_content(p)
+                critique = await critique_content(content)
+                return {
+                    "index": idx,
+                    "product": p.product_name,
+                    "status": "ok",
+                    "script": content.get("script", {}),
+                    "caption": content.get("caption", ""),
+                    "hashtags": content.get("hashtags", []),
+                    "score": critique.get("total_score", 0),
+                }
+            except Exception as e:
+                return {"index": idx, "product": p.product_name, "status": "error", "error": str(e)}
+
+    t_start = time.time()
+    results = await asyncio.gather(*[_gen_one(p, i) for i, p in enumerate(products)])
+    elapsed = round(time.time() - t_start, 1)
+    logger.info("bulk_generate | count=%d | elapsed=%ss | ip=%s", len(products), elapsed, ip)
+    return {
+        "count": len(products),
+        "elapsed_seconds": elapsed,
+        "results": list(results),
+    }
+
+# ── ข้อ 5: Affiliate payout endpoints ─────────────────────────────────────────
+
+class PayoutRequest(BaseModel):
+    bank_name: str         # KBank, SCB, BBL …
+    account_number: str
+    account_name: str
+    amount: Optional[float] = None   # None = request all available
+
+@app.post("/affiliate/{code}/request-payout")
+async def request_affiliate_payout(code: str, req: PayoutRequest):
+    """ตัวแทนขอถอนค่าคอมมิชชั่น → สร้าง payout record รอ admin อนุมัติ"""
+    try:
+        from db import AsyncSessionLocal, Affiliate, Commission
+        from sqlalchemy import func
+        async with AsyncSessionLocal() as db:
+            aff_res = await db.execute(
+                select(Affiliate).where(Affiliate.code == code)
+            )
+            aff = aff_res.scalar_one_or_none()
+            if not aff:
+                raise HTTPException(status_code=404, detail="Affiliate code ไม่พบ")
+
+            # Sum approved commissions minus paid-out payouts
+            earned_res = await db.execute(
+                select(func.sum(Commission.commission_amount)).where(
+                    Commission.affiliate_code == code,
+                    Commission.status == "approved"
+                )
+            )
+            paid_res = await db.execute(
+                select(func.sum(Commission.amount)).where(
+                    Commission.affiliate_code == code,
+                    Commission.status == "paid",
+                    Commission.amount < 0
+                )
+            )
+            earned = float(earned_res.scalar() or 0)
+            paid_out = abs(float(paid_res.scalar() or 0))
+            available = earned - paid_out
+            payout_amount = min(req.amount, available) if req.amount else available
+
+            if payout_amount < 100:
+                raise HTTPException(status_code=400, detail=f"ยอดน้อยกว่าขั้นต่ำ 100 บาท (ยอดคงเหลือ {available:.2f} บาท)")
+
+            # Create payout record as negative-amount Commission entry
+            payout = Commission(
+                affiliate_code=code,
+                order_id=f"PAYOUT-{secrets.token_hex(4).upper()}",
+                package="payout",
+                amount=-payout_amount,
+                commission_rate=0,
+                commission_amount=0,
+                status="payout_pending",
+                note=f"ถอนเงิน → {req.bank_name} {req.account_number} ({req.account_name})",
+            )
+            db.add(payout)
+            await db.commit()
+            await db.refresh(payout)
+
+        # Notify finance team
+        finance_token = os.getenv("LINE_NOTIFY_FINANCE", os.getenv("LINE_MYTHOS_FINANCE", ""))
+        if finance_token:
+            try:
+                async with httpx.AsyncClient() as c:
+                    await c.post(
+                        "https://notify-api.line.me/api/notify",
+                        headers={"Authorization": f"Bearer {finance_token}"},
+                        data={"message": f"\n💸 Affiliate Payout Request\nCode: {code}\nยอด: {payout_amount:.2f} บาท\nธนาคาร: {req.bank_name} {req.account_number}\nชื่อ: {req.account_name}\nยืนยัน: POST /affiliate/{code}/approve-payout/{payout.id}"},
+                        timeout=8,
+                    )
+            except Exception:
+                pass
+
+        logger.info("payout_request | code=%s | amount=%.2f", code, payout_amount)
+        return {
+            "payout_id": payout.id, "code": code,
+            "amount": payout_amount, "bank": req.bank_name,
+            "account": req.account_number, "status": "payout_pending",
+            "message": "คำขอถอนเงินส่งแล้ว Finance team จะโอนภายใน 3 วันทำการ",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/affiliate/{code}/approve-payout/{payout_id}")
+async def approve_affiliate_payout(code: str, payout_id: int, request: Request):
+    """Admin อนุมัติ payout → เปลี่ยน status เป็น paid"""
+    admin_key = request.headers.get("X-Admin-Key", "")
+    if admin_key != os.getenv("ADMIN_API_KEY", ""):
+        raise HTTPException(status_code=403, detail="Admin key required")
+    try:
+        from db import AsyncSessionLocal, Commission
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(Commission).where(Commission.id == payout_id))
+            payout = res.scalar_one_or_none()
+            if not payout:
+                raise HTTPException(status_code=404, detail="Payout not found")
+            payout.status = "paid"
+            await db.commit()
+        logger.info("payout_approved | id=%d | code=%s", payout_id, code)
+        return {"payout_id": payout_id, "status": "paid"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/affiliate/{code}/balance")
+async def get_affiliate_balance(code: str):
+    """ดูยอดคอมมิชชั่นคงเหลือและประวัติ"""
+    try:
+        from db import AsyncSessionLocal, Affiliate, Commission
+        from sqlalchemy import func
+        async with AsyncSessionLocal() as db:
+            aff_res = await db.execute(select(Affiliate).where(Affiliate.code == code))
+            aff = aff_res.scalar_one_or_none()
+            if not aff:
+                raise HTTPException(status_code=404, detail="Affiliate code ไม่พบ")
+
+            earned_res = await db.execute(
+                select(func.sum(Commission.commission_amount)).where(
+                    Commission.affiliate_code == code, Commission.status == "approved"
+                )
+            )
+            paid_out_res = await db.execute(
+                select(func.sum(Commission.amount)).where(
+                    Commission.affiliate_code == code, Commission.amount < 0, Commission.status == "paid"
+                )
+            )
+            earned = float(earned_res.scalar() or 0)
+            paid_out = abs(float(paid_out_res.scalar() or 0))
+            available = earned - paid_out
+
+            history_res = await db.execute(
+                select(Commission).where(Commission.affiliate_code == code)
+                .order_by(Commission.created_at.desc()).limit(20)
+            )
+            history = [
+                {"id": c.id, "order_id": c.order_id, "amount": c.amount,
+                 "status": c.status, "note": c.note or "",
+                 "created_at": c.created_at.isoformat()}
+                for c in history_res.scalars().all()
+            ]
+
+        return {
+            "code": code, "earned_total": round(earned, 2),
+            "paid_out": round(paid_out, 2), "available": round(available, 2),
+            "min_payout": 100, "history": history,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ================== SETUP & ADMIN ENDPOINTS ==================
 

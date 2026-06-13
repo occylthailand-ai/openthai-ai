@@ -20,6 +20,12 @@ backend/data/moltbook-credentials.json
 *.n8nexport*
 sync-all.ps1
 
+# Database files — ห้าม commit ข้อมูลผู้ใช้
+*.db
+*.sqlite
+*.sqlite3
+backend/openthai.db
+
 # Runtime data — ป้องกัน commit ข้อมูลผู้ใช้/log โดยไม่ตั้งใจ
 backend/data/affiliates.json
 backend/data/agents.json
