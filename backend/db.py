@@ -387,6 +387,22 @@ class MythosGoalAnalysis(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
+class TokenUsage(Base):
+    """บันทึก Claude API token usage ทุก call"""
+    __tablename__ = "token_usage"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    call_type: Mapped[str] = mapped_column(String(50), index=True)   # generate, critic, mythos, goal_health
+    model: Mapped[str] = mapped_column(String(60), default="claude-sonnet-4-6")
+    input_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    output_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    total_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+    metadata: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
 class SystemConfig(Base):
     """Key-value store สำหรับ runtime configuration และ limit overrides"""
     __tablename__ = "system_config"

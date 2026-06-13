@@ -102,7 +102,14 @@ Context: {context or 'ไม่มี'}
             text = text.split("```")[1]
             if text.startswith("json"):
                 text = text[4:]
-        return json.loads(text.strip())
+        result = json.loads(text.strip())
+        try:
+            from token_counter import record_usage
+            import asyncio
+            asyncio.create_task(record_usage("goal_health", resp.usage.input_tokens, resp.usage.output_tokens))
+        except Exception:
+            pass
+        return result
     except Exception as e:
         logger.error("analyze_goal_health: %s", e)
         avg = sum(kr.get("progress_pct", 0) for kr in key_results) / max(1, len(key_results))

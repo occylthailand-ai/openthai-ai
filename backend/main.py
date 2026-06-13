@@ -299,8 +299,10 @@ async def generate_content(product: ProductInput) -> dict:
                 content = content[4:]
         content = content.strip()
         
-        return json.loads(content)
-        
+        result = json.loads(content)
+        asyncio.create_task(_record_tokens("generate", response))
+        return result
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Content generation failed: {str(e)}")
 
@@ -324,10 +326,22 @@ async def critique_content(content: dict) -> dict:
                 critique_text = critique_text[4:]
         critique_text = critique_text.strip()
         
-        return json.loads(critique_text)
-        
+        result = json.loads(critique_text)
+        asyncio.create_task(_record_tokens("critic", response))
+        return result
+
     except Exception as e:
         return {"total_score": 7, "feedback": "Critique unavailable", "improvement_suggestions": []}
+
+
+async def _record_tokens(call_type: str, response) -> None:
+    """Helper: บันทึก token usage จาก Anthropic response object"""
+    try:
+        from token_counter import record_usage
+        u = response.usage
+        await record_usage(call_type, u.input_tokens, u.output_tokens)
+    except Exception:
+        pass
 
 # ================== API ENDPOINTS ==================
 
@@ -1634,6 +1648,50 @@ async def unlock_all_limits(key: str = Depends(_require_admin)):
         _limits.set_override(name, value)
         await _limits.save_db_override(name, value)
     return {"status": "all_limits_unlocked", "applied": unlocks}
+
+# ================== TOKEN COUNTER ==================
+
+@app.get("/tokens/today")
+async def tokens_today():
+    """สรุป token usage + cost วันนี้"""
+    from token_counter import get_daily_summary
+    return await get_daily_summary()
+
+@app.get("/tokens/daily/{date_str}")
+async def tokens_by_date(date_str: str):
+    """สรุป token usage วันที่ระบุ (YYYY-MM-DD)"""
+    from token_counter import get_daily_summary
+    return await get_daily_summary(date_str)
+
+@app.get("/tokens/monthly/{year}/{month}")
+async def tokens_monthly(year: int, month: int):
+    """สรุป token usage รายเดือน"""
+    from token_counter import get_monthly_summary
+    return await get_monthly_summary(year, month)
+
+@app.get("/tokens/history")
+async def tokens_history(limit: int = 50):
+    """ประวัติ token usage ล่าสุด"""
+    from db import AsyncSessionLocal, TokenUsage
+    from sqlalchemy import select, desc
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(
+            select(TokenUsage).order_by(desc(TokenUsage.created_at)).limit(limit)
+        )
+        rows = res.scalars().all()
+    return [
+        {
+            "id": r.id,
+            "call_type": r.call_type,
+            "model": r.model,
+            "input_tokens": r.input_tokens,
+            "output_tokens": r.output_tokens,
+            "total_tokens": r.total_tokens,
+            "cost_usd": round(r.cost_usd, 6),
+            "created_at": r.created_at.isoformat(),
+        }
+        for r in rows
+    ]
 
 # ================== MASTER ORCHESTRATOR (autorun) ==================
 
