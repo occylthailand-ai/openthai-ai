@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenThai AI — สร้างคอนเทนต์ TikTok ด้วย AI สัญชาติไทย</title>
 <meta name="description" content="เครื่องมือ AI สร้างสคริปต์ TikTok แคปชั่น แฮชแท็ก สำหรับสินค้าไทย OTOP และสินค้าทั่วโลก ใน 30 วินาที">
+<meta property="og:title" content="OpenThai AI — สร้างคอนเทนต์ TikTok ด้วย AI สัญชาติไทย">
+<meta property="og:description" content="สคริปต์ แคปชั่น แฮชแท็ก สำหรับสินค้าไทย OTOP ใน 30 วินาที ฟรี ไม่ต้องสมัคร">
+<meta property="og:url" content="https://www.openthai-ai.com/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="th_TH">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenThai AI — TikTok Content Generator">
+<meta name="twitter:description" content="AI-powered TikTok content for Thai products. Free, instant, no signup.">
+<link rel="canonical" href="https://www.openthai-ai.com/">
+<link rel="preconnect" href="https://api.openthai-ai.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -623,7 +633,12 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 
 <script>
 // ===== CONFIG =====
-const API_URL = 'https://api.openthai-ai.com';
+const API_URL = (() => {
+  if (window.__OPENTHAI_API_URL__) return window.__OPENTHAI_API_URL__;
+  const h = location.hostname;
+  if (h === 'www.openthai-ai.com' || h === 'openthai-ai.com') return 'https://api.openthai-ai.com';
+  return 'http://localhost:8000';
+})();
 let selectedHook = 'auto';
 let currentResult = null;
 let freeUsed = parseInt(localStorage.getItem('otai_free_used') || '0');

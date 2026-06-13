@@ -8,18 +8,41 @@ OpenThai AI Backend — FastAPI + Claude API
 3. uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import anthropic
 import os
+import time
+import logging
 from dotenv import load_dotenv
 import json
-from datetime import datetime
+from datetime import datetime, date
+from collections import defaultdict
 
 # Load environment variables
 load_dotenv()
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger("openthai")
+
+# ── Rate limiting (in-memory, resets on restart) ──────────────────────────────
+_rate_store: dict = defaultdict(lambda: {"count": 0, "date": str(date.today())})
+FREE_DAILY_LIMIT = 3
+
+def check_rate_limit(ip: str) -> bool:
+    """Returns True if request is allowed, False if rate limited."""
+    today = str(date.today())
+    rec = _rate_store[ip]
+    if rec["date"] != today:
+        rec["count"] = 0
+        rec["date"] = today
+    if rec["count"] >= FREE_DAILY_LIMIT:
+        return False
+    rec["count"] += 1
+    return True
 
 # Initialize FastAPI
 app = FastAPI(
@@ -28,14 +51,28 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
+# ── CORS ──────────────────────────────────────────────────────────────────────
+IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
+ALLOWED_ORIGINS = (
+    [os.getenv("FRONTEND_URL", "https://www.openthai-ai.com")]
+    if IS_PRODUCTION
+    else ["*"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Startup validation ────────────────────────────────────────────────────────
+@app.on_event("startup")
+async def startup_event():
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        raise RuntimeError("ANTHROPIC_API_KEY is not set — cannot start server")
+    logger.info(f"OpenThai AI started | env={'production' if IS_PRODUCTION else 'dev'} | origins={ALLOWED_ORIGINS}")
 
 # Initialize Anthropic client
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
@@ -272,7 +309,7 @@ async def health_check():
     }
 
 @app.post("/generate", response_model=ContentOutput)
-async def generate_tiktok_content(product: ProductInput):
+async def generate_tiktok_content(product: ProductInput, request: Request):
     """
     Generate TikTok content for a product
     
@@ -283,6 +320,16 @@ async def generate_tiktok_content(product: ProductInput):
     - **hook_type**: รูปแบบ Hook (story, process, contrast, question, transformation, auto)
     """
     
+    # Rate limiting for free tier
+    ip = request.client.host if request.client else "unknown"
+    auth = request.headers.get("Authorization", "")
+    is_pro = auth.startswith("Bearer ")  # Pro users bypass rate limit
+    if not is_pro and not check_rate_limit(ip):
+        raise HTTPException(status_code=429, detail="ครบโควตาฟรี 3 ครั้ง/วันแล้ว — อัปเกรดเพื่อใช้งานไม่จำกัด")
+
+    t_start = time.time()
+    logger.info(f"generate | product={product.product_name[:40]} | category={product.product_category} | ip={ip}")
+
     max_iterations = 3
     best_content = None
     best_score = 0
@@ -305,6 +352,8 @@ async def generate_tiktok_content(product: ProductInput):
         if score >= 7:
             break
     
+    logger.info(f"generate done | product={product.product_name[:40]} | score={best_score} | elapsed={time.time()-t_start:.1f}s")
+
     # Prepare response
     return ContentOutput(
         script={
