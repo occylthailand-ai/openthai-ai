@@ -518,6 +518,199 @@ async def create_order(req: OrderRequest, request: Request):
         payload = ""
     return {"order_id": order_id, "package": req.package, "price": price, "status": "pending_payment", "promptpay_payload": payload, "promptpay_id": PROMPTPAY_ID}
 
+# ================== TASK ROUTER ENDPOINTS ==================
+
+class ManualTaskRequest(BaseModel):
+    content: str
+    source: str = "manual"
+    sender: Optional[str] = ""
+
+@app.post("/webhook/line")
+async def webhook_line(request: Request):
+    """LINE OA Webhook — รับข้อความจาก LINE Official Account"""
+    body = await request.body()
+    sig = request.headers.get("X-Line-Signature", "")
+    from task_router import verify_line_signature, route_message
+    if not verify_line_signature(body, sig):
+        raise HTTPException(status_code=400, detail="Invalid LINE signature")
+    try:
+        payload = json.loads(body)
+        results = []
+        for event in payload.get("events", []):
+            if event.get("type") != "message":
+                continue
+            msg = event.get("message", {})
+            if msg.get("type") not in ("text",):
+                continue
+            content = msg.get("text", "")
+            source_obj = event.get("source", {})
+            sender = source_obj.get("userId", "")
+            ref = msg.get("id", "")
+            result = await route_message("line", content, sender, ref)
+            results.append(result)
+        return {"status": "ok", "processed": len(results)}
+    except Exception as e:
+        logger.error("LINE webhook error: %s", e)
+        return {"status": "error", "detail": str(e)}
+
+@app.post("/webhook/github")
+async def webhook_github(request: Request):
+    """GitHub Webhook — รับ issues, PR, comments"""
+    body = await request.body()
+    sig = request.headers.get("X-Hub-Signature-256", "")
+    event_type = request.headers.get("X-GitHub-Event", "")
+    from task_router import verify_github_signature, parse_github_event, route_message
+    if not verify_github_signature(body, sig):
+        raise HTTPException(status_code=400, detail="Invalid GitHub signature")
+    try:
+        payload = json.loads(body)
+        parsed = parse_github_event(event_type, payload)
+        if not parsed:
+            return {"status": "skipped", "reason": "event not actionable"}
+        result = await route_message("github", parsed["content"], parsed["sender"], event_type)
+        return {"status": "ok", "task": result}
+    except Exception as e:
+        logger.error("GitHub webhook error: %s", e)
+        return {"status": "error", "detail": str(e)}
+
+@app.post("/webhook/form")
+async def webhook_form(request: Request):
+    """Web Form Webhook — รับ waitlist, checkout, affiliate submissions"""
+    try:
+        payload = await request.json()
+        form_type = payload.get("type", "form")
+        name = payload.get("name", "")
+        email = payload.get("email", "")
+        content_parts = [f"[Form: {form_type}]"]
+        for k, v in payload.items():
+            if k not in ("type",) and v:
+                content_parts.append(f"{k}: {v}")
+        content = "\n".join(content_parts)
+        sender = f"{name} <{email}>" if name or email else "anonymous"
+        from task_router import route_message
+        result = await route_message("form", content, sender, form_type)
+        return {"status": "ok", "task": result}
+    except Exception as e:
+        logger.error("Form webhook error: %s", e)
+        return {"status": "error", "detail": str(e)}
+
+@app.post("/webhook/email")
+async def webhook_email(request: Request):
+    """Email Webhook — สำหรับ email services เช่น SendGrid Inbound Parse"""
+    try:
+        # Support both JSON and form-data (SendGrid format)
+        ct = request.headers.get("content-type", "")
+        if "application/json" in ct:
+            payload = await request.json()
+            subject = payload.get("subject", "")
+            body_text = payload.get("text", payload.get("body", ""))
+            sender = payload.get("from", payload.get("sender", ""))
+        else:
+            form = await request.form()
+            subject = form.get("subject", "")
+            body_text = form.get("text", form.get("body", ""))
+            sender = form.get("from", "")
+        content = f"Subject: {subject}\n\n{body_text}"
+        from task_router import route_message
+        result = await route_message("email", content, sender, subject[:50])
+        return {"status": "ok", "task": result}
+    except Exception as e:
+        logger.error("Email webhook error: %s", e)
+        return {"status": "error", "detail": str(e)}
+
+@app.post("/tasks/manual")
+async def create_manual_task(req: ManualTaskRequest):
+    """สร้าง task ด้วยตนเอง (test / manual input)"""
+    from task_router import route_message
+    result = await route_message(req.source, req.content, req.sender or "manual")
+    return result
+
+@app.get("/tasks")
+async def get_tasks(
+    department: Optional[str] = None,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    limit: int = 50,
+    page: int = 1,
+):
+    """ดู task ทั้งหมด พร้อม filter"""
+    try:
+        from db import AsyncSessionLocal, AutoTask
+        from sqlalchemy import select, desc
+        async with AsyncSessionLocal() as db:
+            q = select(AutoTask).order_by(desc(AutoTask.created_at))
+            if department:
+                q = q.where(AutoTask.department == department)
+            if status:
+                q = q.where(AutoTask.status == status)
+            if priority:
+                q = q.where(AutoTask.priority == priority)
+            q = q.offset((page - 1) * limit).limit(limit)
+            res = await db.execute(q)
+            tasks = res.scalars().all()
+        return {
+            "tasks": [
+                {
+                    "task_id": t.task_id, "source": t.source, "sender": t.sender,
+                    "department": t.department, "priority": t.priority,
+                    "summary": t.summary, "action": t.action, "status": t.status,
+                    "created_at": t.created_at.isoformat(),
+                }
+                for t in tasks
+            ],
+            "page": page, "count": len(tasks),
+        }
+    except Exception as e:
+        return {"tasks": [], "error": str(e)}
+
+@app.patch("/tasks/{task_id}")
+async def update_task_status(task_id: str, request: Request):
+    """อัปเดตสถานะ task: open → in_progress → done"""
+    try:
+        body = await request.json()
+        new_status = body.get("status", "")
+        if new_status not in ("open", "in_progress", "done"):
+            raise HTTPException(status_code=400, detail="status must be open|in_progress|done")
+        from db import AsyncSessionLocal, AutoTask
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(AutoTask).where(AutoTask.task_id == task_id))
+            task = res.scalar_one_or_none()
+            if not task:
+                raise HTTPException(status_code=404, detail="Task not found")
+            task.status = new_status
+            task.updated_at = datetime.utcnow()
+            await db.commit()
+        return {"task_id": task_id, "status": new_status}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/tasks/departments")
+async def get_department_summary():
+    """สถิติ task แต่ละแผนก"""
+    try:
+        from db import AsyncSessionLocal, AutoTask
+        from sqlalchemy import select, func
+        from task_router import DEPARTMENTS
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(
+                select(AutoTask.department, AutoTask.status, func.count().label("cnt"))
+                .group_by(AutoTask.department, AutoTask.status)
+            )
+            rows = res.all()
+        summary = {}
+        for dept_id, info in DEPARTMENTS.items():
+            summary[dept_id] = {"label": info["label"], "emoji": info["emoji"],
+                                "open": 0, "in_progress": 0, "done": 0}
+        for dept, status, cnt in rows:
+            if dept in summary and status in summary[dept]:
+                summary[dept][status] = cnt
+        return summary
+    except Exception as e:
+        return {"error": str(e)}
+
 # ================== NEWS ENDPOINTS ==================
 
 @app.get("/news")

@@ -273,6 +273,26 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 .auth-panel{display:none;}.auth-panel.active{display:block;}
 .api-key-display{background:var(--input-bg);border:1.5px solid var(--success);border-radius:10px;padding:0.9rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--success);word-break:break-all;margin:1rem 0;cursor:pointer;position:relative;}
 .api-key-display::after{content:'คลิกเพื่อคัดลอก';position:absolute;top:-8px;right:10px;background:var(--success);color:white;font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:6px;font-family:'Noto Sans Thai',sans-serif;}
+/* ===== TASK DASHBOARD ===== */
+.dept-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem;}
+.dept-header{display:flex;align-items:center;gap:0.75rem;}
+.dept-emoji{font-size:1.6rem;}
+.dept-name{font-weight:700;color:white;font-size:0.95rem;}
+.dept-stats{display:flex;gap:0.5rem;flex-wrap:wrap;}
+.stat-chip{padding:0.25rem 0.6rem;border-radius:20px;font-size:0.72rem;font-weight:700;}
+.stat-open{background:rgba(255,107,53,0.15);color:var(--primary);border:1px solid rgba(255,107,53,0.3);}
+.stat-progress{background:rgba(78,205,196,0.12);color:var(--secondary);border:1px solid rgba(78,205,196,0.25);}
+.stat-done{background:rgba(39,174,96,0.12);color:var(--success);border:1px solid rgba(39,174,96,0.25);}
+.task-item{background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;display:flex;flex-direction:column;gap:0.35rem;}
+.task-meta{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;}
+.task-source-chip{font-size:0.68rem;padding:0.1rem 0.45rem;border-radius:10px;font-weight:700;background:rgba(255,255,255,0.07);color:var(--muted);}
+.task-prio-urgent{color:#e74c3c;font-weight:700;font-size:0.72rem;}
+.task-prio-high{color:#e67e22;font-weight:700;font-size:0.72rem;}
+.task-prio-normal{color:var(--muted);font-size:0.72rem;}
+.task-title{font-size:0.85rem;color:var(--text);line-height:1.45;}
+.task-action{font-size:0.78rem;color:var(--secondary);}
+.task-time{font-size:0.68rem;color:#555;}
+.test-task-box{background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);border-radius:12px;padding:1.25rem;margin-top:1.5rem;}
 /* ===== NEWS ===== */
 .news-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.25rem;transition:all 0.2s;display:flex;flex-direction:column;gap:0.5rem;}
 .news-card:hover{border-color:rgba(255,107,53,0.4);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,0.2);}
@@ -307,6 +327,7 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
       <a href="#app" data-th="ใช้งาน" data-en="App">ใช้งาน</a>
       <a href="#features" data-th="ฟีเจอร์" data-en="Features">ฟีเจอร์</a>
       <a href="#affiliate" data-th="ตัวแทน" data-en="Affiliate">ตัวแทน</a>
+      <a href="#tasks" data-th="ทีมงาน" data-en="Tasks">ทีมงาน</a>
       <a href="#ai-news" data-th="ข่าว AI" data-en="AI News">ข่าว AI</a>
       <a href="#pricing" data-th="ราคา" data-en="Pricing">ราคา</a>
       <a href="#waitlist" class="nav-cta" data-th="ลงทะเบียน" data-en="Register">ลงทะเบียน</a>
@@ -327,6 +348,7 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
   <a href="#app" onclick="toggleMenu()">⚡ ใช้งานเลย</a>
   <a href="#features" onclick="toggleMenu()">✨ ฟีเจอร์</a>
   <a href="#affiliate" onclick="toggleMenu()">🤝 ตัวแทน</a>
+  <a href="#tasks" onclick="toggleMenu()">⚡ ทีมงาน</a>
   <a href="#ai-news" onclick="toggleMenu()">📡 ข่าว AI</a>
   <a href="#pricing" onclick="toggleMenu()">💰 ราคา</a>
   <a href="#waitlist" onclick="toggleMenu()">🎉 ลงทะเบียน</a>
@@ -623,6 +645,61 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
     <div class="success-msg" id="successMsg">
       <h3>✅ ลงทะเบียนสำเร็จ!</h3>
       <p>ขอบคุณที่สนใจ OpenThai AI เราจะติดต่อกลับภายใน 24 ชั่วโมง</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TASK DASHBOARD ===== -->
+<section class="section section-dark" id="tasks" style="padding:4rem 2rem;">
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h2 class="section-title" style="margin-bottom:0.25rem;text-align:left;">⚡ Task Board — ทีมงาน</h2>
+        <p style="color:var(--muted);font-size:0.85rem;">งานที่สร้างอัตโนมัติจาก LINE / Email / Form / GitHub</p>
+      </div>
+      <button onclick="refreshTasks()" style="background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.3);color:var(--primary);border-radius:8px;padding:0.4rem 0.9rem;font-size:0.82rem;cursor:pointer;font-family:inherit;font-weight:600;">🔄 รีเฟรช</button>
+    </div>
+
+    <!-- Department summary cards -->
+    <div id="deptGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem;margin-bottom:2rem;">
+      <div class="dept-card" id="dept-dev"><div class="dept-header"><span class="dept-emoji">🔧</span><span class="dept-name">Dev / Tech</span></div><div class="dept-stats"><span class="stat-chip stat-open" id="dept-dev-open">0 open</span><span class="stat-chip stat-progress" id="dept-dev-prog">0 in progress</span><span class="stat-chip stat-done" id="dept-dev-done">0 done</span></div></div>
+      <div class="dept-card" id="dept-sales"><div class="dept-header"><span class="dept-emoji">💼</span><span class="dept-name">Sales / Marketing</span></div><div class="dept-stats"><span class="stat-chip stat-open" id="dept-sales-open">0 open</span><span class="stat-chip stat-progress" id="dept-sales-prog">0 in progress</span><span class="stat-chip stat-done" id="dept-sales-done">0 done</span></div></div>
+      <div class="dept-card" id="dept-support"><div class="dept-header"><span class="dept-emoji">🎧</span><span class="dept-name">Support / CS</span></div><div class="dept-stats"><span class="stat-chip stat-open" id="dept-support-open">0 open</span><span class="stat-chip stat-progress" id="dept-support-prog">0 in progress</span><span class="stat-chip stat-done" id="dept-support-done">0 done</span></div></div>
+      <div class="dept-card" id="dept-finance"><div class="dept-header"><span class="dept-emoji">💰</span><span class="dept-name">Finance / Payment</span></div><div class="dept-stats"><span class="stat-chip stat-open" id="dept-finance-open">0 open</span><span class="stat-chip stat-progress" id="dept-finance-prog">0 in progress</span><span class="stat-chip stat-done" id="dept-finance-done">0 done</span></div></div>
+    </div>
+
+    <!-- Filter row -->
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <button class="news-filter-btn active" onclick="filterTasks(this,'')">ทั้งหมด</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'dev')">🔧 Dev</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'sales')">💼 Sales</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'support')">🎧 Support</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'finance')">💰 Finance</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'','open')">🔴 Open</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'','urgent')">🚨 Urgent</button>
+    </div>
+
+    <div id="taskList" style="display:flex;flex-direction:column;gap:0.65rem;">
+      <div style="text-align:center;padding:2rem;color:var(--muted);">⏳ กำลังโหลด task...</div>
+    </div>
+
+    <!-- Test task input (for testing the router) -->
+    <div class="test-task-box" style="margin-top:2rem;">
+      <p style="font-size:0.85rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">🧪 ทดสอบ AI Task Router</p>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.75rem;">พิมพ์ข้อความ — AI จะวิเคราะห์และส่งไปทีมที่เหมาะสมทันที</p>
+      <textarea id="testTaskInput" rows="3" placeholder="เช่น: ลูกค้าแจ้งว่าระบบ login ไม่ทำงาน มา 2 ชั่วโมงแล้ว&#10;หรือ: สนใจสมัคร affiliate อยากทราบ commission&#10;หรือ: โอนเงินแล้ว 149 บาท แต่ยังไม่ได้รับ API key"
+        style="width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:var(--text);font-family:inherit;font-size:0.88rem;resize:vertical;"></textarea>
+      <div style="display:flex;gap:0.75rem;margin-top:0.75rem;flex-wrap:wrap;">
+        <select id="testTaskSource" style="background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:0.5rem 0.75rem;color:var(--text);font-family:inherit;font-size:0.85rem;">
+          <option value="manual">✍️ Manual</option>
+          <option value="line">💬 LINE</option>
+          <option value="email">📧 Email</option>
+          <option value="form">📝 Form</option>
+          <option value="github">🐙 GitHub</option>
+        </select>
+        <button onclick="submitTestTask()" class="btn-primary" style="border:none;cursor:pointer;padding:0.5rem 1.5rem;font-size:0.9rem;" id="testTaskBtn">⚡ ส่ง Task</button>
+      </div>
+      <div id="testTaskResult" style="display:none;margin-top:0.75rem;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:10px;padding:0.85rem;font-size:0.82rem;"></div>
     </div>
   </div>
 </section>
@@ -1006,6 +1083,8 @@ async function submitCheckout(){
   const btn=document.getElementById('coBtn');btn.textContent='⏳ กำลังส่ง...';btn.disabled=true;
   const data={name,email,phone:document.getElementById('co-phone').value.trim(),plan:selectedPlan,timestamp:new Date().toISOString(),ref:localStorage.getItem('otai_ref')||''};
   try{await fetch('https://script.google.com/macros/s/AKfycbxxUkC-hJcDANcyL6md7x_AjodJJihHrbKvIQgaQWyRxrWQm_awjtGLLt0RJvg7KIhPSQ/exec',{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,type:'checkout'})});}catch{}
+  // Auto-route checkout to Finance team
+  try{await fetch(API_URL+'/webhook/form',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,type:'checkout'})});}catch{}
   document.getElementById('coSuccess').style.display='block';btn.style.display='none';
 }
 
@@ -1017,6 +1096,8 @@ document.getElementById('waitlistForm').addEventListener('submit',async function
   const fd=new FormData(this);const data=Object.fromEntries(fd.entries());
   data.timestamp=new Date().toISOString();data.source='landing';data.ref=localStorage.getItem('otai_ref')||'';
   try{await fetch('https://script.google.com/macros/s/AKfycbxxUkC-hJcDANcyL6md7x_AjodJJihHrbKvIQgaQWyRxrWQm_awjtGLLt0RJvg7KIhPSQ/exec',{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}catch{}
+  // Auto-route waitlist to Sales team
+  try{await fetch(API_URL+'/webhook/form',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,type:'waitlist'})});}catch{}
   this.style.display='none';document.getElementById('successMsg').style.display='block';
 });
 
@@ -1097,6 +1178,136 @@ function safeHTML(id, v){ const el=document.getElementById(id); if(el&&v) el.inn
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter')generateContent();
   if(e.key==='Escape'){closeLineModal();closeCheckout();closeAuth();}
+});
+
+// ===== TASK DASHBOARD =====
+const DEPT_LABELS = {
+  dev:     {emoji:'🔧', label:'Dev/Tech'},
+  sales:   {emoji:'💼', label:'Sales'},
+  support: {emoji:'🎧', label:'Support'},
+  finance: {emoji:'💰', label:'Finance'},
+};
+const PRIO_ICONS = {urgent:'🔴',high:'🟠',normal:'🟡',low:'🟢'};
+const SOURCE_ICONS = {line:'💬',email:'📧',form:'📝',github:'🐙',manual:'✍️'};
+
+let taskDeptFilter = '';
+let taskStatusFilter = '';
+
+async function loadDeptSummary() {
+  try {
+    const r = await fetch(API_URL+'/tasks/departments', {signal: AbortSignal.timeout(6000)});
+    if (!r.ok) return;
+    const data = await r.json();
+    for (const [dept, info] of Object.entries(data)) {
+      const el = id => document.getElementById(`dept-${dept}-${id}`);
+      if (el('open'))  el('open').textContent  = `${info.open||0} open`;
+      if (el('prog'))  el('prog').textContent  = `${info.in_progress||0} in progress`;
+      if (el('done'))  el('done').textContent  = `${info.done||0} done`;
+      // Highlight dept card if has open tasks
+      const card = document.getElementById(`dept-${dept}`);
+      if (card && (info.open||0) > 0) card.style.borderColor = 'rgba(255,107,53,0.5)';
+    }
+  } catch {}
+}
+
+async function loadTasks(dept='', statusOrPrio='') {
+  const list = document.getElementById('taskList');
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">⏳ กำลังโหลด...</div>';
+  try {
+    let url = API_URL + '/tasks?limit=20';
+    if (dept) url += `&department=${dept}`;
+    if (statusOrPrio === 'open')   url += `&status=open`;
+    if (statusOrPrio === 'urgent') url += `&priority=urgent`;
+    const r = await fetch(url, {signal: AbortSignal.timeout(6000)});
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (!data.tasks.length) {
+      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);"><div style="font-size:1.5rem;">📭</div><p style="margin-top:0.5rem;">ยังไม่มี task — ลองส่ง test task ด้านล่าง</p></div>';
+      return;
+    }
+    list.innerHTML = data.tasks.map(t => `
+      <div class="task-item" id="task-${t.task_id}">
+        <div class="task-meta">
+          <span class="task-source-chip">${SOURCE_ICONS[t.source]||'📌'} ${t.source}</span>
+          <span style="font-size:0.68rem;padding:0.1rem 0.45rem;border-radius:10px;font-weight:700;background:rgba(255,255,255,0.05);color:var(--muted);">${DEPT_LABELS[t.department]?.emoji||''} ${DEPT_LABELS[t.department]?.label||t.department}</span>
+          <span class="task-prio-${t.priority}">${PRIO_ICONS[t.priority]||''} ${t.priority.toUpperCase()}</span>
+          <span class="task-time">${timeAgo(t.created_at)}</span>
+          <span style="margin-left:auto;">
+            <select onchange="updateTaskStatus('${t.task_id}',this.value)" style="background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:0.2rem 0.4rem;color:var(--text);font-size:0.72rem;cursor:pointer;">
+              <option value="open" ${t.status==='open'?'selected':''}>🔴 Open</option>
+              <option value="in_progress" ${t.status==='in_progress'?'selected':''}>🟡 In Progress</option>
+              <option value="done" ${t.status==='done'?'selected':''}>✅ Done</option>
+            </select>
+          </span>
+        </div>
+        <div class="task-title">${t.summary}</div>
+        ${t.action ? `<div class="task-action">→ ${t.action}</div>` : ''}
+        ${t.sender ? `<div class="task-time">👤 ${t.sender}</div>` : ''}
+      </div>
+    `).join('');
+  } catch {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);"><div style="font-size:1.5rem;">🔌</div><p style="margin-top:0.5rem;">ต้อง deploy backend เพื่อดู tasks จริง</p><p style="font-size:0.78rem;margin-top:0.3rem;">ลองใช้ปุ่ม "ส่ง Task" ด้านล่างเพื่อทดสอบ</p></div>';
+  }
+}
+
+function filterTasks(btn, dept, statusOrPrio='') {
+  document.querySelectorAll('#tasks .news-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  taskDeptFilter = dept;
+  taskStatusFilter = statusOrPrio;
+  loadTasks(dept, statusOrPrio);
+}
+
+async function updateTaskStatus(taskId, status) {
+  try {
+    await fetch(API_URL+`/tasks/${taskId}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({status})
+    });
+    loadDeptSummary();
+  } catch {}
+}
+
+async function submitTestTask() {
+  const content = document.getElementById('testTaskInput').value.trim();
+  if (!content) { alert('กรุณาพิมพ์ข้อความก่อน'); return; }
+  const source = document.getElementById('testTaskSource').value;
+  const btn = document.getElementById('testTaskBtn');
+  btn.textContent = '⏳ กำลังวิเคราะห์...'; btn.disabled = true;
+  const res = document.getElementById('testTaskResult');
+  res.style.display = 'none';
+  try {
+    const r = await fetch(API_URL+'/tasks/manual', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({content, source})
+    });
+    const data = await r.json();
+    const dept = DEPT_LABELS[data.department] || {emoji:'📌', label: data.department};
+    res.style.display = 'block';
+    res.innerHTML = `
+      <p style="color:var(--success);font-weight:700;margin-bottom:0.5rem;">✅ Task สร้างแล้ว — ${data.task_id}</p>
+      <p>🏢 ทีม: <strong>${dept.emoji} ${dept.label}</strong></p>
+      <p>${PRIO_ICONS[data.priority]} ความเร่งด่วน: <strong>${data.priority?.toUpperCase()}</strong></p>
+      <p>📋 ${data.summary}</p>
+      <p style="color:var(--secondary);">→ ${data.action}</p>
+      <p style="color:var(--muted);font-size:0.75rem;margin-top:0.3rem;">${data.notified_line ? '📱 ส่ง LINE แล้ว' : '📱 LINE (ต้องตั้ง token)'}</p>
+    `;
+    document.getElementById('testTaskInput').value = '';
+    setTimeout(() => { loadTasks(taskDeptFilter, taskStatusFilter); loadDeptSummary(); }, 800);
+  } catch {
+    res.style.display = 'block';
+    res.innerHTML = '<p style="color:#e74c3c;">❌ ต้อง deploy backend ก่อน — หรือลอง manual mode</p>';
+  }
+  btn.textContent = '⚡ ส่ง Task'; btn.disabled = false;
+}
+
+function refreshTasks() { loadTasks(taskDeptFilter, taskStatusFilter); loadDeptSummary(); }
+
+// Load tasks on page load
+window.addEventListener('load', () => {
+  loadDeptSummary();
+  loadTasks();
+  setInterval(refreshTasks, 2 * 60 * 1000); // auto-refresh every 2 min
 });
 
 // ===== AI NEWS =====

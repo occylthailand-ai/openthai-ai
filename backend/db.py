@@ -229,6 +229,28 @@ def new_org_key() -> str:
     return "org_" + secrets.token_urlsafe(32)
 
 
+# ── Auto Task Router ─────────────────────────────────────────────────────────
+
+class AutoTask(Base):
+    """Task ที่สร้างอัตโนมัติจาก AI Task Router"""
+    __tablename__ = "auto_tasks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    task_id: Mapped[str] = mapped_column(String(20), unique=True, index=True)
+    source: Mapped[str] = mapped_column(String(30), index=True)       # line, email, form, github
+    source_ref: Mapped[str] = mapped_column(String(200), default="")  # message_id, email_id, etc.
+    raw_content: Mapped[str] = mapped_column(Text)                     # original message
+    sender: Mapped[str] = mapped_column(String(200), default="")       # sender name/email
+    department: Mapped[str] = mapped_column(String(20), index=True)   # dev, sales, support, finance
+    priority: Mapped[str] = mapped_column(String(10), default="normal") # urgent, high, normal, low
+    summary: Mapped[str] = mapped_column(Text)
+    action: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="open", index=True)  # open, in_progress, done
+    notified_line: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 # ── News Monitor ──────────────────────────────────────────────────────────────
 
 class NewsArticle(Base):
