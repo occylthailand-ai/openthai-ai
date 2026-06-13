@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import anthropic
+import asyncio
 import os
 import time
 import logging
@@ -81,6 +82,13 @@ async def startup_event():
         logger.info("Database initialized")
     except Exception as e:
         logger.warning(f"DB init skipped: {e}")
+    try:
+        from news_monitor import start_scheduler, run_news_fetch
+        start_scheduler()
+        asyncio.create_task(run_news_fetch())  # immediate first fetch
+        logger.info("News monitor started")
+    except Exception as e:
+        logger.warning(f"News monitor skipped: {e}")
     logger.info(f"OpenThai AI started | env={'production' if IS_PRODUCTION else 'dev'} | origins={ALLOWED_ORIGINS}")
 
 # Initialize Anthropic client
@@ -509,6 +517,64 @@ async def create_order(req: OrderRequest, request: Request):
     except Exception:
         payload = ""
     return {"order_id": order_id, "package": req.package, "price": price, "status": "pending_payment", "promptpay_payload": payload, "promptpay_id": PROMPTPAY_ID}
+
+# ================== NEWS ENDPOINTS ==================
+
+@app.get("/news")
+async def get_news(
+    source: Optional[str] = None,
+    priority: Optional[int] = None,
+    limit: int = 30,
+    page: int = 1,
+):
+    """ดึงข่าว AI ล่าสุดจาก database"""
+    try:
+        from db import AsyncSessionLocal, NewsArticle
+        from sqlalchemy import select, desc
+        async with AsyncSessionLocal() as db:
+            q = select(NewsArticle).order_by(desc(NewsArticle.priority), desc(NewsArticle.published_at))
+            if source:
+                q = q.where(NewsArticle.source == source)
+            if priority is not None:
+                q = q.where(NewsArticle.priority >= priority)
+            q = q.offset((page - 1) * limit).limit(limit)
+            res = await db.execute(q)
+            articles = res.scalars().all()
+        return {
+            "articles": [
+                {
+                    "id": a.id, "source": a.source, "label": a.source_label,
+                    "emoji": a.source_emoji, "title": a.title, "url": a.url,
+                    "summary": a.summary[:200] if a.summary else "",
+                    "published_at": a.published_at.isoformat(),
+                    "priority": a.priority,
+                }
+                for a in articles
+            ],
+            "page": page,
+            "count": len(articles),
+        }
+    except Exception as e:
+        return {"articles": [], "error": str(e), "page": page, "count": 0}
+
+
+@app.post("/news/fetch")
+async def trigger_news_fetch():
+    """Trigger manual news fetch (admin use)"""
+    try:
+        from news_monitor import run_news_fetch
+        result = await run_news_fetch()
+        return {"status": "ok", **result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/news/sources")
+async def get_news_sources():
+    """รายชื่อแหล่งข่าวทั้งหมด"""
+    from news_monitor import FEEDS
+    return [{"source": f["source"], "label": f["label"], "emoji": f["emoji"], "priority": f["priority"]} for f in FEEDS]
+
 
 # ================== RUN SERVER ==================
 

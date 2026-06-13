@@ -273,6 +273,20 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
 .auth-panel{display:none;}.auth-panel.active{display:block;}
 .api-key-display{background:var(--input-bg);border:1.5px solid var(--success);border-radius:10px;padding:0.9rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--success);word-break:break-all;margin:1rem 0;cursor:pointer;position:relative;}
 .api-key-display::after{content:'คลิกเพื่อคัดลอก';position:absolute;top:-8px;right:10px;background:var(--success);color:white;font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:6px;font-family:'Noto Sans Thai',sans-serif;}
+/* ===== NEWS ===== */
+.news-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.25rem;transition:all 0.2s;display:flex;flex-direction:column;gap:0.5rem;}
+.news-card:hover{border-color:rgba(255,107,53,0.4);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,0.2);}
+.news-source-badge{display:inline-flex;align-items:center;gap:0.35rem;font-size:0.72rem;font-weight:700;padding:0.15rem 0.6rem;border-radius:20px;border:1px solid;width:fit-content;}
+.news-p3{background:rgba(255,107,53,0.1);border-color:rgba(255,107,53,0.4);color:var(--primary);}
+.news-p2{background:rgba(78,205,196,0.08);border-color:rgba(78,205,196,0.3);color:var(--secondary);}
+.news-p1{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);color:var(--muted);}
+.news-title{font-size:0.9rem;font-weight:600;color:white;line-height:1.45;text-decoration:none;display:block;}
+.news-title:hover{color:var(--primary);}
+.news-summary{font-size:0.78rem;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.news-time{font-size:0.72rem;color:#555;}
+.news-filter-btn{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:0.3rem 0.8rem;font-size:0.78rem;cursor:pointer;font-family:inherit;transition:all 0.2s;}
+.news-filter-btn.active{background:rgba(255,107,53,0.15);border-color:rgba(255,107,53,0.5);color:var(--primary);font-weight:700;}
+.news-empty{text-align:center;padding:3rem;color:var(--muted);grid-column:1/-1;}
 /* ===== QR PAYMENT ===== */
 .qr-container{text-align:center;padding:1rem 0;}
 .qr-container canvas{border-radius:12px;border:4px solid white;max-width:200px;}
@@ -293,6 +307,7 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
       <a href="#app" data-th="ใช้งาน" data-en="App">ใช้งาน</a>
       <a href="#features" data-th="ฟีเจอร์" data-en="Features">ฟีเจอร์</a>
       <a href="#affiliate" data-th="ตัวแทน" data-en="Affiliate">ตัวแทน</a>
+      <a href="#ai-news" data-th="ข่าว AI" data-en="AI News">ข่าว AI</a>
       <a href="#pricing" data-th="ราคา" data-en="Pricing">ราคา</a>
       <a href="#waitlist" class="nav-cta" data-th="ลงทะเบียน" data-en="Register">ลงทะเบียน</a>
     </div>
@@ -312,6 +327,7 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
   <a href="#app" onclick="toggleMenu()">⚡ ใช้งานเลย</a>
   <a href="#features" onclick="toggleMenu()">✨ ฟีเจอร์</a>
   <a href="#affiliate" onclick="toggleMenu()">🤝 ตัวแทน</a>
+  <a href="#ai-news" onclick="toggleMenu()">📡 ข่าว AI</a>
   <a href="#pricing" onclick="toggleMenu()">💰 ราคา</a>
   <a href="#waitlist" onclick="toggleMenu()">🎉 ลงทะเบียน</a>
 </div>
@@ -607,6 +623,45 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
     <div class="success-msg" id="successMsg">
       <h3>✅ ลงทะเบียนสำเร็จ!</h3>
       <p>ขอบคุณที่สนใจ OpenThai AI เราจะติดต่อกลับภายใน 24 ชั่วโมง</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== AI NEWS SECTION ===== -->
+<section class="section section-darker" id="ai-news" style="padding:4rem 2rem;">
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h2 class="section-title" style="margin-bottom:0.25rem;text-align:left;">📡 AI News Live</h2>
+        <p style="color:var(--muted);font-size:0.85rem;">อัปเดตอัตโนมัติทุก 30 นาที จาก 12 แหล่งทั่วโลก</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span id="newsLastUpdate" style="font-size:0.78rem;color:var(--muted);"></span>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;" id="newsFilterBtns">
+          <button class="news-filter-btn active" data-priority="" onclick="filterNews(this,'')">ทั้งหมด</button>
+          <button class="news-filter-btn" data-source="anthropic" onclick="filterNews(this,'anthropic')">🤖 Anthropic</button>
+          <button class="news-filter-btn" data-source="openai" onclick="filterNews(this,'openai')">⚡ OpenAI</button>
+          <button class="news-filter-btn" data-source="blognone" onclick="filterNews(this,'blognone')">🇹🇭 ไทย</button>
+        </div>
+        <button onclick="refreshNews()" id="newsRefreshBtn" style="background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.3);color:var(--primary);border-radius:8px;padding:0.4rem 0.9rem;font-size:0.82rem;cursor:pointer;font-family:inherit;font-weight:600;">🔄 รีเฟรช</button>
+      </div>
+    </div>
+
+    <!-- News ticker bar -->
+    <div id="newsTicker" style="display:none;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:10px;padding:0.5rem 1rem;margin-bottom:1.25rem;overflow:hidden;white-space:nowrap;">
+      <span style="color:var(--primary);font-weight:700;margin-right:0.75rem;">🔴 LIVE</span>
+      <span id="newsTickerText" style="color:var(--text);font-size:0.85rem;"></span>
+    </div>
+
+    <div id="newsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem;">
+      <div style="text-align:center;padding:3rem;color:var(--muted);grid-column:1/-1;" id="newsLoading">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">📡</div>
+        <p>กำลังโหลดข่าว...</p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:1.5rem;" id="newsLoadMore" style="display:none;">
+      <button onclick="loadMoreNews()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:0.65rem 2rem;cursor:pointer;font-family:inherit;font-size:0.88rem;">โหลดเพิ่ม →</button>
     </div>
   </div>
 </section>
@@ -1042,6 +1097,120 @@ function safeHTML(id, v){ const el=document.getElementById(id); if(el&&v) el.inn
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter')generateContent();
   if(e.key==='Escape'){closeLineModal();closeCheckout();closeAuth();}
+});
+
+// ===== AI NEWS =====
+let newsPage = 1;
+let newsSourceFilter = '';
+let newsAllArticles = [];
+let newsAutoRefresh = null;
+
+function timeAgo(isoStr) {
+  const diff = (Date.now() - new Date(isoStr + 'Z').getTime()) / 1000;
+  if (diff < 60) return 'เมื่อกี้';
+  if (diff < 3600) return `${Math.floor(diff/60)} นาทีที่แล้ว`;
+  if (diff < 86400) return `${Math.floor(diff/3600)} ชั่วโมงที่แล้ว`;
+  return `${Math.floor(diff/86400)} วันที่แล้ว`;
+}
+
+function priorityClass(p) { return p>=3?'news-p3':p===2?'news-p2':'news-p1'; }
+
+function renderNewsCard(a) {
+  return `<div class="news-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
+      <span class="news-source-badge ${priorityClass(a.priority)}">${a.emoji} ${a.label}</span>
+      <span class="news-time">${timeAgo(a.published_at)}</span>
+    </div>
+    <a href="${a.url}" target="_blank" rel="noopener" class="news-title">${a.title}</a>
+    ${a.summary ? `<p class="news-summary">${a.summary}</p>` : ''}
+  </div>`;
+}
+
+function renderNewsGrid(articles) {
+  const grid = document.getElementById('newsGrid');
+  if (!articles.length) {
+    grid.innerHTML = '<div class="news-empty"><div style="font-size:2rem;">📭</div><p>ยังไม่มีข่าว — รอระบบดึงข้อมูล</p><p style="font-size:0.78rem;margin-top:0.4rem;">Backend ต้อง deploy บน Railway ก่อน</p></div>';
+    return;
+  }
+  grid.innerHTML = articles.map(renderNewsCard).join('');
+  // Show load more if >= 30
+  document.getElementById('newsLoadMore').style.display = articles.length >= 30 ? 'block' : 'none';
+}
+
+function updateTicker(articles) {
+  const ticker = document.getElementById('newsTicker');
+  if (!articles.length) return;
+  const top = articles.slice(0, 5).map(a => `${a.emoji} ${a.title}`).join('  ·  ');
+  document.getElementById('newsTickerText').textContent = top;
+  ticker.style.display = 'block';
+}
+
+async function fetchNews(source = '', page = 1) {
+  const btn = document.getElementById('newsRefreshBtn');
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  try {
+    let url = API_URL + `/news?limit=30&page=${page}`;
+    if (source) url += `&source=${source}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    document.getElementById('newsLoading').style.display = 'none';
+    if (page === 1) {
+      newsAllArticles = data.articles;
+    } else {
+      newsAllArticles = [...newsAllArticles, ...data.articles];
+    }
+    renderNewsGrid(newsAllArticles);
+    if (page === 1) updateTicker(data.articles);
+    document.getElementById('newsLastUpdate').textContent = 'อัปเดต: ' + new Date().toLocaleTimeString('th-TH');
+  } catch (e) {
+    document.getElementById('newsLoading').style.display = 'none';
+    // Show mock news cards when backend not available
+    renderMockNews();
+  }
+  btn.textContent = '🔄 รีเฟรช';
+  btn.disabled = false;
+}
+
+function renderMockNews() {
+  const mock = [
+    {emoji:'🤖',label:'Anthropic Blog',priority:3,title:'Claude 4 — ความสามารถใหม่ด้าน Reasoning และ Safety',url:'https://www.anthropic.com/news',summary:'Anthropic เปิดตัว Claude 4 พร้อม Constitutional AI รุ่นใหม่',published_at:new Date(Date.now()-3600000).toISOString()},
+    {emoji:'⚡',label:'OpenAI Blog',priority:2,title:'GPT-5 Turbo: Faster and More Capable',url:'https://openai.com/blog',summary:'OpenAI releases GPT-5 Turbo with improved speed and accuracy',published_at:new Date(Date.now()-7200000).toISOString()},
+    {emoji:'🇹🇭',label:'Blognone (ไทย)',priority:2,title:'รัฐบาลไทยเตรียมกฎระเบียบ AI ฉบับแรก',url:'https://www.blognone.com',summary:'กระทรวงดิจิทัลเตรียมออกกฎหมาย AI เพื่อคุ้มครองผู้บริโภค',published_at:new Date(Date.now()-10800000).toISOString()},
+    {emoji:'🎵',label:'TikTok Newsroom',priority:2,title:'TikTok LIVE Shopping ขยายตัวในไทย 300%',url:'https://newsroom.tiktok.com',summary:'TikTok รายงานยอดขายผ่าน LIVE shopping ในไทยเพิ่มขึ้น 3 เท่า',published_at:new Date(Date.now()-14400000).toISOString()},
+    {emoji:'🤗',label:'Hugging Face Blog',priority:2,title:'New Open-Source LLM Beats GPT-4 on Thai NLP',url:'https://huggingface.co/blog',summary:'Community releases Thai-optimized model with state-of-the-art performance',published_at:new Date(Date.now()-18000000).toISOString()},
+    {emoji:'📡',label:'TechCrunch AI',priority:1,title:'AI Startups Raised $50B in Q1 2026',url:'https://techcrunch.com',summary:'Venture capital continues flooding into AI sector despite market uncertainty',published_at:new Date(Date.now()-21600000).toISOString()},
+  ];
+  newsAllArticles = mock;
+  renderNewsGrid(mock);
+  updateTicker(mock);
+  document.getElementById('newsLastUpdate').textContent = '(ตัวอย่าง — deploy backend เพื่อดูข่าวจริง)';
+}
+
+function filterNews(btn, source) {
+  document.querySelectorAll('.news-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  newsSourceFilter = source;
+  newsPage = 1;
+  document.getElementById('newsGrid').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);grid-column:1/-1;">⏳ กำลังโหลด...</div>';
+  fetchNews(source, 1);
+}
+
+function refreshNews() { newsPage = 1; fetchNews(newsSourceFilter, 1); }
+
+function loadMoreNews() { newsPage++; fetchNews(newsSourceFilter, newsPage); }
+
+// Auto-refresh every 5 minutes
+function startNewsAutoRefresh() {
+  if (newsAutoRefresh) clearInterval(newsAutoRefresh);
+  newsAutoRefresh = setInterval(() => fetchNews(newsSourceFilter, 1), 5 * 60 * 1000);
+}
+
+// Load news on page load
+window.addEventListener('load', () => {
+  fetchNews();
+  startNewsAutoRefresh();
 });
 
 // ===== AUTH =====
