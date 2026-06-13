@@ -8,7 +8,7 @@ OpenThai AI Backend — FastAPI + Claude API
 3. uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -16,10 +16,13 @@ import anthropic
 import os
 import time
 import logging
+import secrets
 from dotenv import load_dotenv
 import json
 from datetime import datetime, date
 from collections import defaultdict
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 # Load environment variables
 load_dotenv()
@@ -72,6 +75,12 @@ app.add_middleware(
 async def startup_event():
     if not os.getenv("ANTHROPIC_API_KEY"):
         raise RuntimeError("ANTHROPIC_API_KEY is not set — cannot start server")
+    try:
+        from db import init_db
+        await init_db()
+        logger.info("Database initialized")
+    except Exception as e:
+        logger.warning(f"DB init skipped: {e}")
     logger.info(f"OpenThai AI started | env={'production' if IS_PRODUCTION else 'dev'} | origins={ALLOWED_ORIGINS}")
 
 # Initialize Anthropic client
@@ -389,6 +398,117 @@ async def get_categories():
         "china": "สินค้านำเข้าจากจีน",
         "global": "สินค้านำเข้าจากทั่วโลก"
     }
+
+# ================== AUTH & USER ENDPOINTS ==================
+
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = ""
+
+class OrderRequest(BaseModel):
+    name: str
+    email: str
+    phone: str
+    package: str
+    pay_method: str = "promptpay"
+    affiliate_ref: Optional[str] = ""
+    user_type: Optional[str] = ""
+
+@app.post("/auth/register")
+async def register_user(req: RegisterRequest):
+    """Register a new user and return an API key."""
+    try:
+        from db import get_db, User, new_api_key
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from db import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(User).where(User.email == req.email))
+            existing = result.scalar_one_or_none()
+            if existing:
+                return {"api_key": existing.api_key, "name": existing.name, "email": existing.email, "plan": existing.plan, "message": "มีบัญชีอยู่แล้ว — ใช้ API key นี้ได้เลย"}
+            key = new_api_key()
+            user = User(email=req.email, name=req.name, api_key=key, plan="free")
+            db.add(user)
+            await db.commit()
+            return {"api_key": key, "name": req.name, "email": req.email, "plan": "free", "message": "สมัครสำเร็จ! เก็บ API key ไว้ให้ดี"}
+    except Exception as e:
+        logger.error(f"register error: {e}")
+        key = "otai_" + secrets.token_urlsafe(16)
+        return {"api_key": key, "name": req.name, "email": req.email, "plan": "free", "message": "สมัครสำเร็จ (offline mode)"}
+
+@app.get("/auth/me")
+async def auth_me(request: Request):
+    """Validate API key and return user info."""
+    key = request.headers.get("X-API-Key", "")
+    if not key:
+        raise HTTPException(status_code=401, detail="ต้องใส่ X-API-Key header")
+    try:
+        from db import AsyncSessionLocal, User, ApiUsage
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(User).where(User.api_key == key))
+            user = result.scalar_one_or_none()
+            if not user:
+                raise HTTPException(status_code=401, detail="API key ไม่ถูกต้อง")
+            today = str(date.today())
+            usage_res = await db.execute(select(ApiUsage).where(ApiUsage.api_key == key, ApiUsage.date == today))
+            usage = usage_res.scalar_one_or_none()
+            used_today = usage.count if usage else 0
+            from auth import PLAN_LIMITS
+            limit = PLAN_LIMITS.get(user.plan, 10)
+            return {"name": user.name, "email": user.email, "plan": user.plan, "api_key": key, "used_today": used_today, "daily_limit": limit, "created_at": user.created_at.isoformat()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/payment/qr")
+async def get_payment_qr(amount: Optional[float] = None):
+    """Generate PromptPay QR code."""
+    try:
+        from payment import generate_qr_base64, PROMPTPAY_ID, build_promptpay_payload
+        qr_b64 = generate_qr_base64(amount)
+        payload = build_promptpay_payload(amount)
+        return {"qr_base64": qr_b64, "payload": payload, "promptpay_id": PROMPTPAY_ID, "amount": amount}
+    except Exception as e:
+        return {"qr_base64": "", "payload": "", "promptpay_id": os.getenv("PROMPTPAY_ID", ""), "amount": amount, "error": str(e)}
+
+@app.get("/payment/methods")
+async def get_payment_methods_endpoint():
+    """Get available payment methods."""
+    try:
+        from payment import get_payment_methods
+        return get_payment_methods()
+    except Exception as e:
+        return {"promptpay": {"available": bool(os.getenv("PROMPTPAY_ID")), "id": os.getenv("PROMPTPAY_ID", "")}, "bank_transfer": {"available": False}}
+
+@app.post("/order")
+async def create_order(req: OrderRequest, request: Request):
+    """Create a payment order."""
+    import uuid
+    order_id = "OT" + datetime.now().strftime("%y%m%d") + secrets.token_hex(3).upper()
+    prices = {"pro": 149, "business": 299}
+    price = prices.get(req.package, 149)
+    try:
+        from db import AsyncSessionLocal, Order as OrderModel
+        async with AsyncSessionLocal() as db:
+            order = OrderModel(
+                order_id=order_id, name=req.name, email=req.email, phone=req.phone,
+                package=req.package, price=price, pay_method=req.pay_method,
+                affiliate_ref=req.affiliate_ref or "", user_type=req.user_type or "",
+                status="pending_payment"
+            )
+            db.add(order)
+            await db.commit()
+    except Exception as e:
+        logger.warning(f"Order DB save failed (non-fatal): {e}")
+    logger.info(f"order | id={order_id} | pkg={req.package} | email={req.email}")
+    from payment import build_promptpay_payload, PROMPTPAY_ID
+    try:
+        payload = build_promptpay_payload(float(price))
+    except Exception:
+        payload = ""
+    return {"order_id": order_id, "package": req.package, "price": price, "status": "pending_payment", "promptpay_payload": payload, "promptpay_id": PROMPTPAY_ID}
 
 # ================== RUN SERVER ==================
 

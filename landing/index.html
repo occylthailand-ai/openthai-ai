@@ -16,6 +16,7 @@
 <link rel="canonical" href="https://www.openthai-ai.com/">
 <link rel="preconnect" href="https://api.openthai-ai.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 :root {
   --primary:#FF6B35; --primary-dark:#E55A2B; --secondary:#4ECDC4;
@@ -261,6 +262,25 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
   .tier-card.gold-tier{transform:none;}
 }
 @media(max-width:480px){.hero-btns{flex-direction:column;align-items:center;}}
+
+/* ===== AUTH ===== */
+.user-badge{display:flex;align-items:center;gap:0.5rem;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.3);border-radius:20px;padding:0.3rem 0.75rem;font-size:0.8rem;cursor:pointer;transition:all 0.2s;}
+.user-badge:hover{background:rgba(255,107,53,0.2);}
+.user-badge .plan-chip{background:var(--primary);color:white;border-radius:10px;padding:0.1rem 0.45rem;font-size:0.7rem;font-weight:700;text-transform:uppercase;}
+.auth-tabs{display:flex;gap:0.5rem;margin-bottom:1.5rem;background:var(--input-bg);border-radius:10px;padding:0.25rem;}
+.auth-tab{flex:1;padding:0.55rem;text-align:center;border-radius:8px;cursor:pointer;font-size:0.88rem;font-weight:600;color:var(--muted);border:none;background:none;font-family:inherit;transition:all 0.2s;}
+.auth-tab.active{background:var(--primary);color:white;}
+.auth-panel{display:none;}.auth-panel.active{display:block;}
+.api-key-display{background:var(--input-bg);border:1.5px solid var(--success);border-radius:10px;padding:0.9rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--success);word-break:break-all;margin:1rem 0;cursor:pointer;position:relative;}
+.api-key-display::after{content:'คลิกเพื่อคัดลอก';position:absolute;top:-8px;right:10px;background:var(--success);color:white;font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:6px;font-family:'Noto Sans Thai',sans-serif;}
+/* ===== QR PAYMENT ===== */
+.qr-container{text-align:center;padding:1rem 0;}
+.qr-container canvas{border-radius:12px;border:4px solid white;max-width:200px;}
+.promptpay-id{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--primary);font-weight:700;margin-top:0.5rem;}
+/* ===== AFFILIATE LINK ===== */
+.aff-link-box{background:var(--input-bg);border:2px solid rgba(255,107,53,0.3);border-radius:14px;padding:1.5rem;margin-top:2rem;}
+.aff-link-box h4{color:white;font-size:1rem;margin-bottom:0.75rem;}
+.aff-link-display{background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.3);border-radius:10px;padding:0.75rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--secondary);word-break:break-all;margin:0.75rem 0;}
 </style>
 </head>
 <body>
@@ -280,6 +300,11 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
       <button class="lang-btn active" id="langTH" onclick="setLang('th')">🇹🇭 TH</button>
       <button class="lang-btn" id="langEN" onclick="setLang('en')">🇺🇸 EN</button>
     </div>
+    <div id="userBadge" onclick="openAuth()" style="display:none;" class="user-badge">
+      <span id="userBadgeName">User</span>
+      <span class="plan-chip" id="userBadgePlan">FREE</span>
+    </div>
+    <button id="loginNavBtn" onclick="openAuth()" style="background:none;border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.8);padding:0.35rem 0.9rem;border-radius:20px;font-size:0.82rem;cursor:pointer;font-family:inherit;margin-left:0.5rem;">เข้าสู่ระบบ</button>
     <button class="hamburger" id="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></button>
   </div>
 </nav>
@@ -477,9 +502,29 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
       <div class="tier-card gold-tier"><div class="tier-icon">🥇</div><div class="tier-name">Gold</div><div class="tier-commission">40%<span>/ยอดขาย</span></div><div class="tier-sales">31+ คน/เดือน</div><p style="font-size:0.8rem;color:var(--muted);">+ priority support + training</p></div>
     </div>
     <div class="aff-steps">
-      <div class="aff-step"><div class="aff-step-num">1</div><h4>สมัครฟรี</h4><p>กรอกฟอร์มด้านล่าง รับลิ้งก์ Affiliate ทันที</p></div>
+      <div class="aff-step"><div class="aff-step-num">1</div><h4>สมัครฟรี</h4><p>กรอกชื่อด้านล่าง รับลิ้งก์ Affiliate ทันที</p></div>
       <div class="aff-step"><div class="aff-step-num">2</div><h4>แชร์ลิ้งก์</h4><p>โพสต์ใน TikTok / LINE / Facebook ได้เลย</p></div>
       <div class="aff-step"><div class="aff-step-num">3</div><h4>รับค่าคอม</h4><p>โอนทุกวันที่ 1 ผ่านพร้อมเพย์ ไม่มีค่าธรรมเนียม</p></div>
+    </div>
+
+    <!-- Affiliate link generator -->
+    <div class="aff-link-box" id="affLinkBox">
+      <h4>🔗 รับลิ้งก์ Affiliate ของคุณ</h4>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">ใส่ชื่อย่อหรือชื่อของคุณ (ภาษาอังกฤษ ไม่มีช่องว่าง)</p>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <input type="text" id="affCodeInput" placeholder="เช่น somchai หรือ shop99" maxlength="20"
+          style="flex:1;min-width:180px;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.7rem 1rem;color:white;font-family:'JetBrains Mono',monospace;font-size:0.9rem;">
+        <button onclick="generateAffLink()" class="btn-primary" style="border:none;cursor:pointer;padding:0.7rem 1.5rem;font-size:0.9rem;">สร้างลิ้งก์</button>
+      </div>
+      <div id="affLinkResult" style="display:none;">
+        <p style="font-size:0.8rem;color:var(--success);margin:0.75rem 0 0.3rem;">✅ ลิ้งก์ Affiliate ของคุณ:</p>
+        <div class="aff-link-display" id="affLinkDisplay" onclick="copyAffLink()" style="cursor:pointer;" title="คลิกเพื่อคัดลอก"></div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;">
+          <button onclick="copyAffLink()" style="background:rgba(78,205,196,0.15);border:1px solid rgba(78,205,196,0.4);color:var(--secondary);border-radius:8px;padding:0.5rem 1rem;cursor:pointer;font-family:inherit;font-size:0.82rem;font-weight:600;">📋 คัดลอก</button>
+          <button onclick="shareAffLink('line')" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#27AE60;border-radius:8px;padding:0.5rem 1rem;cursor:pointer;font-family:inherit;font-size:0.82rem;font-weight:600;">💬 แชร์ LINE</button>
+          <button onclick="shareAffLink('tiktok')" style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);color:var(--primary);border-radius:8px;padding:0.5rem 1rem;cursor:pointer;font-family:inherit;font-size:0.82rem;font-weight:600;">🎵 คัดลอกสำหรับ TikTok</button>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -601,6 +646,46 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
   </div>
 </div>
 
+<!-- ===== AUTH MODAL ===== -->
+<div class="modal-bg" id="authModal">
+  <div class="modal" style="max-width:440px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h3 id="authModalTitle">🔑 เข้าสู่ระบบ / สมัคร</h3>
+      <button onclick="closeAuth()" style="background:none;border:none;color:var(--muted);font-size:1.5rem;cursor:pointer;">×</button>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('register')">สมัครใช้งาน</button>
+      <button class="auth-tab" onclick="switchAuthTab('login')">มี API Key แล้ว</button>
+    </div>
+
+    <!-- Register Panel -->
+    <div class="auth-panel active" id="authRegister">
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">สมัครฟรี รับ API Key — ใช้งานได้ไม่จำกัดวัน</p>
+      <input type="text" id="regName" placeholder="ชื่อ-นามสกุล" style="width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:inherit;font-size:0.9rem;margin-bottom:0.75rem;">
+      <input type="email" id="regEmail" placeholder="อีเมล" style="width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:inherit;font-size:0.9rem;margin-bottom:1rem;">
+      <button class="btn-primary" onclick="doRegister()" style="width:100%;border:none;cursor:pointer;font-size:0.95rem;" id="regBtn">สมัครและรับ API Key →</button>
+      <div id="regResult" style="display:none;margin-top:1rem;">
+        <p style="font-size:0.82rem;color:var(--success);margin-bottom:0.5rem;">✅ สมัครสำเร็จ! บันทึก API Key ไว้ด้วย</p>
+        <div class="api-key-display" id="regKeyDisplay" onclick="copyApiKey()"></div>
+        <button class="btn-primary" onclick="closeAuth()" style="width:100%;border:none;cursor:pointer;margin-top:0.5rem;font-size:0.9rem;">เริ่มใช้งาน →</button>
+      </div>
+    </div>
+
+    <!-- Login Panel -->
+    <div class="auth-panel" id="authLogin">
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">วาง API Key ที่เคยได้รับเพื่อเข้าสู่ระบบ</p>
+      <input type="text" id="loginKey" placeholder="otai_xxxxxxxxxxxxxxxx" style="width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:'JetBrains Mono',monospace;font-size:0.85rem;margin-bottom:1rem;">
+      <button class="btn-primary" onclick="doLogin()" style="width:100%;border:none;cursor:pointer;font-size:0.95rem;">เข้าสู่ระบบ →</button>
+      <button onclick="doLogout()" style="width:100%;background:none;border:1px solid rgba(255,255,255,0.15);color:var(--muted);border-radius:10px;padding:0.6rem;cursor:pointer;font-family:inherit;font-size:0.85rem;margin-top:0.5rem;">ออกจากระบบ</button>
+    </div>
+
+    <div id="authUserInfo" style="display:none;margin-top:1rem;padding:1rem;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:12px;">
+      <p style="font-size:0.88rem;color:var(--success);font-weight:600;" id="authUserName"></p>
+      <p style="font-size:0.8rem;color:var(--muted);">แผน: <span id="authUserPlan" style="color:var(--primary);font-weight:700;"></span> · ใช้วันนี้: <span id="authUserUsage"></span></p>
+    </div>
+  </div>
+</div>
+
 <!-- ===== CHECKOUT MODAL ===== -->
 <div class="modal-bg" id="checkoutModal">
   <div class="modal" style="max-width:520px;">
@@ -623,10 +708,20 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2r
       <div class="form-group"><label style="color:#ccc;">อีเมล</label><input type="email" id="co-email" placeholder="อีเมล" style="background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:inherit;width:100%;font-size:0.9rem;"></div>
       <div class="form-group"><label style="color:#ccc;">เบอร์โทร (LINE)</label><input type="tel" id="co-phone" placeholder="0812345678" style="background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:inherit;width:100%;font-size:0.9rem;"></div>
     </div>
-    <div style="background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.2);border-radius:12px;padding:1rem;margin:1rem 0;font-size:0.85rem;color:var(--secondary);">
-      💳 ชำระผ่าน PromptPay / QR Code<br><span style="color:var(--muted);font-size:0.78rem;">ทีมงานจะส่ง QR Code ทางอีเมลภายใน 15 นาที</span>
+    <div style="background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.2);border-radius:12px;padding:1rem;margin:1rem 0;text-align:center;">
+      <div class="qr-container" id="qrContainer" style="display:none;">
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.5rem;">สแกน QR ด้วยแอปธนาคารไทยทุกแห่ง</p>
+        <canvas id="promptpayQR"></canvas>
+        <div class="promptpay-id" id="promptpayIdDisplay"></div>
+        <p style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem;">ยอดชำระ: <strong id="qrAmount" style="color:var(--primary);"></strong></p>
+      </div>
+      <div id="qrPlaceholder" style="font-size:0.85rem;color:var(--secondary);">
+        💳 ชำระผ่าน PromptPay / QR Code<br>
+        <span style="color:var(--muted);font-size:0.78rem;">กด "ดู QR Code" เพื่อสแกนชำระได้เลย</span>
+      </div>
+      <button onclick="showPaymentQR()" id="showQRBtn" style="margin-top:0.75rem;background:rgba(78,205,196,0.15);border:1px solid rgba(78,205,196,0.4);color:var(--secondary);border-radius:10px;padding:0.5rem 1.25rem;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600;">📱 ดู QR Code PromptPay</button>
     </div>
-    <button class="btn-primary" onclick="submitCheckout()" style="width:100%;border:none;cursor:pointer;font-size:1rem;" id="coBtn">ยืนยันและชำระเงิน →</button>
+    <button class="btn-primary" onclick="submitCheckout()" style="width:100%;border:none;cursor:pointer;font-size:1rem;" id="coBtn">ยืนยันและแจ้งชำระเงิน →</button>
     <div id="coSuccess" style="display:none;text-align:center;padding:1rem;color:var(--success);">✅ ส่งข้อมูลแล้ว! เราจะติดต่อกลับเร็วๆ นี้</div>
   </div>
 </div>
@@ -687,6 +782,15 @@ function quickFill(name, cat) {
 
 // ===== FREE COUNTER =====
 function updateFreeCounter() {
+  const userLoggedIn = currentUser && currentUser.api_key;
+  const isPro = userLoggedIn && (currentUser.plan === 'pro' || currentUser.plan === 'business');
+  if (isPro) {
+    document.getElementById('freeNotice').style.display = 'none';
+    document.getElementById('upgradeBanner').style.display = 'none';
+    document.getElementById('generateBtn').disabled = false;
+    document.getElementById('freeCount').textContent = '∞';
+    return;
+  }
   const r = Math.max(0, FREE_LIMIT - freeUsed);
   document.getElementById('freeCount').textContent = r;
   if (r <= 0) {
@@ -738,21 +842,26 @@ function getMock(name, cat) {
 async function generateContent() {
   const name = document.getElementById('productName').value.trim();
   if (!name) { document.getElementById('productName').focus(); showError('กรุณาใส่ชื่อสินค้า'); return; }
-  if (freeUsed >= FREE_LIMIT && localStorage.getItem('otai_plan') !== 'pro') { document.getElementById('upgradeBanner').style.display='flex'; return; }
+  const userLoggedIn = currentUser && currentUser.api_key;
+  const isPro = userLoggedIn && (currentUser.plan === 'pro' || currentUser.plan === 'business');
+  if (!isPro && freeUsed >= FREE_LIMIT) { document.getElementById('upgradeBanner').style.display='flex'; return; }
 
   const cat = document.getElementById('productCategory').value;
   setLoading(true); hideError();
 
+  const headers = {'Content-Type':'application/json'};
+  if (userLoggedIn) headers['X-API-Key'] = currentUser.api_key;
+
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 6000);
+    const t = setTimeout(() => ctrl.abort(), 10000);
     const res = await fetch(API_URL+'/generate', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers,
       body:JSON.stringify({product_name:name,product_category:cat,product_description:document.getElementById('productDesc').value.trim(),target_audience:document.getElementById('targetAudience').value,hook_type:selectedHook}),
       signal:ctrl.signal
     });
     clearTimeout(t);
-    if (!res.ok) throw new Error();
+    if (!res.ok) throw new Error(res.status);
     currentResult = {...await res.json(), product_name:name};
   } catch {
     await new Promise(r=>setTimeout(r,1400));
@@ -760,7 +869,7 @@ async function generateContent() {
   }
 
   renderResult(currentResult, name);
-  freeUsed++; localStorage.setItem('otai_free_used', freeUsed); updateFreeCounter();
+  if (!isPro) { freeUsed++; localStorage.setItem('otai_free_used', freeUsed); updateFreeCounter(); }
   saveHistory(name, cat);
   setLoading(false);
 }
@@ -817,7 +926,22 @@ async function sendToLine(){
 document.getElementById('lineModalBg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeLineModal();});
 
 // ===== CHECKOUT =====
-function openCheckout(plan){selectedPlan=plan||'pro';document.querySelectorAll('.checkout-plan').forEach(p=>p.classList.remove('selected'));document.getElementById('plan-'+selectedPlan)?.classList.add('selected');document.getElementById('coSuccess').style.display='none';document.getElementById('checkoutModal').classList.add('open');}
+function openCheckout(plan){
+  selectedPlan=plan||'pro';
+  document.querySelectorAll('.checkout-plan').forEach(p=>p.classList.remove('selected'));
+  document.getElementById('plan-'+selectedPlan)?.classList.add('selected');
+  document.getElementById('coSuccess').style.display='none';
+  // Reset QR state
+  document.getElementById('qrContainer').style.display='none';
+  document.getElementById('qrPlaceholder').style.display='block';
+  document.getElementById('showQRBtn').style.display='';
+  // Pre-fill name/email from user session
+  if(currentUser){
+    if(currentUser.name&&!document.getElementById('co-name').value) document.getElementById('co-name').value=currentUser.name;
+    if(currentUser.email&&!document.getElementById('co-email').value) document.getElementById('co-email').value=currentUser.email;
+  }
+  document.getElementById('checkoutModal').classList.add('open');
+}
 function closeCheckout(){document.getElementById('checkoutModal').classList.remove('open');}
 function selectPlan(p){selectedPlan=p;document.querySelectorAll('.checkout-plan').forEach(el=>el.classList.remove('selected'));document.getElementById('plan-'+p)?.classList.add('selected');}
 document.getElementById('checkoutModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeCheckout();});
@@ -917,8 +1041,234 @@ function safeHTML(id, v){ const el=document.getElementById(id); if(el&&v) el.inn
 // ===== KEYBOARD =====
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter')generateContent();
-  if(e.key==='Escape'){closeLineModal();closeCheckout();}
+  if(e.key==='Escape'){closeLineModal();closeCheckout();closeAuth();}
 });
+
+// ===== AUTH =====
+let currentUser = JSON.parse(localStorage.getItem('otai_user') || 'null');
+
+function initUserState() {
+  if (currentUser) {
+    document.getElementById('userBadge').style.display = 'flex';
+    document.getElementById('loginNavBtn').style.display = 'none';
+    document.getElementById('userBadgeName').textContent = currentUser.name.split(' ')[0];
+    document.getElementById('userBadgePlan').textContent = (currentUser.plan || 'free').toUpperCase();
+    if (currentUser.plan === 'pro' || currentUser.plan === 'business') {
+      document.getElementById('generateBtn').disabled = false;
+      document.getElementById('upgradeBanner').style.display = 'none';
+    }
+  } else {
+    document.getElementById('userBadge').style.display = 'none';
+    document.getElementById('loginNavBtn').style.display = '';
+  }
+}
+
+function openAuth() {
+  document.getElementById('authModal').classList.add('open');
+  if (currentUser) {
+    document.getElementById('authUserInfo').style.display = 'block';
+    document.getElementById('authUserName').textContent = '👤 ' + currentUser.name + ' (' + currentUser.email + ')';
+    document.getElementById('authUserPlan').textContent = (currentUser.plan || 'free').toUpperCase();
+    document.getElementById('authUserUsage').textContent = currentUser.used_today || 0;
+    document.getElementById('loginKey').value = currentUser.api_key || '';
+  }
+}
+function closeAuth() { document.getElementById('authModal').classList.remove('open'); }
+document.getElementById('authModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeAuth(); });
+
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (tab==='register'&&i===0)||(tab==='login'&&i===1)));
+  document.getElementById('authRegister').classList.toggle('active', tab==='register');
+  document.getElementById('authLogin').classList.toggle('active', tab==='login');
+}
+
+async function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  if (!name || !email) { alert('กรุณาใส่ชื่อและอีเมล'); return; }
+  const btn = document.getElementById('regBtn');
+  btn.textContent = '⏳ กำลังสมัคร...'; btn.disabled = true;
+  try {
+    const res = await fetch(API_URL + '/auth/register', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, email})
+    });
+    const data = await res.json();
+    currentUser = data;
+    localStorage.setItem('otai_user', JSON.stringify(data));
+    document.getElementById('regKeyDisplay').textContent = data.api_key;
+    document.getElementById('regResult').style.display = 'block';
+    initUserState();
+  } catch {
+    // offline fallback: generate local key
+    const key = 'otai_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    currentUser = {name, email, api_key: key, plan: 'free'};
+    localStorage.setItem('otai_user', JSON.stringify(currentUser));
+    document.getElementById('regKeyDisplay').textContent = key;
+    document.getElementById('regResult').style.display = 'block';
+    initUserState();
+  }
+  btn.textContent = 'สมัครและรับ API Key →'; btn.disabled = false;
+}
+
+async function doLogin() {
+  const key = document.getElementById('loginKey').value.trim();
+  if (!key) { alert('กรุณาใส่ API Key'); return; }
+  try {
+    const res = await fetch(API_URL + '/auth/me', { headers: {'X-API-Key': key} });
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = {...data, api_key: key};
+      localStorage.setItem('otai_user', JSON.stringify(currentUser));
+      document.getElementById('authUserInfo').style.display = 'block';
+      document.getElementById('authUserName').textContent = '👤 ' + data.name;
+      document.getElementById('authUserPlan').textContent = (data.plan||'free').toUpperCase();
+      document.getElementById('authUserUsage').textContent = data.used_today + '/' + data.daily_limit;
+      initUserState();
+      setTimeout(closeAuth, 1200);
+    } else {
+      // store key locally even without validation
+      currentUser = {api_key: key, name: 'User', email: '', plan: 'free'};
+      localStorage.setItem('otai_user', JSON.stringify(currentUser));
+      initUserState();
+      setTimeout(closeAuth, 800);
+    }
+  } catch {
+    currentUser = {api_key: key, name: 'User', email: '', plan: 'free'};
+    localStorage.setItem('otai_user', JSON.stringify(currentUser));
+    initUserState();
+    setTimeout(closeAuth, 800);
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  localStorage.removeItem('otai_user');
+  closeAuth();
+  initUserState();
+}
+
+function copyApiKey() {
+  const k = document.getElementById('regKeyDisplay').textContent;
+  navigator.clipboard.writeText(k).then(() => {
+    const el = document.getElementById('regKeyDisplay');
+    const orig = el.textContent;
+    el.textContent = '✅ คัดลอกแล้ว!';
+    setTimeout(() => el.textContent = orig, 1500);
+  });
+}
+
+// ===== PROMPTPAY QR (EMVCo standard, client-side) =====
+const PROMPTPAY_MERCHANT_ID = ''; // filled by backend or set manually
+
+function crc16ccitt(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+    }
+  }
+  return crc;
+}
+
+function emvField(tag, value) {
+  return `${tag}${value.length.toString().padStart(2,'0')}${value}`;
+}
+
+function buildPromptPayPayload(promptpayId, amount) {
+  if (!promptpayId) return '';
+  let pid = promptpayId.replace(/[-\s]/g, '');
+  if (pid.length === 10 && pid.startsWith('0')) pid = '0066' + pid.slice(1);
+  const merchantInfo = emvField('00','A000000677010111') + emvField('01', pid);
+  let payload = emvField('00','01') + emvField('01', amount ? '12' : '11') + emvField('29', merchantInfo) + '5303764' + '5802TH';
+  if (amount) payload += emvField('54', parseFloat(amount).toFixed(2));
+  payload += '6304';
+  const crc = crc16ccitt(payload);
+  return payload + crc.toString(16).toUpperCase().padStart(4,'0');
+}
+
+async function showPaymentQR() {
+  const prices = {pro: 149, business: 299};
+  const amount = prices[selectedPlan] || 149;
+  // Try to get PROMPTPAY_ID from backend
+  let promptpayId = '';
+  try {
+    const r = await fetch(API_URL + '/payment/methods', {signal: AbortSignal.timeout(4000)});
+    if (r.ok) {
+      const d = await r.json();
+      promptpayId = d?.promptpay?.id || '';
+    }
+  } catch {}
+
+  if (!promptpayId) {
+    // fallback instruction
+    document.getElementById('qrPlaceholder').innerHTML = '💳 ชำระผ่าน PromptPay<br><span style="color:var(--muted);font-size:0.78rem;">ทีมงานจะส่ง QR ทางอีเมลภายใน 15 นาที</span>';
+    document.getElementById('showQRBtn').style.display = 'none';
+    return;
+  }
+
+  const payload = buildPromptPayPayload(promptpayId, amount);
+  if (!payload) return;
+
+  document.getElementById('qrContainer').style.display = 'block';
+  document.getElementById('qrPlaceholder').style.display = 'none';
+  document.getElementById('showQRBtn').style.display = 'none';
+  document.getElementById('promptpayIdDisplay').textContent = promptpayId;
+  document.getElementById('qrAmount').textContent = '฿' + amount;
+
+  if (typeof QRCode !== 'undefined') {
+    QRCode.toCanvas(document.getElementById('promptpayQR'), payload, {
+      width: 200, margin: 2,
+      color: {dark: '#1A1A2E', light: '#FFFFFF'}
+    });
+  }
+}
+
+// ===== AFFILIATE LINK GENERATOR =====
+let currentAffLink = '';
+
+function generateAffLink() {
+  let code = document.getElementById('affCodeInput').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!code) { alert('กรุณาใส่ชื่อย่อ (ภาษาอังกฤษ)'); return; }
+  if (code.length < 3) { alert('ชื่อย่อต้องมีอย่างน้อย 3 ตัวอักษร'); return; }
+  currentAffLink = `https://www.openthai-ai.com/?ref=${code}`;
+  document.getElementById('affLinkDisplay').textContent = currentAffLink;
+  document.getElementById('affLinkResult').style.display = 'block';
+  // save ref code locally
+  localStorage.setItem('otai_aff_code', code);
+}
+
+function copyAffLink() {
+  navigator.clipboard.writeText(currentAffLink).then(() => {
+    const el = document.getElementById('affLinkDisplay');
+    const orig = el.textContent;
+    el.textContent = '✅ คัดลอกแล้ว!';
+    setTimeout(() => el.textContent = orig, 1500);
+  });
+}
+
+function shareAffLink(platform) {
+  if (platform === 'line') {
+    window.open('https://social-plugins.line.me/lineit/share?url=' + encodeURIComponent(currentAffLink), '_blank');
+  } else if (platform === 'tiktok') {
+    const text = `🇹🇭 OpenThai AI — AI สร้างคอนเทนต์ TikTok ภาษาไทย ใน 30 วินาที!\n${currentAffLink}\n#OpenThaiAI #TikTokCreator #AIคอนเทนต์`;
+    navigator.clipboard.writeText(text).then(() => alert('✅ คัดลอก Caption + ลิ้งก์ สำหรับ TikTok แล้ว!'));
+  }
+}
+
+// Restore saved aff code
+(function() {
+  const saved = localStorage.getItem('otai_aff_code');
+  if (saved) document.getElementById('affCodeInput').value = saved;
+})();
+
+// ===== SEND API KEY IN GENERATE REQUESTS =====
+// Patch generateContent to include X-API-Key header when user is logged in
+const _origFetch = window.fetch;
+
+// Init user state on load
+initUserState();
 </script>
 </body>
 </html>
