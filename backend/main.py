@@ -8,18 +8,57 @@ OpenThai AI Backend — FastAPI + Claude API
 3. uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import anthropic
+import asyncio
+import httpx
 import os
+import time
+import logging
+import secrets
 from dotenv import load_dotenv
 import json
-from datetime import datetime
+from datetime import datetime, date
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 # Load environment variables
 load_dotenv()
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger("openthai")
+
+# ── Rate limiting — DB-backed via limits.py ────────────────────────────────────
+import limits as _limits
+
+async def check_rate_limit_db(ip: str) -> bool:
+    """DB-backed rate limit for anonymous IPs. Returns True if allowed."""
+    free_limit = _limits.get("free_ip_daily", 50)
+    if free_limit == -1:
+        return True  # unlimited
+    pseudo_key = f"ip:{ip}"
+    today = str(date.today())
+    try:
+        from db import AsyncSessionLocal, ApiUsage
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(
+                select(ApiUsage).where(ApiUsage.api_key == pseudo_key, ApiUsage.date == today)
+            )
+            usage = res.scalar_one_or_none()
+            if usage and usage.count >= free_limit:
+                return False
+            if usage:
+                usage.count += 1
+            else:
+                db.add(ApiUsage(api_key=pseudo_key, date=today, count=1))
+            await db.commit()
+            return True
+    except Exception:
+        return True
 
 # Initialize FastAPI
 app = FastAPI(
@@ -28,14 +67,53 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
+# ── CORS ──────────────────────────────────────────────────────────────────────
+IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
+ALLOWED_ORIGINS = (
+    [os.getenv("FRONTEND_URL", "https://www.openthai-ai.com")]
+    if IS_PRODUCTION
+    else ["*"]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Startup validation ────────────────────────────────────────────────────────
+@app.on_event("startup")
+async def startup_event():
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        raise RuntimeError("ANTHROPIC_API_KEY is not set — cannot start server")
+    try:
+        from db import init_db
+        await init_db()
+        logger.info("Database initialized")
+        # โหลด limit overrides จาก DB
+        await _limits.load_db_overrides()
+        logger.info("Limit overrides loaded")
+    except Exception as e:
+        logger.warning(f"DB init skipped: {e}")
+    try:
+        from news_monitor import start_scheduler, run_news_fetch, get_scheduler
+        start_scheduler()
+        asyncio.create_task(run_news_fetch())  # immediate first fetch
+        logger.info("News monitor started")
+        try:
+            from mythos_command import register_mythos_jobs
+            from mythos_goals import register_goal_jobs
+            sched = get_scheduler()
+            register_mythos_jobs(sched)
+            register_goal_jobs(sched)
+            logger.info("Mythos Command System + Goal Tracker started")
+        except Exception as e2:
+            logger.warning(f"Mythos scheduler skipped: {e2}")
+    except Exception as e:
+        logger.warning(f"News monitor skipped: {e}")
+    logger.info(f"OpenThai AI started | env={'production' if IS_PRODUCTION else 'dev'} | origins={ALLOWED_ORIGINS}")
 
 # Initialize Anthropic client
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
@@ -206,8 +284,8 @@ async def generate_content(product: ProductInput) -> dict:
 
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-5-20251001",
-            max_tokens=2000,
+            model="claude-sonnet-4-6",
+            max_tokens=_limits.get("claude_max_tokens", 4000),
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}]
         )
@@ -221,8 +299,10 @@ async def generate_content(product: ProductInput) -> dict:
                 content = content[4:]
         content = content.strip()
         
-        return json.loads(content)
-        
+        result = json.loads(content)
+        asyncio.create_task(_record_tokens("generate", response))
+        return result
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Content generation failed: {str(e)}")
 
@@ -230,8 +310,8 @@ async def critique_content(content: dict) -> dict:
     """Critique content using AI Critic"""
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-5-20251001",
-            max_tokens=1000,
+            model="claude-sonnet-4-6",
+            max_tokens=_limits.get("claude_max_tokens_critic", 1000),
             system=AI_CRITIC_PROMPT,
             messages=[{
                 "role": "user", 
@@ -246,10 +326,22 @@ async def critique_content(content: dict) -> dict:
                 critique_text = critique_text[4:]
         critique_text = critique_text.strip()
         
-        return json.loads(critique_text)
-        
+        result = json.loads(critique_text)
+        asyncio.create_task(_record_tokens("critic", response))
+        return result
+
     except Exception as e:
         return {"total_score": 7, "feedback": "Critique unavailable", "improvement_suggestions": []}
+
+
+async def _record_tokens(call_type: str, response) -> None:
+    """Helper: บันทึก token usage จาก Anthropic response object"""
+    try:
+        from token_counter import record_usage
+        u = response.usage
+        await record_usage(call_type, u.input_tokens, u.output_tokens)
+    except Exception:
+        pass
 
 # ================== API ENDPOINTS ==================
 
@@ -272,7 +364,7 @@ async def health_check():
     }
 
 @app.post("/generate", response_model=ContentOutput)
-async def generate_tiktok_content(product: ProductInput):
+async def generate_tiktok_content(product: ProductInput, request: Request):
     """
     Generate TikTok content for a product
     
@@ -283,10 +375,49 @@ async def generate_tiktok_content(product: ProductInput):
     - **hook_type**: รูปแบบ Hook (story, process, contrast, question, transformation, auto)
     """
     
-    max_iterations = 3
+    # Rate limiting — check X-API-Key first, fall back to IP-based free quota
+    ip = request.client.host if request.client else "unknown"
+    api_key = request.headers.get("X-API-Key", "")
+    is_pro = False
+
+    if api_key:
+        try:
+            from db import AsyncSessionLocal, User, ApiUsage
+            async with AsyncSessionLocal() as db:
+                res = await db.execute(select(User).where(User.api_key == api_key))
+                user = res.scalar_one_or_none()
+                if user and user.is_active:
+                    is_pro = user.plan in ("pro", "business")
+                    limit = _limits.plan_daily_limit(user.plan)
+                    today = str(date.today())
+                    usage_res = await db.execute(
+                        select(ApiUsage).where(ApiUsage.api_key == api_key, ApiUsage.date == today)
+                    )
+                    usage = usage_res.scalar_one_or_none()
+                    if limit != -1 and usage and usage.count >= limit:
+                        raise HTTPException(status_code=429, detail=f"เกินโควตา {limit} ครั้ง/วัน สำหรับ plan {user.plan}")
+                    # Track usage
+                    if usage:
+                        usage.count += 1
+                    else:
+                        db.add(ApiUsage(api_key=api_key, date=today, count=1))
+                    await db.commit()
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning("API key check error (non-fatal): %s", e)
+    else:
+        if not await check_rate_limit_db(ip):
+            free_lim = _limits.get("free_ip_daily", 50)
+            raise HTTPException(status_code=429, detail=f"ครบโควตาฟรี {free_lim} ครั้ง/วันแล้ว — อัปเกรดเพื่อใช้งานไม่จำกัด")
+
+    t_start = time.time()
+    logger.info(f"generate | product={product.product_name[:40]} | category={product.product_category} | ip={ip}")
+
+    max_iterations = _limits.get("claude_max_iterations", 5)
     best_content = None
     best_score = 0
-    
+
     for iteration in range(max_iterations):
         # Generate content
         content = await generate_content(product)
@@ -305,6 +436,8 @@ async def generate_tiktok_content(product: ProductInput):
         if score >= 7:
             break
     
+    logger.info(f"generate done | product={product.product_name[:40]} | score={best_score} | elapsed={time.time()-t_start:.1f}s")
+
     # Prepare response
     return ContentOutput(
         script={
@@ -340,6 +473,1263 @@ async def get_categories():
         "china": "สินค้านำเข้าจากจีน",
         "global": "สินค้านำเข้าจากทั่วโลก"
     }
+
+# ================== AUTH & USER ENDPOINTS ==================
+
+class RegisterRequest(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = ""
+
+class OrderRequest(BaseModel):
+    name: str
+    email: str
+    phone: str
+    package: str
+    pay_method: str = "promptpay"
+    affiliate_ref: Optional[str] = ""
+    user_type: Optional[str] = ""
+
+@app.post("/auth/register")
+async def register_user(req: RegisterRequest):
+    """Register a new user and return an API key."""
+    try:
+        from db import get_db, User, new_api_key
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from db import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(User).where(User.email == req.email))
+            existing = result.scalar_one_or_none()
+            if existing:
+                return {"api_key": existing.api_key, "name": existing.name, "email": existing.email, "plan": existing.plan, "message": "มีบัญชีอยู่แล้ว — ใช้ API key นี้ได้เลย"}
+            key = new_api_key()
+            user = User(email=req.email, name=req.name, api_key=key, plan="free")
+            db.add(user)
+            await db.commit()
+            return {"api_key": key, "name": req.name, "email": req.email, "plan": "free", "message": "สมัครสำเร็จ! เก็บ API key ไว้ให้ดี"}
+    except Exception as e:
+        logger.error(f"register error: {e}")
+        key = "otai_" + secrets.token_urlsafe(16)
+        return {"api_key": key, "name": req.name, "email": req.email, "plan": "free", "message": "สมัครสำเร็จ (offline mode)"}
+
+@app.get("/auth/me")
+async def auth_me(request: Request):
+    """Validate API key and return user info."""
+    key = request.headers.get("X-API-Key", "")
+    if not key:
+        raise HTTPException(status_code=401, detail="ต้องใส่ X-API-Key header")
+    try:
+        from db import AsyncSessionLocal, User, ApiUsage
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(User).where(User.api_key == key))
+            user = result.scalar_one_or_none()
+            if not user:
+                raise HTTPException(status_code=401, detail="API key ไม่ถูกต้อง")
+            today = str(date.today())
+            usage_res = await db.execute(select(ApiUsage).where(ApiUsage.api_key == key, ApiUsage.date == today))
+            usage = usage_res.scalar_one_or_none()
+            used_today = usage.count if usage else 0
+            limit = _limits.plan_daily_limit(user.plan)
+            return {"name": user.name, "email": user.email, "plan": user.plan, "api_key": key, "used_today": used_today, "daily_limit": limit, "created_at": user.created_at.isoformat()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/payment/qr")
+async def get_payment_qr(amount: Optional[float] = None):
+    """Generate PromptPay QR code."""
+    try:
+        from payment import generate_qr_base64, PROMPTPAY_ID, build_promptpay_payload
+        qr_b64 = generate_qr_base64(amount)
+        payload = build_promptpay_payload(amount)
+        return {"qr_base64": qr_b64, "payload": payload, "promptpay_id": PROMPTPAY_ID, "amount": amount}
+    except Exception as e:
+        return {"qr_base64": "", "payload": "", "promptpay_id": os.getenv("PROMPTPAY_ID", ""), "amount": amount, "error": str(e)}
+
+@app.get("/payment/methods")
+async def get_payment_methods_endpoint():
+    """Get available payment methods."""
+    try:
+        from payment import get_payment_methods
+        return get_payment_methods()
+    except Exception as e:
+        return {"promptpay": {"available": bool(os.getenv("PROMPTPAY_ID")), "id": os.getenv("PROMPTPAY_ID", "")}, "bank_transfer": {"available": False}}
+
+@app.post("/order")
+async def create_order(req: OrderRequest, request: Request):
+    """Create a payment order."""
+    import uuid
+    order_id = "OT" + datetime.now().strftime("%y%m%d") + secrets.token_hex(3).upper()
+    prices = {"pro": 149, "business": 299}
+    price = prices.get(req.package, 149)
+    try:
+        from db import AsyncSessionLocal, Order as OrderModel
+        async with AsyncSessionLocal() as db:
+            order = OrderModel(
+                order_id=order_id, name=req.name, email=req.email, phone=req.phone,
+                package=req.package, price=price, pay_method=req.pay_method,
+                affiliate_ref=req.affiliate_ref or "", user_type=req.user_type or "",
+                status="pending_payment"
+            )
+            db.add(order)
+            await db.commit()
+    except Exception as e:
+        logger.warning(f"Order DB save failed (non-fatal): {e}")
+    logger.info(f"order | id={order_id} | pkg={req.package} | email={req.email}")
+    from payment import build_promptpay_payload, PROMPTPAY_ID
+    try:
+        payload = build_promptpay_payload(float(price))
+    except Exception:
+        payload = ""
+    return {"order_id": order_id, "package": req.package, "price": price, "status": "pending_payment", "promptpay_payload": payload, "promptpay_id": PROMPTPAY_ID}
+
+# ── ข้อ 1: Payment webhook endpoints ──────────────────────────────────────────
+
+class SlipUploadRequest(BaseModel):
+    slip_data: str          # base64 PNG/JPG ของสลิป
+    bank_code: Optional[str] = ""
+
+@app.post("/order/{order_id}/slip")
+async def upload_payment_slip(order_id: str, req: SlipUploadRequest):
+    """ลูกค้าอัปโหลดสลิปโอนเงิน → รอ admin ยืนยัน"""
+    try:
+        from db import AsyncSessionLocal, Order as OrderModel, PaymentSlip
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(OrderModel).where(OrderModel.order_id == order_id))
+            order = res.scalar_one_or_none()
+            if not order:
+                raise HTTPException(status_code=404, detail="Order not found")
+            if order.status not in ("pending_payment",):
+                raise HTTPException(status_code=400, detail=f"Order status is already '{order.status}'")
+            slip = PaymentSlip(
+                order_id=order_id,
+                bank_code=req.bank_code or "",
+                slip_data=req.slip_data,
+                verified=False,
+            )
+            db.add(slip)
+            order.status = "slip_uploaded"
+            await db.commit()
+        logger.info("slip uploaded | order=%s | bank=%s", order_id, req.bank_code)
+        # Notify admin via LINE
+        admin_token = os.getenv("LINE_NOTIFY_FINANCE", os.getenv("LINE_NOTIFY_ALL", ""))
+        if admin_token:
+            try:
+                async with httpx.AsyncClient() as c:
+                    await c.post(
+                        "https://notify-api.line.me/api/notify",
+                        headers={"Authorization": f"Bearer {admin_token}"},
+                        data={"message": f"\n💳 สลิปใหม่รอยืนยัน\nOrder: {order_id}\nBank: {req.bank_code or 'ไม่ระบุ'}\n🔗 ยืนยัน: POST /order/{order_id}/confirm"},
+                        timeout=8,
+                    )
+            except Exception:
+                pass
+        return {"order_id": order_id, "status": "slip_uploaded", "message": "อัปโหลดสลิปสำเร็จ รอ admin ยืนยัน 1-2 ชั่วโมง"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/order/{order_id}/confirm")
+async def confirm_payment(order_id: str, request: Request):
+    """Admin ยืนยันการชำระเงิน → เปลี่ยน order + user plan เป็น pro/business"""
+    admin_key = request.headers.get("X-Admin-Key", "")
+    if admin_key != os.getenv("ADMIN_API_KEY", ""):
+        raise HTTPException(status_code=403, detail="Admin key required")
+    try:
+        from db import AsyncSessionLocal, Order as OrderModel, PaymentSlip, User
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(OrderModel).where(OrderModel.order_id == order_id))
+            order = res.scalar_one_or_none()
+            if not order:
+                raise HTTPException(status_code=404, detail="Order not found")
+            # Mark slip verified
+            slip_res = await db.execute(
+                select(PaymentSlip).where(PaymentSlip.order_id == order_id)
+            )
+            slip = slip_res.scalar_one_or_none()
+            if slip:
+                slip.verified = True
+            # Upgrade order status
+            order.status = "paid"
+            # Upgrade user plan
+            user_res = await db.execute(select(User).where(User.email == order.email))
+            user = user_res.scalar_one_or_none()
+            if user:
+                user.plan = order.package  # "pro" or "business"
+                logger.info("user_plan_upgraded | email=%s | plan=%s", order.email, order.package)
+            await db.commit()
+        logger.info("payment_confirmed | order=%s", order_id)
+        return {"order_id": order_id, "status": "paid", "user_upgraded": bool(user)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/order/{order_id}/status")
+async def get_order_status(order_id: str):
+    """ลูกค้าตรวจสอบสถานะ order"""
+    try:
+        from db import AsyncSessionLocal, Order as OrderModel
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(OrderModel).where(OrderModel.order_id == order_id))
+            order = res.scalar_one_or_none()
+            if not order:
+                raise HTTPException(status_code=404, detail="Order not found")
+            return {
+                "order_id": order.order_id, "package": order.package,
+                "price": order.price, "status": order.status,
+                "created_at": order.created_at.isoformat(),
+            }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ── ข้อ 4: Bulk generation endpoint ───────────────────────────────────────────
+
+class BulkProductInput(BaseModel):
+    products: List[ProductInput]
+    max_parallel: Optional[int] = 3   # สูงสุด 3 requests พร้อมกัน
+
+@app.post("/generate/bulk")
+async def generate_bulk(req: BulkProductInput, request: Request):
+    """สร้างคอนเทนต์ TikTok หลายสินค้าพร้อมกัน (สูงสุด 10 ชิ้น)"""
+    ip = request.client.host if request.client else "unknown"
+    api_key = request.headers.get("X-API-Key", "")
+    if not api_key:
+        raise HTTPException(status_code=401, detail="Bulk generation ต้องใช้ X-API-Key (plan pro/business)")
+
+    # Verify pro/business plan
+    try:
+        from db import AsyncSessionLocal, User
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(User).where(User.api_key == api_key))
+            user = res.scalar_one_or_none()
+            if not user or not user.is_active:
+                raise HTTPException(status_code=401, detail="API key ไม่ถูกต้อง")
+            if user.plan not in ("pro", "business"):
+                raise HTTPException(status_code=403, detail="Bulk generation สำหรับ Pro/Business เท่านั้น")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    bulk_cap = _limits.get("bulk_max_products", 50)
+    products = req.products[:bulk_cap]
+    max_par = _limits.get("bulk_max_parallel", 10)
+    sem = asyncio.Semaphore(min(req.max_parallel or max_par, max_par))
+
+    async def _gen_one(p: ProductInput, idx: int):
+        async with sem:
+            try:
+                content = await generate_content(p)
+                critique = await critique_content(content)
+                return {
+                    "index": idx,
+                    "product": p.product_name,
+                    "status": "ok",
+                    "script": content.get("script", {}),
+                    "caption": content.get("caption", ""),
+                    "hashtags": content.get("hashtags", []),
+                    "score": critique.get("total_score", 0),
+                }
+            except Exception as e:
+                return {"index": idx, "product": p.product_name, "status": "error", "error": str(e)}
+
+    t_start = time.time()
+    results = await asyncio.gather(*[_gen_one(p, i) for i, p in enumerate(products)])
+    elapsed = round(time.time() - t_start, 1)
+    logger.info("bulk_generate | count=%d | elapsed=%ss | ip=%s", len(products), elapsed, ip)
+    return {
+        "count": len(products),
+        "elapsed_seconds": elapsed,
+        "results": list(results),
+    }
+
+# ── ข้อ 5: Affiliate payout endpoints ─────────────────────────────────────────
+
+class PayoutRequest(BaseModel):
+    bank_name: str         # KBank, SCB, BBL …
+    account_number: str
+    account_name: str
+    amount: Optional[float] = None   # None = request all available
+
+@app.post("/affiliate/{code}/request-payout")
+async def request_affiliate_payout(code: str, req: PayoutRequest):
+    """ตัวแทนขอถอนค่าคอมมิชชั่น → สร้าง payout record รอ admin อนุมัติ"""
+    try:
+        from db import AsyncSessionLocal, Affiliate, Commission
+        from sqlalchemy import func
+        async with AsyncSessionLocal() as db:
+            aff_res = await db.execute(
+                select(Affiliate).where(Affiliate.code == code)
+            )
+            aff = aff_res.scalar_one_or_none()
+            if not aff:
+                raise HTTPException(status_code=404, detail="Affiliate code ไม่พบ")
+
+            # Sum approved commissions minus paid-out payouts
+            earned_res = await db.execute(
+                select(func.sum(Commission.commission_amount)).where(
+                    Commission.affiliate_code == code,
+                    Commission.status == "approved"
+                )
+            )
+            paid_res = await db.execute(
+                select(func.sum(Commission.amount)).where(
+                    Commission.affiliate_code == code,
+                    Commission.status == "paid",
+                    Commission.amount < 0
+                )
+            )
+            earned = float(earned_res.scalar() or 0)
+            paid_out = abs(float(paid_res.scalar() or 0))
+            available = earned - paid_out
+            payout_amount = min(req.amount, available) if req.amount else available
+
+            if payout_amount < 100:
+                raise HTTPException(status_code=400, detail=f"ยอดน้อยกว่าขั้นต่ำ 100 บาท (ยอดคงเหลือ {available:.2f} บาท)")
+
+            # Create payout record as negative-amount Commission entry
+            payout = Commission(
+                affiliate_code=code,
+                order_id=f"PAYOUT-{secrets.token_hex(4).upper()}",
+                package="payout",
+                amount=-payout_amount,
+                commission_rate=0,
+                commission_amount=0,
+                status="payout_pending",
+                note=f"ถอนเงิน → {req.bank_name} {req.account_number} ({req.account_name})",
+            )
+            db.add(payout)
+            await db.commit()
+            await db.refresh(payout)
+
+        # Notify finance team
+        finance_token = os.getenv("LINE_NOTIFY_FINANCE", os.getenv("LINE_MYTHOS_FINANCE", ""))
+        if finance_token:
+            try:
+                async with httpx.AsyncClient() as c:
+                    await c.post(
+                        "https://notify-api.line.me/api/notify",
+                        headers={"Authorization": f"Bearer {finance_token}"},
+                        data={"message": f"\n💸 Affiliate Payout Request\nCode: {code}\nยอด: {payout_amount:.2f} บาท\nธนาคาร: {req.bank_name} {req.account_number}\nชื่อ: {req.account_name}\nยืนยัน: POST /affiliate/{code}/approve-payout/{payout.id}"},
+                        timeout=8,
+                    )
+            except Exception:
+                pass
+
+        logger.info("payout_request | code=%s | amount=%.2f", code, payout_amount)
+        return {
+            "payout_id": payout.id, "code": code,
+            "amount": payout_amount, "bank": req.bank_name,
+            "account": req.account_number, "status": "payout_pending",
+            "message": "คำขอถอนเงินส่งแล้ว Finance team จะโอนภายใน 3 วันทำการ",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/affiliate/{code}/approve-payout/{payout_id}")
+async def approve_affiliate_payout(code: str, payout_id: int, request: Request):
+    """Admin อนุมัติ payout → เปลี่ยน status เป็น paid"""
+    admin_key = request.headers.get("X-Admin-Key", "")
+    if admin_key != os.getenv("ADMIN_API_KEY", ""):
+        raise HTTPException(status_code=403, detail="Admin key required")
+    try:
+        from db import AsyncSessionLocal, Commission
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(Commission).where(Commission.id == payout_id))
+            payout = res.scalar_one_or_none()
+            if not payout:
+                raise HTTPException(status_code=404, detail="Payout not found")
+            payout.status = "paid"
+            await db.commit()
+        logger.info("payout_approved | id=%d | code=%s", payout_id, code)
+        return {"payout_id": payout_id, "status": "paid"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/affiliate/{code}/balance")
+async def get_affiliate_balance(code: str):
+    """ดูยอดคอมมิชชั่นคงเหลือและประวัติ"""
+    try:
+        from db import AsyncSessionLocal, Affiliate, Commission
+        from sqlalchemy import func
+        async with AsyncSessionLocal() as db:
+            aff_res = await db.execute(select(Affiliate).where(Affiliate.code == code))
+            aff = aff_res.scalar_one_or_none()
+            if not aff:
+                raise HTTPException(status_code=404, detail="Affiliate code ไม่พบ")
+
+            earned_res = await db.execute(
+                select(func.sum(Commission.commission_amount)).where(
+                    Commission.affiliate_code == code, Commission.status == "approved"
+                )
+            )
+            paid_out_res = await db.execute(
+                select(func.sum(Commission.amount)).where(
+                    Commission.affiliate_code == code, Commission.amount < 0, Commission.status == "paid"
+                )
+            )
+            earned = float(earned_res.scalar() or 0)
+            paid_out = abs(float(paid_out_res.scalar() or 0))
+            available = earned - paid_out
+
+            history_res = await db.execute(
+                select(Commission).where(Commission.affiliate_code == code)
+                .order_by(Commission.created_at.desc()).limit(20)
+            )
+            history = [
+                {"id": c.id, "order_id": c.order_id, "amount": c.amount,
+                 "status": c.status, "note": c.note or "",
+                 "created_at": c.created_at.isoformat()}
+                for c in history_res.scalars().all()
+            ]
+
+        return {
+            "code": code, "earned_total": round(earned, 2),
+            "paid_out": round(paid_out, 2), "available": round(available, 2),
+            "min_payout": 100, "history": history,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ================== SETUP & ADMIN ENDPOINTS ==================
+
+@app.get("/admin/setup")
+async def get_setup_status():
+    """ตรวจสอบสถานะ integration ทั้งหมด"""
+    from setup_check import run_setup_check
+    return await run_setup_check()
+
+@app.post("/admin/test-line/{department}")
+async def test_line_notify(department: str):
+    """ส่งข้อความทดสอบไป LINE Notify ของแผนก"""
+    from task_router import DEPARTMENTS, send_team_line_notify
+    if department not in DEPARTMENTS:
+        raise HTTPException(status_code=400, detail=f"department must be one of {list(DEPARTMENTS.keys())}")
+    dept = DEPARTMENTS[department]
+    token_env = dept["line_token_env"]
+    token = os.getenv(token_env, "")
+    if not token:
+        return {"status": "not_configured", "env": token_env,
+                "how_to": f"ตั้งค่า {token_env} ใน Railway environment variables"}
+    msg = f"\n✅ ทดสอบ LINE Notify — {dept['label']}\nOpenThai AI Task Router พร้อมใช้งาน!\nเวลา: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+    ok = await send_team_line_notify(department, msg)
+    return {"status": "ok" if ok else "failed", "department": department, "label": dept["label"]}
+
+@app.post("/admin/register-github-webhook")
+async def register_github_webhook():
+    """Auto-register webhook ใน GitHub repo"""
+    token = os.getenv("GITHUB_TOKEN", "")
+    repo = os.getenv("GITHUB_REPO", "")
+    api_url = os.getenv("API_URL", "")
+    secret = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+
+    if not all([token, repo, api_url]):
+        return {
+            "status": "missing_config",
+            "required": {"GITHUB_TOKEN": bool(token), "GITHUB_REPO": bool(repo), "API_URL": bool(api_url)},
+            "how_to": "ตั้งค่า GITHUB_TOKEN (Personal Access Token), GITHUB_REPO (owner/repo), API_URL ใน Railway"
+        }
+    webhook_url = api_url.rstrip("/") + "/webhook/github"
+    payload = {
+        "name": "web",
+        "active": True,
+        "events": ["issues", "issue_comment", "pull_request"],
+        "config": {"url": webhook_url, "content_type": "json", "secret": secret or ""},
+    }
+    async with httpx.AsyncClient() as c:
+        r = await c.post(
+            f"https://api.github.com/repos/{repo}/hooks",
+            json=payload,
+            headers={"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"},
+            timeout=10,
+        )
+    if r.status_code in (201, 422):  # 422 = already exists
+        return {"status": "ok", "webhook_url": webhook_url, "repo": repo, "events": ["issues", "issue_comment", "pull_request"]}
+    return {"status": "error", "github_response": r.status_code, "detail": r.text[:200]}
+
+# ================== TASK ROUTER ENDPOINTS ==================
+
+class ManualTaskRequest(BaseModel):
+    content: str
+    source: str = "manual"
+    sender: Optional[str] = ""
+
+@app.post("/webhook/line")
+async def webhook_line(request: Request):
+    """LINE OA Webhook — รับข้อความจาก LINE Official Account"""
+    body = await request.body()
+    sig = request.headers.get("X-Line-Signature", "")
+    from task_router import verify_line_signature, route_message
+    if not verify_line_signature(body, sig):
+        raise HTTPException(status_code=400, detail="Invalid LINE signature")
+    try:
+        payload = json.loads(body)
+        results = []
+        for event in payload.get("events", []):
+            if event.get("type") != "message":
+                continue
+            msg = event.get("message", {})
+            if msg.get("type") not in ("text",):
+                continue
+            content = msg.get("text", "")
+            source_obj = event.get("source", {})
+            sender = source_obj.get("userId", "")
+            ref = msg.get("id", "")
+            result = await route_message("line", content, sender, ref)
+            results.append(result)
+        return {"status": "ok", "processed": len(results)}
+    except Exception as e:
+        logger.error("LINE webhook error: %s", e)
+        return {"status": "error", "detail": str(e)}
+
+@app.post("/webhook/github")
+async def webhook_github(request: Request):
+    """GitHub Webhook — รับ issues, PR, comments"""
+    body = await request.body()
+    sig = request.headers.get("X-Hub-Signature-256", "")
+    event_type = request.headers.get("X-GitHub-Event", "")
+    from task_router import verify_github_signature, parse_github_event, route_message
+    if not verify_github_signature(body, sig):
+        raise HTTPException(status_code=400, detail="Invalid GitHub signature")
+    try:
+        payload = json.loads(body)
+        parsed = parse_github_event(event_type, payload)
+        if not parsed:
+            return {"status": "skipped", "reason": "event not actionable"}
+        result = await route_message("github", parsed["content"], parsed["sender"], event_type)
+        return {"status": "ok", "task": result}
+    except Exception as e:
+        logger.error("GitHub webhook error: %s", e)
+        return {"status": "error", "detail": str(e)}
+
+@app.post("/webhook/form")
+async def webhook_form(request: Request):
+    """Web Form Webhook — รับ waitlist, checkout, affiliate submissions"""
+    try:
+        payload = await request.json()
+        form_type = payload.get("type", "form")
+        name = payload.get("name", "")
+        email = payload.get("email", "")
+        content_parts = [f"[Form: {form_type}]"]
+        for k, v in payload.items():
+            if k not in ("type",) and v:
+                content_parts.append(f"{k}: {v}")
+        content = "\n".join(content_parts)
+        sender = f"{name} <{email}>" if name or email else "anonymous"
+        from task_router import route_message
+        result = await route_message("form", content, sender, form_type)
+        return {"status": "ok", "task": result}
+    except Exception as e:
+        logger.error("Form webhook error: %s", e)
+        return {"status": "error", "detail": str(e)}
+
+@app.post("/webhook/email")
+async def webhook_email(request: Request):
+    """Email Webhook — สำหรับ email services เช่น SendGrid Inbound Parse"""
+    try:
+        # Support both JSON and form-data (SendGrid format)
+        ct = request.headers.get("content-type", "")
+        if "application/json" in ct:
+            payload = await request.json()
+            subject = payload.get("subject", "")
+            body_text = payload.get("text", payload.get("body", ""))
+            sender = payload.get("from", payload.get("sender", ""))
+        else:
+            form = await request.form()
+            subject = form.get("subject", "")
+            body_text = form.get("text", form.get("body", ""))
+            sender = form.get("from", "")
+        content = f"Subject: {subject}\n\n{body_text}"
+        from task_router import route_message
+        result = await route_message("email", content, sender, subject[:50])
+        return {"status": "ok", "task": result}
+    except Exception as e:
+        logger.error("Email webhook error: %s", e)
+        return {"status": "error", "detail": str(e)}
+
+@app.post("/tasks/manual")
+async def create_manual_task(req: ManualTaskRequest):
+    """สร้าง task ด้วยตนเอง (test / manual input)"""
+    from task_router import route_message
+    result = await route_message(req.source, req.content, req.sender or "manual")
+    return result
+
+@app.get("/tasks")
+async def get_tasks(
+    department: Optional[str] = None,
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    limit: int = 50,
+    page: int = 1,
+):
+    """ดู task ทั้งหมด พร้อม filter"""
+    try:
+        from db import AsyncSessionLocal, AutoTask
+        from sqlalchemy import select, desc
+        async with AsyncSessionLocal() as db:
+            q = select(AutoTask).order_by(desc(AutoTask.created_at))
+            if department:
+                q = q.where(AutoTask.department == department)
+            if status:
+                q = q.where(AutoTask.status == status)
+            if priority:
+                q = q.where(AutoTask.priority == priority)
+            q = q.offset((page - 1) * limit).limit(limit)
+            res = await db.execute(q)
+            tasks = res.scalars().all()
+        return {
+            "tasks": [
+                {
+                    "task_id": t.task_id, "source": t.source, "sender": t.sender,
+                    "department": t.department, "priority": t.priority,
+                    "summary": t.summary, "action": t.action, "status": t.status,
+                    "created_at": t.created_at.isoformat(),
+                }
+                for t in tasks
+            ],
+            "page": page, "count": len(tasks),
+        }
+    except Exception as e:
+        return {"tasks": [], "error": str(e)}
+
+@app.patch("/tasks/{task_id}")
+async def update_task_status(task_id: str, request: Request):
+    """อัปเดตสถานะ task: open → in_progress → done"""
+    try:
+        body = await request.json()
+        new_status = body.get("status", "")
+        if new_status not in ("open", "in_progress", "done"):
+            raise HTTPException(status_code=400, detail="status must be open|in_progress|done")
+        from db import AsyncSessionLocal, AutoTask
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(AutoTask).where(AutoTask.task_id == task_id))
+            task = res.scalar_one_or_none()
+            if not task:
+                raise HTTPException(status_code=404, detail="Task not found")
+            task.status = new_status
+            task.updated_at = datetime.utcnow()
+            await db.commit()
+        return {"task_id": task_id, "status": new_status}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/tasks/departments")
+async def get_department_summary():
+    """สถิติ task แต่ละแผนก"""
+    try:
+        from db import AsyncSessionLocal, AutoTask
+        from sqlalchemy import select, func
+        from task_router import DEPARTMENTS
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(
+                select(AutoTask.department, AutoTask.status, func.count().label("cnt"))
+                .group_by(AutoTask.department, AutoTask.status)
+            )
+            rows = res.all()
+        summary = {}
+        for dept_id, info in DEPARTMENTS.items():
+            summary[dept_id] = {"label": info["label"], "emoji": info["emoji"],
+                                "open": 0, "in_progress": 0, "done": 0}
+        for dept, status, cnt in rows:
+            if dept in summary and status in summary[dept]:
+                summary[dept][status] = cnt
+        return summary
+    except Exception as e:
+        return {"error": str(e)}
+
+# ================== NEWS ENDPOINTS ==================
+
+@app.get("/news")
+async def get_news(
+    source: Optional[str] = None,
+    priority: Optional[int] = None,
+    limit: int = 30,
+    page: int = 1,
+):
+    """ดึงข่าว AI ล่าสุดจาก database"""
+    try:
+        from db import AsyncSessionLocal, NewsArticle
+        from sqlalchemy import select, desc
+        async with AsyncSessionLocal() as db:
+            q = select(NewsArticle).order_by(desc(NewsArticle.priority), desc(NewsArticle.published_at))
+            if source:
+                q = q.where(NewsArticle.source == source)
+            if priority is not None:
+                q = q.where(NewsArticle.priority >= priority)
+            q = q.offset((page - 1) * limit).limit(limit)
+            res = await db.execute(q)
+            articles = res.scalars().all()
+        return {
+            "articles": [
+                {
+                    "id": a.id, "source": a.source, "label": a.source_label,
+                    "emoji": a.source_emoji, "title": a.title, "url": a.url,
+                    "summary": a.summary[:200] if a.summary else "",
+                    "published_at": a.published_at.isoformat(),
+                    "priority": a.priority,
+                }
+                for a in articles
+            ],
+            "page": page,
+            "count": len(articles),
+        }
+    except Exception as e:
+        return {"articles": [], "error": str(e), "page": page, "count": 0}
+
+
+@app.post("/news/fetch")
+async def trigger_news_fetch():
+    """Trigger manual news fetch (admin use)"""
+    try:
+        from news_monitor import run_news_fetch
+        result = await run_news_fetch()
+        return {"status": "ok", **result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/news/sources")
+async def get_news_sources():
+    """รายชื่อแหล่งข่าวทั้งหมด"""
+    from news_monitor import FEEDS
+    return [{"source": f["source"], "label": f["label"], "emoji": f["emoji"], "priority": f["priority"]} for f in FEEDS]
+
+
+# ================== MYTHOS COMMAND ENDPOINTS ==================
+
+class MythosCommandRequest(BaseModel):
+    directive: str
+    context: Optional[str] = ""
+    issued_by: Optional[str] = "Mythos"
+
+class ExecutiveTaskUpdate(BaseModel):
+    status: str  # assigned | in_progress | done | blocked | cancelled
+    progress_note: Optional[str] = ""
+
+@app.post("/mythos/command")
+async def mythos_issue_command(req: MythosCommandRequest):
+    """Mythos ออก directive → AI แตกงาน → มอบหมาย C-Suite/Regional/Dept → แจ้ง LINE"""
+    from mythos_command import issue_directive
+    result = await issue_directive(req.directive, req.context or "", req.issued_by or "Mythos")
+    return result
+
+@app.get("/mythos/directives")
+async def mythos_get_directives(
+    status: Optional[str] = None,
+    urgency: Optional[str] = None,
+    limit: int = 20,
+):
+    """รายการ directive ทั้งหมดของ Mythos"""
+    try:
+        from db import AsyncSessionLocal, MythosDirective, ExecutiveTask
+        from sqlalchemy import select, desc
+        async with AsyncSessionLocal() as db:
+            q = select(MythosDirective).order_by(desc(MythosDirective.created_at))
+            if status:
+                q = q.where(MythosDirective.status == status)
+            if urgency:
+                q = q.where(MythosDirective.urgency == urgency)
+            q = q.limit(limit)
+            res = await db.execute(q)
+            directives = res.scalars().all()
+
+            all_ids = [d.directive_id for d in directives]
+            tasks_by_dir: dict = {}
+            if all_ids:
+                tq = select(ExecutiveTask).where(ExecutiveTask.directive_id.in_(all_ids))
+                tr = await db.execute(tq)
+                for t in tr.scalars().all():
+                    tasks_by_dir.setdefault(t.directive_id, []).append({
+                        "assignee": t.assignee, "assignee_title": t.assignee_title,
+                        "title": t.title, "status": t.status,
+                        "deadline": t.deadline.isoformat(),
+                    })
+
+        return {"directives": [
+            {
+                "directive_id": d.directive_id, "summary": d.summary,
+                "strategic_intent": d.strategic_intent, "urgency": d.urgency,
+                "status": d.status, "task_count": d.task_count,
+                "success_criteria": d.success_criteria,
+                "review_date": d.review_date.isoformat(),
+                "created_at": d.created_at.isoformat(),
+                "tasks": tasks_by_dir.get(d.directive_id, []),
+            }
+            for d in directives
+        ], "count": len(directives)}
+    except Exception as e:
+        return {"directives": [], "error": str(e)}
+
+@app.get("/mythos/dashboard")
+async def mythos_dashboard():
+    """Executive dashboard — stats ทั้งหมดสำหรับ Mythos"""
+    try:
+        from db import AsyncSessionLocal, MythosDirective, ExecutiveTask
+        from sqlalchemy import select, func, desc
+        from mythos_command import ORG
+
+        async with AsyncSessionLocal() as db:
+            # Directive counts by urgency + status
+            dr = await db.execute(
+                select(MythosDirective.urgency, MythosDirective.status, func.count().label("c"))
+                .group_by(MythosDirective.urgency, MythosDirective.status)
+            )
+            dir_stats: dict = {}
+            for urgency, status, cnt in dr.all():
+                dir_stats.setdefault(urgency, {})[status] = cnt
+
+            # Task stats by assignee
+            tr = await db.execute(
+                select(ExecutiveTask.assignee, ExecutiveTask.status, func.count().label("c"))
+                .group_by(ExecutiveTask.assignee, ExecutiveTask.status)
+            )
+            exec_stats: dict = {}
+            for assignee, status, cnt in tr.all():
+                exec_stats.setdefault(assignee, {})[status] = cnt
+
+            # Overdue
+            odr = await db.execute(
+                select(func.count()).where(
+                    ExecutiveTask.deadline < datetime.utcnow(),
+                    ExecutiveTask.status.notin_(["done", "cancelled"])
+                )
+            )
+            overdue_count = odr.scalar() or 0
+
+            # Recent directives
+            recent = await db.execute(
+                select(MythosDirective).order_by(desc(MythosDirective.created_at)).limit(5)
+            )
+            recent_list = [
+                {"directive_id": d.directive_id, "summary": d.summary,
+                 "urgency": d.urgency, "status": d.status,
+                 "created_at": d.created_at.isoformat()}
+                for d in recent.scalars().all()
+            ]
+
+        # Build exec roster with task counts
+        exec_roster = {}
+        for exec_id, info in ORG.items():
+            stats = exec_stats.get(exec_id, {})
+            total = sum(stats.values())
+            done = stats.get("done", 0)
+            exec_roster[exec_id] = {
+                "title": info["title"], "emoji": info["emoji"],
+                "tier": info["tier"], "name_th": info.get("name_th", ""),
+                "tasks_total": total, "tasks_done": done,
+                "tasks_overdue": 0,
+                "completion_pct": int(done / total * 100) if total else 0,
+            }
+
+        return {
+            "org": exec_roster,
+            "directive_stats": dir_stats,
+            "overdue_tasks": overdue_count,
+            "recent_directives": recent_list,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    except Exception as e:
+        from mythos_command import ORG
+        return {
+            "org": {k: {"title": v["title"], "emoji": v["emoji"], "tier": v["tier"],
+                        "tasks_total": 0, "tasks_done": 0, "completion_pct": 0}
+                    for k, v in ORG.items()},
+            "directive_stats": {}, "overdue_tasks": 0,
+            "recent_directives": [], "error": str(e),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+@app.patch("/mythos/task/{task_id}")
+async def mythos_update_task(task_id: int, req: ExecutiveTaskUpdate):
+    """Executive อัปเดตสถานะงาน"""
+    valid = {"assigned", "in_progress", "done", "blocked", "cancelled"}
+    if req.status not in valid:
+        raise HTTPException(status_code=400, detail=f"status must be one of {valid}")
+    try:
+        from db import AsyncSessionLocal, ExecutiveTask
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(select(ExecutiveTask).where(ExecutiveTask.id == task_id))
+            task = res.scalar_one_or_none()
+            if not task:
+                raise HTTPException(status_code=404, detail="Task not found")
+            task.status = req.status
+            task.updated_at = datetime.utcnow()
+            if req.progress_note:
+                task.progress_note = req.progress_note
+            await db.commit()
+        return {"id": task_id, "status": req.status, "updated": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/mythos/brief")
+async def mythos_trigger_brief():
+    """Trigger Daily Brief ด้วยตนเอง (ปกติรันอัตโนมัติ 08:00 BKK)"""
+    from mythos_command import generate_daily_brief
+    result = await generate_daily_brief()
+    return result
+
+@app.get("/mythos/org")
+async def mythos_get_org():
+    """ดูโครงสร้างองค์กรทั้งหมด"""
+    from mythos_command import ORG, TIERS
+    return {"org": ORG, "tiers": TIERS}
+
+# ================== MYTHOS GOAL TRACKER ENDPOINTS ==================
+
+class GoalCreateRequest(BaseModel):
+    objective: str
+    description: Optional[str] = ""
+    owner: str                           # cto, cmo, th_director …
+    period: Optional[str] = None         # 2026-Q2  (auto-detect if omitted)
+    category: Optional[str] = "growth"  # growth, ops, product, people, financial
+    priority: Optional[str] = "high"
+
+class KeyResultRequest(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    metric_type: Optional[str] = "number"  # number, percentage, boolean, currency
+    start_value: Optional[float] = 0.0
+    target_value: float
+    unit: Optional[str] = ""
+
+class CheckInRequest(BaseModel):
+    value: float
+    note: Optional[str] = ""
+    checked_by: Optional[str] = "Mythos"
+
+@app.post("/mythos/goals")
+async def create_goal(req: GoalCreateRequest):
+    """Mythos สร้าง Objective ใหม่"""
+    from db import AsyncSessionLocal, MythosGoal
+    from mythos_command import ORG
+    from mythos_goals import current_quarter
+    exec_info = ORG.get(req.owner, {})
+    period = req.period or current_quarter()
+    async with AsyncSessionLocal() as db:
+        goal = MythosGoal(
+            objective=req.objective, description=req.description or "",
+            owner=req.owner, owner_title=exec_info.get("title", req.owner),
+            period=period, category=req.category or "growth",
+            priority=req.priority or "high", status="active", health="not_started",
+        )
+        db.add(goal)
+        await db.commit()
+        await db.refresh(goal)
+    return {"id": goal.id, "objective": goal.objective, "owner": goal.owner,
+            "owner_title": goal.owner_title, "period": period, "status": "active"}
+
+@app.post("/mythos/goals/{goal_id}/kr")
+async def add_key_result(goal_id: int, req: KeyResultRequest):
+    """เพิ่ม Key Result เข้า Objective"""
+    from db import AsyncSessionLocal, MythosKeyResult, MythosGoal
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(MythosGoal).where(MythosGoal.id == goal_id))
+        if not res.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Goal not found")
+        kr = MythosKeyResult(
+            goal_id=goal_id, title=req.title, description=req.description or "",
+            metric_type=req.metric_type or "number",
+            start_value=req.start_value or 0.0, current_value=req.start_value or 0.0,
+            target_value=req.target_value, unit=req.unit or "",
+        )
+        db.add(kr)
+        await db.commit()
+        await db.refresh(kr)
+    return {"id": kr.id, "goal_id": goal_id, "title": kr.title,
+            "target_value": kr.target_value, "unit": kr.unit}
+
+@app.post("/mythos/goals/{goal_id}/kr/{kr_id}/checkin")
+async def checkin_kr(goal_id: int, kr_id: int, req: CheckInRequest):
+    """อัปเดตค่า Key Result (check-in)"""
+    from db import AsyncSessionLocal, MythosKeyResult, MythosCheckIn
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(MythosKeyResult).where(MythosKeyResult.id == kr_id, MythosKeyResult.goal_id == goal_id))
+        kr = res.scalar_one_or_none()
+        if not kr:
+            raise HTTPException(status_code=404, detail="Key Result not found")
+        kr.current_value = req.value
+        kr.last_updated = datetime.utcnow()
+        kr.updated_by = req.checked_by or "Mythos"
+        checkin = MythosCheckIn(
+            goal_id=goal_id, kr_id=kr_id, value=req.value,
+            note=req.note or "", checked_by=req.checked_by or "Mythos",
+        )
+        db.add(checkin)
+        await db.commit()
+    pct = min(100.0, req.value / kr.target_value * 100) if kr.target_value else 0
+    return {"kr_id": kr_id, "value": req.value, "target": kr.target_value,
+            "progress_pct": round(pct, 1), "unit": kr.unit}
+
+@app.get("/mythos/goals")
+async def list_goals(
+    period: Optional[str] = None,
+    owner: Optional[str] = None,
+    health: Optional[str] = None,
+    status: Optional[str] = "active",
+):
+    """รายการ Objectives ทั้งหมด พร้อม Key Results"""
+    try:
+        from db import AsyncSessionLocal, MythosGoal, MythosKeyResult
+        from sqlalchemy import select, desc
+        import json as _json
+        async with AsyncSessionLocal() as db:
+            q = select(MythosGoal).order_by(desc(MythosGoal.created_at))
+            if status:
+                q = q.where(MythosGoal.status == status)
+            if period:
+                q = q.where(MythosGoal.period == period)
+            if owner:
+                q = q.where(MythosGoal.owner == owner)
+            if health:
+                q = q.where(MythosGoal.health == health)
+            res = await db.execute(q)
+            goals = res.scalars().all()
+
+            result = []
+            for g in goals:
+                kr_res = await db.execute(
+                    select(MythosKeyResult).where(MythosKeyResult.goal_id == g.id)
+                )
+                krs = kr_res.scalars().all()
+                result.append({
+                    "id": g.id, "objective": g.objective, "description": g.description,
+                    "owner": g.owner, "owner_title": g.owner_title,
+                    "period": g.period, "category": g.category, "priority": g.priority,
+                    "status": g.status, "health": g.health, "health_reason": g.health_reason,
+                    "progress_pct": round(g.progress_pct, 1),
+                    "last_checked": g.last_checked.isoformat() if g.last_checked else None,
+                    "created_at": g.created_at.isoformat(),
+                    "key_results": [
+                        {
+                            "id": kr.id, "title": kr.title, "metric_type": kr.metric_type,
+                            "current_value": kr.current_value, "target_value": kr.target_value,
+                            "unit": kr.unit,
+                            "progress_pct": round(
+                                min(100.0, kr.current_value / kr.target_value * 100)
+                                if kr.target_value else 0, 1
+                            ),
+                            "last_updated": kr.last_updated.isoformat(),
+                        }
+                        for kr in krs
+                    ],
+                })
+        return {"goals": result, "count": len(result)}
+    except Exception as e:
+        return {"goals": [], "error": str(e)}
+
+@app.get("/mythos/goals/{goal_id}/analysis")
+async def get_goal_analysis(goal_id: int):
+    """ขอ AI วิเคราะห์สุขภาพเป้าหมายล่าสุด"""
+    from db import AsyncSessionLocal, MythosGoal, MythosKeyResult
+    from sqlalchemy import select
+    from mythos_goals import analyze_goal_health, pace_expected, quarter_dates
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(MythosGoal).where(MythosGoal.id == goal_id))
+        goal = res.scalar_one_or_none()
+        if not goal:
+            raise HTTPException(status_code=404, detail="Goal not found")
+        kr_res = await db.execute(select(MythosKeyResult).where(MythosKeyResult.goal_id == goal_id))
+        krs = kr_res.scalars().all()
+    start, end = quarter_dates(goal.period)
+    pace = pace_expected(start, end)
+    kr_dicts = [
+        {"title": kr.title, "current_value": kr.current_value,
+         "target_value": kr.target_value, "unit": kr.unit,
+         "progress_pct": min(100.0, kr.current_value / kr.target_value * 100) if kr.target_value else 0}
+        for kr in krs
+    ]
+    analysis = await analyze_goal_health(goal.objective, kr_dicts, goal.owner, pace)
+    return {"goal_id": goal_id, "objective": goal.objective, "pace_pct": round(pace * 100, 1),
+            "analysis": analysis}
+
+@app.post("/mythos/goals/track")
+async def trigger_goal_tracker():
+    """Trigger goal tracker ด้วยตนเอง"""
+    from mythos_goals import run_goal_tracker
+    result = await run_goal_tracker()
+    return result
+
+@app.post("/mythos/goals/weekly-report")
+async def trigger_weekly_report():
+    """Trigger weekly OKR report ด้วยตนเอง"""
+    from mythos_goals import generate_weekly_goal_report
+    result = await generate_weekly_goal_report()
+    return result
+
+@app.delete("/mythos/goals/{goal_id}")
+async def delete_goal(goal_id: int):
+    """ยกเลิก / ลบ Objective"""
+    from db import AsyncSessionLocal, MythosGoal
+    from sqlalchemy import select
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(select(MythosGoal).where(MythosGoal.id == goal_id))
+        goal = res.scalar_one_or_none()
+        if not goal:
+            raise HTTPException(status_code=404, detail="Goal not found")
+        goal.status = "cancelled"
+        goal.updated_at = datetime.utcnow()
+        await db.commit()
+    return {"id": goal_id, "status": "cancelled"}
+
+# ================== LIMIT CONTROL — Admin endpoints ==================
+
+from auth import require_admin as _require_admin
+
+@app.get("/admin/limits")
+async def get_limits(key: str = Depends(_require_admin)):
+    """ดู limits ทั้งหมดพร้อม source (default/env/override)"""
+    return _limits.all_limits()
+
+class LimitUpdateRequest(BaseModel):
+    value: int   # -1 = unlimited
+
+@app.patch("/admin/limits/{name}")
+async def update_limit(name: str, req: LimitUpdateRequest, key: str = Depends(_require_admin)):
+    """อัปเดต limit แบบ real-time — persist ข้าม restart ผ่าน DB"""
+    _limits.set_override(name, req.value)
+    await _limits.save_db_override(name, req.value)
+    return {"name": name, "value": req.value, "status": "updated"}
+
+@app.delete("/admin/limits/{name}")
+async def reset_limit(name: str, key: str = Depends(_require_admin)):
+    """รีเซต limit กลับค่า default"""
+    _limits.remove_override(name)
+    try:
+        from db import AsyncSessionLocal, SystemConfig
+        from sqlalchemy import select, delete
+        async with AsyncSessionLocal() as db:
+            await db.execute(delete(SystemConfig).where(SystemConfig.key == f"limit.{name}"))
+            await db.commit()
+    except Exception:
+        pass
+    return {"name": name, "status": "reset_to_default", "default": _limits.get(name)}
+
+@app.post("/admin/limits/unlock-all")
+async def unlock_all_limits(key: str = Depends(_require_admin)):
+    """ปลดลิมิตทุกอย่าง — สิทธิ์เต็ม 100%"""
+    unlocks = {
+        "free_ip_daily":         -1,
+        "plan_free_daily":       -1,
+        "plan_pro_daily":        -1,
+        "plan_business_daily":   -1,
+        "plan_enterprise_daily": -1,
+        "bulk_max_products":     200,
+        "bulk_max_parallel":     20,
+        "claude_max_tokens":     8096,
+        "claude_max_tokens_critic":    2000,
+        "claude_max_tokens_mythos":    8096,
+        "claude_max_tokens_goal":      2000,
+        "claude_max_iterations":       5,
+        "timeout_news_feed":     60,
+        "timeout_line_notify":   30,
+        "timeout_claude":        180,
+        "timeout_payment":       30,
+    }
+    for name, value in unlocks.items():
+        _limits.set_override(name, value)
+        await _limits.save_db_override(name, value)
+    return {"status": "all_limits_unlocked", "applied": unlocks}
+
+# ================== TOKEN COUNTER ==================
+
+@app.get("/tokens/today")
+async def tokens_today():
+    """สรุป token usage + cost วันนี้"""
+    from token_counter import get_daily_summary
+    return await get_daily_summary()
+
+@app.get("/tokens/daily/{date_str}")
+async def tokens_by_date(date_str: str):
+    """สรุป token usage วันที่ระบุ (YYYY-MM-DD)"""
+    from token_counter import get_daily_summary
+    return await get_daily_summary(date_str)
+
+@app.get("/tokens/monthly/{year}/{month}")
+async def tokens_monthly(year: int, month: int):
+    """สรุป token usage รายเดือน"""
+    from token_counter import get_monthly_summary
+    return await get_monthly_summary(year, month)
+
+@app.get("/tokens/history")
+async def tokens_history(limit: int = 50):
+    """ประวัติ token usage ล่าสุด"""
+    from db import AsyncSessionLocal, TokenUsage
+    from sqlalchemy import select, desc
+    async with AsyncSessionLocal() as db:
+        res = await db.execute(
+            select(TokenUsage).order_by(desc(TokenUsage.created_at)).limit(limit)
+        )
+        rows = res.scalars().all()
+    return [
+        {
+            "id": r.id,
+            "call_type": r.call_type,
+            "model": r.model,
+            "input_tokens": r.input_tokens,
+            "output_tokens": r.output_tokens,
+            "total_tokens": r.total_tokens,
+            "cost_usd": round(r.cost_usd, 6),
+            "created_at": r.created_at.isoformat(),
+        }
+        for r in rows
+    ]
+
+# ================== MASTER ORCHESTRATOR (autorun) ==================
+
+@app.post("/system/run-all")
+async def system_run_all(background_tasks: BackgroundTasks, request: Request):
+    """เริ่มทุกระบบพร้อมกัน — DB, News, Goals, Tests"""
+    from autorun import run_all_systems
+    base_url = str(request.base_url).rstrip("/")
+    background_tasks.add_task(run_all_systems, base_url)
+    return {"status": "started", "message": "Autorun initiated. Check /system/status or /system/logs for results."}
+
+@app.get("/system/status")
+async def system_status():
+    """สถานะ real-time ทุกโปรแกรม"""
+    from autorun import get_system_status
+    return get_system_status()
+
+@app.post("/system/test-all")
+async def system_test_all(request: Request):
+    """รัน endpoint test suite ทั้งหมด"""
+    from autorun import run_endpoint_tests, run_generate_test
+    base_url = str(request.base_url).rstrip("/")
+    ep = await run_endpoint_tests(base_url)
+    gen = await run_generate_test(base_url)
+    return {"endpoint_tests": ep, "generate_test": gen}
+
+@app.post("/system/restart/{job_id}")
+async def system_restart_job(job_id: str, request: Request):
+    """Restart job เฉพาะตัว — news_monitor, goal_tracker, mythos_daily_brief, db_init"""
+    from autorun import restart_job
+    base_url = str(request.base_url).rstrip("/")
+    return await restart_job(job_id, base_url)
+
+@app.get("/system/logs")
+async def system_logs(limit: int = 100):
+    """ดู orchestrator logs ล่าสุด"""
+    from autorun import get_logs
+    return {"logs": get_logs(limit)}
 
 # ================== RUN SERVER ==================
 
