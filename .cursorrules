@@ -1,0 +1,76 @@
+# OpenThai.ai — Cursor AI Rules v2.0
+# ปรัชญา: AI-Augmented Network-Hybrid + Non-MLM · ไร้พรมแดน ทั่วโลก
+
+## โปรเจกต์
+- Platform: OpenThai.ai — AI Commerce สำหรับตลาดไทย จีน อาเซียน
+- Stack: FastAPI (Python) + React/Vite (Frontend) + Claude API (Anthropic)
+- Deploy: Vercel (Frontend) + Railway (Backend)
+- ภาษา: ไตรภาษา — ไทย, จีน (Traditional/Simplified), อังกฤษ
+
+## กฎหลักที่ต้องปฏิบัติทุกครั้ง
+
+### 1. Non-MLM Compliance (ห้ามละเมิด)
+- ห้ามสร้าง Multi-level commission ที่เกิน 2 ชั้น
+- ทุก Payout ต้องผ่าน check_non_mlm_compliance() ก่อนเสมอ
+- Affiliate commission ต้องอิงจาก direct sale เท่านั้น
+
+### 2. ความปลอดภัย
+- ไม่ hardcode API Keys, Tokens, หรือ Secrets ในโค้ด
+- ใช้ os.getenv() / process.env เสมอ
+- ทุก API endpoint ต้องมี Rate Limiting
+- Validate input ทุกตัวก่อน process
+
+### 3. Backend (Python/FastAPI)
+- ใช้ async/await เสมอ — ไม่ใช้ sync functions ใน async context
+- Type hints ทุก function parameter และ return type
+- ใช้ Pydantic models สำหรับ request/response validation
+- Error handling ด้วย HTTPException + logging
+
+### 4. Frontend (React/Vite)
+- Component ทุกตัวต้องรองรับ 3 ภาษา (ไทย/จีน/EN) ผ่าน i18n
+- Mobile-first design — test ที่ 375px ก่อนเสมอ
+- ใช้ CSS variables สำหรับสี — ห้าม hardcode hex
+- Lazy load components ที่ไม่จำเป็นต้องโหลดทันที
+
+### 5. AI Integration (Claude API)
+- Model: claude-sonnet-4-6 (default) / claude-haiku-4-5-20251001 (สำหรับงานเร็ว)
+- ทุก prompt ต้องมี system message กำกับภาษาและบริบท
+- Cache prompt ที่ใช้ซ้ำด้วย cache_control: {"type": "ephemeral"}
+- ไม่ส่ง PII (ชื่อ เบอร์ บัตรประชาชน) เข้า Claude โดยไม่ผ่าน anonymize
+
+### 6. Database
+- ใช้ async SQLAlchemy เสมอ
+- Migration ทุกครั้งก่อน deploy
+- Index ทุก column ที่ใช้ใน WHERE/JOIN
+
+### 7. Naming Convention
+- Python: snake_case functions, PascalCase classes
+- TypeScript/JS: camelCase functions, PascalCase components
+- Files: kebab-case
+- API endpoints: /api/v1/{resource}/{action}
+
+### 8. Git
+- Branch: feature/xxx, fix/xxx, staging, main
+- Commit: [Guild] type: description (เช่น [DevOps] feat: add staging workflow)
+- ห้าม push ตรงไป main — ต้องผ่าน staging ก่อน
+
+## โครงสร้างโปรเจกต์
+```
+/backend     — FastAPI + Python + Claude API
+/frontend    — React + Vite + TypeScript
+/landing     — Static HTML landing page
+/.github     — GitHub Actions workflows
+/docs        — Documentation
+```
+
+## Guilds และผู้รับผิดชอบ
+- AI/ML: Model training, RAG, Qdrant
+- Frontend: UI/UX, React components, i18n
+- Backend: FastAPI, Database, Auth
+- DevOps: CI/CD, Railway, Vercel, monitoring
+- Security: Zero Trust, audit logs
+- Legal: Non-MLM compliance, PDPA
+- Blockchain: OTAI token, smart contracts
+- Growth: Affiliate Hub, analytics
+- Content: Multilingual content, localization
+- Data: Pipelines, dashboards, reporting
