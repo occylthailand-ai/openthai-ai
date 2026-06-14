@@ -1,0 +1,118 @@
+﻿# ~/.hermes/config.yaml — Openthai.ai Integration Patch
+# Copy ส่วนนี้ต่อท้าย config.yaml ที่มีอยู่แล้ว
+# หรือ merge ด้วย: hermes config import ./config/hermes_openthai_config.yaml
+
+# ============================
+# LLM Provider — Anthropic Claude
+# ============================
+llm:
+  provider: anthropic
+  model: claude-sonnet-4-20250514   # ใช้ Sonnet 4 สำหรับ script generation
+  temperature: 0.7
+  max_tokens: 2000
+  system_prompt_append: |
+    คุณเป็น AI assistant ของ Openthai.ai — แพลตฟอร์มสร้าง TikTok script สำหรับผู้ค้าไทย
+    เชี่ยวชาญด้าน: สินค้า OTOP, สินค้าไทย-จีน, การตลาดดิจิทัล
+    ภาษาหลัก: ภาษาไทย (ตอบไทยเว้นแต่ถูกถามเป็นภาษาอื่น)
+
+# ============================
+# Gateway — OpenAI-Compatible Server
+# (ให้ OpenThai backend เรียกได้)
+# ============================
+gateway:
+  openai_server:
+    enabled: true
+    host: "0.0.0.0"
+    port: 8642
+    api_key: "${HERMES_GATEWAY_KEY}"  # ตั้งใน ~/.hermes/.env
+
+# ============================
+# Messaging Channels
+# ============================
+messaging:
+  telegram:
+    enabled: true
+    token: "${TELEGRAM_BOT_TOKEN}"
+    # Bot commands
+    commands:
+      - command: "script"
+        description: "สร้าง TikTok script — /script [ชื่อสินค้า]"
+      - command: "batch"
+        description: "สร้าง script หลายชิ้น"
+      - command: "tips"
+        description: "เคล็ดลับ TikTok วันนี้"
+    # Custom welcome message
+    welcome_message: |
+      สวัสดีครับ! 🇹🇭 ผมคือ Openthai.ai Bot
+      ช่วยสร้าง TikTok Script สำหรับสินค้าของคุณ
+
+      📝 วิธีใช้:
+      /script [ชื่อสินค้า] — สร้าง script ทันที
+      ตัวอย่าง: /script สบู่มะขามสด ราคา 150 บาท
+
+  line:
+    enabled: false  # เปิดเมื่อได้ LINE Messaging API key
+    channel_access_token: "${LINE_CHANNEL_ACCESS_TOKEN}"
+    channel_secret: "${LINE_CHANNEL_SECRET}"
+
+# ============================
+# Memory — จดจำ user preferences
+# ============================
+memory:
+  enabled: true
+  # จดจำข้อมูลต่อไปนี้จากการสนทนา
+  auto_extract:
+    - "ประเภทสินค้าที่ขาย"
+    - "กลุ่มลูกค้าหลัก"
+    - "ช่องทางการขาย"
+    - "ราคาช่วง"
+    - "สไตล์การเขียน script ที่ชอบ"
+  retention_days: 365
+
+# ============================
+# Cron Jobs — Auto Content Generation
+# ============================
+cron:
+  enabled: true
+  jobs:
+    - name: "daily_trending_hooks"
+      schedule: "0 8 * * *"  # ทุกวัน 8:00 น.
+      task: |
+        ค้นหา trending sounds และ hooks บน TikTok ไทยวันนี้
+        สรุปเป็นรายงาน 5 hook ที่น่าใช้
+        ส่งรายงานไปยัง Telegram
+      notify: telegram
+
+    - name: "weekly_script_tips"
+      schedule: "0 9 * * 1"  # ทุกวันจันทร์ 9:00 น.
+      task: |
+        สร้างเคล็ดลับ TikTok content 5 ข้อสำหรับสัปดาห์นี้
+        เน้นเทรนด์สินค้าไทยและ OTOP
+        ส่งไปยัง Telegram
+
+# ============================
+# Tools — เปิดใช้งาน
+# ============================
+tools:
+  web_search: true          # ค้นหา trending TikTok hooks
+  terminal: true            # รัน script generation
+  file_system: true         # อ่าน/เขียน product database
+  memory: true              # จดจำ user prefs
+  code_execution: true      # รัน Python scripts
+
+# ============================
+# Skills — Custom OpenThai Skills
+# ============================
+skills:
+  auto_load:
+    - "~/.hermes/skills/openthai_tiktok.py"
+
+# ============================
+# API Keys (ต้องตั้งใน ~/.hermes/.env)
+# ============================
+# ANTHROPIC_API_KEY=sk-ant-...
+# HERMES_GATEWAY_KEY=openthai-hermes-secret-changeme
+# TELEGRAM_BOT_TOKEN=...
+# LINE_CHANNEL_ACCESS_TOKEN=...
+# LINE_CHANNEL_SECRET=...
+# BRIDGE_API_KEY=openthai-bridge-key-changeme

@@ -1,0 +1,188 @@
+# OpenThai.ai AI Engine | เครื่องมือ AI OpenThai.ai
+# Docker Compose Configuration | การตั้งค่า Docker Compose
+#
+# Complete stack including:
+# - PostgreSQL (main database)
+# - Vector Database (Qdrant)
+# - Redis (caching)
+# - RAG Service
+# - MCP Server
+# - API Gateway
+#
+# Author: OpenThai.ai Team
+# Date: May 21, 2026
+
+version: '3.8'
+
+services:
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # PostgreSQL - Main Database | ฐานข้อมูลหลัก
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  postgres:
+    image: postgres:16-alpine
+    container_name: openthai-postgres
+    environment:
+      POSTGRES_DB: openthai_ai
+      POSTGRES_USER: openthai_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openthai_secure_2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - openthai-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openthai_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Qdrant - Vector Database | ฐานข้อมูลเวกเตอร์
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: openthai-qdrant
+    ports:
+      - "6333:6333"  # REST API
+      - "6334:6334"  # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    networks:
+      - openthai-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Redis - Caching Layer | ชั้น Cache
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  redis:
+    image: redis:7-alpine
+    container_name: openthai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - openthai-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # RAG Service | บริการ RAG
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  rag-service:
+    build:
+      context: ./backend/rag-service
+      dockerfile: Dockerfile
+    container_name: openthai-rag
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: openthai_ai
+      POSTGRES_USER: openthai_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openthai_secure_2026}
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - openthai-network
+    volumes:
+      - ./backend/rag-service:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # MCP Server | MCP Server
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  mcp-server:
+    build:
+      context: ./backend/mcp-servers
+      dockerfile: Dockerfile
+    container_name: openthai-mcp
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: openthai_ai
+      POSTGRES_USER: openthai_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openthai_secure_2026}
+    ports:
+      - "8002:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - openthai-network
+    volumes:
+      - ./backend/mcp-servers:/app
+    command: python -m mcp serve openthai_mcp:OpenThaiMCPServer
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # API Gateway | API Gateway
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    container_name: openthai-gateway
+    environment:
+      RAG_SERVICE_URL: http://rag-service:8000
+      MCP_SERVICE_URL: http://mcp-server:8000
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8000:8000"
+    depends_on:
+      - rag-service
+      - mcp-server
+      - redis
+    networks:
+      - openthai-network
+    volumes:
+      - ./backend/api-gateway:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Networks | เครือข่าย
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+networks:
+  openthai-network:
+    driver: bridge
+    name: openthai-network
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Volumes | ที่เก็บข้อมูล
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+volumes:
+  postgres_data:
+    name: openthai-postgres-data
+  qdrant_data:
+    name: openthai-qdrant-data
+  redis_data:
+    name: openthai-redis-data

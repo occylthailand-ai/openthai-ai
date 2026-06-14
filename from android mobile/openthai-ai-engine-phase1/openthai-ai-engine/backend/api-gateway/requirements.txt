@@ -1,0 +1,33 @@
+# OpenThai.ai API Gateway Dependencies | Dependencies สำหรับ API Gateway
+# Date: May 21, 2026
+
+# Core | หลัก
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+python-dotenv>=1.0.0
+
+# Database | ฐานข้อมูล
+asyncpg>=0.30.0
+
+# Caching | แคช
+redis>=5.2.0
+
+# HTTP Client | HTTP Client
+httpx>=0.27.0
+
+# Security | ความปลอดภัย
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Rate limiting | จำกัดอัตรา
+slowapi>=0.1.9
+
+# Utils | เครื่องมือ
+loguru>=0.7.0
+prometheus-client>=0.21.0
+
+# Testing | ทดสอบ
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+httpx[testing]>=0.27.0

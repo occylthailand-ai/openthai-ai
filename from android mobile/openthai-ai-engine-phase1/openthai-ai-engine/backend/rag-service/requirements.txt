@@ -1,0 +1,36 @@
+# OpenThai.ai RAG Service Dependencies | Dependencies สำหรับ RAG Service
+# Date: May 21, 2026
+
+# Core | หลัก
+anthropic>=0.39.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+python-dotenv>=1.0.0
+
+# Vector Database | ฐานข้อมูลเวกเตอร์
+qdrant-client>=1.12.0
+
+# Database | ฐานข้อมูล
+asyncpg>=0.30.0
+sqlalchemy>=2.0.0
+
+# Caching | แคช
+redis>=5.2.0
+
+# HTTP Client | HTTP Client
+httpx>=0.27.0
+
+# Embeddings | Embeddings
+sentence-transformers>=3.3.0
+voyageai>=0.3.0
+
+# Utils | เครื่องมือ
+python-multipart>=0.0.17
+tenacity>=9.0.0
+loguru>=0.7.0
+
+# Testing | ทดสอบ
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+pytest-cov>=6.0.0

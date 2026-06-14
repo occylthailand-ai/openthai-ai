@@ -1,5 +1,5 @@
-/**
- * OpenThai AI × Claude — Google Apps Script
+﻿/**
+ * Openthai.ai × Claude — Google Apps Script
  * ==========================================
  * วิธีใช้:
  *  1. ไปที่ script.google.com → New Project
@@ -48,7 +48,7 @@ function doGet(e) {
     return respond(getSheet(e.parameter.sheet));
   }
 
-  return respond({ status: "OpenThai AI — Google Apps Script is running ✅", ts: new Date().toISOString() });
+  return respond({ status: "Openthai.ai — Google Apps Script is running ✅", ts: new Date().toISOString() });
 }
 
 // ══════════════════════════════════════════════════════
@@ -102,7 +102,7 @@ function addWaitlist(data) {
   try {
     MailApp.sendEmail({
       to: ADMIN_EMAIL,
-      subject: `🎉 OpenThai AI — New Signup: ${data.name}`,
+      subject: `🎉 Openthai.ai — New Signup: ${data.name}`,
       body: `ลงทะเบียนใหม่!\n\nชื่อ: ${data.name}\nEmail: ${data.email}\nPhone: ${data.phone || "-"}\nRole: ${data.role || "-"}\nSource: ${data.source || "-"}\nPDPA: ${data.pdpa || "No"}\n\nเวลา: ${data.timestamp}`,
     });
   } catch (_) { /* email optional */ }
