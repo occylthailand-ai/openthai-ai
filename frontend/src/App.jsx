@@ -44,6 +44,14 @@ import BoardPage from './pages/corporate/BoardPage';
 import PRCommsPage from './pages/corporate/PRCommsPage';
 import CommandCenterPage from './pages/corporate/CommandCenterPage';
 import ProgressDashboard from './pages/ProgressDashboard';
+import PortalHubPage from './pages/PortalHubPage';
+import ProducerPortalPage from './pages/portals/ProducerPortalPage';
+import AffiliatePortalPage from './pages/portals/AffiliatePortalPage';
+import CreatorPortalPage from './pages/portals/CreatorPortalPage';
+import GovThaiPortalPage from './pages/portals/GovThaiPortalPage';
+import GovIntlPortalPage from './pages/portals/GovIntlPortalPage';
+import IntlOrgPortalPage from './pages/portals/IntlOrgPortalPage';
+import FoundationPortalPage from './pages/portals/FoundationPortalPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -132,6 +140,15 @@ function App() {
             <Route path="/corporate/pr"          element={isAuthenticated ? <PRCommsPage />           : <Navigate to="/login" />} />
             <Route path="/corporate/command"     element={isAuthenticated ? <CommandCenterPage />     : <Navigate to="/login" />} />
             <Route path="/progress" element={<ProgressDashboard />} />
+            {/* Portal Hub & Individual Portals */}
+            <Route path="/portals" element={<PortalHubPage />} />
+            <Route path="/portals/producer" element={<ProducerPortalPage />} />
+            <Route path="/portals/affiliate" element={<AffiliatePortalPage />} />
+            <Route path="/portals/creator" element={<CreatorPortalPage />} />
+            <Route path="/portals/gov-thai" element={<GovThaiPortalPage />} />
+            <Route path="/portals/gov-intl" element={<GovIntlPortalPage />} />
+            <Route path="/portals/intl-org" element={<IntlOrgPortalPage />} />
+            <Route path="/portals/foundation" element={<FoundationPortalPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />
