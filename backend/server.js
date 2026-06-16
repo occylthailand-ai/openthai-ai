@@ -29,6 +29,7 @@ import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
 import { createInventory } from './inventory.js';
+import { createProgressTracker } from './progress-tracker.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -63,6 +64,7 @@ const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
 const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
+const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
 
 import {
   signToken, verifyToken, requireAuth,
@@ -381,6 +383,49 @@ app.post('/api/orders/admin/deliver', async (req, res) => {
   const r = await orders.deliver(req.body?.id, req.body || {});
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
+});
+
+// ─── 360° Progress Tracker ───────────────────────────────────────────────────
+// GET /api/progress/snapshot — snapshot ล่าสุด (public read)
+app.get('/api/progress/snapshot', async (req, res) => {
+  try {
+    let snap = progress.loadSnapshot();
+    if (!snap || snap.date !== new Date().toISOString().slice(0, 10)) {
+      snap = await progress.buildSnapshot();
+    }
+    res.json({ success: true, ...snap });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/progress/history — 90 วันย้อนหลัง
+app.get('/api/progress/history', (req, res) => {
+  try {
+    const days = Math.min(parseInt(req.query.days || '30'), 90);
+    const h = progress.loadHistory().slice(-days);
+    res.json({ success: true, history: h, days });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/progress/daily-report — Vercel Cron trigger (23:30 Thai = 16:30 UTC)
+app.post('/api/progress/daily-report', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key || req.headers['x-vercel-cron-secret'];
+  const adminOk = checkAdminKey(key);
+  const cronOk  = key === process.env.CRON_SECRET;
+  if (!adminOk && !cronOk) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try {
+    const result = await progress.sendDailyReport();
+    res.json({ success: true, ...result });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PATCH /api/progress/kpi — อัปเดต KPI มือ
+app.patch('/api/progress/kpi', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const { guild_id, kpi_key, value } = req.body || {};
+  if (!guild_id || !kpi_key || value === undefined) return res.status(400).json({ success: false, error: 'ต้องการ guild_id, kpi_key, value' });
+  const r = await progress.updateManualKpi(guild_id, kpi_key, value);
+  res.json(r);
 });
 
 // ─── Inventory admin (Admin Key) ──────────────────────────────────────────────

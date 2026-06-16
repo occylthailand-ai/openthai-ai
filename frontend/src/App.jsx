@@ -43,6 +43,7 @@ import FinancePage from './pages/corporate/FinancePage';
 import BoardPage from './pages/corporate/BoardPage';
 import PRCommsPage from './pages/corporate/PRCommsPage';
 import CommandCenterPage from './pages/corporate/CommandCenterPage';
+import ProgressDashboard from './pages/ProgressDashboard';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -130,6 +131,7 @@ function App() {
             <Route path="/corporate/global"      element={isAuthenticated ? <GlobalOpsPage />         : <Navigate to="/login" />} />
             <Route path="/corporate/pr"          element={isAuthenticated ? <PRCommsPage />           : <Navigate to="/login" />} />
             <Route path="/corporate/command"     element={isAuthenticated ? <CommandCenterPage />     : <Navigate to="/login" />} />
+            <Route path="/progress" element={<ProgressDashboard />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />
