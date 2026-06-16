@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { apiBase } from '../apiBase';
+import { apiUrl } from '../apiBase';
 
 const GUILDS = [
   { id: 'ai_ml',      name: 'AI/ML',               icon: '🤖', color: '#6366f1' },
@@ -155,8 +155,8 @@ export default function ProgressDashboard() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`${apiBase}/api/progress/snapshot`).then(r => r.json()),
-      fetch(`${apiBase}/api/progress/history?days=30`).then(r => r.json()),
+      fetch(apiUrl('/api/progress/snapshot')).then(r => r.json()),
+      fetch(apiUrl('/api/progress/history?days=30')).then(r => r.json()),
     ]).then(([s, h]) => {
       if (s.success) setSnap(s);
       if (h.success) setHist(h.history || []);
@@ -166,7 +166,7 @@ export default function ProgressDashboard() {
   const sendReport = async () => {
     setSending(true);
     try {
-      const r = await fetch(`${apiBase}/api/progress/daily-report`, {
+      const r = await fetch(apiUrl('/api/progress/daily-report'), {
         method: 'POST',
         headers: { 'x-admin-key': adminKey },
       }).then(r => r.json());
