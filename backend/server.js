@@ -1719,7 +1719,7 @@ app.get('/api/health', (req, res) => {
   const aiEngine = anthropic ? 'claude-haiku-4-5-20251001' : gemini ? 'gemini-flash-latest' : 'mock';
   res.json({
     status:        'ok',
-    version:       '2.0.0',
+    version:       '2.1.0',
     charter_version: charter.version,
     charter_title:   charter.title,
     ai_primary:    anthropic ? '✅ Claude Haiku'     : '⚠️ No ANTHROPIC_API_KEY',
