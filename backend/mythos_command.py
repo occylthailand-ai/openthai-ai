@@ -535,6 +535,69 @@ async def generate_daily_brief() -> dict:
 
 # ── APScheduler integration ────────────────────────────────────────────────────
 
+async def producer_daily_summary() -> dict:
+    """23:30 BKK — สรุปผู้ผลิตที่ลงทะเบียนวันนี้ ส่ง Slack + LINE"""
+    try:
+        from db import AsyncSessionLocal, Producer
+        from sqlalchemy import select, func
+        from datetime import date
+
+        today = date.today()
+        async with AsyncSessionLocal() as db:
+            # ผู้ผลิตวันนี้
+            res = await db.execute(
+                select(Producer).where(
+                    func.date(Producer.created_at) == today
+                ).order_by(Producer.created_at.desc())
+            )
+            today_producers = res.scalars().all()
+
+            # สถิติรวม
+            stats_res = await db.execute(
+                select(Producer.status, func.count().label("cnt")).group_by(Producer.status)
+            )
+            stats = {row.status: row.cnt for row in stats_res.all()}
+            total_res = await db.execute(select(func.count(Producer.id)))
+            total = total_res.scalar() or 0
+
+        msg = (
+            f"\n{'━'*24}"
+            f"\n🏭 PRODUCER DAILY SUMMARY"
+            f"\n{datetime.now().strftime('%d/%m/%Y %H:%M')} BKK"
+            f"\n{'━'*24}"
+            f"\n\n📊 ยอดรวมทั้งหมด: {total} ราย"
+            f"\n⏳ รอติดต่อ: {stats.get('pending', 0)}"
+            f"\n📞 ติดต่อแล้ว: {stats.get('contacted', 0)}"
+            f"\n✅ Onboard แล้ว: {stats.get('onboarded', 0)}"
+            f"\n\n🆕 ลงทะเบียนวันนี้: {len(today_producers)} ราย"
+        )
+        if today_producers:
+            msg += "\n" + "\n".join(
+                f"  • {p.company_name} ({p.category}) — {p.contact_phone}"
+                for p in today_producers[:10]
+            )
+        msg += f"\n\n🔗 https://www.openthai-ai.com/producer/admin"
+
+        await notify_mythos(msg)
+
+        # Slack
+        slack = os.getenv("STARTUP_SLACK_WEBHOOK") or os.getenv("SLACK_WEBHOOK_URL")
+        if slack:
+            slack_msg = (
+                f"🏭 *Producer Daily Summary — {datetime.now().strftime('%d/%m/%Y')}*\n"
+                f"📊 รวม: *{total}* ราย | วันนี้: *{len(today_producers)}* ราย\n"
+                f"⏳ Pending: {stats.get('pending',0)} | ✅ Onboarded: {stats.get('onboarded',0)}\n"
+                f"🔗 <https://www.openthai-ai.com/producer/admin|เปิด Admin Dashboard>"
+            )
+            async with __import__("httpx").AsyncClient() as client:
+                await client.post(slack, json={"text": slack_msg}, timeout=5)
+
+        return {"status": "sent", "today": len(today_producers), "total": total}
+    except Exception as e:
+        logger.error("producer_daily_summary error: %s", e)
+        return {"status": "error", "detail": str(e)}
+
+
 def register_mythos_jobs(scheduler) -> None:
     """เพิ่ม Mythos jobs เข้า scheduler ที่มีอยู่"""
     try:
@@ -545,6 +608,12 @@ def register_mythos_jobs(scheduler) -> None:
             id="mythos_daily_brief",
             replace_existing=True,
         )
-        logger.info("Mythos daily brief scheduled at 08:00 BKK")
+        scheduler.add_job(
+            producer_daily_summary,
+            CronTrigger(hour=23, minute=30, timezone="Asia/Bangkok"),
+            id="producer_daily_summary",
+            replace_existing=True,
+        )
+        logger.info("Mythos daily brief @08:00 + Producer summary @23:30 BKK scheduled")
     except Exception as e:
         logger.warning("Mythos scheduler error: %s", e)
