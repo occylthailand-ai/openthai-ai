@@ -40,6 +40,7 @@ import PRCommsPage from './pages/corporate/PRCommsPage';
 import CommandCenterPage from './pages/corporate/CommandCenterPage';
 import ProducerOnboardingPage from './pages/ProducerOnboardingPage';
 import ProducerAdminPage from './pages/ProducerAdminPage';
+import ErrorHunterPage from './pages/ErrorHunterPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -123,6 +124,8 @@ function App() {
             <Route path="/producer" element={<ProducerOnboardingPage />} />
             {/* Producer Admin — Login required */}
             <Route path="/producer/admin" element={isAuthenticated ? <ProducerAdminPage /> : <Navigate to="/login" />} />
+            {/* Error Hunter — Login required */}
+            <Route path="/error-hunter" element={isAuthenticated ? <ErrorHunterPage /> : <Navigate to="/login" />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />

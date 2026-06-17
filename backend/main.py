@@ -105,10 +105,12 @@ async def startup_event():
         try:
             from mythos_command import register_mythos_jobs
             from mythos_goals import register_goal_jobs
+            from error_hunter import register_error_hunter_jobs
             sched = get_scheduler()
             register_mythos_jobs(sched)
             register_goal_jobs(sched)
-            logger.info("Mythos Command System + Goal Tracker started")
+            register_error_hunter_jobs(sched)
+            logger.info("Mythos Command System + Goal Tracker + Error Hunter started")
         except Exception as e2:
             logger.warning(f"Mythos scheduler skipped: {e2}")
     except Exception as e:
@@ -1898,6 +1900,22 @@ async def update_producer_status(producer_id: int, body: dict):
             producer.notes = notes
         await db.commit()
     return {"status": "ok", "producer_id": producer_id, "new_status": status}
+
+# ================== ERROR HUNTER ==================
+
+@app.post("/system/error-hunt")
+async def trigger_error_hunt(background_tasks: BackgroundTasks):
+    """Trigger Error Hunter ทันที (Admin)"""
+    from error_hunter import run_error_hunt
+    background_tasks.add_task(run_error_hunt, False)
+    return {"status": "started", "message": "Error Hunt กำลังรัน — ผลจะส่งไปที่ Slack + LINE"}
+
+@app.get("/system/error-hunt")
+async def run_error_hunt_sync():
+    """รัน Error Hunt และรอผล (synchronous)"""
+    from error_hunter import run_error_hunt
+    result = await run_error_hunt(silent_if_clean=False)
+    return result
 
 # ================== RUN SERVER ==================
 
