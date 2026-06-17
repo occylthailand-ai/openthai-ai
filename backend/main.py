@@ -1731,6 +1731,174 @@ async def system_logs(limit: int = 100):
     from autorun import get_logs
     return {"logs": get_logs(limit)}
 
+# ================== PRODUCER ONBOARDING ==================
+
+class ProducerRegistration(BaseModel):
+    company_name: str
+    company_name_en: Optional[str] = ""
+    company_name_zh: Optional[str] = ""
+    contact_name: str
+    contact_phone: str
+    contact_email: str
+    province: Optional[str] = ""
+    website: Optional[str] = ""
+    line_id: Optional[str] = ""
+    category: str
+    product_count: Optional[str] = ""
+    flagship_product: str
+    description_th: str
+    description_en: Optional[str] = ""
+    description_zh: Optional[str] = ""
+    min_order: Optional[str] = ""
+    price_range: Optional[str] = ""
+    has_certificate: bool = False
+    sell_online: bool = False
+    sell_offline: bool = False
+    export_ready: bool = False
+    target_market: List[str] = []
+    social_channels: Optional[str] = ""
+
+@app.post("/producers/register")
+async def register_producer(data: ProducerRegistration, background_tasks: BackgroundTasks):
+    """ลงทะเบียนผู้ผลิต / Producer Onboarding"""
+    import json as _json
+    registered_at = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    # บันทึกลง DB
+    from db import AsyncSessionLocal, Producer
+    async with AsyncSessionLocal() as db:
+        producer = Producer(
+            company_name=data.company_name,
+            company_name_en=data.company_name_en or "",
+            company_name_zh=data.company_name_zh or "",
+            contact_name=data.contact_name,
+            contact_phone=data.contact_phone,
+            contact_email=data.contact_email,
+            province=data.province or "",
+            website=data.website or "",
+            line_id=data.line_id or "",
+            category=data.category,
+            product_count=data.product_count or "",
+            flagship_product=data.flagship_product,
+            description_th=data.description_th,
+            description_en=data.description_en or "",
+            description_zh=data.description_zh or "",
+            min_order=data.min_order or "",
+            price_range=data.price_range or "",
+            has_certificate=data.has_certificate,
+            sell_online=data.sell_online,
+            sell_offline=data.sell_offline,
+            export_ready=data.export_ready,
+            target_market=_json.dumps(data.target_market, ensure_ascii=False),
+            social_channels=data.social_channels or "",
+            status="pending",
+        )
+        db.add(producer)
+        await db.commit()
+        await db.refresh(producer)
+        producer_id = producer.id
+
+    # แจ้ง Slack
+    slack_webhook = os.getenv("STARTUP_SLACK_WEBHOOK") or os.getenv("SLACK_WEBHOOK_URL")
+    if slack_webhook:
+        async def notify_slack():
+            msg = (
+                f"🏭 *ผู้ผลิตใหม่ลงทะเบียน! #{producer_id}*\n"
+                f"🏢 บริษัท: *{data.company_name}*"
+                + (f" / {data.company_name_en}" if data.company_name_en else "") + "\n"
+                f"👤 ติดต่อ: {data.contact_name} | {data.contact_phone}\n"
+                f"📧 Email: {data.contact_email}\n"
+                f"📦 หมวด: {data.category} | สินค้าเด่น: {data.flagship_product}\n"
+                f"🌍 ตลาด: {', '.join(data.target_market) or '-'} | ส่งออก: {'✅' if data.export_ready else '❌'}\n"
+                f"🕐 {registered_at}"
+            )
+            async with httpx.AsyncClient() as client:
+                await client.post(slack_webhook, json={"text": msg}, timeout=5)
+        background_tasks.add_task(notify_slack)
+
+    # แจ้ง LINE
+    line_token = os.getenv("STARTUP_LINE_TOKEN")
+    line_user_id = os.getenv("STARTUP_LINE_USER_ID")
+    if line_token and line_user_id:
+        async def notify_line():
+            msg = (
+                f"🏭 ผู้ผลิตใหม่ #{producer_id}\n"
+                f"บริษัท: {data.company_name}\n"
+                f"ติดต่อ: {data.contact_name} {data.contact_phone}\n"
+                f"หมวด: {data.category}\n"
+                f"สินค้าเด่น: {data.flagship_product}\n"
+                f"เวลา: {registered_at}"
+            )
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    "https://api.line.me/v2/bot/message/push",
+                    headers={"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"},
+                    json={"to": line_user_id, "messages": [{"type": "text", "text": msg}]},
+                    timeout=5
+                )
+        background_tasks.add_task(notify_line)
+
+    logger.info(f"Producer registered #{producer_id}: {data.company_name} | {data.contact_email}")
+    return {"status": "ok", "message": "ลงทะเบียนสำเร็จ", "producer_id": producer_id, "registered_at": registered_at}
+
+
+@app.get("/producers/list")
+async def list_producers(status: Optional[str] = None, limit: int = 50, offset: int = 0):
+    """ดูรายการผู้ผลิตทั้งหมด (Admin)"""
+    import json as _json
+    from db import AsyncSessionLocal, Producer
+    from sqlalchemy import select, func
+    async with AsyncSessionLocal() as db:
+        q = select(Producer).order_by(Producer.created_at.desc()).limit(limit).offset(offset)
+        if status:
+            q = q.where(Producer.status == status)
+        result = await db.execute(q)
+        producers = result.scalars().all()
+        count_q = select(func.count(Producer.id))
+        if status:
+            count_q = count_q.where(Producer.status == status)
+        total = (await db.execute(count_q)).scalar()
+    return {
+        "total": total,
+        "producers": [{
+            "id": p.id,
+            "company_name": p.company_name,
+            "company_name_en": p.company_name_en,
+            "contact_name": p.contact_name,
+            "contact_phone": p.contact_phone,
+            "contact_email": p.contact_email,
+            "category": p.category,
+            "flagship_product": p.flagship_product,
+            "province": p.province,
+            "export_ready": p.export_ready,
+            "has_certificate": p.has_certificate,
+            "target_market": _json.loads(p.target_market) if p.target_market else [],
+            "status": p.status,
+            "created_at": p.created_at.isoformat(),
+        } for p in producers]
+    }
+
+
+@app.patch("/producers/{producer_id}/status")
+async def update_producer_status(producer_id: int, body: dict):
+    """อัปเดตสถานะผู้ผลิต: pending → contacted → onboarded"""
+    from db import AsyncSessionLocal, Producer
+    from sqlalchemy import select
+    status = body.get("status")
+    notes = body.get("notes", "")
+    if status not in ("pending", "contacted", "onboarded"):
+        raise HTTPException(400, "status must be pending/contacted/onboarded")
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Producer).where(Producer.id == producer_id))
+        producer = result.scalar_one_or_none()
+        if not producer:
+            raise HTTPException(404, "Producer not found")
+        producer.status = status
+        if notes:
+            producer.notes = notes
+        await db.commit()
+    return {"status": "ok", "producer_id": producer_id, "new_status": status}
+
 # ================== RUN SERVER ==================
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ Database models — SQLite (dev) / PostgreSQL (prod)
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Integer, Float, DateTime, Boolean, Text, UniqueConstraint, Index
+from sqlalchemy import String, Integer, Float, DateTime, Boolean, Text, UniqueConstraint, Index, JSON
 from datetime import datetime
 import os
 import secrets
@@ -411,3 +411,36 @@ class SystemConfig(Base):
     value: Mapped[str] = mapped_column(Text, default="")
     description: Mapped[str] = mapped_column(Text, default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Producer(Base):
+    """ผู้ผลิต / แบรนด์ที่ลงทะเบียนเข้าแพลตฟอร์ม"""
+    __tablename__ = "producers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    company_name: Mapped[str] = mapped_column(String(255), index=True)
+    company_name_en: Mapped[str] = mapped_column(String(255), default="")
+    company_name_zh: Mapped[str] = mapped_column(String(255), default="")
+    contact_name: Mapped[str] = mapped_column(String(255))
+    contact_phone: Mapped[str] = mapped_column(String(50))
+    contact_email: Mapped[str] = mapped_column(String(255), index=True)
+    province: Mapped[str] = mapped_column(String(100), default="")
+    website: Mapped[str] = mapped_column(String(500), default="")
+    line_id: Mapped[str] = mapped_column(String(100), default="")
+    category: Mapped[str] = mapped_column(String(100), index=True)
+    product_count: Mapped[str] = mapped_column(String(50), default="")
+    flagship_product: Mapped[str] = mapped_column(String(255))
+    description_th: Mapped[str] = mapped_column(Text, default="")
+    description_en: Mapped[str] = mapped_column(Text, default="")
+    description_zh: Mapped[str] = mapped_column(Text, default="")
+    min_order: Mapped[str] = mapped_column(String(100), default="")
+    price_range: Mapped[str] = mapped_column(String(100), default="")
+    has_certificate: Mapped[bool] = mapped_column(Boolean, default=False)
+    sell_online: Mapped[bool] = mapped_column(Boolean, default=False)
+    sell_offline: Mapped[bool] = mapped_column(Boolean, default=False)
+    export_ready: Mapped[bool] = mapped_column(Boolean, default=False)
+    target_market: Mapped[str] = mapped_column(Text, default="")  # JSON array as string
+    social_channels: Mapped[str] = mapped_column(String(500), default="")
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)  # pending/contacted/onboarded
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

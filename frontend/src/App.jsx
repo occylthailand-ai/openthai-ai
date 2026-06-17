@@ -38,6 +38,8 @@ import FinancePage from './pages/corporate/FinancePage';
 import BoardPage from './pages/corporate/BoardPage';
 import PRCommsPage from './pages/corporate/PRCommsPage';
 import CommandCenterPage from './pages/corporate/CommandCenterPage';
+import ProducerOnboardingPage from './pages/ProducerOnboardingPage';
+import ProducerAdminPage from './pages/ProducerAdminPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -117,6 +119,10 @@ function App() {
             <Route path="/corporate/global"      element={isAuthenticated ? <GlobalOpsPage />         : <Navigate to="/login" />} />
             <Route path="/corporate/pr"          element={isAuthenticated ? <PRCommsPage />           : <Navigate to="/login" />} />
             <Route path="/corporate/command"     element={isAuthenticated ? <CommandCenterPage />     : <Navigate to="/login" />} />
+            {/* Producer Onboarding — Public */}
+            <Route path="/producer" element={<ProducerOnboardingPage />} />
+            {/* Producer Admin — Login required */}
+            <Route path="/producer/admin" element={isAuthenticated ? <ProducerAdminPage /> : <Navigate to="/login" />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />
