@@ -27,7 +27,7 @@ export default function ProducerDirectoryPage() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { document.title = 'ค้นหาผู้ผลิต — Openthai.ai'; search('', 'ทั้งหมด'); }, [search]);
+  useEffect(() => { document.title = 'ค้นหาผู้ผลิต — OpenThaiAi'; search('', 'ทั้งหมด'); }, [search]);
 
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);

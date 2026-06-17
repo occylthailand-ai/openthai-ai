@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  PROD_URL: https://www.openthai-ai.com
+  PROD_URL: https://www.OpenThaiAi.com
   THRESHOLD_MS: 4000
 
 jobs:
@@ -55,7 +55,7 @@ jobs:
           if [ -n "$LINE_NOTIFY_TOKEN" ]; then
             curl -s -X POST https://notify-api.line.me/api/notify \
               -H "Authorization: Bearer $LINE_NOTIFY_TOKEN" \
-              --data-urlencode "message=🚨 Openthai.ai DOWN — /api/health คืน HTTP ${{ steps.health.outputs.code }} ($(date -u '+%H:%M UTC'))" \
+              --data-urlencode "message=🚨 OpenThaiAi DOWN — /api/health คืน HTTP ${{ steps.health.outputs.code }} ($(date -u '+%H:%M UTC'))" \
               && echo "📱 LINE แจ้งเตือนแล้ว"
           else
             echo "⏭️ ไม่ได้ตั้ง LINE_NOTIFY_TOKEN — ข้ามการแจ้งเตือน (workflow ยัง fail ให้เห็นใน Actions)"

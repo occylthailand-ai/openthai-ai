@@ -45,7 +45,7 @@ const CorporateDashboard = () => {
   }, []);
 
   return (
-    <CorporateLayout title="🏛️ Corporate Overview" subtitle="Openthai.ai Public Company Limited — Global AI Platform">
+    <CorporateLayout title="🏛️ Corporate Overview" subtitle="OpenThaiAi Public Company Limited — Global AI Platform">
 
       {/* Hero Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>

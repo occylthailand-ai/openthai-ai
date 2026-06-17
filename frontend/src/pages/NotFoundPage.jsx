@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
-  useEffect(() => { document.title = '404 — หน้าไม่พบ | Openthai.ai'; }, []);
+  useEffect(() => { document.title = '404 — หน้าไม่พบ | OpenThaiAi'; }, []);
   return (
     <div style={{ minHeight: '100vh', background: '#080812', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 24, fontFamily: "'Inter','Sarabun',sans-serif", color: '#f8fafc' }}>
       <div>

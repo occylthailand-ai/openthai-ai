@@ -1,6 +1,6 @@
 {
-  "name": "Openthai.ai",
-  "short_name": "OpenThai",
+  "name": "OpenThaiAi",
+  "short_name": "OpenThaiAi",
   "description": "AI ไทยแท้ สร้างคอนเทนต์ TikTok ใน 10 วินาที",
   "start_url": "/",
   "display": "standalone",

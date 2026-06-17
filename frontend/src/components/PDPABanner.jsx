@@ -52,7 +52,7 @@ export default function PDPABanner() {
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
             <span style={{ fontSize: 20 }}>🍪</span>
-            <strong style={{ fontSize: 16 }}>นโยบายการใช้คุกกี้ — Openthai.ai</strong>
+            <strong style={{ fontSize: 16 }}>นโยบายการใช้คุกกี้ — OpenThaiAi</strong>
             <button onClick={() => setDetail(false)} style={{ marginLeft: 'auto', ...linkBtn }}>ย่อลง ▲</button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12 }}>

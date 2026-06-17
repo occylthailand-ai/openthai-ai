@@ -10,7 +10,7 @@ export default function CatalogPage() {
   const [order, setOrder] = useState(null);
 
   useEffect(() => {
-    document.title = 'ตลาดสินค้าไทย — Openthai.ai';
+    document.title = 'ตลาดสินค้าไทย — OpenThaiAi';
     fetch(apiUrl('/api/catalog')).then(r => r.json()).then(d => setProducts(d.products || [])).catch(() => setProducts([]));
   }, []);
 

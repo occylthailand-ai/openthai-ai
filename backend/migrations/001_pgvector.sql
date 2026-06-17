@@ -1,4 +1,4 @@
--- OpenThai AI — pgvector Migration
+-- OpenThaiAi — pgvector Migration
 -- Run this in Supabase SQL Editor → Database → SQL Editor
 -- Required: supabase.com → project → Extensions → enable vector
 
@@ -147,7 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_tenant  ON payments(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_payments_charge  ON payments(charge_id);
 CREATE INDEX IF NOT EXISTS idx_payments_status  ON payments(status);
 
-COMMENT ON TABLE memory_entries IS 'OpenThai AI Vector Memory — pgvector powered';
+COMMENT ON TABLE memory_entries IS 'OpenThaiAi Vector Memory — pgvector powered';
 COMMENT ON TABLE webhooks IS 'Webhook registrations per tenant';
 COMMENT ON TABLE tenants IS 'Multi-tenant accounts';
 COMMENT ON TABLE video_jobs IS 'Video generation job queue';

@@ -133,10 +133,10 @@
   "facebookFeed": [
     {
       "id": "1",
-      "user": { "name": "ซุ้ยใจ Openthai.ai", "avatar": "👩‍💼", "time": "2 ชั่วโมงที่แล้ว", "privacy": "🌐" },
+      "user": { "name": "ซุ้ยใจ OpenThaiAi", "avatar": "👩‍💼", "time": "2 ชั่วโมงที่แล้ว", "privacy": "🌐" },
       "type": "product",
-      "content": "🎉 เปิดตัว Openthai.ai แล้ว! เครื่องมือ AI สร้างคอนเทนต์ TikTok สำหรับสินค้าไทย OTOP ใช้ฟรี 3 คอนเทนต์/วัน ลองเลย!",
-      "product": { "name": "Openthai.ai Pro", "price": "฿149/เดือน", "emoji": "🤖", "gradient": "linear-gradient(135deg,#667eea,#764ba2)" },
+      "content": "🎉 เปิดตัว OpenThaiAi แล้ว! เครื่องมือ AI สร้างคอนเทนต์ TikTok สำหรับสินค้าไทย OTOP ใช้ฟรี 3 คอนเทนต์/วัน ลองเลย!",
+      "product": { "name": "OpenThaiAi Pro", "price": "฿149/เดือน", "emoji": "🤖", "gradient": "linear-gradient(135deg,#667eea,#764ba2)" },
       "likes": 842, "love": 312, "haha": 45, "comments": 128, "shares": 267,
       "topComment": { "user": "สมชาย พ่อค้า OTOP", "text": "เจ๋งมากเลยครับ รอใช้อยู่!" }
     },

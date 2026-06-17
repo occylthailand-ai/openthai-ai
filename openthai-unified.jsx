@@ -391,7 +391,7 @@ function CommerceTab() {
     setLoading(true); setResult("");
     try {
       const langNames = langs.map(l => LANGS.find(x=>x.code===l)?.label).join(", ");
-      const sys = `คุณคือ Openthai.ai ผู้เชี่ยวชาญด้าน Cross-border E-commerce สำหรับผู้ขายไทย ตอบเป็นภาษาที่กำหนดเท่านั้น ห้ามเพิ่มคำอธิบายภาษาอื่น`;
+      const sys = `คุณคือ OpenThaiAi ผู้เชี่ยวชาญด้าน Cross-border E-commerce สำหรับผู้ขายไทย ตอบเป็นภาษาที่กำหนดเท่านั้น ห้ามเพิ่มคำอธิบายภาษาอื่น`;
       const prompt = `สร้าง ${contentType} สำหรับ Platform: ${plat?.name}
 สินค้า/ธุรกิจ: ${product}
 ภาษาที่ต้องการ: ${langNames}
@@ -592,7 +592,7 @@ function CodeTab() {
 ═══════════════════════════════════════════════════════ */
 function CoworkTab() {
   const [tasks, setTasks] = useState([
-    { id:1, text:"Deploy Openthai.ai ไปยัง Vercel", done:false },
+    { id:1, text:"Deploy OpenThaiAi ไปยัง Vercel", done:false },
     { id:2, text:"ตั้งค่า n8n workflow automation", done:false },
     { id:3, text:"เพิ่ม Claude API key ใน .env", done:true },
     { id:4, text:"ทดสอบ Content Generator", done:false },
@@ -647,7 +647,7 @@ function CoworkTab() {
         {/* Task Manager */}
         <div>
           <div style={S.card}>
-            <div style={S.cardTitle}>📋 Task Manager — Openthai.ai</div>
+            <div style={S.cardTitle}>📋 Task Manager — OpenThaiAi</div>
 
             {/* Progress */}
             <div style={{ background:C.surface, borderRadius:4, height:4, marginBottom:14, overflow:"hidden" }}>

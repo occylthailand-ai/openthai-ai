@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Openthai.ai — Migrate Vector Memory: JSON files → Supabase pgvector
+// OpenThaiAi — Migrate Vector Memory: JSON files → Supabase pgvector
 // Usage: SUPABASE_URL=... SUPABASE_SERVICE_KEY=... GEMINI_API_KEY=... node migrate-memory.js
 //
 // ขั้นตอน:
@@ -15,7 +15,7 @@ import { migrateFromJson } from '../vector-memory-supabase.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, '..', 'data');
 
-console.log('🚀 Openthai.ai — Vector Memory Migration');
+console.log('🚀 OpenThaiAi — Vector Memory Migration');
 console.log('📂 Source:', DATA_DIR);
 console.log('🗄️  Target: Supabase pgvector');
 console.log('');

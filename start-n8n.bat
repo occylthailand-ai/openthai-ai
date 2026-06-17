@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo   OpenThai AI — n8n Workflow Engine
+echo   OpenThaiAi — n8n Workflow Engine
 echo ========================================
 echo.
 

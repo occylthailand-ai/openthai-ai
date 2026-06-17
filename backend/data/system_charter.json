@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "title": "นโยบายระบบถาวร — OpenThaiAi Operations Charter",
   "effective": "2026-05-04",
   "deployment": {
-    "frontend": "https://www.openthai-ai.com (Vercel Static)",
-    "backend": "https://www.openthai-ai.com/api/* (Vercel Serverless ESM)",
+    "frontend": "https://www.OpenThaiAi.com (Vercel Static)",
+    "backend": "https://www.OpenThaiAi.com/api/* (Vercel Serverless ESM)",
     "cron_watchdog": "0 6 * * * — Vercel Cron ทุกวัน 06:00 UTC",
     "cron_news_rag": "0 4 * * * — Vercel Cron ทุกวัน 04:00 UTC"
   },
@@ -55,7 +55,7 @@
     "ANTHROPIC_API_KEY": "Claude AI primary — console.anthropic.com",
     "GEMINI_API_KEY": "Gemini fallback — aistudio.google.com (ฟรี)",
     "JWT_SECRET": "SET ✅ Vercel",
-    "FRONTEND_URL": "SET ✅ https://www.openthai-ai.com",
+    "FRONTEND_URL": "SET ✅ https://www.OpenThaiAi.com",
     "SMTP_USER": "SET ✅ occylthailand@gmail.com",
     "SMTP_PASS": "Gmail App Password — myaccount.google.com/apppasswords",
     "ADMIN_PASSWORD": "Password สำหรับ /admin page",

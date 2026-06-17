@@ -1,5 +1,5 @@
 ﻿const fs = require('fs');
-const dir = 'C:/Openthai.ai/all-platform-files';
+const dir = 'C:/OpenThaiAi/all-platform-files';
 
 const platforms = [
   // === EU MARKETPLACES (20) ===
@@ -72,12 +72,12 @@ const platforms = [
 let created = 0;
 platforms.forEach(p => {
   // HTML Section
-  const html = `<!-- Openthai.ai - ${p.name} Roadmap -->\n<section id="${p.id}-roadmap" style="max-width:900px;margin:2rem auto;padding:2rem;font-family:'Sarabun',sans-serif;background:#f8f9fa;border-radius:16px;">\n<h2 style="text-align:center;color:${p.color};font-size:2rem;">${p.name} — ${p.steps} ขั้นตอน</h2>\n<p style="text-align:center;color:#666;">${p.desc} | ${p.users}</p>\n<div style="background:#fff;padding:1.5rem;border-radius:12px;border-left:4px solid ${p.color};margin-top:1rem;">\n<ol>${p.phases.map((ph,i) => `<li style="padding:4px 0;"><strong>ส่วนที่ ${i+1}</strong> — ${ph}</li>`).join('\n')}</ol>\n</div>\n<div style="text-align:center;margin-top:1.5rem;padding:1rem;background:${p.color};border-radius:12px;">\n<p style="color:#fff;margin:0;">🤖 Openthai.ai ช่วยสร้าง Content ได้ทุกภาษา</p>\n<a href="/generate" style="display:inline-block;margin-top:8px;padding:10px 24px;background:#fff;color:${p.color};border-radius:20px;text-decoration:none;font-weight:bold;">สร้าง Content ${p.name} →</a>\n</div>\n</section>`;
+  const html = `<!-- OpenThaiAi - ${p.name} Roadmap -->\n<section id="${p.id}-roadmap" style="max-width:900px;margin:2rem auto;padding:2rem;font-family:'Sarabun',sans-serif;background:#f8f9fa;border-radius:16px;">\n<h2 style="text-align:center;color:${p.color};font-size:2rem;">${p.name} — ${p.steps} ขั้นตอน</h2>\n<p style="text-align:center;color:#666;">${p.desc} | ${p.users}</p>\n<div style="background:#fff;padding:1.5rem;border-radius:12px;border-left:4px solid ${p.color};margin-top:1rem;">\n<ol>${p.phases.map((ph,i) => `<li style="padding:4px 0;"><strong>ส่วนที่ ${i+1}</strong> — ${ph}</li>`).join('\n')}</ol>\n</div>\n<div style="text-align:center;margin-top:1.5rem;padding:1rem;background:${p.color};border-radius:12px;">\n<p style="color:#fff;margin:0;">🤖 OpenThaiAi ช่วยสร้าง Content ได้ทุกภาษา</p>\n<a href="/generate" style="display:inline-block;margin-top:8px;padding:10px 24px;background:#fff;color:${p.color};border-radius:20px;text-decoration:none;font-weight:bold;">สร้าง Content ${p.name} →</a>\n</div>\n</section>`;
   fs.writeFileSync(dir + '/' + p.id + '-roadmap-section.html', html);
 
   // HTML Guide
-  const guide = `<html><head><meta charset="utf-8"><style>body{font-family:Sarabun,sans-serif;max-width:700px;margin:0 auto;padding:20px;line-height:1.6}h1{color:${p.color};border-bottom:3px solid ${p.color}}h3{margin-top:16px}</style></head><body><h1>${p.name} Roadmap</h1><p>${p.desc} | ${p.users}</p><p><strong>${p.steps} ขั้นตอน | ${p.sections} ส่วน</strong></p>${p.phases.map((ph,i) => `<h3>ส่วนที่ ${i+1} — ${ph}</h3>`).join('')}<hr><p><em>สร้างโดย Openthai.ai — www.Openthai.ai.com</em></p></body></html>`;
-  fs.writeFileSync(dir + '/Openthai.ai_' + p.name + '_Roadmap.html', guide);
+  const guide = `<html><head><meta charset="utf-8"><style>body{font-family:Sarabun,sans-serif;max-width:700px;margin:0 auto;padding:20px;line-height:1.6}h1{color:${p.color};border-bottom:3px solid ${p.color}}h3{margin-top:16px}</style></head><body><h1>${p.name} Roadmap</h1><p>${p.desc} | ${p.users}</p><p><strong>${p.steps} ขั้นตอน | ${p.sections} ส่วน</strong></p>${p.phases.map((ph,i) => `<h3>ส่วนที่ ${i+1} — ${ph}</h3>`).join('')}<hr><p><em>สร้างโดย OpenThaiAi — www.OpenThaiAi.com</em></p></body></html>`;
+  fs.writeFileSync(dir + '/OpenThaiAi_' + p.name + '_Roadmap.html', guide);
 
   created++;
   console.log(created + '. ' + p.name + ' ✓');
