@@ -69,11 +69,16 @@ app = FastAPI(
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 IS_PRODUCTION = os.getenv("ENVIRONMENT") == "production"
-ALLOWED_ORIGINS = (
-    [os.getenv("FRONTEND_URL", "https://www.openthai-ai.com")]
-    if IS_PRODUCTION
-    else ["*"]
-)
+ALLOWED_ORIGINS = [
+    "https://www.openthai-ai.com",
+    "https://openthai-ai.com",
+    "https://openthai-ai.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+_extra = os.getenv("FRONTEND_URL", "")
+if _extra and _extra not in ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS.append(_extra)
 
 app.add_middleware(
     CORSMiddleware,
