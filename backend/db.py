@@ -400,7 +400,7 @@ class TokenUsage(Base):
     total_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
-    metadata: Mapped[str] = mapped_column(Text, default="")
+    extra_data: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
