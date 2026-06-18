@@ -3108,6 +3108,14 @@ app.patch('/api/corporate/global', requireAuth, corpLimiter, (req, res) => {
   res.json({ success: true });
 });
 
+// ── IT Department — Roles & Positions ────────────────────────────────────────
+app.get('/api/corporate/it',   (req, res) => res.json({ success: true, data: corporate.getITDept() }));
+app.patch('/api/corporate/it', requireAuth, corpLimiter, (req, res) => {
+  const current = corporate.getITDept();
+  corporate.saveITDept({ ...current, ...req.body });
+  res.json({ success: true });
+});
+
 // ── PR & Global Communications ────────────────────────────────────────────────
 app.get('/api/corporate/pr/releases',   (req, res) => res.json({ success: true, data: pr.getPressReleases() }));
 app.patch('/api/corporate/pr/releases', requireAuth, corpLimiter, (req, res) => {

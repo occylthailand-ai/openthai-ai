@@ -43,6 +43,7 @@ import FinancePage from './pages/corporate/FinancePage';
 import BoardPage from './pages/corporate/BoardPage';
 import PRCommsPage from './pages/corporate/PRCommsPage';
 import CommandCenterPage from './pages/corporate/CommandCenterPage';
+import TechnologyPage from './pages/corporate/TechnologyPage';
 import ProgressDashboard from './pages/ProgressDashboard';
 import PortalHubPage from './pages/PortalHubPage';
 import ProducerPortalPage from './pages/portals/ProducerPortalPage';
@@ -139,6 +140,7 @@ function App() {
             <Route path="/corporate/global"      element={isAuthenticated ? <GlobalOpsPage />         : <Navigate to="/login" />} />
             <Route path="/corporate/pr"          element={isAuthenticated ? <PRCommsPage />           : <Navigate to="/login" />} />
             <Route path="/corporate/command"     element={isAuthenticated ? <CommandCenterPage />     : <Navigate to="/login" />} />
+            <Route path="/corporate/it"          element={isAuthenticated ? <TechnologyPage />         : <Navigate to="/login" />} />
             <Route path="/progress" element={<ProgressDashboard />} />
             {/* Portal Hub & Individual Portals */}
             <Route path="/portals" element={<PortalHubPage />} />

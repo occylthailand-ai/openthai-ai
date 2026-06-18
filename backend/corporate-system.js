@@ -23,6 +23,87 @@ export const DEPARTMENTS = {
   globalexpand: { id: 'globalexpand', name: 'Global Expansion',           nameT: 'ขยายธุรกิจโลก',              icon: '🚀', category: 'strategy'   },
 };
 
+// ── IT Department — Role Categories (Large IT Company Standard) ───────────────
+export const IT_ROLE_CATEGORIES = [
+  {
+    id: 'leadership', name: 'IT Leadership', nameT: 'ผู้บริหารไอที', icon: '👑', color: '#f59e0b',
+    roles: [
+      { id: 'r01', title: 'Chief Technology Officer (CTO)',            level: 'C-Level', count: 1, salary: '฿300K–฿600K/เดือน', skills: ['Technology Strategy', 'R&D', 'Architecture', 'AI Vision'] },
+      { id: 'r02', title: 'Chief Information Officer (CIO)',            level: 'C-Level', count: 1, salary: '฿250K–฿500K/เดือน', skills: ['IT Strategy', 'Digital Transformation', 'Vendor Mgmt'] },
+      { id: 'r03', title: 'Chief Information Security Officer (CISO)', level: 'C-Level', count: 1, salary: '฿250K–฿500K/เดือน', skills: ['Cybersecurity', 'Risk Management', 'ISO 27001'] },
+      { id: 'r04', title: 'VP of Engineering',                          level: 'VP',      count: 1, salary: '฿150K–฿300K/เดือน', skills: ['Engineering Management', 'Architecture', 'Agile'] },
+      { id: 'r05', title: 'VP of Product',                              level: 'VP',      count: 1, salary: '฿150K–฿300K/เดือน', skills: ['Product Strategy', 'Roadmap', 'Market Analysis'] },
+      { id: 'r06', title: 'VP of Data & AI',                            level: 'VP',      count: 1, salary: '฿150K–฿300K/เดือน', skills: ['AI Strategy', 'Data Governance', 'ML Platforms'] },
+    ],
+  },
+  {
+    id: 'engineering', name: 'Software Engineering', nameT: 'วิศวกรซอฟต์แวร์', icon: '💻', color: '#6366f1',
+    roles: [
+      { id: 'r07', title: 'Engineering Manager',        level: 'Manager', count: 3, salary: '฿100K–฿200K/เดือน', skills: ['Team Leadership', 'Agile', 'Technical Direction'] },
+      { id: 'r08', title: 'Senior Full-Stack Engineer', level: 'Senior',  count: 5, salary: '฿80K–฿150K/เดือน',  skills: ['React', 'Node.js', 'PostgreSQL', 'AWS'] },
+      { id: 'r09', title: 'Frontend Engineer',           level: 'Mid',     count: 4, salary: '฿50K–฿100K/เดือน',  skills: ['React', 'TypeScript', 'CSS', 'Web Performance'] },
+      { id: 'r10', title: 'Backend Engineer',            level: 'Mid',     count: 4, salary: '฿50K–฿100K/เดือน',  skills: ['Node.js', 'Python', 'REST/GraphQL', 'Microservices'] },
+      { id: 'r11', title: 'Mobile Developer',            level: 'Mid',     count: 3, salary: '฿60K–฿120K/เดือน',  skills: ['React Native', 'iOS', 'Android', 'Flutter'] },
+      { id: 'r12', title: 'Junior Software Engineer',    level: 'Junior',  count: 8, salary: '฿25K–฿50K/เดือน',   skills: ['JavaScript', 'Python', 'Git', 'APIs'] },
+    ],
+  },
+  {
+    id: 'ai_data', name: 'AI & Data', nameT: 'ปัญญาประดิษฐ์และข้อมูล', icon: '🤖', color: '#8b5cf6',
+    roles: [
+      { id: 'r13', title: 'AI Research Lead',          level: 'Lead',   count: 1, salary: '฿120K–฿250K/เดือน', skills: ['LLM', 'AI Research', 'Papers', 'Model Training'] },
+      { id: 'r14', title: 'Machine Learning Engineer', level: 'Senior', count: 3, salary: '฿80K–฿160K/เดือน',  skills: ['PyTorch', 'TensorFlow', 'MLOps', 'LLMs'] },
+      { id: 'r15', title: 'Data Scientist',            level: 'Mid',    count: 3, salary: '฿60K–฿120K/เดือน',  skills: ['Python', 'Statistics', 'SQL', 'Visualization'] },
+      { id: 'r16', title: 'Data Engineer',             level: 'Mid',    count: 2, salary: '฿60K–฿120K/เดือน',  skills: ['ETL', 'Airflow', 'Spark', 'Data Warehouse'] },
+      { id: 'r17', title: 'AI Product Engineer',       level: 'Mid',    count: 3, salary: '฿70K–฿140K/เดือน',  skills: ['AI APIs', 'Prompt Engineering', 'LangChain', 'RAG'] },
+    ],
+  },
+  {
+    id: 'infrastructure', name: 'Infrastructure & DevOps', nameT: 'โครงสร้างพื้นฐานและ DevOps', icon: '⚙️', color: '#06b6d4',
+    roles: [
+      { id: 'r18', title: 'Cloud Architect',        level: 'Senior', count: 2, salary: '฿100K–฿200K/เดือน', skills: ['AWS', 'GCP', 'Azure', 'Terraform', 'Architecture'] },
+      { id: 'r19', title: 'DevOps / SRE Engineer',  level: 'Mid',    count: 3, salary: '฿70K–฿140K/เดือน',  skills: ['CI/CD', 'Docker', 'Kubernetes', 'Monitoring'] },
+      { id: 'r20', title: 'Database Administrator', level: 'Mid',    count: 2, salary: '฿60K–฿120K/เดือน',  skills: ['PostgreSQL', 'MySQL', 'MongoDB', 'Performance Tuning'] },
+      { id: 'r21', title: 'Network Engineer',       level: 'Mid',    count: 2, salary: '฿50K–฿100K/เดือน',  skills: ['Networking', 'Firewall', 'VPN', 'DNS/CDN'] },
+      { id: 'r22', title: 'System Administrator',   level: 'Mid',    count: 2, salary: '฿45K–฿90K/เดือน',   skills: ['Linux', 'Windows Server', 'Backup', 'Monitoring'] },
+    ],
+  },
+  {
+    id: 'security', name: 'Cybersecurity', nameT: 'ความปลอดภัยทางไซเบอร์', icon: '🔒', color: '#ef4444',
+    roles: [
+      { id: 'r23', title: 'Security Architect',    level: 'Lead',   count: 1, salary: '฿120K–฿250K/เดือน', skills: ['Security Design', 'Zero Trust', 'IAM', 'SIEM'] },
+      { id: 'r24', title: 'Security Engineer',     level: 'Senior', count: 2, salary: '฿80K–฿160K/เดือน',  skills: ['AppSec', 'Cloud Security', 'DevSecOps', 'Threat Modeling'] },
+      { id: 'r25', title: 'SOC Analyst',           level: 'Mid',    count: 3, salary: '฿50K–฿100K/เดือน',  skills: ['Incident Response', 'SIEM', 'Threat Hunting', 'Forensics'] },
+      { id: 'r26', title: 'Penetration Tester',    level: 'Senior', count: 1, salary: '฿80K–฿160K/เดือน',  skills: ['Ethical Hacking', 'Red Team', 'OSCP', 'Bug Bounty'] },
+    ],
+  },
+  {
+    id: 'product_ux', name: 'Product & UX', nameT: 'ผลิตภัณฑ์และประสบการณ์ผู้ใช้', icon: '🎨', color: '#ec4899',
+    roles: [
+      { id: 'r27', title: 'Product Manager', level: 'Mid', count: 3, salary: '฿70K–฿150K/เดือน', skills: ['Product Roadmap', 'Agile', 'Market Research', 'Analytics'] },
+      { id: 'r28', title: 'UX/UI Designer',  level: 'Mid', count: 3, salary: '฿50K–฿100K/เดือน', skills: ['Figma', 'User Research', 'Prototyping', 'Design System'] },
+      { id: 'r29', title: 'UX Researcher',   level: 'Mid', count: 1, salary: '฿50K–฿100K/เดือน', skills: ['User Research', 'A/B Testing', 'Usability Testing', 'Analytics'] },
+    ],
+  },
+  {
+    id: 'qa', name: 'QA & Testing', nameT: 'QA และการทดสอบระบบ', icon: '🧪', color: '#10b981',
+    roles: [
+      { id: 'r30', title: 'QA Manager',              level: 'Manager', count: 1, salary: '฿80K–฿150K/เดือน', skills: ['QA Strategy', 'Team Lead', 'Process Improvement'] },
+      { id: 'r31', title: 'Senior QA Engineer',       level: 'Senior',  count: 2, salary: '฿60K–฿120K/เดือน', skills: ['Test Planning', 'Automation', 'Performance Testing'] },
+      { id: 'r32', title: 'QA Engineer',              level: 'Mid',     count: 4, salary: '฿40K–฿80K/เดือน',  skills: ['Manual Testing', 'Test Cases', 'Bug Reporting', 'Regression'] },
+      { id: 'r33', title: 'Automation Test Engineer', level: 'Mid',     count: 2, salary: '฿50K–฿100K/เดือน', skills: ['Selenium', 'Cypress', 'Playwright', 'CI Integration'] },
+    ],
+  },
+  {
+    id: 'it_support', name: 'IT Support & Operations', nameT: 'สนับสนุนไอทีและปฏิบัติการ', icon: '🛠️', color: '#f97316',
+    roles: [
+      { id: 'r34', title: 'IT Manager',            level: 'Manager', count: 1, salary: '฿70K–฿130K/เดือน', skills: ['IT Operations', 'Vendor Management', 'Budgeting', 'ITIL'] },
+      { id: 'r35', title: 'Senior IT Support',     level: 'Senior',  count: 2, salary: '฿40K–฿70K/เดือน',  skills: ['Systems Admin', 'Troubleshooting', 'Escalation', 'ITSM'] },
+      { id: 'r36', title: 'IT Support Specialist', level: 'Mid',     count: 5, salary: '฿25K–฿45K/เดือน',  skills: ['Help Desk', 'Hardware', 'Software Support', 'Ticketing'] },
+      { id: 'r37', title: 'IT Technician',         level: 'Junior',  count: 3, salary: '฿18K–฿30K/เดือน',  skills: ['Hardware Setup', 'Cable Management', 'Device Imaging'] },
+    ],
+  },
+];
+
 // ── Corporate Data Store ───────────────────────────────────────────────────────
 export function createCorporateSystem(writeDir) {
   const path = f => join(writeDir, f);
@@ -189,6 +270,25 @@ export function createCorporateSystem(writeDir) {
       updatedAt: new Date().toISOString(),
     }),
     saveFinance: (data) => { data.updatedAt = new Date().toISOString(); save('corp_finance.json', data); },
+
+    // ── IT Department Staff & Roles ──────────────────────────────────────────
+    getITDept: () => load('corp_it.json', {
+      overview: {
+        total_categories: IT_ROLE_CATEGORIES.length,
+        total_roles: IT_ROLE_CATEGORIES.reduce((s, c) => s + c.roles.length, 0),
+        total_positions: IT_ROLE_CATEGORIES.reduce((s, c) => s + c.roles.reduce((rs, r) => rs + r.count, 0), 0),
+        current_headcount: 2,
+        tech_stack: ['React', 'Node.js', 'FastAPI', 'PostgreSQL', 'Supabase', 'Vercel', 'AWS', 'Docker', 'Python', 'TypeScript'],
+        methodologies: ['Agile/Scrum', 'DevOps', 'CI/CD', 'GitOps', 'Domain-Driven Design'],
+      },
+      categories: IT_ROLE_CATEGORIES,
+      staff_members: [
+        { id: 's1', name: 'Zuejai (ซึ้ใจ)', role: 'Founder / Acting CTO', level: 'C-Level', dept: 'leadership', status: 'active', skills: ['AI Strategy', 'Full-Stack', 'Product', 'Architecture'] },
+        { id: 's2', name: 'AI Agent (Claude)', role: 'AI Engineering Assistant', level: 'Mid', dept: 'ai_data', status: 'active', skills: ['Code Generation', 'Review', 'Architecture', 'Documentation'] },
+      ],
+      updatedAt: new Date().toISOString(),
+    }),
+    saveITDept: (data) => { data.updatedAt = new Date().toISOString(); save('corp_it.json', data); },
 
     DEPARTMENTS,
   };
