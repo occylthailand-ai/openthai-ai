@@ -1917,6 +1917,93 @@ async def run_error_hunt_sync():
     result = await run_error_hunt(silent_if_clean=False)
     return result
 
+# ================== PAYMENT CREATE / STATUS (Frontend endpoints) ==================
+
+class PaymentCreateRequest(BaseModel):
+    plan: str = "starter"
+    method: str = "promptpay"   # promptpay | credit_card | bank_transfer
+    email: Optional[str] = None
+    name: Optional[str] = None
+
+@app.post("/payment/create")
+async def payment_create(req: PaymentCreateRequest):
+    """Frontend calls this to initiate payment — returns QR or redirect URL"""
+    from payment import generate_qr_base64, build_promptpay_payload, PROMPTPAY_ID
+
+    prices = {"starter": 299, "pro": 799, "enterprise": 2499}
+    amount = prices.get(req.plan, 299)
+
+    import secrets as _sec
+    charge_id = "OT" + __import__("datetime").datetime.now().strftime("%y%m%d%H%M%S") + _sec.token_hex(3).upper()
+
+    if req.method == "promptpay":
+        qr_b64   = generate_qr_base64(float(amount))
+        payload  = build_promptpay_payload(float(amount))
+        if not qr_b64:
+            raise HTTPException(422, detail="PROMPTPAY_ID ยังไม่ได้ตั้งค่า — กรุณาติดต่อ admin")
+        return {
+            "charge_id":    charge_id,
+            "status":       "pending",
+            "method":       "promptpay",
+            "amount":       amount,
+            "currency":     "thb",
+            "plan":         req.plan,
+            "qr_base64":    qr_b64,
+            "payload":      payload,
+            "promptpay_id": PROMPTPAY_ID,
+            "expires_in":   900,
+        }
+
+    # Bank transfer fallback
+    return {
+        "charge_id": charge_id,
+        "status":    "pending",
+        "method":    "bank_transfer",
+        "amount":    amount,
+        "currency":  "thb",
+        "plan":      req.plan,
+        "note":      f"โอน {amount} บาท แล้วแนบสลิปที่ /order/{charge_id}/slip",
+    }
+
+@app.get("/payment/status/{charge_id}")
+async def payment_status(charge_id: str):
+    """Poll payment status — manual confirm for PromptPay"""
+    try:
+        from db import AsyncSessionLocal, Order as OrderModel
+        from sqlalchemy import select as sa_select
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(sa_select(OrderModel).where(OrderModel.order_id == charge_id))
+            order = result.scalar_one_or_none()
+            if order:
+                return {"charge_id": charge_id, "status": order.status, "amount": order.price}
+    except Exception:
+        pass
+    return {"charge_id": charge_id, "status": "pending", "amount": None}
+
+@app.post("/payment/confirm/{charge_id}")
+async def payment_confirm(charge_id: str):
+    """Admin manually confirms payment — triggers success"""
+    try:
+        from db import AsyncSessionLocal, Order as OrderModel
+        from sqlalchemy import select as sa_select
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(sa_select(OrderModel).where(OrderModel.order_id == charge_id))
+            order = result.scalar_one_or_none()
+            if order:
+                order.status = "successful"
+                await db.commit()
+                # Notify Slack
+                webhook = os.getenv("SLACK_WEBHOOK_URL", "")
+                if webhook:
+                    import httpx as _hx
+                    async with _hx.AsyncClient() as c:
+                        await c.post(webhook, json={"text": f"💰 *Payment Confirmed!* charge_id={charge_id} amount={order.price} THB plan={order.package} 🎉"})
+                return {"status": "successful", "charge_id": charge_id}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+    return {"status": "not_found"}
+
+
 # ================== OT-AUTOPILOT SLASH COMMAND ==================
 
 @app.post("/slack/autopilot")
@@ -1986,6 +2073,37 @@ async def ot_autopilot(request: Request, background_tasks: BackgroundTasks):
         "response_type": "in_channel",
         "text": f"🤖 *OT-Autopilot เปิดใช้งานแล้ว!* กำลังตรวจสอบระบบทั้งหมด... รอสักครู่นะครับ @{user_name} 🚀"
     }
+
+
+# ================== CREATIVE GUILD APPLICATION ==================
+
+class CreativeApplyRequest(BaseModel):
+    name: str
+    role: str
+    portfolio: Optional[str] = None
+    line_id: Optional[str] = None
+    motivation: Optional[str] = None
+    email: Optional[str] = None
+
+@app.post("/creative/apply")
+async def creative_apply(req: CreativeApplyRequest):
+    """Receive Creative Guild applications and notify Slack"""
+    webhook = os.getenv("SLACK_WEBHOOK_URL", "")
+    if webhook:
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                await client.post(webhook, json={"text": (
+                    f"🎨 *Creative Guild Application ใหม่!*\n"
+                    f"*ตำแหน่ง:* {req.role}\n"
+                    f"*ชื่อ:* {req.name}\n"
+                    f"*Portfolio:* {req.portfolio or '-'}\n"
+                    f"*LINE:* {req.line_id or '-'}\n"
+                    f"*Email:* {req.email or '-'}\n"
+                    f"*แรงบันดาลใจ:* {req.motivation or '-'}"
+                )})
+        except Exception:
+            pass
+    return {"status": "received", "message": "ได้รับใบสมัครแล้วครับ! ทีมจะติดต่อกลับภายใน 24 ชั่วโมง"}
 
 
 # ================== RUN SERVER ==================
