@@ -2111,6 +2111,106 @@ async def creative_apply(req: CreativeApplyRequest):
     return {"status": "received", "message": "ได้รับใบสมัครแล้วครับ! ทีมจะติดต่อกลับภายใน 24 ชั่วโมง"}
 
 
+# ================== WORKFLOW MONITOR ==================
+
+@app.get("/workflow/status")
+async def workflow_status():
+    """Unified workflow monitor — ตรวจทุกระบบพร้อมกัน"""
+    import time as _time
+
+    async def check(name: str, coro):
+        t0 = _time.monotonic()
+        try:
+            result = await coro
+            ms = int((_time.monotonic() - t0) * 1000)
+            return {"name": name, "status": "ok", "ms": ms, "detail": result}
+        except Exception as e:
+            ms = int((_time.monotonic() - t0) * 1000)
+            return {"name": name, "status": "error", "ms": ms, "detail": str(e)}
+
+    async def check_db():
+        from db import AsyncSessionLocal
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+        return "connected"
+
+    async def check_payment():
+        from payment import PROMPTPAY_ID, build_promptpay_payload
+        if not PROMPTPAY_ID:
+            raise Exception("PROMPTPAY_ID not set")
+        payload = build_promptpay_payload(1.0)
+        if not payload:
+            raise Exception("QR payload empty")
+        return f"PromptPay {PROMPTPAY_ID[:4]}****"
+
+    async def check_slack():
+        webhook = os.getenv("SLACK_WEBHOOK_URL", "")
+        if not webhook:
+            raise Exception("SLACK_WEBHOOK_URL not set")
+        async with httpx.AsyncClient(timeout=5) as c:
+            r = await c.post(webhook, json={"text": "🔍 workflow ping"})
+            if r.status_code != 200:
+                raise Exception(f"Slack returned {r.status_code}")
+        return "webhook ok"
+
+    async def check_anthropic():
+        key = os.getenv("ANTHROPIC_API_KEY", "")
+        if not key:
+            raise Exception("ANTHROPIC_API_KEY not set")
+        return f"key present ({len(key)} chars)"
+
+    async def check_env():
+        missing = [k for k in ["JWT_SECRET", "ANTHROPIC_API_KEY"] if not os.getenv(k)]
+        if missing:
+            raise Exception(f"missing: {missing}")
+        return "all required vars present"
+
+    results = await asyncio.gather(
+        check("database",    check_db()),
+        check("payment_qr",  check_payment()),
+        check("slack",       check_slack()),
+        check("anthropic",   check_anthropic()),
+        check("env_vars",    check_env()),
+    )
+
+    overall = "ok" if all(r["status"] == "ok" for r in results) else "degraded"
+    errors  = [r for r in results if r["status"] == "error"]
+
+    return {
+        "overall":    overall,
+        "timestamp":  datetime.utcnow().isoformat() + "Z",
+        "checks":     list(results),
+        "errors":     len(errors),
+        "env":        "production" if IS_PRODUCTION else "development",
+        "version":    "2.2.0",
+    }
+
+@app.get("/workflow/logs")
+async def workflow_logs(limit: int = 50):
+    """ดู error logs ล่าสุดจาก DB"""
+    try:
+        from db import AsyncSessionLocal, ErrorLog
+        from sqlalchemy import select, desc
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(
+                select(ErrorLog).order_by(desc(ErrorLog.created_at)).limit(limit)
+            )
+            logs = res.scalars().all()
+            return {"logs": [
+                {"id": l.id, "level": l.level, "source": l.source,
+                 "message": l.message, "created_at": str(l.created_at)}
+                for l in logs
+            ]}
+    except Exception as e:
+        return {"logs": [], "error": str(e)}
+
+@app.post("/workflow/ping")
+async def workflow_ping():
+    """Keep-alive ping — เรียกทุก 10 นาที เพื่อป้องกัน Render sleep"""
+    return {"pong": True, "ts": datetime.utcnow().isoformat() + "Z"}
+
+
 # ================== RUN SERVER ==================
 
 if __name__ == "__main__":
