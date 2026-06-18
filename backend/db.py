@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy import String, Integer, Float, DateTime, Boolean, Text, UniqueConstraint, Index, JSON
 from datetime import datetime
+from typing import Optional
 import os
 import secrets
 
