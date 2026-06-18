@@ -104,6 +104,42 @@ export const IT_ROLE_CATEGORIES = [
   },
 ];
 
+// ── Generate all 90 IT positions from categories ──────────────────────────────
+function generateITPositions() {
+  const positions = [];
+  let idx = 1;
+  for (const cat of IT_ROLE_CATEGORIES) {
+    for (const role of cat.roles) {
+      for (let n = 1; n <= role.count; n++) {
+        positions.push({
+          id: `pos-${String(idx).padStart(3, '0')}`,
+          role_id: role.id,
+          title: role.title,
+          slot: n,
+          total_slots: role.count,
+          level: role.level,
+          category_id: cat.id,
+          category_name: cat.nameT,
+          category_icon: cat.icon,
+          category_color: cat.color,
+          salary: role.salary,
+          skills: role.skills,
+          name: null,
+          status: 'open',
+          hired_at: null,
+        });
+        idx++;
+      }
+    }
+  }
+  // Mark active staff into their positions
+  const cto = positions.find(p => p.role_id === 'r01');
+  if (cto) Object.assign(cto, { name: 'Zuejai (ซึ้ใจ)', status: 'active', hired_at: '2024-01' });
+  const aiEng = positions.find(p => p.role_id === 'r17' && p.slot === 1);
+  if (aiEng) Object.assign(aiEng, { name: 'AI Agent (Claude)', status: 'active', hired_at: '2024-01' });
+  return positions;
+}
+
 // ── Corporate Data Store ───────────────────────────────────────────────────────
 export function createCorporateSystem(writeDir) {
   const path = f => join(writeDir, f);
@@ -278,14 +314,12 @@ export function createCorporateSystem(writeDir) {
         total_roles: IT_ROLE_CATEGORIES.reduce((s, c) => s + c.roles.length, 0),
         total_positions: IT_ROLE_CATEGORIES.reduce((s, c) => s + c.roles.reduce((rs, r) => rs + r.count, 0), 0),
         current_headcount: 2,
+        open_positions: IT_ROLE_CATEGORIES.reduce((s, c) => s + c.roles.reduce((rs, r) => rs + r.count, 0), 0) - 2,
         tech_stack: ['React', 'Node.js', 'FastAPI', 'PostgreSQL', 'Supabase', 'Vercel', 'AWS', 'Docker', 'Python', 'TypeScript'],
         methodologies: ['Agile/Scrum', 'DevOps', 'CI/CD', 'GitOps', 'Domain-Driven Design'],
       },
       categories: IT_ROLE_CATEGORIES,
-      staff_members: [
-        { id: 's1', name: 'Zuejai (ซึ้ใจ)', role: 'Founder / Acting CTO', level: 'C-Level', dept: 'leadership', status: 'active', skills: ['AI Strategy', 'Full-Stack', 'Product', 'Architecture'] },
-        { id: 's2', name: 'AI Agent (Claude)', role: 'AI Engineering Assistant', level: 'Mid', dept: 'ai_data', status: 'active', skills: ['Code Generation', 'Review', 'Architecture', 'Documentation'] },
-      ],
+      positions: generateITPositions(),
       updatedAt: new Date().toISOString(),
     }),
     saveITDept: (data) => { data.updatedAt = new Date().toISOString(); save('corp_it.json', data); },
