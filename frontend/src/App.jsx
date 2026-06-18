@@ -41,6 +41,7 @@ import CommandCenterPage from './pages/corporate/CommandCenterPage';
 import ProducerOnboardingPage from './pages/ProducerOnboardingPage';
 import ProducerAdminPage from './pages/ProducerAdminPage';
 import ErrorHunterPage from './pages/ErrorHunterPage';
+import CreativeGuildPage from './pages/CreativeGuildPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -120,6 +121,8 @@ function App() {
             <Route path="/corporate/global"      element={isAuthenticated ? <GlobalOpsPage />         : <Navigate to="/login" />} />
             <Route path="/corporate/pr"          element={isAuthenticated ? <PRCommsPage />           : <Navigate to="/login" />} />
             <Route path="/corporate/command"     element={isAuthenticated ? <CommandCenterPage />     : <Navigate to="/login" />} />
+            {/* Creative Guild — Public */}
+            <Route path="/creative-guild" element={<CreativeGuildPage />} />
             {/* Producer Onboarding — Public */}
             <Route path="/producer" element={<ProducerOnboardingPage />} />
             {/* Producer Admin — Login required */}
