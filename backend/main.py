@@ -1917,6 +1917,77 @@ async def run_error_hunt_sync():
     result = await run_error_hunt(silent_if_clean=False)
     return result
 
+# ================== OT-AUTOPILOT SLASH COMMAND ==================
+
+@app.post("/slack/autopilot")
+async def ot_autopilot(request: Request, background_tasks: BackgroundTasks):
+    """Slack Slash Command: /ot-autopilot — เปิดโหมด AI Autopilot เต็มรูปแบบ"""
+    form = await request.form()
+    user_name = form.get("user_name", "unknown")
+    user_id   = form.get("user_id", "")
+    text      = form.get("text", "").strip()
+    channel   = form.get("channel_id", "")
+
+    async def run_autopilot():
+        slack_webhook = os.getenv("SLACK_WEBHOOK_URL", "")
+        if not slack_webhook:
+            return
+
+        # 1. System health check
+        checks = []
+        async with httpx.AsyncClient(timeout=10) as client:
+            for path, label in [("/", "Frontend"), ("/producer", "Producer"), ("/payment", "Payment")]:
+                try:
+                    r = await client.get(f"https://openthai-ai.com{path}", follow_redirects=True)
+                    checks.append(f"{'✅' if r.status_code == 200 else '❌'} {label}: {r.status_code}")
+                except Exception:
+                    checks.append(f"❌ {label}: timeout")
+
+        # 2. Build report
+        now_bkk = datetime.now().strftime("%d/%m/%Y %H:%M น.")
+        system_lines = "\n".join(checks)
+
+        # 3. Mission status
+        mission = f"🎯 Mission วันนี้: รายได้ 100 บาทแรก ภายใน 19:00 น." if datetime.now().hour < 19 else "🏆 Mission ปิดแล้ว — รอสรุปผล"
+
+        msg = (
+            f"🤖 *OT-Autopilot เปิดใช้งานโดย @{user_name}*\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"⏰ *{now_bkk}*\n\n"
+            f"*🔍 System Status:*\n{system_lines}\n\n"
+            f"{mission}\n\n"
+            f"*📋 Guild Status Checklist:*\n"
+            f"📈 Growth — หา producer + โพสต์ content ทุก channel\n"
+            f"⚙️ Backend — ยืนยัน payment API พร้อม\n"
+            f"💰 Finance — ตรวจ Omise keys บน Railway\n"
+            f"🖥️ DevOps — monitor uptime ทุก 5 นาที\n"
+            f"🎧 Support — ตอบ inquiry ทันที\n"
+            f"📝 Content — โพสต์ TH/ZH/EN ทุก 2 ชั่วโมง\n\n"
+            f"_พิมพ์ `/ot-autopilot status` เพื่อดูสถานะ หรือ `/ot-autopilot mission` เพื่อดู mission ปัจจุบัน_"
+        )
+
+        if text == "status":
+            msg = f"📊 *OT-Autopilot Status — {now_bkk}*\n\n{system_lines}\n\n{mission}"
+        elif text == "mission":
+            msg = (
+                f"🎯 *Mission ปัจจุบัน — {now_bkk}*\n\n"
+                f"{mission}\n\n"
+                f"*ช่องทางรับเงิน:*\n"
+                f"💳 openthai-ai.com/payment\n"
+                f"🏭 openthai-ai.com/producer\n\n"
+                f"ทุกทีมลุยเลยครับ! 💪"
+            )
+
+        await client.post(slack_webhook, json={"text": msg})
+
+    background_tasks.add_task(run_autopilot)
+
+    return {
+        "response_type": "in_channel",
+        "text": f"🤖 *OT-Autopilot เปิดใช้งานแล้ว!* กำลังตรวจสอบระบบทั้งหมด... รอสักครู่นะครับ @{user_name} 🚀"
+    }
+
+
 # ================== RUN SERVER ==================
 
 if __name__ == "__main__":
