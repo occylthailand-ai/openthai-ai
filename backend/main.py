@@ -2211,6 +2211,16 @@ async def workflow_ping():
     return {"pong": True, "ts": datetime.utcnow().isoformat() + "Z"}
 
 
+def _parse_ai_json(raw: str) -> dict:
+    """Parse JSON from AI response — handles markdown code blocks robustly"""
+    import re
+    raw = raw.strip()
+    # strip ```json ... ``` or ``` ... ```
+    match = re.search(r'```(?:json)?\s*([\s\S]*?)```', raw)
+    if match:
+        raw = match.group(1).strip()
+    return json.loads(raw)
+
 # ================== PROGRAM 1: TREND PRODUCT HUNTER ==================
 
 TREND_PROMPT = """คุณคือ AI ผู้เชี่ยวชาญวิเคราะห์ตลาดสินค้า Trending ในประเทศไทยและทั่วโลก
@@ -2263,12 +2273,7 @@ async def _fetch_trends_from_ai() -> dict:
             "content": f"{TREND_PROMPT}\n\nวันที่วันนี้: {now.strftime('%Y-%m-%d')} (ไทย: เดือน{now.month} ปี{now.year+543})\nวิเคราะห์ 10 สินค้า Trending ที่น่าสนใจที่สุดตอนนี้"
         }]
     )
-    raw = msg.content[0].text.strip()
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-    return json.loads(raw)
+    return _parse_ai_json(msg.content[0].text)
 
 @app.get("/api/trending")
 async def get_trending(bust: str = ""):
@@ -2369,12 +2374,7 @@ async def find_customers(req: CustomerFinderRequest):
             max_tokens=2000,
             messages=[{"role": "user", "content": prompt}]
         )
-        raw = msg.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        result = json.loads(raw)
+        result = _parse_ai_json(msg.content[0].text)
         result["analyzed_at"] = datetime.utcnow().isoformat() + "Z"
         return result
     except Exception as e:
@@ -2422,11 +2422,7 @@ async def hope_guide(req: HopeRequest):
 }}
 แนะนำ 3 เส้นทางที่เหมาะสม เรียงจากง่ายไปยาก"""}]
         )
-        raw = msg.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"): raw = raw[4:]
-        return json.loads(raw)
+        return _parse_ai_json(msg.content[0].text)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2434,7 +2430,7 @@ async def hope_guide(req: HopeRequest):
 
 class AffiliateGuideRequest(BaseModel):
     occupation: str
-    daily_time: int = 1
+    daily_time: float = 1.0
     platform: str = "LINE"
 
 @app.post("/api/affiliate-guide")
@@ -2459,14 +2455,10 @@ async def affiliate_guide(req: AffiliateGuideRequest):
   "best_products": ["สินค้าที่เหมาะโปรโมท"],
   "content_ideas": ["ไอเดียคอนเทนต์ 1", "ไอเดีย 2", "ไอเดีย 3"],
   "first_week_plan": ["วันที่ 1: ...", "วันที่ 2-3: ...", "วันที่ 4-7: ..."],
-  "tips": ["เคล็ดลับสำหรับ{occupation}"]
+  "tips": ["เคล็ดลับสำหรับ{req.occupation}"]
 }}"""}]
         )
-        raw = msg.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"): raw = raw[4:]
-        return json.loads(raw)
+        return _parse_ai_json(msg.content[0].text)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2510,11 +2502,7 @@ async def investor_guide(req: InvestorRequest):
 }}
 แนะนำ 3 แผนที่เหมาะสมกับงบนี้"""}]
         )
-        raw = msg.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"): raw = raw[4:]
-        return json.loads(raw)
+        return _parse_ai_json(msg.content[0].text)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2591,11 +2579,7 @@ async def tax_calculator(req: TaxRequest):
   "disclaimer": "ข้อมูลนี้เป็นการประมาณการเบื้องต้น ควรตรวจสอบกับผู้เชี่ยวชาญก่อนดำเนินการจริง"
 }}"""}]
         )
-        raw = msg.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"): raw = raw[4:]
-        result = json.loads(raw)
+        result = _parse_ai_json(msg.content[0].text)
         result["calculated_at"] = datetime.utcnow().isoformat() + "Z"
         return result
     except Exception as e:

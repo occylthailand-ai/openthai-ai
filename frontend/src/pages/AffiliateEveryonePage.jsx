@@ -10,18 +10,22 @@ export default function AffiliateEveryonePage() {
   const [platform, setPlatform] = useState('LINE');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const getGuide = useCallback(async () => {
     if (!occupation) return;
-    setLoading(true); setResult(null);
+    setLoading(true); setResult(null); setError(null);
     try {
       const r = await fetch(apiUrl('/api/affiliate-guide'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ occupation, daily_time: dailyTime, platform }),
       });
+      if (!r.ok) throw new Error(`Server error ${r.status}`);
       setResult(await r.json());
-    } catch { } finally { setLoading(false); }
+    } catch (e) {
+      setError('เชื่อมต่อไม่ได้ กรุณาลองใหม่อีกครั้ง');
+    } finally { setLoading(false); }
   }, [occupation, dailyTime, platform]);
 
   return (
@@ -140,6 +144,13 @@ export default function AffiliateEveryonePage() {
               </div>
             ))}
           </div>
+        )}
+
+        {error && (
+          <div style={{
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 10, padding: '12px 16px', color: '#fca5a5', fontSize: 13, marginTop: 16,
+          }}>⚠️ {error}</div>
         )}
 
         <div style={{ textAlign: 'center', marginTop: 28, color: '#334155', fontSize: 12 }}>

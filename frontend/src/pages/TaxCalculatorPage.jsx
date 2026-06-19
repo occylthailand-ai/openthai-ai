@@ -20,10 +20,11 @@ export default function TaxCalculatorPage() {
   const [qty, setQty] = useState(1);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const calculate = useCallback(async () => {
     if (!product.trim()) return;
-    setLoading(true); setResult(null);
+    setLoading(true); setResult(null); setError(null);
     try {
       const r = await fetch(apiUrl('/api/tax-calculator'), {
         method: 'POST',
@@ -36,8 +37,11 @@ export default function TaxCalculatorPage() {
           quantity: qty,
         }),
       });
+      if (!r.ok) throw new Error(`Server error ${r.status}`);
       setResult(await r.json());
-    } catch { } finally { setLoading(false); }
+    } catch (e) {
+      setError('เชื่อมต่อไม่ได้ กรุณาลองใหม่อีกครั้ง');
+    } finally { setLoading(false); }
   }, [product, fromCountry, toCountry, value, qty]);
 
   const CountrySelect = ({ val, onChange, label }) => (
@@ -216,6 +220,13 @@ export default function TaxCalculatorPage() {
               <div style={{ fontSize: 11, color: '#475569', lineHeight: 1.5 }}>⚠️ {result.disclaimer}</div>
             )}
           </div>
+        )}
+
+        {error && (
+          <div style={{
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 10, padding: '12px 16px', color: '#fca5a5', fontSize: 13, marginTop: 16,
+          }}>⚠️ {error}</div>
         )}
 
         <div style={{ textAlign: 'center', marginTop: 28, color: '#334155', fontSize: 12 }}>

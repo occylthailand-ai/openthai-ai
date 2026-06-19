@@ -5,12 +5,13 @@ export default function GlobalConnectPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetch(apiUrl('/api/global-connect/countries'))
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(setData)
-      .catch(() => {})
+      .catch(() => setError('โหลดข้อมูลไม่ได้ กรุณาลองใหม่'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -72,6 +73,13 @@ export default function GlobalConnectPage() {
         )}
 
         {/* Countries Grid */}
+        {error && (
+          <div style={{
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 10, padding: '16px', color: '#fca5a5', fontSize: 13, textAlign: 'center',
+          }}>⚠️ {error}</div>
+        )}
+
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: '#64748b' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>🌍</div>
