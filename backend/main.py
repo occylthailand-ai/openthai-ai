@@ -2211,6 +2211,136 @@ async def workflow_ping():
     return {"pong": True, "ts": datetime.utcnow().isoformat() + "Z"}
 
 
+# ================== AUTO BUG HUNTER ==================
+
+async def _notify_slack_error(title: str, details: str):
+    """ส่งแจ้งเตือน error ไป Slack"""
+    webhook = os.getenv("SLACK_WEBHOOK_URL", "")
+    if not webhook:
+        return
+    payload = {
+        "text": f"🐛 *Auto Bug Hunter — {title}*\n```{details[:1000]}```\n_เวลา: {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC_"
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            await client.post(webhook, json=payload)
+    except Exception:
+        pass
+
+async def _log_error_to_db(level: str, source: str, message: str):
+    """บันทึก error ลง DB"""
+    try:
+        from db import AsyncSessionLocal, ErrorLog
+        async with AsyncSessionLocal() as db:
+            db.add(ErrorLog(level=level, source=source, message=message))
+            await db.commit()
+    except Exception:
+        pass
+
+async def _auto_scan_errors():
+    """สแกนหา error อัตโนมัติ — รันทุก 5 นาที"""
+    checks = []
+
+    # 1. DB connectivity
+    try:
+        from db import AsyncSessionLocal
+        async with AsyncSessionLocal() as db:
+            await db.execute(select(1))  # type: ignore[arg-type]
+    except Exception as e:
+        checks.append(("error", "database", f"DB unreachable: {e}"))
+
+    # 2. PromptPay QR
+    try:
+        from payment import generate_qr_base64
+        qr = generate_qr_base64(100)
+        if not qr:
+            checks.append(("warning", "payment_qr", "QR returned empty — PROMPTPAY_ID missing?"))
+    except Exception as e:
+        checks.append(("error", "payment_qr", f"QR generation failed: {e}"))
+
+    # 3. Anthropic API key present
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        checks.append(("warning", "anthropic", "ANTHROPIC_API_KEY not set"))
+
+    # 4. Required env vars
+    required = ["PROMPTPAY_ID", "SLACK_WEBHOOK_URL"]
+    for var in required:
+        if not os.getenv(var):
+            checks.append(("warning", "env_vars", f"{var} not set"))
+
+    # 5. Log and notify all findings
+    for level, source, message in checks:
+        await _log_error_to_db(level, source, message)
+        await _notify_slack_error(f"{source.upper()} [{level.upper()}]", message)
+
+    return checks
+
+async def _auto_bug_hunter_loop():
+    """Background loop — สแกน error ทุก 5 นาที + keep-alive ping"""
+    await asyncio.sleep(10)  # รอ app startup เสร็จก่อน
+    ping_counter = 0
+    while True:
+        try:
+            findings = await _auto_scan_errors()
+            if findings:
+                logger.warning(f"[BugHunter] พบ {len(findings)} issues")
+            else:
+                logger.info("[BugHunter] ✅ ทุกระบบปกติ")
+        except Exception as e:
+            logger.error(f"[BugHunter] scan failed: {e}")
+
+        ping_counter += 1
+        if ping_counter % 2 == 0:  # ทุก 10 นาที — keep Render alive
+            try:
+                async with httpx.AsyncClient(timeout=5) as c:
+                    await c.post("http://localhost:8000/workflow/ping")
+            except Exception:
+                pass
+
+        await asyncio.sleep(300)  # สแกนทุก 5 นาที
+
+@app.on_event("startup")
+async def start_auto_bug_hunter():
+    asyncio.create_task(_auto_bug_hunter_loop())
+    logger.info("[BugHunter] 🐛 Auto Bug Hunter started — scanning every 5 minutes")
+
+@app.get("/bug-hunter/scan")
+async def bug_hunter_scan_now():
+    """Manual trigger — สแกนหา bug ทันที"""
+    findings = await _auto_scan_errors()
+    return {
+        "scanned_at": datetime.utcnow().isoformat() + "Z",
+        "issues_found": len(findings),
+        "findings": [{"level": l, "source": s, "message": m} for l, s, m in findings],
+        "status": "ok" if not findings else "issues_found",
+    }
+
+@app.get("/bug-hunter/history")
+async def bug_hunter_history(limit: int = 50):
+    """ดูประวัติ bug ที่พบจาก Auto Hunter"""
+    try:
+        from db import AsyncSessionLocal, ErrorLog
+        from sqlalchemy import desc
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(
+                select(ErrorLog)
+                .where(ErrorLog.source.in_(["database", "payment_qr", "anthropic", "env_vars", "bug_hunter"]))
+                .order_by(desc(ErrorLog.created_at))
+                .limit(limit)
+            )
+            logs = res.scalars().all()
+            return {
+                "total": len(logs),
+                "logs": [
+                    {"id": l.id, "level": l.level, "source": l.source,
+                     "message": l.message, "created_at": str(l.created_at)}
+                    for l in logs
+                ]
+            }
+    except Exception as e:
+        return {"total": 0, "logs": [], "error": str(e)}
+
+
 # ================== RUN SERVER ==================
 
 if __name__ == "__main__":

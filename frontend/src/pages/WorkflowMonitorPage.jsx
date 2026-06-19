@@ -63,6 +63,8 @@ export default function WorkflowMonitorPage() {
   const [lastCheck, setLastCheck] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [logs, setLogs] = useState([]);
+  const [bugScan, setBugScan] = useState(null);
+  const [scanning, setScanning] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     setLoading(true);
@@ -86,9 +88,23 @@ export default function WorkflowMonitorPage() {
     } catch {}
   }, []);
 
+  const runBugScan = useCallback(async () => {
+    setScanning(true);
+    try {
+      const r = await fetch(apiUrl('/bug-hunter/scan'));
+      const d = await r.json();
+      setBugScan(d);
+    } catch (e) {
+      setBugScan({ status: 'error', issues_found: 0, findings: [], error: e.message });
+    } finally {
+      setScanning(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchStatus();
     fetchLogs();
+    runBugScan();
   }, []);
 
   useEffect(() => {
@@ -272,8 +288,46 @@ export default function WorkflowMonitorPage() {
           ))}
         </div>
 
+        {/* Auto Bug Hunter */}
+        <div style={{ background: '#1e293b', borderRadius: 12, marginBottom: 20, overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500 }}>
+              🐛 AUTO BUG HUNTER {bugScan && bugScan.issues_found > 0 && (
+                <span style={{ background: '#7f1d1d', color: '#fca5a5', borderRadius: 6, padding: '1px 8px', fontSize: 11, marginLeft: 8 }}>
+                  {bugScan.issues_found} issues
+                </span>
+              )}
+            </span>
+            <button
+              onClick={runBugScan}
+              disabled={scanning}
+              style={{ background: '#1e3a5f', color: '#93c5fd', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: 12 }}
+            >
+              {scanning ? '🔍 กำลังสแกน...' : '🔍 สแกนทันที'}
+            </button>
+          </div>
+          {!bugScan ? (
+            <div style={{ padding: '16px', color: '#475569', fontSize: 13, textAlign: 'center' }}>กำลังสแกนครั้งแรก...</div>
+          ) : bugScan.issues_found === 0 ? (
+            <div style={{ padding: '16px', color: '#22c55e', fontSize: 13, textAlign: 'center' }}>
+              ✅ ไม่พบ bug หรือ error ในระบบ · สแกนเมื่อ {bugScan.scanned_at?.slice(0, 19)} UTC
+            </div>
+          ) : bugScan.findings?.map((f, i) => (
+            <div key={i} style={{
+              padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.04)',
+              fontFamily: 'monospace', fontSize: 12,
+            }}>
+              <span style={{ color: f.level === 'error' ? '#fca5a5' : '#fcd34d', marginRight: 8 }}>
+                [{f.level?.toUpperCase()}]
+              </span>
+              <span style={{ color: '#7dd3fc', marginRight: 8 }}>{f.source}</span>
+              <span style={{ color: '#cbd5e1' }}>{f.message}</span>
+            </div>
+          ))}
+        </div>
+
         <div style={{ textAlign: 'center', marginTop: 20, color: '#334155', fontSize: 12 }}>
-          OpenThai.ai Workflow Monitor v2.2 · backend: openthai-ai-1.onrender.com
+          OpenThai.ai Workflow Monitor v2.3 · Auto Bug Hunter ทุก 5 นาที · backend: openthai-ai-1.onrender.com
         </div>
       </div>
     </div>
