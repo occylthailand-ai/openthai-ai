@@ -2321,6 +2321,66 @@ async def get_trending_categories():
         "ts": datetime.utcnow().isoformat() + "Z"
     }
 
+# ================== PROGRAM 2: CUSTOMER FINDER ==================
+
+class CustomerFinderRequest(BaseModel):
+    product: str
+
+CUSTOMER_FINDER_PROMPT = """คุณคือ AI ผู้เชี่ยวชาญวิเคราะห์กลุ่มลูกค้าสำหรับตลาดไทย
+
+วิเคราะห์กลุ่มลูกค้าที่ต้องการสินค้า: {product}
+
+ตอบเป็น JSON เท่านั้น:
+{{
+  "product": "{product}",
+  "summary": "สรุปภาพรวมกลุ่มลูกค้า",
+  "top_strategy": "กลยุทธ์หลักที่แนะนำ",
+  "segments": [
+    {{
+      "segment_name": "ชื่อกลุ่ม",
+      "description": "รายละเอียดกลุ่ม 1-2 ประโยค",
+      "match_score": 95,
+      "estimated_size": "500,000 คน",
+      "avg_spend_thb": "฿200-500/ครั้ง",
+      "platforms": ["TikTok", "Facebook", "LINE"],
+      "pain_points": ["ปัญหา 1", "ปัญหา 2"],
+      "buying_behavior": "พฤติกรรมการซื้อ",
+      "how_to_reach": "วิธีเข้าถึงที่ได้ผล",
+      "best_message": "ข้อความที่โดนใจ"
+    }}
+  ],
+  "quick_actions": [
+    "Action 1 ที่ทำได้เลยวันนี้",
+    "Action 2",
+    "Action 3"
+  ]
+}}
+
+วิเคราะห์ 4-5 กลุ่มลูกค้าที่แตกต่างกัน"""
+
+@app.post("/api/customer-finder")
+async def find_customers(req: CustomerFinderRequest):
+    """โปรแกรม 2: Customer Finder — หาลูกค้าที่ต้องการสินค้า"""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+        prompt = CUSTOMER_FINDER_PROMPT.format(product=req.product)
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        raw = msg.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        result = json.loads(raw)
+        result["analyzed_at"] = datetime.utcnow().isoformat() + "Z"
+        return result
+    except Exception as e:
+        logger.error(f"[CustomerFinder] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ================== AUTO BUG HUNTER ==================
 
 async def _notify_slack_error(title: str, details: str):
