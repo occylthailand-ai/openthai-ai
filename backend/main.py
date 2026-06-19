@@ -2381,6 +2381,226 @@ async def find_customers(req: CustomerFinderRequest):
         logger.error(f"[CustomerFinder] {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ================== PROGRAM 5: HOPE — คนตกงาน ==================
+
+class HopeRequest(BaseModel):
+    situation: str
+    skills: str = ""
+    budget: int = 0
+
+@app.post("/api/hope")
+async def hope_guide(req: HopeRequest):
+    """โปรแกรม 5: Hope — แนะนำเส้นทางสร้างรายได้จาก 0"""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": f"""คุณคือที่ปรึกษาที่เห็นใจและช่วยคนตกงานหรือไม่มีรายได้ให้เริ่มต้นใหม่ผ่าน OpenThai.ai
+
+สถานการณ์ผู้ใช้: {req.situation}
+ทักษะที่มี: {req.skills or "ยังไม่แน่ใจ"}
+งบที่มี: {req.budget} บาท
+
+ตอบเป็น JSON เท่านั้น:
+{{
+  "message": "ข้อความให้กำลังใจ อบอุ่น จริงใจ 2-3 ประโยค",
+  "paths": [
+    {{
+      "path_name": "ชื่อเส้นทาง",
+      "description": "รายละเอียด",
+      "timeline": "เริ่มมีรายได้ใน X วัน/สัปดาห์",
+      "required_budget": "0 บาท หรือจำนวน",
+      "first_step": "ขั้นตอนแรกที่ทำได้เลยตอนนี้",
+      "income_potential": "รายได้โดยประมาณ X-Y บาท/เดือน",
+      "difficulty": "ง่าย|ปานกลาง|ท้าทาย",
+      "tools": ["เครื่องมือที่ใช้"]
+    }}
+  ],
+  "today_action": "สิ่งที่ทำได้วันนี้เลย ภายใน 1 ชั่วโมง",
+  "encouragement": "คำให้กำลังใจสุดท้าย"
+}}
+แนะนำ 3 เส้นทางที่เหมาะสม เรียงจากง่ายไปยาก"""}]
+        )
+        raw = msg.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"): raw = raw[4:]
+        return json.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ================== PROGRAM 6: AFFILIATE FOR EVERYONE ==================
+
+class AffiliateGuideRequest(BaseModel):
+    occupation: str
+    daily_time: int = 1
+    platform: str = "LINE"
+
+@app.post("/api/affiliate-guide")
+async def affiliate_guide(req: AffiliateGuideRequest):
+    """โปรแกรม 6: Affiliate สำหรับทุกคน"""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": f"""คุณคือผู้เชี่ยวชาญ Affiliate Marketing สำหรับคนไทย
+
+อาชีพ: {req.occupation}
+เวลาว่างต่อวัน: {req.daily_time} ชั่วโมง
+แพลตฟอร์มหลัก: {req.platform}
+
+ตอบเป็น JSON เท่านั้น:
+{{
+  "income_estimate": "รายได้ประมาณการต่อเดือน",
+  "strategy": "กลยุทธ์ที่เหมาะกับอาชีพนี้",
+  "daily_routine": ["กิจกรรม 1 (XX นาที)", "กิจกรรม 2"],
+  "best_products": ["สินค้าที่เหมาะโปรโมท"],
+  "content_ideas": ["ไอเดียคอนเทนต์ 1", "ไอเดีย 2", "ไอเดีย 3"],
+  "first_week_plan": ["วันที่ 1: ...", "วันที่ 2-3: ...", "วันที่ 4-7: ..."],
+  "tips": ["เคล็ดลับสำหรับ{occupation}"]
+}}"""}]
+        )
+        raw = msg.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"): raw = raw[4:]
+        return json.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ================== PROGRAM 7: SMART INVESTOR GUIDE ==================
+
+class InvestorRequest(BaseModel):
+    budget: int
+    risk_level: str = "medium"
+    goal: str = "passive_income"
+
+@app.post("/api/investor-guide")
+async def investor_guide(req: InvestorRequest):
+    """โปรแกรม 7: Smart Investor — แนะนำการลงทุนใน OpenThai.ai"""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": f"""คุณคือที่ปรึกษาการลงทุนใน OpenThai.ai Platform
+
+งบลงทุน: {req.budget:,} บาท
+ความเสี่ยงที่รับได้: {req.risk_level}
+เป้าหมาย: {req.goal}
+
+ตอบเป็น JSON เท่านั้น:
+{{
+  "summary": "สรุปแผนการลงทุนที่เหมาะสม",
+  "plans": [
+    {{
+      "plan_name": "ชื่อแผน",
+      "description": "รายละเอียด",
+      "investment": "จำนวนเงิน",
+      "expected_return": "ผลตอบแทนที่คาดหวัง",
+      "timeline": "ระยะเวลาเห็นผล",
+      "risk": "ต่ำ|กลาง|สูง",
+      "steps": ["ขั้นตอน 1", "ขั้นตอน 2"]
+    }}
+  ],
+  "warning": "ข้อควรระวัง",
+  "start_today": "เริ่มต้นวันนี้ทำอะไรก่อน"
+}}
+แนะนำ 3 แผนที่เหมาะสมกับงบนี้"""}]
+        )
+        raw = msg.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"): raw = raw[4:]
+        return json.loads(raw)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ================== PROGRAM 8: GLOBAL SAFE CONNECT ==================
+
+@app.get("/api/global-connect/countries")
+async def global_connect_countries():
+    """โปรแกรม 8: รายชื่อประเทศที่รองรับ + ข้อมูลตลาด"""
+    return {
+        "supported_countries": [
+            {"code": "TH", "name": "ไทย", "flag": "🇹🇭", "language": "th", "status": "active", "traders": "12,500+"},
+            {"code": "CN", "name": "จีน", "flag": "🇨🇳", "language": "zh", "status": "active", "traders": "8,200+"},
+            {"code": "JP", "name": "ญี่ปุ่น", "flag": "🇯🇵", "language": "ja", "status": "active", "traders": "3,100+"},
+            {"code": "SG", "name": "สิงคโปร์", "flag": "🇸🇬", "language": "en", "status": "active", "traders": "2,800+"},
+            {"code": "MY", "name": "มาเลเซีย", "flag": "🇲🇾", "language": "ms", "status": "active", "traders": "2,400+"},
+            {"code": "VN", "name": "เวียดนาม", "flag": "🇻🇳", "language": "vi", "status": "active", "traders": "1,900+"},
+            {"code": "KR", "name": "เกาหลีใต้", "flag": "🇰🇷", "language": "ko", "status": "coming", "traders": "—"},
+            {"code": "US", "name": "สหรัฐฯ", "flag": "🇺🇸", "language": "en", "status": "coming", "traders": "—"},
+            {"code": "GB", "name": "อังกฤษ", "flag": "🇬🇧", "language": "en", "status": "coming", "traders": "—"},
+            {"code": "DE", "name": "เยอรมนี", "flag": "🇩🇪", "language": "de", "status": "coming", "traders": "—"},
+            {"code": "AU", "name": "ออสเตรเลีย", "flag": "🇦🇺", "language": "en", "status": "coming", "traders": "—"},
+            {"code": "IN", "name": "อินเดีย", "flag": "🇮🇳", "language": "hi", "status": "coming", "traders": "—"},
+        ],
+        "active_count": 6,
+        "coming_soon": 6,
+        "kyc_required": True,
+        "supported_currencies": ["THB", "CNY", "USD", "EUR", "JPY", "SGD"],
+        "ts": datetime.utcnow().isoformat() + "Z"
+    }
+
+# ================== PROGRAM 9: GLOBAL TAX & CUSTOMS ==================
+
+class TaxRequest(BaseModel):
+    product: str
+    from_country: str
+    to_country: str
+    value_thb: float
+    quantity: int = 1
+
+@app.post("/api/tax-calculator")
+async def tax_calculator(req: TaxRequest):
+    """โปรแกรม 9: คำนวณภาษีศุลกากรอัตโนมัติ"""
+    try:
+        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+        msg = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": f"""คุณคือผู้เชี่ยวชาญกฎหมายศุลกากรและภาษีนำเข้า-ส่งออกระหว่างประเทศ
+
+สินค้า: {req.product}
+จากประเทศ: {req.from_country}
+ไปประเทศ: {req.to_country}
+มูลค่า: {req.value_thb:,.2f} บาท
+จำนวน: {req.quantity} ชิ้น
+
+ตอบเป็น JSON เท่านั้น:
+{{
+  "summary": "สรุปภาษีที่ต้องชำระ",
+  "hs_code": "HS Code โดยประมาณ",
+  "taxes": [
+    {{
+      "name": "ชื่อภาษี/อากร",
+      "rate": "X%",
+      "amount_thb": 0,
+      "description": "รายละเอียด"
+    }}
+  ],
+  "total_tax_thb": 0,
+  "total_cost_thb": 0,
+  "documents_required": ["เอกสารที่ต้องใช้"],
+  "estimated_clearance_days": 3,
+  "tips": "เคล็ดลับประหยัดภาษีอย่างถูกกฎหมาย",
+  "warning": "ข้อควรระวัง",
+  "disclaimer": "ข้อมูลนี้เป็นการประมาณการเบื้องต้น ควรตรวจสอบกับผู้เชี่ยวชาญก่อนดำเนินการจริง"
+}}"""}]
+        )
+        raw = msg.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"): raw = raw[4:]
+        result = json.loads(raw)
+        result["calculated_at"] = datetime.utcnow().isoformat() + "Z"
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ================== AUTO BUG HUNTER ==================
 
 async def _notify_slack_error(title: str, details: str):

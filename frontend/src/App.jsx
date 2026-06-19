@@ -45,6 +45,11 @@ import CreativeGuildPage from './pages/CreativeGuildPage';
 import WorkflowMonitorPage from './pages/WorkflowMonitorPage';
 import TrendProductHunterPage from './pages/TrendProductHunterPage';
 import CustomerFinderPage from './pages/CustomerFinderPage';
+import HopePage from './pages/HopePage';
+import AffiliateEveryonePage from './pages/AffiliateEveryonePage';
+import InvestorGuidePage from './pages/InvestorGuidePage';
+import GlobalConnectPage from './pages/GlobalConnectPage';
+import TaxCalculatorPage from './pages/TaxCalculatorPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -135,6 +140,11 @@ function App() {
             <Route path="/workflow" element={isAuthenticated ? <WorkflowMonitorPage /> : <Navigate to="/login" />} />
             <Route path="/trend-hunter" element={<TrendProductHunterPage />} />
             <Route path="/customer-finder" element={<CustomerFinderPage />} />
+            <Route path="/hope" element={<HopePage />} />
+            <Route path="/affiliate-everyone" element={<AffiliateEveryonePage />} />
+            <Route path="/investor-guide" element={<InvestorGuidePage />} />
+            <Route path="/global-connect" element={<GlobalConnectPage />} />
+            <Route path="/tax-calculator" element={<TaxCalculatorPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />
