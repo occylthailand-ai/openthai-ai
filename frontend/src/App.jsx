@@ -43,6 +43,7 @@ import ProducerAdminPage from './pages/ProducerAdminPage';
 import ErrorHunterPage from './pages/ErrorHunterPage';
 import CreativeGuildPage from './pages/CreativeGuildPage';
 import WorkflowMonitorPage from './pages/WorkflowMonitorPage';
+import TrendProductHunterPage from './pages/TrendProductHunterPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -131,6 +132,7 @@ function App() {
             {/* Error Hunter — Login required */}
             <Route path="/error-hunter" element={isAuthenticated ? <ErrorHunterPage /> : <Navigate to="/login" />} />
             <Route path="/workflow" element={isAuthenticated ? <WorkflowMonitorPage /> : <Navigate to="/login" />} />
+            <Route path="/trend-hunter" element={<TrendProductHunterPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />

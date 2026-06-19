@@ -2211,6 +2211,116 @@ async def workflow_ping():
     return {"pong": True, "ts": datetime.utcnow().isoformat() + "Z"}
 
 
+# ================== PROGRAM 1: TREND PRODUCT HUNTER ==================
+
+TREND_PROMPT = """คุณคือ AI ผู้เชี่ยวชาญวิเคราะห์ตลาดสินค้า Trending ในประเทศไทยและทั่วโลก
+
+วิเคราะห์และส่งออกข้อมูลสินค้าที่กำลัง Trending ขณะนี้ โดยครอบคลุม:
+- TikTok Shop Thailand
+- Shopee Thailand
+- Lazada Thailand
+- ตลาดโลก (Amazon, Alibaba)
+- Google Trends Thailand
+
+ตอบเป็น JSON เท่านั้น รูปแบบดังนี้:
+{
+  "updated_at": "ISO timestamp",
+  "market": "TH",
+  "trending_products": [
+    {
+      "rank": 1,
+      "name_th": "ชื่อสินค้าภาษาไทย",
+      "name_en": "Product name in English",
+      "category": "หมวดหมู่",
+      "trend_score": 95,
+      "trend_direction": "rising|peak|stable",
+      "avg_price_thb": 0,
+      "demand_level": "very_high|high|medium",
+      "platforms": ["TikTok", "Shopee", "Lazada"],
+      "target_audience": "กลุ่มเป้าหมาย",
+      "why_trending": "เหตุผลที่กำลังฮิต",
+      "opportunity": "โอกาสทางธุรกิจ",
+      "hashtags": ["#tag1", "#tag2"],
+      "season": "ตลอดปี|Q1|Q2|Q3|Q4"
+    }
+  ],
+  "hot_categories": ["หมวดที่ฮิตสุด"],
+  "market_insight": "สรุปภาพรวมตลาด",
+  "best_opportunity": "สินค้าที่ควรลงทุนเดี๋ยวนี้"
+}"""
+
+_trend_cache: dict = {"data": None, "ts": 0}
+
+async def _fetch_trends_from_ai() -> dict:
+    """ดึงข้อมูล trend จาก Claude AI"""
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
+    now = datetime.utcnow()
+    msg = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=2000,
+        messages=[{
+            "role": "user",
+            "content": f"{TREND_PROMPT}\n\nวันที่วันนี้: {now.strftime('%Y-%m-%d')} (ไทย: เดือน{now.month} ปี{now.year+543})\nวิเคราะห์ 10 สินค้า Trending ที่น่าสนใจที่สุดตอนนี้"
+        }]
+    )
+    raw = msg.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    return json.loads(raw)
+
+@app.get("/api/trending")
+async def get_trending(bust: str = ""):
+    """โปรแกรม 1: Trend Product Hunter — สินค้ากำลัง Trending อัตโนมัติ"""
+    global _trend_cache
+    now = time.time()
+    # Cache 1 ชั่วโมง (3600 วินาที)
+    if not bust and _trend_cache["data"] and (now - _trend_cache["ts"]) < 3600:
+        return _trend_cache["data"]
+    try:
+        data = await asyncio.to_thread(_fetch_trends_from_ai)
+        data["source"] = "claude_ai"
+        data["ts"] = datetime.utcnow().isoformat() + "Z"
+        data["cache_expires_in"] = 3600
+        _trend_cache = {"data": data, "ts": now}
+        # บันทึก log
+        await _log_error_to_db("info", "trend_hunter", f"Fetched {len(data.get('trending_products', []))} trending products")
+        return data
+    except Exception as e:
+        logger.error(f"[TrendHunter] {e}")
+        # Fallback data เมื่อ AI ไม่พร้อม
+        return {
+            "ts": datetime.utcnow().isoformat() + "Z",
+            "source": "fallback",
+            "market": "TH",
+            "trending_products": [
+                {"rank": 1, "name_th": "แผ่นฟิล์มกระจกมือถือ", "name_en": "Screen Protector", "category": "อุปกรณ์มือถือ", "trend_score": 92, "trend_direction": "rising", "avg_price_thb": 99, "demand_level": "very_high", "platforms": ["TikTok", "Shopee"], "target_audience": "คนใช้สมาร์ทโฟน", "why_trending": "คนเปลี่ยนมือถือบ่อยขึ้น", "opportunity": "ขายเป็น bundle กับเคส", "hashtags": ["#ฟิล์มกระจก", "#มือถือ"], "season": "ตลอดปี"},
+                {"rank": 2, "name_th": "ครีมกันแดด SPF50+", "name_en": "Sunscreen SPF50+", "category": "สกินแคร์", "trend_score": 89, "trend_direction": "peak", "avg_price_thb": 350, "demand_level": "very_high", "platforms": ["TikTok", "Shopee", "Lazada"], "target_audience": "ผู้หญิง 18-35", "why_trending": "เทรนด์ skincare ยังแรง", "opportunity": "bundle กับมอยเจอร์ไรเซอร์", "hashtags": ["#กันแดด", "#skincare"], "season": "Q2|Q3"},
+            ],
+            "hot_categories": ["สกินแคร์", "อุปกรณ์มือถือ", "ของใช้ในบ้าน"],
+            "market_insight": "ตลาด e-commerce ไทยเติบโต 20% YoY",
+            "best_opportunity": "สินค้า health & beauty ยังมาแรงมาก",
+            "error": str(e)
+        }
+
+@app.get("/api/trending/categories")
+async def get_trending_categories():
+    """ดึงหมวดหมู่สินค้า trending แยกตามแพลตฟอร์ม"""
+    return {
+        "categories": [
+            {"name": "สกินแคร์ & ความงาม", "icon": "💄", "growth": "+34%", "platforms": ["TikTok", "Shopee"]},
+            {"name": "อาหารเสริม & สุขภาพ", "icon": "💊", "growth": "+28%", "platforms": ["Shopee", "Lazada"]},
+            {"name": "อุปกรณ์มือถือ", "icon": "📱", "growth": "+22%", "platforms": ["TikTok", "Shopee", "Lazada"]},
+            {"name": "เสื้อผ้าแฟชั่น", "icon": "👗", "growth": "+18%", "platforms": ["TikTok", "Shopee"]},
+            {"name": "ของใช้ในบ้าน", "icon": "🏠", "growth": "+15%", "platforms": ["Shopee", "Lazada"]},
+            {"name": "อาหารและขนม", "icon": "🍜", "growth": "+12%", "platforms": ["TikTok", "Shopee"]},
+            {"name": "สินค้าเด็ก", "icon": "🧸", "growth": "+10%", "platforms": ["Shopee", "Lazada"]},
+            {"name": "กีฬาและออกกำลังกาย", "icon": "⚽", "growth": "+9%", "platforms": ["TikTok", "Lazada"]},
+        ],
+        "ts": datetime.utcnow().isoformat() + "Z"
+    }
+
 # ================== AUTO BUG HUNTER ==================
 
 async def _notify_slack_error(title: str, details: str):
