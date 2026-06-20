@@ -742,6 +742,30 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* TAB: AUTO-POST */}
+        {tab === 'autopost' && (
+          <div style={{ ...glass, textAlign: 'center', padding: '48px 24px' }}>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>🚀</div>
+            <h2 style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>Auto-Post Engine</h2>
+            <p style={{ color: '#94a3b8', marginBottom: 28, fontSize: 15 }}>สร้างเนื้อหา AI + โพสต์ทุกแพลตฟอร์มพร้อมกัน พร้อม Affiliate Link อัตโนมัติ</p>
+            <a href="/autopost" style={{ display: 'inline-block', padding: '12px 32px', background: 'linear-gradient(135deg,#6366f1,#7c3aed)', borderRadius: 12, fontWeight: 700, color: '#fff', textDecoration: 'none', fontSize: 15 }}>
+              เปิด Auto-Post Engine →
+            </a>
+          </div>
+        )}
+
+        {/* TAB: LINK TRACKER */}
+        {tab === 'linktracker' && (
+          <div style={{ ...glass, textAlign: 'center', padding: '48px 24px' }}>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>🔗</div>
+            <h2 style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>Link Tracker</h2>
+            <p style={{ color: '#94a3b8', marginBottom: 28, fontSize: 15 }}>ติดตาม affiliate link แบบ real-time — คลิก · Conversion · รายได้</p>
+            <a href="/link-tracker" style={{ display: 'inline-block', padding: '12px 32px', background: 'linear-gradient(135deg,#10b981,#0d9488)', borderRadius: 12, fontWeight: 700, color: '#fff', textDecoration: 'none', fontSize: 15 }}>
+              เปิด Link Tracker →
+            </a>
+          </div>
+        )}
+
         {/* TAB: SETTINGS */}
         {tab === 'settings' && (
           <div style={{ display: 'grid', gap: 16 }}>

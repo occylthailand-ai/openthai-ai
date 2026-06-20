@@ -25,6 +25,8 @@ const QUICK_ACTIONS = [
   { icon: '▶️', label: 'TikTok Feed', desc: 'Feed สินค้า OTOP', route: '/tiktok', color: '#fe2c55' },
   { icon: '👥', label: 'Facebook Feed', desc: 'โพสต์ + Marketplace', route: '/facebook', color: '#1877f2' },
   { icon: '💰', label: 'Affiliate', desc: 'รับ commission 20–40%', route: '/affiliate', color: '#f59e0b' },
+  { icon: '🚀', label: 'Auto-Post', desc: 'สร้างเนื้อหา AI + โพสต์ทุกแพลตฟอร์มพร้อมกัน', route: '/autopost', color: '#6366f1', hot: true },
+  { icon: '🔗', label: 'Link Tracker', desc: 'ติดตาม affiliate link · คลิก · Conversion · รายได้', route: '/link-tracker', color: '#10b981' },
 ];
 
 const ACTIVITY = [

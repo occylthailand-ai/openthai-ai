@@ -192,6 +192,57 @@ app.post('/api/autopost/broadcast', async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// ─── GET /api/autopost/process — Vercel cron: daily auto-post (noon) ──────────
+app.get('/api/autopost/process', async (req, res) => {
+  // Only allow Vercel cron or admin
+  const isVercelCron = req.headers['x-vercel-cron'] === '1';
+  const isAdmin = checkAdminKey(req.headers['x-admin-key'] || req.query.key);
+  if (!isVercelCron && !isAdmin) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+  try {
+    // ใช้ PR Autopilot สร้างเนื้อหา แล้วโพสต์ทุก platform ที่ตั้งค่าไว้
+    const signals = await prAutopilot.collectSignals?.() || {};
+    const topics  = prAutopilot.planTopics?.(signals) || [];
+
+    if (!topics.length) return res.json({ success: true, message: 'No topics planned today', posted: 0 });
+
+    const topic = topics[0]; // โพสต์ 1 รายการต่อวัน
+    const form  = {
+      product:  topic.product,
+      category: topic.category,
+      platform: 'facebook',
+      style:    topic.style,
+      price:    topic.price,
+      topic:    topic.angle,
+    };
+
+    let content;
+    try { content = await smartGenerate(form); }
+    catch (e) { return res.json({ success: false, error: `generate failed: ${e.message}` }); }
+
+    // Build structured content for autopost
+    const structured = {
+      hook: content.hook || content.caption?.split('\n')[0] || topic.product,
+      body: (content.script || []).join('\n') || content.caption || '',
+      cta:  '👉 ลองฟรีที่ OpenThaiAi.com',
+    };
+    const hashtags = content.hashtags || [];
+
+    const batch = await autoPost.broadcast({
+      content: structured,
+      hashtags,
+      affiliateRef: null,
+      productId: null,
+      targetPlatforms: null, // all enabled
+    });
+
+    addLog('info', 'Cron', `autopost/process: โพสต์ ${batch.success_count}/${batch.total_count} platform`);
+    res.json({ success: true, posted: batch.success_count, total: batch.total_count, batch_id: batch.id });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({
   windowMs: 60 * 1000,        // 1 นาที
@@ -343,6 +394,11 @@ function mockGenerate(form) {
 
 // ─── Build Claude prompt ──────────────────────────────────────────────────────
 function buildPrompt(form) {
+  // ถ้า caller ส่ง customPrompt มา → ใช้ตรงๆ (AutoPost, PR Autopilot ฯลฯ)
+  if (form.customPrompt) return form.customPrompt;
+  // ถ้าส่งแค่ topic (ไม่มี product) → map เป็น product
+  if (!form.product && form.topic) form.product = form.topic;
+
   const langMap = { 'ภาษาไทย': 'ภาษาไทย', 'English': 'English', 'ไทย + อังกฤษ': 'ทั้งภาษาไทยและอังกฤษ' };
   const lang = langMap[form.lang] || 'ภาษาไทย';
 
@@ -377,13 +433,14 @@ function buildPrompt(form) {
 app.post('/api/generate', generateLimiter, async (req, res) => {
   const form = req.body;
 
-  if (!form?.product?.trim()) {
-    return res.status(400).json({ error: 'product is required' });
+  if (!form?.product?.trim() && !form?.topic?.trim() && !form?.customPrompt?.trim()) {
+    return res.status(400).json({ error: 'product or topic is required' });
   }
 
   // Basic input sanitization — ตัดอักขระอันตราย
   const sanitize = (s) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').slice(0, 500) : '');
-  form.product  = sanitize(form.product);
+  form.product  = sanitize(form.product || '');
+  form.topic    = sanitize(form.topic || '');
   form.audience = sanitize(form.audience);
   form.price    = sanitize(form.price);
 
