@@ -32,6 +32,7 @@ const QUICK_ACTIONS = [
   { icon: '📊', label: 'Analytics', desc: 'วิเคราะห์ผล · Platform · Angle · Revenue จริง', route: '/analytics', color: '#10b981', hot: true },
   { icon: '💡', label: 'Content Ideas', desc: 'AI สร้างไอเดีย · Truth Angle · หลาย Platform', route: '/ideas', color: '#f59e0b', hot: true },
   { icon: '📋', label: 'Queue Manager', desc: 'จัดการ Schedule · เลื่อน · ยกเลิก · ดูประวัติ', route: '/queue', color: '#8b5cf6' },
+  { icon: '🆚', label: 'A/B Tester', desc: 'สร้าง 2 เวอร์ชั่น · AI วิเคราะห์ · เลือกดีที่สุด', route: '/abtest', color: '#06b6d4', hot: true },
   { icon: '🔗', label: 'Link Tracker', desc: 'ติดตาม affiliate link · คลิก · Conversion · รายได้', route: '/link-tracker', color: '#06b6d4' },
 ];
 
