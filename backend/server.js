@@ -35,6 +35,8 @@ import { createKVStore } from './kv-store.js';
 import { createMythos } from './mythos.js';
 import { createPRAutopilot } from './pr-autopilot.js';
 import { createInvite } from './invite.js';
+import { createAutoPost } from './autopost.js';
+import { createLinkTracker } from './link-tracker.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -68,12 +70,25 @@ const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
-const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
+const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => {
+  sendOrderNotification(order);
+  try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) {}
+  // บันทึก conversion ถ้ามี ref (affiliate link tracking)
+  if (order.ref) {
+    try { linkTracker.recordConversion(order.ref, { orderId: order.id, amount: order.total || 0, platform: order.utm_source || '' }); } catch (_) {}
+  }
+} });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
 const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
 const carriers  = createCarriers(WRITE_DATA_DIR, {
   onNewCarrier: (c) => sendCarrierSignupAlert(c),
   onNewJob: (j) => sendDeliveryJobAlert(j),
+});
+const linkTracker = createLinkTracker(WRITE_DATA_DIR, { kvPush: (k, v) => kv.push(k, v), addLog });
+const autoPost  = createAutoPost(WRITE_DATA_DIR, {
+  kvPush: (k, v) => kv.push(k, v),
+  addLog,
+  createTrackingLink: (params) => linkTracker.createTrackingLink(params),
 });
 
 import {
@@ -151,6 +166,10 @@ app.use(orders.router);
 app.use(inventory.router);
 // Carrier & logistics routes — /api/carriers, /api/delivery
 app.use(carriers.router);
+// Link tracking & redirect routes — /go/:code, /api/track/*
+app.use(linkTracker.buildRouter(express));
+// Auto-post platform routes — /api/autopost/*
+app.use(autoPost.buildRouter(express));
 
 // Logistics admin
 app.get('/api/logistics/admin/summary', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await carriers.summary()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
@@ -161,6 +180,17 @@ app.get('/api/logistics/admin/jobs', async (req, res) => { if (!invAuth(req, res
 app.post('/api/logistics/admin/job-assign', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.assignJob(req.body?.id, req.body?.carrier_id, req.body?.note); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
 app.post('/api/logistics/admin/job-status', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.jobSetStatus(req.body?.id, req.body?.status, req.body?.note); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
 app.post('/api/logistics/admin/job-deliver', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.deliverJob(req.body?.id, req.body || {}); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+
+// ─── Auto-Post Broadcast (Admin) — POST /api/autopost/broadcast ───────────────
+app.post('/api/autopost/broadcast', async (req, res) => {
+  if (!invAuth(req, res)) return;
+  try {
+    const { content, hashtags, imageUrl, affiliateRef, productId, targetPlatforms } = req.body || {};
+    if (!content?.hook) return res.status(400).json({ success: false, error: 'content.hook is required' });
+    const batch = await autoPost.broadcast({ content, hashtags, imageUrl, affiliateRef, productId, targetPlatforms });
+    res.json({ success: true, ...batch });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({

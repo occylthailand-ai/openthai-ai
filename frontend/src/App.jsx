@@ -58,6 +58,8 @@ const FoundationPortalPage = lazy(() => import('./pages/portals/FoundationPortal
 const CarrierJoinPage = lazy(() => import('./pages/CarrierJoinPage'));
 const DeliveryPage = lazy(() => import('./pages/DeliveryPage'));
 const CarrierDirectoryPage = lazy(() => import('./pages/CarrierDirectoryPage'));
+const AutoPostPage = lazy(() => import('./pages/AutoPostPage'));
+const LinkTrackerPage = lazy(() => import('./pages/LinkTrackerPage'));
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -168,6 +170,8 @@ function App() {
               <Route path="/delivery" element={<DeliveryPage />} />
               <Route path="/ship" element={<DeliveryPage />} />
               <Route path="/carriers" element={<CarrierDirectoryPage />} />
+              <Route path="/autopost" element={isAuthenticated ? <AutoPostPage /> : <Navigate to="/login" />} />
+              <Route path="/link-tracker" element={isAuthenticated ? <LinkTrackerPage /> : <Navigate to="/login" />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>
