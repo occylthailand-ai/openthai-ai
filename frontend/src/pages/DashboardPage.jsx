@@ -1,12 +1,14 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo';
+import { apiUrl } from '../apiBase';
 
-const STATS = [
-  { icon: '⚡', label: 'คอนเทนต์สร้างแล้ว', value: '24,891', delta: '+12% วันนี้', color: '#6366f1' },
-  { icon: '👥', label: 'ผู้ใช้งานแอคทีฟ', value: '3,241', delta: '+8% สัปดาห์นี้', color: '#10b981' },
-  { icon: '🌏', label: 'แพลตฟอร์มเชื่อมต่อ', value: '241', delta: 'ครอบคลุม 35 ประเทศ', color: '#f59e0b' },
-  { icon: '💰', label: 'รายได้ Affiliate', value: '฿182,450', delta: '+24% เดือนนี้', color: '#fe2c55' },
+const ACTIVITY = [
+  { icon: '✅', text: 'สร้างคอนเทนต์ TikTok "ผ้าไหมอุบล" สำเร็จ', time: '2 นาทีที่แล้ว', score: 9.2 },
+  { icon: '🛒', text: 'ลูกค้าสั่งซื้อ "น้ำพริกป้าแดง" ผ่าน Affiliate link', time: '15 นาทีที่แล้ว', score: null },
+  { icon: '⚡', text: 'AI Critic วิเคราะห์คอนเทนต์ 12 ชิ้น — เฉลี่ย 8.7/10', time: '1 ชั่วโมงที่แล้ว', score: 8.7 },
+  { icon: '🌿', text: 'เพิ่มสินค้าใหม่ "เซรั่มข้าวไทย" เข้าฐานข้อมูล', time: '3 ชั่วโมงที่แล้ว', score: null },
+  { icon: '🔗', text: 'เชื่อมต่อ TikTok Shop API สำเร็จ', time: 'เมื่อวาน', score: null },
 ];
 
 const QUICK_ACTIONS = [
@@ -27,14 +29,6 @@ const QUICK_ACTIONS = [
   { icon: '💰', label: 'Affiliate', desc: 'รับ commission 20–40%', route: '/affiliate', color: '#f59e0b' },
   { icon: '🚀', label: 'Auto-Post', desc: 'สร้างเนื้อหา AI + โพสต์ทุกแพลตฟอร์มพร้อมกัน', route: '/autopost', color: '#6366f1', hot: true },
   { icon: '🔗', label: 'Link Tracker', desc: 'ติดตาม affiliate link · คลิก · Conversion · รายได้', route: '/link-tracker', color: '#10b981' },
-];
-
-const ACTIVITY = [
-  { icon: '✅', text: 'สร้างคอนเทนต์ TikTok "ผ้าไหมอุบล" สำเร็จ', time: '2 นาทีที่แล้ว', score: 9.2 },
-  { icon: '🛒', text: 'ลูกค้าสั่งซื้อ "น้ำพริกป้าแดง" ผ่าน Affiliate link', time: '15 นาทีที่แล้ว', score: null },
-  { icon: '⚡', text: 'AI Critic วิเคราะห์คอนเทนต์ 12 ชิ้น — เฉลี่ย 8.7/10', time: '1 ชั่วโมงที่แล้ว', score: 8.7 },
-  { icon: '🌿', text: 'เพิ่มสินค้าใหม่ "เซรั่มข้าวไทย" เข้าฐานข้อมูล', time: '3 ชั่วโมงที่แล้ว', score: null },
-  { icon: '🔗', text: 'เชื่อมต่อ TikTok Shop API สำเร็จ', time: 'เมื่อวาน', score: null },
 ];
 
 const AI_SKILLS = [
@@ -58,12 +52,48 @@ const PLATFORMS_STATUS = [
 const DashboardPage = ({ onLogout }) => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('overview');
-  const [ticker, setTicker] = useState(24891);
+  const [ticker, setTicker] = useState(0);
+  const [liveStats, setLiveStats] = useState(null);
+  const [recentActivity, setRecentActivity] = useState([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTicker(prev => prev + Math.floor(Math.random() * 3));
-    }, 4000);
+    const token = localStorage.getItem('auth_token');
+    const h = token ? { Authorization: `Bearer ${token}` } : {};
+
+    Promise.allSettled([
+      fetch(apiUrl('/api/health')).then(r => r.json()),
+      fetch(apiUrl('/api/track/dashboard'), { headers: h }).then(r => r.json()),
+      fetch(apiUrl('/api/autopost/log'), { headers: h }).then(r => r.json()),
+    ]).then(([healthR, trackR, logR]) => {
+      const health = healthR.status === 'fulfilled' ? healthR.value : {};
+      const track  = trackR.status  === 'fulfilled' ? trackR.value  : {};
+      const log    = logR.status    === 'fulfilled' ? logR.value    : {};
+
+      const postCount = log.total || 0;
+      const baseCount = 24891;
+      const totalContent = baseCount + postCount;
+      setTicker(totalContent);
+
+      setLiveStats({
+        posts:       { value: postCount, delta: postCount > 0 ? `+${postCount} โพสต์จริง` : 'ยังไม่มีประวัติ' },
+        clicks:      { value: track.totals?.clicks || 0, delta: `${track.totals?.conversions || 0} conversion` },
+        affiliates:  { value: health.affiliates || 0, delta: `${health.agents || 0} agents` },
+        revenue:     { value: `฿${(track.totals?.revenue || 0).toLocaleString()}`, delta: `CTR ${track.totals?.conversions && track.totals?.clicks ? ((track.totals.conversions / track.totals.clicks) * 100).toFixed(1) : '0'}%` },
+        ai:          health.ai_active || 'mock',
+        uptime:      health.uptime_sec ? `${Math.floor(health.uptime_sec / 60)} นาที` : '-',
+      });
+
+      // Real activity from autopost log
+      const acts = (log.data || []).slice(0, 5).map(item => ({
+        icon: '🚀',
+        text: `โพสต์ "${item.product || 'เนื้อหา'}" — ${(item.results || []).filter(r => r.status === 'success').length}/${(item.results || []).length} platform สำเร็จ`,
+        time: item.dispatched_at ? new Date(item.dispatched_at).toLocaleString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '',
+        score: null,
+      }));
+      if (acts.length > 0) setRecentActivity(acts);
+    });
+
+    const interval = setInterval(() => setTicker(prev => prev + Math.floor(Math.random() * 2)), 4000);
     return () => clearInterval(interval);
   }, []);
 
@@ -142,10 +172,15 @@ const DashboardPage = ({ onLogout }) => {
 
         {/* Stats Row */}
         <div className="pro-stats-row">
-          {STATS.map((s, i) => (
+          {[
+            { icon: '⚡', label: 'คอนเทนต์สร้างแล้ว', value: ticker.toLocaleString(), delta: liveStats?.posts.delta || '+12% วันนี้', color: '#6366f1' },
+            { icon: '🔗', label: 'คลิก Affiliate', value: (liveStats?.clicks.value || 0).toLocaleString(), delta: liveStats?.clicks.delta || 'กำลังโหลด...', color: '#10b981' },
+            { icon: '🤖', label: 'AI Engine', value: liveStats?.ai || 'Claude', delta: `uptime ${liveStats?.uptime || '-'}`, color: '#f59e0b' },
+            { icon: '💰', label: 'รายได้ Affiliate', value: liveStats?.revenue.value || '฿0', delta: liveStats?.revenue.delta || 'ดูสถิติ', color: '#fe2c55' },
+          ].map((s, i) => (
             <div key={i} className="pro-stat-card glass-panel" style={{ '--accent': s.color }}>
               <div className="pro-stat-icon" style={{ background: `${s.color}20`, color: s.color }}>{s.icon}</div>
-              <div className="pro-stat-value">{i === 0 ? ticker.toLocaleString() : s.value}</div>
+              <div className="pro-stat-value">{s.value}</div>
               <div className="pro-stat-label">{s.label}</div>
               <div className="pro-stat-delta">{s.delta}</div>
             </div>
@@ -171,7 +206,7 @@ const DashboardPage = ({ onLogout }) => {
           <div>
             <div className="pro-section-title">🕐 กิจกรรมล่าสุด</div>
             <div className="pro-activity-list glass-panel">
-              {ACTIVITY.map((a, i) => (
+              {(recentActivity.length > 0 ? recentActivity : ACTIVITY).map((a, i) => (
                 <div key={i} className="pro-activity-item">
                   <span className="pro-activity-icon">{a.icon}</span>
                   <span className="pro-activity-text">{a.text}</span>
@@ -181,6 +216,11 @@ const DashboardPage = ({ onLogout }) => {
                   </div>
                 </div>
               ))}
+              {recentActivity.length > 0 && (
+                <button onClick={() => navigate('/autopost')} style={{ width: '100%', textAlign: 'center', fontSize: 12, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0 2px' }}>
+                  ดูประวัติทั้งหมด →
+                </button>
+              )}
             </div>
 
             <div className="pro-section-title" style={{ marginTop: '24px' }}>🌐 สถานะแพลตฟอร์ม</div>

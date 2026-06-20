@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
+import { apiUrl } from '../apiBase';
 
 const CAL_KEY = 'openthai_calendar';
 const PLATFORM_COLOR = { TikTok: '#fe2c55', Facebook: '#1877f2', Instagram: '#e1306c', YouTube: '#ff0000', LINE: '#06c755' };
@@ -22,20 +23,48 @@ export default function ContentCalendarPage() {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [posts, setPosts] = useState(getPosts);
+  const [queuePosts, setQueuePosts] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ product: '', platform: 'TikTok', note: '', done: false });
 
-  useEffect(() => { document.title = 'Content Calendar — Openthai.ai'; }, []);
+  useEffect(() => {
+    document.title = 'Content Calendar — Openthai.ai';
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      fetch(apiUrl('/api/autopost/queue'), { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => {
+          if (!d.data) return;
+          const mapped = d.data.map(item => ({
+            id: `q_${item.id}`,
+            date: item.schedule_at ? item.schedule_at.slice(0, 10) : '',
+            product: item.product || 'เนื้อหา AI',
+            platform: (item.platforms?.[0] || 'facebook').charAt(0).toUpperCase() + (item.platforms?.[0] || 'facebook').slice(1),
+            platforms: item.platforms || [],
+            status: item.status,
+            note: `queue · ${item.status}`,
+            done: item.status === 'sent',
+            isQueue: true,
+          })).filter(p => p.date);
+          setQueuePosts(mapped);
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay();
 
-  const postsOnDate = (d) => posts.filter(p => p.date === `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+  const dateStr = (d) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const postsOnDate = (d) => {
+    const key = dateStr(d);
+    return [...posts.filter(p => p.date === key), ...queuePosts.filter(p => p.date === key)];
+  };
 
   const openAdd = (d) => {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    setSelectedDate(dateStr);
+    const key = dateStr(d);
+    setSelectedDate(key);
     setForm({ product: '', platform: 'TikTok', note: '', done: false });
     setShowModal(true);
   };
@@ -75,8 +104,9 @@ export default function ContentCalendarPage() {
           <div style={{ fontSize: 15, fontWeight: 800 }}>📅 Content Calendar</div>
           <div style={{ fontSize: 11, color: '#64748b' }}>วางแผนโพสต์ · {totalPosts} แผน · {donePosts} เสร็จแล้ว</div>
         </div>
-        <button onClick={() => navigate('/ai-generator')} style={{ background: 'linear-gradient(135deg,#fe2c55,#6366f1)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
-          + สร้างคอนเทนต์
+        <button onClick={() => navigate(selectedDate ? `/autopost?date=${selectedDate}` : '/autopost')}
+          style={{ background: 'linear-gradient(135deg,#6366f1,#10b981)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+          🚀 Auto-Post{selectedDate ? ` (${selectedDate})` : ''}
         </button>
       </header>
 
@@ -130,9 +160,10 @@ export default function ContentCalendarPage() {
                   onMouseLeave={e => e.currentTarget.style.background = isToday ? 'rgba(99,102,241,0.08)' : 'transparent'}>
                   <div style={{ fontSize: 13, fontWeight: isToday ? 900 : 500, color: isToday ? '#a5b4fc' : col === 0 || col === 6 ? '#fe2c55' : '#94a3b8', marginBottom: 4, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isToday ? '#6366f1' : 'transparent', borderRadius: '50%' }}>{d}</div>
                   {dayPosts.slice(0, 3).map(p => (
-                    <div key={p.id} onClick={e => { e.stopPropagation(); toggleDone(p.id); }}
-                      style={{ background: `${PLATFORM_COLOR[p.platform]}22`, borderLeft: `3px solid ${PLATFORM_COLOR[p.platform]}`, borderRadius: '0 4px 4px 0', padding: '2px 5px', marginBottom: 2, fontSize: 10, color: p.done ? '#475569' : '#f8fafc', textDecoration: p.done ? 'line-through' : 'none', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer' }}>
-                      {p.done ? '✅' : '📌'} {p.product}
+                    <div key={p.id}
+                      onClick={e => { e.stopPropagation(); if (!p.isQueue) toggleDone(p.id); }}
+                      style={{ background: p.isQueue ? 'rgba(99,102,241,0.2)' : `${PLATFORM_COLOR[p.platform] || '#6366f1'}22`, borderLeft: `3px solid ${p.isQueue ? '#6366f1' : (PLATFORM_COLOR[p.platform] || '#6366f1')}`, borderRadius: '0 4px 4px 0', padding: '2px 5px', marginBottom: 2, fontSize: 10, color: p.done ? '#475569' : '#f8fafc', textDecoration: p.done ? 'line-through' : 'none', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: p.isQueue ? 'default' : 'pointer' }}>
+                      {p.isQueue ? '🤖' : p.done ? '✅' : '📌'} {p.product}
                     </div>
                   ))}
                   {dayPosts.length > 3 && <div style={{ fontSize: 9, color: '#64748b' }}>+{dayPosts.length - 3} อื่นๆ</div>}
@@ -195,8 +226,12 @@ export default function ContentCalendarPage() {
               <button onClick={handleSave} style={{ flex: 1, background: 'linear-gradient(135deg,#fe2c55,#6366f1)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
                 📌 เพิ่มแผน
               </button>
-              <button onClick={() => setShowModal(false)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 20px', color: '#94a3b8', cursor: 'pointer', fontSize: 14 }}>
-                ยกเลิก
+              <button onClick={() => { setShowModal(false); navigate(`/autopost?date=${selectedDate}`); }}
+                style={{ flex: 1, background: 'linear-gradient(135deg,#6366f1,#10b981)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                🤖 สร้าง AI
+              </button>
+              <button onClick={() => setShowModal(false)} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 16px', color: '#94a3b8', cursor: 'pointer', fontSize: 14 }}>
+                ✕
               </button>
             </div>
           </div>

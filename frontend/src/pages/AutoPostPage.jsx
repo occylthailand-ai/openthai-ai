@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 
 const TRUTH_ANGLES = [
@@ -21,6 +22,7 @@ const PLATFORM_META = {
 };
 
 export default function AutoPostPage() {
+  const [searchParams] = useSearchParams();
   const [platforms, setPlatforms]           = useState([]);
   const [selectedPlatforms, setSelectedPlatforms] = useState([]);
   const [history, setHistory]               = useState([]);
@@ -41,10 +43,17 @@ export default function AutoPostPage() {
   const [posting, setPosting]       = useState(false);
   const [postResult, setPostResult] = useState(null);
   const [activeTab, setActiveTab]   = useState('compose');
+
+  useEffect(() => {
+    if (searchParams?.get('date')) setScheduleEnabled(true);
+  }, []);
   const [platformStatus, setPlatformStatus] = useState(null);
   const [showStatus, setShowStatus] = useState(false);
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
-  const [scheduleTime, setScheduleTime] = useState('');
+  const [scheduleTime, setScheduleTime] = useState(() => {
+    const d = searchParams?.get('date');
+    return d ? `${d}T09:00` : '';
+  });
   const [queueItems, setQueueItems] = useState([]);
   const token = localStorage.getItem('auth_token');
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'x-admin-key': localStorage.getItem('admin_key') || '' };
