@@ -76,6 +76,7 @@ const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => {
   // บันทึก conversion ถ้ามี ref (affiliate link tracking)
   if (order.ref) {
     try { linkTracker.recordConversion(order.ref, { orderId: order.id, amount: order.total || 0, platform: order.utm_source || '' }); } catch (_) {}
+    sendSlackAlert(`💰 Conversion! Order #${order.id} ฿${order.total || 0} via ref=${order.ref}`, '💰');
   }
 } });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
@@ -84,7 +85,13 @@ const carriers  = createCarriers(WRITE_DATA_DIR, {
   onNewCarrier: (c) => sendCarrierSignupAlert(c),
   onNewJob: (j) => sendDeliveryJobAlert(j),
 });
-const linkTracker = createLinkTracker(WRITE_DATA_DIR, { kvPush: (k, v) => kv.push(k, v), addLog });
+const linkTracker = createLinkTracker(WRITE_DATA_DIR, {
+  kvPush: (k, v) => kv.push(k, v),
+  addLog,
+  onMilestone: (code, count, platform, ref) => {
+    sendSlackAlert(`🎯 /go/${code} ถึง ${count} คลิก! platform=${platform} ref=${ref || '-'}`, '🎯');
+  },
+});
 const autoPost  = createAutoPost(WRITE_DATA_DIR, {
   kvPush: (k, v) => kv.push(k, v),
   addLog,
@@ -188,6 +195,9 @@ app.post('/api/autopost/broadcast', async (req, res) => {
     const { content, hashtags, imageUrl, affiliateRef, productId, targetPlatforms } = req.body || {};
     if (!content?.hook) return res.status(400).json({ success: false, error: 'content.hook is required' });
     const batch = await autoPost.broadcast({ content, hashtags, imageUrl, affiliateRef, productId, targetPlatforms });
+    if (batch.success_count > 0) {
+      sendSlackAlert(`โพสต์สำเร็จ ${batch.success_count}/${batch.total_count} platform · "${(content.hook || '').slice(0, 60)}"`, '🚀');
+    }
     res.json({ success: true, ...batch });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -1665,6 +1675,25 @@ function addLog(level, source, message, detail = null) {
   }
 }
 
+// ─── Slack notifier — ใช้ SLACK_WEBHOOK_URL (webhook) หรือ SLACK_BOT_TOKEN ────
+async function sendSlackAlert(text, emoji = '🔔') {
+  const webhook = process.env.SLACK_WEBHOOK_URL;
+  const token   = process.env.SLACK_BOT_TOKEN;
+  const channel = process.env.SLACK_CHANNEL || '#general';
+  const payload = { text: `${emoji} *OpenThaiAi* ${text}` };
+  try {
+    if (webhook) {
+      await fetch(webhook, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    } else if (token) {
+      await fetch('https://slack.com/api/chat.postMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ channel, ...payload }),
+      });
+    }
+  } catch (e) { addLog('warn', 'Slack', `Slack alert failed: ${e.message}`); }
+}
+
 // ── Watchdog state ─────────────────────────────────────────────────────────────
 let watchdogStats = { lastRun: null, healed: 0, checked: 0, status: 'idle', nextRun: null };
 
@@ -2592,26 +2621,21 @@ async function postToTikTok(content, videoPath) {
 
 // ── Master Auto-Post Dispatcher ───────────────────────────────────────────────
 async function dispatchAutoPost(item) {
-  const results = [];
-  const platforms = item.platforms || [];
-
-  for (const platform of platforms) {
-    try {
-      let result;
-      if (platform === 'line')     result = await postToLINE(item.content);
-      if (platform === 'facebook') result = await postToFacebook(item.content);
-      if (platform === 'tiktok')   result = await postToTikTok(item.content, item.videoPath);
-      if (result) {
-        results.push(result);
-        addLog('info', 'AutoPost', `✅ ${platform.toUpperCase()} posted — ${item.content.hook?.slice(0,60)}`);
-      }
-    } catch (err) {
-      results.push({ platform, status: 'error', error: err.message, ts: new Date().toISOString() });
-      addLog('warn', 'AutoPost', `⚠️ ${platform.toUpperCase()} ไม่สำเร็จ: ${err.message}`);
-    }
-  }
-
+  const content = {
+    hook: item.content?.hook || item.product,
+    body: (item.content?.script || []).join('\n') || item.content?.caption || '',
+    cta:  item.content?.cta || '👉 ลองเลยตอนนี้',
+  };
+  const hashtags = item.content?.hashtags || [];
+  const batch = await autoPost.broadcast({
+    content,
+    hashtags,
+    affiliateRef: item.affiliate_ref || null,
+    productId:    item.product_id || null,
+    targetPlatforms: item.platforms || null,
+  });
   // บันทึก log
+  const results = (batch.platforms || []).map(p => ({ platform: p.platform, status: p.status, post_id: p.post_id, error: p.error, ts: new Date().toISOString() }));
   autopostLog.unshift({ id: item.id, product: item.product, results, dispatched_at: new Date().toISOString() });
   saveAutopostLog(autopostLog);
   return results;
@@ -2669,16 +2693,16 @@ app.get('/api/autopost/status', (req, res) => {
     success: true,
     platforms: {
       line: {
-        ready:    !!process.env.LINE_CHANNEL_TOKEN,
-        token:    process.env.LINE_CHANNEL_TOKEN ? '✅ Set' : '❌ ต้องการ LINE_CHANNEL_TOKEN',
-        can_post: !!process.env.LINE_CHANNEL_TOKEN,
+        ready:    !!process.env.LINE_CHANNEL_ACCESS_TOKEN,
+        token:    process.env.LINE_CHANNEL_ACCESS_TOKEN ? '✅ Set' : '❌ ต้องการ LINE_CHANNEL_ACCESS_TOKEN',
+        can_post: !!process.env.LINE_CHANNEL_ACCESS_TOKEN,
         note:     'Broadcast ไปหา Followers ทั้งหมดของ LINE OA',
       },
       facebook: {
-        ready:    !!(process.env.FB_PAGE_ID && process.env.FB_PAGE_TOKEN),
-        page_id:  process.env.FB_PAGE_ID   ? '✅ Set' : '❌ ต้องการ FB_PAGE_ID',
-        token:    process.env.FB_PAGE_TOKEN ? '✅ Set' : '❌ ต้องการ FB_PAGE_TOKEN (never-expiring)',
-        can_post: !!(process.env.FB_PAGE_ID && process.env.FB_PAGE_TOKEN),
+        ready:    !!(process.env.FB_PAGE_ID && process.env.FB_ACCESS_TOKEN),
+        page_id:  process.env.FB_PAGE_ID      ? '✅ Set' : '❌ ต้องการ FB_PAGE_ID',
+        token:    process.env.FB_ACCESS_TOKEN ? '✅ Set' : '❌ ต้องการ FB_ACCESS_TOKEN (never-expiring)',
+        can_post: !!(process.env.FB_PAGE_ID && process.env.FB_ACCESS_TOKEN),
         note:     'Post ข้อความ+ลิงก์บน Facebook Page',
       },
       tiktok: {
@@ -2688,9 +2712,9 @@ app.get('/api/autopost/status', (req, res) => {
         note:     'ต้องการ video file + TikTok API approval (2-6 สัปดาห์) — ตอนนี้: queue caption ไว้รอ',
       },
       instagram: {
-        ready:    !!(process.env.IG_USER_ID && process.env.FB_PAGE_TOKEN),
+        ready:    !!(process.env.IG_USER_ID && process.env.FB_ACCESS_TOKEN),
         ig_user:  process.env.IG_USER_ID ? '✅ Set' : '❌ ต้องการ IG_USER_ID',
-        can_post: !!(process.env.IG_USER_ID && process.env.FB_PAGE_TOKEN),
+        can_post: !!(process.env.IG_USER_ID && process.env.FB_ACCESS_TOKEN),
         note:     'Post Reels/Image บน Instagram Business ผ่าน Facebook Graph API',
       },
       shopee: {
@@ -2700,8 +2724,8 @@ app.get('/api/autopost/status', (req, res) => {
       },
     },
     summary: {
-      ready_now:    [process.env.LINE_CHANNEL_TOKEN && 'LINE', process.env.FB_PAGE_ID && process.env.FB_PAGE_TOKEN && 'Facebook', process.env.IG_USER_ID && process.env.FB_PAGE_TOKEN && 'Instagram'].filter(Boolean),
-      needs_setup:  [!process.env.LINE_CHANNEL_TOKEN && 'LINE', !(process.env.FB_PAGE_ID && process.env.FB_PAGE_TOKEN) && 'Facebook', !process.env.TIKTOK_ACCESS_TOKEN && 'TikTok'].filter(Boolean),
+      ready_now:    [process.env.LINE_CHANNEL_ACCESS_TOKEN && 'LINE', process.env.FB_PAGE_ID && process.env.FB_ACCESS_TOKEN && 'Facebook', process.env.IG_USER_ID && process.env.FB_ACCESS_TOKEN && 'Instagram'].filter(Boolean),
+      needs_setup:  [!process.env.LINE_CHANNEL_ACCESS_TOKEN && 'LINE', !(process.env.FB_PAGE_ID && process.env.FB_ACCESS_TOKEN) && 'Facebook', !process.env.TIKTOK_ACCESS_TOKEN && 'TikTok'].filter(Boolean),
     },
     ts: new Date().toISOString(),
   });

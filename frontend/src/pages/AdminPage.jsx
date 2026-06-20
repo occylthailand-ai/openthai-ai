@@ -743,28 +743,10 @@ export default function AdminPage() {
         )}
 
         {/* TAB: AUTO-POST */}
-        {tab === 'autopost' && (
-          <div style={{ ...glass, textAlign: 'center', padding: '48px 24px' }}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>🚀</div>
-            <h2 style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>Auto-Post Engine</h2>
-            <p style={{ color: '#94a3b8', marginBottom: 28, fontSize: 15 }}>สร้างเนื้อหา AI + โพสต์ทุกแพลตฟอร์มพร้อมกัน พร้อม Affiliate Link อัตโนมัติ</p>
-            <a href="/autopost" style={{ display: 'inline-block', padding: '12px 32px', background: 'linear-gradient(135deg,#6366f1,#7c3aed)', borderRadius: 12, fontWeight: 700, color: '#fff', textDecoration: 'none', fontSize: 15 }}>
-              เปิด Auto-Post Engine →
-            </a>
-          </div>
-        )}
+        {tab === 'autopost' && <AutoPostAdminPanel adminKey={adminKey} />}
 
         {/* TAB: LINK TRACKER */}
-        {tab === 'linktracker' && (
-          <div style={{ ...glass, textAlign: 'center', padding: '48px 24px' }}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>🔗</div>
-            <h2 style={{ margin: '0 0 8px', fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>Link Tracker</h2>
-            <p style={{ color: '#94a3b8', marginBottom: 28, fontSize: 15 }}>ติดตาม affiliate link แบบ real-time — คลิก · Conversion · รายได้</p>
-            <a href="/link-tracker" style={{ display: 'inline-block', padding: '12px 32px', background: 'linear-gradient(135deg,#10b981,#0d9488)', borderRadius: 12, fontWeight: 700, color: '#fff', textDecoration: 'none', fontSize: 15 }}>
-              เปิด Link Tracker →
-            </a>
-          </div>
-        )}
+        {tab === 'linktracker' && <LinkTrackerAdminPanel adminKey={adminKey} />}
 
         {/* TAB: SETTINGS */}
         {tab === 'settings' && (
@@ -796,6 +778,99 @@ export default function AdminPage() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── AutoPost Admin Panel ───────────────────────────────────────────────────────
+function AutoPostAdminPanel({ adminKey }) {
+  const [log, setLog] = React.useState([]);
+  const [queue, setQueue] = React.useState([]);
+  React.useEffect(() => {
+    const key = adminKey();
+    fetch(apiUrl('/api/autopost/log'), { headers: { 'x-admin-key': key } }).then(r => r.json()).then(d => setLog(d.data || [])).catch(() => {});
+    fetch(apiUrl('/api/autopost/queue'), { headers: { 'x-admin-key': key } }).then(r => r.json()).then(d => setQueue(d.data || [])).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div style={glass}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <h2 style={{ margin: 0, fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>🚀 Auto-Post Engine</h2>
+        <a href="/autopost" style={{ padding: '8px 16px', background: '#6366f1', borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#fff', textDecoration: 'none' }}>เปิดหน้าสร้างโพสต์ →</a>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+        <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 16 }}>
+          <div style={{ fontSize: 24, fontWeight: 900, color: '#f8fafc' }}>{log.length}</div>
+          <div style={{ fontSize: 13, color: '#94a3b8' }}>โพสต์ที่ส่งแล้ว</div>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 16 }}>
+          <div style={{ fontSize: 24, fontWeight: 900, color: '#f59e0b' }}>{queue.filter(q => q.status === 'queued').length}</div>
+          <div style={{ fontSize: 13, color: '#94a3b8' }}>รอในคิว</div>
+        </div>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 12 }}>ประวัติล่าสุด</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {log.slice(0, 5).map((item, i) => (
+          <div key={i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 500, color: '#f8fafc' }}>{(item.product || '').slice(0, 50)}</p>
+              <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>{item.dispatched_at ? new Date(item.dispatched_at).toLocaleString('th-TH') : '-'}</p>
+            </div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {(item.results || []).map((r, j) => (
+                <span key={j} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: r.status === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: r.status === 'success' ? '#6ee7b7' : '#fca5a5' }}>{r.platform}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+        {log.length === 0 && <p style={{ color: '#475569', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>ยังไม่มีประวัติ</p>}
+      </div>
+    </div>
+  );
+}
+
+// ── LinkTracker Admin Panel ────────────────────────────────────────────────────
+function LinkTrackerAdminPanel({ adminKey }) {
+  const [dash, setDash] = React.useState(null);
+  React.useEffect(() => {
+    const key = adminKey();
+    fetch(apiUrl('/api/track/dashboard'), { headers: { 'x-admin-key': key } }).then(r => r.json()).then(d => setDash(d.dashboard)).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const t = dash?.totals || {};
+  return (
+    <div style={glass}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <h2 style={{ margin: 0, fontWeight: 800, fontSize: 20, color: '#f8fafc' }}>🔗 Link Tracker</h2>
+        <a href="/link-tracker" style={{ padding: '8px 16px', background: '#10b981', borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#fff', textDecoration: 'none' }}>เปิด Dashboard →</a>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+        {[
+          { v: (t.clicks || 0).toLocaleString(), label: 'คลิกรวม', c: '#f8fafc' },
+          { v: (t.unique_clicks || 0).toLocaleString(), label: 'Unique', c: '#a5b4fc' },
+          { v: t.conversions || 0, label: 'Conversion', c: '#6ee7b7' },
+          { v: `฿${(t.revenue || 0).toLocaleString()}`, label: 'รายได้', c: '#fbbf24' },
+        ].map((s, i) => (
+          <div key={i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 16 }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: s.c }}>{s.v}</div>
+            <div style={{ fontSize: 11, color: '#94a3b8' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 12 }}>Top Links</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {(dash?.top_links || []).slice(0, 5).map((l, i) => (
+          <div key={i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <p style={{ margin: '0 0 2px', fontSize: 13, fontFamily: 'monospace', color: '#a5b4fc' }}>/go/{l.code}</p>
+              <p style={{ margin: 0, fontSize: 11, color: '#64748b' }}>{l.platform} · {l.affiliate_ref || '-'}</p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>{l.clicks} คลิก</p>
+              <p style={{ margin: 0, fontSize: 11, color: '#6ee7b7' }}>CTR {l.ctr}</p>
+            </div>
+          </div>
+        ))}
+        {(!dash?.top_links?.length) && <p style={{ color: '#475569', fontSize: 13, textAlign: 'center', padding: '32px 0' }}>ยังไม่มีลิ้ง</p>}
       </div>
     </div>
   );

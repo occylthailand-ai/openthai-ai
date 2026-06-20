@@ -8,7 +8,7 @@ import { join } from 'path';
 export function createLinkTracker(dataDir, deps = {}) {
   const LINKS_FILE  = join(dataDir, 'tracking_links.json');
   const CLICKS_FILE = join(dataDir, 'tracking_clicks.json');
-  const { kvPush = async () => {}, addLog = () => {} } = deps;
+  const { kvPush = async () => {}, addLog = () => {}, onMilestone = null } = deps;
 
   const clickBuffer = [];       // in-memory buffer — flush every 5s
   let flushTimer = null;
@@ -73,6 +73,11 @@ export function createLinkTracker(dataDir, deps = {}) {
     const ip = meta.ip || 'unknown';
     const isUnique = !link.seen_ips.includes(ip);
     link.clicks++;
+    // Milestone alert (10, 100, 500, 1000, 5000 clicks)
+    const milestones = [10, 100, 500, 1000, 5000];
+    if (milestones.includes(link.clicks) && onMilestone) {
+      onMilestone(link.code, link.clicks, link.platform, link.affiliate_ref);
+    }
     if (isUnique) {
       link.unique_clicks++;
       link.seen_ips = [...link.seen_ips.slice(-9999), ip];
