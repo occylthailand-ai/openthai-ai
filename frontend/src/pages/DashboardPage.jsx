@@ -58,6 +58,7 @@ const DashboardPage = ({ onLogout }) => {
   const [ticker, setTicker] = useState(0);
   const [liveStats, setLiveStats] = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
+  const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -95,6 +96,12 @@ const DashboardPage = ({ onLogout }) => {
       }));
       if (acts.length > 0) setRecentActivity(acts);
     });
+
+    // Load notification unread count
+    fetch(apiUrl('/api/notifications?limit=10'), { headers: h })
+      .then(r => r.json())
+      .then(d => { if (d.success) setNotifCount(d.unread || 0); })
+      .catch(() => {});
 
     const interval = setInterval(() => setTicker(prev => prev + Math.floor(Math.random() * 2)), 4000);
     return () => clearInterval(interval);
@@ -168,9 +175,17 @@ const DashboardPage = ({ onLogout }) => {
             <h2 className="pro-greeting">สวัสดีผู้จัดการ 👋</h2>
             <p className="pro-subgreeting">Openthai.ai Pro · วันนี้ระบบสร้างคอนเทนต์ไปแล้ว <strong style={{ color: '#a5b4fc' }}>{ticker.toLocaleString()}</strong> ชิ้น</p>
           </div>
-          <button className="pro-cta-btn" onClick={() => navigate('/ai-generator')}>
-            ⚡ สร้างคอนเทนต์ AI
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={() => navigate('/notifications')} style={{ position: 'relative', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 12px', color: '#94a3b8', cursor: 'pointer', fontSize: 18 }}>
+              🔔
+              {notifCount > 0 && (
+                <span style={{ position: 'absolute', top: -4, right: -4, background: '#ef4444', borderRadius: 20, padding: '0px 5px', fontSize: 10, fontWeight: 800, color: '#fff', minWidth: 16, textAlign: 'center' }}>{notifCount}</span>
+              )}
+            </button>
+            <button className="pro-cta-btn" onClick={() => navigate('/ai-generator')}>
+              ⚡ สร้างคอนเทนต์ AI
+            </button>
+          </div>
         </div>
 
         {/* Stats Row */}

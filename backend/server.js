@@ -2797,6 +2797,49 @@ app.get('/api/autopost/process', async (req, res) => {
   res.json({ success: true, processed, ts: new Date().toISOString() });
 });
 
+// ── GET /api/notifications — Activity feed รวม log + autopost + conversions ─────
+app.get('/api/notifications', requireAuth, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 30, 100);
+
+  // Merge: autopost results → notification items
+  const postItems = autopostLog.slice(0, 20).map(b => ({
+    id: `post_${b.id || b.dispatched_at}`,
+    type:  b.success_count > 0 ? 'post_success' : 'post_fail',
+    icon:  b.success_count > 0 ? '🚀' : '❌',
+    title: b.success_count > 0
+      ? `โพสต์สำเร็จ ${b.success_count} platform`
+      : 'โพสต์ล้มเหลว',
+    body:  (b.product || b.content?.hook || '').slice(0, 80),
+    ts:    b.dispatched_at || b.created_at || new Date().toISOString(),
+    data:  { success: b.success_count, total: b.results?.length || 0 },
+  }));
+
+  // Recent system logs (info/warn/error only — skip verbose)
+  const logItems = sysLogs
+    .filter(l => ['warn', 'error'].includes(l.level) || ['AutoPost', 'Agent', 'Payment', 'Milestone'].includes(l.source))
+    .slice(0, 30)
+    .map(l => ({
+      id:    `log_${l.ts}_${l.source}`,
+      type:  l.level === 'error' ? 'error' : l.level === 'warn' ? 'warning' : 'info',
+      icon:  l.level === 'error' ? '🔴' : l.level === 'warn' ? '⚠️' : '🔔',
+      title: `${l.source}: ${l.message.slice(0, 60)}`,
+      body:  l.detail ? String(l.detail).slice(0, 120) : '',
+      ts:    l.ts,
+    }));
+
+  // Merge + sort by time desc
+  const all = [...postItems, ...logItems]
+    .sort((a, b) => new Date(b.ts) - new Date(a.ts))
+    .slice(0, limit);
+
+  res.json({
+    success: true,
+    total: all.length,
+    unread: all.filter(n => n.type === 'error' || n.type === 'post_fail').length,
+    notifications: all,
+  });
+});
+
 // ── GET /api/analytics/summary — รวมข้อมูล analytics ทั้งหมดในครั้งเดียว ────────
 app.get('/api/analytics/summary', requireAuth, (req, res) => {
   const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 90);

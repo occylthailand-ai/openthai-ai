@@ -238,14 +238,24 @@ const VideoGeneratorPage = () => {
               )}
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 <button onClick={() => { setResult(null); setJobStatus(null); }}
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '14px' }}>
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: '14px', minWidth: 120 }}>
                   🔄 สร้างใหม่
                 </button>
                 <button onClick={() => { navigator.clipboard.writeText(JSON.stringify(result, null, 2)); }}
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
-                  📋 Copy Script JSON
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', cursor: 'pointer', fontSize: '14px', fontWeight: 600, minWidth: 120 }}>
+                  📋 Copy Script
+                </button>
+                <button onClick={() => {
+                  const draft = { product: form.product, angle: 'demo' };
+                  const content = { hook: result.hook_text, body: result.caption, hashtags: (result.hashtags || []).join(' '), cta: result.cta || '' };
+                  sessionStorage.setItem('autopost_draft', JSON.stringify(draft));
+                  sessionStorage.setItem('autopost_draft_content', JSON.stringify(content));
+                  navigate('/autopost');
+                }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', cursor: 'pointer', fontSize: '14px', fontWeight: 700, minWidth: 120 }}>
+                  ⚡ ส่งไป AutoPost
                 </button>
               </div>
             </div>
