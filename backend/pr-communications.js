@@ -128,10 +128,17 @@ export function createPRSystem(writeDir) {
     }),
 
     // ── Auto-PR Queue & Broadcast Log ────────────────────────────────────────
-    getAutoQueue:     () => load('pr_auto_queue.json', []),
-    saveAutoQueue:    (data) => save('pr_auto_queue.json', data),
-    getBroadcastLog:  () => load('pr_broadcast_log.json', []),
-    saveBroadcastLog: (data) => save('pr_broadcast_log.json', data.slice(0, 100)),
+    getAutoQueue:       () => load('pr_auto_queue.json', []),
+    saveAutoQueue:      (data) => save('pr_auto_queue.json', data),
+    getBroadcastLog:    () => load('pr_broadcast_log.json', []),
+    saveBroadcastLog:   (data) => save('pr_broadcast_log.json', data.slice(0, 100)),
+    getAutopilotConfig: () => load('pr_autopilot_config.json', {
+      enabled: true,
+      channels: ['line', 'slack', 'facebook'],
+      langs: ['th', 'en', 'zh'],
+      updatedAt: null,
+    }),
+    saveAutopilotConfig: (data) => save('pr_autopilot_config.json', data),
 
     // ── Team Tasks (Command Center) ───────────────────────────────────────────
     getTasks: () => load('cmd_tasks.json', [

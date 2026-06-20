@@ -42,6 +42,32 @@ const card = (style = {}) => ({
   borderRadius: '14px', padding: '18px', ...style,
 });
 
+// ── Autopilot Status Row ──────────────────────────────────────────────────────
+function AutopilotRow({ config, onToggle, loading }) {
+  const ch = config?.availableChannels || [];
+  const enabled = config?.enabled !== false;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: enabled ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)', border: `1px solid ${enabled ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.08)'}`, borderRadius: '12px' }}>
+      <span style={{ fontSize: '20px' }}>{enabled ? '⚡' : '⏸'}</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: '13px', fontWeight: 800, color: enabled ? '#6ee7b7' : '#6b7280' }}>
+          Autopilot {enabled ? 'เปิดอยู่' : 'ปิดอยู่'}
+        </div>
+        <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
+          {enabled
+            ? `กระจายอัตโนมัติ → ${ch.length > 0 ? ch.map(c => ({ line:'LINE 💬', slack:'Slack 🔔', facebook:'Facebook 📘' })[c] || c).join(' · ') : 'Slack 🔔'}`
+            : 'เปิด Autopilot เพื่อกระจาย PR ทุกแพลตฟอร์มอัตโนมัติ'}
+        </div>
+      </div>
+      {ch.length === 0 && <span style={{ fontSize: '11px', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '3px 10px', borderRadius: '8px' }}>ยังไม่ตั้งค่า API</span>}
+      <button onClick={onToggle} disabled={loading}
+        style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: enabled ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.3)', color: enabled ? '#f87171' : '#6ee7b7', fontSize: '12px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
+        {loading ? '...' : enabled ? 'ปิด' : 'เปิด'}
+      </button>
+    </div>
+  );
+}
+
 // ── Auto-PR Panel ─────────────────────────────────────────────────────────────
 function AutoPRPanel() {
   const [prType, setPrType]         = useState('platform_announcement');
@@ -50,42 +76,85 @@ function AutoPRPanel() {
   const [channels, setChannels]     = useState(['slack']);
   const [generating, setGenerating] = useState(false);
   const [broadcasting, setBroadcasting] = useState(false);
+  const [autopiloting, setAutopiloting] = useState(false);
   const [preview, setPreview]       = useState(null);
+  const [trilingualResult, setTrilingualResult] = useState(null);
   const [broadcastLog, setBroadcastLog] = useState([]);
   const [autoQueue, setAutoQueue]   = useState([]);
+  const [autopilotConfig, setAutopilotConfig] = useState(null);
+  const [configLoading, setConfigLoading] = useState(false);
   const [schedType, setSchedType]   = useState('');
   const [schedTime, setSchedTime]   = useState('');
   const [toast, setToast]           = useState('');
+  const [activePreviewLang, setActivePreviewLang] = useState('th');
   const navigate = useNavigate();
 
-  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
+  const showToast = (msg, dur = 4000) => { setToast(msg); setTimeout(() => setToast(''), dur); };
+  const h = useCallback(() => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` }), []);
 
-  const loadLogs = useCallback(async () => {
-    const h = { Authorization: `Bearer ${localStorage.getItem('auth_token')}` };
-    const [logR, queueR] = await Promise.allSettled([
-      fetch(apiUrl('/api/corporate/pr/broadcast-log'), { headers: h }).then(r => r.json()),
-      fetch(apiUrl('/api/corporate/pr/auto-queue'),    { headers: h }).then(r => r.json()),
+  const loadData = useCallback(async () => {
+    const [logR, queueR, cfgR] = await Promise.allSettled([
+      fetch(apiUrl('/api/corporate/pr/broadcast-log'), { headers: h() }).then(r => r.json()),
+      fetch(apiUrl('/api/corporate/pr/auto-queue'),    { headers: h() }).then(r => r.json()),
+      fetch(apiUrl('/api/corporate/pr/autopilot/config'), { headers: h() }).then(r => r.json()),
     ]);
     if (logR.value?.success)   setBroadcastLog(logR.value.data || []);
     if (queueR.value?.success) setAutoQueue(queueR.value.data || []);
-  }, []);
+    if (cfgR.value?.success)   setAutopilotConfig(cfgR.value.data);
+  }, [h]);
 
-  useEffect(() => { loadLogs(); }, [loadLogs]);
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const toggleAutopilot = async () => {
+    setConfigLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/corporate/pr/autopilot/config'), {
+        method: 'PATCH', headers: h(),
+        body: JSON.stringify({ enabled: !(autopilotConfig?.enabled !== false) }),
+      });
+      const d = await res.json();
+      if (d.success) { setAutopilotConfig(d.data); showToast(d.data.enabled ? '⚡ Autopilot เปิดแล้ว' : '⏸ Autopilot ปิดแล้ว'); }
+    } catch (e) { showToast('❌ ' + e.message); }
+    setConfigLoading(false);
+  };
 
   const toggleChannel = (ch) => setChannels(prev =>
     prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch]
   );
 
+  // One-shot Autopilot: Generate 3 ภาษา + Broadcast ทุกช่องทางพร้อมกัน
+  const runAutopilot = async () => {
+    setAutopiloting(true); setTrilingualResult(null); setPreview(null);
+    showToast('⚡ AI กำลังสร้าง 3 ภาษา + กระจายทุกแพลตฟอร์ม...', 8000);
+    try {
+      const res = await fetch(apiUrl('/api/corporate/pr/autopilot'), {
+        method: 'POST', headers: h(),
+        body: JSON.stringify({ type: prType, topic }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTrilingualResult(data.generated);
+        setPreview(data.generated.th);
+        setActivePreviewLang('th');
+        const ch = data.channels || [];
+        showToast(`✅ กระจายแล้ว: ${ch.map(c => ({ line:'LINE 💬', slack:'Slack 🔔', facebook:'FB 📘' })[c] || c).join(' + ')}`);
+        loadData();
+      } else {
+        showToast('❌ ' + data.error);
+      }
+    } catch (e) { showToast('❌ ' + e.message); }
+    setAutopiloting(false);
+  };
+
   const generate = async () => {
-    setGenerating(true); setPreview(null);
+    setGenerating(true); setPreview(null); setTrilingualResult(null);
     try {
       const res = await fetch(apiUrl('/api/corporate/pr/generate'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+        method: 'POST', headers: h(),
         body: JSON.stringify({ type: prType, topic, lang }),
       });
       const data = await res.json();
-      if (data.success) setPreview(data.data);
+      if (data.success) { setPreview(data.data); setActivePreviewLang(lang); }
       else showToast('❌ สร้างไม่สำเร็จ: ' + data.error);
     } catch (e) { showToast('❌ ' + e.message); }
     setGenerating(false);
@@ -97,18 +166,15 @@ function AutoPRPanel() {
     setBroadcasting(true);
     try {
       const res = await fetch(apiUrl('/api/corporate/pr/broadcast'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+        method: 'POST', headers: h(),
         body: JSON.stringify({ content: preview, channels }),
       });
       const data = await res.json();
       if (data.success) {
         const ok = data.results?.filter(r => r.ok).map(r => r.channel).join(', ');
         showToast(`✅ กระจายสำเร็จ: ${ok || 'ดำเนินการแล้ว'}`);
-        loadLogs();
-      } else {
-        showToast('❌ ' + data.error);
-      }
+        loadData();
+      } else showToast('❌ ' + data.error);
     } catch (e) { showToast('❌ ' + e.message); }
     setBroadcasting(false);
   };
@@ -127,56 +193,121 @@ function AutoPRPanel() {
 
   const addSchedule = async () => {
     if (!schedType || !schedTime) { showToast('⚠️ กรอกประเภทและเวลาก่อน'); return; }
-    const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` };
     await fetch(apiUrl('/api/corporate/pr/auto-queue'), {
-      method: 'POST', headers: h,
+      method: 'POST', headers: h(),
       body: JSON.stringify({ type: schedType, scheduledAt: schedTime, lang, topic }),
     });
     showToast('✅ เพิ่มตารางสำเร็จ');
-    setSchedTime(''); loadLogs();
+    setSchedTime(''); loadData();
   };
 
   const removeSchedule = async (id) => {
-    const h = { Authorization: `Bearer ${localStorage.getItem('auth_token')}` };
-    await fetch(apiUrl(`/api/corporate/pr/auto-queue/${id}`), { method: 'DELETE', headers: h });
-    loadLogs();
+    await fetch(apiUrl(`/api/corporate/pr/auto-queue/${id}`), { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` } });
+    loadData();
   };
 
   const selectedType = PR_TYPES.find(t => t.value === prType);
+  const previewData = trilingualResult
+    ? trilingualResult[activePreviewLang] || trilingualResult.th
+    : preview;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
       {/* Toast */}
       {toast && (
-        <div style={{ position: 'fixed', top: '20px', right: '20px', background: '#1e293b', border: '1px solid rgba(99,102,241,0.4)', borderRadius: '10px', padding: '12px 20px', zIndex: 9999, color: '#e2e8f0', fontSize: '14px', fontWeight: 600 }}>
+        <div style={{ position: 'fixed', top: '20px', right: '20px', background: '#0f172a', border: '1px solid rgba(99,102,241,0.5)', borderRadius: '12px', padding: '14px 22px', zIndex: 9999, color: '#e2e8f0', fontSize: '14px', fontWeight: 600, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
           {toast}
         </div>
       )}
 
-      {/* Header Banner */}
-      <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.1) 100%)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '16px', padding: '20px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <span style={{ fontSize: '28px' }}>⚔️</span>
+      {/* ── AUTOPILOT COMMAND CENTER ──────────────────────────────────────────── */}
+      <div style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(99,102,241,0.08) 100%)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '18px', padding: '22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          <span style={{ fontSize: '32px' }}>⚔️</span>
           <div>
-            <div style={{ fontSize: '18px', fontWeight: 900, color: '#a5b4fc' }}>ดาบอายาสิทธิ์ — AI PR Engine</div>
-            <div style={{ fontSize: '13px', color: '#6b7280' }}>สร้างและกระจาย PR อัตโนมัติสำหรับ OpenThaiAi · ลูกค้า · ผู้ผลิต</div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#6ee7b7' }}>ดาบอายาสิทธิ์ — Zero-Click Autopilot</div>
+            <div style={{ fontSize: '12px', color: '#6b7280' }}>เลือกประเภท → กดปุ่มเดียว → AI สร้าง 3 ภาษา + กระจายทุกแพลตฟอร์มทันที ไม่ต้องรอ</div>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '14px' }}>
+
+        {/* Autopilot status */}
+        {autopilotConfig && (
+          <AutopilotRow config={autopilotConfig} onToggle={toggleAutopilot} loading={configLoading} />
+        )}
+
+        {/* Type selector compact */}
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', margin: '14px 0' }}>
+          {PR_TYPES.map(t => (
+            <button key={t.value} onClick={() => setPrType(t.value)}
+              style={{ padding: '7px 12px', borderRadius: '8px', border: `1px solid ${prType === t.value ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.07)'}`, background: prType === t.value ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)', cursor: 'pointer', fontSize: '12px', fontWeight: prType === t.value ? 800 : 400, color: prType === t.value ? '#a5b4fc' : '#6b7280', whiteSpace: 'nowrap' }}>
+              {t.emoji} {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Topic input */}
+        <input
+          value={topic} onChange={e => setTopic(e.target.value)}
+          placeholder={`หัวข้อ/บริบท (ไม่บังคับ) — ${selectedType?.desc || ''}`}
+          style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#e2e8f0', padding: '10px 14px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', marginBottom: '14px' }}
+        />
+
+        {/* THE ONE BUTTON */}
+        <button onClick={runAutopilot} disabled={autopiloting || generating}
+          style={{ width: '100%', padding: '18px', borderRadius: '14px', border: 'none', background: autopiloting ? 'rgba(16,185,129,0.3)' : 'linear-gradient(135deg, #059669, #6366f1)', color: '#fff', fontSize: '17px', fontWeight: 900, cursor: autopiloting ? 'not-allowed' : 'pointer', letterSpacing: '0.3px', boxShadow: autopiloting ? 'none' : '0 4px 20px rgba(16,185,129,0.3)' }}>
+          {autopiloting
+            ? '🤖 AI กำลังสร้าง 3 ภาษา + กระจายทุกแพลตฟอร์ม...'
+            : '⚡ สร้าง & กระจายทันที — ทุกภาษา ทุกแพลตฟอร์ม'}
+        </button>
+
+        {/* Trilingual result tabs */}
+        {trilingualResult && (
+          <div style={{ marginTop: '14px' }}>
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+              {[{k:'th',l:'🇹🇭 ไทย'},{k:'en',l:'🇬🇧 English'},{k:'zh',l:'🇨🇳 中文'}].map(({k,l}) => (
+                trilingualResult[k] && (
+                  <button key={k} onClick={() => { setActivePreviewLang(k); setPreview(trilingualResult[k]); }}
+                    style={{ padding: '6px 14px', borderRadius: '8px', border: `1px solid ${activePreviewLang===k ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.07)'}`, background: activePreviewLang===k ? 'rgba(99,102,241,0.2)' : 'transparent', cursor: 'pointer', fontSize: '12px', fontWeight: activePreviewLang===k ? 800 : 400, color: activePreviewLang===k ? '#a5b4fc' : '#6b7280' }}>
+                    {l}
+                  </button>
+                )
+              ))}
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '14px', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: '#e2e8f0', marginBottom: '6px' }}>{previewData?.headline}</div>
+              <div style={{ fontSize: '12px', color: '#6366f1', marginBottom: '8px' }}>{previewData?.subheadline}</div>
+              <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.7, maxHeight: '100px', overflow: 'auto', marginBottom: '8px' }}>{previewData?.social_post}</div>
+              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                {(previewData?.hashtags || []).map(hh => (
+                  <span key={hh} style={{ fontSize: '10px', background: 'rgba(99,102,241,0.1)', color: '#a5b4fc', padding: '2px 7px', borderRadius: '8px' }}>{hh}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stats row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginTop: '14px' }}>
           {[
             { label: 'กระจายแล้ว', value: broadcastLog.length, emoji: '📡' },
             { label: 'ในคิว', value: autoQueue.filter(q => q.status === 'pending').length, emoji: '⏰' },
-            { label: 'ช่องทาง', value: '3', emoji: '📣' },
+            { label: 'ช่องทาง', value: (autopilotConfig?.availableChannels?.length || 0) + '/3', emoji: '📣' },
           ].map((s, i) => (
-            <div key={i} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 900, color: '#a5b4fc' }}>{s.emoji} {s.value}</div>
-              <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{s.label}</div>
+            <div key={i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+              <div style={{ fontSize: '18px', fontWeight: 900, color: '#a5b4fc' }}>{s.emoji} {s.value}</div>
+              <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>{s.label}</div>
             </div>
           ))}
         </div>
       </div>
 
+      {/* ── MANUAL MODE (Advanced) ──────────────────────────────────────────────── */}
+      <details style={{ cursor: 'pointer' }}>
+        <summary style={{ fontSize: '13px', color: '#6b7280', fontWeight: 700, padding: '10px 0', userSelect: 'none', listStyle: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '16px' }}>⚙️</span> โหมดกำหนดเอง (เลือกภาษา / ช่องทาง / ดูตัวอย่างก่อน)
+        </summary>
+        <div style={{ marginTop: '16px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
 
         {/* Left: Generator */}
@@ -299,66 +430,24 @@ function AutoPRPanel() {
           )}
         </div>
       </div>
-
-      {/* Schedule Auto-PR */}
-      <div style={card()}>
-        <div style={{ fontSize: '14px', fontWeight: 800, color: '#a5b4fc', marginBottom: '14px' }}>⏰ ตั้งเวลา Auto-PR</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '10px', alignItems: 'end' }}>
-          <div>
-            <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '6px' }}>ประเภท</div>
-            <select value={schedType} onChange={e => setSchedType(e.target.value)}
-              style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#e2e8f0', padding: '8px 10px', fontSize: '13px', outline: 'none' }}>
-              <option value="">-- เลือกประเภท --</option>
-              {PR_TYPES.map(t => <option key={t.value} value={t.value}>{t.emoji} {t.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '6px' }}>วันเวลา</div>
-            <input type="datetime-local" value={schedTime} onChange={e => setSchedTime(e.target.value)}
-              style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#e2e8f0', padding: '8px 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-          </div>
-          <button onClick={addSchedule}
-            style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'rgba(99,102,241,0.6)', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            + เพิ่ม
-          </button>
         </div>
-
-        {autoQueue.length > 0 && (
-          <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 700 }}>คิวที่รอ ({autoQueue.length})</div>
-            {autoQueue.map(q => (
-              <div key={q.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ fontSize: '16px' }}>{PR_TYPES.find(t => t.value === q.type)?.emoji || '📣'}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#d1d5db' }}>{PR_TYPES.find(t => t.value === q.type)?.label || q.type}</div>
-                  <div style={{ fontSize: '11px', color: '#6b7280' }}>{q.scheduledAt ? new Date(q.scheduledAt).toLocaleString('th-TH') : 'ไม่ระบุเวลา'}</div>
-                </div>
-                <span style={{ fontSize: '10px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', padding: '2px 8px', borderRadius: '8px', fontWeight: 700 }}>{q.status}</span>
-                <button onClick={() => removeSchedule(q.id)}
-                  style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', color: '#f87171', padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}>
-                  ลบ
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      </details>
 
       {/* Broadcast Log */}
       {broadcastLog.length > 0 && (
         <div style={card()}>
           <div style={{ fontSize: '14px', fontWeight: 800, color: '#a5b4fc', marginBottom: '14px' }}>📡 ประวัติการกระจาย</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflow: 'auto' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '260px', overflow: 'auto' }}>
             {broadcastLog.map(log => (
-              <div key={log.id} style={{ display: 'flex', gap: '12px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', alignItems: 'center' }}>
-                <span style={{ fontSize: '18px' }}>{PR_TYPES.find(t => t.value === log.type)?.emoji || '📣'}</span>
+              <div key={log.id} style={{ display: 'flex', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '16px' }}>{PR_TYPES.find(t => t.value === log.type)?.emoji || '📣'}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.headline}</div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#e2e8f0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.headline}</div>
                   <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>
-                    {(log.channels || []).map(ch => CHANNELS.find(c => c.value === ch)?.emoji + ' ' + ch).join(' · ')} · {timeAgo(log.ts)}
+                    {(log.channels || []).map(ch => ({ line:'💬 LINE', slack:'🔔 Slack', facebook:'📘 FB' })[ch] || ch).join(' · ')} · {timeAgo(log.ts)}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                   {(log.results || []).map((r, i) => (
                     <span key={i} style={{ fontSize: '10px', background: r.ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: r.ok ? '#6ee7b7' : '#f87171', padding: '2px 6px', borderRadius: '6px', fontWeight: 700 }}>
                       {r.ok ? '✅' : '❌'} {r.channel}
@@ -370,23 +459,6 @@ function AutoPRPanel() {
           </div>
         </div>
       )}
-
-      {/* Auto-schedule notice */}
-      <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: '12px', padding: '14px 18px' }}>
-        <div style={{ fontSize: '12px', color: '#a5b4fc', fontWeight: 700, marginBottom: '6px' }}>⚔️ ตารางเสกสรรค์อัตโนมัติ (Built-in)</div>
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-          {[
-            { day: 'จันทร์', time: '09:00', type: '🚀 Platform Update' },
-            { day: 'พุธ',   time: '10:00', type: '🌟 Producer Spotlight' },
-            { day: 'ศุกร์', time: '15:00', type: '⭐ Customer Success' },
-          ].map((s, i) => (
-            <div key={i} style={{ fontSize: '12px', color: '#6b7280' }}>
-              <span style={{ color: '#9ca3af', fontWeight: 600 }}>{s.day} {s.time}</span> — {s.type}
-            </div>
-          ))}
-        </div>
-        <div style={{ fontSize: '11px', color: '#4b5563', marginTop: '6px' }}>สร้างอัตโนมัติ → กระจาย Slack ทุกสัปดาห์</div>
-      </div>
     </div>
   );
 }

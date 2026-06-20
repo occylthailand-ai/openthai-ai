@@ -3691,9 +3691,70 @@ app.delete('/api/corporate/pr/auto-queue/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// ── Autopilot Config ──────────────────────────────────────────────────────────
+let prAutopilotConfig = pr.getAutopilotConfig();
+
+function getAvailableChannels() {
+  return [
+    process.env.LINE_CHANNEL_TOKEN                                    && 'line',
+    (process.env.SLACK_WEBHOOK_URL || process.env.SLACK_BOT_TOKEN)   && 'slack',
+    (process.env.FB_PAGE_ID && process.env.FB_ACCESS_TOKEN)          && 'facebook',
+  ].filter(Boolean);
+}
+
+// Autopilot: Generate 3 ภาษา + Broadcast ทุกช่องทาง ในคำสั่งเดียว
+app.post('/api/corporate/pr/autopilot', requireAuth, corpLimiter, async (req, res) => {
+  const { type = 'platform_announcement', topic = '', channels } = req.body;
+  const ts = new Date().toISOString();
+  addLog('info', 'Auto-PR', `⚡ Autopilot triggered: ${type}`);
+
+  // สร้าง 3 ภาษาพร้อมกัน
+  const [thR, enR, zhR] = await Promise.allSettled([
+    generatePRContent(type, topic, 'th'),
+    generatePRContent(type, topic, 'en'),
+    generatePRContent(type, topic, 'zh'),
+  ]);
+
+  const th = thR.status === 'fulfilled' ? thR.value : null;
+  const en = enR.status === 'fulfilled' ? enR.value : null;
+  const zh = zhR.status === 'fulfilled' ? zhR.value : null;
+
+  const targetChannels = channels || getAvailableChannels();
+  if (targetChannels.length === 0) targetChannels.push('slack');
+
+  // กระจาย TH → LINE + Facebook + Slack
+  // กระจาย EN → Slack (international)
+  // กระจาย ZH → Slack (if configured)
+  const broadcasts = [];
+  if (th) broadcasts.push(broadcastPR(th, targetChannels));
+  if (en && targetChannels.includes('slack'))
+    broadcasts.push(broadcastPR(en, ['slack']));
+
+  const broadcastResults = await Promise.allSettled(broadcasts);
+  const allOk = broadcastResults.every(r => r.status === 'fulfilled');
+
+  addLog('info', 'Auto-PR', `✅ Autopilot done — ${targetChannels.join('+')} — ${allOk ? 'all OK' : 'some failed'}`);
+  res.json({
+    success: true,
+    generated: { th, en, zh },
+    channels: targetChannels,
+    broadcastResults: broadcastResults.map(r => r.value || r.reason?.message),
+    ts,
+  });
+});
+
+// Autopilot Config GET/PATCH
+app.get('/api/corporate/pr/autopilot/config', requireAuth, (req, res) => {
+  res.json({ success: true, data: { ...prAutopilotConfig, availableChannels: getAvailableChannels() } });
+});
+app.patch('/api/corporate/pr/autopilot/config', requireAuth, corpLimiter, (req, res) => {
+  prAutopilotConfig = { ...prAutopilotConfig, ...req.body, updatedAt: new Date().toISOString() };
+  pr.saveAutopilotConfig(prAutopilotConfig);
+  res.json({ success: true, data: prAutopilotConfig });
+});
+
 // ── Auto-PR Cron: สร้างและกระจาย PR อัตโนมัติทุกวัน ─────────────────────────
 if (!IS_VERCEL) {
-  // จ. 9am: Platform update | พ. 10am: Producer spotlight | ศ. 3pm: Customer success
   const prSchedules = [
     { day: 1, hour: 9,  type: 'platform_announcement', topic: 'อัปเดตประจำสัปดาห์จาก Openthai.ai' },
     { day: 3, hour: 10, type: 'producer_spotlight',    topic: 'ผู้ผลิต OTOP และ SME ที่ใช้ Openthai.ai ประสบความสำเร็จ' },
@@ -3703,13 +3764,23 @@ if (!IS_VERCEL) {
     const now = new Date();
     const sched = prSchedules.find(s => s.day === now.getDay() && s.hour === now.getHours());
     if (!sched) return;
-    addLog('info', 'Auto-PR', `🤖 Auto-PR cron: ${sched.type}`);
+    // ใช้ autopilot (3 ภาษา + ทุกช่องทางที่มี)
+    if (!prAutopilotConfig.enabled) {
+      addLog('info', 'Auto-PR', '⏸ Autopilot disabled — skip cron');
+      return;
+    }
+    addLog('info', 'Auto-PR', `⚡ Auto-PR cron: ${sched.type}`);
     try {
-      const content = await generatePRContent(sched.type, sched.topic, 'th');
-      await broadcastPR(content, ['slack']);
-      addLog('info', 'Auto-PR', `✅ Auto-PR sent: ${content.headline}`);
+      const availCh = getAvailableChannels();
+      const [th, en] = await Promise.all([
+        generatePRContent(sched.type, sched.topic, 'th'),
+        generatePRContent(sched.type, sched.topic, 'en'),
+      ]);
+      await broadcastPR(th, availCh.length ? availCh : ['slack']);
+      if (availCh.includes('slack')) await broadcastPR(en, ['slack']);
+      addLog('info', 'Auto-PR', `✅ Cron PR sent: ${th.headline}`);
     } catch (e) {
-      addLog('warn', 'Auto-PR', `Auto-PR failed: ${e.message}`);
+      addLog('warn', 'Auto-PR', `Cron PR failed: ${e.message}`);
     }
   });
 }
