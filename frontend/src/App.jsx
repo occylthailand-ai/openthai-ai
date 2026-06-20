@@ -60,6 +60,8 @@ const DeliveryPage = lazy(() => import('./pages/DeliveryPage'));
 const CarrierDirectoryPage = lazy(() => import('./pages/CarrierDirectoryPage'));
 const AutoPostPage = lazy(() => import('./pages/AutoPostPage'));
 const LinkTrackerPage = lazy(() => import('./pages/LinkTrackerPage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const BulkContentPage = lazy(() => import('./pages/BulkContentPage'));
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -130,7 +132,7 @@ function App() {
               <Route path="/find" element={<ProducerDirectoryPage />} />
               <Route path="/track" element={<TrackOrderPage />} />
               <Route path="/store" element={<StorePage />} />
-              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/admin" element={isAuthenticated ? <AdminPage /> : <Navigate to="/login" />} />
               <Route path="/affiliate" element={<AffiliatePage />} />
               <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
               <Route path="/privacy" element={<PrivacyPage />} />
@@ -140,7 +142,7 @@ function App() {
               <Route path="/trending" element={<TrendingPage />} />
               <Route path="/calendar" element={<ContentCalendarPage />} />
               <Route path="/brand" element={<BrandMemoryPage />} />
-              <Route path="/voice" element={<VoiceCommandPage />} />
+              <Route path="/voice" element={isAuthenticated ? <VoiceCommandPage /> : <Navigate to="/login" />} />
               <Route path="/video" element={isAuthenticated ? <VideoGeneratorPage /> : <Navigate to="/login" />} />
               <Route path="/payment" element={<PaymentPage />} />
               {/* Corporate System — Public Company */}
@@ -172,6 +174,8 @@ function App() {
               <Route path="/carriers" element={<CarrierDirectoryPage />} />
               <Route path="/autopost" element={isAuthenticated ? <AutoPostPage /> : <Navigate to="/login" />} />
               <Route path="/link-tracker" element={isAuthenticated ? <LinkTrackerPage /> : <Navigate to="/login" />} />
+              <Route path="/analytics" element={isAuthenticated ? <AnalyticsPage /> : <Navigate to="/login" />} />
+              <Route path="/bulk-post" element={isAuthenticated ? <BulkContentPage /> : <Navigate to="/login" />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>

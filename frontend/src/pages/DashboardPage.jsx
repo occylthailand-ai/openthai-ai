@@ -28,7 +28,9 @@ const QUICK_ACTIONS = [
   { icon: '👥', label: 'Facebook Feed', desc: 'โพสต์ + Marketplace', route: '/facebook', color: '#1877f2' },
   { icon: '💰', label: 'Affiliate', desc: 'รับ commission 20–40%', route: '/affiliate', color: '#f59e0b' },
   { icon: '🚀', label: 'Auto-Post', desc: 'สร้างเนื้อหา AI + โพสต์ทุกแพลตฟอร์มพร้อมกัน', route: '/autopost', color: '#6366f1', hot: true },
-  { icon: '🔗', label: 'Link Tracker', desc: 'ติดตาม affiliate link · คลิก · Conversion · รายได้', route: '/link-tracker', color: '#10b981' },
+  { icon: '📦', label: 'Bulk Content', desc: 'สร้างเนื้อหา 7–30 วันพร้อมกันในคลิกเดียว', route: '/bulk-post', color: '#fe2c55', hot: true },
+  { icon: '📊', label: 'Analytics', desc: 'วิเคราะห์ผล · Platform · Angle · Revenue จริง', route: '/analytics', color: '#10b981', hot: true },
+  { icon: '🔗', label: 'Link Tracker', desc: 'ติดตาม affiliate link · คลิก · Conversion · รายได้', route: '/link-tracker', color: '#06b6d4' },
 ];
 
 const AI_SKILLS = [
