@@ -1,0 +1,19 @@
+{
+  "name": "openthai-social-tools",
+  "version": "1.0.0",
+  "description": "Openthai.ai — Social Media Analysis Toolkit",
+  "type": "module",
+  "scripts": {
+    "browser":    "node browser-fetch.js",
+    "screenshot": "node screenshot.js",
+    "analyze":    "node analyze-content.js",
+    "fb-api":     "node fb-api.js",
+    "full":       "node social-pipeline.js"
+  },
+  "dependencies": {
+    "axios": "^1.18.0",
+    "cheerio": "^1.2.0",
+    "node-fetch": "^3.3.2",
+    "puppeteer-core": "^25.1.0"
+  }
+}
