@@ -66,6 +66,7 @@ const ContentIdeasPage = lazy(() => import('./pages/ContentIdeasPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const QueuePage = lazy(() => import('./pages/QueuePage'));
 const ABTestPage = lazy(() => import('./pages/ABTestPage'));
+const HashtagPage = lazy(() => import('./pages/HashtagPage'));
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -184,6 +185,7 @@ function App() {
               <Route path="/notifications" element={isAuthenticated ? <NotificationsPage /> : <Navigate to="/login" />} />
               <Route path="/queue" element={isAuthenticated ? <QueuePage /> : <Navigate to="/login" />} />
               <Route path="/abtest" element={isAuthenticated ? <ABTestPage /> : <Navigate to="/login" />} />
+              <Route path="/hashtags" element={isAuthenticated ? <HashtagPage /> : <Navigate to="/login" />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>
