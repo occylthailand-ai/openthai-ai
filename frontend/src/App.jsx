@@ -64,6 +64,7 @@ const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const BulkContentPage = lazy(() => import('./pages/BulkContentPage'));
 const ContentIdeasPage = lazy(() => import('./pages/ContentIdeasPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const QueuePage = lazy(() => import('./pages/QueuePage'));
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -180,6 +181,7 @@ function App() {
               <Route path="/bulk-post" element={isAuthenticated ? <BulkContentPage /> : <Navigate to="/login" />} />
               <Route path="/ideas" element={isAuthenticated ? <ContentIdeasPage /> : <Navigate to="/login" />} />
               <Route path="/notifications" element={isAuthenticated ? <NotificationsPage /> : <Navigate to="/login" />} />
+              <Route path="/queue" element={isAuthenticated ? <QueuePage /> : <Navigate to="/login" />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>

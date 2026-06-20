@@ -2716,9 +2716,29 @@ app.get('/api/autopost/queue', (req, res) => {
   res.json({ success: true, total: autopostQueue.length, data: autopostQueue.slice(0, 50) });
 });
 
+// ── DELETE /api/autopost/queue/:id — ลบงานออกจาก queue ─────────────────────
+app.delete('/api/autopost/queue/:id', requireAuth, (req, res) => {
+  const idx = autopostQueue.findIndex(i => i.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ success: false, error: 'Not found' });
+  autopostQueue.splice(idx, 1);
+  saveAutopostQueue(autopostQueue);
+  res.json({ success: true, deleted: req.params.id });
+});
+
+// ── PATCH /api/autopost/queue/:id — แก้ไขเวลา schedule ─────────────────────
+app.patch('/api/autopost/queue/:id', requireAuth, (req, res) => {
+  const item = autopostQueue.find(i => i.id === req.params.id);
+  if (!item) return res.status(404).json({ success: false, error: 'Not found' });
+  if (req.body.schedule_at) item.schedule_at = req.body.schedule_at;
+  if (req.body.status && ['queued', 'cancelled'].includes(req.body.status)) item.status = req.body.status;
+  saveAutopostQueue(autopostQueue);
+  res.json({ success: true, item });
+});
+
 // ── GET /api/autopost/log — ประวัติการส่ง ──────────────────────────────────
 app.get('/api/autopost/log', (req, res) => {
-  res.json({ success: true, total: autopostLog.length, data: autopostLog.slice(0, 50) });
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  res.json({ success: true, total: autopostLog.length, data: autopostLog.slice(0, limit) });
 });
 
 // ── GET /api/autopost/status — สถานะ credentials ทุก platform ───────────────
