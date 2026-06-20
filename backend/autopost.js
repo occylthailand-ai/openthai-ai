@@ -218,46 +218,50 @@ export function createAutoPost(dataDir, deps = {}) {
       .map(([id, cfg]) => ({ id, name: cfg.name, icon: cfg.icon }));
   }
 
-  // ── Broadcast to all selected platforms ────────────────────────────────────
+  // ── Broadcast to all selected platforms — parallel via Promise.allSettled ──
   async function broadcast({ content, hashtags = [], imageUrl = null, affiliateRef = null, productId = null, targetPlatforms = null }) {
     const batchId = `post_${Date.now()}_${randomBytes(4).toString('hex')}`;
-    const results = [];
     const platforms = targetPlatforms || Object.keys(PLATFORM_CONFIGS).filter(p => PLATFORM_CONFIGS[p].enabled());
 
-    for (const platform of platforms) {
-      const cfg = PLATFORM_CONFIGS[platform];
-      if (!cfg) { results.push({ platform, status: 'skipped', reason: 'unknown platform' }); continue; }
-      if (!cfg.enabled()) { results.push({ platform, status: 'skipped', reason: 'no credentials' }); continue; }
+    const TIMEOUT_MS = 12000;
+    const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`timeout ${ms}ms`)), ms))]);
 
-      // สร้าง tracking link เฉพาะ platform นี้
+    const settled = await Promise.allSettled(platforms.map(async (platform) => {
+      const cfg = PLATFORM_CONFIGS[platform];
+      if (!cfg) return { platform, status: 'skipped', reason: 'unknown platform' };
+      if (!cfg.enabled()) return { platform, status: 'skipped', reason: 'no credentials' };
+
       let trackingLink = null;
       if (createTrackingLink && affiliateRef) {
         try {
-          const tl = await createTrackingLink({ affiliateRef, platform, postBatchId: batchId, productId });
+          const tl = await withTimeout(createTrackingLink({ affiliateRef, platform, postBatchId: batchId, productId }), 3000);
           trackingLink = tl.shortUrl;
         } catch (_) {}
       }
 
       const text = formatForPlatform(platform, content, trackingLink, hashtags);
-      if (!text) { results.push({ platform, status: 'skipped', reason: 'format error' }); continue; }
+      if (!text) return { platform, status: 'skipped', reason: 'format error' };
 
-      try {
-        let result;
-        if (platform === 'facebook') result = await postToFacebook(text, imageUrl);
-        else if (platform === 'instagram') result = await postToInstagram(text, imageUrl);
-        else if (platform === 'twitter') result = await postToTwitter(text);
-        else if (platform === 'line') result = await postToLine(text);
-        else if (platform === 'telegram') result = await postToTelegram(text);
-        else if (platform === 'tiktok') result = await postToTikTok(text);
-        else result = { platform, post_id: `mock_${Date.now()}`, url: null };
+      let result;
+      if (platform === 'facebook') result = await withTimeout(postToFacebook(text, imageUrl), TIMEOUT_MS);
+      else if (platform === 'instagram') result = await withTimeout(postToInstagram(text, imageUrl), TIMEOUT_MS);
+      else if (platform === 'twitter') result = await withTimeout(postToTwitter(text), TIMEOUT_MS);
+      else if (platform === 'line') result = await withTimeout(postToLine(text), TIMEOUT_MS);
+      else if (platform === 'telegram') result = await withTimeout(postToTelegram(text), TIMEOUT_MS);
+      else if (platform === 'tiktok') result = await withTimeout(postToTikTok(text), TIMEOUT_MS);
+      else result = { platform, post_id: `mock_${Date.now()}`, url: null };
 
-        results.push({ ...result, status: 'success', tracking_link: trackingLink, text_preview: text.slice(0, 100) });
-        addLog('info', 'AutoPost', `✅ โพสต์ ${cfg.name} สำเร็จ post_id=${result.post_id}`);
-      } catch (err) {
-        results.push({ platform, status: 'error', error: err.message, text_preview: text.slice(0, 100) });
-        addLog('warn', 'AutoPost', `⚠️ โพสต์ ${cfg.name} ล้มเหลว: ${err.message}`);
-      }
-    }
+      addLog('info', 'AutoPost', `✅ โพสต์ ${cfg.name} สำเร็จ post_id=${result.post_id}`);
+      return { ...result, status: 'success', tracking_link: trackingLink, text_preview: text.slice(0, 100) };
+    }));
+
+    const results = settled.map((s, i) => {
+      if (s.status === 'fulfilled') return s.value;
+      const platform = platforms[i];
+      const err = s.reason?.message || 'unknown error';
+      addLog('warn', 'AutoPost', `⚠️ โพสต์ ${platform} ล้มเหลว: ${err}`);
+      return { platform, status: 'error', error: err };
+    });
 
     // บันทึก batch
     const posts = loadPosts();

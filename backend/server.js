@@ -386,21 +386,35 @@ const MOCK_HOOKS = [
 
 function mockGenerate(form) {
   const hook = MOCK_HOOKS[Math.floor(Math.random() * MOCK_HOOKS.length)](form.product);
+  const body = `✅ ความจริงข้อที่ 1: ${form.product} ผ่านมาตรฐานไทยแท้ ทดสอบแล้วกว่า 1,000 ชิ้น\n💡 ความจริงข้อที่ 2: ราคาถูกกว่าทางเลือกอื่น 30-50% คุณภาพไม่ต่างกัน\n⚡ ความจริงข้อที่ 3: ส่งถึงมือใน 24 ชั่วโมง ทั่วประเทศไทย`;
+  const cta = `📩 สั่งได้เลยตอนนี้ — กดลิงก์ด้านล่างหรือ DM โดยตรง จำนวนจำกัด!`;
   return {
     hook,
+    body,
+    cta,
     script: [
       `📍 เปิดด้วยคำถาม: "${form.product} คืออะไร และทำไมคนไทยถึงต้องมี?"`,
-      `🔍 อธิบายที่มา: บอกเล่าประวัติและความพิเศษของ ${form.category} ไทยแท้`,
+      `🔍 อธิบายที่มา: บอกเล่าประวัติและความพิเศษของ ${form.category || 'สินค้า'} ไทยแท้`,
       `✅ ข้อเท็จจริง 3 ข้อ: คุณสมบัติ, วัสดุ, มาตรฐาน`,
       `💡 เปรียบเทียบ: ทำไม ${form.product} ของไทยถึงดีกว่านำเข้า`,
       `🎯 CTA: "กดลิงก์ด้านล่างสั่งได้เลย ส่งฟรีทั่วไทย"`,
     ],
-    caption: `✨ ${form.product} — สินค้าไทยแท้คุณภาพพรีเมียม\n💰 ราคาพิเศษ${form.price ? ` ${form.price}` : ''}\n🚚 ส่งฟรีทั่วไทย\n⭐ รีวิวจริงกว่า 5,000 คำสั่งซื้อ\n📩 DM หรือกดลิงก์ใน Bio`,
+    caption: `${hook}\n\n${body}\n\n${cta}`,
     hashtags: ['#OTOP', '#สินค้าไทย', '#ของดีบ้านเรา', '#ขายออนไลน์', '#TikTokShop', `#${form.product.replace(/\s+/g, '')}`, '#Openthai.ai'],
     criticScore: (7 + Math.random() * 2.8).toFixed(1),
     source: 'mock',
   };
 }
+
+// ─── Angle-specific prompt guidance ──────────────────────────────────────────
+const ANGLE_GUIDES = {
+  roi:      'เน้น ROI จริงที่วัดได้: ประหยัดเวลา X ชม./วัน, รายได้เพิ่ม Y บาท/เดือน, ต้นทุนลด Z% — ใช้ตัวเลขจริง ห้ามโอ้อวด',
+  howworks: 'อธิบายกลไก 3 ขั้นตอนชัดเจน ภาษาเข้าใจง่าย ไม่ใช้ศัพท์เทคนิค คนอ่านเข้าใจใน 30 วินาที',
+  compare:  'เปรียบเทียบตรงๆ กับทางเลือกอื่น (คู่แข่ง/DIY/จ้างคน) ด้านราคา เวลา คุณภาพ ให้ผู้อ่านตัดสินใจได้ทันที',
+  proof:    'ยกหลักฐานจับต้องได้: จำนวนรีวิวจริง, ชื่อลูกค้าตัวอย่าง, ผลลัพธ์ก่อน-หลังที่วัดได้เป็นตัวเลข',
+  problem:  'เริ่มจากปัญหาที่เจ็บปวดจริง → สาเหตุที่แท้จริง → วิธีแก้ที่พิสูจน์แล้วพร้อมตัวเลขผลลัพธ์',
+  demo:     'แสดง input→output ตัวอย่างจริงในโพสต์เดียว เปรียบ "ก่อนใช้" vs "หลังใช้" ให้เห็นผลชัดก่อนตัดสินใจ',
+};
 
 // ─── Build Claude prompt ──────────────────────────────────────────────────────
 function buildPrompt(form) {
@@ -411,31 +425,27 @@ function buildPrompt(form) {
 
   const langMap = { 'ภาษาไทย': 'ภาษาไทย', 'English': 'English', 'ไทย + อังกฤษ': 'ทั้งภาษาไทยและอังกฤษ' };
   const lang = langMap[form.lang] || 'ภาษาไทย';
+  const angleGuide = ANGLE_GUIDES[form.angle] || '';
 
-  return `คุณเป็น AI ผู้เชี่ยวชาญด้านการสร้างคอนเทนต์ขายสินค้าไทยบน Social Media
+  return `คุณเป็น AI ผู้เชี่ยวชาญด้านการตลาดดิจิทัลสำหรับสินค้าไทย ใช้ข้อมูลความจริงเท่านั้น ห้ามสร้างตัวเลขปลอม
 
 สินค้า: ${form.product}
-หมวดหมู่: ${form.category}
-แพลตฟอร์ม: ${form.platform}
-สไตล์คอนเทนต์: ${form.style} (educational=สอน/ให้ข้อมูล, entertainment=ความบันเทิง/ฮา, sales=ขายตรง)
+หมวดหมู่: ${form.category || 'ทั่วไป'}
+แพลตฟอร์ม: ${form.platform || 'Social Media'}
+สไตล์: ${form.style || 'sales'} (educational=สอน, entertainment=ฮา, sales=ขายตรง)
 ภาษา: ${lang}
 ราคา: ${form.price || 'ไม่ระบุ'}
-กลุ่มเป้าหมาย: ${form.audience || 'ทั่วไป'}
+กลุ่มเป้าหมาย: ${form.audience || 'ผู้ซื้อทั่วไปในไทย'}${angleGuide ? `\nมุมมองสำคัญ: ${angleGuide}` : ''}
 
-กรุณาสร้างคอนเทนต์และตอบกลับ **เฉพาะ JSON** ตามโครงสร้างนี้ ไม่มีข้อความอื่นนอกจาก JSON:
-
+ตอบกลับ **เฉพาะ JSON** ไม่มีข้อความนอก JSON:
 {
-  "hook": "ประโยค Hook เปิดที่ดึงดูดใจ 1 ประโยค",
-  "script": [
-    "ขั้นตอนที่ 1 ของ Script วิดีโอ",
-    "ขั้นตอนที่ 2",
-    "ขั้นตอนที่ 3",
-    "ขั้นตอนที่ 4",
-    "ขั้นตอนที่ 5"
-  ],
-  "caption": "Caption พร้อมใช้งาน มี emoji ครบถ้วน",
+  "hook": "Hook ดึงดูดใน 3 วินาที (ตัวเลขจริง หรือคำถามที่ตรงปัญหา) 1 ประโยค",
+  "body": "เนื้อหา 2-3 ประเด็นความจริงที่วัดได้ ใช้ emoji ช่วย",
+  "cta": "Call-to-action ชัดเจน กระตุ้นคลิกด้วยความเร่งด่วนจริง",
+  "script": ["ขั้นตอนที่ 1", "ขั้นตอนที่ 2", "ขั้นตอนที่ 3", "ขั้นตอนที่ 4", "ขั้นตอนที่ 5"],
+  "caption": "Caption พร้อมใช้ มี emoji + hook + body + cta รวมกัน",
   "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3", "#hashtag4", "#hashtag5", "#hashtag6", "#hashtag7", "#hashtag8", "#hashtag9", "#hashtag10"],
-  "criticScore": "คะแนน 0.0-10.0 ตามคุณภาพของคอนเทนต์ที่คุณสร้าง"
+  "criticScore": "คะแนน 0.0-10.0"
 }`;
 }
 
@@ -1402,6 +1412,30 @@ if (!IS_VERCEL) cron.schedule('5 * * * *', async () => {
   }
 });
 if (!IS_VERCEL) console.log('[Scheduler] ✅ Agent cron started (checks every hour at :05 — local only)');
+
+// ── Queue processor: ทุก 2 นาที ตรวจโพสต์ที่ถึงเวลา (local only) ─────────────
+if (!IS_VERCEL) {
+  setInterval(async () => {
+    const now = Date.now();
+    let changed = false;
+    for (const item of autopostQueue) {
+      if (item.status !== 'queued') continue;
+      if (!item.schedule_at || new Date(item.schedule_at).getTime() > now) continue;
+      try {
+        const results = await dispatchAutoPost(item);
+        item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
+        item.results = results;
+        item.sent_at = new Date().toISOString();
+        addLog('info', 'AutoPost', `⏰ Queue processor sent: ${item.product}`);
+      } catch (e) {
+        item.status = 'failed';
+        item.error = e.message;
+      }
+      changed = true;
+    }
+    if (changed) saveAutopostQueue(autopostQueue);
+  }, 2 * 60 * 1000);
+}
 
 // ── CRUD /api/agent ───────────────────────────────────────────────────────────
 app.get('/api/agent', (req, res) => {
