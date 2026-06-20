@@ -30,9 +30,18 @@ echo ""
 CRON_LINE="$SCHEDULE bash $SYNC_ALL >> $LOG_FILE 2>&1"
 MARKER="# OpenThaiAi Auto-Sync"
 
+# ตรวจสอบว่ามี crontab command หรือไม่
+if ! command -v crontab &>/dev/null; then
+  echo "⚠️  ไม่พบ crontab ในระบบนี้"
+  echo "   ติดตั้ง cron: sudo apt-get install cron (Ubuntu/Debian)"
+  echo "   หรือบน macOS: cron มีอยู่แล้ว ไม่ต้องติดตั้ง"
+  echo ""
+  echo "   คุณสามารถรัน sync ด้วยตัวเองด้วย: bash $SYNC_ALL"
+  exit 0
+fi
+
 if crontab -l 2>/dev/null | grep -q "OpenThaiAi Auto-Sync"; then
   echo "ℹ️  Cron job มีอยู่แล้ว — กำลังอัปเดต..."
-  # ลบ cron เดิมของ OpenThaiAi
   crontab -l 2>/dev/null | grep -v "OpenThaiAi" | crontab -
 fi
 
