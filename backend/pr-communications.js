@@ -127,6 +127,12 @@ export function createPRSystem(writeDir) {
       ],
     }),
 
+    // ── Auto-PR Queue & Broadcast Log ────────────────────────────────────────
+    getAutoQueue:     () => load('pr_auto_queue.json', []),
+    saveAutoQueue:    (data) => save('pr_auto_queue.json', data),
+    getBroadcastLog:  () => load('pr_broadcast_log.json', []),
+    saveBroadcastLog: (data) => save('pr_broadcast_log.json', data.slice(0, 100)),
+
     // ── Team Tasks (Command Center) ───────────────────────────────────────────
     getTasks: () => load('cmd_tasks.json', [
       { id: 't001', dept: 'it',        title: 'ติดตั้ง OMISE_SECRET_KEY ใน Vercel',         priority: 'critical', status: 'pending',     assignee: 'IT Team',    due: '2026-05-25' },

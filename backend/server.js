@@ -3516,6 +3516,204 @@ app.patch('/api/corporate/pr/kols', requireAuth, corpLimiter, (req, res) => {
 app.get('/api/corporate/pr/crisis',   (req, res) => res.json({ success: true, data: pr.getCrisisPlan() }));
 app.get('/api/corporate/pr/newsletters', (req, res) => res.json({ success: true, data: pr.getNewsletters() }));
 
+// ── PR Auto-Generation & Broadcast (AI Ayasit Engine) ─────────────────────────
+const prBroadcastLog = [];
+
+const PR_TYPE_META = {
+  platform_announcement: { label: 'ประกาศแพลตฟอร์ม', emoji: '🚀', target: 'OpenThaiAi Platform' },
+  customer_success:      { label: 'เรื่องราวลูกค้า',  emoji: '⭐', target: 'Customer & Community' },
+  producer_spotlight:    { label: 'ไฮไลต์ผู้ผลิต',   emoji: '🌟', target: 'Producer Network' },
+  campaign_launch:       { label: 'เปิดตัวแคมเปญ',   emoji: '📣', target: 'All Audiences' },
+  product_update:        { label: 'อัปเดตฟีเจอร์',   emoji: '✨', target: 'Users & Partners' },
+  press_release:         { label: 'Press Release',    emoji: '📰', target: 'Media & Press' },
+};
+
+async function generatePRContent(type, topic, lang = 'th') {
+  const meta = PR_TYPE_META[type] || PR_TYPE_META.platform_announcement;
+  const now = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const langNote = lang === 'en' ? 'ตอบเป็นภาษาอังกฤษ' : lang === 'zh' ? '用中文回答' : 'ตอบเป็นภาษาไทย';
+  const prompt = `คุณเป็นผู้เชี่ยวชาญ PR และการสื่อสารแบรนด์ระดับโลกของ Openthai.ai — แพลตฟอร์ม AI สำหรับ SME ไทยและ ASEAN
+
+สร้างเนื้อหา PR ประเภท: "${meta.label}" (${meta.emoji})
+เป้าหมาย: ${meta.target}
+หัวข้อ/บริบท: ${topic || 'Openthai.ai แพลตฟอร์ม AI สำหรับ SME ไทย'}
+วันที่: ${now}
+${langNote}
+
+ตอบเป็น JSON เท่านั้น:
+{
+  "headline": "หัวข้อหลัก กระชับ น่าสนใจ",
+  "subheadline": "หัวข้อรอง (1 ประโยค)",
+  "body": "เนื้อหาหลัก 3-5 ย่อหน้า สละสลวย น่าอ่าน",
+  "quote": "คำพูดสมมติจากทีมผู้บริหาร Openthai.ai (ใส่ชื่อและตำแหน่งด้วย)",
+  "cta": "Call to Action",
+  "social_post": "โพสต์สำหรับ Social Media (ไม่เกิน 280 ตัวอักษร) พร้อม hashtags",
+  "line_message": "ข้อความส่ง LINE (เป็นกันเอง ไม่เกิน 300 ตัวอักษร)",
+  "hashtags": ["#hashtag1", "#hashtag2", "#hashtag3", "#hashtag4", "#hashtag5"],
+  "audience": "กลุ่มเป้าหมายหลัก",
+  "key_messages": ["ประเด็นสำคัญ 1", "ประเด็นสำคัญ 2", "ประเด็นสำคัญ 3"]
+}`;
+
+  // Claude
+  if (anthropic) {
+    try {
+      const msg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      const raw = msg.content?.[0]?.text || '';
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) return { ok: true, ...JSON.parse(match[0]), type, lang, generatedAt: new Date().toISOString() };
+    } catch (e) { addLog('warn', 'PR-AI', `Claude failed: ${e.message}`); }
+  }
+
+  // Gemini fallback
+  if (gemini) {
+    try {
+      const result = await gemini.models.generateContent({ model: 'gemini-1.5-flash', contents: [{ parts: [{ text: prompt }] }] });
+      const raw = result.response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const match = raw.match(/\{[\s\S]*\}/);
+      if (match) return { ok: true, ...JSON.parse(match[0]), type, lang, generatedAt: new Date().toISOString() };
+    } catch (e) { addLog('warn', 'PR-AI', `Gemini failed: ${e.message}`); }
+  }
+
+  // Mock fallback
+  return {
+    ok: true, type, lang, generatedAt: new Date().toISOString(),
+    headline: `🚀 Openthai.ai ${topic || 'เปิดตัวนวัตกรรม AI ใหม่'} สำหรับ SME ไทย`,
+    subheadline: 'แพลตฟอร์ม AI ครบวงจรที่ออกแบบมาเพื่อธุรกิจไทยโดยเฉพาะ',
+    body: `Openthai.ai ประกาศ${topic || 'ความก้าวหน้าครั้งสำคัญ'} เพื่อยกระดับธุรกิจ SME ไทยสู่ยุคดิจิทัลอย่างเต็มรูปแบบ\n\nด้วยเทคโนโลยี AI ที่ทรงพลัง Openthai.ai ช่วยให้ผู้ประกอบการไทยสามารถสร้างเนื้อหาที่มีคุณภาพ วิเคราะห์ตลาด และเชื่อมต่อกับลูกค้าทั่วโลกได้อย่างมีประสิทธิภาพ\n\nแพลตฟอร์มรองรับการทำงานกับ Social Media กว่า 241 แพลตฟอร์ม ทำให้ธุรกิจของคุณเติบโตได้อย่างไม่มีขีดจำกัด`,
+    quote: `"เราเชื่อว่า AI ควรเข้าถึงได้สำหรับทุกคน ไม่ว่าจะเป็นธุรกิจขนาดเล็กหรือใหญ่" — Zuejai, CEO & Founder, Openthai.ai`,
+    cta: 'เริ่มต้นใช้งานฟรีที่ Openthai.ai',
+    social_post: `🚀 ${topic || 'Openthai.ai'} พร้อมช่วยธุรกิจ SME ไทยเติบโตด้วย AI!\n\nครบ ง่าย ทรงพลัง 🇹🇭\n#OpenthaAi #AIforThailand #SME #DigitalTransformation`,
+    line_message: `📢 สวัสดีนะคะ!\n\n${topic || 'Openthai.ai มีอัปเดตสำคัญมาบอก'} 🎉\n\nมาร่วมเป็นส่วนหนึ่งของการเปลี่ยนแปลงครั้งนี้กันนะคะ ✨`,
+    hashtags: ['#OpenthaAi', '#AIThailand', '#SMEไทย', '#DigitalTransformation', '#TechStartup'],
+    audience: 'SME ไทย, ผู้ผลิต OTOP, นักธุรกิจ ASEAN',
+    key_messages: ['AI ที่ออกแบบมาเพื่อคนไทย', 'ใช้งานง่าย ผลลัพธ์ทรงพลัง', 'เชื่อมทุกธุรกิจสู่โลกดิจิทัล'],
+  };
+}
+
+async function broadcastPR(content, channels = []) {
+  const results = [];
+  const ts = new Date().toISOString();
+
+  // LINE Broadcast
+  if (channels.includes('line') && process.env.LINE_CHANNEL_TOKEN) {
+    try {
+      const lineRes = await fetch('https://api.line.me/v2/bot/message/broadcast', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.LINE_CHANNEL_TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: [{ type: 'text', text: content.line_message || content.social_post || content.headline }] }),
+      });
+      results.push({ channel: 'line', ok: lineRes.ok, status: lineRes.status });
+      addLog('info', 'PR-Broadcast', `LINE broadcast: ${lineRes.ok ? 'OK' : 'FAIL ' + lineRes.status}`);
+    } catch (e) {
+      results.push({ channel: 'line', ok: false, error: e.message });
+    }
+  }
+
+  // Slack
+  if (channels.includes('slack') && (process.env.SLACK_WEBHOOK_URL || process.env.SLACK_BOT_TOKEN)) {
+    try {
+      await sendSlackAlert(`📣 *${content.headline}*\n\n${content.social_post || content.subheadline}\n\n${(content.hashtags || []).join(' ')}`, '📣');
+      results.push({ channel: 'slack', ok: true });
+    } catch (e) {
+      results.push({ channel: 'slack', ok: false, error: e.message });
+    }
+  }
+
+  // Facebook Page
+  if (channels.includes('facebook') && process.env.FB_PAGE_ID && process.env.FB_ACCESS_TOKEN) {
+    try {
+      const fbRes = await fetch(`https://graph.facebook.com/v19.0/${process.env.FB_PAGE_ID}/feed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: content.social_post || content.headline, access_token: process.env.FB_ACCESS_TOKEN }),
+      });
+      const fbData = await fbRes.json();
+      results.push({ channel: 'facebook', ok: fbRes.ok, postId: fbData.id });
+      addLog('info', 'PR-Broadcast', `Facebook post: ${fbData.id || 'FAIL'}`);
+    } catch (e) {
+      results.push({ channel: 'facebook', ok: false, error: e.message });
+    }
+  }
+
+  const log = { id: `pb${Date.now()}`, ts, headline: content.headline, type: content.type, channels, results };
+  prBroadcastLog.unshift(log);
+  if (prBroadcastLog.length > 100) prBroadcastLog.splice(100);
+  pr.saveBroadcastLog(prBroadcastLog);
+  return { results, log };
+}
+
+// PR Generate endpoint
+app.post('/api/corporate/pr/generate', requireAuth, corpLimiter, async (req, res) => {
+  const { type = 'platform_announcement', topic = '', lang = 'th' } = req.body;
+  try {
+    const content = await generatePRContent(type, topic, lang);
+    res.json({ success: true, data: content });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// PR Broadcast endpoint
+app.post('/api/corporate/pr/broadcast', requireAuth, corpLimiter, async (req, res) => {
+  const { content, channels = ['slack'] } = req.body;
+  if (!content?.headline) return res.status(400).json({ success: false, error: 'content.headline required' });
+  try {
+    const result = await broadcastPR(content, channels);
+    res.json({ success: true, ...result });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// PR Broadcast log
+app.get('/api/corporate/pr/broadcast-log', requireAuth, (req, res) => {
+  const log = pr.getBroadcastLog();
+  prBroadcastLog.push(...log.filter(l => !prBroadcastLog.find(e => e.id === l.id)));
+  res.json({ success: true, data: prBroadcastLog.slice(0, 50) });
+});
+
+// Auto-PR Queue
+app.get('/api/corporate/pr/auto-queue',  requireAuth, (req, res) => res.json({ success: true, data: pr.getAutoQueue() }));
+app.post('/api/corporate/pr/auto-queue', requireAuth, corpLimiter, (req, res) => {
+  const queue = pr.getAutoQueue();
+  const item = { id: `aq${Date.now()}`, createdAt: new Date().toISOString(), status: 'pending', ...req.body };
+  queue.push(item);
+  pr.saveAutoQueue(queue);
+  res.json({ success: true, data: item });
+});
+app.delete('/api/corporate/pr/auto-queue/:id', requireAuth, (req, res) => {
+  pr.saveAutoQueue(pr.getAutoQueue().filter(i => i.id !== req.params.id));
+  res.json({ success: true });
+});
+
+// ── Auto-PR Cron: สร้างและกระจาย PR อัตโนมัติทุกวัน ─────────────────────────
+if (!IS_VERCEL) {
+  // จ. 9am: Platform update | พ. 10am: Producer spotlight | ศ. 3pm: Customer success
+  const prSchedules = [
+    { day: 1, hour: 9,  type: 'platform_announcement', topic: 'อัปเดตประจำสัปดาห์จาก Openthai.ai' },
+    { day: 3, hour: 10, type: 'producer_spotlight',    topic: 'ผู้ผลิต OTOP และ SME ที่ใช้ Openthai.ai ประสบความสำเร็จ' },
+    { day: 5, hour: 15, type: 'customer_success',      topic: 'ลูกค้า Openthai.ai เพิ่มยอดขายได้อย่างไรด้วย AI' },
+  ];
+  cron.schedule('0 * * * *', async () => {
+    const now = new Date();
+    const sched = prSchedules.find(s => s.day === now.getDay() && s.hour === now.getHours());
+    if (!sched) return;
+    addLog('info', 'Auto-PR', `🤖 Auto-PR cron: ${sched.type}`);
+    try {
+      const content = await generatePRContent(sched.type, sched.topic, 'th');
+      await broadcastPR(content, ['slack']);
+      addLog('info', 'Auto-PR', `✅ Auto-PR sent: ${content.headline}`);
+    } catch (e) {
+      addLog('warn', 'Auto-PR', `Auto-PR failed: ${e.message}`);
+    }
+  });
+}
+
 // Command Center — Team Tasks + KPIs
 app.get('/api/corporate/tasks',   (req, res) => res.json({ success: true, data: pr.getTasks() }));
 app.patch('/api/corporate/tasks', requireAuth, corpLimiter, (req, res) => {
