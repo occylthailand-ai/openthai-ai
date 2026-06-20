@@ -30,16 +30,22 @@ import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
+import { createCarriers } from './carriers.js';
+import { createKVStore } from './kv-store.js';
+import { createMythos } from './mythos.js';
+import { createPRAutopilot } from './pr-autopilot.js';
+import { createInvite } from './invite.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── Vercel serverless detection ──────────────────────────────────────────────
 const IS_VERCEL = !!process.env.VERCEL;
+const IS_PROD = IS_VERCEL || process.env.NODE_ENV === 'production';
 // Admin key — ใน production (serverless) ห้าม fallback ค่า default สาธารณะ
 // ต้องตั้ง ADMIN_KEY เท่านั้น; โหมด local ยังใช้ default เพื่อความสะดวกตอน dev
 function resolveAdminKey() {
   if (process.env.ADMIN_KEY) return process.env.ADMIN_KEY;
-  return IS_VERCEL ? null : 'openthai-admin-2026';
+  return IS_PROD ? null : 'openthai-admin-2026';
 }
 function checkAdminKey(provided) {
   const key = resolveAdminKey();
@@ -65,6 +71,10 @@ const producers = createProducers(WRITE_DATA_DIR);
 const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
 const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
+const carriers  = createCarriers(WRITE_DATA_DIR, {
+  onNewCarrier: (c) => sendCarrierSignupAlert(c),
+  onNewJob: (j) => sendDeliveryJobAlert(j),
+});
 
 import {
   signToken, verifyToken, requireAuth,
@@ -76,13 +86,60 @@ const app = express();
 const PORT = process.env.PORT || 8000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-app.use(cors({ origin: true, credentials: true })); // allow all origins (file://, localhost, Vercel)
+const CORS_ALLOWLIST = new Set([
+  process.env.FRONTEND_URL || '',
+  'http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000',
+  ...(process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',').map(s => s.trim()).filter(Boolean) : []),
+].filter(Boolean));
+
+app.use(cors({
+  origin(origin, cb) {
+    if (!origin) return cb(null, true);
+    if (!IS_PROD) return cb(null, true);
+    return cb(null, CORS_ALLOWLIST.has(origin));
+  },
+  credentials: true,
+}));
 // Skip global JSON parser for LINE webhook — needs raw buffer for HMAC signature verification
 app.use((req, res, next) => {
   if (req.path === '/api/line/webhook') return next();
   express.json({ limit: '50kb' })(req, res, next);
 });
 // image endpoint uses its own larger limit (see /api/analyze-image)
+
+// ── KV store setup ────────────────────────────────────────────────────────────
+const kv = createKVStore();
+if (IS_VERCEL && !kv.useSB) {
+  console.warn('[kv] ⚠️  บน Vercel แต่ไม่ได้ตั้ง SUPABASE_URL/SUPABASE_SERVICE_KEY — payments/entitlements จะหายเมื่อ cold start!');
+}
+
+// ── Mythos setup ──────────────────────────────────────────────────────────────
+const mythos = createMythos({
+  express,
+  aiActive:     () => (process.env.ANTHROPIC_API_KEY ? 'claude' : process.env.GEMINI_API_KEY ? 'gemini' : 'mock'),
+  persistence:  () => (kv.useSB ? 'supabase' : 'file'),
+  paymentsLive: () => !!process.env.OMISE_SECRET_KEY,
+  isProd:       () => IS_PROD,
+  prodHardened: () => (!IS_PROD || (!!process.env.ADMIN_KEY && !!process.env.JWT_SECRET)),
+  kvPush:       (k, v) => kv.push(k, v),
+});
+app.use(mythos.router);
+
+// ── Invite setup ──────────────────────────────────────────────────────────────
+const invite = createInvite({ express, kv });
+app.use(invite.router);
+
+// ── PR Autopilot setup ────────────────────────────────────────────────────────
+const prAutopilot = createPRAutopilot({
+  express,
+  isProd:     () => IS_PROD,
+  adminCheck: (req) => {
+    const key = req.headers['x-admin-key'] || req.query.key;
+    return checkAdminKey(key);
+  },
+  kvPush: (k, v) => kv.push(k, v),
+});
+app.use(prAutopilot.router);
 
 // Credit ledger routes — /api/credits, /credits/checkin, /credits/spin, /credits/claim
 app.use(credits.router);
@@ -92,6 +149,18 @@ app.use(producers.router);
 app.use(orders.router);
 // Inventory / first-party shop routes — /api/shop/products
 app.use(inventory.router);
+// Carrier & logistics routes — /api/carriers, /api/delivery
+app.use(carriers.router);
+
+// Logistics admin
+app.get('/api/logistics/admin/summary', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await carriers.summary()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.get('/api/logistics/admin/carriers', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, carriers: await carriers.allCarriers() }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.post('/api/logistics/admin/carrier-status', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.setCarrierStatus(req.body?.id, req.body?.status, { verified: req.body?.verified }); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.post('/api/logistics/admin/carrier-availability', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.setAvailability(req.body?.id, req.body?.available); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.get('/api/logistics/admin/jobs', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, jobs: await carriers.allJobs() }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.post('/api/logistics/admin/job-assign', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.assignJob(req.body?.id, req.body?.carrier_id, req.body?.note); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.post('/api/logistics/admin/job-status', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.jobSetStatus(req.body?.id, req.body?.status, req.body?.note); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.post('/api/logistics/admin/job-deliver', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.deliverJob(req.body?.id, req.body || {}); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({
@@ -710,6 +779,37 @@ async function sendLowStockAlert(product) {
     try { await fetch('https://notify-api.line.me/api/notify', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ message: `\n${line}` }).toString() }); }
     catch (e) { console.error('Low-stock LINE error:', e.message); }
   }
+}
+
+async function sendCarrierSignupAlert(c) {
+  const line = `🚚 ผู้จัดส่งสมัครใหม่: ${c.business_name || c.contact_name} (${c.phone}) · ยานพาหนะ ${(c.vehicles || []).join(',')} · โซน ${(c.zones || []).join(',')}`;
+  addLog('info', 'Logistics', line);
+  const to = process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  if (mailer && to) {
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to,
+        subject: `🚚 ผู้จัดส่งสมัครใหม่ — ${c.business_name || c.contact_name}`,
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;"><div style="background:linear-gradient(135deg,#6366f1,#10b981);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">🚚 ผู้จัดส่งสมัครใหม่</h1></div><div style="padding:24px;font-size:14px;line-height:1.8;"><b>${c.business_name || c.contact_name}</b> (${c.type})<br>☎️ ${c.phone}${c.email ? ` · ✉️ ${c.email}` : ''}<br>🚗 ยานพาหนะ: ${(c.vehicles || []).join(', ')}<br>📍 โซนบริการ: ${(c.zones || []).join(', ')}<br><br>👉 ตรวจเอกสาร/ยืนยันตัวตนที่ <a href="https://www.openthai-ai.com/admin" style="color:#6366f1;">Admin → ขนส่ง</a></div></div>`,
+      });
+    } catch (e) { console.error('Carrier signup email error:', e.message); }
+  }
+  const token = process.env.LINE_NOTIFY_TOKEN;
+  if (token) { try { await fetch('https://notify-api.line.me/api/notify', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ message: `\n${line}` }).toString() }); } catch (e) { console.error('Carrier LINE error:', e.message); } }
+}
+
+async function sendDeliveryJobAlert(j) {
+  const line = `📦 งานจัดส่งใหม่ ${j.id}: ${j.pickup_zone || '-'} → ${j.dropoff_zone || '-'} · ${j.vehicle} · ประเมิน ฿${j.quote_price}`;
+  addLog('info', 'Logistics', line);
+  const to = process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  if (!mailer || !to) return;
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to,
+      subject: `📦 งานจัดส่งใหม่ — ${j.pickup_zone || ''} → ${j.dropoff_zone || ''} (฿${j.quote_price})`,
+      html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;"><div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">📦 งานจัดส่งใหม่</h1></div><div style="padding:24px;font-size:14px;line-height:1.8;">รับ: ${j.pickup_address} (${j.pickup_zone || '-'})<br>ส่ง: ${j.dropoff_address} (${j.dropoff_zone || '-'})<br>🚗 ${j.vehicle}${j.weight_kg ? ` · ${j.weight_kg} กก.` : ''}${j.express ? ' · ด่วน' : ''}<br>💰 ประเมิน <b style="color:#10b981;">฿${Number(j.quote_price).toLocaleString('th-TH')}</b>${j.cod_amount ? ` · COD ฿${j.cod_amount}` : ''}<br>🆔 <span style="font-family:monospace;font-size:12px;">${j.id}</span><br><br>👉 จ่ายงานให้คนขับที่ <a href="https://www.openthai-ai.com/admin" style="color:#6366f1;">Admin → ขนส่ง</a></div></div>`,
+    });
+  } catch (e) { console.error('Delivery job email error:', e.message); }
 }
 
 // ─── Affiliate JSON File DB ───────────────────────────────────────────────────

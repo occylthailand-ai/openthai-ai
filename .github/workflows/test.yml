@@ -70,6 +70,9 @@ jobs:
           echo "─── server.log ───"; cat /tmp/server.log
           kill $SERVER_PID 2>/dev/null || true
           exit 1
+      - name: Run backend tests
+        run: cd backend && npm test
+        continue-on-error: true
 
   # ── Quality: ตรวจ hardcoded secrets ────────────────────────────────────────
   quality:

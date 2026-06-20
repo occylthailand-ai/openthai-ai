@@ -1,70 +1,76 @@
-﻿// Openthai.ai — Service Worker v1
-// Cache Strategy: Network-first for API, Cache-first for static assets
+// Openthai.ai — Service Worker v2 (Display Acceleration)
+// กลยุทธ์: API = pass-through · navigation = network-first + offline fallback
+//          static assets (hashed JS/CSS/img/font) = stale-while-revalidate
+//          → โหลดซ้ำเร็วทันที (จากแคช) แล้วอัปเดตเบื้องหลัง
 
-const CACHE_NAME = 'openthai-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/manifest.json',
-  '/favicon.svg',
-];
+const VERSION = 'v2';
+const SHELL_CACHE = `openthai-shell-${VERSION}`;   // เปลือกแอป (precache)
+const ASSET_CACHE = `openthai-assets-${VERSION}`;  // ไฟล์ static แบบ runtime
+const SHELL_ASSETS = ['/', '/manifest.json', '/favicon.svg'];
+const ASSET_MAX = 80; // กันแคชโตเกิน — เก็บไฟล์ล่าสุดไว้
 
-// ── Install: cache static shell ───────────────────────────────────────────────
+// ── Install: precache เปลือกแอป ───────────────────────────────────────────────
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
-  );
+  e.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(SHELL_ASSETS)).catch(() => {}));
   self.skipWaiting();
 });
 
-// ── Activate: clear old caches ────────────────────────────────────────────────
+// ── Activate: ลบแคชเวอร์ชันเก่า ───────────────────────────────────────────────
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+      Promise.all(keys.filter((k) => ![SHELL_CACHE, ASSET_CACHE].includes(k)).map((k) => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
+
+// จำกัดจำนวนไฟล์ในแคช (ลบตัวเก่าสุดออกแบบ FIFO)
+async function trim(cacheName, max) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length > max) for (let i = 0; i < keys.length - max; i++) await cache.delete(keys[i]);
+}
+
+const isStaticAsset = (url) =>
+  url.pathname.startsWith('/assets/') ||
+  /\.(?:js|css|woff2?|ttf|otf|png|jpe?g|svg|webp|avif|gif|ico)$/i.test(url.pathname);
 
 // ── Fetch: smart routing ──────────────────────────────────────────────────────
 self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
+  const { request } = e;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
 
-  // ไม่แคช API calls, OAuth, external requests
-  if (
-    url.pathname.startsWith('/api/') ||
-    url.pathname.startsWith('/auth/') ||
-    url.origin !== self.location.origin
-  ) {
-    return; // pass through — ไม่ intercept
-  }
+  // API / OAuth / ข้ามโดเมน → ปล่อยผ่าน ไม่ intercept
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) return;
 
-  // Network-first สำหรับ HTML navigation (SPA)
-  if (e.request.mode === 'navigate') {
+  // Navigation (SPA) → network-first, ออฟไลน์ค่อย fallback เปลือกที่แคชไว้
+  if (request.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request)
-        .catch(() => caches.match('/'))
+      fetch(request).catch(() => caches.match('/', { ignoreSearch: true }).then((r) => r || caches.match('/')))
     );
     return;
   }
 
-  // Cache-first สำหรับ static assets (JS, CSS, images, fonts)
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(e.request).then((response) => {
-        // แคชเฉพาะ successful responses
-        if (response && response.status === 200 && response.type === 'basic') {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
-        }
-        return response;
-      });
-    })
-  );
+  // Static assets → stale-while-revalidate (เร็วทันทีจากแคช + รีเฟรชเบื้องหลัง)
+  if (isStaticAsset(url)) {
+    e.respondWith(
+      caches.open(ASSET_CACHE).then(async (cache) => {
+        const cached = await cache.match(request);
+        const network = fetch(request).then((res) => {
+          if (res && res.status === 200 && res.type === 'basic') {
+            cache.put(request, res.clone());
+            trim(ASSET_CACHE, ASSET_MAX);
+          }
+          return res;
+        }).catch(() => cached);
+        return cached || network;
+      })
+    );
+  }
 });
 
-// ── Background Sync (future use) ──────────────────────────────────────────────
+// รับสัญญาณอัปเดตเวอร์ชันใหม่ทันที
 self.addEventListener('message', (e) => {
   if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });

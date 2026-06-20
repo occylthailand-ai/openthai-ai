@@ -1,57 +1,63 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import TikTokFeedPage from './pages/TikTokFeedPage';
-import FacebookFeedPage from './pages/FacebookFeedPage';
-import AIGeneratorPage from './pages/AIGeneratorPage';
-import AIToolsHub from './pages/AIToolsHub';
-import AffiliatePage from './pages/AffiliatePage';
-import AffiliateDashboard from './pages/AffiliateDashboard';
-import LandingPage from './pages/LandingPage';
-import PricingPage from './pages/PricingPage';
-import ProducerJoinPage from './pages/ProducerJoinPage';
-import CatalogPage from './pages/CatalogPage';
-import ProducerDirectoryPage from './pages/ProducerDirectoryPage';
-import TrackOrderPage from './pages/TrackOrderPage';
-import StorePage from './pages/StorePage';
-import AdminPage from './pages/AdminPage';
-import NotFoundPage from './pages/NotFoundPage';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsPage from './pages/TermsPage';
-import ContactPage from './pages/ContactPage';
-import BrandMemoryPage from './pages/BrandMemoryPage';
-import AgentPage from './pages/AgentPage';
-import TrendingPage from './pages/TrendingPage';
-import ContentCalendarPage from './pages/ContentCalendarPage';
 import PDPABanner from './components/PDPABanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
 import ScrollToTop from './components/ScrollToTop';
 import { apiUrl } from './apiBase';
-import VoiceCommander from './components/VoiceCommander';
-import VoiceCommandPage from './pages/VoiceCommandPage';
-import VideoGeneratorPage from './pages/VideoGeneratorPage';
-import PaymentPage from './pages/PaymentPage';
-import CorporateDashboard from './pages/corporate/CorporateDashboard';
-import InvestorRelationsPage from './pages/corporate/InvestorRelationsPage';
-import CompliancePage from './pages/corporate/CompliancePage';
-import ESGPage from './pages/corporate/ESGPage';
-import HRPage from './pages/corporate/HRPage';
-import GlobalOpsPage from './pages/corporate/GlobalOpsPage';
-import FinancePage from './pages/corporate/FinancePage';
-import BoardPage from './pages/corporate/BoardPage';
-import PRCommsPage from './pages/corporate/PRCommsPage';
-import CommandCenterPage from './pages/corporate/CommandCenterPage';
-import ProgressDashboard from './pages/ProgressDashboard';
-import PortalHubPage from './pages/PortalHubPage';
-import ProducerPortalPage from './pages/portals/ProducerPortalPage';
-import AffiliatePortalPage from './pages/portals/AffiliatePortalPage';
-import CreatorPortalPage from './pages/portals/CreatorPortalPage';
-import GovThaiPortalPage from './pages/portals/GovThaiPortalPage';
-import GovIntlPortalPage from './pages/portals/GovIntlPortalPage';
-import IntlOrgPortalPage from './pages/portals/IntlOrgPortalPage';
-import FoundationPortalPage from './pages/portals/FoundationPortalPage';
+import RouteFallback from './components/RouteFallback';
+import { prefetchWhenIdle } from './perf';
+
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const TikTokFeedPage = lazy(() => import('./pages/TikTokFeedPage'));
+const FacebookFeedPage = lazy(() => import('./pages/FacebookFeedPage'));
+const AIGeneratorPage = lazy(() => import('./pages/AIGeneratorPage'));
+const AIToolsHub = lazy(() => import('./pages/AIToolsHub'));
+const AffiliatePage = lazy(() => import('./pages/AffiliatePage'));
+const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
+const ProducerJoinPage = lazy(() => import('./pages/ProducerJoinPage'));
+const CatalogPage = lazy(() => import('./pages/CatalogPage'));
+const ProducerDirectoryPage = lazy(() => import('./pages/ProducerDirectoryPage'));
+const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'));
+const StorePage = lazy(() => import('./pages/StorePage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const BrandMemoryPage = lazy(() => import('./pages/BrandMemoryPage'));
+const AgentPage = lazy(() => import('./pages/AgentPage'));
+const TrendingPage = lazy(() => import('./pages/TrendingPage'));
+const ContentCalendarPage = lazy(() => import('./pages/ContentCalendarPage'));
+const VoiceCommander = lazy(() => import('./components/VoiceCommander'));
+const VoiceCommandPage = lazy(() => import('./pages/VoiceCommandPage'));
+const VideoGeneratorPage = lazy(() => import('./pages/VideoGeneratorPage'));
+const PaymentPage = lazy(() => import('./pages/PaymentPage'));
+const CorporateDashboard = lazy(() => import('./pages/corporate/CorporateDashboard'));
+const InvestorRelationsPage = lazy(() => import('./pages/corporate/InvestorRelationsPage'));
+const CompliancePage = lazy(() => import('./pages/corporate/CompliancePage'));
+const ESGPage = lazy(() => import('./pages/corporate/ESGPage'));
+const HRPage = lazy(() => import('./pages/corporate/HRPage'));
+const GlobalOpsPage = lazy(() => import('./pages/corporate/GlobalOpsPage'));
+const FinancePage = lazy(() => import('./pages/corporate/FinancePage'));
+const BoardPage = lazy(() => import('./pages/corporate/BoardPage'));
+const PRCommsPage = lazy(() => import('./pages/corporate/PRCommsPage'));
+const CommandCenterPage = lazy(() => import('./pages/corporate/CommandCenterPage'));
+const ProgressDashboard = lazy(() => import('./pages/ProgressDashboard'));
+const PortalHubPage = lazy(() => import('./pages/PortalHubPage'));
+const ProducerPortalPage = lazy(() => import('./pages/portals/ProducerPortalPage'));
+const AffiliatePortalPage = lazy(() => import('./pages/portals/AffiliatePortalPage'));
+const CreatorPortalPage = lazy(() => import('./pages/portals/CreatorPortalPage'));
+const GovThaiPortalPage = lazy(() => import('./pages/portals/GovThaiPortalPage'));
+const GovIntlPortalPage = lazy(() => import('./pages/portals/GovIntlPortalPage'));
+const IntlOrgPortalPage = lazy(() => import('./pages/portals/IntlOrgPortalPage'));
+const FoundationPortalPage = lazy(() => import('./pages/portals/FoundationPortalPage'));
+const CarrierJoinPage = lazy(() => import('./pages/CarrierJoinPage'));
+const DeliveryPage = lazy(() => import('./pages/DeliveryPage'));
+const CarrierDirectoryPage = lazy(() => import('./pages/CarrierDirectoryPage'));
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -69,6 +75,12 @@ function App() {
       .finally(() => setAuthChecked(true));
   }, []);
 
+  useEffect(() => {
+    prefetchWhenIdle(isAuthenticated
+      ? [() => import('./pages/AIGeneratorPage'), () => import('./pages/DashboardPage'), () => import('./pages/AIToolsHub')]
+      : [() => import('./pages/LoginPage'), () => import('./pages/PricingPage'), () => import('./pages/StorePage')]);
+  }, [isAuthenticated]);
+
   const handleLogin = () => setIsAuthenticated(true);
 
   const handleLogout = () => {
@@ -84,76 +96,84 @@ function App() {
       <ToastProvider>
         <Router>
           <ScrollToTop />
-          <Routes>
-            <Route
-              path="/login"
-              element={!isAuthenticated ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/dashboard" />}
-            />
-            <Route
-              path="/dashboard"
-              element={isAuthenticated ? <DashboardPage onLogout={handleLogout} /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/tiktok"
-              element={isAuthenticated ? <TikTokFeedPage /> : <Navigate to="/login" />}
-            />
-            <Route
-              path="/facebook"
-              element={isAuthenticated ? <FacebookFeedPage /> : <Navigate to="/login" />}
-            />
-            <Route path="/ai-generator" element={isAuthenticated ? <AIGeneratorPage /> : <Navigate to="/login" />} />
-            <Route path="/ai-tools" element={isAuthenticated ? <AIToolsHub /> : <Navigate to="/login" />} />
-            <Route path="/agent" element={isAuthenticated ? <AgentPage /> : <Navigate to="/login" />} />
-            {/* Public pages — ไม่ต้อง login */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
-            <Route path="/join" element={<ProducerJoinPage />} />
-            <Route path="/producers" element={<ProducerJoinPage />} />
-            <Route path="/catalog" element={<CatalogPage />} />
-            <Route path="/shop" element={<CatalogPage />} />
-            <Route path="/find-producers" element={<ProducerDirectoryPage />} />
-            <Route path="/find" element={<ProducerDirectoryPage />} />
-            <Route path="/track" element={<TrackOrderPage />} />
-            <Route path="/store" element={<StorePage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/affiliate" element={<AffiliatePage />} />
-            <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            {/* New feature pages — public */}
-            <Route path="/trending" element={<TrendingPage />} />
-            <Route path="/calendar" element={<ContentCalendarPage />} />
-            <Route path="/brand" element={<BrandMemoryPage />} />
-            <Route path="/voice" element={<VoiceCommandPage />} />
-            <Route path="/video" element={isAuthenticated ? <VideoGeneratorPage /> : <Navigate to="/login" />} />
-            <Route path="/payment" element={<PaymentPage />} />
-            {/* Corporate System — Public Company */}
-            <Route path="/corporate"             element={isAuthenticated ? <CorporateDashboard />    : <Navigate to="/login" />} />
-            <Route path="/corporate/board"       element={isAuthenticated ? <BoardPage />             : <Navigate to="/login" />} />
-            <Route path="/corporate/ir"          element={isAuthenticated ? <InvestorRelationsPage /> : <Navigate to="/login" />} />
-            <Route path="/corporate/compliance"  element={isAuthenticated ? <CompliancePage />        : <Navigate to="/login" />} />
-            <Route path="/corporate/esg"         element={isAuthenticated ? <ESGPage />               : <Navigate to="/login" />} />
-            <Route path="/corporate/hr"          element={isAuthenticated ? <HRPage />                : <Navigate to="/login" />} />
-            <Route path="/corporate/finance"     element={isAuthenticated ? <FinancePage />           : <Navigate to="/login" />} />
-            <Route path="/corporate/global"      element={isAuthenticated ? <GlobalOpsPage />         : <Navigate to="/login" />} />
-            <Route path="/corporate/pr"          element={isAuthenticated ? <PRCommsPage />           : <Navigate to="/login" />} />
-            <Route path="/corporate/command"     element={isAuthenticated ? <CommandCenterPage />     : <Navigate to="/login" />} />
-            <Route path="/progress" element={<ProgressDashboard />} />
-            {/* Portal Hub & Individual Portals */}
-            <Route path="/portals" element={<PortalHubPage />} />
-            <Route path="/portals/producer" element={<ProducerPortalPage />} />
-            <Route path="/portals/affiliate" element={<AffiliatePortalPage />} />
-            <Route path="/portals/creator" element={<CreatorPortalPage />} />
-            <Route path="/portals/gov-thai" element={<GovThaiPortalPage />} />
-            <Route path="/portals/gov-intl" element={<GovIntlPortalPage />} />
-            <Route path="/portals/intl-org" element={<IntlOrgPortalPage />} />
-            <Route path="/portals/foundation" element={<FoundationPortalPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              <Route
+                path="/login"
+                element={!isAuthenticated ? <LoginPage onLogin={handleLogin} /> : <Navigate to="/dashboard" />}
+              />
+              <Route
+                path="/dashboard"
+                element={isAuthenticated ? <DashboardPage onLogout={handleLogout} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/tiktok"
+                element={isAuthenticated ? <TikTokFeedPage /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/facebook"
+                element={isAuthenticated ? <FacebookFeedPage /> : <Navigate to="/login" />}
+              />
+              <Route path="/ai-generator" element={isAuthenticated ? <AIGeneratorPage /> : <Navigate to="/login" />} />
+              <Route path="/ai-tools" element={isAuthenticated ? <AIToolsHub /> : <Navigate to="/login" />} />
+              <Route path="/agent" element={isAuthenticated ? <AgentPage /> : <Navigate to="/login" />} />
+              {/* Public pages — ไม่ต้อง login */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/join" element={<ProducerJoinPage />} />
+              <Route path="/producers" element={<ProducerJoinPage />} />
+              <Route path="/catalog" element={<CatalogPage />} />
+              <Route path="/shop" element={<CatalogPage />} />
+              <Route path="/find-producers" element={<ProducerDirectoryPage />} />
+              <Route path="/find" element={<ProducerDirectoryPage />} />
+              <Route path="/track" element={<TrackOrderPage />} />
+              <Route path="/store" element={<StorePage />} />
+              <Route path="/admin" element={<AdminPage />} />
+              <Route path="/affiliate" element={<AffiliatePage />} />
+              <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              {/* New feature pages — public */}
+              <Route path="/trending" element={<TrendingPage />} />
+              <Route path="/calendar" element={<ContentCalendarPage />} />
+              <Route path="/brand" element={<BrandMemoryPage />} />
+              <Route path="/voice" element={<VoiceCommandPage />} />
+              <Route path="/video" element={isAuthenticated ? <VideoGeneratorPage /> : <Navigate to="/login" />} />
+              <Route path="/payment" element={<PaymentPage />} />
+              {/* Corporate System — Public Company */}
+              <Route path="/corporate"             element={isAuthenticated ? <CorporateDashboard />    : <Navigate to="/login" />} />
+              <Route path="/corporate/board"       element={isAuthenticated ? <BoardPage />             : <Navigate to="/login" />} />
+              <Route path="/corporate/ir"          element={isAuthenticated ? <InvestorRelationsPage /> : <Navigate to="/login" />} />
+              <Route path="/corporate/compliance"  element={isAuthenticated ? <CompliancePage />        : <Navigate to="/login" />} />
+              <Route path="/corporate/esg"         element={isAuthenticated ? <ESGPage />               : <Navigate to="/login" />} />
+              <Route path="/corporate/hr"          element={isAuthenticated ? <HRPage />                : <Navigate to="/login" />} />
+              <Route path="/corporate/finance"     element={isAuthenticated ? <FinancePage />           : <Navigate to="/login" />} />
+              <Route path="/corporate/global"      element={isAuthenticated ? <GlobalOpsPage />         : <Navigate to="/login" />} />
+              <Route path="/corporate/pr"          element={isAuthenticated ? <PRCommsPage />           : <Navigate to="/login" />} />
+              <Route path="/corporate/command"     element={isAuthenticated ? <CommandCenterPage />     : <Navigate to="/login" />} />
+              <Route path="/progress" element={<ProgressDashboard />} />
+              {/* Portal Hub & Individual Portals */}
+              <Route path="/portals" element={<PortalHubPage />} />
+              <Route path="/portals/producer" element={<ProducerPortalPage />} />
+              <Route path="/portals/affiliate" element={<AffiliatePortalPage />} />
+              <Route path="/portals/creator" element={<CreatorPortalPage />} />
+              <Route path="/portals/gov-thai" element={<GovThaiPortalPage />} />
+              <Route path="/portals/gov-intl" element={<GovIntlPortalPage />} />
+              <Route path="/portals/intl-org" element={<IntlOrgPortalPage />} />
+              <Route path="/portals/foundation" element={<FoundationPortalPage />} />
+              {/* Carrier & Delivery pages — public */}
+              <Route path="/carrier" element={<CarrierJoinPage />} />
+              <Route path="/drivers" element={<CarrierJoinPage />} />
+              <Route path="/delivery" element={<DeliveryPage />} />
+              <Route path="/ship" element={<DeliveryPage />} />
+              <Route path="/carriers" element={<CarrierDirectoryPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
           <PDPABanner />
           {/* Voice Commander Widget — ปรากฏทุกหน้าหลัง login */}
-          {isAuthenticated && <VoiceCommander mode="widget" />}
+          {isAuthenticated && <Suspense fallback={null}><VoiceCommander mode="widget" /></Suspense>}
         </Router>
       </ToastProvider>
     </ErrorBoundary>

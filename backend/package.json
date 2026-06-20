@@ -6,7 +6,8 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "sdk:gen": "node sdk-gen.js",
-    "sdk:watch": "node --watch sdk-gen.js"
+    "sdk:watch": "node --watch sdk-gen.js",
+    "test": "node --test test/*.test.js test/**/*.test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
