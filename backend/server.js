@@ -2797,6 +2797,82 @@ app.get('/api/autopost/process', async (req, res) => {
   res.json({ success: true, processed, ts: new Date().toISOString() });
 });
 
+// ── GET /api/analytics/summary — รวมข้อมูล analytics ทั้งหมดในครั้งเดียว ────────
+app.get('/api/analytics/summary', requireAuth, (req, res) => {
+  const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 90);
+  const cutoff = Date.now() - days * 86400000;
+
+  // Filter log to requested range
+  const batches = autopostLog.filter(b => {
+    const t = new Date(b.dispatched_at || b.created_at || 0).getTime();
+    return t >= cutoff;
+  });
+
+  // Daily post counts
+  const dayCounts = {};
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    dayCounts[d.toISOString().slice(0, 10)] = 0;
+  }
+  batches.forEach(b => {
+    const day = (b.dispatched_at || b.created_at || '').slice(0, 10);
+    if (dayCounts[day] !== undefined) dayCounts[day]++;
+  });
+
+  // Platform breakdown
+  const byPlatform = {};
+  batches.forEach(b => {
+    (b.results || b.platforms || []).forEach(r => {
+      if (r.status === 'success') {
+        const p = r.platform || 'unknown';
+        byPlatform[p] = (byPlatform[p] || 0) + 1;
+      }
+    });
+  });
+
+  // Angle breakdown
+  const byAngle = {};
+  batches.forEach(b => {
+    const angle = b.angle || b.content?.angle;
+    if (angle) byAngle[angle] = (byAngle[angle] || 0) + 1;
+  });
+
+  // Totals
+  const successPosts = batches.reduce((s, b) => s + (b.success_count || 0), 0);
+  const scoredBatches = batches.filter(b => b.score);
+  const avgScore = scoredBatches.length
+    ? (scoredBatches.reduce((s, b) => s + b.score, 0) / scoredBatches.length).toFixed(1)
+    : null;
+
+  // Track totals (from in-memory link tracker)
+  const trackDash = linkTracker.getDashboard();
+
+  res.json({
+    success: true,
+    days,
+    summary: {
+      posts:           batches.length,
+      successPosts,
+      activePlatforms: Object.keys(byPlatform).length,
+      avgScore,
+      clicks:          trackDash.totals.clicks,
+      unique_clicks:   trackDash.totals.unique_clicks,
+      conversions:     trackDash.totals.conversions,
+      revenue:         trackDash.totals.revenue,
+    },
+    daily_posts:      Object.values(dayCounts),
+    daily_labels:     Object.keys(dayCounts),
+    by_platform:      byPlatform,
+    by_angle:         byAngle,
+    track_by_platform: trackDash.by_platform,
+    recent_batches:   batches.slice(0, 10),
+    queue_pending:    autopostQueue.filter(q => q.status === 'queued').length,
+    ts:               new Date().toISOString(),
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  VIDEO GENERATOR — Script + Storyboard + Multi-provider Video AI
 // ═══════════════════════════════════════════════════════════════════════════════

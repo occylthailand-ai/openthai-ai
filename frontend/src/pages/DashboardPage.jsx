@@ -30,6 +30,7 @@ const QUICK_ACTIONS = [
   { icon: '🚀', label: 'Auto-Post', desc: 'สร้างเนื้อหา AI + โพสต์ทุกแพลตฟอร์มพร้อมกัน', route: '/autopost', color: '#6366f1', hot: true },
   { icon: '📦', label: 'Bulk Content', desc: 'สร้างเนื้อหา 7–30 วันพร้อมกันในคลิกเดียว', route: '/bulk-post', color: '#fe2c55', hot: true },
   { icon: '📊', label: 'Analytics', desc: 'วิเคราะห์ผล · Platform · Angle · Revenue จริง', route: '/analytics', color: '#10b981', hot: true },
+  { icon: '💡', label: 'Content Ideas', desc: 'AI สร้างไอเดีย · Truth Angle · หลาย Platform', route: '/ideas', color: '#f59e0b', hot: true },
   { icon: '🔗', label: 'Link Tracker', desc: 'ติดตาม affiliate link · คลิก · Conversion · รายได้', route: '/link-tracker', color: '#06b6d4' },
 ];
 

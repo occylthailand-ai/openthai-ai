@@ -38,7 +38,7 @@ function BarChart({ items = [], color = '#6366f1' }) {
         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>{item.value}</div>
           <div style={{
-            width: '100%', background: `${color}30`, borderRadius: '4px 4px 0 0',
+            width: '100%', borderRadius: '4px 4px 0 0',
             height: `${(item.value / max) * 56}px`, minHeight: 4,
             background: `linear-gradient(to top, ${color}, ${color}88)`,
             transition: 'height 0.6s cubic-bezier(0.34,1.56,0.64,1)',
@@ -117,75 +117,48 @@ export default function AnalyticsPage() {
     setLoading(true);
     const token = localStorage.getItem('auth_token');
     const h = token ? { Authorization: `Bearer ${token}` } : {};
+    const days = parseInt(range);
 
-    const [trackR, logR, healthR] = await Promise.allSettled([
-      fetch(apiUrl('/api/track/dashboard'), { headers: h }).then(r => r.json()),
-      fetch(apiUrl('/api/autopost/log?limit=100'), { headers: h }).then(r => r.json()),
+    const [summaryR, healthR] = await Promise.allSettled([
+      fetch(apiUrl(`/api/analytics/summary?days=${days}`), { headers: h }).then(r => r.json()),
       fetch(apiUrl('/api/health')).then(r => r.json()),
     ]);
 
-    const track  = trackR.status  === 'fulfilled' ? trackR.value  : {};
-    const log    = logR.status    === 'fulfilled' ? logR.value    : {};
-    const health = healthR.status === 'fulfilled' ? healthR.value : {};
+    const data   = summaryR.status === 'fulfilled' && summaryR.value?.success ? summaryR.value : null;
+    const health = healthR.status  === 'fulfilled' ? healthR.value : {};
 
-    const batches = log.data || [];
-    const totals  = track.totals || {};
+    if (!data) { setLoading(false); return; }
 
-    // ── Daily posts series (last 30 days) ──────────────────────────────────────
-    const days = parseInt(range);
-    const dayCounts = {};
-    const now = new Date();
-    for (let i = days - 1; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      dayCounts[d.toISOString().slice(0, 10)] = 0;
-    }
-    batches.forEach(b => {
-      const day = (b.dispatched_at || b.created_at || '').slice(0, 10);
-      if (dayCounts[day] !== undefined) dayCounts[day]++;
-    });
-    setDailyPosts(Object.values(dayCounts));
-    setClickSeries(Array.from({ length: days }, (_, i) => Math.floor(Math.random() * 40 + (totals.clicks || 0) / days)));
+    setDailyPosts(data.daily_posts || []);
+    setClickSeries(Array.from({ length: days }, () => Math.floor(Math.random() * 40 + (data.summary.clicks || 0) / days)));
 
-    // ── Platform breakdown ────────────────────────────────────────────────────
-    const platCount = {};
-    batches.forEach(b => {
-      (b.results || b.platforms || []).forEach(r => {
-        if (r.status === 'success') platCount[r.platform] = (platCount[r.platform] || 0) + 1;
-      });
-    });
+    // Platform breakdown
+    const platCount = data.by_platform || {};
     setPlatformBreakdown(
       Object.entries(platCount)
         .sort((a, b) => b[1] - a[1])
         .map(([id, count]) => ({ id, count, ...(PLATFORM_META[id] || { name: id, color: '#6366f1', icon: '📲' }) }))
     );
 
-    // ── Angle breakdown ───────────────────────────────────────────────────────
-    const angleCount = {};
-    batches.forEach(b => {
-      const angle = b.angle || b.content?.angle;
-      if (angle) angleCount[angle] = (angleCount[angle] || 0) + 1;
-    });
+    // Angle breakdown
+    const angleCount = data.by_angle || {};
     setAngleBreakdown(
       Object.entries(angleCount).map(([id, count]) => ({ id, count, ...(ANGLE_META[id] || { label: id, color: '#6366f1', icon: '📌' }) }))
     );
 
-    // ── Summary ───────────────────────────────────────────────────────────────
-    const successPosts = batches.reduce((s, b) => s + (b.success_count || 0), 0);
     setSummary({
-      posts:           batches.length,
-      successPosts,
-      clicks:          totals.clicks || 0,
-      revenue:         totals.revenue || 0,
-      conversions:     totals.conversions || 0,
-      avgScore:        batches.filter(b => b.score).length
-        ? (batches.reduce((s, b) => s + (b.score || 0), 0) / batches.filter(b => b.score).length).toFixed(1)
-        : '—',
-      activePlatforms: Object.keys(platCount).length,
+      posts:           data.summary.posts,
+      successPosts:    data.summary.successPosts,
+      clicks:          data.summary.clicks || 0,
+      revenue:         data.summary.revenue || 0,
+      conversions:     data.summary.conversions || 0,
+      avgScore:        data.summary.avgScore || '—',
+      activePlatforms: data.summary.activePlatforms,
       uptime:          health.uptime_sec ? `${Math.floor(health.uptime_sec / 3600)}h` : '—',
+      queuePending:    data.queue_pending || 0,
     });
 
-    setRecentBatches(batches.slice(0, 10));
+    setRecentBatches(data.recent_batches || []);
     setLoading(false);
   }
 
@@ -238,7 +211,7 @@ export default function AnalyticsPage() {
                 { icon: '💰', label: 'รายได้รวม', value: `฿${(summary.revenue || 0).toLocaleString()}`, delta: `${summary.conversions} conversions`, color: '#f59e0b', series: Array.from({length:30},()=>Math.random()) },
                 { icon: '🌐', label: 'Platform ที่ใช้', value: summary.activePlatforms, delta: 'จาก 7 platforms', color: '#8b5cf6', series: [] },
                 { icon: '⭐', label: 'AI Quality Score', value: summary.avgScore, delta: 'เฉลี่ยทุกโพสต์', color: '#fe2c55', series: [] },
-                { icon: '⏱️', label: 'Server Uptime', value: summary.uptime, delta: 'ไม่มีหยุดพัก', color: '#06b6d4', series: [] },
+                { icon: '📅', label: 'Queue รอส่ง', value: summary.queuePending ?? '—', delta: 'โพสต์รอ Schedule', color: '#06b6d4', series: [] },
               ].map((s, i) => (
                 <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${s.color}22`, borderRadius: 14, padding: '16px', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>{s.label}</div>

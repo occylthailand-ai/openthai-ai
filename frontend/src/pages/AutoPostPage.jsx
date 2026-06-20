@@ -29,15 +29,21 @@ export default function AutoPostPage() {
   const [affiliates, setAffiliates]         = useState([]);
   const [products, setProducts]             = useState([]);
 
-  const [form, setForm] = useState({
-    topic: '',
-    angle: 'roi',
-    affiliateRef: '',
-    productId: '',
-    imageUrl: '',
+  const [form, setForm] = useState(() => {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem('autopost_draft') || 'null');
+      if (draft) { sessionStorage.removeItem('autopost_draft'); return { topic: draft.product || '', angle: draft.angle || 'roi', affiliateRef: '', productId: '', imageUrl: '' }; }
+    } catch (_) {}
+    return { topic: '', angle: 'roi', affiliateRef: '', productId: '', imageUrl: '' };
   });
 
-  const [generated, setGenerated] = useState(null);
+  const [generated, setGenerated] = useState(() => {
+    try {
+      const draft = JSON.parse(sessionStorage.getItem('autopost_draft_content') || 'null');
+      if (draft) { sessionStorage.removeItem('autopost_draft_content'); return draft; }
+    } catch (_) {}
+    return null;
+  });
   const [generatingStep, setGeneratingStep] = useState('');
   const [generatingPct, setGeneratingPct]   = useState(0);
   const [posting, setPosting]       = useState(false);
