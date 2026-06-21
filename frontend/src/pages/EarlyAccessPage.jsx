@@ -184,11 +184,8 @@ export default function EarlyAccessPage() {
       {/* vs Shopee/TikTok */}
       <div style={S.sectionAlt}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
-          <h2 style={{ ...S.h2, textAlign: 'center' }}>ต่างจาก TikTok Shop และ Shopee อย่างไร?</h2>
+          <h2 style={{ ...S.h2, textAlign: 'center' }}>TikTok Shop และ Shopee คือบ้านเช่าท่าน</h2>
           <div style={{ textAlign: 'center', margin: '0 auto 36px', maxWidth: 640 }}>
-            <p style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', lineHeight: 1.5, margin: '0 0 8px' }}>
-              พวกเขาคือบ้านเช่า
-            </p>
             <p style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.5, margin: 0 }}>
               <span style={{ background: 'linear-gradient(90deg,#6366f1,#10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>OpenThai.ai คือทีมงานส่วนตัวของคุณ</span>
             </p>
