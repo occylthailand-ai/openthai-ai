@@ -143,7 +143,7 @@ export default function EarlyAccessPage() {
         </p>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
           <a href="#register" style={{ background: 'linear-gradient(90deg,#6366f1,#10b981)', color: '#fff', padding: '14px 32px', borderRadius: 10, fontWeight: 700, fontSize: 15, textDecoration: 'none' }}>
-            ลงทะเบียนใช้ฟรีเลย →
+            ลงทะเบียนใช้ฟรี →
           </a>
           <a href="#programs" style={{ background: 'transparent', border: '1px solid #cbd5e1', color: '#475569', padding: '14px 28px', borderRadius: 10, fontWeight: 600, fontSize: 15, textDecoration: 'none' }}>
             ดู 9 โปรแกรม
