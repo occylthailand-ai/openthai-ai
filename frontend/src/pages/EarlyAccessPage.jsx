@@ -131,9 +131,6 @@ export default function EarlyAccessPage() {
 
       {/* Hero */}
       <div style={{ padding: '80px 5% 50px', maxWidth: 960, margin: '0 auto', textAlign: 'center' }}>
-        <div style={{ display: 'inline-block', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 20, padding: '5px 16px', fontSize: 12, color: '#059669', fontWeight: 600, marginBottom: 24 }}>
-          ✅ ระบบใช้งานได้จริง — ไม่ใช่ Demo
-        </div>
         <h1 style={{ fontSize: 'clamp(28px,5vw,48px)', fontWeight: 900, lineHeight: 1.2, marginBottom: 20, color: '#0f172a' }}>
           AI ที่ช่วยให้คนไทย<br />
           <span style={{ background: 'linear-gradient(90deg,#6366f1,#10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ขายสินค้าได้ทั่วโลก</span>
