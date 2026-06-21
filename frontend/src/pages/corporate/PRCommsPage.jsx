@@ -79,6 +79,7 @@ function AutoPRPanel() {
   const [autopiloting, setAutopiloting] = useState(false);
   const [preview, setPreview]       = useState(null);
   const [trilingualResult, setTrilingualResult] = useState(null);
+  const [prAnalysis, setPrAnalysis] = useState(null);
   const [broadcastLog, setBroadcastLog] = useState([]);
   const [autoQueue, setAutoQueue]   = useState([]);
   const [autopilotConfig, setAutopilotConfig] = useState(null);
@@ -122,10 +123,10 @@ function AutoPRPanel() {
     prev.includes(ch) ? prev.filter(c => c !== ch) : [...prev, ch]
   );
 
-  // One-shot Autopilot: Generate 3 ภาษา + Broadcast ทุกช่องทางพร้อมกัน
+  // One-shot Autopilot: Generate 3 ภาษา → Analyze → Enhance → Broadcast
   const runAutopilot = async () => {
-    setAutopiloting(true); setTrilingualResult(null); setPreview(null);
-    showToast('⚡ AI กำลังสร้าง 3 ภาษา + กระจายทุกแพลตฟอร์ม...', 8000);
+    setAutopiloting(true); setTrilingualResult(null); setPreview(null); setPrAnalysis(null);
+    showToast('⚡ AI กำลังสร้าง 3 ภาษา + วิเคราะห์ + กระจายทุกแพลตฟอร์ม...', 10000);
     try {
       const res = await fetch(apiUrl('/api/corporate/pr/autopilot'), {
         method: 'POST', headers: h(),
@@ -134,10 +135,15 @@ function AutoPRPanel() {
       const data = await res.json();
       if (data.success) {
         setTrilingualResult(data.generated);
-        setPreview(data.generated.th);
+        setPreview(data.generated?.th);
         setActivePreviewLang('th');
+        if (data.analysis) setPrAnalysis(data.analysis);
         const ch = data.channels || [];
-        showToast(`✅ กระจายแล้ว: ${ch.map(c => ({ line:'LINE 💬', slack:'Slack 🔔', facebook:'FB 📘' })[c] || c).join(' + ')}`);
+        if (data.broadcasted) {
+          showToast(`✅ กระจายแล้ว: ${ch.map(c => ({ line:'LINE 💬', slack:'Slack 🔔', facebook:'FB 📘' })[c] || c).join(' + ')}`);
+        } else {
+          showToast(`🔍 วิเคราะห์เสร็จ — ${data.analysis?.approval_reason || 'รอการอนุมัติ'}`, 6000);
+        }
         loadData();
       } else {
         showToast('❌ ' + data.error);
@@ -257,7 +263,7 @@ function AutoPRPanel() {
         <button onClick={runAutopilot} disabled={autopiloting || generating}
           style={{ width: '100%', padding: '18px', borderRadius: '14px', border: 'none', background: autopiloting ? 'rgba(16,185,129,0.3)' : 'linear-gradient(135deg, #059669, #6366f1)', color: '#fff', fontSize: '17px', fontWeight: 900, cursor: autopiloting ? 'not-allowed' : 'pointer', letterSpacing: '0.3px', boxShadow: autopiloting ? 'none' : '0 4px 20px rgba(16,185,129,0.3)' }}>
           {autopiloting
-            ? '🤖 AI กำลังสร้าง 3 ภาษา + กระจายทุกแพลตฟอร์ม...'
+            ? '🤖 AI กำลังสร้าง → วิเคราะห์ → เสริมกำลังใจ → กระจาย...'
             : '⚡ สร้าง & กระจายทันที — ทุกภาษา ทุกแพลตฟอร์ม'}
         </button>
 
@@ -275,15 +281,149 @@ function AutoPRPanel() {
               ))}
             </div>
             <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '14px', border: '1px solid rgba(255,255,255,0.07)' }}>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: '#e2e8f0', marginBottom: '6px' }}>{previewData?.headline}</div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '6px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 800, color: '#e2e8f0', flex: 1 }}>{previewData?.headline}</div>
+                {previewData?.enhanced && <span style={{ fontSize: '9px', background: 'rgba(236,72,153,0.2)', color: '#f9a8d4', padding: '2px 6px', borderRadius: '6px', fontWeight: 700, flexShrink: 0 }}>✨ Enhanced</span>}
+              </div>
               <div style={{ fontSize: '12px', color: '#6366f1', marginBottom: '8px' }}>{previewData?.subheadline}</div>
-              <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.7, maxHeight: '100px', overflow: 'auto', marginBottom: '8px' }}>{previewData?.social_post}</div>
+              <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.7, maxHeight: '120px', overflow: 'auto', marginBottom: '8px' }}>
+                {previewData?.social_post}
+                {previewData?.morale_section && (
+                  <div style={{ marginTop: '8px', color: '#c7d2fe', fontStyle: 'italic', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px' }}>
+                    {previewData.morale_section}
+                  </div>
+                )}
+              </div>
+              {previewData?.power_quote && (
+                <div style={{ fontSize: '11px', color: '#f9a8d4', fontStyle: 'italic', marginBottom: '8px', padding: '6px 10px', background: 'rgba(236,72,153,0.07)', borderRadius: '6px' }}>
+                  "{previewData.power_quote}"
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                 {(previewData?.hashtags || []).map(hh => (
                   <span key={hh} style={{ fontSize: '10px', background: 'rgba(99,102,241,0.1)', color: '#a5b4fc', padding: '2px 7px', borderRadius: '8px' }}>{hh}</span>
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* ── PR Analysis Panel ──────────────────────────────────────────── */}
+        {prAnalysis && (
+          <div style={{ marginTop: '16px', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '16px' }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <span style={{ fontSize: '22px' }}>🔍</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: '#e2e8f0' }}>ผลการวิเคราะห์ PR — ทีมประชาสัมพันธ์</div>
+                <div style={{ fontSize: '11px', color: '#6b7280' }}>แรงผลักดัน · แรงจูงใจ · โอกาส · แรงส่งกำลังใจ</div>
+              </div>
+              <div style={{ padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 800,
+                background: prAnalysis.approved ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
+                color: prAnalysis.approved ? '#6ee7b7' : '#f87171',
+                border: `1px solid ${prAnalysis.approved ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}` }}>
+                {prAnalysis.approved ? '✅ อนุมัติ' : '⚠️ รอปรับปรุง'}
+              </div>
+            </div>
+
+            {prAnalysis.approval_reason && (
+              <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '12px', fontStyle: 'italic', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                {prAnalysis.approval_reason}
+              </div>
+            )}
+
+            {/* 4 Score Bars */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
+              {[
+                { key: 'driving_forces',  label: 'แรงผลักดัน',      emoji: '🚀', color: '#6366f1' },
+                { key: 'motivations',     label: 'แรงจูงใจ',         emoji: '💪', color: '#10b981' },
+                { key: 'opportunities',   label: 'โอกาส',            emoji: '🌟', color: '#f59e0b' },
+                { key: 'morale_momentum', label: 'แรงส่งกำลังใจ',   emoji: '❤️', color: '#ec4899' },
+              ].map(({ key, label, emoji, color }) => {
+                const dim = prAnalysis[key];
+                const score = dim?.score ?? 0;
+                return (
+                  <div key={key}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '12px', color: '#d1d5db', fontWeight: 700 }}>{emoji} {label}</span>
+                      <span style={{ fontSize: '12px', color, fontWeight: 900 }}>{score}/10</span>
+                    </div>
+                    <div style={{ height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${score * 10}%`, background: `linear-gradient(90deg, ${color}, ${color}88)`, borderRadius: '4px', transition: 'width 0.6s ease' }} />
+                    </div>
+                    {dim?.summary && <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '3px' }}>{dim.summary}</div>}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Morale Sub-scores */}
+            {prAnalysis.morale_momentum && (
+              <div style={{ background: 'rgba(236,72,153,0.06)', border: '1px solid rgba(236,72,153,0.15)', borderRadius: '10px', padding: '12px', marginBottom: '12px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#f9a8d4', marginBottom: '8px' }}>❤️ มิติแรงส่งกำลังใจ</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                  {[
+                    { key: 'hope_factor',         label: 'ความหวัง' },
+                    { key: 'inclusion_factor',     label: 'ความเป็นธรรม' },
+                    { key: 'empowerment_factor',   label: 'พลังเสริมศักยภาพ' },
+                    { key: 'clarity_factor',       label: 'ความชัดเจน' },
+                  ].map(({ key, label }) => {
+                    const val = prAnalysis.morale_momentum[key] ?? 0;
+                    return (
+                      <div key={key}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+                          <span style={{ fontSize: '10px', color: '#9ca3af' }}>{label}</span>
+                          <span style={{ fontSize: '10px', color: '#f9a8d4', fontWeight: 700 }}>{val}/10</span>
+                        </div>
+                        <div style={{ height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px' }}>
+                          <div style={{ height: '100%', width: `${val * 10}%`, background: 'rgba(236,72,153,0.6)', borderRadius: '3px' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* For discouraged / For seekers */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              {prAnalysis.morale_momentum?.for_discouraged && (
+                <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: '10px', padding: '10px' }}>
+                  <div style={{ fontSize: '10px', color: '#a5b4fc', fontWeight: 800, marginBottom: '5px' }}>💙 ถึงคนที่ท้อแท้</div>
+                  <div style={{ fontSize: '11px', color: '#c7d2fe', lineHeight: 1.6 }}>{prAnalysis.morale_momentum.for_discouraged}</div>
+                </div>
+              )}
+              {prAnalysis.morale_momentum?.for_seekers && (
+                <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: '10px', padding: '10px' }}>
+                  <div style={{ fontSize: '10px', color: '#6ee7b7', fontWeight: 800, marginBottom: '5px' }}>🌱 ถึงคนมองหาโอกาส</div>
+                  <div style={{ fontSize: '11px', color: '#a7f3d0', lineHeight: 1.6 }}>{prAnalysis.morale_momentum.for_seekers}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Power quote (enhanced) */}
+            {(preview?.power_quote || prAnalysis.morale_momentum?.power_quote) && (
+              <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.1))', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px' }}>
+                <div style={{ fontSize: '10px', color: '#a5b4fc', fontWeight: 800, marginBottom: '6px' }}>✨ Power Quote</div>
+                <div style={{ fontSize: '13px', color: '#e2e8f0', fontStyle: 'italic', lineHeight: 1.7, fontWeight: 500 }}>
+                  "{preview?.power_quote || prAnalysis.morale_momentum?.power_quote}"
+                </div>
+              </div>
+            )}
+
+            {/* Opportunities factors */}
+            {(prAnalysis.opportunities?.achievability) && (
+              <div style={{ marginTop: '10px', fontSize: '11px', color: '#9ca3af', padding: '8px 12px', background: 'rgba(245,158,11,0.05)', borderRadius: '8px', borderLeft: '3px solid rgba(245,158,11,0.4)' }}>
+                <span style={{ color: '#fcd34d', fontWeight: 700 }}>🌟 ความเป็นไปได้: </span>{prAnalysis.opportunities.achievability}
+              </div>
+            )}
+
+            {prAnalysis.enhancement_needed && (
+              <div style={{ marginTop: '10px', fontSize: '11px', color: '#fcd34d', padding: '8px 12px', background: 'rgba(245,158,11,0.08)', borderRadius: '8px' }}>
+                ✨ {prAnalysis.enhancement_note || 'เนื้อหาได้รับการเสริมแรงส่งกำลังใจแล้ว'}
+              </div>
+            )}
           </div>
         )}
 
@@ -370,11 +510,22 @@ function AutoPRPanel() {
                 </div>
               </div>
 
-              <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.7, marginBottom: '12px', maxHeight: '140px', overflow: 'auto' }}>
+              <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: 1.7, marginBottom: '12px', maxHeight: '160px', overflow: 'auto' }}>
                 {preview.body}
+                {preview.morale_section && (
+                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', color: '#c7d2fe', fontStyle: 'italic' }}>
+                    {preview.morale_section}
+                  </div>
+                )}
               </div>
 
-              {preview.quote && (
+              {preview.power_quote && (
+                <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(236,72,153,0.08))', border: '1px solid rgba(236,72,153,0.2)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: '#f9a8d4', fontStyle: 'italic', marginBottom: '10px' }}>
+                  <div style={{ fontSize: '10px', color: '#ec4899', fontWeight: 800, fontStyle: 'normal', marginBottom: '4px' }}>✨ Power Quote</div>
+                  "{preview.power_quote}"
+                </div>
+              )}
+              {preview.quote && !preview.power_quote && (
                 <div style={{ background: 'rgba(99,102,241,0.08)', borderLeft: '3px solid rgba(99,102,241,0.4)', borderRadius: '0 8px 8px 0', padding: '10px 12px', fontSize: '12px', color: '#a5b4fc', fontStyle: 'italic', marginBottom: '12px' }}>
                   {preview.quote}
                 </div>

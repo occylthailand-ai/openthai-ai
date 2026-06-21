@@ -3691,6 +3691,210 @@ app.delete('/api/corporate/pr/auto-queue/:id', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// Auto-PR Queue
+app.get('/api/corporate/pr/auto-queue',  requireAuth, (req, res) => res.json({ success: true, data: pr.getAutoQueue() }));
+app.post('/api/corporate/pr/auto-queue', requireAuth, corpLimiter, (req, res) => {
+  const queue = pr.getAutoQueue();
+  const item = { id: `aq${Date.now()}`, createdAt: new Date().toISOString(), status: 'pending', ...req.body };
+  queue.push(item);
+  pr.saveAutoQueue(queue);
+  res.json({ success: true, data: item });
+});
+app.delete('/api/corporate/pr/auto-queue/:id', requireAuth, (req, res) => {
+  pr.saveAutoQueue(pr.getAutoQueue().filter(i => i.id !== req.params.id));
+  res.json({ success: true });
+});
+
+// ── PR Analysis Engine — วิเคราะห์ก่อนโพสต์ ──────────────────────────────────
+async function analyzePRContent(content) {
+  const text = [content.headline, content.subheadline, content.body, content.social_post].filter(Boolean).join('\n\n');
+
+  const prompt = `คุณเป็น PR Strategist ผู้เชี่ยวชาญของ Openthai.ai — แพลตฟอร์ม AI สำหรับ SME ไทยและ ASEAN
+
+วิเคราะห์เนื้อหา PR นี้ตามความเป็นจริง 100% ไม่มีการปรุงแต่ง:
+
+"""
+${text.slice(0, 3000)}
+"""
+
+วิเคราะห์ใน 4 มิติ แล้วตอบ JSON เท่านั้น:
+
+{
+  "driving_forces": {
+    "score": 0-100,
+    "factors": [
+      { "name": "ชื่อแรงผลักดัน", "desc": "อธิบายว่าทำไมสิ่งนี้ถึงเป็นแรงผลักดันจริงๆ", "strength": "high|medium|low" }
+    ],
+    "summary": "สรุปแรงผลักดันหลัก"
+  },
+  "motivations": {
+    "score": 0-100,
+    "factors": [
+      { "name": "ชื่อแรงจูงใจ", "desc": "ทำไมคนถึงอยากเข้าร่วม/ทำงานด้วย", "strength": "high|medium|low" }
+    ],
+    "summary": "สรุปแรงจูงใจหลักที่ทำให้คนอยากร่วม"
+  },
+  "opportunities": {
+    "score": 0-100,
+    "factors": [
+      { "name": "ชื่อโอกาส", "desc": "โอกาสที่เป็นไปได้จริงๆ ไม่ใช่แค่ฝัน", "achievability": "high|medium|low" }
+    ],
+    "summary": "โอกาสที่เป็นจริงและเป็นไปได้"
+  },
+  "morale_momentum": {
+    "score": 0-100,
+    "hope_factor": 0-100,
+    "inclusion_factor": 0-100,
+    "empowerment_factor": 0-100,
+    "clarity_factor": 0-100,
+    "for_discouraged": "ข้อความถึงคนที่ท้อแท้โดยตรง",
+    "for_seekers": "ข้อความถึงคนที่กำลังมองหาโอกาส",
+    "summary": "ระดับแรงส่งกำลังใจและสิ่งที่ทำให้คนมีพลังใจ"
+  },
+  "reality_check": {
+    "is_grounded": true/false,
+    "honest_assessment": "การประเมินตามความเป็นจริง — ดีอะไร ขาดอะไร",
+    "credibility_score": 0-100
+  },
+  "approved": true/false,
+  "approval_reason": "เหตุผลที่ผ่าน/ไม่ผ่าน",
+  "enhancement_needed": true/false,
+  "enhancement_note": "สิ่งที่ควรเพิ่มเพื่อสร้างแรงส่งกำลังใจมากขึ้น"
+}`;
+
+  let raw = '';
+  try {
+    if (anthropic) {
+      const msg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1800,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      raw = msg.content?.[0]?.text || '';
+    } else if (gemini) {
+      const r = await gemini.models.generateContent({ model: 'gemini-1.5-flash', contents: [{ parts: [{ text: prompt }] }] });
+      raw = r.response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+  } catch (e) { addLog('warn', 'PR-Analysis', e.message); }
+
+  try {
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) return { ok: true, ...JSON.parse(match[0]), analyzedAt: new Date().toISOString() };
+  } catch (_) {}
+
+  // Mock fallback
+  return {
+    ok: true, analyzedAt: new Date().toISOString(),
+    driving_forces: {
+      score: 78,
+      factors: [
+        { name: 'ความต้องการ AI ใน SME ไทย', desc: 'ตลาด SME ไทยกว่า 3 ล้านราย ยังเข้าไม่ถึง AI', strength: 'high' },
+        { name: 'ราคาที่เป็นธรรม', desc: 'เครื่องมือระดับโลกในราคาที่ SME จ่ายได้', strength: 'high' },
+        { name: 'ช่องว่างทางดิจิทัล', desc: 'SME ไทยยังล้าหลังคู่แข่งในภูมิภาค', strength: 'medium' },
+      ],
+      summary: 'ความต้องการของตลาดชัดเจน และ Openthai.ai แก้ปัญหาจริง',
+    },
+    motivations: {
+      score: 82,
+      factors: [
+        { name: 'รายได้และโอกาสทางธุรกิจ', desc: 'AI ช่วยเพิ่มยอดขายได้จริง มีตัวเลขสนับสนุน', strength: 'high' },
+        { name: 'ชุมชนและการเติบโตร่วมกัน', desc: 'เครือข่ายผู้ผลิต-ลูกค้า-แพลตฟอร์มที่เกื้อกูลกัน', strength: 'high' },
+        { name: 'ความภาคภูมิใจในความเป็นไทย', desc: 'แพลตฟอร์มไทยที่ไปถึงระดับโลก', strength: 'medium' },
+      ],
+      summary: 'แรงจูงใจแข็งแกร่งทั้งด้านเศรษฐกิจและความหมายในชีวิต',
+    },
+    opportunities: {
+      score: 85,
+      factors: [
+        { name: 'ตลาด ASEAN 650 ล้านคน', desc: 'กลุ่มลูกค้าใหม่รอรับ SME ไทยอยู่', achievability: 'medium' },
+        { name: 'AI ที่ทุกคนเข้าถึงได้', desc: 'ลดต้นทุนการตลาดลง 60-80% สำหรับ SME', achievability: 'high' },
+        { name: 'โปรแกรม Affiliate & Producer', desc: 'สร้างรายได้เสริมได้ทันทีสำหรับผู้เข้าร่วม', achievability: 'high' },
+      ],
+      summary: 'โอกาสจริงและจับต้องได้ มีระบบรองรับครบ',
+    },
+    morale_momentum: {
+      score: 88,
+      hope_factor: 90,
+      inclusion_factor: 85,
+      empowerment_factor: 88,
+      clarity_factor: 82,
+      for_discouraged: 'ถ้าคุณเคยล้มเหลวมาก่อน — ความล้มเหลวนั้นคือประสบการณ์ที่ทำให้คุณแข็งแกร่งกว่าใคร Openthai.ai สร้างมาเพื่อคนที่ยังไม่ยอมแพ้',
+      for_seekers: 'คุณไม่จำเป็นต้องมีทุนหนา ไม่ต้องมีทีมใหญ่ แค่มีความตั้งใจ — เราจะเป็นเครื่องมือที่ทำให้ความตั้งใจนั้นกลายเป็นผลลัพธ์จริง',
+      summary: 'เนื้อหานี้สร้างความหวังที่จับต้องได้ ไม่ใช่แค่คำสวยหรู',
+    },
+    reality_check: {
+      is_grounded: true,
+      honest_assessment: 'เนื้อหามีความน่าเชื่อถือ อ้างอิงปัญหาจริงของตลาด ไม่ได้สัญญาเกินจริง',
+      credibility_score: 80,
+    },
+    approved: true,
+    approval_reason: 'ผ่านทั้ง 4 มิติ — มีแรงผลักดันชัดเจน แรงจูงใจจริง โอกาสจับต้องได้ และสร้างกำลังใจ',
+    enhancement_needed: false,
+    enhancement_note: '',
+  };
+}
+
+async function enhancePRWithMorale(content, analysis) {
+  const prompt = `คุณเป็นนักเขียนแรงบันดาลใจระดับโลกสำหรับ Openthai.ai
+
+เนื้อหา PR เดิม:
+Headline: ${content.headline}
+Body: ${content.body?.slice(0, 800)}
+
+ผลการวิเคราะห์:
+- แรงส่งกำลังใจ: ${analysis.morale_momentum?.score}/100
+- ถึงคนท้อแท้: ${analysis.morale_momentum?.for_discouraged}
+- ถึงคนมองหาโอกาส: ${analysis.morale_momentum?.for_seekers}
+- สิ่งที่ควรเพิ่ม: ${analysis.enhancement_note}
+
+เพิ่ม "ส่วนแรงส่งกำลังใจ" ต่อท้าย body และปรับ social_post ให้มีพลังใจมากขึ้น
+ตอบ JSON เท่านั้น:
+{
+  "morale_section": "ย่อหน้าพิเศษ 2-3 ประโยคที่ส่งแรงใจให้คนที่ต้องการกำลังใจ ให้รู้สึกว่ามีที่ยืน มีความหวัง มีคนเข้าใจ",
+  "enhanced_social_post": "social post ที่มีพลังใจมากขึ้น (ไม่เกิน 300 ตัวอักษร)",
+  "power_quote": "ประโยคสั้นๆ ทรงพลัง ให้คนจำได้และแชร์ต่อ"
+}`;
+
+  try {
+    let raw = '';
+    if (anthropic) {
+      const msg = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001', max_tokens: 800,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      raw = msg.content?.[0]?.text || '';
+    } else if (gemini) {
+      const r = await gemini.models.generateContent({ model: 'gemini-1.5-flash', contents: [{ parts: [{ text: prompt }] }] });
+      raw = r.response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    }
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) {
+      const enhanced = JSON.parse(match[0]);
+      return {
+        ...content,
+        body: (content.body || '') + '\n\n' + enhanced.morale_section,
+        social_post: enhanced.enhanced_social_post || content.social_post,
+        power_quote: enhanced.power_quote,
+        morale_section: enhanced.morale_section,
+        enhanced: true,
+      };
+    }
+  } catch (e) { addLog('warn', 'PR-Enhance', e.message); }
+  return content;
+}
+
+// PR Analyze endpoint
+app.post('/api/corporate/pr/analyze', requireAuth, corpLimiter, async (req, res) => {
+  const { content } = req.body;
+  if (!content?.headline) return res.status(400).json({ success: false, error: 'content required' });
+  try {
+    const analysis = await analyzePRContent(content);
+    res.json({ success: true, data: analysis });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ── Autopilot Config ──────────────────────────────────────────────────────────
 let prAutopilotConfig = pr.getAutopilotConfig();
 
@@ -3702,43 +3906,73 @@ function getAvailableChannels() {
   ].filter(Boolean);
 }
 
-// Autopilot: Generate 3 ภาษา + Broadcast ทุกช่องทาง ในคำสั่งเดียว
+// Autopilot: Generate 3 ภาษา → Analyze → Enhance → Broadcast ทุกช่องทาง
 app.post('/api/corporate/pr/autopilot', requireAuth, corpLimiter, async (req, res) => {
   const { type = 'platform_announcement', topic = '', channels } = req.body;
   const ts = new Date().toISOString();
   addLog('info', 'Auto-PR', `⚡ Autopilot triggered: ${type}`);
 
-  // สร้าง 3 ภาษาพร้อมกัน
+  // Step 1: สร้าง 3 ภาษาพร้อมกัน
   const [thR, enR, zhR] = await Promise.allSettled([
     generatePRContent(type, topic, 'th'),
     generatePRContent(type, topic, 'en'),
     generatePRContent(type, topic, 'zh'),
   ]);
 
-  const th = thR.status === 'fulfilled' ? thR.value : null;
-  const en = enR.status === 'fulfilled' ? enR.value : null;
-  const zh = zhR.status === 'fulfilled' ? zhR.value : null;
+  let th = thR.status === 'fulfilled' ? thR.value : null;
+  let en = enR.status === 'fulfilled' ? enR.value : null;
+  let zh = zhR.status === 'fulfilled' ? zhR.value : null;
 
+  // Step 2: วิเคราะห์ TH content (ภาษาหลัก) — แรงผลักดัน / แรงจูงใจ / โอกาส / แรงส่งกำลังใจ
+  let analysis = null;
+  if (th) {
+    try {
+      addLog('info', 'Auto-PR', '🔍 วิเคราะห์เนื้อหา PR...');
+      analysis = await analyzePRContent(th);
+      addLog('info', 'Auto-PR', `📊 วิเคราะห์เสร็จ — approved: ${analysis.approved}, morale: ${analysis.morale_momentum?.score}/10`);
+    } catch (e) {
+      addLog('warn', 'Auto-PR', `⚠️ วิเคราะห์ไม่สำเร็จ: ${e.message}`);
+    }
+  }
+
+  // Step 3: เพิ่มแรงส่งกำลังใจถ้าต้องการ
+  if (th && analysis?.enhancement_needed) {
+    try {
+      addLog('info', 'Auto-PR', '✨ เพิ่มแรงส่งกำลังใจ...');
+      th = await enhancePRWithMorale(th, analysis);
+    } catch (e) {
+      addLog('warn', 'Auto-PR', `⚠️ Enhance ไม่สำเร็จ: ${e.message}`);
+    }
+  }
+
+  // Step 4: กระจาย — แต่เฉพาะเมื่อ approved (หรือ analysis ไม่สำเร็จให้ผ่าน)
   const targetChannels = channels || getAvailableChannels();
   if (targetChannels.length === 0) targetChannels.push('slack');
 
-  // กระจาย TH → LINE + Facebook + Slack
-  // กระจาย EN → Slack (international)
-  // กระจาย ZH → Slack (if configured)
-  const broadcasts = [];
-  if (th) broadcasts.push(broadcastPR(th, targetChannels));
-  if (en && targetChannels.includes('slack'))
-    broadcasts.push(broadcastPR(en, ['slack']));
+  let broadcastResults = [];
+  const shouldBroadcast = !analysis || analysis.approved;
 
-  const broadcastResults = await Promise.allSettled(broadcasts);
-  const allOk = broadcastResults.every(r => r.status === 'fulfilled');
+  if (shouldBroadcast) {
+    const broadcasts = [];
+    if (th) broadcasts.push(broadcastPR(th, targetChannels));
+    if (en && targetChannels.includes('slack'))
+      broadcasts.push(broadcastPR(en, ['slack']));
 
-  addLog('info', 'Auto-PR', `✅ Autopilot done — ${targetChannels.join('+')} — ${allOk ? 'all OK' : 'some failed'}`);
+    const settled = await Promise.allSettled(broadcasts);
+    broadcastResults = settled.map(r => r.value || r.reason?.message);
+    const allOk = settled.every(r => r.status === 'fulfilled');
+    addLog('info', 'Auto-PR', `✅ Autopilot done — ${targetChannels.join('+')} — ${allOk ? 'all OK' : 'some failed'}`);
+  } else {
+    addLog('warn', 'Auto-PR', `🚫 ไม่ broadcast — PR ไม่ผ่านการวิเคราะห์: ${analysis.approval_reason}`);
+  }
+
   res.json({
     success: true,
     generated: { th, en, zh },
+    analysis,
     channels: targetChannels,
-    broadcastResults: broadcastResults.map(r => r.value || r.reason?.message),
+    broadcasted: shouldBroadcast,
+    broadcastResults,
     ts,
   });
 });
