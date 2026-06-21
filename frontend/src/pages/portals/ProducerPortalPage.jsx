@@ -1,61 +1,55 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiUrl } from '../../apiBase';
+import PortalLayout from '../../components/PortalLayout';
 
-const T = {
-  th: { title:'ทางเข้าผู้ผลิต', sub:'เชื่อมต่อสินค้าของคุณกับตลาด AI ไทยและทั่วโลก', benefits:['ขายสินค้าผ่าน AI-powered store','เข้าถึงผู้ซื้อทั่วโลก','ระบบ inventory อัตโนมัติ','รายงานยอดขายแบบ real-time'], form:{ name:'ชื่อบริษัท/ผู้ผลิต', country:'ประเทศ', product:'ประเภทสินค้า/บริการ', email:'อีเมลติดต่อ', phone:'เบอร์โทร', submit:'ลงทะเบียนผู้ผลิต', ok:'ส่งคำขอเรียบร้อย! ทีมงานจะติดต่อกลับภายใน 24 ชม.' } },
-  en: { title:'Producer Portal', sub:'Connect your products to the Thai AI market and beyond', benefits:['Sell via AI-powered store','Reach global buyers','Automated inventory system','Real-time sales reports'], form:{ name:'Company / Producer Name', country:'Country', product:'Product / Service Type', email:'Contact Email', phone:'Phone Number', submit:'Register as Producer', ok:'Request received! Our team will contact you within 24 hours.' } },
-  zh: { title:'生产商门户', sub:'将您的产品连接到泰国AI市场及全球', benefits:['通过AI驱动的商店销售','接触全球买家','自动库存系统','实时销售报告'], form:{ name:'公司/生产商名称', country:'国家', product:'产品/服务类型', email:'联系邮箱', phone:'电话号码', submit:'注册为生产商', ok:'申请已收到！我们的团队将在24小时内与您联系。' } },
+const TRANSLATIONS = {
+  th: { cta: 'ลงทะเบียนผู้ผลิต', featuresTitle: 'สิทธิประโยชน์สำหรับผู้ผลิต', stepsTitle: 'เริ่มต้นใน 3 ขั้นตอน', submit: 'ส่งคำขอลงทะเบียน', submitAnother: 'ส่งอีกครั้ง', formNote: 'ทีมงานจะติดต่อกลับภายใน 24 ชม.' },
+  en: { cta: 'Register as Producer', featuresTitle: 'Producer Benefits', stepsTitle: 'Get Started in 3 Steps', submit: 'Submit Registration', submitAnother: 'Submit Another', formNote: 'Our team will contact you within 24 hours.' },
+  zh: { cta: '注册为生产商', featuresTitle: '生产商权益', stepsTitle: '3步开始', submit: '提交注册', submitAnother: '再次提交', formNote: '我们的团队将在24小时内与您联系。' },
 };
 
 export default function ProducerPortalPage() {
   const [lang, setLang] = useState('th');
-  const [form, setForm] = useState({ name:'', country:'', product:'', email:'', phone:'' });
-  const [sent, setSent] = useState(false);
-  const navigate = useNavigate();
-  const t = T[lang];
-
-  const submit = async e => {
-    e.preventDefault();
-    try {
-      await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ...form, type:'producer', lang }) });
-    } catch {}
-    setSent(true);
-  };
+  const t = TRANSLATIONS[lang];
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', color:'#fff', fontFamily:'system-ui,sans-serif' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 32px', borderBottom:'1px solid #1e1e2e' }}>
-        <button onClick={() => navigate('/portals')} style={{ background:'none', border:'1px solid #333', color:'#aaa', padding:'8px 16px', borderRadius:8, cursor:'pointer' }}>← กลับ</button>
-        <div style={{ display:'flex', gap:8 }}>
-          {['th','en','zh'].map(l => <button key={l} onClick={() => setLang(l)} style={{ background:lang===l?'#6366f1':'none', border:'1px solid #333', color:'#fff', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:13 }}>{l==='th'?'ไทย':l==='en'?'English':'中文'}</button>)}
-        </div>
-      </div>
-      <div style={{ maxWidth:900, margin:'0 auto', padding:'48px 32px' }}>
-        <div style={{ textAlign:'center', marginBottom:48 }}>
-          <div style={{ fontSize:56, marginBottom:16 }}>🏭</div>
-          <h1 style={{ fontSize:36, fontWeight:800, color:'#6366f1', margin:'0 0 12px' }}>{t.title}</h1>
-          <p style={{ color:'#aaa', fontSize:18 }}>{t.sub}</p>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:32 }}>
-          <div>
-            <h3 style={{ color:'#6366f1', marginBottom:20 }}>สิทธิประโยชน์</h3>
-            {t.benefits.map((b,i) => <div key={i} style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#6366f1', fontSize:20 }}>✓</span><span style={{ color:'#ddd' }}>{b}</span></div>)}
-          </div>
-          <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #6366f133' }}>
-            {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
-            <form onSubmit={submit}>
-              {[['name',t.form.name],['country',t.form.country],['product',t.form.product],['email',t.form.email],['phone',t.form.phone]].map(([k,label]) => (
-                <div key={k} style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
-                </div>
-              ))}
-              <button type="submit" style={{ width:'100%', background:'#6366f1', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor:'pointer', marginTop:8 }}>{t.form.submit}</button>
-            </form>}
-          </div>
-        </div>
-      </div>
-    </div>
+    <PortalLayout config={{
+      icon: '🏭',
+      title: lang === 'th' ? 'พอร์ทัลผู้ผลิต' : lang === 'en' ? 'Producer Portal' : '生产商门户',
+      titleGrad: 'linear-gradient(90deg,#6366f1,#10b981)',
+      sub: lang === 'th' ? 'เชื่อมต่อสินค้าของคุณกับ AI ไทย — ขายได้ทุกตลาดโลก ด้วยระบบ inventory อัตโนมัติและ AI Content ที่สร้างให้ฟรี' : lang === 'en' ? 'Connect your products to the Thai AI ecosystem — sell globally with automated inventory and free AI content generation' : '将您的产品连接到泰国AI生态系统——通过自动库存和免费AI内容生成在全球销售',
+      color: '#6366f1',
+      accent: '#10b981',
+      lang, setLang, t,
+      stats: [
+        { value: '300+', label: lang === 'th' ? 'ผู้ผลิตในระบบ' : 'Producers' },
+        { value: '12', label: lang === 'th' ? 'ประเทศส่งออก' : 'Export Countries' },
+        { value: '24/7', label: lang === 'th' ? 'AI ทำงานให้' : 'AI Active' },
+        { value: '฿0', label: lang === 'th' ? 'ค่าเริ่มต้น' : 'Setup Cost' },
+      ],
+      features: [
+        { icon: '🤖', title: lang === 'th' ? 'AI Content ฟรีทุกสินค้า' : 'Free AI Content per Product', desc: lang === 'th' ? 'ระบบสร้าง Hook · Script · Caption · Hashtag สำหรับทุกสินค้าโดยอัตโนมัติ ใน 3 ภาษา' : 'Auto-generates Hook, Script, Caption, Hashtag for every product in 3 languages' },
+        { icon: '📦', title: lang === 'th' ? 'Inventory อัตโนมัติ' : 'Automated Inventory', desc: lang === 'th' ? 'ระบบตัดสต็อกอัตโนมัติทุกครั้งที่มีออเดอร์ แจ้งเตือนเมื่อสินค้าใกล้หมด' : 'Auto-deducts stock on every order, alerts when inventory is low' },
+        { icon: '🌍', title: lang === 'th' ? 'ขายได้ทั่วโลก' : 'Global Sales', desc: lang === 'th' ? 'เข้าถึงผู้ซื้อใน 12 ประเทศ พร้อมระบบ Tax Calculator ข้ามพรมแดน' : 'Reach buyers in 12 countries with built-in cross-border tax calculator' },
+        { icon: '💰', title: lang === 'th' ? 'รับเงินตรง ไม่ผ่านคนกลาง' : 'Direct Payments', desc: lang === 'th' ? 'PromptPay · บัตรเครดิต · QR Code — เงินโอนตรงให้ผู้ผลิตทันทีหลังยืนยัน' : 'PromptPay · Credit Card · QR Code — funds transfer directly after confirmation' },
+        { icon: '📊', title: lang === 'th' ? 'Dashboard ยอดขาย Real-time' : 'Real-time Sales Dashboard', desc: lang === 'th' ? 'ดูยอดขาย ออเดอร์ สต็อก และ trend สินค้าแบบ real-time ในหน้าเดียว' : 'View sales, orders, stock, and trends in real-time on one dashboard' },
+        { icon: '🤝', title: lang === 'th' ? 'Affiliate Network' : 'Affiliate Network', desc: lang === 'th' ? 'Creator และ Affiliate แชร์สินค้าคุณ รับ commission อัตโนมัติ ไม่ต้องจ้างทีมขาย' : 'Creators and affiliates promote your products automatically with commission payouts' },
+      ],
+      steps: [
+        { title: lang === 'th' ? 'กรอกฟอร์มลงทะเบียน' : 'Fill Registration Form', desc: lang === 'th' ? 'ระบุข้อมูลบริษัท ประเภทสินค้า และช่องทางติดต่อ' : 'Provide company info, product type, and contact details' },
+        { title: lang === 'th' ? 'ทีมงานยืนยันและ onboard' : 'Team Verification & Onboarding', desc: lang === 'th' ? 'ทีมงานติดต่อกลับภายใน 24 ชม. เพื่อยืนยันและเพิ่มสินค้าเข้าระบบ' : 'Team contacts within 24h to verify and add your products to the system' },
+        { title: lang === 'th' ? 'เริ่มขายและรับออเดอร์' : 'Start Selling & Receiving Orders', desc: lang === 'th' ? 'สินค้าปรากฏใน AI Store ทันที AI Content Generator สร้าง content ให้อัตโนมัติ' : 'Products appear in AI Store immediately. AI generates content automatically' },
+      ],
+      formTitle: lang === 'th' ? 'ลงทะเบียนเป็นผู้ผลิต' : lang === 'en' ? 'Register as Producer' : '注册为生产商',
+      formFields: [
+        { key: 'name', label: lang === 'th' ? 'ชื่อบริษัท / ผู้ผลิต' : 'Company / Producer Name', placeholder: 'OpenThai Co., Ltd.' },
+        { key: 'product', label: lang === 'th' ? 'ประเภทสินค้า' : 'Product Type', type: 'select', options: lang === 'th' ? ['สินค้า OTOP', 'อาหาร & เครื่องดื่ม', 'เสื้อผ้า & แฟชั่น', 'สมุนไพร & ความงาม', 'ของใช้ในบ้าน', 'อิเล็กทรอนิกส์', 'อื่นๆ'] : ['OTOP Products', 'Food & Beverage', 'Fashion', 'Herbal & Beauty', 'Home Goods', 'Electronics', 'Other'] },
+        { key: 'country', label: lang === 'th' ? 'ประเทศ' : 'Country', placeholder: 'Thailand' },
+        { key: 'email', label: lang === 'th' ? 'อีเมลติดต่อ' : 'Contact Email', type: 'email', placeholder: 'contact@company.com' },
+        { key: 'phone', label: lang === 'th' ? 'เบอร์โทร' : 'Phone', placeholder: '+66 8x-xxx-xxxx' },
+        { key: 'monthly_volume', label: lang === 'th' ? 'ปริมาณสินค้าต่อเดือน (โดยประมาณ)' : 'Est. Monthly Volume', type: 'select', options: lang === 'th' ? ['< 100 ชิ้น', '100–500 ชิ้น', '500–2000 ชิ้น', '2000+ ชิ้น'] : ['< 100 units', '100–500 units', '500–2000 units', '2000+ units'] },
+      ],
+      apiEndpoint: '/api/leads/submit',
+      successMsg: lang === 'th' ? 'ส่งคำขอเรียบร้อย! ทีมงานจะติดต่อกลับภายใน 24 ชม.' : 'Request received! Team will contact you within 24 hours.',
+    }} />
   );
 }

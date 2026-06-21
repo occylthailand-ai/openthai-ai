@@ -3375,6 +3375,171 @@ async function startServer() {
   });
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ── EARLY ACCESS + AFFILIATE SYSTEM (unified into Express) ───────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+import { randomBytes, createHash } from 'node:crypto';
+
+const EA_FILE        = join(WRITE_DATA_DIR, 'early_access.json');
+const EA_REF_FILE    = join(WRITE_DATA_DIR, 'affiliate_referrals.json');
+const EA_SALES_FILE  = join(WRITE_DATA_DIR, 'affiliate_sales.json');
+const BRAND_MEM_FILE = join(WRITE_DATA_DIR, 'brand_memory.json');
+
+mkdirSync(WRITE_DATA_DIR, { recursive: true });
+
+const PLATFORM_COMM = { tiktok:10, shopee:10, lazada:10, facebook:8, instagram:8, line:8, other:5 };
+
+function _readJ(p) { try { return JSON.parse(readFileSync(p,'utf8')); } catch { return []; } }
+function _writeJ(p, d) { mkdirSync(dirname(p),{recursive:true}); writeFileSync(p, JSON.stringify(d, null, 2), 'utf8'); }
+function _genAffCode(email) {
+  const prefix = createHash('md5').update(email).digest('hex').slice(0,4).toUpperCase();
+  const tok    = randomBytes(4).toString('hex').toUpperCase();
+  return `OT-${prefix}${tok}`;
+}
+
+// POST /api/early-access/register
+app.post('/api/early-access/register', async (req, res) => {
+  const { name, email, phone='', line_id='', role, referred_by='' } = req.body || {};
+  if (!name || !email || !role) return res.status(400).json({ error: 'ต้องระบุ name, email, role' });
+  const records = _readJ(EA_FILE);
+  if (records.find(r => r.email === email))
+    return res.status(409).json({ error: 'อีเมลนี้ลงทะเบียนไว้แล้ว' });
+  const affiliate_code = _genAffCode(email);
+  const entry = { name, email, phone, line_id, role, affiliate_code, referred_by, registered_at: new Date().toISOString() };
+  records.push(entry);
+  _writeJ(EA_FILE, records);
+  if (referred_by) {
+    const refs = _readJ(EA_REF_FILE);
+    refs.push({ referrer_code: referred_by, new_member_email: email, new_member_affiliate_code: affiliate_code, referred_at: new Date().toISOString() });
+    _writeJ(EA_REF_FILE, refs);
+  }
+  const host = process.env.FRONTEND_URL || 'https://openthai.ai';
+  res.json({ ok: true, message: `ยินดีต้อนรับ ${name}!`, total: records.length, affiliate_code, affiliate_link: `${host}/early-access?ref=${affiliate_code}` });
+});
+
+// GET /api/early-access/count
+app.get('/api/early-access/count', (req, res) => {
+  res.json({ count: _readJ(EA_FILE).length });
+});
+
+// POST /api/affiliate/sale — บันทึกยอดขาย + commission
+app.post('/api/affiliate/sale', (req, res) => {
+  const { affiliate_code, platform, platform_order_id, sale_amount, buyer_platform_id='', seller_platform_id='' } = req.body || {};
+  if (!affiliate_code || !platform || !platform_order_id || !sale_amount)
+    return res.status(400).json({ error: 'ข้อมูลไม่ครบ' });
+  const records = _readJ(EA_FILE);
+  const aff = records.find(r => r.affiliate_code === affiliate_code);
+  if (!aff) return res.status(404).json({ error: 'ไม่พบ affiliate code นี้' });
+  const rate = PLATFORM_COMM[platform.toLowerCase()] ?? PLATFORM_COMM.other;
+  const commission = Math.round(sale_amount * rate) / 100;
+  const sales = _readJ(EA_SALES_FILE);
+  sales.push({ affiliate_code, affiliate_email: aff.email, platform: platform.toLowerCase(), platform_order_id, buyer_platform_id, seller_platform_id, sale_amount, commission_rate: rate, commission_amount: commission, status: 'pending', recorded_at: new Date().toISOString(), paid_at: null });
+  _writeJ(EA_SALES_FILE, sales);
+  res.json({ ok: true, commission_amount: commission, commission_rate: rate, status: 'pending', message: `commission ${rate}% = ฿${commission.toFixed(2)}` });
+});
+
+// POST /api/affiliate/payout — โอน commission ทันที
+app.post('/api/affiliate/payout', (req, res) => {
+  const { affiliate_code } = req.body || {};
+  if (!affiliate_code) return res.status(400).json({ error: 'ต้องระบุ affiliate_code' });
+  let sales = _readJ(EA_SALES_FILE);
+  const pending = sales.filter(s => s.affiliate_code === affiliate_code && s.status === 'pending');
+  if (!pending.length) return res.json({ ok: true, message: 'ไม่มียอด commission ที่รอโอน', paid_amount: 0 });
+  const total = pending.reduce((s, r) => s + r.commission_amount, 0);
+  const paid_at = new Date().toISOString();
+  sales = sales.map(s => (s.affiliate_code === affiliate_code && s.status === 'pending') ? { ...s, status: 'paid', paid_at } : s);
+  _writeJ(EA_SALES_FILE, sales);
+  res.json({ ok: true, paid_amount: Math.round(total*100)/100, paid_count: pending.length, paid_at, message: `โอน commission ฿${total.toFixed(2)} จาก ${pending.length} รายการ` });
+});
+
+// GET /api/affiliate/summary/:code
+app.get('/api/affiliate/summary/:code', (req, res) => {
+  const { code } = req.params;
+  const records = _readJ(EA_FILE);
+  const aff = records.find(r => r.affiliate_code === code);
+  if (!aff) return res.status(404).json({ error: 'ไม่พบ affiliate code นี้' });
+  const sales = _readJ(EA_SALES_FILE).filter(s => s.affiliate_code === code);
+  const by_platform = {};
+  for (const s of sales) {
+    if (!by_platform[s.platform]) by_platform[s.platform] = { sales:0, commission:0, count:0 };
+    by_platform[s.platform].sales     += s.sale_amount;
+    by_platform[s.platform].commission += s.commission_amount;
+    by_platform[s.platform].count++;
+  }
+  const refs = _readJ(EA_REF_FILE).filter(r => r.referrer_code === code);
+  const host = process.env.FRONTEND_URL || 'https://openthai.ai';
+  res.json({ affiliate_code: code, name: aff.name, affiliate_link: `${host}/early-access?ref=${code}`, total_sales: sales.reduce((a,s)=>a+s.sale_amount,0), total_commission_pending: sales.filter(s=>s.status==='pending').reduce((a,s)=>a+s.commission_amount,0), total_commission_paid: sales.filter(s=>s.status==='paid').reduce((a,s)=>a+s.commission_amount,0), by_platform, referral_count: refs.length });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── BRAND MEMORY (persistent backend storage) ─────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/brand-memory/:user_id
+app.get('/api/brand-memory/:user_id', (req, res) => {
+  const all = _readJ(BRAND_MEM_FILE);
+  const entry = all.find(b => b.user_id === req.params.user_id);
+  res.json(entry || { user_id: req.params.user_id, data: {} });
+});
+
+// POST /api/brand-memory/:user_id
+app.post('/api/brand-memory/:user_id', (req, res) => {
+  const { user_id } = req.params;
+  const all = _readJ(BRAND_MEM_FILE);
+  const idx = all.findIndex(b => b.user_id === user_id);
+  const entry = { user_id, data: req.body, updated_at: new Date().toISOString() };
+  if (idx >= 0) all[idx] = entry; else all.push(entry);
+  _writeJ(BRAND_MEM_FILE, all);
+  res.json({ ok: true });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── TREND HUNTER / CUSTOMER FINDER / GLOBAL CONNECT (Claude AI) ──────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function claudeJSON(prompt) {
+  if (!anthropic) throw new Error('ANTHROPIC_API_KEY ยังไม่ได้ตั้งค่า');
+  const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: 2000, messages: [{ role: 'user', content: prompt }] });
+  let text = msg.content[0].text.trim();
+  if (text.startsWith('```')) { text = text.split('```')[1]; if (text.startsWith('json')) text = text.slice(4); }
+  return JSON.parse(text.trim());
+}
+
+// POST /api/trend-hunter/search
+app.post('/api/trend-hunter/search', async (req, res) => {
+  const { category='all', platform='all', market='TH' } = req.body || {};
+  try {
+    const data = await claudeJSON(`วันที่: ${new Date().toISOString().slice(0,10)} ตลาด:${market} platform:${platform} หมวด:${category}
+วิเคราะห์ 5 สินค้าน่าขายที่สุดตอนนี้ ตอบ JSON:
+{"trending_products":[{"rank":1,"name":"ชื่อสินค้า","category":"หมวด","why_now":"เหตุผล","target_platform":"platform","estimated_margin":"กำไร%","competition_level":"low|medium|high","quick_tip":"เคล็ดลับ"}],"market_insight":"ภาพรวม","best_timing":"ช่วงเวลา"}`);
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/customer-finder/analyze
+app.post('/api/customer-finder/analyze', async (req, res) => {
+  const { product_name, product_category='', platform='all', market='TH' } = req.body || {};
+  if (!product_name) return res.status(400).json({ error: 'ต้องระบุ product_name' });
+  try {
+    const data = await claudeJSON(`สินค้า:${product_name} หมวด:${product_category} platform:${platform} ตลาด:${market}
+วิเคราะห์กลุ่มลูกค้าที่ใช่ ตอบ JSON:
+{"primary_segments":[{"segment_name":"ชื่อกลุ่ม","age_range":"ช่วงอายุ","gender":"เพศ","income_level":"รายได้","interests":["ความสนใจ"],"pain_points":["ปัญหา"],"where_to_find":["ช่องทาง"],"best_message":"ข้อความโดนใจ","conversion_rate":"สูง|ปานกลาง|ต่ำ"}],"total_market_size":"ขนาดตลาด","best_platform":"platform","content_style":"สไตล์คอนเทนต์"}`);
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /api/global-connect/recommend
+app.post('/api/global-connect/recommend', async (req, res) => {
+  const { business_type, product_category='', current_platforms=[], target_market='' } = req.body || {};
+  if (!business_type) return res.status(400).json({ error: 'ต้องระบุ business_type' });
+  try {
+    const data = await claudeJSON(`ธุรกิจ:${business_type} สินค้า:${product_category} platform ปัจจุบัน:${current_platforms.join(',')||'ไม่มี'} เป้าหมาย:${target_market||'ทั่วโลก'}
+แนะนำช่องทางเชื่อมต่อต่างประเทศ ตอบ JSON:
+{"recommended_channels":[{"rank":1,"channel_name":"ชื่อ","channel_type":"marketplace|social|b2b","target_country":["ประเทศ"],"setup_difficulty":"ง่าย|ปานกลาง|ยาก","cost_estimate":"ค่าใช้จ่าย","time_to_first_sale":"ระยะเวลา","why_suitable":"เหตุผล","first_step":"ขั้นตอนแรก","safety_tips":["ความปลอดภัย"]}],"legal_note":"กฎหมาย","payment_recommendation":"การรับเงิน","logistics_tip":"ขนส่ง"}`);
+    res.json(data);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Export app สำหรับ Vercel Serverless (api/index.js import ไปใช้) ──────────
 export { app };
 

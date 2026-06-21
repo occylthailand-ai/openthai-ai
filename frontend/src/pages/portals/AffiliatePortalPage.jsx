@@ -1,69 +1,52 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiUrl } from '../../apiBase';
+import PortalLayout from '../../components/PortalLayout';
 
 const T = {
-  th: { title:'ทางเข้าผู้ขาย / Affiliate', sub:'ขายสินค้าจาก OpenThai.ai และรับค่าคอมมิชชั่นสูงสุด 30%', benefits:['คอมมิชชั่นสูงสุด 30% ต่อการขาย','Dashboard ติดตาม real-time','ลิงก์ referral เฉพาะของคุณ','รับเงินผ่านระบบอัตโนมัติ'], tiers:[{name:'Starter',rate:'10%',min:'0 ฿'},{name:'Pro',rate:'20%',min:'50,000 ฿'},{name:'Elite',rate:'30%',min:'200,000 ฿'}], form:{ name:'ชื่อ-นามสกุล', country:'ประเทศ', platform:'แพลตฟอร์มที่ใช้โปรโมท', email:'อีเมล', submit:'สมัคร Affiliate', ok:'สมัครเรียบร้อย! ลิงก์ Affiliate จะส่งไปยังอีเมลของท่าน' } },
-  en: { title:'Seller / Affiliate Portal', sub:'Sell OpenThai.ai products and earn up to 30% commission', benefits:['Up to 30% commission per sale','Real-time tracking dashboard','Personalized referral link','Automated payouts'], tiers:[{name:'Starter',rate:'10%',min:'0 ฿'},{name:'Pro',rate:'20%',min:'50,000 ฿'},{name:'Elite',rate:'30%',min:'200,000 ฿'}], form:{ name:'Full Name', country:'Country', platform:'Promotion Platform', email:'Email', submit:'Apply as Affiliate', ok:'Application received! Your affiliate link will be sent to your email.' } },
-  zh: { title:'卖家/联盟门户', sub:'销售OpenThai.ai产品，赚取高达30%的佣金', benefits:['每次销售最高30%佣金','实时追踪仪表板','专属推荐链接','自动结算'], tiers:[{name:'入门级',rate:'10%',min:'0 ฿'},{name:'专业级',rate:'20%',min:'50,000 ฿'},{name:'精英级',rate:'30%',min:'200,000 ฿'}], form:{ name:'姓名', country:'国家', platform:'推广平台', email:'邮箱', submit:'申请联盟', ok:'申请已收到！您的联盟链接将发送到您的邮箱。' } },
+  th: { cta: 'สมัคร Affiliate', featuresTitle: 'ทำไมต้องเป็น Affiliate กับเรา', stepsTitle: 'เริ่มสร้างรายได้', submit: 'สมัครทันที', submitAnother: 'สมัครอีก', formNote: 'ได้รับ link พิเศษภายใน 1 ชั่วโมง ค่าตอบแทนโปร่งใส' },
+  en: { cta: 'Join Affiliate', featuresTitle: 'Why Join Our Affiliate Program', stepsTitle: 'Start Earning', submit: 'Apply Now', submitAnother: 'Apply Again', formNote: 'Receive your unique link within 1 hour. Transparent compensation.' },
+  zh: { cta: '加入联盟', featuresTitle: '为什么加入联盟计划', stepsTitle: '开始赚钱', submit: '立即申请', submitAnother: '再次申请', formNote: '1小时内收到专属链接。透明佣金。' },
 };
 
 export default function AffiliatePortalPage() {
   const [lang, setLang] = useState('th');
-  const [form, setForm] = useState({ name:'', country:'', platform:'', email:'' });
-  const [sent, setSent] = useState(false);
-  const navigate = useNavigate();
   const t = T[lang];
-
-  const submit = async e => {
-    e.preventDefault();
-    try { await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...form, type:'affiliate', lang}) }); } catch {}
-    setSent(true);
-  };
-
   return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', color:'#fff', fontFamily:'system-ui,sans-serif' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 32px', borderBottom:'1px solid #1e1e2e' }}>
-        <button onClick={() => navigate('/portals')} style={{ background:'none', border:'1px solid #333', color:'#aaa', padding:'8px 16px', borderRadius:8, cursor:'pointer' }}>← กลับ</button>
-        <div style={{ display:'flex', gap:8 }}>
-          {['th','en','zh'].map(l => <button key={l} onClick={() => setLang(l)} style={{ background:lang===l?'#f59e0b':'none', border:'1px solid #333', color:'#fff', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:13 }}>{l==='th'?'ไทย':l==='en'?'English':'中文'}</button>)}
-        </div>
-      </div>
-      <div style={{ maxWidth:900, margin:'0 auto', padding:'48px 32px' }}>
-        <div style={{ textAlign:'center', marginBottom:40 }}>
-          <div style={{ fontSize:56, marginBottom:16 }}>🤝</div>
-          <h1 style={{ fontSize:36, fontWeight:800, color:'#f59e0b', margin:'0 0 12px' }}>{t.title}</h1>
-          <p style={{ color:'#aaa', fontSize:18 }}>{t.sub}</p>
-        </div>
-        {/* Tiers */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:40 }}>
-          {t.tiers.map((tier,i) => (
-            <div key={i} style={{ background:'#111', border:`1px solid ${i===2?'#f59e0b':'#333'}`, borderRadius:12, padding:20, textAlign:'center' }}>
-              <div style={{ color: i===2?'#f59e0b':'#aaa', fontWeight:700, fontSize:16, marginBottom:8 }}>{tier.name}</div>
-              <div style={{ color:'#fff', fontSize:32, fontWeight:800 }}>{tier.rate}</div>
-              <div style={{ color:'#666', fontSize:12, marginTop:4 }}>ยอดขาย {tier.min}+</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:32 }}>
-          <div>
-            <h3 style={{ color:'#f59e0b', marginBottom:20 }}>สิทธิประโยชน์</h3>
-            {t.benefits.map((b,i) => <div key={i} style={{ display:'flex', gap:12, marginBottom:14, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#f59e0b' }}>✓</span><span style={{ color:'#ddd' }}>{b}</span></div>)}
-          </div>
-          <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #f59e0b33' }}>
-            {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
-            <form onSubmit={submit}>
-              {[['name',t.form.name],['country',t.form.country],['platform',t.form.platform],['email',t.form.email]].map(([k,label]) => (
-                <div key={k} style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
-                </div>
-              ))}
-              <button type="submit" style={{ width:'100%', background:'#f59e0b', color:'#000', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor:'pointer', marginTop:8 }}>{t.form.submit}</button>
-            </form>}
-          </div>
-        </div>
-      </div>
-    </div>
+    <PortalLayout config={{
+      icon: '🤝',
+      title: lang === 'th' ? 'พอร์ทัล Affiliate' : lang === 'en' ? 'Affiliate Portal' : '联盟门户',
+      titleGrad: 'linear-gradient(90deg,#f59e0b,#ef4444)',
+      sub: lang === 'th' ? 'แชร์ link — รับเงินทุก platform ทันทีที่ยอดขายเสร็จสิ้น ค่าตอบแทนโปร่งใส ชัดเจน ไม่มีเงื่อนไขซับซ้อน' : lang === 'en' ? 'Share a link — earn from every platform instantly when sales complete. Transparent, no hidden conditions.' : '分享链接——销售完成即时到账，透明无隐藏条件。',
+      color: '#f59e0b', accent: '#ef4444',
+      lang, setLang, t,
+      stats: [
+        { value: '10%', label: 'TikTok / Shopee / Lazada' },
+        { value: '8%', label: 'FB / Instagram / Line' },
+        { value: '24h', label: lang === 'th' ? 'โอนเงินรวดเร็ว' : 'Fast Payout' },
+        { value: '฿0', label: lang === 'th' ? 'ค่าสมัคร' : 'Signup Cost' },
+      ],
+      features: [
+        { icon: '🔗', title: lang === 'th' ? 'Link พิเศษประจำตัว' : 'Unique Affiliate Link', desc: lang === 'th' ? 'รับ link เฉพาะตัวทันทีหลังสมัคร แชร์ได้ทุก platform ระบบติดตาม click และ conversion อัตโนมัติ' : 'Get a unique link instantly. Works on all platforms. Auto-tracks clicks and conversions.' },
+        { icon: '💸', title: lang === 'th' ? 'Commission อัตโนมัติ' : 'Auto Commission', desc: lang === 'th' ? 'TikTok/Shopee/Lazada 10% | FB/IG/Line 8% โอนทันทีที่เงินเข้า OpenThai.ai' : 'TikTok/Shopee/Lazada 10% | FB/IG/Line 8%. Paid the moment funds reach OpenThai.ai.' },
+        { icon: '📊', title: lang === 'th' ? 'Dashboard Real-time' : 'Real-time Dashboard', desc: lang === 'th' ? 'ดู click, conversion, ยอดขาย และ commission แยกตาม platform' : 'View clicks, conversions, and commissions by platform in real-time.' },
+        { icon: '🌐', title: lang === 'th' ? 'ครบทุก Platform' : 'All Platforms', desc: lang === 'th' ? 'TikTok · Shopee · Lazada · Facebook · Instagram · Line ในบัญชีเดียว' : 'TikTok · Shopee · Lazada · Facebook · Instagram · Line — all in one account.' },
+        { icon: '👥', title: lang === 'th' ? 'Multi-Level Referral' : 'Multi-Level Referral', desc: lang === 'th' ? 'แนะนำ Affiliate คนอื่น รับ bonus เพิ่ม โครงสร้างโปร่งใส' : 'Refer others, earn bonus commissions. Transparent structure.' },
+        { icon: '🤖', title: lang === 'th' ? 'AI ช่วยสร้าง Content' : 'AI Content Help', desc: lang === 'th' ? 'ใช้ AI Content Generator สร้าง caption + hashtag สำหรับสินค้าที่แชร์ได้ฟรี' : 'Free AI-generated captions and hashtags for products you promote.' },
+      ],
+      steps: [
+        { title: lang === 'th' ? 'สมัครและรับ Affiliate Code' : 'Apply & Get Code', desc: lang === 'th' ? 'กรอกฟอร์มด้านล่าง รับ affiliate_code และ link ภายใน 1 ชั่วโมง' : 'Fill the form, receive your code and link within 1 hour.' },
+        { title: lang === 'th' ? 'แชร์ Link บน Platform ที่ถนัด' : 'Share on Your Platform', desc: lang === 'th' ? 'โพสต์ link ใน TikTok, Shopee, FB, IG, Line หรือช่องทางที่มีผู้ชม' : 'Post your link wherever your audience is.' },
+        { title: lang === 'th' ? 'รับ Commission อัตโนมัติ' : 'Get Paid Automatically', desc: lang === 'th' ? 'เมื่อยอดขายเสร็จและเงินเข้า OpenThai.ai ระบบโอนให้คุณทันที' : 'When a sale clears, the system transfers your commission immediately.' },
+      ],
+      formTitle: lang === 'th' ? 'สมัครเป็น Affiliate' : lang === 'en' ? 'Join Affiliate Program' : '申请联盟计划',
+      formFields: [
+        { key: 'name', label: lang === 'th' ? 'ชื่อ-นามสกุล' : 'Full Name', placeholder: lang === 'th' ? 'สมชาย ใจดี' : 'John Doe' },
+        { key: 'email', label: 'Email', type: 'email', placeholder: 'you@example.com' },
+        { key: 'phone', label: lang === 'th' ? 'เบอร์โทร' : 'Phone', placeholder: '+66 8x-xxx-xxxx' },
+        { key: 'primary_platform', label: lang === 'th' ? 'Platform หลัก' : 'Primary Platform', type: 'select', options: ['TikTok', 'Shopee', 'Lazada', 'Facebook', 'Instagram', 'Line', 'YouTube', 'Other'] },
+        { key: 'audience_size', label: lang === 'th' ? 'ขนาดผู้ติดตาม' : 'Audience Size', type: 'select', options: ['< 1,000', '1,000–10,000', '10,000–100,000', '100,000+'] },
+      ],
+      apiEndpoint: '/api/affiliate/apply',
+      successMsg: lang === 'th' ? 'สมัครเรียบร้อย! รับ Affiliate Link ภายใน 1 ชั่วโมง' : 'Registered! Your Affiliate Link will arrive within 1 hour.',
+    }} />
   );
 }

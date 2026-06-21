@@ -1,78 +1,52 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiUrl } from '../../apiBase';
-
-const ORGS = ['United Nations (UN)','ASEAN','World Bank','IMF','WHO','UNESCO','UNICEF','ADB','UNDP','WTO','Other'];
+import PortalLayout from '../../components/PortalLayout';
 
 const T = {
-  en: { title:'International Organization Portal', sub:'Partnering with global institutions to advance AI for humanity', desc:'OpenThai.ai welcomes partnerships with UN agencies, ASEAN bodies, development banks, and all international organizations committed to sustainable development and digital inclusion.', services:['SDG-aligned AI programs','Digital inclusion initiatives','Capacity building workshops','Research & data partnerships','Humanitarian AI applications'], form:{ org:'Organization Name', type:'Organization Type', country:'Headquarters Country', name:'Contact Person', position:'Title', email:'Official Email', focus:'Focus Area / SDG Goal', submit:'Submit Partnership Request', ok:'Thank you! Our Partnerships team will respond within 72 hours.' } },
-  th: { title:'ทางเข้าองค์กรระหว่างประเทศ', sub:'ร่วมมือกับองค์กรระหว่างประเทศเพื่อ AI เพื่อมนุษยชาติ', desc:'OpenThai.ai ยินดีต้อนรับความร่วมมือกับองค์กรสหประชาชาติ อาเซียน ธนาคารพัฒนา และองค์กรระหว่างประเทศทุกแห่ง', services:['โปรแกรม AI สอดคล้องกับ SDG','โครงการ Digital Inclusion','การอบรมสร้างศักยภาพ','ความร่วมมือด้านวิจัยและข้อมูล','การประยุกต์ AI เพื่อมนุษยธรรม'], form:{ org:'ชื่อองค์กร', type:'ประเภทองค์กร', country:'ประเทศที่ตั้งสำนักงานใหญ่', name:'ผู้ติดต่อ', position:'ตำแหน่ง', email:'อีเมลทางการ', focus:'ด้านที่ให้ความสำคัญ / เป้าหมาย SDG', submit:'ส่งคำขอความร่วมมือ', ok:'ขอบคุณ! ทีม Partnerships จะตอบกลับภายใน 72 ชม.' } },
-  zh: { title:'国际组织门户', sub:'与全球机构合作，推进为人类服务的AI', desc:'OpenThai.ai欢迎与联合国机构、东盟、开发银行及所有致力于可持续发展和数字包容的国际组织建立合作关系。', services:['符合SDG的AI项目','数字包容计划','能力建设研讨会','研究与数据合作','人道主义AI应用'], form:{ org:'组织名称', type:'组织类型', country:'总部所在国', name:'联系人', position:'职务', email:'官方邮箱', focus:'重点领域/SDG目标', submit:'提交合作申请', ok:'谢谢！我们的合作团队将在72小时内回复。' } },
+  th: { cta: 'ยื่นแบบคำขอ', featuresTitle: 'บริการสำหรับองค์กรระหว่างประเทศ', stepsTitle: 'ขั้นตอนความร่วมมือ', submit: 'ส่งคำขอ', submitAnother: 'ส่งอีกครั้ง', formNote: 'ทีมงานจะติดต่อภายใน 3 วันทำการ' },
+  en: { cta: 'Submit Partnership Request', featuresTitle: 'Services for International Organizations', stepsTitle: 'Partnership Process', submit: 'Submit Request', submitAnother: 'Submit Again', formNote: 'Team will contact within 3 business days.' },
+  zh: { cta: '提交合作申请', featuresTitle: '国际组织服务', stepsTitle: '合作流程', submit: '提交申请', submitAnother: '再次提交', formNote: '3个工作日内联系。' },
 };
 
 export default function IntlOrgPortalPage() {
   const [lang, setLang] = useState('en');
-  const [form, setForm] = useState({ org:'', type:'United Nations (UN)', country:'', name:'', position:'', email:'', focus:'' });
-  const [sent, setSent] = useState(false);
-  const navigate = useNavigate();
   const t = T[lang];
-
-  const submit = async e => {
-    e.preventDefault();
-    try { await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...form, type:'intl-org', lang}) }); } catch {}
-    setSent(true);
-  };
-
   return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', color:'#fff', fontFamily:'system-ui,sans-serif' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 32px', borderBottom:'1px solid #1e1e2e' }}>
-        <button onClick={() => navigate('/portals')} style={{ background:'none', border:'1px solid #333', color:'#aaa', padding:'8px 16px', borderRadius:8, cursor:'pointer' }}>← Back</button>
-        <div style={{ display:'flex', gap:8 }}>
-          {['en','th','zh'].map(l => <button key={l} onClick={() => setLang(l)} style={{ background:lang===l?'#8b5cf6':'none', border:'1px solid #333', color:'#fff', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:13 }}>{l==='th'?'ไทย':l==='en'?'English':'中文'}</button>)}
-        </div>
-      </div>
-      <div style={{ maxWidth:960, margin:'0 auto', padding:'48px 32px' }}>
-        <div style={{ textAlign:'center', marginBottom:40 }}>
-          <div style={{ fontSize:56, marginBottom:16 }}>🏛️</div>
-          <h1 style={{ fontSize:36, fontWeight:800, color:'#8b5cf6', margin:'0 0 12px' }}>{t.title}</h1>
-          <p style={{ color:'#aaa', fontSize:18, maxWidth:600, margin:'0 auto' }}>{t.sub}</p>
-        </div>
-        <div style={{ background:'#8b5cf611', border:'1px solid #8b5cf633', borderRadius:12, padding:20, marginBottom:32, textAlign:'center' }}>
-          <p style={{ color:'#c4b5fd', margin:0, fontSize:15 }}>{t.desc}</p>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr', gap:32 }}>
-          <div>
-            <h3 style={{ color:'#8b5cf6', marginBottom:20 }}>Partnership Areas</h3>
-            {t.services.map((s,i) => <div key={i} style={{ display:'flex', gap:12, marginBottom:14, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#8b5cf6' }}>▸</span><span style={{ color:'#ddd' }}>{s}</span></div>)}
-          </div>
-          <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #8b5cf633' }}>
-            {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
-            <form onSubmit={submit}>
-              <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.org}</label>
-                <input required value={form.org} onChange={e=>setForm({...form,org:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
-              </div>
-              <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.type}</label>
-                <select value={form.type} onChange={e=>setForm({...form,type:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
-                  {ORGS.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-              {[['country',t.form.country],['name',t.form.name],['position',t.form.position],['email',t.form.email]].map(([k,label]) => (
-                <div key={k} style={{ marginBottom:14 }}>
-                  <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
-                </div>
-              ))}
-              <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.focus}</label>
-                <textarea rows={2} value={form.focus} onChange={e=>setForm({...form,focus:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box', resize:'vertical' }} />
-              </div>
-              <button type="submit" style={{ width:'100%', background:'#8b5cf6', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor:'pointer' }}>{t.form.submit}</button>
-            </form>}
-          </div>
-        </div>
-      </div>
-    </div>
+    <PortalLayout config={{
+      icon: '🌐',
+      title: lang === 'th' ? 'พอร์ทัลองค์กรระหว่างประเทศ' : lang === 'en' ? 'International Organization Portal' : '国际组织门户',
+      titleGrad: 'linear-gradient(90deg,#7c3aed,#0891b2)',
+      sub: lang === 'en' ? 'Partner with OpenThai.ai to accelerate economic development, digital inclusion, and sustainable trade across Southeast Asia' : lang === 'th' ? 'ร่วมมือกับ OpenThai.ai เพื่อเร่งการพัฒนาเศรษฐกิจ การรวมดิจิทัล และการค้าอย่างยั่งยืนในเอเชียตะวันออกเฉียงใต้' : '与OpenThai.ai合作，加速东南亚经济发展、数字包容和可持续贸易',
+      color: '#7c3aed', accent: '#0891b2',
+      lang, setLang, t,
+      stats: [
+        { value: 'ASEAN', label: lang === 'en' ? 'Focus Region' : 'ภูมิภาคหลัก' },
+        { value: 'SDG', label: lang === 'en' ? 'Aligned Goals' : 'เป้าหมาย SDG' },
+        { value: '3', label: lang === 'en' ? 'Languages' : 'ภาษา' },
+        { value: 'MOU', label: lang === 'en' ? 'Partnership Model' : 'รูปแบบ MOU' },
+      ],
+      features: [
+        { icon: '📈', title: lang === 'en' ? 'Economic Development Programs' : lang === 'th' ? 'โปรแกรมพัฒนาเศรษฐกิจ' : '经济发展计划', desc: lang === 'en' ? 'AI-powered tools to help SMEs, cooperatives, and micro-enterprises in emerging economies access digital markets.' : lang === 'th' ? 'เครื่องมือ AI ช่วย SME สหกรณ์ และผู้ประกอบการรายย่อยในเศรษฐกิจเกิดใหม่เข้าถึงตลาดดิจิทัล' : 'AI工具帮助SME、合作社进入数字市场' },
+        { icon: '🌱', title: lang === 'en' ? 'Sustainable Trade' : lang === 'th' ? 'การค้าอย่างยั่งยืน' : '可持续贸易', desc: lang === 'en' ? 'Traceability tools and green commerce features aligned with SDG 8 (Decent Work) and SDG 12 (Responsible Consumption).' : lang === 'th' ? 'เครื่องมือ traceability และ green commerce ที่สอดคล้องกับ SDG 8 และ SDG 12' : '与SDG 8和SDG 12对齐的可追溯性工具和绿色商业功能' },
+        { icon: '👩‍💼', title: lang === 'en' ? 'Women & Youth Empowerment' : lang === 'th' ? 'เสริมพลังผู้หญิงและเยาวชน' : '妇女青年赋权', desc: lang === 'en' ? 'Dedicated programs for women entrepreneurs and youth-led businesses — priority access and lower commission rates.' : lang === 'th' ? 'โปรแกรมพิเศษสำหรับผู้ประกอบการสตรีและธุรกิจที่นำโดยเยาวชน — สิทธิ์เข้าถึงก่อนและอัตราค่าคอมมิชชั่นต่ำกว่า' : '为女性企业家和青年企业提供优先准入和较低佣金率' },
+        { icon: '📡', title: lang === 'en' ? 'Digital Inclusion' : lang === 'th' ? 'ความครอบคลุมทางดิจิทัล' : '数字包容', desc: lang === 'en' ? 'Multilingual AI interfaces and offline-capable tools ensure rural and underserved communities can participate.' : lang === 'th' ? 'อินเทอร์เฟซ AI หลายภาษาและเครื่องมือที่รองรับ offline ช่วยให้ชุมชนชนบทมีส่วนร่วมได้' : '多语言AI界面和离线工具确保农村和服务不足社区参与' },
+        { icon: '📊', title: lang === 'en' ? 'Impact Measurement' : lang === 'th' ? 'การวัดผลกระทบ' : '影响力测量', desc: lang === 'en' ? 'Dashboards and reports for measuring SDG impact, beneficiary reach, and economic outcomes of cooperation programs.' : lang === 'th' ? 'Dashboard และรายงานสำหรับวัด SDG impact การเข้าถึงผู้รับประโยชน์ และผลลัพธ์ทางเศรษฐกิจ' : '用于衡量SDG影响、受益人范围和经济成果的仪表板和报告' },
+        { icon: '🔬', title: lang === 'en' ? 'Research & Data Sharing' : lang === 'th' ? 'การวิจัยและแบ่งปันข้อมูล' : '研究与数据共享', desc: lang === 'en' ? 'Anonymized, aggregated trade data available for economic research — supporting evidence-based policy development.' : lang === 'th' ? 'ข้อมูลการค้าแบบไม่ระบุตัวตนสำหรับการวิจัยเศรษฐกิจ — สนับสนุนการพัฒนานโยบายที่อิงหลักฐาน' : '用于经济研究的匿名聚合贸易数据——支持循证政策制定' },
+      ],
+      steps: [
+        { title: lang === 'en' ? 'Submit Partnership Inquiry' : lang === 'th' ? 'ยื่นคำขอความร่วมมือ' : '提交合作询问', desc: lang === 'en' ? 'Describe your organization, mandate, and how OpenThai.ai fits your program objectives.' : lang === 'th' ? 'อธิบายองค์กร อำนาจหน้าที่ และวิธีที่ OpenThai.ai เหมาะกับวัตถุประสงค์โปรแกรมของท่าน' : '描述贵组织、授权及OpenThai.ai如何符合计划目标' },
+        { title: lang === 'en' ? 'Alignment Workshop' : lang === 'th' ? 'Workshop ปรับทิศทาง' : '对齐研讨会', desc: lang === 'en' ? 'Joint workshop to align cooperation scope, impact metrics, and technical implementation with your mandate.' : lang === 'th' ? 'Workshop ร่วมเพื่อปรับขอบเขตความร่วมมือ ตัวชี้วัดผลกระทบ และการดำเนินการทางเทคนิคให้สอดคล้องกัน' : '联合研讨会，对齐合作范围、影响指标和技术实施' },
+        { title: lang === 'en' ? 'Program Launch & Monitoring' : lang === 'th' ? 'เปิดตัวโปรแกรมและติดตาม' : '计划启动与监测', desc: lang === 'en' ? 'Launch targeted programs with dedicated dashboards, impact tracking, and quarterly reviews.' : lang === 'th' ? 'เปิดตัวโปรแกรมที่กำหนดเป้าหมาย พร้อม dashboard ติดตามผลกระทบ และการทบทวนรายไตรมาส' : '启动定向计划，配备专用仪表板、影响跟踪和季度审查' },
+      ],
+      formTitle: lang === 'en' ? 'Partnership Inquiry' : lang === 'th' ? 'คำขอความร่วมมือ' : '合作询问',
+      formFields: [
+        { key: 'org', label: lang === 'en' ? 'Organization Name' : lang === 'th' ? 'ชื่อองค์กร' : '组织名称', placeholder: lang === 'en' ? 'UNDP, ADB, ILO, APEC...' : 'UNDP, ADB, ILO...' },
+        { key: 'mandate', label: lang === 'en' ? 'Mandate / Focus Area' : lang === 'th' ? 'อำนาจหน้าที่ / พื้นที่ดำเนินงาน' : '授权/重点领域', type: 'select', options: lang === 'en' ? ['Economic Development', 'Trade & Commerce', 'Gender Equality', 'Youth Employment', 'Sustainable Development', 'Digital Inclusion', 'Other'] : lang === 'th' ? ['การพัฒนาเศรษฐกิจ', 'การค้า', 'ความเท่าเทียมทางเพศ', 'การจ้างงานเยาวชน', 'การพัฒนาที่ยั่งยืน', 'การรวมดิจิทัล', 'อื่นๆ'] : ['经济发展', '贸易', '性别平等', '青年就业', '可持续发展', '数字包容', '其他'] },
+        { key: 'contact', label: lang === 'en' ? 'Contact Person & Title' : lang === 'th' ? 'ผู้ติดต่อ และตำแหน่ง' : '联系人及职称', placeholder: lang === 'en' ? 'Dr. Smith, Programme Officer' : 'ชื่อ / ตำแหน่ง' },
+        { key: 'email', label: lang === 'en' ? 'Official Email' : lang === 'th' ? 'อีเมลทางการ' : '官方邮箱', type: 'email', placeholder: 'contact@undp.org' },
+        { key: 'countries', label: lang === 'en' ? 'Target Countries / Region' : lang === 'th' ? 'ประเทศ / ภูมิภาคเป้าหมาย' : '目标国家/地区', placeholder: lang === 'en' ? 'Thailand, ASEAN, GMS...' : 'ไทย, อาเซียน...' },
+      ],
+      apiEndpoint: '/api/leads/submit',
+      successMsg: lang === 'en' ? 'Inquiry received! Our partnerships team will be in touch within 3 business days.' : lang === 'th' ? 'ส่งคำขอเรียบร้อย! ทีมงานจะติดต่อภายใน 3 วันทำการ' : '收到询问！3个工作日内联系。',
+    }} />
   );
 }

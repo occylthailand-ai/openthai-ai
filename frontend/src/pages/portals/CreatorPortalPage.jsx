@@ -1,69 +1,52 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiUrl } from '../../apiBase';
+import PortalLayout from '../../components/PortalLayout';
 
 const T = {
-  th: { title:'ทางเข้าผู้ร่วมสร้างคอนเทนต์', sub:'ร่วมสร้างคอนเทนต์ AI จากทุกแพลตฟอร์ม ไม่จำกัดประเทศ', platforms:['TikTok','Instagram','YouTube','Facebook','X (Twitter)','LinkedIn','Twitch','Other'], benefits:['AI ช่วยสร้างคอนเทนต์ฟรี','Trending analysis แบบ real-time','ระบบ scheduling อัตโนมัติ','รายได้จาก creator program'], form:{ name:'ชื่อ / Channel Name', country:'ประเทศ', platform:'แพลตฟอร์มหลัก', followers:'จำนวน Followers (โดยประมาณ)', email:'อีเมล', submit:'เข้าร่วม Creator Program', ok:'ยินดีต้อนรับ! ตรวจสอบอีเมลของท่านเพื่อรับ access ครับ' } },
-  en: { title:'Content Creator Portal', sub:'Create AI-powered content across all platforms, worldwide', platforms:['TikTok','Instagram','YouTube','Facebook','X (Twitter)','LinkedIn','Twitch','Other'], benefits:['Free AI content creation tools','Real-time trending analysis','Automated scheduling system','Income from creator program'], form:{ name:'Name / Channel Name', country:'Country', platform:'Primary Platform', followers:'Followers Count (approx.)', email:'Email', submit:'Join Creator Program', ok:'Welcome! Check your email for access details.' } },
-  zh: { title:'内容创作者门户', sub:'利用AI跨平台创作内容，面向全球', platforms:['TikTok','Instagram','YouTube','Facebook','X (Twitter)','LinkedIn','Twitch','其他'], benefits:['免费AI内容创作工具','实时热点分析','自动排期系统','创作者计划收入'], form:{ name:'姓名/频道名', country:'国家', platform:'主要平台', followers:'粉丝数量（大约）', email:'邮箱', submit:'加入创作者计划', ok:'欢迎！请查看您的邮件获取访问详情。' } },
+  th: { cta: 'เริ่มสร้าง Content', featuresTitle: 'เครื่องมือสำหรับ Creator', stepsTitle: 'เริ่มต้นง่ายๆ', submit: 'สมัครทันที', submitAnother: 'สมัครอีก', formNote: 'ไม่มีค่าใช้จ่าย ทดลองใช้ได้เลย' },
+  en: { cta: 'Start Creating', featuresTitle: 'Tools for Creators', stepsTitle: 'Get Started Easily', submit: 'Apply Now', submitAnother: 'Apply Again', formNote: 'No cost. Start immediately.' },
+  zh: { cta: '开始创作', featuresTitle: '创作者工具', stepsTitle: '简单开始', submit: '立即申请', submitAnother: '再次申请', formNote: '免费。立即开始。' },
 };
 
 export default function CreatorPortalPage() {
   const [lang, setLang] = useState('th');
-  const [form, setForm] = useState({ name:'', country:'', platform:'TikTok', followers:'', email:'' });
-  const [sent, setSent] = useState(false);
-  const navigate = useNavigate();
   const t = T[lang];
-
-  const submit = async e => {
-    e.preventDefault();
-    try { await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...form, type:'creator', lang}) }); } catch {}
-    setSent(true);
-  };
-
   return (
-    <div style={{ minHeight:'100vh', background:'#0a0a0f', color:'#fff', fontFamily:'system-ui,sans-serif' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 32px', borderBottom:'1px solid #1e1e2e' }}>
-        <button onClick={() => navigate('/portals')} style={{ background:'none', border:'1px solid #333', color:'#aaa', padding:'8px 16px', borderRadius:8, cursor:'pointer' }}>← กลับ</button>
-        <div style={{ display:'flex', gap:8 }}>
-          {['th','en','zh'].map(l => <button key={l} onClick={() => setLang(l)} style={{ background:lang===l?'#ec4899':'none', border:'1px solid #333', color:'#fff', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:13 }}>{l==='th'?'ไทย':l==='en'?'English':'中文'}</button>)}
-        </div>
-      </div>
-      <div style={{ maxWidth:900, margin:'0 auto', padding:'48px 32px' }}>
-        <div style={{ textAlign:'center', marginBottom:40 }}>
-          <div style={{ fontSize:56, marginBottom:16 }}>🎨</div>
-          <h1 style={{ fontSize:36, fontWeight:800, color:'#ec4899', margin:'0 0 12px' }}>{t.title}</h1>
-          <p style={{ color:'#aaa', fontSize:18 }}>{t.sub}</p>
-        </div>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:32 }}>
-          <div>
-            <h3 style={{ color:'#ec4899', marginBottom:20 }}>สิทธิประโยชน์</h3>
-            {t.benefits.map((b,i) => <div key={i} style={{ display:'flex', gap:12, marginBottom:14, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#ec4899' }}>✓</span><span style={{ color:'#ddd' }}>{b}</span></div>)}
-            <h3 style={{ color:'#ec4899', margin:'28px 0 16px' }}>Platforms</h3>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-              {t.platforms.map(p => <span key={p} style={{ background:'#1a1a2e', border:'1px solid #ec489933', color:'#ec4899', padding:'6px 14px', borderRadius:20, fontSize:13 }}>{p}</span>)}
-            </div>
-          </div>
-          <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #ec489933' }}>
-            {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
-            <form onSubmit={submit}>
-              {[['name',t.form.name,'text'],['country',t.form.country,'text'],['followers',t.form.followers,'number'],['email',t.form.email,'email']].map(([k,label,type]) => (
-                <div key={k} style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input type={type} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
-                </div>
-              ))}
-              <div style={{ marginBottom:16 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.platform}</label>
-                <select value={form.platform} onChange={e=>setForm({...form,platform:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
-                  {t.platforms.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <button type="submit" style={{ width:'100%', background:'#ec4899', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor:'pointer', marginTop:8 }}>{t.form.submit}</button>
-            </form>}
-          </div>
-        </div>
-      </div>
-    </div>
+    <PortalLayout config={{
+      icon: '🎬',
+      title: lang === 'th' ? 'พอร์ทัล Creator' : lang === 'en' ? 'Creator Portal' : '创作者门户',
+      titleGrad: 'linear-gradient(90deg,#ec4899,#8b5cf6)',
+      sub: lang === 'th' ? 'AI ช่วยสร้าง Content ไวขึ้น 10 เท่า — Hook · Script · Caption · Hashtag · Video Script ในภาษาไทย จีน อังกฤษ' : lang === 'en' ? 'AI helps you create content 10x faster — Hook, Script, Caption, Hashtag, Video Script in Thai, Chinese, English' : 'AI帮助您创作速度提升10倍——Thai、Chinese、English的Hook、脚本、Caption、Hashtag、视频脚本',
+      color: '#ec4899', accent: '#8b5cf6',
+      lang, setLang, t,
+      stats: [
+        { value: '10s', label: lang === 'th' ? 'สร้าง Content' : 'Content Created' },
+        { value: '3', label: lang === 'th' ? 'ภาษา' : 'Languages' },
+        { value: '9', label: lang === 'th' ? 'AI Tools' : 'AI Tools' },
+        { value: '฿0', label: lang === 'th' ? 'ค่าเริ่มต้น' : 'Start Free' },
+      ],
+      features: [
+        { icon: '⚡', title: lang === 'th' ? 'AI Content Generator' : 'AI Content Generator', desc: lang === 'th' ? 'สร้าง Hook · Script · Caption · Hashtag สำหรับ TikTok, IG Reels, YouTube Shorts ใน 10 วินาที' : 'Generate Hook, Script, Caption, Hashtag for TikTok, IG Reels, YouTube Shorts in 10 seconds.' },
+        { icon: '🎙️', title: lang === 'th' ? 'Voice Command' : 'Voice Command', desc: lang === 'th' ? 'สั่งงาน AI ด้วยเสียงภาษาไทย ไม่ต้องพิมพ์ เหมาะสำหรับ creator ที่ทำคนเดียว' : 'Give Thai-language voice commands to AI — perfect for solo creators.' },
+        { icon: '🎬', title: lang === 'th' ? 'Video Script Generator' : 'Video Script Generator', desc: lang === 'th' ? 'สร้าง Script + Storyboard วิดีโอสินค้าอัตโนมัติ พร้อม shot list และ timing' : 'Auto-generate Script + Storyboard with shot list and timing.' },
+        { icon: '🔍', title: lang === 'th' ? 'AI Critic' : 'AI Critic', desc: lang === 'th' ? 'ให้ AI วิเคราะห์ content ของคุณ ให้คะแนน 0–10 พร้อมคำแนะนำปรับปรุงแบบละเอียด' : 'AI scores your content 0–10 with detailed improvement suggestions.' },
+        { icon: '📈', title: lang === 'th' ? 'Trend Product Hunter' : 'Trend Product Hunter', desc: lang === 'th' ? 'รู้ก่อนว่าตอนนี้ควรทำ content เรื่องอะไร ก่อนที่ทุกคนจะทำ' : 'Know what content to make before it becomes mainstream.' },
+        { icon: '💰', title: lang === 'th' ? 'Affiliate + Creator Fund' : 'Affiliate + Creator Fund', desc: lang === 'th' ? 'แชร์สินค้าผ่าน content รับ commission 8–10% ทุกยอดขาย' : 'Share products through your content, earn 8–10% commission per sale.' },
+      ],
+      steps: [
+        { title: lang === 'th' ? 'สมัครและรับ Creator Account' : 'Sign Up for Creator Account', desc: lang === 'th' ? 'กรอกฟอร์ม รับสิทธิ์ใช้งาน AI Tools ทั้ง 9 โปรแกรมฟรี' : 'Fill the form, get access to all 9 AI tools for free.' },
+        { title: lang === 'th' ? 'เลือกสินค้าและสร้าง Content' : 'Choose Products & Create Content', desc: lang === 'th' ? 'เลือกสินค้าจาก catalog ให้ AI ช่วยสร้าง script และ caption ในภาษาที่ต้องการ' : 'Pick products from the catalog, let AI generate scripts and captions in your language.' },
+        { title: lang === 'th' ? 'โพสต์และรับ Commission' : 'Post & Earn Commission', desc: lang === 'th' ? 'โพสต์ content พร้อม affiliate link รับ commission อัตโนมัติทุกยอดขายที่เกิดขึ้น' : 'Post content with your affiliate link, earn commission on every resulting sale.' },
+      ],
+      formTitle: lang === 'th' ? 'สมัครเป็น Creator' : lang === 'en' ? 'Join as Creator' : '加入创作者计划',
+      formFields: [
+        { key: 'name', label: lang === 'th' ? 'ชื่อ / ชื่อ Channel' : 'Name / Channel Name', placeholder: 'สมชาย / @somchai_creates' },
+        { key: 'email', label: 'Email', type: 'email', placeholder: 'creator@example.com' },
+        { key: 'primary_platform', label: lang === 'th' ? 'Platform หลัก' : 'Primary Platform', type: 'select', options: ['TikTok', 'YouTube', 'Instagram', 'Facebook', 'Line', 'Other'] },
+        { key: 'content_type', label: lang === 'th' ? 'ประเภท Content' : 'Content Type', type: 'select', options: lang === 'th' ? ['สินค้า / Product Review', 'ไลฟ์สไตล์', 'อาหาร', 'แฟชั่น', 'เทคโนโลยี', 'ท่องเที่ยว', 'อื่นๆ'] : ['Product Review', 'Lifestyle', 'Food', 'Fashion', 'Tech', 'Travel', 'Other'] },
+        { key: 'followers', label: lang === 'th' ? 'จำนวน Followers รวม' : 'Total Followers', type: 'select', options: ['< 1K', '1K–10K', '10K–100K', '100K–1M', '1M+'] },
+      ],
+      apiEndpoint: '/api/leads/submit',
+      successMsg: lang === 'th' ? 'สมัครเรียบร้อย! ทีมงานจะส่ง Creator Access ให้ภายใน 24 ชั่วโมง' : 'Applied! Team will send your Creator Access within 24 hours.',
+    }} />
   );
 }
