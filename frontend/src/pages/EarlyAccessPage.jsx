@@ -166,7 +166,7 @@ export default function EarlyAccessPage() {
 
       {/* Programs */}
       <div id="programs" style={S.section}>
-        <h2 style={S.h2}>9 โปรแกรม AI ที่สร้างมาเพื่อคุณ</h2>
+        <h2 style={S.h2}>9 โปรแกรม AI กำเนิดเพื่อคุณ</h2>
         <p style={S.sub}>แต่ละโปรแกรมตอบปัญหาจริงที่พ่อค้าแม่ค้าไทยเจออยู่ทุกวัน</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 14 }}>
           {PROGRAMS.map(p => (
