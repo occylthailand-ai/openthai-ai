@@ -289,7 +289,7 @@ export default function EarlyAccessPage() {
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
                 </div>
                 <div>
-                  <label style={S.label}>เบอร์โทรศัพท์ (ไม่บังคับ)</label>
+                  <label style={S.label}>เบอร์โทรศัพท์*</label>
                   <input style={S.input} type="tel" placeholder="08x-xxx-xxxx" value={form.phone}
                     onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
                 </div>
