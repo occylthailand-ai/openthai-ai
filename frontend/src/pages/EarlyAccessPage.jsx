@@ -14,11 +14,13 @@ const PROGRAMS = [
 ];
 
 const COMPARE_ROWS = [
-  { label: 'บทบาท', them: 'ตลาด — คุณอยู่ในพื้นที่ของเขา', us: 'ทีมงานของคุณ — ช่วยคุณขายทุกแพลตฟอร์ม' },
+  { label: 'บทบาท', them: 'บ้านเช่า — คุณอยู่ในพื้นที่ของเขา', us: 'ทีมงานของคุณ — ช่วยขายได้ทุกแพลตฟอร์ม' },
+  { label: 'ความเป็นเจ้าของ', them: 'ถูกล็อกอยู่ใน platform เดียว', us: 'ขายได้พร้อมกันทุก platform' },
   { label: 'ข้อมูลลูกค้า', them: 'เป็นของแพลตฟอร์ม', us: 'เป็นของคุณ 100%' },
   { label: 'กฎระเบียบ', them: 'ต้องทำตามกฎของเขา', us: 'คุณกำหนดเอง' },
   { label: 'AI Tools', them: 'มีบ้าง แต่จำกัด', us: '9 โปรแกรม AI พร้อมใช้' },
   { label: 'ภาษา', them: 'ไทย/อังกฤษ', us: 'ไทย · จีน · อังกฤษ' },
+  { label: 'Affiliate', them: 'ระบบปิด ขึ้นกับ platform', us: 'แชร์ link ได้ทุก platform รับ commission ทันที' },
 ];
 
 const ROLES = [
@@ -230,7 +232,7 @@ export default function EarlyAccessPage() {
       {/* vs Shopee/TikTok */}
       <div style={S.sectionAlt}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
-          <h2 style={{ ...S.h2, textAlign: 'center' }}>TikTok Shop และ Shopee คือบ้านเช่าของท่าน</h2>
+          <h2 style={{ ...S.h2, textAlign: 'center' }}>TikTok · Shopee · Lazada · FB · Instagram · Line คือบ้านเช่าของท่าน</h2>
           <div style={{ textAlign: 'center', margin: '0 auto 36px', maxWidth: 640 }}>
             <p style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.5, margin: 0 }}>
               <span style={{ background: 'linear-gradient(90deg,#6366f1,#10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>OpenThai.ai คือทีมงานส่วนตัวของคุณ</span>
@@ -241,7 +243,7 @@ export default function EarlyAccessPage() {
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
                   <th style={{ padding: '12px 16px', textAlign: 'left', color: '#475569', fontWeight: 600, borderBottom: '1px solid #e2e8f0' }}>เรื่อง</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: 600, borderBottom: '1px solid #e2e8f0' }}>TikTok Shop / Shopee</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', color: '#475569', fontWeight: 600, borderBottom: '1px solid #e2e8f0' }}>TikTok / Shopee / Lazada / FB / IG / Line</th>
                   <th style={{ padding: '12px 16px', textAlign: 'center', color: '#6366f1', fontWeight: 700, borderBottom: '1px solid #e2e8f0', background: 'rgba(99,102,241,0.04)' }}>OpenThai.ai</th>
                 </tr>
               </thead>
@@ -383,7 +385,7 @@ export default function EarlyAccessPage() {
           {[
             ['ระบบใช้งานได้จริงไหม?', 'ใช้ได้จริงทั้ง 9 โปรแกรม ผ่าน Claude AI ของ Anthropic — ไม่ใช่ mock หรือ demo ระบบ Payment รองรับ PromptPay และบัตรเครดิต พร้อมกับการชำระช่องทางอื่นๆด้วย'],
             ['Early Access ใช้ฟรีได้นานแค่ไหน?', 'ตลอดช่วง Early Access — ประมาณ Q3-Q4 2026 ผู้ที่ลงทะเบียนในช่วงนี้ได้รับสิทธิ์ราคาพิเศษตลอดอายุบัญชี'],
-            ['ต่างจาก TikTok Shop ยังไง?', 'TikTok Shop คือตลาด — คุณขายในพื้นที่ของเขา เราคือทีมงาน AI ของคุณ ที่ช่วยคุณขายได้ดีขึ้นในทุกแพลตฟอร์ม ข้อมูลลูกค้าเป็นของคุณ'],
+            ['ต่างจาก TikTok · Shopee · Lazada · FB · IG · Line ยังไง?', 'แพลตฟอร์มเหล่านั้นคือบ้านเช่า — คุณขายในพื้นที่ของเขา ข้อมูลลูกค้าเป็นของเขา กฎเป็นของเขา OpenThai.ai คือทีมงาน AI ส่วนตัวของคุณ ที่ช่วยให้คุณขายได้ดีขึ้นในทุกแพลตฟอร์มพร้อมกัน โดยข้อมูลทั้งหมดเป็นของคุณ 100%'],
             ['รองรับภาษาอะไรบ้าง?', 'ไทย · จีน (Simplified + Traditional) · อังกฤษ — ทุกโปรแกรมรองรับ 3 ภาษา'],
             ['มี Affiliate Program ไหม?', 'มี — ลงทะเบียน Early Access แล้วรับ link พิเศษ แชร์ให้เพื่อนได้คอมมิชชั่น ค่าตอบแทนโปร่งใส ชัดเจน ไม่มีเงื่อนไขซับซ้อน หากการขายของจาก TikTok ID, Shopee ID, Lazada ID, FB ID, Instagram ID, Line ID นั้นๆ เสร็จสิ้นและรอการจ่ายเงินกลับเข้า OpenThai.ai — เงินค่า Affiliate ที่ผ่านการแชร์ของท่านจะโอนให้ท่านตามสัดส่วนที่คำนวณถูกต้องแล้วในทันที'],
           ].map(([q, a]) => (
