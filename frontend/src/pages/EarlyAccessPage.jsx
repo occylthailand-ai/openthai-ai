@@ -166,9 +166,6 @@ export default function EarlyAccessPage() {
 
       {/* Programs */}
       <div id="programs" style={S.section}>
-        <div style={{ display: 'inline-block', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 20, padding: '4px 14px', fontSize: 12, color: '#059669', fontWeight: 600, marginBottom: 16 }}>
-          ใช้งานได้จริงทั้งหมด
-        </div>
         <h2 style={S.h2}>9 โปรแกรม AI ที่สร้างมาเพื่อคุณ</h2>
         <p style={S.sub}>แต่ละโปรแกรมตอบปัญหาจริงที่พ่อค้าแม่ค้าไทยเจออยู่ทุกวัน</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 14 }}>
