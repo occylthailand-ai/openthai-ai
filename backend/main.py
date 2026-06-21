@@ -17,6 +17,7 @@ import os
 from dotenv import load_dotenv
 import json
 from datetime import datetime
+import pathlib
 
 # Load environment variables
 load_dotenv()
@@ -340,6 +341,56 @@ async def get_categories():
         "china": "สินค้านำเข้าจากจีน",
         "global": "สินค้านำเข้าจากทั่วโลก"
     }
+
+# ================== EARLY ACCESS ==================
+
+EARLY_ACCESS_FILE = pathlib.Path("data/early_access.json")
+EARLY_ACCESS_FILE.parent.mkdir(exist_ok=True)
+
+class EarlyAccessRequest(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = ""
+    line_id: Optional[str] = ""
+    role: str
+
+@app.post("/api/early-access/register")
+async def register_early_access(req: EarlyAccessRequest):
+    """ลงทะเบียน Early Access"""
+    records: list = []
+    if EARLY_ACCESS_FILE.exists():
+        try:
+            records = json.loads(EARLY_ACCESS_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            records = []
+
+    # ตรวจ duplicate email
+    if any(r.get("email") == req.email for r in records):
+        raise HTTPException(status_code=409, detail="อีเมลนี้ลงทะเบียนไว้แล้ว")
+
+    entry = {
+        "name": req.name,
+        "email": req.email,
+        "phone": req.phone,
+        "line_id": req.line_id,
+        "role": req.role,
+        "registered_at": datetime.utcnow().isoformat(),
+    }
+    records.append(entry)
+    EARLY_ACCESS_FILE.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"ok": True, "message": f"ยินดีต้อนรับ {req.name}!", "total": len(records)}
+
+@app.get("/api/early-access/count")
+async def early_access_count():
+    """จำนวนผู้ลงทะเบียน Early Access"""
+    if not EARLY_ACCESS_FILE.exists():
+        return {"count": 0}
+    try:
+        records = json.loads(EARLY_ACCESS_FILE.read_text(encoding="utf-8"))
+        return {"count": len(records)}
+    except Exception:
+        return {"count": 0}
+
 
 # ================== RUN SERVER ==================
 

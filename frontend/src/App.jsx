@@ -52,6 +52,7 @@ import GovThaiPortalPage from './pages/portals/GovThaiPortalPage';
 import GovIntlPortalPage from './pages/portals/GovIntlPortalPage';
 import IntlOrgPortalPage from './pages/portals/IntlOrgPortalPage';
 import FoundationPortalPage from './pages/portals/FoundationPortalPage';
+import EarlyAccessPage from './pages/EarlyAccessPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -149,6 +150,7 @@ function App() {
             <Route path="/portals/gov-intl" element={<GovIntlPortalPage />} />
             <Route path="/portals/intl-org" element={<IntlOrgPortalPage />} />
             <Route path="/portals/foundation" element={<FoundationPortalPage />} />
+            <Route path="/early-access" element={<EarlyAccessPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <PDPABanner />
