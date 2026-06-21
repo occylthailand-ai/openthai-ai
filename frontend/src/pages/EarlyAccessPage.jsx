@@ -138,7 +138,53 @@ export default function EarlyAccessPage() {
         <p style={{ fontSize: 18, color: '#64748b', lineHeight: 1.7, maxWidth: 600, margin: '0 auto 36px' }}>
           ไม่ว่าคุณจะขายของบน TikTok, Shopee, หรือตลาดต่างประเทศ — OpenThai.ai คือทีมงาน AI ของคุณ ที่ช่วยตั้งแต่ "ไม่รู้จะขายอะไร" ไปจนถึง "ขายได้ทั่วโลก"
         </p>
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
+          {/* 3D Arrow */}
+          <style>{`
+            @keyframes arrow-bounce {
+              0%,100% { transform: translateX(0) rotateY(0deg); }
+              50% { transform: translateX(10px) rotateY(20deg); }
+            }
+            .arrow-3d {
+              display: inline-flex;
+              align-items: center;
+              animation: arrow-bounce 1.2s ease-in-out infinite;
+              filter: drop-shadow(3px 4px 6px rgba(99,102,241,0.45));
+              cursor: default;
+            }
+            .arrow-3d svg {
+              width: 52px;
+              height: 52px;
+            }
+          `}</style>
+          <span className="arrow-3d">
+            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="arrowFace" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#818cf8"/>
+                  <stop offset="100%" stopColor="#10b981"/>
+                </linearGradient>
+                <linearGradient id="arrowTop" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#a5b4fc"/>
+                  <stop offset="100%" stopColor="#34d399"/>
+                </linearGradient>
+                <linearGradient id="arrowSide" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#4f46e5"/>
+                  <stop offset="100%" stopColor="#059669"/>
+                </linearGradient>
+              </defs>
+              {/* Arrow body — front face */}
+              <polygon points="8,28 48,28 48,18 72,40 48,62 48,52 8,52" fill="url(#arrowFace)"/>
+              {/* Top bevel */}
+              <polygon points="8,28 48,28 52,24 12,24" fill="url(#arrowTop)" opacity="0.8"/>
+              {/* Side bevel */}
+              <polygon points="52,24 72,40 72,44 52,28" fill="url(#arrowSide)" opacity="0.7"/>
+              {/* Bottom bevel */}
+              <polygon points="8,52 48,52 52,56 12,56" fill="#064e3b" opacity="0.35"/>
+              {/* Highlight */}
+              <polygon points="8,28 48,28 48,32 8,32" fill="white" opacity="0.18"/>
+            </svg>
+          </span>
           <a href="#register" style={{ background: 'linear-gradient(90deg,#6366f1,#10b981)', color: '#fff', padding: '14px 32px', borderRadius: 10, fontWeight: 700, fontSize: 15, textDecoration: 'none' }}>
             ลงทะเบียนใช้ฟรี →
           </a>
