@@ -335,7 +335,7 @@ export default function EarlyAccessPage() {
         <h2 style={{ ...S.h2, textAlign: 'center' }}>คำถามที่พบบ่อย</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 680, margin: '32px auto 0' }}>
           {[
-            ['ระบบใช้งานได้จริงไหม?', 'ใช้ได้จริงทั้ง 9 โปรแกรม ผ่าน Claude AI ของ Anthropic — ไม่ใช่ mock หรือ demo ระบบ Payment รองรับ PromptPay และบัตรเครดิต'],
+            ['ระบบใช้งานได้จริงไหม?', 'ใช้ได้จริงทั้ง 9 โปรแกรม ผ่าน Claude AI ของ Anthropic — ไม่ใช่ mock หรือ demo ระบบ Payment รองรับ PromptPay และบัตรเครดิต พร้อมกับการชำระช่องทางอื่นๆด้วย'],
             ['Early Access ใช้ฟรีได้นานแค่ไหน?', 'ตลอดช่วง Early Access — ประมาณ Q3-Q4 2026 ผู้ที่ลงทะเบียนในช่วงนี้ได้รับสิทธิ์ราคาพิเศษตลอดอายุบัญชี'],
             ['ต่างจาก TikTok Shop ยังไง?', 'TikTok Shop คือตลาด — คุณขายในพื้นที่ของเขา เราคือทีมงาน AI ของคุณ ที่ช่วยคุณขายได้ดีขึ้นในทุกแพลตฟอร์ม ข้อมูลลูกค้าเป็นของคุณ'],
             ['รองรับภาษาอะไรบ้าง?', 'ไทย · จีน (Simplified + Traditional) · อังกฤษ — ทุกโปรแกรมรองรับ 3 ภาษา'],
