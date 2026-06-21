@@ -554,6 +554,149 @@ async def affiliate_summary(affiliate_code: str):
     }
 
 
+# ================== TREND PRODUCT HUNTER ==================
+
+class TrendRequest(BaseModel):
+    category: Optional[str] = "all"   # all | food | fashion | beauty | tech | home
+    platform: Optional[str] = "all"   # all | tiktok | shopee | lazada
+    market: Optional[str] = "TH"      # TH | CN | INTL
+
+@app.post("/api/trend-hunter/search")
+async def trend_hunter_search(req: TrendRequest):
+    """AI จะค้นให้ว่าตอนนี้ควรขายอะไร"""
+    prompt = f"""คุณเป็น AI ผู้เชี่ยวชาญด้านการค้าออนไลน์ไทย
+วันนี้คือ {datetime.utcnow().strftime('%Y-%m-%d')} ตลาด: {req.market} แพลตฟอร์ม: {req.platform} หมวด: {req.category}
+
+วิเคราะห์และแนะนำ 5 สินค้าที่น่าขายที่สุดตอนนี้ ตอบเป็น JSON:
+{{
+  "trending_products": [
+    {{
+      "rank": 1,
+      "name": "ชื่อสินค้า",
+      "category": "หมวดหมู่",
+      "why_now": "เหตุผลที่ควรขายตอนนี้",
+      "target_platform": "แพลตฟอร์มที่เหมาะ",
+      "estimated_margin": "กำไรโดยประมาณ %",
+      "competition_level": "low|medium|high",
+      "quick_tip": "เคล็ดลับการขาย"
+    }}
+  ],
+  "market_insight": "ภาพรวมตลาดตอนนี้",
+  "best_timing": "ช่วงเวลาที่ควรโพสต์"
+}}"""
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-5-20251001",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        text = response.content[0].text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"): text = text[4:]
+        return json.loads(text.strip())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ================== CUSTOMER FINDER ==================
+
+class CustomerFinderRequest(BaseModel):
+    product_name: str
+    product_category: Optional[str] = ""
+    platform: Optional[str] = "all"
+    market: Optional[str] = "TH"
+
+@app.post("/api/customer-finder/analyze")
+async def customer_finder_analyze(req: CustomerFinderRequest):
+    """AI จะค้นหากลุ่มลูกค้าที่ใช่ให้ทันที"""
+    prompt = f"""คุณเป็น AI ผู้เชี่ยวชาญด้าน Customer Segmentation สำหรับตลาดออนไลน์ไทย
+สินค้า: {req.product_name} | หมวด: {req.product_category} | แพลตฟอร์ม: {req.platform} | ตลาด: {req.market}
+
+วิเคราะห์กลุ่มลูกค้าที่ใช่ ตอบเป็น JSON:
+{{
+  "primary_segments": [
+    {{
+      "segment_name": "ชื่อกลุ่ม",
+      "age_range": "ช่วงอายุ",
+      "gender": "เพศ",
+      "income_level": "ระดับรายได้",
+      "interests": ["ความสนใจ"],
+      "pain_points": ["ปัญหาที่เขาเจอ"],
+      "where_to_find": ["ช่องทางหาลูกค้า"],
+      "best_message": "ข้อความที่โดนใจเขา",
+      "conversion_rate": "โอกาสซื้อสูง|ปานกลาง|ต่ำ"
+    }}
+  ],
+  "total_market_size": "ขนาดตลาดโดยประมาณ",
+  "best_platform": "แพลตฟอร์มที่เข้าถึงลูกค้าได้ดีสุด",
+  "content_style": "สไตล์คอนเทนต์ที่เหมาะ"
+}}"""
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-5-20251001",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        text = response.content[0].text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"): text = text[4:]
+        return json.loads(text.strip())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ================== GLOBAL SAFE CONNECT ==================
+
+class GlobalConnectRequest(BaseModel):
+    business_type: str              # ประเภทธุรกิจ
+    product_category: Optional[str] = ""
+    current_platforms: Optional[List[str]] = []  # platform ที่ใช้อยู่แล้ว
+    target_market: Optional[str] = ""  # ตลาดที่ต้องการ
+
+@app.post("/api/global-connect/recommend")
+async def global_connect_recommend(req: GlobalConnectRequest):
+    """AI แนะนำช่องทางการเชื่อมต่อที่เหมาะกับคุณ"""
+    prompt = f"""คุณเป็น AI ผู้เชี่ยวชาญด้าน Global E-Commerce และการขยายธุรกิจต่างประเทศ
+ธุรกิจ: {req.business_type} | สินค้า: {req.product_category}
+Platform ปัจจุบัน: {', '.join(req.current_platforms) or 'ยังไม่มี'} | เป้าหมาย: {req.target_market or 'ทั่วโลก'}
+
+แนะนำช่องทางการเชื่อมต่อที่เหมาะที่สุด ตอบเป็น JSON:
+{{
+  "recommended_channels": [
+    {{
+      "rank": 1,
+      "channel_name": "ชื่อช่องทาง",
+      "channel_type": "marketplace|social|b2b|wholesale",
+      "target_country": ["ประเทศเป้าหมาย"],
+      "setup_difficulty": "ง่าย|ปานกลาง|ยาก",
+      "cost_estimate": "ค่าใช้จ่ายโดยประมาณ",
+      "time_to_first_sale": "ระยะเวลาถึงยอดขายแรก",
+      "why_suitable": "เหตุผลที่เหมาะ",
+      "first_step": "ขั้นตอนแรกที่ต้องทำ",
+      "safety_tips": ["เคล็ดลับความปลอดภัย"]
+    }}
+  ],
+  "legal_note": "ข้อควรระวังทางกฎหมาย",
+  "payment_recommendation": "ช่องทางรับเงินที่แนะนำ",
+  "logistics_tip": "คำแนะนำการขนส่ง"
+}}"""
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-5-20251001",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        text = response.content[0].text.strip()
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"): text = text[4:]
+        return json.loads(text.strip())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ================== RUN SERVER ==================
 
 if __name__ == "__main__":

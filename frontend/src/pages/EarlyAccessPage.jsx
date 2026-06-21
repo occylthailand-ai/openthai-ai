@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { apiUrl } from '../apiBase';
 
 const PROGRAMS = [
-  { icon: '📈', name: 'Trend Product Hunter', desc: 'AI บอกว่าตอนนี้ควรขายอะไร', status: 'live' },
-  { icon: '🎯', name: 'Customer Finder', desc: 'AI หากลุ่มลูกค้าที่ใช่ให้ทันที', status: 'live' },
-  { icon: '🌍', name: 'Global Safe Connect', desc: 'เชื่อมตลาดต่างประเทศอย่างปลอดภัย', status: 'live' },
+  { icon: '📈', name: 'Trend Product Hunter', desc: 'AI จะค้นให้ว่าตอนนี้ควรขายอะไร', status: 'live' },
+  { icon: '🎯', name: 'Customer Finder', desc: 'AI จะค้นหากลุ่มลูกค้าที่ใช่ให้ทันที', status: 'live' },
+  { icon: '🌍', name: 'Global Safe Connect', desc: 'AI แนะนำช่องทางการเชื่อมต่อที่เหมาะกับคุณ', status: 'live' },
   { icon: '💡', name: 'Hope — เส้นทางรายได้', desc: 'AI แนะนำเส้นทางทำมาหากินที่เหมาะกับคุณ', status: 'live' },
   { icon: '🧾', name: 'Tax Calculator', desc: 'คำนวณภาษีส่งออกข้ามประเทศ 12 ประเทศ', status: 'live' },
   { icon: '🎬', name: 'Video Generator', desc: 'สร้าง Script + Storyboard วิดีโอสินค้าอัตโนมัติ', status: 'live' },
