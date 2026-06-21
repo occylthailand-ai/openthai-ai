@@ -18,6 +18,8 @@ from dotenv import load_dotenv
 import json
 from datetime import datetime
 import pathlib
+import secrets
+import hashlib
 
 # Load environment variables
 load_dotenv()
@@ -342,10 +344,41 @@ async def get_categories():
         "global": "สินค้านำเข้าจากทั่วโลก"
     }
 
-# ================== EARLY ACCESS ==================
+# ================== EARLY ACCESS + AFFILIATE ==================
 
 EARLY_ACCESS_FILE = pathlib.Path("data/early_access.json")
+AFFILIATE_REFERRALS_FILE = pathlib.Path("data/affiliate_referrals.json")
+AFFILIATE_SALES_FILE = pathlib.Path("data/affiliate_sales.json")
 EARLY_ACCESS_FILE.parent.mkdir(exist_ok=True)
+
+# Commission rate (%) per platform
+PLATFORM_COMMISSION = {
+    "tiktok": 10,
+    "shopee": 10,
+    "lazada": 10,
+    "facebook": 8,
+    "instagram": 8,
+    "line": 8,
+    "other": 5,
+}
+
+def _read_json(path: pathlib.Path) -> list:
+    if not path.exists():
+        return []
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+def _write_json(path: pathlib.Path, data) -> None:
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+def _generate_affiliate_code(email: str) -> str:
+    """สร้าง affiliate code ที่ unique จาก email + random token"""
+    token = secrets.token_hex(4).upper()
+    prefix = hashlib.md5(email.encode()).hexdigest()[:4].upper()
+    return f"OT-{prefix}{token}"
+
 
 class EarlyAccessRequest(BaseModel):
     name: str
@@ -353,43 +386,172 @@ class EarlyAccessRequest(BaseModel):
     phone: Optional[str] = ""
     line_id: Optional[str] = ""
     role: str
+    referred_by: Optional[str] = ""  # affiliate code ของคนที่แนะนำ
+
+
+class SaleNotification(BaseModel):
+    affiliate_code: str          # code ของ affiliate ที่แชร์
+    platform: str                # tiktok | shopee | lazada | facebook | instagram | line | other
+    platform_order_id: str       # order ID จาก platform
+    sale_amount: float           # ยอดขาย (บาท)
+    buyer_platform_id: str       # ID ของผู้ซื้อบน platform
+    seller_platform_id: str      # ID ของผู้ขายบน platform
+
+
+class PayoutRequest(BaseModel):
+    affiliate_code: str
+
 
 @app.post("/api/early-access/register")
 async def register_early_access(req: EarlyAccessRequest):
-    """ลงทะเบียน Early Access"""
-    records: list = []
-    if EARLY_ACCESS_FILE.exists():
-        try:
-            records = json.loads(EARLY_ACCESS_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            records = []
+    """ลงทะเบียน Early Access + สร้าง affiliate link"""
+    records = _read_json(EARLY_ACCESS_FILE)
 
-    # ตรวจ duplicate email
     if any(r.get("email") == req.email for r in records):
         raise HTTPException(status_code=409, detail="อีเมลนี้ลงทะเบียนไว้แล้ว")
 
+    affiliate_code = _generate_affiliate_code(req.email)
     entry = {
         "name": req.name,
         "email": req.email,
         "phone": req.phone,
         "line_id": req.line_id,
         "role": req.role,
+        "affiliate_code": affiliate_code,
+        "referred_by": req.referred_by or "",
         "registered_at": datetime.utcnow().isoformat(),
     }
     records.append(entry)
-    EARLY_ACCESS_FILE.write_text(json.dumps(records, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"ok": True, "message": f"ยินดีต้อนรับ {req.name}!", "total": len(records)}
+    _write_json(EARLY_ACCESS_FILE, records)
+
+    # บันทึก referral ถ้ามีคนแนะนำ
+    if req.referred_by:
+        referrals = _read_json(AFFILIATE_REFERRALS_FILE)
+        referrals.append({
+            "referrer_code": req.referred_by,
+            "new_member_email": req.email,
+            "new_member_affiliate_code": affiliate_code,
+            "referred_at": datetime.utcnow().isoformat(),
+        })
+        _write_json(AFFILIATE_REFERRALS_FILE, referrals)
+
+    affiliate_link = f"https://openthai.ai/early-access?ref={affiliate_code}"
+    return {
+        "ok": True,
+        "message": f"ยินดีต้อนรับ {req.name}!",
+        "total": len(records),
+        "affiliate_code": affiliate_code,
+        "affiliate_link": affiliate_link,
+    }
+
 
 @app.get("/api/early-access/count")
 async def early_access_count():
     """จำนวนผู้ลงทะเบียน Early Access"""
-    if not EARLY_ACCESS_FILE.exists():
-        return {"count": 0}
-    try:
-        records = json.loads(EARLY_ACCESS_FILE.read_text(encoding="utf-8"))
-        return {"count": len(records)}
-    except Exception:
-        return {"count": 0}
+    records = _read_json(EARLY_ACCESS_FILE)
+    return {"count": len(records)}
+
+
+@app.post("/api/affiliate/sale")
+async def record_sale(sale: SaleNotification):
+    """บันทึกยอดขายที่เกิดจาก affiliate link และคำนวณ commission"""
+    records = _read_json(EARLY_ACCESS_FILE)
+    affiliate = next((r for r in records if r.get("affiliate_code") == sale.affiliate_code), None)
+    if not affiliate:
+        raise HTTPException(status_code=404, detail="ไม่พบ affiliate code นี้")
+
+    platform_key = sale.platform.lower()
+    commission_rate = PLATFORM_COMMISSION.get(platform_key, PLATFORM_COMMISSION["other"])
+    commission_amount = round(sale.sale_amount * commission_rate / 100, 2)
+
+    sales = _read_json(AFFILIATE_SALES_FILE)
+    entry = {
+        "affiliate_code": sale.affiliate_code,
+        "affiliate_email": affiliate["email"],
+        "platform": platform_key,
+        "platform_order_id": sale.platform_order_id,
+        "buyer_platform_id": sale.buyer_platform_id,
+        "seller_platform_id": sale.seller_platform_id,
+        "sale_amount": sale.sale_amount,
+        "commission_rate": commission_rate,
+        "commission_amount": commission_amount,
+        "status": "pending",  # pending → paid
+        "recorded_at": datetime.utcnow().isoformat(),
+        "paid_at": None,
+    }
+    sales.append(entry)
+    _write_json(AFFILIATE_SALES_FILE, sales)
+
+    return {
+        "ok": True,
+        "commission_amount": commission_amount,
+        "commission_rate": commission_rate,
+        "status": "pending",
+        "message": f"บันทึกยอดขายแล้ว commission {commission_rate}% = ฿{commission_amount:,.2f}",
+    }
+
+
+@app.post("/api/affiliate/payout")
+async def process_payout(req: PayoutRequest):
+    """โอน commission ที่ pending ทั้งหมดให้ affiliate ในทันทีที่เงินเข้า OpenThai.ai"""
+    sales = _read_json(AFFILIATE_SALES_FILE)
+
+    pending = [s for s in sales if s.get("affiliate_code") == req.affiliate_code and s.get("status") == "pending"]
+    if not pending:
+        return {"ok": True, "message": "ไม่มียอด commission ที่รอโอน", "paid_amount": 0}
+
+    total = sum(s["commission_amount"] for s in pending)
+    paid_at = datetime.utcnow().isoformat()
+
+    for s in sales:
+        if s.get("affiliate_code") == req.affiliate_code and s.get("status") == "pending":
+            s["status"] = "paid"
+            s["paid_at"] = paid_at
+
+    _write_json(AFFILIATE_SALES_FILE, sales)
+
+    return {
+        "ok": True,
+        "paid_amount": round(total, 2),
+        "paid_count": len(pending),
+        "paid_at": paid_at,
+        "message": f"โอน commission ฿{total:,.2f} จาก {len(pending)} รายการเรียบร้อย",
+    }
+
+
+@app.get("/api/affiliate/summary/{affiliate_code}")
+async def affiliate_summary(affiliate_code: str):
+    """สรุปยอด commission ของ affiliate แยกตาม platform"""
+    records = _read_json(EARLY_ACCESS_FILE)
+    affiliate = next((r for r in records if r.get("affiliate_code") == affiliate_code), None)
+    if not affiliate:
+        raise HTTPException(status_code=404, detail="ไม่พบ affiliate code นี้")
+
+    sales = _read_json(AFFILIATE_SALES_FILE)
+    my_sales = [s for s in sales if s.get("affiliate_code") == affiliate_code]
+
+    by_platform = {}
+    for s in my_sales:
+        p = s["platform"]
+        if p not in by_platform:
+            by_platform[p] = {"sales": 0, "commission": 0, "count": 0}
+        by_platform[p]["sales"] += s["sale_amount"]
+        by_platform[p]["commission"] += s["commission_amount"]
+        by_platform[p]["count"] += 1
+
+    referrals = _read_json(AFFILIATE_REFERRALS_FILE)
+    my_referrals = [r for r in referrals if r.get("referrer_code") == affiliate_code]
+
+    return {
+        "affiliate_code": affiliate_code,
+        "name": affiliate["name"],
+        "affiliate_link": f"https://openthai.ai/early-access?ref={affiliate_code}",
+        "total_sales": round(sum(s["sale_amount"] for s in my_sales), 2),
+        "total_commission_pending": round(sum(s["commission_amount"] for s in my_sales if s["status"] == "pending"), 2),
+        "total_commission_paid": round(sum(s["commission_amount"] for s in my_sales if s["status"] == "paid"), 2),
+        "by_platform": by_platform,
+        "referral_count": len(my_referrals),
+    }
 
 
 # ================== RUN SERVER ==================
