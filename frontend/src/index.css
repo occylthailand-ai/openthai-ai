@@ -2823,6 +2823,54 @@ body, html {
     right: 10px !important;
     max-width: 100% !important;
   }
+
+  /* Dashboard: stats 2-col on tablet */
+  .pro-stats-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Dashboard: quick actions 2-col on tablet */
+  .pro-quick-actions {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Dashboard: two-col stacked */
+  .pro-two-col {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Dashboard: topbar stacks */
+  .pro-topbar {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .pro-cta-btn {
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  /* Sidebar: hide labels/separators, show icons only as horizontal nav */
+  .sidebar .nav-section-label,
+  .pro-sidebar .nav-section-label,
+  .nav-separator,
+  .sidebar-brand,
+  .ai-status-box,
+  .logout-btn {
+    display: none !important;
+  }
+  .nav-links {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 4px !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+  }
+  .nav-link {
+    flex-shrink: 0 !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
 }
 
 /* Mobile ≤ 480px */
@@ -2866,6 +2914,35 @@ body, html {
   /* Dashboard quick actions */
   .quick-actions-grid {
     grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Dashboard: stats 1-col on mobile */
+  .pro-stats-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Dashboard: quick actions 2-col on mobile */
+  .pro-quick-actions {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Dashboard: main padding bottom for bottom-nav space */
+  .pro-main {
+    padding-bottom: 100px !important;
+  }
+
+  /* Dashboard: stat values smaller */
+  .pro-stat-value {
+    font-size: 20px !important;
+  }
+  .pro-greeting {
+    font-size: 18px !important;
+  }
+  .pro-action-label {
+    font-size: 13px !important;
+  }
+  .pro-action-desc {
+    display: none !important;
   }
 }
 
