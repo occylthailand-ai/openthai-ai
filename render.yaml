@@ -1,0 +1,48 @@
+# ── Render — backend สำรองทั้งตัว (Express server.js รันจริง ไม่พึ่ง Vercel) ─────────
+# ต่อใช้: Render → New → Blueprint → เลือก repo นี้ → Render อ่านไฟล์นี้แล้วสร้าง service
+# server.js จะ app.listen(PORT) อัตโนมัติเมื่อไม่ได้อยู่บน Vercel
+#
+# ⚠️ สำคัญด้านความปลอดภัย: บนโฮสต์ที่ไม่ใช่ Vercel ระบบจะใช้ admin key ค่า default
+#    ถ้าไม่ตั้ง ADMIN_KEY → "ต้องตั้ง ADMIN_KEY" ด้านล่าง (sync:false = กรอกใน dashboard)
+#
+# 🗄️ ดิสก์ฟรีของ Render เป็น ephemeral (รีเซ็ตตอน redeploy) → ตั้ง SUPABASE_* เพื่อข้อมูลถาวร
+
+services:
+  - type: web
+    name: openthai-ai-backend
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # ── ต้องตั้ง (กรอกใน Render dashboard) ──
+      - key: ADMIN_KEY
+        sync: false
+      # ── แนะนำให้ตั้ง เพื่อให้ข้อมูลถาวร + ฟีเจอร์ครบ ──
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      # ── ทางเลือก (อีเมล/ชำระเงิน/แจ้งเตือน) ──
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: ORDER_NOTIFY_EMAIL
+        sync: false
+      - key: OMISE_SECRET_KEY
+        sync: false
+      - key: LINE_NOTIFY_TOKEN
+        sync: false
+      - key: FRONTEND_URL
+        sync: false

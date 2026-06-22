@@ -30,6 +30,7 @@ import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
+import { createCarriers } from './carriers.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -65,6 +66,10 @@ const producers = createProducers(WRITE_DATA_DIR);
 const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
 const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
+const carriers  = createCarriers(WRITE_DATA_DIR, {
+  onNewCarrier: (c) => sendCarrierSignupAlert(c),
+  onNewJob: (j) => sendDeliveryJobAlert(j),
+});
 
 import {
   signToken, verifyToken, requireAuth,
@@ -92,6 +97,8 @@ app.use(producers.router);
 app.use(orders.router);
 // Inventory / first-party shop routes — /api/shop/products
 app.use(inventory.router);
+// Carriers & logistics routes — /api/logistics/* (สมัครผู้จัดส่ง, ไดเรกทอรี, จองงาน, ติดตาม)
+app.use(carriers.router);
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 const generateLimiter = rateLimit({
@@ -439,6 +446,16 @@ app.post('/api/inventory/admin/remove', async (req, res) => { if (!invAuth(req, 
 app.get('/api/inventory/admin/sales', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.productSales(req.query.product_id)) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
 app.get('/api/inventory/admin/sales-report', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.salesReport()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
 
+// ─── Logistics admin (Admin Key) — จัดการผู้จัดส่ง + งานจัดส่ง (จ่ายงาน/อนุมัติ/ติดตาม) ───
+app.get('/api/logistics/admin/summary', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await carriers.summary()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.get('/api/logistics/admin/carriers', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, carriers: await carriers.allCarriers() }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.post('/api/logistics/admin/carrier-status', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.setCarrierStatus(req.body?.id, req.body?.status, { verified: req.body?.verified }); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.post('/api/logistics/admin/carrier-availability', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.setAvailability(req.body?.id, req.body?.available); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.get('/api/logistics/admin/jobs', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, jobs: await carriers.allJobs() }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.post('/api/logistics/admin/job-assign', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.assignJob(req.body?.id, req.body?.carrier_id, req.body?.note); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.post('/api/logistics/admin/job-status', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.jobSetStatus(req.body?.id, req.body?.status, req.body?.note); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.post('/api/logistics/admin/job-deliver', async (req, res) => { if (!invAuth(req, res)) return; const r = await carriers.deliverJob(req.body?.id, req.body || {}); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+
 // POST /api/shop/checkout — ซื้อสินค้าร้านเรา + รับชำระเงิน (Omise) + ตัดสต๊อก + สร้างออเดอร์ติดตามได้
 const shopLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 12, message: { success: false, error: 'สั่งซื้อบ่อยเกินไป' } });
 app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
@@ -710,6 +727,56 @@ async function sendLowStockAlert(product) {
     try { await fetch('https://notify-api.line.me/api/notify', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ message: `\n${line}` }).toString() }); }
     catch (e) { console.error('Low-stock LINE error:', e.message); }
   }
+}
+
+// แจ้งเตือนเมื่อมีผู้สมัครเป็นผู้จัดส่งใหม่ — อีเมล + LINE + log
+async function sendCarrierSignupAlert(c) {
+  const line = `🚚 ผู้จัดส่งสมัครใหม่: ${c.business_name || c.contact_name} (${c.phone}) · ยานพาหนะ ${(c.vehicles || []).join(',')} · โซน ${(c.zones || []).join(',')}`;
+  addLog('info', 'Logistics', line);
+  const to = process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  if (mailer && to) {
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to,
+        subject: `🚚 ผู้จัดส่งสมัครใหม่ — ${c.business_name || c.contact_name}`,
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#6366f1,#10b981);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">🚚 ผู้จัดส่งสมัครใหม่</h1></div>
+          <div style="padding:24px;font-size:14px;line-height:1.8;">
+            <b>${c.business_name || c.contact_name}</b> (${c.type})<br>
+            ☎️ ${c.phone}${c.email ? ` · ✉️ ${c.email}` : ''}<br>
+            🚗 ยานพาหนะ: ${(c.vehicles || []).join(', ')}<br>
+            📍 โซนบริการ: ${(c.zones || []).join(', ')}<br><br>
+            👉 ตรวจเอกสาร/ยืนยันตัวตนที่ <a href="https://www.openthai-ai.com/admin" style="color:#6366f1;">Admin → ขนส่ง</a>
+          </div></div>`,
+      });
+    } catch (e) { console.error('Carrier signup email error:', e.message); }
+  }
+  const token = process.env.LINE_NOTIFY_TOKEN;
+  if (token) { try { await fetch('https://notify-api.line.me/api/notify', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ message: `\n${line}` }).toString() }); } catch (e) { console.error('Carrier LINE error:', e.message); } }
+}
+
+// แจ้งเตือนเมื่อมีงานจัดส่งใหม่เข้ามา — อีเมล + log
+async function sendDeliveryJobAlert(j) {
+  const line = `📦 งานจัดส่งใหม่ ${j.id}: ${j.pickup_zone || '-'} → ${j.dropoff_zone || '-'} · ${j.vehicle} · ประเมิน ฿${j.quote_price}`;
+  addLog('info', 'Logistics', line);
+  const to = process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  if (!mailer || !to) return;
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to,
+      subject: `📦 งานจัดส่งใหม่ — ${j.pickup_zone || ''} → ${j.dropoff_zone || ''} (฿${j.quote_price})`,
+      html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">📦 งานจัดส่งใหม่</h1></div>
+        <div style="padding:24px;font-size:14px;line-height:1.8;">
+          รับ: ${j.pickup_address} (${j.pickup_zone || '-'})<br>
+          ส่ง: ${j.dropoff_address} (${j.dropoff_zone || '-'})<br>
+          🚗 ${j.vehicle}${j.weight_kg ? ` · ${j.weight_kg} กก.` : ''}${j.express ? ' · ด่วน' : ''}<br>
+          💰 ประเมิน <b style="color:#10b981;">฿${Number(j.quote_price).toLocaleString('th-TH')}</b>${j.cod_amount ? ` · COD ฿${j.cod_amount}` : ''}<br>
+          🆔 <span style="font-family:monospace;font-size:12px;">${j.id}</span><br><br>
+          👉 จ่ายงานให้คนขับที่ <a href="https://www.openthai-ai.com/admin" style="color:#6366f1;">Admin → ขนส่ง</a>
+        </div></div>`,
+    });
+  } catch (e) { console.error('Delivery job email error:', e.message); }
 }
 
 // ─── Affiliate JSON File DB ───────────────────────────────────────────────────

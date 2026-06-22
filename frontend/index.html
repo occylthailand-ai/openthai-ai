@@ -2,7 +2,9 @@
 <html lang="th">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- วาดพื้นมืดทันที (กันจอขาวแวบ → รู้สึกเร็วขึ้นทุกจอ) -->
+    <meta name="color-scheme" content="dark" />
 
     <!-- ── Primary SEO ─────────────────────────────────────────────────── -->
     <title>Openthai.ai — สร้างคอนเทนต์ TikTok ปัง ด้วย AI ไทยแท้ ใน 10 วินาที</title>
@@ -45,7 +47,9 @@
     <!-- ── Fonts ──────────────────────────────────────────────────────── -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Sarabun:wght@400;600;700;800&display=swap" rel="stylesheet" />
+    <!-- ฟอนต์แบบไม่บล็อกการเรนเดอร์: โหลดเป็น print ก่อน แล้วสลับเป็น all เมื่อพร้อม → เพนต์เฟรมแรกไว -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Sarabun:wght@400;600;700;800&display=swap" media="print" onload="this.media='all'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=Sarabun:wght@400;600;700;800&display=swap" /></noscript>
 
     <!-- ── Google Analytics 4 (Consent Mode v2) ─────────────────────── -->
     <!-- TODO: แทนที่ G-XXXXXXXXXX ด้วย Measurement ID จริงจาก analytics.google.com -->
