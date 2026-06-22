@@ -789,15 +789,33 @@ app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
 app.get('/api/affiliate/stats/:ref_code', (req, res) => {
   const aff = affiliates.find((a) => a.ref_code === req.params.ref_code);
   if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบ Affiliate นี้' });
+
+  // คำนวณวันจันทร์ถัดไป (วันจ่ายเงิน)
+  const d = new Date();
+  const daysUntil = d.getDay() === 1 ? 7 : (8 - d.getDay()) % 7 || 7;
+  d.setDate(d.getDate() + daysUntil);
+  const nextPayout = d.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+
   res.json({
     success: true,
     data: {
-      ref_code: aff.ref_code,
-      tier: aff.tier,
+      ref_code:        aff.ref_code,
+      name:            aff.name,
+      tier:            aff.tier,
       commission_rate: aff.commission_rate,
-      total_sales: aff.total_sales,
-      total_earned: aff.total_earned,
-      joined_at: aff.joined_at,
+      total_sales:     aff.total_sales     || 0,
+      total_earned:    aff.total_earned    || 0,
+      pending_payout:  (aff.total_earned   || 0) - (aff.paid_out || 0),
+      paid_out:        aff.paid_out        || 0,
+      clicks:          aff.clicks          || 0,
+      conversions:     aff.total_sales     || 0,
+      conversion_rate: aff.clicks > 0 ? +((aff.total_sales / aff.clicks) * 100).toFixed(1) : 0,
+      monthly:         aff.monthly         || [],
+      recent_sales:    aff.recent_sales    || [],
+      next_payout_date: nextPayout,
+      joined_at:       aff.joined_at,
+      status:          aff.status,
+      platform:        aff.platform,
     },
   });
 });
@@ -2913,6 +2931,31 @@ app.get('/api/payment/plans', (req, res) => {
 app.get('/api/payment/history', requireAuth, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 200);
   res.json({ success: true, data: payments.slice(0, limit), total: payments.length });
+});
+
+// GET /api/admin/stats — overview stats จริงสำหรับ Admin Panel
+app.get('/api/admin/stats', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+
+  const isPaid = (p) => p.paid || p.status === 'successful' || p.paid_at;
+  const paid = payments.filter(isPaid);
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const sum = (arr) => arr.reduce((t, p) => t + (Number(p.amount_thb) || 0), 0);
+  const paidThisMonth = paid.filter(p => new Date(p.paid_at || p.createdAt) >= monthStart);
+
+  const activeAff = affiliates.filter(a => a.status === 'active').length;
+
+  res.json({
+    success: true,
+    affiliates:        affiliates.length,
+    affiliates_active: activeAff,
+    revenue_total:     sum(paid),
+    revenue_month:     sum(paidThisMonth),
+    orders_total:      payments.length,
+    orders_paid:       paid.length,
+  });
 });
 
 // GET /api/payment/admin/summary — สรุปยอดขาย (ใช้ Admin Key header เหมือน affiliate)

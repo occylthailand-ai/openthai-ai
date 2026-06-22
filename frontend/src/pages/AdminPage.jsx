@@ -5,33 +5,6 @@ import { useLang } from '../i18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { ADM } from '../i18n/admin';
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK = {
-  stats: {
-    users: 1247, users_today: 34,
-    content: 28941, content_today: 412,
-    affiliates: 87, affiliates_active: 63,
-    revenue: 42850, revenue_month: 18200,
-  },
-  users: [
-    { id: 'U001', name: 'คุณแพร', email: 'prae@example.com', plan: 'pro', joined: '2026-04-01', content: 142, status: 'active' },
-    { id: 'U002', name: 'คุณมิน', email: 'min@example.com', plan: 'business', joined: '2026-04-05', content: 389, status: 'active' },
-    { id: 'U003', name: 'คุณโจ', email: 'joe@example.com', plan: 'free', joined: '2026-05-01', content: 3, status: 'active' },
-    { id: 'U004', name: 'คุณนก', email: 'nok@example.com', plan: 'pro', joined: '2026-03-15', content: 256, status: 'suspended' },
-    { id: 'U005', name: 'คุณต้น', email: 'ton@example.com', plan: 'pro', joined: '2026-04-20', content: 78, status: 'active' },
-  ],
-  affiliates: [
-    { id: 'A001', name: 'คุณแพร', ref: 'PRAEKH1', tier: 'pro', sales: 23, earned: 2070, status: 'active' },
-    { id: 'A002', name: 'คุณมิน', ref: 'MINCH2', tier: 'elite', sales: 67, earned: 8040, status: 'active' },
-    { id: 'A003', name: 'คุณโจ', ref: 'JOETH3', tier: 'starter', sales: 4, earned: 180, status: 'active' },
-  ],
-  content: [
-    { id: 'C001', user: 'คุณแพร', product: 'ผ้าไหมอุบล', platform: 'TikTok', score: 9.2, time: '2 นาทีที่แล้ว' },
-    { id: 'C002', user: 'คุณมิน', product: 'น้ำพริกป้าแดง', platform: 'Facebook', score: 8.7, time: '15 นาทีที่แล้ว' },
-    { id: 'C003', user: 'คุณโจ', product: 'กาแฟดอยช้าง', platform: 'TikTok', score: 9.5, time: '1 ชม.ที่แล้ว' },
-    { id: 'C004', user: 'คุณต้น', product: 'เซรั่มข้าวหอม', platform: 'Instagram', score: 8.1, time: '2 ชม.ที่แล้ว' },
-  ],
-};
 
 const PLAN_COLOR = { free: '#64748b', pro: '#6366f1', premier: '#f59e0b', business: '#f59e0b' };
 const TIER_COLOR = { starter: '#10b981', pro: '#6366f1', elite: '#f59e0b' };
@@ -50,8 +23,9 @@ export default function AdminPage() {
   const [pwErr, setPwErr] = useState('');
   const [tab, setTab] = useState('overview');
   const [search, setSearch] = useState('');
-  const [data] = useState(MOCK);
-  const [sales, setSales] = useState(null);     // ยอดขายจริงจาก backend
+  const [overview, setOverview] = useState(null);  // stats จริงจาก /api/admin/stats
+  const [overviewErr, setOverviewErr] = useState('');
+  const [sales, setSales] = useState(null);         // ยอดขายจริงจาก backend
   const [salesErr, setSalesErr] = useState('');
   const [creds, setCreds] = useState(null);     // สรุปเครดิต/รางวัลจาก backend
   const [credsErr, setCredsErr] = useState('');
@@ -70,15 +44,17 @@ export default function AdminPage() {
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
   const adminKey = () => sessionStorage.getItem('admin_key') || ADMIN_KEY;
+  const [affList, setAffList] = useState([]);   // รายชื่อ affiliate จริง
   const loadProducers = () => fetch(apiUrl('/api/producers/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setProds(d.producers); }).catch(() => {});
   const loadOrders = () => fetch(apiUrl('/api/orders/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setOrds(d.orders); }).catch(() => {});
   const loadLeads = () => fetch(apiUrl('/api/leads/admin/search'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setLeads(d); }).catch(() => {});
+  const loadAffiliates = () => fetch(apiUrl('/api/affiliate/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setAffList(d.data); }).catch(() => {});
   const loadInventory = () => {
     fetch(apiUrl('/api/inventory/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInv(d.products); }).catch(() => {});
     fetch(apiUrl('/api/inventory/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInvSum(d); }).catch(() => {});
     fetch(apiUrl('/api/inventory/admin/sales-report'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setSalesRep(d); }).catch(() => {});
   };
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveProduct = async (data) => {
     const r = await fetch(apiUrl('/api/inventory/admin/upsert'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(data) }).then(x => x.json());
@@ -118,10 +94,14 @@ export default function AdminPage() {
     loadOrders();
   };
 
-  // ดึงสรุปยอดขายจริงเมื่อล็อกอินแล้ว (ใช้ admin key เป็น x-admin-key header)
+  // ดึง overview stats จริง + ยอดขายจริง
   useEffect(() => {
     if (!authed) return;
     const key = sessionStorage.getItem('admin_key') || ADMIN_KEY;
+    fetch(apiUrl('/api/admin/stats'), { headers: { 'x-admin-key': key } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setOverview(d); else setOverviewErr(d.message || 'โหลด stats ไม่สำเร็จ'); })
+      .catch(() => setOverviewErr('เชื่อมต่อ backend ไม่ได้'));
     fetch(apiUrl('/api/payment/admin/summary'), { headers: { 'x-admin-key': key } })
       .then(r => r.json())
       .then(d => { if (d.success) setSales(d); else setSalesErr(d.message || 'โหลดยอดขายไม่สำเร็จ'); })
@@ -164,8 +144,8 @@ export default function AdminPage() {
     </div>
   );
 
-  const filteredUsers = data.users.filter((u) =>
-    !search || u.name.includes(search) || u.email.includes(search)
+  const filteredAff = affList.filter((a) =>
+    !search || a.name?.includes(search) || a.email?.includes(search) || a.ref_code?.includes(search)
   );
 
   // ── Main Admin UI ──────────────────────────────────────────────────────────
@@ -185,20 +165,18 @@ export default function AdminPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px' }}>
 
         {/* OVERVIEW STATS */}
-        {salesErr && (
-          <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: '10px 16px', marginBottom: 14, fontSize: 13, color: '#fcd34d' }}>
-            ⚠️ ยอดขาย/รายได้: {salesErr} — ตัวเลขบางส่วนด้านล่างเป็นข้อมูลตัวอย่าง ไม่ใช่ข้อมูลจริง
+        {(overviewErr || salesErr) && (
+          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 16px', marginBottom: 14, fontSize: 13, color: '#fca5a5' }}>
+            ❌ {overviewErr || salesErr}
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 28 }}>
           {[
-            { icon: '👥', label: T.stat.users, v: data.stats.users.toLocaleString(), sub: `+${data.stats.users_today} ${T.stat.today}`, c: '#6366f1', mock: true },
-            { icon: '⚡', label: T.stat.content, v: data.stats.content.toLocaleString(), sub: `+${data.stats.content_today} ${T.stat.today}`, c: '#10b981', mock: true },
-            { icon: '🤝', label: T.stat.aff, v: data.stats.affiliates, sub: `${data.stats.affiliates_active} active`, c: '#f59e0b', mock: true },
-            { icon: '💰', label: T.stat.revenue, v: baht(sales ? sales.stats.revenue_total : data.stats.revenue), sub: `${baht(sales ? sales.stats.revenue_month : data.stats.revenue_month)} ${T.stat.month}`, c: '#fe2c55', mock: !sales },
+            { icon: '🤝', label: T.stat.aff, v: overview ? overview.affiliates.toLocaleString() : '—', sub: overview ? `${overview.affiliates_active} active` : '...', c: '#f59e0b' },
+            { icon: '📦', label: T.stat.orders || 'ออเดอร์ทั้งหมด', v: overview ? overview.orders_total.toLocaleString() : '—', sub: overview ? `${overview.orders_paid} ชำระแล้ว` : '...', c: '#6366f1' },
+            { icon: '💰', label: T.stat.revenue, v: sales ? baht(sales.stats.revenue_total) : (overview ? baht(overview.revenue_total) : '—'), sub: sales ? `${baht(sales.stats.revenue_month)} ${T.stat.month}` : '...', c: '#fe2c55' },
           ].map((s) => (
-            <div key={s.label} style={{ ...glass, textAlign: 'center', position: 'relative' }}>
-              {s.mock && <div style={{ position: 'absolute', top: 8, right: 8, fontSize: 10, background: 'rgba(100,116,139,0.2)', color: '#64748b', padding: '2px 6px', borderRadius: 4 }}>ตัวอย่าง</div>}
+            <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
               <div style={{ fontSize: 26, marginBottom: 4 }}>{s.icon}</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: s.c }}>{s.v}</div>
               <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
@@ -220,37 +198,42 @@ export default function AdminPage() {
         {tab === 'overview' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             <div style={glass}>
-              <div style={{ fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                {T.ov.recent}
-                <span style={{ fontSize: 10, background: 'rgba(100,116,139,0.2)', color: '#64748b', padding: '2px 8px', borderRadius: 4, fontWeight: 400 }}>ข้อมูลตัวอย่าง</span>
-              </div>
-              {data.content.map((c) => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+              <div style={{ fontWeight: 700, marginBottom: 14 }}>📦 ออเดอร์ล่าสุด</div>
+              {ords && ords.length > 0 ? ords.slice(0, 5).map((o) => (
+                <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
                   <div>
-                    <div style={{ fontWeight: 600 }}>{c.product}</div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>{c.user} · {c.time}</div>
+                    <div style={{ fontWeight: 600 }}>{o.product_name || o.id}</div>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>{o.buyer_name || o.email} · {o.createdAt ? new Date(o.createdAt).toLocaleDateString('th-TH') : ''}</div>
                   </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, background: 'rgba(99,102,241,0.15)', borderRadius: 6, padding: '2px 8px', color: '#a5b4fc' }}>{c.platform}</span>
-                    <span style={{ color: '#10b981', fontWeight: 700 }}>{c.score}</span>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ color: '#10b981', fontWeight: 700 }}>฿{Number(o.amount || 0).toLocaleString()}</div>
+                    <div style={{ fontSize: 11, color: STATUS_COLOR[o.status] || '#64748b' }}>● {o.status}</div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div style={{ padding: '24px 0', textAlign: 'center', color: '#475569', fontSize: 13 }}>
+                  {ords === null ? '⏳ กำลังโหลด...' : 'ยังไม่มีออเดอร์'}
+                </div>
+              )}
             </div>
             <div style={glass}>
               <div style={{ fontWeight: 700, marginBottom: 14 }}>{T.ov.topaff}</div>
-              {data.affiliates.map((a) => (
-                <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+              {affList.length > 0 ? affList.slice(0, 5).map((a) => (
+                <div key={a.ref_code} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
                   <div>
                     <div style={{ fontWeight: 600 }}>{a.name}</div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>REF: {a.ref}</div>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>REF: {a.ref_code}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ color: '#10b981', fontWeight: 700 }}>฿{a.earned.toLocaleString()}</div>
-                    <div style={{ fontSize: 11, color: TIER_COLOR[a.tier] }}>{a.tier}</div>
+                    <div style={{ color: '#10b981', fontWeight: 700 }}>฿{Number(a.total_earned || 0).toLocaleString()}</div>
+                    <div style={{ fontSize: 11, color: TIER_COLOR[a.tier] || '#64748b' }}>{a.tier}</div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div style={{ padding: '24px 0', textAlign: 'center', color: '#475569', fontSize: 13 }}>
+                  {affList.length === 0 ? 'ยังไม่มี Affiliate' : '⏳ กำลังโหลด...'}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -638,115 +621,100 @@ export default function AdminPage() {
           );
         })()}
 
-        {/* TAB: USERS */}
+        {/* TAB: USERS — ระบบนี้ใช้ Leads แทน User Registry */}
         {tab === 'users' && (
           <div style={glass}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-              <div style={{ fontWeight: 700 }}>👥 Users ({data.users.length})</div>
+              <div style={{ fontWeight: 700 }}>👥 Leads & ผู้สมัคร ({leads ? (leads.counts?.total || 0) : '...'})</div>
               <input placeholder="🔍 ค้นหาชื่อ / อีเมล" value={search} onChange={(e) => setSearch(e.target.value)}
                 style={{ ...inputSt, width: 220, textAlign: 'left', letterSpacing: 0, padding: '8px 14px', fontSize: 13 }} />
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ color: '#475569', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    {['ID','ชื่อ','อีเมล','แพ็กเกจ','คอนเทนต์','สมัคร','สถานะ','จัดการ'].map((h) => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11, whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((u) => (
-                    <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <td style={{ padding: '10px 12px', color: '#475569', fontSize: 11 }}>{u.id}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 600 }}>{u.name}</td>
-                      <td style={{ padding: '10px 12px', color: '#64748b' }}>{u.email}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ background: `${PLAN_COLOR[u.plan]}22`, color: PLAN_COLOR[u.plan], borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700, border: `1px solid ${PLAN_COLOR[u.plan]}44` }}>{u.plan}</span>
-                      </td>
-                      <td style={{ padding: '10px 12px', color: '#94a3b8' }}>{u.content}</td>
-                      <td style={{ padding: '10px 12px', color: '#64748b', fontSize: 11 }}>{u.joined}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ color: STATUS_COLOR[u.status], fontSize: 11, fontWeight: 600 }}>● {u.status}</span>
-                      </td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <button style={{ ...smallBtn, fontSize: 11, padding: '4px 10px' }}>แก้ไข</button>
-                      </td>
+            {leads?.leads?.length > 0 ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ color: '#475569', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                      {['ชื่อ','อีเมล','ประเภท','วันที่','สถานะ'].map((h) => (
+                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {leads.leads.filter(l => !search || l.name?.includes(search) || l.email?.includes(search)).map((l, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>{l.name || '—'}</td>
+                        <td style={{ padding: '10px 12px', color: '#64748b' }}>{l.email}</td>
+                        <td style={{ padding: '10px 12px', color: '#a5b4fc', fontSize: 11 }}>{l.type}</td>
+                        <td style={{ padding: '10px 12px', color: '#64748b', fontSize: 11 }}>{l.createdAt ? new Date(l.createdAt).toLocaleDateString('th-TH') : '—'}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ color: STATUS_COLOR[l.status] || '#64748b', fontSize: 11 }}>● {l.status || 'active'}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: '#475569' }}>
+                {leads === null ? '⏳ กำลังโหลด...' : 'ยังไม่มีข้อมูล Leads'}
+              </div>
+            )}
           </div>
         )}
 
         {/* TAB: AFFILIATES */}
         {tab === 'affiliates' && (
           <div style={glass}>
-            <div style={{ fontWeight: 700, marginBottom: 16 }}>🤝 Affiliate Management</div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ color: '#475569', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    {['ชื่อ','Ref Code','Tier','ยอดขาย','รายได้รวม','สถานะ','จ่ายเงิน'].map((h) => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.affiliates.map((a) => (
-                    <tr key={a.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <td style={{ padding: '10px 12px', fontWeight: 600 }}>{a.name}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#a5b4fc', letterSpacing: 2 }}>{a.ref}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ color: TIER_COLOR[a.tier], fontWeight: 700, textTransform: 'capitalize' }}>{a.tier}</span>
-                      </td>
-                      <td style={{ padding: '10px 12px' }}>{a.sales}</td>
-                      <td style={{ padding: '10px 12px', color: '#10b981', fontWeight: 700 }}>฿{a.earned.toLocaleString()}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ color: STATUS_COLOR[a.status], fontSize: 11 }}>● {a.status}</span>
-                      </td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <button style={{ ...smallBtn, fontSize: 11, padding: '4px 10px', background: 'rgba(16,185,129,0.15)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.3)' }}>💸 จ่าย</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ fontWeight: 700 }}>🤝 Affiliate Management ({affList.length})</div>
+              <input placeholder="🔍 ค้นหาชื่อ / อีเมล / Ref" value={search} onChange={(e) => setSearch(e.target.value)}
+                style={{ ...inputSt, width: 220, textAlign: 'left', letterSpacing: 0, padding: '8px 14px', fontSize: 13 }} />
             </div>
+            {filteredAff.length > 0 ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ color: '#475569', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                      {['ชื่อ','Ref Code','Platform','Tier','ยอดขาย','รายได้รวม','สถานะ'].map((h) => (
+                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAff.map((a) => (
+                      <tr key={a.ref_code} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 600 }}>{a.name}</td>
+                        <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#a5b4fc', letterSpacing: 2 }}>{a.ref_code}</td>
+                        <td style={{ padding: '10px 12px', color: '#64748b', fontSize: 11 }}>{a.platform}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ color: TIER_COLOR[a.tier] || '#64748b', fontWeight: 700, textTransform: 'capitalize' }}>{a.tier}</span>
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>{a.total_sales || 0}</td>
+                        <td style={{ padding: '10px 12px', color: '#10b981', fontWeight: 700 }}>฿{Number(a.total_earned || 0).toLocaleString()}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ color: STATUS_COLOR[a.status] || '#64748b', fontSize: 11 }}>● {a.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: '#475569' }}>
+                {affList.length === 0 ? 'ยังไม่มี Affiliate สมัคร' : 'ไม่พบผลลัพธ์'}
+              </div>
+            )}
           </div>
         )}
 
-        {/* TAB: CONTENT */}
+        {/* TAB: CONTENT — ยังไม่มี server-side content log */}
         {tab === 'content' && (
-          <div style={glass}>
-            <div style={{ fontWeight: 700, marginBottom: 16 }}>⚡ Content Log</div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ color: '#475569', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    {['ID','ผู้ใช้','สินค้า','Platform','AI Score','เวลา'].map((h) => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.content.map((c) => (
-                    <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <td style={{ padding: '10px 12px', color: '#475569', fontSize: 11 }}>{c.id}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 600 }}>{c.user}</td>
-                      <td style={{ padding: '10px 12px' }}>{c.product}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ background: 'rgba(99,102,241,0.15)', borderRadius: 6, padding: '2px 8px', color: '#a5b4fc', fontSize: 11 }}>{c.platform}</span>
-                      </td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ color: c.score >= 9 ? '#10b981' : c.score >= 8 ? '#f59e0b' : '#ef4444', fontWeight: 700 }}>{c.score}/10</span>
-                      </td>
-                      <td style={{ padding: '10px 12px', color: '#64748b', fontSize: 11 }}>{c.time}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div style={{ ...glass, textAlign: 'center', padding: '60px 24px' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>⚡</div>
+            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Content Log ยังไม่พร้อม</div>
+            <div style={{ color: '#64748b', fontSize: 14, maxWidth: 400, margin: '0 auto' }}>
+              ระบบ AI สร้างคอนเทนต์แบบ Stateless — ยังไม่มี backend log เก็บไว้<br />
+              ต้องเพิ่ม <code style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4 }}>/api/content/log</code> ก่อนจึงจะแสดงที่นี่ได้
             </div>
           </div>
         )}

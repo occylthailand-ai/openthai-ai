@@ -3,39 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 import { apiUrl } from '../apiBase';
 
-// ── Fake data generator for demo ─────────────────────────────────────────────
-function makeDemoData(refCode) {
-  const now = Date.now();
-  const DAY = 86400000;
-  return {
-    ref_code: refCode,
-    name: 'Creator ไทย',
-    tier: 'pro',
-    commission_rate: 0.30,
-    total_sales: 23,
-    total_earned: 2070,
-    pending_payout: 690,
-    next_payout_date: '2026-05-06 (จันทร์)',
-    clicks: 412,
-    conversions: 23,
-    conversion_rate: 5.6,
-    joined_at: new Date(now - 7 * DAY).toISOString(),
-    monthly: [
-      { month: 'ม.ค.', sales: 3, earned: 270 },
-      { month: 'ก.พ.', sales: 5, earned: 450 },
-      { month: 'มี.ค.', sales: 7, earned: 630 },
-      { month: 'เม.ย.', sales: 8, earned: 720 },
-    ],
-    recent_sales: [
-      { id: 'S001', plan: 'Pro ฿299', commission: 90, date: '2026-05-03', status: 'confirmed' },
-      { id: 'S002', plan: 'Pro ฿299', commission: 90, date: '2026-05-02', status: 'confirmed' },
-      { id: 'S003', plan: 'Business ฿499', commission: 150, date: '2026-05-01', status: 'confirmed' },
-      { id: 'S004', plan: 'Pro ฿299', commission: 90, date: '2026-04-30', status: 'paid' },
-      { id: 'S005', plan: 'Starter ฿149', commission: 45, date: '2026-04-29', status: 'paid' },
-    ],
-  };
-}
-
 const TIER_COLOR = { starter: '#10b981', pro: '#6366f1', elite: '#f59e0b' };
 const STATUS_STYLE = {
   confirmed: { bg: 'rgba(99,102,241,0.15)', color: '#a5b4fc', label: '✅ ยืนยัน' },
@@ -69,7 +36,6 @@ export default function AffiliateDashboard() {
 
   const [refInput, setRefInput] = useState(refFromUrl);
   const [data, setData] = useState(null);
-  const [isDemo, setIsDemo] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
@@ -77,25 +43,21 @@ export default function AffiliateDashboard() {
   // ถ้ามี ref ใน URL โหลดอัตโนมัติ
   useEffect(() => {
     if (refFromUrl) loadDashboard(refFromUrl);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadDashboard = async (code) => {
     if (!code.trim()) { setError('กรุณากรอก Ref Code'); toast.warn('กรุณากรอก Ref Code'); return; }
-    setLoading(true); setError(''); setIsDemo(false);
+    setLoading(true); setError(''); setData(null);
     try {
       const res = await fetch(apiUrl(`/api/affiliate/stats/${code.trim().toUpperCase()}`));
       const json = await res.json();
       if (json.success) {
-        // real data overrides demo defaults (not the other way around)
-        setData({ ...makeDemoData(code.trim().toUpperCase()), ...json.data });
-        setIsDemo(false);
+        setData(json.data);
       } else {
-        setData(makeDemoData(code.trim().toUpperCase()));
-        setIsDemo(true);
+        setError(json.message || 'ไม่พบ Ref Code นี้ในระบบ');
       }
     } catch {
-      setData(makeDemoData(code.trim().toUpperCase()));
-      setIsDemo(true);
+      setError('เชื่อมต่อ server ไม่ได้ กรุณาลองใหม่');
     } finally {
       setLoading(false);
     }
@@ -142,15 +104,6 @@ export default function AffiliateDashboard() {
   // ── MAIN DASHBOARD ─────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0a0a1a,#1a0a2e)', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif" }}>
-
-      {/* DEMO MODE BANNER */}
-      {isDemo && (
-        <div style={{ background: 'rgba(245,158,11,0.15)', borderBottom: '1px solid rgba(245,158,11,0.4)', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
-          <span style={{ fontSize: 18 }}>⚠️</span>
-          <span style={{ color: '#fcd34d', fontWeight: 600 }}>ข้อมูลตัวอย่าง (Demo)</span>
-          <span style={{ color: '#94a3b8' }}>— ระบบไม่พบข้อมูลจริงสำหรับ Ref Code นี้ ตัวเลขด้านล่างเป็นเพียงตัวอย่างเท่านั้น ไม่ใช่ยอดจริงของคุณ</span>
-        </div>
-      )}
 
       {/* NAV */}
       <nav style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
@@ -214,15 +167,21 @@ export default function AffiliateDashboard() {
             {/* Bar Chart */}
             <div style={glass}>
               <div style={{ fontWeight: 700, marginBottom: 16 }}>📊 รายได้รายเดือน</div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 120 }}>
-                {data.monthly.map((m) => (
-                  <div key={m.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                    <div style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>฿{m.earned}</div>
-                    <div style={{ width: '100%', background: 'linear-gradient(180deg,#6366f1,#fe2c55)', borderRadius: '4px 4px 0 0', height: `${(m.earned / maxBar) * 100}px`, minHeight: 4, transition: 'height .4s' }} />
-                    <div style={{ fontSize: 11, color: '#64748b' }}>{m.month}</div>
-                  </div>
-                ))}
-              </div>
+              {data.monthly?.length > 0 ? (
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 120 }}>
+                  {data.monthly.map((m) => (
+                    <div key={m.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>฿{m.earned}</div>
+                      <div style={{ width: '100%', background: 'linear-gradient(180deg,#6366f1,#fe2c55)', borderRadius: '4px 4px 0 0', height: `${(m.earned / maxBar) * 100}px`, minHeight: 4, transition: 'height .4s' }} />
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{m.month}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 14 }}>
+                  ยังไม่มีข้อมูลรายได้รายเดือน
+                </div>
+              )}
             </div>
 
             {/* Tier Progress */}
@@ -253,33 +212,41 @@ export default function AffiliateDashboard() {
         {activeTab === 'sales' && (
           <div style={glass}>
             <div style={{ fontWeight: 700, marginBottom: 16 }}>📦 ประวัติยอดขาย</div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-                <thead>
-                  <tr style={{ color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    {['Order ID', 'แพ็กเกจ', 'คอมมิชชั่น', 'วันที่', 'สถานะ'].map((h) => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12 }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.recent_sales.map((s) => {
-                    const st = STATUS_STYLE[s.status] || STATUS_STYLE.pending;
-                    return (
-                      <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td style={{ padding: '10px 12px', color: '#94a3b8' }}>{s.id}</td>
-                        <td style={{ padding: '10px 12px' }}>{s.plan}</td>
-                        <td style={{ padding: '10px 12px', color: '#10b981', fontWeight: 700 }}>+฿{s.commission}</td>
-                        <td style={{ padding: '10px 12px', color: '#64748b', fontSize: 12 }}>{s.date}</td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{ background: st.bg, color: st.color, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>{st.label}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {data.recent_sales?.length > 0 ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                      {['Order ID', 'แพ็กเกจ', 'คอมมิชชั่น', 'วันที่', 'สถานะ'].map((h) => (
+                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.recent_sales.map((s) => {
+                      const st = STATUS_STYLE[s.status] || STATUS_STYLE.pending;
+                      return (
+                        <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <td style={{ padding: '10px 12px', color: '#94a3b8' }}>{s.id}</td>
+                          <td style={{ padding: '10px 12px' }}>{s.plan}</td>
+                          <td style={{ padding: '10px 12px', color: '#10b981', fontWeight: 700 }}>+฿{s.commission}</td>
+                          <td style={{ padding: '10px 12px', color: '#64748b', fontSize: 12 }}>{s.date}</td>
+                          <td style={{ padding: '10px 12px' }}>
+                            <span style={{ background: st.bg, color: st.color, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>{st.label}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: '#475569' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+                <div style={{ fontSize: 14 }}>ยังไม่มีการขายผ่านลิงก์ของคุณ</div>
+                <div style={{ fontSize: 12, color: '#334155', marginTop: 6 }}>เริ่มแชร์ลิงก์เพื่อรับคอมมิชชั่น</div>
+              </div>
+            )}
           </div>
         )}
 
