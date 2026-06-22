@@ -3,14 +3,14 @@ export const AF = {
   th: {
     nav: { back: '← กลับหน้าหลัก', hub: '💰 Affiliate Hub' },
     badge: '🇹🇭 Openthai.ai Affiliate Program',
-    hero: { l1: 'แชร์ → ได้เงิน', l2: 'คอมมิชชั่นสูงสุด 40%', sub: 'แชร์ Openthai.ai ให้เพื่อน Creator ไทย — ทุกครั้งที่เขาสมัคร คุณได้เงิน ไม่ต้องลงทุนอะไรเลย' },
+    hero: { l1: 'แนะนำ → รับคอมมิชชั่น', l2: 'คอมมิชชั่นสูงสุด 40%', sub: 'แนะนำ Openthai.ai ให้เพื่อน Creator ไทย — เมื่อลูกค้าชำระเสร็จและแพลตฟอร์มโอนเงินส่วนต่างมาให้เรา เราโอนค่าคอมมิชชั่นให้คุณทุกวันจันทร์ โปร่งใส ไม่มีเงื่อนไขซ่อน' },
     stats: [['1,200+', 'Creator ใช้แล้ว'], ['3x', 'คอนเทนต์โตไว'], ['40%', 'คอมมิชชั่นสูงสุด'], ['24ชม.', 'จ่ายทุกสัปดาห์']],
     how: { title: 'วิธีเริ่มต้น 4 ขั้นตอน' },
     steps: [
       { icon: '📝', title: 'สมัครฟรี', desc: 'กรอกข้อมูลด้านล่าง ไม่มีค่าใช้จ่าย' },
       { icon: '🔗', title: 'รับลิงก์พิเศษ', desc: 'ได้รับลิงก์ Affiliate ส่วนตัวทันที' },
       { icon: '📢', title: 'แชร์ให้เพื่อน', desc: 'แชร์ผ่าน TikTok, IG, Facebook ได้เลย' },
-      { icon: '💰', title: 'รับคอมมิชชั่น', desc: 'ทุกการสมัครผ่านลิงก์คุณ = เงินเข้ากระเป๋า' },
+      { icon: '💰', title: 'รับคอมมิชชั่น', desc: 'ลูกค้าชำระเงินผ่านลิงก์คุณ → รอแพลตฟอร์มโอนส่วนต่างมาให้ → เราโอนค่าคอมฯ ให้คุณ' },
     ],
     tiers: { title: 'ระดับ Affiliate & คอมมิชชั่น', recommended: 'แนะนำ ⭐', sales: 'ยอดขาย {min}–{max} ออเดอร์/เดือน' },
     tier: {
@@ -40,26 +40,26 @@ export const AF = {
     ok: { title: 'ยินดีด้วย! คุณเป็น Affiliate แล้ว', sub: 'รหัสและลิงก์ Affiliate ส่วนตัวของคุณ:', copylink: '📋 คัดลอกลิงก์', copied: '✅ คัดลอกแล้ว!', tierLabel: '🌱 Tier เริ่มต้น', tierVal: 'Starter (20%)', payLabel: '💸 จ่ายทุก', payVal: 'จันทร์', confLabel: '📧 อีเมลยืนยัน', confVal: 'ส่งแล้ว', team: '📩 ทีมงานจะส่งรายละเอียดเพิ่มเติมไปที่' },
     faq: { title: '❓ คำถามที่พบบ่อย' },
     faqs: [
-      ['สมัครแล้วได้เงินเมื่อไหร่?', 'ยอดค้างชำระจะถูกโอนให้ทุกวันจันทร์ ผ่าน PromptPay หรือ Bank Transfer ขั้นต่ำ ฿100'],
+      ['ได้รับคอมมิชชั่นเมื่อไหร่?', 'หลังลูกค้าชำระเงินแล้ว เราจะรอให้แพลตฟอร์มโอนเงินส่วนต่างมาให้เราก่อน จากนั้นจะโอนคอมมิชชั่นของคุณทุกวันจันทร์ ผ่าน PromptPay หรือ Bank Transfer ขั้นต่ำ ฿100 โปร่งใส ไม่จกตา'],
       ['ต้องมีคนตามเท่าไหร่ถึงสมัครได้?', 'ไม่มีขั้นต่ำ! แม้จะเพิ่งเริ่มต้นก็สมัครได้ทันที'],
       ['ลิงก์มีอายุนานแค่ไหน?', 'ลิงก์ Affiliate ของคุณไม่มีวันหมดอายุ ใช้ได้ตลอดไป'],
       ['จ่ายคอมมิชชั่นแบบไหน?', 'จ่ายคอมมิชชั่นจากทุกแพ็กเกจที่ขายผ่านลิงก์ของคุณ รวมถึง Renewal ด้วย'],
       ['ติดตามยอดขายได้ที่ไหน?', 'หลังสมัครสำเร็จ คุณจะได้รับลิงก์ Dashboard ส่วนตัวทางอีเมล'],
     ],
-    footer: { title: 'พร้อมเริ่มสร้างรายได้แล้วใช่ไหม?', sub: 'สมัครฟรีใน 30 วินาที เริ่มได้ทันที ไม่ต้องรอ', cta: '🚀 สมัคร Affiliate ฟรีตอนนี้เลย' },
+    footer: { title: 'พร้อมเริ่มแนะนำและรับคอมมิชชั่นแล้วใช่ไหม?', sub: 'สมัครฟรีใน 30 วินาที เริ่มแนะนำได้ทันที', cta: '🚀 สมัคร Affiliate ฟรีตอนนี้เลย' },
   },
 
   en: {
     nav: { back: '← Back home', hub: '💰 Affiliate Hub' },
     badge: '🇹🇭 Openthai.ai Affiliate Program',
-    hero: { l1: 'Share → earn', l2: 'up to 40% commission', sub: 'Share Openthai.ai with fellow Thai creators — every signup through your link earns you money, with zero investment' },
+    hero: { l1: 'Recommend → earn commission', l2: 'up to 40% commission', sub: 'Recommend Openthai.ai to fellow Thai creators — once the customer pays and the platform clears the net funds to us, we transfer your commission every Monday. Transparent, no hidden conditions.' },
     stats: [['1,200+', 'creators using it'], ['3x', 'faster content growth'], ['40%', 'max commission'], ['24h', 'weekly payouts']],
     how: { title: 'Get started in 4 steps' },
     steps: [
       { icon: '📝', title: 'Sign up free', desc: 'Fill the form below — no cost' },
       { icon: '🔗', title: 'Get your link', desc: 'Receive your personal affiliate link instantly' },
       { icon: '📢', title: 'Share it', desc: 'Share on TikTok, IG, Facebook' },
-      { icon: '💰', title: 'Earn commission', desc: 'Every signup via your link = money in your pocket' },
+      { icon: '💰', title: 'Earn commission', desc: 'Customer pays via your link → platform clears funds to us → we transfer your commission' },
     ],
     tiers: { title: 'Affiliate tiers & commission', recommended: 'Recommended ⭐', sales: '{min}–{max} orders/month' },
     tier: {
@@ -89,26 +89,26 @@ export const AF = {
     ok: { title: 'Congrats! You are an affiliate', sub: 'Your personal affiliate code and link:', copylink: '📋 Copy link', copied: '✅ Copied!', tierLabel: '🌱 Starting tier', tierVal: 'Starter (20%)', payLabel: '💸 Paid every', payVal: 'Monday', confLabel: '📧 Confirmation', confVal: 'Sent', team: '📩 Our team will email more details to' },
     faq: { title: '❓ Frequently asked questions' },
     faqs: [
-      ['When do I get paid?', 'Pending balance is paid every Monday via PromptPay or bank transfer, ฿100 minimum'],
+      ['When do I get paid?', 'After a customer pays, we wait for the platform to clear the net funds to us first, then we pay your commission every Monday via PromptPay or bank transfer, ฿100 minimum. Transparent — no tricks.'],
       ['How many followers do I need?', 'No minimum! You can join even as a beginner'],
       ['How long does the link last?', 'Your affiliate link never expires'],
       ['How is commission paid?', 'Commission on every plan sold via your link, including renewals'],
       ['Where do I track sales?', 'After signup you get a personal dashboard link by email'],
     ],
-    footer: { title: 'Ready to start earning?', sub: 'Sign up free in 30 seconds, start right away', cta: '🚀 Join Affiliate free now' },
+    footer: { title: 'Ready to start recommending and earning?', sub: 'Sign up free in 30 seconds, start recommending right away', cta: '🚀 Join Affiliate free now' },
   },
 
   zh: {
     nav: { back: '← 返回首页', hub: '💰 联盟中心' },
     badge: '🇹🇭 Openthai.ai 联盟计划',
-    hero: { l1: '分享 → 赚钱', l2: '最高 40% 佣金', sub: '把 Openthai.ai 分享给泰国创作者 — 每次通过你的链接注册你都能赚钱，零投入' },
+    hero: { l1: '推荐 → 赚取佣金', l2: '最高 40% 佣金', sub: '把 Openthai.ai 推荐给泰国创作者 — 客户付款后，待平台将净额结算给我们，每周一转账你的佣金。透明公开，无隐藏条件。' },
     stats: [['1,200+', '创作者在用'], ['3x', '内容增长更快'], ['40%', '最高佣金'], ['24h', '每周结算']],
     how: { title: '4 步开始' },
     steps: [
       { icon: '📝', title: '免费注册', desc: '填写下方表单，免费' },
       { icon: '🔗', title: '获取链接', desc: '立即获得专属联盟链接' },
       { icon: '📢', title: '分享出去', desc: '在 TikTok、IG、Facebook 分享' },
-      { icon: '💰', title: '赚取佣金', desc: '每次通过你链接注册 = 收入到账' },
+      { icon: '💰', title: '赚取佣金', desc: '客户通过你的链接付款 → 平台结算给我们 → 转账你的佣金' },
     ],
     tiers: { title: '联盟等级与佣金', recommended: '推荐 ⭐', sales: '每月 {min}–{max} 单' },
     tier: {
@@ -138,12 +138,12 @@ export const AF = {
     ok: { title: '恭喜！你已成为联盟伙伴', sub: '你的专属推荐码和链接：', copylink: '📋 复制链接', copied: '✅ 已复制！', tierLabel: '🌱 起始等级', tierVal: 'Starter (20%)', payLabel: '💸 结算周期', payVal: '周一', confLabel: '📧 确认邮件', confVal: '已发送', team: '📩 团队将把更多详情发送至' },
     faq: { title: '❓ 常见问题' },
     faqs: [
-      ['什么时候结算？', '待结算金额每周一通过 PromptPay 或银行转账支付，最低 ฿100'],
+      ['什么时候结算？', '客户付款后，我们等平台将净额结算给我们，再于每周一通过 PromptPay 或银行转账支付你的佣金，最低 ฿100。透明，不套路。'],
       ['需要多少粉丝才能加入？', '没有门槛！新手也能立即加入'],
       ['链接有效期多久？', '你的联盟链接永不过期'],
       ['佣金怎么算？', '通过你链接售出的每个套餐都有佣金，含续费'],
       ['在哪里查看业绩？', '注册成功后会通过邮件收到专属看板链接'],
     ],
-    footer: { title: '准备好开始赚钱了吗？', sub: '30 秒免费注册，立即开始', cta: '🚀 立即免费加入联盟' },
+    footer: { title: '准备好开始推荐并赚取佣金了吗？', sub: '30 秒免费注册，立即开始推荐', cta: '🚀 立即免费加入联盟' },
   },
 };
