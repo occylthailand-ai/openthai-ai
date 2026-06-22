@@ -95,6 +95,64 @@ create table if not exists public.stock_movements (
 create index if not exists stock_mv_product_idx on public.stock_movements (product_id);
 alter table public.stock_movements enable row level security;
 
+-- ── affiliates (ผู้ขาย Affiliate / ระบบค่าคอมมิชชั่น) ─────────────────
+create table if not exists public.affiliates (
+  ref_code        text primary key,
+  name            text not null,
+  email           text unique not null,
+  phone           text,
+  platform        text default 'TikTok',
+  followers       text,
+  channel_url     text,
+  note            text,
+  ref_link        text not null default '',
+  tier            text not null default 'starter'
+                  check (tier in ('starter','silver','gold','platinum','elite')),
+  commission_rate numeric(4,2) not null default 0.20,
+  total_sales     integer not null default 0,
+  total_earned    numeric(12,2) not null default 0,
+  pending_payout  numeric(12,2) not null default 0,
+  status          text not null default 'active'
+                  check (status in ('active','suspended','inactive')),
+  joined_at       timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+create index if not exists affiliates_email_idx  on public.affiliates (email);
+create index if not exists affiliates_status_idx on public.affiliates (status);
+alter table public.affiliates enable row level security;
+
+-- ── payments (บันทึกการชำระเงิน Omise) ───────────────────────────────
+create table if not exists public.payments (
+  charge_id   text primary key,
+  email       text,
+  plan        text not null,
+  method      text not null,
+  amount_thb  numeric,
+  status      text,
+  paid        boolean default false,
+  paid_at     timestamptz,
+  mock_mode   boolean default false,
+  created_at  timestamptz not null default now()
+);
+create index if not exists payments_email_idx  on public.payments (email);
+create index if not exists payments_plan_idx   on public.payments (plan);
+alter table public.payments enable row level security;
+
+-- ── entitlements (สิทธิ์การใช้งานแผน — key by email) ─────────────────
+create table if not exists public.entitlements (
+  email           text primary key,
+  plan            text not null,
+  status          text not null default 'active'
+                  check (status in ('active','expired','cancelled')),
+  source          text,
+  subscription_id text,
+  started_at      timestamptz,
+  updated_at      timestamptz not null default now(),
+  expires_at      timestamptz
+);
+create index if not exists entitlements_status_idx on public.entitlements (status);
+alter table public.entitlements enable row level security;
+
 -- ════════════════════════════════════════════════════════════════════════
 -- เสร็จ! ตารางทั้งหมดเปิด RLS — เข้าถึงได้เฉพาะ service_role (backend)
 -- ════════════════════════════════════════════════════════════════════════

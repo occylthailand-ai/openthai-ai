@@ -53,6 +53,22 @@ function adminDenyMessage() {
 // Local: ทุกอย่างอยู่ใน backend/data/
 const STATIC_DATA_DIR = join(__dirname, 'data');
 const WRITE_DATA_DIR  = IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR;
+
+// ─── Supabase REST helper — shared by affiliates / payments / entitlements ────
+const _SB_URL = process.env.SUPABASE_URL;
+const _SB_KEY = process.env.SUPABASE_SERVICE_KEY;
+const _useSB  = !!(_SB_URL && _SB_KEY);
+async function _sbReq(method, table, opts = {}) {
+  const url = new URL(`${_SB_URL}/rest/v1${table}`);
+  Object.entries(opts.params || {}).forEach(([k, v]) => url.searchParams.set(k, v));
+  const hdrs = { apikey: _SB_KEY, Authorization: `Bearer ${_SB_KEY}`, 'Content-Type': 'application/json' };
+  if (opts.prefer) hdrs.Prefer = opts.prefer;
+  const r = await fetch(url.toString(), { method, headers: hdrs, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  if (r.status === 204) return null;
+  const d = await r.json().catch(() => null);
+  if (!r.ok) throw new Error((d?.message || d?.hint) || `SB HTTP ${r.status}`);
+  return d;
+}
 // ── Infrastructure Layer — Vector Memory · Webhooks · Multi-tenant ────────────
 // Initialized after WRITE_DATA_DIR is known
 const memory    = createMemorySystem(WRITE_DATA_DIR, () => gemini ? { _googleAI: { getGenerativeModel: (o) => new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel(o) } } : null);
@@ -712,29 +728,61 @@ async function sendLowStockAlert(product) {
   }
 }
 
-// ─── Affiliate JSON File DB ───────────────────────────────────────────────────
-
+// ─── Affiliate DB — Supabase primary / JSON file fallback ────────────────────
 const AFF_FILE = join(WRITE_DATA_DIR, 'affiliates.json');
-
-function loadAffiliates() {
-  try {
-    if (existsSync(AFF_FILE)) return JSON.parse(readFileSync(AFF_FILE, 'utf8'));
-  } catch (_) {}
-  return [];
-}
-
-function saveAffiliates(data) {
+function _affFileSave(data) {
   try {
     const dir = AFF_FILE.replace(/[/\\][^/\\]+$/, '');
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true }); // sync — ไม่ใช้ dynamic import
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     writeFileSync(AFF_FILE, JSON.stringify(data, null, 2), 'utf8');
-  } catch (e) { console.error('Save affiliates error:', e.message); }
+  } catch (e) { console.error('[affiliates] file save error:', e.message); }
+}
+const _affToRow = (r) => ({
+  ref_code: r.ref_code, name: r.name, email: r.email, phone: r.phone || '',
+  platform: r.platform || 'TikTok', followers: r.followers || '',
+  channel_url: r.channel_url || '', note: r.note || '', ref_link: r.ref_link || '',
+  tier: r.tier || 'starter', commission_rate: r.commission_rate ?? 0.20,
+  total_sales: r.total_sales || 0, total_earned: r.total_earned || 0,
+  pending_payout: (r.total_earned || 0) - (r.paid_out || 0),
+  status: r.status || 'active',
+  joined_at: r.joined_at || new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+const _affFromRow = (r) => ({
+  id: r.id, ref_code: r.ref_code, name: r.name, email: r.email,
+  phone: r.phone || '', platform: r.platform || 'TikTok',
+  followers: r.followers || '', channel_url: r.channel_url || '',
+  note: r.note || '', ref_link: r.ref_link || '',
+  tier: r.tier || 'starter', commission_rate: r.commission_rate ?? 0.20,
+  total_sales: r.total_sales || 0, total_earned: r.total_earned || 0,
+  paid_out: 0, clicks: 0, monthly: [], recent_sales: [],
+  status: r.status || 'active', joined_at: r.joined_at,
+});
+let affiliates = [];
+try { if (existsSync(AFF_FILE)) affiliates = JSON.parse(readFileSync(AFF_FILE, 'utf8')); } catch (_) {}
+
+if (_useSB) {
+  _sbReq('GET', '/affiliates', { params: { select: '*', order: 'joined_at.asc', limit: '10000' } })
+    .then(rows => {
+      if (Array.isArray(rows) && rows.length > 0) {
+        affiliates.length = 0; affiliates.push(...rows.map(_affFromRow));
+        console.log(`[affiliates] ✅ Loaded ${rows.length} from Supabase`);
+      }
+    })
+    .catch(e => console.warn('[affiliates] Supabase init failed, using file:', e.message));
+}
+
+async function saveAffiliate(record) {
+  _affFileSave(affiliates);
+  if (_useSB) {
+    try { await _sbReq('POST', '/affiliates', { body: [_affToRow(record)], params: { on_conflict: 'ref_code' }, prefer: 'resolution=merge-duplicates,return=minimal' }); }
+    catch (e) { console.warn('[affiliates] Supabase write failed:', e.message); }
+  }
 }
 
 // ─── POST /api/affiliate/apply — รับสมัคร Affiliate ──────────────────────────
-const affiliates = loadAffiliates(); // persistent JSON file store
 
-app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
+app.post('/api/affiliate/apply', affiliateLimiter, async (req, res) => {
   try {
     const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link } = req.body;
     if (!name || !email) return res.status(400).json({ success: false, message: 'ต้องการชื่อและอีเมล' });
@@ -762,7 +810,7 @@ app.post('/api/affiliate/apply', affiliateLimiter, (req, res) => {
     };
 
     affiliates.push(record);
-    saveAffiliates(affiliates); // บันทึกลงไฟล์ถาวร
+    await saveAffiliate(record);
     console.log(`✅ Affiliate สมัครใหม่: ${name} (${email}) — Ref: ${record.ref_code}`);
 
     // ส่ง welcome email + dispatch webhook (async — ไม่บล็อก response)
@@ -2652,26 +2700,62 @@ app.get('/api/video/jobs/:id/status', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  OMISE PAYMENT — PromptPay QR + Subscription Billing
 // ═══════════════════════════════════════════════════════════════════════════════
+// ─── Payments DB — Supabase primary / JSON file fallback ─────────────────────
 const PAYMENTS_FILE = join(WRITE_DATA_DIR, 'payments.json');
-function loadPayments() {
-  try { if (existsSync(PAYMENTS_FILE)) return JSON.parse(readFileSync(PAYMENTS_FILE, 'utf8')); } catch (_) {}
-  return [];
+let payments = [];
+try { if (existsSync(PAYMENTS_FILE)) payments = JSON.parse(readFileSync(PAYMENTS_FILE, 'utf8')); } catch (_) {}
+
+if (_useSB) {
+  _sbReq('GET', '/payments', { params: { select: '*', order: 'created_at.desc', limit: '500' } })
+    .then(rows => {
+      if (Array.isArray(rows) && rows.length > 0) {
+        payments.length = 0; payments.push(...rows);
+        console.log(`[payments] ✅ Loaded ${rows.length} from Supabase`);
+      }
+    })
+    .catch(e => console.warn('[payments] Supabase init failed, using file:', e.message));
 }
+
 function savePayments(data) {
   try { writeFileSync(PAYMENTS_FILE, JSON.stringify(data.slice(0, 500), null, 2), 'utf8'); } catch (_) {}
+  if (_useSB && data.length > 0) {
+    const rec = data[0];
+    const row = {
+      charge_id:  rec.charge_id || rec.subscription_id || `pay_${Date.now()}`,
+      email:      rec.email || null,
+      plan:       rec.plan || 'unknown',
+      method:     rec.method || 'unknown',
+      amount_thb: rec.amount_thb || null,
+      status:     rec.status || null,
+      paid:       !!rec.paid,
+      paid_at:    rec.paid_at || null,
+      mock_mode:  !!rec.mock_mode,
+      created_at: rec.createdAt || new Date().toISOString(),
+    };
+    _sbReq('POST', '/payments', { body: [row], params: { on_conflict: 'charge_id' }, prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch(e => console.warn('[payments] Supabase write failed:', e.message));
+  }
 }
-const payments = loadPayments();
 
-// ─── Entitlements — แผนที่ user มีสิทธิ์ใช้ (key by email) ────────────────────
+// ─── Entitlements DB — Supabase primary / JSON file fallback ─────────────────
 const ENTITLEMENTS_FILE = join(WRITE_DATA_DIR, 'entitlements.json');
-function loadEntitlements() {
-  try { if (existsSync(ENTITLEMENTS_FILE)) return JSON.parse(readFileSync(ENTITLEMENTS_FILE, 'utf8')); } catch (_) {}
-  return {};
+let entitlements = {};
+try { if (existsSync(ENTITLEMENTS_FILE)) entitlements = JSON.parse(readFileSync(ENTITLEMENTS_FILE, 'utf8')); } catch (_) {}
+
+if (_useSB) {
+  _sbReq('GET', '/entitlements', { params: { select: '*', limit: '10000' } })
+    .then(rows => {
+      if (Array.isArray(rows) && rows.length > 0) {
+        rows.forEach(r => { entitlements[r.email] = r; });
+        console.log(`[entitlements] ✅ Loaded ${rows.length} from Supabase`);
+      }
+    })
+    .catch(e => console.warn('[entitlements] Supabase init failed, using file:', e.message));
 }
+
 function saveEntitlements(data) {
   try { writeFileSync(ENTITLEMENTS_FILE, JSON.stringify(data, null, 2), 'utf8'); } catch (_) {}
 }
-const entitlements = loadEntitlements();
 
 // เปิดสิทธิ์ใช้งานแผนให้ user (เรียกเมื่อชำระเงินสำเร็จ)
 function grantEntitlement(email, plan, { source = 'payment', subscription_id = null } = {}) {
@@ -2688,6 +2772,10 @@ function grantEntitlement(email, plan, { source = 'payment', subscription_id = n
   };
   entitlements[key] = ent;
   saveEntitlements(entitlements);
+  if (_useSB) {
+    _sbReq('POST', '/entitlements', { body: [ent], params: { on_conflict: 'email' }, prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch(e => console.warn('[entitlements] Supabase grant failed:', e.message));
+  }
   addLog('info', 'Entitlement', `เปิดสิทธิ์ ${plan} ให้ ${key} (${source})`);
   return ent;
 }
@@ -2699,6 +2787,10 @@ function getEntitlement(email) {
   if (!ent) return { plan: 'free', status: 'none' };
   if (ent.status === 'active' && ent.expires_at && new Date(ent.expires_at) < new Date()) {
     ent.status = 'expired'; saveEntitlements(entitlements);
+    if (_useSB) {
+      _sbReq('PATCH', `/entitlements?email=eq.${encodeURIComponent(ent.email)}`, { body: { status: 'expired', updated_at: new Date().toISOString() } })
+        .catch(e => console.warn('[entitlements] Supabase expiry update failed:', e.message));
+    }
   }
   return ent.status === 'active' ? ent : { ...ent, plan: 'free' };
 }
