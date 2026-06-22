@@ -1063,8 +1063,11 @@ app.post('/api/analyze-image', express.json({ limit: '5mb' }), generateLimiter, 
 const trendCache = { data: null, ts: 0 };
 const TREND_TTL  = 30 * 60 * 1000;
 
+const TREND_MAX_AGE = 2 * 60 * 60 * 1000; // force-refresh after 2 hours even if TTL not expired
+
 app.get('/api/trending', async (req, res) => {
-  if (trendCache.data && Date.now() - trendCache.ts < TREND_TTL) {
+  const age = Date.now() - trendCache.ts;
+  if (trendCache.data && age < TREND_TTL && age < TREND_MAX_AGE) {
     return res.json(trendCache.data);
   }
 
@@ -1569,6 +1572,18 @@ async function runWatchdog() {
   watchdogStats.checked = 0;
   let healed = 0;
   addLog('info', 'Watchdog', '🔍 เริ่มตรวจระบบ auto-heal...');
+
+  // Clear stale checkpoint files (agent crashed and left a lock > 1 hour old)
+  try {
+    if (existsSync(CHECKPOINT_FILE)) {
+      const cp = JSON.parse(readFileSync(CHECKPOINT_FILE, 'utf8'));
+      const ageMs = Date.now() - new Date(cp.ts || 0).getTime();
+      if (ageMs > 60 * 60 * 1000) {
+        unlinkSync(CHECKPOINT_FILE);
+        addLog('warn', 'Watchdog', `🗑️ ลบ stale checkpoint (อายุ ${(ageMs / 3600000).toFixed(1)} ชม.) — agent: ${cp.agentName || '?'}`);
+      }
+    }
+  } catch (_) {}
 
   for (const agent of agents) {
     if (!agent.active) continue;

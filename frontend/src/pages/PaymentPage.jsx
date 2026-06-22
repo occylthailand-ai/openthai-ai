@@ -238,7 +238,8 @@ const PaymentPage = () => {
           return;
         }
         // ชำระสำเร็จทันที
-        setChargeId(data.charge_id || null);
+        if (!data.charge_id) throw new Error('ไม่ได้รับ charge_id จากเซิร์ฟเวอร์');
+        setChargeId(data.charge_id);
         setReceipt(buildReceipt({ ...data, paid_at: data.paid_at || new Date().toISOString() }));
         setStep('success');
       }
