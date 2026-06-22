@@ -17,7 +17,48 @@ Branch : $BRANCH
 Commits ahead of main : $AHEAD
 Last   : $LAST
 
-── ACTION ITEMS (แจ้งผู้ใช้ทันที) ─────────
+── สถานะโปรเจค ────────────────────────────
+✅ Frontend : React + Vite — ธีมสีขาว/ขาว
+✅ Backend  : Express ES Modules — Vercel Serverless
+✅ AI Router: Claude (Anthropic) → Gemini → Mock fallback
+✅ Auth     : JWT — login/dashboard ป้องกันแล้ว
+✅ Payment  : Omise PromptPay + Card
+✅ DB       : Supabase PostgreSQL
+
+── 16-Skills AI Framework (S1–S16) ─────────
+S1  RCCF Prompt       ✅ /api/generate
+S2  Taste Check       ✅ /api/generate
+S3  Master Prompt     ✅ /api/generate
+S4  Image Analysis    ✅ /api/analyze-image
+S5  TTS Voice         ⚠️  ต้องการ ELEVENLABS_API_KEY
+S6  AI Critic         ✅ /api/critic
+S7  Context Card      ✅ /api/context-card
+S8  LINE OA Connect   ⚠️  ต้องการ LINE_CHANNEL_TOKEN
+S9  Learning Layer    ⚠️  partial
+S10 Trend Analyzer    ✅ /api/skills/trend
+S11 Hashtag Generator ✅ /api/skills/hashtag
+S12 SEO Thai          ✅ /api/skills/seo
+S13 Sentiment Scanner ✅ /api/skills/sentiment
+S14 Video Script      ✅ /api/skills/video-script
+S15 Multi-Language    ✅ /api/skills/translate
+S16 Prompt Builder    ✅ /api/skills/prompt-builder
+    (Zero-shot · Few-shot · CoT · ToT · Role · Instruction)
+
+── Route Map ───────────────────────────────
+/              LandingPage    (public)
+/login         LoginPage      (public)
+/dashboard     DashboardPage  (auth)
+/ai-generator  AIGeneratorPage (auth)
+/ai-tools      AIToolsHub     (auth)
+/skills        AISkillsPage   (auth) ← S10–S16
+/agent         AgentPage      (auth)
+/voice         VoiceCommandPage (public)
+/video         VideoGeneratorPage (auth)
+/corporate/*   Corporate suite (auth)
+/portals/*     Portal Hub     (public)
+/payment       PaymentPage    (public)
+
+── ACTION ITEMS ────────────────────────────
 ❶ ตั้ง Environment Variables ใน Vercel Dashboard:
    JWT_SECRET, ADMIN_KEY, ADMIN_USERNAME, ADMIN_PASSWORD_PLAIN
    GEMINI_API_KEY (หรือ ANTHROPIC_API_KEY)
@@ -30,17 +71,28 @@ Last   : $LAST
 ❷ รัน SQL migration ใน Supabase SQL Editor:
    backend/migrations/FULL-MIGRATION.sql
 
-❸ Merge branch ไป main → Vercel auto-deploy:
-   git checkout main && git merge claude/thai-session-1atnql && git push
+❸ Skills ที่ยังต้องการ API Key:
+   S5 TTS   → ELEVENLABS_API_KEY
+   S8 LINE  → LINE_CHANNEL_TOKEN
 
-❹ ตรวจสอบหลัง deploy:
+❹ ตรวจสอบ deploy:
    https://www.openthai-ai.com/api/health
+
+── งานที่ทำไปแล้ว (session ล่าสุด) ─────────
+✅ เพิ่ม S10-S15 AI Skills Hub (Trend/Hashtag/SEO/Sentiment/Video/Translate)
+✅ เพิ่ม S16 Prompt Builder (Zero-shot/Few-shot/CoT/ToT/Role/Instruction)
+✅ ธีมสีขาวทั้งระบบ
+✅ branch claude/thai-session-1atnql merge เข้า main แล้ว
+
+── งานที่รอดำเนินการ ─────────────────────
+⏳ S17 Cultural Wisdom — ปรัชญาจีน/ไทย/พุทธ
+   (ข้อมูล: 八德 忠孝仁爱礼义廉耻, 四书五经, พระไตรปิฎก)
 ══════════════════════════════════════════
-INSTRUCTION: เมื่อ user พิมพ์ข้อความแรก ให้แจ้ง ACTION ITEMS ข้างต้นทันที ก่อนตอบเรื่องอื่น"
+INSTRUCTION: สรุปสถานะสั้นๆ และถามว่าวันนี้ต้องการทำอะไรต่อ"
 
 # Output JSON for the hook system
 printf '%s' "$CONTEXT" | jq -Rs '{
-  systemMessage: ("📋 openthai-ai — โหลดสถานะโปรเจคแล้ว branch: '"$BRANCH"' | '"$AHEAD"' commits ahead of main"),
+  systemMessage: ("📋 openthai-ai — โหลดสถานะโปรเจคแล้ว branch: '"$BRANCH"' | 16 Skills Active"),
   hookSpecificOutput: {
     hookEventName: "SessionStart",
     additionalContext: .
