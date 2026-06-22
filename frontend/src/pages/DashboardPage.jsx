@@ -49,6 +49,7 @@ const AI_SKILLS = [
   { name: 'S13 · Sentiment Scanner', desc: 'วิเคราะห์ความรู้สึกจากรีวิว',        pct: 82, color: '#a855f7', isNew: true },
   { name: 'S14 · Video Script',      desc: 'Script + Storyboard ครบทุกฉาก',      pct: 79, color: '#ef4444', isNew: true },
   { name: 'S15 · Multi-Language',    desc: 'แปล 5 ภาษา เจาะตลาด ASEAN',          pct: 86, color: '#14b8a6', isNew: true },
+  { name: 'S16 · Prompt Builder',   desc: 'Zero-shot · Few-shot · CoT · ToT',    pct: 93, color: '#f59e0b', isNew: true },
 ];
 
 const PLATFORMS_STATUS = [
@@ -205,10 +206,10 @@ const DashboardPage = ({ onLogout }) => {
 
           {/* Right: AI Skills */}
           <div>
-            <div className="pro-section-title">🧠 15-Skills AI Framework</div>
+            <div className="pro-section-title">🧠 16-Skills AI Framework</div>
             <div className="pro-skills-list glass-panel">
               <div className="pro-skills-header">
-                ระบบ AI ของ Openthai.ai ประกอบด้วย 15 ทักษะ (S1–S15) พัฒนาเฉพาะสำหรับสินค้าไทยและตลาด ASEAN
+                ระบบ AI ของ Openthai.ai ประกอบด้วย 16 ทักษะ (S1–S16) พัฒนาเฉพาะสำหรับสินค้าไทยและตลาด ASEAN
               </div>
               {AI_SKILLS.map((s, i) => (
                 <div key={i} className="pro-skill-row" style={{ cursor: s.isNew ? 'pointer' : 'default' }} onClick={() => s.isNew && navigate('/skills')}>
@@ -227,7 +228,7 @@ const DashboardPage = ({ onLogout }) => {
               ))}
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <button className="pro-view-all-btn" onClick={() => navigate('/skills')}>
-                  ✨ ใช้ Skills ใหม่ S10-S15 →
+                  ✨ ใช้ Skills ใหม่ S10-S16 →
                 </button>
                 <button className="pro-view-all-btn" onClick={() => navigate('/ai-tools')} style={{ background: 'transparent' }}>
                   ดูเครื่องมือทั้งหมด →

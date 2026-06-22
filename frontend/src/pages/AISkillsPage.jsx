@@ -16,6 +16,16 @@ const TABS = [
   { id: 'sentiment',   icon: '💭', label: 'Sentiment Scanner', color: '#a855f7', skill: 'S13' },
   { id: 'video',       icon: '🎬', label: 'Video Script',      color: '#ef4444', skill: 'S14' },
   { id: 'translate',   icon: '🌐', label: 'Multi-Language',    color: '#14b8a6', skill: 'S15' },
+  { id: 'prompt',      icon: '⚡', label: 'Prompt Builder',    color: '#f59e0b', skill: 'S16' },
+];
+
+const PROMPT_TECHNIQUES = [
+  { id: 'zero-shot',   icon: '🎯', label: 'Zero-Shot',   desc: 'สั่งตรง ไม่มีตัวอย่าง — เร็ว เหมาะงานง่าย' },
+  { id: 'few-shot',    icon: '📚', label: 'Few-Shot',    desc: 'ให้ตัวอย่าง 2-5 คู่ — AI เรียนรู้ pattern ของคุณ' },
+  { id: 'chain',       icon: '⛓️', label: 'Chain-of-Thought', desc: 'คิดทีละขั้น — เหมาะงานซับซ้อน/คำนวณ' },
+  { id: 'tree',        icon: '🌳', label: 'Tree-of-Thought', desc: 'สำรวจหลายแนว — แก้ปัญหายากที่ต้องวางแผน' },
+  { id: 'role',        icon: '🎭', label: 'Role Prompting', desc: 'กำหนด persona — AI ตอบแบบผู้เชี่ยวชาญ' },
+  { id: 'instruction', icon: '📋', label: 'Instruction',  desc: 'ออกคำสั่งชัดเจน + format — ควบคุม output ได้แม่นยำ' },
 ];
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
@@ -615,6 +625,184 @@ function TabTranslate() {
   );
 }
 
+// ─── Tab: Prompt Builder (S16) ────────────────────────────────────────────────
+function TabPromptBuilder() {
+  const [form, setForm] = useState({ goal: '', technique: 'zero-shot', role: '', examples: '', context: '', output_format: '' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const run = async () => {
+    if (!form.goal.trim()) { setError('กรุณาอธิบายสิ่งที่ต้องการให้ AI ทำ'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/prompt-builder'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error || 'เกิดข้อผิดพลาด'); } else { setResult(d); }
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  const scoreColor = s => s >= 85 ? '#10b981' : s >= 70 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      {/* Technique Explainer */}
+      <div style={card({ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.2)' })}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#f59e0b', marginBottom: 12 }}>⚡ เลือกเทคนิค Prompt Engineering</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
+          {PROMPT_TECHNIQUES.map(t => (
+            <button key={t.id} onClick={() => setForm(f => ({ ...f, technique: t.id }))}
+              style={{ padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${form.technique === t.id ? '#f59e0b' : 'rgba(0,0,0,0.08)'}`, background: form.technique === t.id ? 'rgba(245,158,11,0.1)' : '#ffffff', cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
+              <div style={{ fontSize: 18, marginBottom: 4 }}>{t.icon}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: form.technique === t.id ? '#d97706' : '#1e293b', marginBottom: 2 }}>{t.label}</div>
+              <div style={{ fontSize: 10, color: '#94a3b8', lineHeight: 1.4 }}>{t.desc}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Input */}
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: '#f59e0b', marginBottom: 16 }}>⚡ สร้าง Prompt อัจฉริยะ</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div>
+            <label style={labelSt}>เป้าหมาย / สิ่งที่ต้องการให้ AI ทำ *</label>
+            <textarea style={{ ...inputSt, height: 100, resize: 'vertical' }}
+              placeholder="เช่น: เขียน caption ขายสินค้า OTOP บน TikTok ที่ดึงดูดและกระตุ้นการซื้อ หรือ วิเคราะห์จุดแข็ง-จุดอ่อนของธุรกิจ SME ไทย..."
+              value={form.goal} onChange={e => setForm(f => ({ ...f, goal: e.target.value }))} />
+          </div>
+
+          <button onClick={() => setShowAdvanced(v => !v)}
+            style={{ background: 'none', border: '1px dashed rgba(0,0,0,0.15)', borderRadius: 8, padding: '8px 14px', color: '#64748b', cursor: 'pointer', fontSize: 12, textAlign: 'left' }}>
+            {showAdvanced ? '▲ ซ่อนตัวเลือกเพิ่มเติม' : '▼ ตัวเลือกเพิ่มเติม (Role / ตัวอย่าง / Format)'}
+          </button>
+
+          {showAdvanced && (
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div>
+                <label style={labelSt}>Role / Persona ของ AI (ไม่บังคับ)</label>
+                <input style={inputSt} placeholder="เช่น: นักการตลาดดิจิทัลระดับ Senior ที่เชี่ยวชาญตลาด ASEAN"
+                  value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} />
+              </div>
+              {(form.technique === 'few-shot') && (
+                <div>
+                  <label style={labelSt}>ตัวอย่าง Input → Output (สำหรับ Few-Shot)</label>
+                  <textarea style={{ ...inputSt, height: 90, resize: 'vertical' }}
+                    placeholder="Input: ผ้าไหมไทย → Output: 🌟 ผ้าไหมไทยแท้ 100% งานครูช่าง..."
+                    value={form.examples} onChange={e => setForm(f => ({ ...f, examples: e.target.value }))} />
+                </div>
+              )}
+              <div>
+                <label style={labelSt}>บริบทเพิ่มเติม</label>
+                <input style={inputSt} placeholder="เช่น: สินค้าราคา 500 บาท กลุ่มเป้าหมายอายุ 25-40 ปี"
+                  value={form.context} onChange={e => setForm(f => ({ ...f, context: e.target.value }))} />
+              </div>
+              <div>
+                <label style={labelSt}>รูปแบบผลลัพธ์ที่ต้องการ</label>
+                <input style={inputSt} placeholder="เช่น: bullet 5 ข้อ, JSON, ตาราง, เรียงความ 200 คำ"
+                  value={form.output_format} onChange={e => setForm(f => ({ ...f, output_format: e.target.value }))} />
+              </div>
+            </div>
+          )}
+
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : 'linear-gradient(135deg,#f59e0b,#d97706)' }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังสร้าง Prompt...' : '⚡ สร้าง Prompt'}
+          </button>
+        </div>
+      </div>
+
+      {/* Result */}
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {/* Main Prompt Output */}
+          <div style={card({ borderLeft: '4px solid #f59e0b' })}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: '#1e293b' }}>⚡ Prompt ที่สร้างขึ้น</div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center' }}>
+                  <SourceBadge source={result.source} />
+                  {result.quality_score && (
+                    <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: `${scoreColor(result.quality_score)}20`, color: scoreColor(result.quality_score), fontWeight: 700 }}>
+                      Quality {result.quality_score}/100
+                    </span>
+                  )}
+                </div>
+              </div>
+              <CopyBtn text={result.built_prompt || ''} />
+            </div>
+            <div style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 10, padding: '16px', fontSize: 13, color: '#1e293b', lineHeight: 1.8, fontFamily: "'Courier New',monospace", whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {result.built_prompt}
+            </div>
+          </div>
+
+          {/* Why this technique */}
+          {result.why_this_technique && (
+            <div style={card({ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.2)' })}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#d97706' }}>💡 เหตุผลที่เลือกเทคนิคนี้</div>
+              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.why_this_technique}</div>
+              {result.expected_output_quality && (
+                <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>🎯 คาดหวัง: {result.expected_output_quality}</div>
+              )}
+            </div>
+          )}
+
+          {/* Prompt Breakdown */}
+          {result.prompt_breakdown?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12 }}>🔬 วิเคราะห์โครงสร้าง Prompt</div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {result.prompt_breakdown.map((p, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 14px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 10, alignItems: 'start' }}>
+                    <span style={{ background: '#f59e0b', color: '#fff', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{p.part}</span>
+                    <div>
+                      <div style={{ fontSize: 12, color: '#1e293b', marginBottom: 2 }}>{p.content}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8' }}>→ {p.role}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tips */}
+          {result.tips?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>🚀 เคล็ดลับปรับปรุง Prompt</div>
+              {result.tips.map((tip, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: i < result.tips.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                  <span style={{ color: '#f59e0b', fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
+                  <span style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{tip}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Variations */}
+          {result.variations?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10 }}>🔄 Prompt ทางเลือก</div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {result.variations.map((v, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#6366f1' }}>🔹 {v.label}</span>
+                      <CopyBtn text={v.prompt || ''} />
+                    </div>
+                    <div style={{ fontSize: 12, color: '#475569', fontFamily: "'Courier New',monospace", lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{v.prompt}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AISkillsPage() {
   const navigate = useNavigate();
@@ -629,7 +817,7 @@ export default function AISkillsPage() {
         <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>🧠 AI Skills Hub</div>
-          <div style={{ fontSize: 11, color: '#94a3b8' }}>S10–S15 · Trend · Hashtag · SEO · Sentiment · Video Script · Translate</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>S10–S16 · Trend · Hashtag · SEO · Sentiment · Video · Translate · Prompt Builder</div>
         </div>
         <button onClick={() => navigate('/ai-generator')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⚡ AI Generator</button>
       </header>
@@ -664,6 +852,7 @@ export default function AISkillsPage() {
         {tab === 'sentiment' && <TabSentiment />}
         {tab === 'video'     && <TabVideoScript />}
         {tab === 'translate' && <TabTranslate />}
+        {tab === 'prompt'    && <TabPromptBuilder />}
       </div>
     </div>
   );

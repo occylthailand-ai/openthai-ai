@@ -109,6 +109,7 @@ const SKILLS_INFO = [
   { code: 'S13', name: 'Sentiment Scanner',  desc: 'วิเคราะห์ความรู้สึกจากคอมเมนต์/รีวิว — รู้ว่าลูกค้ารู้สึกอย่างไรทันที', color: '#a855f7', new: true },
   { code: 'S14', name: 'Video Script',       desc: 'สร้าง Script + Storyboard วิดีโอ TikTok ครบทุกฉาก พร้อมถ่ายทำได้เลย', color: '#ef4444', new: true },
   { code: 'S15', name: 'Multi-Language',     desc: 'แปลคอนเทนต์ไทย → อังกฤษ, จีน, มาเลย์, อินโดนีเซีย เจาะตลาด ASEAN', color: '#14b8a6', new: true },
+  { code: 'S16', name: 'Prompt Builder',    desc: 'สร้าง Prompt คุณภาพสูง — Zero-shot · Few-shot · Chain-of-Thought · Tree-of-Thought · Role', color: '#f59e0b', new: true },
 ];
 
 const PRICING = [
@@ -242,20 +243,20 @@ const AIToolsHub = () => {
       {activeTab === 'skills' && (
         <div className="hub-content">
           <div className="hub-hero">
-            <h1 className="hub-hero-title">15-Skills AI Framework<br /><span style={{ color: '#a5b4fc' }}>พัฒนาเฉพาะสำหรับสินค้าไทย</span></h1>
-            <p className="hub-hero-sub">ระบบ AI ของ Openthai.ai ถูกออกแบบมาเพื่อเข้าใจสินค้า วัฒนธรรม และตลาดไทยอย่างลึกซึ้ง · S10–S15 ใหม่ล่าสุด</p>
+            <h1 className="hub-hero-title">16-Skills AI Framework<br /><span style={{ color: '#a5b4fc' }}>พัฒนาเฉพาะสำหรับสินค้าไทย</span></h1>
+            <p className="hub-hero-sub">ระบบ AI ของ Openthai.ai ถูกออกแบบมาเพื่อเข้าใจสินค้า วัฒนธรรม และตลาดไทยอย่างลึกซึ้ง · S10–S16 ใหม่ล่าสุด</p>
             <div style={{ marginTop: 16 }}>
               <button
                 onClick={() => navigate('/skills')}
-                style={{ background: 'linear-gradient(135deg,#f97316,#ec4899)', border: 'none', borderRadius: 10, padding: '12px 28px', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                🚀 ทดลอง S10–S15 ได้เลย →
+                style={{ background: 'linear-gradient(135deg,#f97316,#f59e0b)', border: 'none', borderRadius: 10, padding: '12px 28px', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                🚀 ทดลอง S10–S16 ได้เลย →
               </button>
             </div>
           </div>
 
           {/* NEW Skills Banner */}
-          <div style={{ background: 'linear-gradient(135deg,rgba(249,115,22,0.08),rgba(168,85,247,0.08))', border: '1px solid rgba(249,115,22,0.2)', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
-            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 12 }}>✨ Skills ใหม่ S10–S15 — ใช้งานได้แล้ววันนี้</div>
+          <div style={{ background: 'linear-gradient(135deg,rgba(249,115,22,0.08),rgba(245,158,11,0.08))', border: '1px solid rgba(249,115,22,0.2)', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 12 }}>✨ Skills ใหม่ S10–S16 — ใช้งานได้แล้ววันนี้</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 8 }}>
               {SKILLS_INFO.filter(s => s.new).map((s, i) => (
                 <div key={i} style={{ background: '#fff', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={() => navigate('/skills')}>
@@ -287,13 +288,14 @@ const AIToolsHub = () => {
           </div>
 
           <div className="hub-framework-note glass-panel">
-            <h3>🧠 ทำไม 15-Skills Framework ถึงแตกต่าง?</h3>
+            <h3>🧠 ทำไม 16-Skills Framework ถึงแตกต่าง?</h3>
             <div className="hub-notes-grid">
               {[
                 { icon: '🇹🇭', title: 'Thai-First AI', desc: 'เข้าใจภาษา วัฒนธรรม และพฤติกรรมผู้บริโภคไทยอย่างแท้จริง' },
                 { icon: '📊', title: 'Data-Driven', desc: 'เรียนรู้จากคอนเทนต์ที่ขายดีจริง 300+ สินค้า OTOP' },
                 { icon: '🔥', title: 'Trend-Aware', desc: 'S10 Trend Analyzer + S11 Hashtag Gen วิเคราะห์กระแสอัตโนมัติ' },
                 { icon: '🌏', title: 'Multi-Market', desc: 'S15 แปล 5 ภาษา เจาะตลาด ASEAN และ 35 ประเทศทั่วโลก' },
+                { icon: '⚡', title: 'Prompt Expert', desc: 'S16 Prompt Builder — Zero-shot · Few-shot · CoT · ToT ครบทุกเทคนิค' },
               ].map((n, i) => (
                 <div key={i} className="hub-note-item glass-panel">
                   <span className="hub-note-icon">{n.icon}</span>

@@ -1346,6 +1346,84 @@ ${product ? `บริบท: สินค้า ${product}` : ''}
   });
 });
 
+// S16 · POST /api/skills/prompt-builder — Prompt Engineering Builder (Zero-shot/Few-shot/CoT/ToT/Role)
+app.post('/api/skills/prompt-builder', generateLimiter, async (req, res) => {
+  const { goal, technique = 'zero-shot', role, examples, context: ctx, output_format } = req.body || {};
+  if (!goal?.trim()) return res.status(400).json({ error: 'goal required' });
+
+  const techniqueMap = {
+    'zero-shot':   'Zero-Shot Prompting — สั่งตรงโดยไม่มีตัวอย่าง ใช้ได้กับงานที่ชัดเจน',
+    'few-shot':    'Few-Shot Prompting — ให้ตัวอย่าง 2-5 คู่ Input→Output เพื่อให้ AI เรียนรู้ pattern',
+    'chain':       'Chain-of-Thought (CoT) — ให้ AI คิดทีละขั้น "Let\'s think step by step"',
+    'tree':        'Tree-of-Thought (ToT) — สำรวจหลายแนวทาง เลือกดีที่สุด เหมาะกับปัญหาซับซ้อน',
+    'role':        'Role Prompting — กำหนด persona/บทบาทให้ AI ทำให้ตอบแบบผู้เชี่ยวชาญ',
+    'instruction': 'Instruction Prompting — ออกคำสั่งชัดเจน + constraints + output format',
+  };
+  const techDesc = techniqueMap[technique] || techniqueMap['zero-shot'];
+
+  const prompt = `คุณเป็น Prompt Engineering Expert ระดับโลก ที่เชี่ยวชาญเทคนิคจาก OpenAI, Google DeepMind, Anthropic
+ช่วยสร้าง Prompt คุณภาพสูงสำหรับงานที่กำหนด โดยใช้เทคนิค: ${techDesc}
+
+เป้าหมาย/งาน: "${goal.slice(0, 500)}"
+เทคนิค: ${technique}
+${role ? `Role/Persona: ${role}` : ''}
+${examples ? `ตัวอย่าง Input→Output ที่ต้องการ: ${examples.slice(0, 500)}` : ''}
+${ctx ? `บริบทเพิ่มเติม: ${ctx.slice(0, 300)}` : ''}
+${output_format ? `รูปแบบผลลัพธ์: ${output_format}` : ''}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "built_prompt": "prompt ที่สร้างขึ้น พร้อมใช้งาน (ภาษาที่เหมาะสมกับงาน)",
+  "technique_used": "${technique}",
+  "why_this_technique": "เหตุผลที่เลือกเทคนิคนี้สำหรับงานนี้",
+  "prompt_breakdown": [{"part":"ชื่อส่วน","content":"เนื้อหาส่วนนั้น","role":"บทบาทของส่วนนี้ใน prompt"}],
+  "tips": ["เคล็ดลับปรับปรุง 1","เคล็ดลับ 2","เคล็ดลับ 3"],
+  "variations": [{"label":"ชื่อรูปแบบ","prompt":"prompt ทางเลือก"}],
+  "quality_score": 85,
+  "expected_output_quality": "สูง/กลาง/ต่ำ พร้อมอธิบาย"
+}`;
+
+  try {
+    const text = await callAI(prompt, 2048);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) {
+    addLog('warn', 'Skills/PromptBuilder', e.message);
+  }
+
+  // Mock fallback
+  const mockPrompts = {
+    'zero-shot':   `คุณเป็น ${role || 'ผู้เชี่ยวชาญ'} โปรด${goal}. ตอบเป็นภาษาที่ชัดเจน กระชับ และมีประสิทธิภาพ${output_format ? `. รูปแบบ: ${output_format}` : ''}`,
+    'few-shot':    `ตัวอย่าง:\nInput: [ตัวอย่าง 1]\nOutput: [ผลลัพธ์ 1]\n\nInput: [ตัวอย่าง 2]\nOutput: [ผลลัพธ์ 2]\n\nตอนนี้โปรด${goal}:\nInput: {{input}}\nOutput:`,
+    'chain':       `มาคิดทีละขั้นตอน (Let's think step by step):\n\nงาน: ${goal}\n\nขั้นที่ 1: วิเคราะห์ปัญหา\nขั้นที่ 2: กำหนดแนวทาง\nขั้นที่ 3: ดำเนินการ\nขั้นที่ 4: ตรวจสอบ\n\nเริ่มกระบวนการ:`,
+    'tree':        `สำรวจ 3 แนวทางสำหรับ: ${goal}\n\nแนวทาง A: [แนวทางที่ 1]\nแนวทาง B: [แนวทางที่ 2]\nแนวทาง C: [แนวทางที่ 3]\n\nประเมิน pros/cons แต่ละแนวทาง แล้วเลือกแนวทางที่ดีที่สุดพร้อมเหตุผล`,
+    'role':        `คุณคือ${role || 'ผู้เชี่ยวชาญระดับโลก'}ที่มีประสบการณ์มากกว่า 20 ปี\nในฐานะผู้เชี่ยวชาญ โปรด${goal}\nใช้ความรู้เชิงลึกและประสบการณ์จริงในการตอบ`,
+    'instruction': `## คำสั่ง\n${goal}\n\n## ข้อกำหนด\n- ตอบเป็นภาษาไทย\n- ความยาว: กระชับและครบถ้วน\n- รูปแบบ: ${output_format || 'bullet points'}\n\n## เริ่มตอบ:`,
+  };
+  res.json({
+    success: true, source: 'mock',
+    built_prompt: mockPrompts[technique] || mockPrompts['zero-shot'],
+    technique_used: technique,
+    why_this_technique: `${techDesc} — เหมาะกับงาน "${goal.slice(0, 60)}"`,
+    prompt_breakdown: [
+      { part: 'Role/Context', content: role || 'ผู้เชี่ยวชาญ', role: 'กำหนดมุมมองและความเชี่ยวชาญของ AI' },
+      { part: 'Task Instruction', content: goal.slice(0, 100), role: 'อธิบายงานที่ต้องการชัดเจน' },
+      { part: 'Output Format', content: output_format || 'default', role: 'กำหนดรูปแบบผลลัพธ์' },
+    ],
+    tips: [
+      'เพิ่ม constraints เช่น "ห้ามเกิน 100 คำ" เพื่อควบคุมความยาว',
+      'ใส่ตัวอย่างที่ดีและไม่ดีเพื่อให้ AI เข้าใจ boundary ชัดขึ้น',
+      'ทดสอบ temperature 0.3-0.7 เพื่อหาจุดสมดุลระหว่าง creativity กับ accuracy',
+    ],
+    variations: [
+      { label: 'Version สั้น', prompt: `${goal}. ตอบสั้นกระชับ 3 bullet points` },
+      { label: 'Version ละเอียด', prompt: `อธิบายอย่างละเอียด: ${goal}. พร้อมตัวอย่างจริง` },
+    ],
+    quality_score: 78,
+    expected_output_quality: 'กลาง — ควรเพิ่ม AI API key เพื่อผลลัพธ์ที่ดีขึ้น',
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  AI AGENT SCHEDULER
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1920,6 +1998,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S13', name:'Sentiment Scanner',pct:82, color:'#a855f7', category:'sentiment',   status:'✅' },
       { id:'S14', name:'Video Script',     pct:79, color:'#ef4444', category:'video',       status:'✅' },
       { id:'S15', name:'Multi-Language',   pct:86, color:'#14b8a6', category:'translate',   status:'✅' },
+      { id:'S16', name:'Prompt Builder',   pct:93, color:'#f59e0b', category:'prompt',      status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
