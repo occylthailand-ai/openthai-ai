@@ -2752,7 +2752,8 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
   }
 
   if (!process.env.OMISE_SECRET_KEY) {
-    // Mock mode — Omise ยังไม่ได้ตั้ง. บัตรเครดิตถือว่าสำเร็จทันที (ไม่มี QR ให้รอ)
+    // Mock mode — Omise ยังไม่ได้ตั้ง (dev/staging only). ห้ามใช้ใน production จริง
+    console.warn('[payment] ⚠️  OMISE_SECRET_KEY not set — running in MOCK mode. No real charge will be made. Set OMISE_SECRET_KEY + OMISE_PUBLIC_KEY + OMISE_PLAN_PRO + OMISE_PLAN_PREMIER + OMISE_WEBHOOK_SECRET in production.');
     const isCard = method === 'card';
     const mock = {
       charge_id:     `mock_charge_${Date.now()}`,
@@ -2765,7 +2766,8 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       expires_at:    new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       promptpay_ref: isCard ? null : 'MOCKREF001',
       plan,
-      message:       'OMISE_SECRET_KEY ยังไม่ได้ตั้งค่า — นี่คือ mock response',
+      mock_mode:     true,
+      message:       '⚠️ MOCK MODE — ไม่มีการตัดเงินจริง ต้องตั้งค่า OMISE_SECRET_KEY ใน production',
     };
     payments.unshift({ ...mock, method, email: email || null, paid_at: isCard ? new Date().toISOString() : null, createdAt: new Date().toISOString() });
     savePayments(payments);

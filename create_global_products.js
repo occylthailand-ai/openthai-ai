@@ -1,5 +1,6 @@
 ﻿const fs = require('fs');
-const dir = 'C:/Openthai.ai/all-platform-files';
+const path = require('path');
+const dir = process.env.OUTPUT_DIR || path.join(__dirname, 'all-platform-files');
 
 // ========================================
 // GLOBAL PRODUCT CATALOG - ALL CONTINENTS

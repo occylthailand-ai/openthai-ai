@@ -138,7 +138,10 @@ export async function cancelSubscription(subscription_id) {
 // ── Verify Omise Webhook Signature ─────────────────────────────────────────────
 export function verifyOmiseWebhook(rawBody, signatureHeader) {
   const secret = process.env.OMISE_WEBHOOK_SECRET;
-  if (!secret) return true; // skip verification if not configured
+  if (!secret) {
+    console.error('[omise] ❌ OMISE_WEBHOOK_SECRET not set — rejecting webhook to prevent forged payment confirmations. Set this variable in production.');
+    return false;
+  }
   const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
   return signatureHeader === expected;
 }

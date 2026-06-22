@@ -69,6 +69,7 @@ export default function AffiliateDashboard() {
 
   const [refInput, setRefInput] = useState(refFromUrl);
   const [data, setData] = useState(null);
+  const [isDemo, setIsDemo] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
@@ -80,18 +81,21 @@ export default function AffiliateDashboard() {
 
   const loadDashboard = async (code) => {
     if (!code.trim()) { setError('กรุณากรอก Ref Code'); toast.warn('กรุณากรอก Ref Code'); return; }
-    setLoading(true); setError('');
+    setLoading(true); setError(''); setIsDemo(false);
     try {
       const res = await fetch(apiUrl(`/api/affiliate/stats/${code.trim().toUpperCase()}`));
       const json = await res.json();
       if (json.success) {
-        setData({ ...json.data, ...makeDemoData(code.trim().toUpperCase()) });
+        // real data overrides demo defaults (not the other way around)
+        setData({ ...makeDemoData(code.trim().toUpperCase()), ...json.data });
+        setIsDemo(false);
       } else {
-        // demo mode ถ้า API ยังไม่มีข้อมูล
         setData(makeDemoData(code.trim().toUpperCase()));
+        setIsDemo(true);
       }
     } catch {
       setData(makeDemoData(code.trim().toUpperCase()));
+      setIsDemo(true);
     } finally {
       setLoading(false);
     }
@@ -138,6 +142,15 @@ export default function AffiliateDashboard() {
   // ── MAIN DASHBOARD ─────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg,#0a0a1a,#1a0a2e)', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif" }}>
+
+      {/* DEMO MODE BANNER */}
+      {isDemo && (
+        <div style={{ background: 'rgba(245,158,11,0.15)', borderBottom: '1px solid rgba(245,158,11,0.4)', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+          <span style={{ fontSize: 18 }}>⚠️</span>
+          <span style={{ color: '#fcd34d', fontWeight: 600 }}>ข้อมูลตัวอย่าง (Demo)</span>
+          <span style={{ color: '#94a3b8' }}>— ระบบไม่พบข้อมูลจริงสำหรับ Ref Code นี้ ตัวเลขด้านล่างเป็นเพียงตัวอย่างเท่านั้น ไม่ใช่ยอดจริงของคุณ</span>
+        </div>
+      )}
 
       {/* NAV */}
       <nav style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>

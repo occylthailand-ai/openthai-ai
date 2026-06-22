@@ -185,14 +185,20 @@ export default function AdminPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px' }}>
 
         {/* OVERVIEW STATS */}
+        {salesErr && (
+          <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 10, padding: '10px 16px', marginBottom: 14, fontSize: 13, color: '#fcd34d' }}>
+            ⚠️ ยอดขาย/รายได้: {salesErr} — ตัวเลขบางส่วนด้านล่างเป็นข้อมูลตัวอย่าง ไม่ใช่ข้อมูลจริง
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14, marginBottom: 28 }}>
           {[
-            { icon: '👥', label: T.stat.users, v: data.stats.users.toLocaleString(), sub: `+${data.stats.users_today} ${T.stat.today}`, c: '#6366f1' },
-            { icon: '⚡', label: T.stat.content, v: data.stats.content.toLocaleString(), sub: `+${data.stats.content_today} ${T.stat.today}`, c: '#10b981' },
-            { icon: '🤝', label: T.stat.aff, v: data.stats.affiliates, sub: `${data.stats.affiliates_active} active`, c: '#f59e0b' },
-            { icon: '💰', label: T.stat.revenue, v: baht(sales ? sales.stats.revenue_total : data.stats.revenue), sub: `${baht(sales ? sales.stats.revenue_month : data.stats.revenue_month)} ${T.stat.month}`, c: '#fe2c55' },
+            { icon: '👥', label: T.stat.users, v: data.stats.users.toLocaleString(), sub: `+${data.stats.users_today} ${T.stat.today}`, c: '#6366f1', mock: true },
+            { icon: '⚡', label: T.stat.content, v: data.stats.content.toLocaleString(), sub: `+${data.stats.content_today} ${T.stat.today}`, c: '#10b981', mock: true },
+            { icon: '🤝', label: T.stat.aff, v: data.stats.affiliates, sub: `${data.stats.affiliates_active} active`, c: '#f59e0b', mock: true },
+            { icon: '💰', label: T.stat.revenue, v: baht(sales ? sales.stats.revenue_total : data.stats.revenue), sub: `${baht(sales ? sales.stats.revenue_month : data.stats.revenue_month)} ${T.stat.month}`, c: '#fe2c55', mock: !sales },
           ].map((s) => (
-            <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
+            <div key={s.label} style={{ ...glass, textAlign: 'center', position: 'relative' }}>
+              {s.mock && <div style={{ position: 'absolute', top: 8, right: 8, fontSize: 10, background: 'rgba(100,116,139,0.2)', color: '#64748b', padding: '2px 6px', borderRadius: 4 }}>ตัวอย่าง</div>}
               <div style={{ fontSize: 26, marginBottom: 4 }}>{s.icon}</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: s.c }}>{s.v}</div>
               <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
@@ -214,7 +220,10 @@ export default function AdminPage() {
         {tab === 'overview' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
             <div style={glass}>
-              <div style={{ fontWeight: 700, marginBottom: 14 }}>{T.ov.recent}</div>
+              <div style={{ fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {T.ov.recent}
+                <span style={{ fontSize: 10, background: 'rgba(100,116,139,0.2)', color: '#64748b', padding: '2px 8px', borderRadius: 4, fontWeight: 400 }}>ข้อมูลตัวอย่าง</span>
+              </div>
               {data.content.map((c) => (
                 <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
                   <div>

@@ -78,19 +78,28 @@ export default function PortalHubPage() {
 
       {/* Portal Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 24, maxWidth: 1200, margin: '0 auto', padding: '0 32px 80px' }}>
-        {t.portals.map((p, i) => (
-          <div key={p.id} onClick={() => navigate(p.path)}
-            style={{ background: '#111', border: `1px solid ${p.color}33`, borderRadius: 16, padding: 28, cursor: 'pointer', transition: 'all .2s', position: 'relative', overflow: 'hidden' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = p.color; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 8px 32px ${p.color}22`; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = `${p.color}33`; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
-          >
-            <div style={{ position: 'absolute', top: 16, right: 16, background: `${p.color}22`, color: p.color, fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600 }}>{p.sub}</div>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>{p.icon}</div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 20, color: '#fff' }}>{p.title}</h3>
-            <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>{p.desc}</p>
-            <div style={{ color: p.color, fontWeight: 700, fontSize: 14 }}>{t.join}</div>
-          </div>
-        ))}
+        {t.portals.map((p) => {
+          const locked = p.id === 'foundation';
+          return (
+            <div key={p.id}
+              onClick={() => !locked && navigate(p.path)}
+              style={{ background: locked ? '#0d0d0d' : '#111', border: `1px solid ${locked ? '#333' : p.color + '33'}`, borderRadius: 16, padding: 28, cursor: locked ? 'not-allowed' : 'pointer', transition: 'all .2s', position: 'relative', overflow: 'hidden', opacity: locked ? 0.55 : 1 }}
+              onMouseEnter={e => { if (!locked) { e.currentTarget.style.borderColor = p.color; e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = `0 8px 32px ${p.color}22`; } }}
+              onMouseLeave={e => { if (!locked) { e.currentTarget.style.borderColor = `${p.color}33`; e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; } }}
+            >
+              {locked && (
+                <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(100,116,139,0.25)', color: '#94a3b8', fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  🔒 ยังไม่เปิดใช้งาน
+                </div>
+              )}
+              <div style={{ position: 'absolute', top: 16, right: 16, background: `${p.color}22`, color: locked ? '#64748b' : p.color, fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600 }}>{p.sub}</div>
+              <div style={{ fontSize: 40, marginBottom: 12, marginTop: locked ? 20 : 0 }}>{p.icon}</div>
+              <h3 style={{ margin: '0 0 8px', fontSize: 20, color: locked ? '#64748b' : '#fff' }}>{p.title}</h3>
+              <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>{p.desc}</p>
+              <div style={{ color: locked ? '#475569' : p.color, fontWeight: 700, fontSize: 14 }}>{locked ? '🔒 เปิดเมื่อกำไรสะสม > 10M ฿' : t.join}</div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Footer */}

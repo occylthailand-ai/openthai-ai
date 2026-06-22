@@ -1,5 +1,6 @@
 ﻿const fs = require('fs');
-const dir = 'C:/Openthai.ai/all-platform-files';
+const path = require('path');
+const dir = process.env.OUTPUT_DIR || path.join(__dirname, 'all-platform-files');
 
 const platforms = [
   {id:'carousell',name:'Carousell',color:'#FF4747',icon:'SG',steps:45,sections:8,users:'30M+',desc:'C2C Marketplace อาเซียน',phases:['สมัครบัญชี (6)','ตั้งค่าโปรไฟล์ (5)','ลงประกาศขาย (7)','โปรโมทสินค้า (3)','รับออร์เดอร์ (5)','ตรวจสอบชำระเงิน (4)','จัดส่ง (4)','หลังการขาย (3)']},
