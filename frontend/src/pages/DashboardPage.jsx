@@ -11,6 +11,7 @@ const STATS = [
 
 const QUICK_ACTIONS = [
   { icon: '🤖', label: 'AI Generator', desc: 'สร้างคอนเทนต์ด้วย AI', route: '/ai-generator', color: '#6366f1', hot: true },
+  { icon: '🧠', label: 'AI Skills Hub', desc: 'Trend · Hashtag · SEO · Video · แปลภาษา', route: '/skills', color: '#f97316', hot: true },
   { icon: '🦾', label: 'AI Agent', desc: 'ตั้งแล้วลืม · 24/7 Auto', route: '/agent', color: '#10b981', hot: true },
   { icon: '🔥', label: 'Trending Now', desc: 'Hashtag ยอดนิยมวันนี้', route: '/trending', color: '#fe2c55' },
   { icon: '📅', label: 'Content Calendar', desc: 'วางแผนโพสต์ 30 วัน', route: '/calendar', color: '#f59e0b' },
@@ -36,12 +37,18 @@ const ACTIVITY = [
 ];
 
 const AI_SKILLS = [
-  { name: 'S1 · RCCF Prompt', desc: 'สร้าง Hook ที่ดึงดูดใจ', pct: 95, color: '#6366f1' },
-  { name: 'S2 · Taste Check', desc: 'ตรวจสอบความถูกต้องของเนื้อหา', pct: 88, color: '#8b5cf6' },
-  { name: 'S3 · Master Prompt', desc: 'Prompt Engineering ขั้นสูง', pct: 92, color: '#10b981' },
-  { name: 'S6 · AI Critic', desc: 'ประเมินคุณภาพคอนเทนต์ 0-10', pct: 97, color: '#f59e0b' },
-  { name: 'S7 · Context Card', desc: 'วิเคราะห์บริบทสินค้าไทย', pct: 90, color: '#fe2c55' },
-  { name: 'S9 · Learning Layer', desc: 'เรียนรู้จากผลลัพธ์จริง', pct: 78, color: '#06b6d4' },
+  { name: 'S1 · RCCF Prompt',       desc: 'สร้าง Hook ที่ดึงดูดใจ',             pct: 95, color: '#6366f1' },
+  { name: 'S2 · Taste Check',        desc: 'ตรวจสอบความถูกต้องของเนื้อหา',      pct: 88, color: '#8b5cf6' },
+  { name: 'S3 · Master Prompt',      desc: 'Prompt Engineering ขั้นสูง',         pct: 92, color: '#10b981' },
+  { name: 'S6 · AI Critic',          desc: 'ประเมินคุณภาพคอนเทนต์ 0-10',        pct: 97, color: '#f59e0b' },
+  { name: 'S7 · Context Card',       desc: 'วิเคราะห์บริบทสินค้าไทย',            pct: 90, color: '#fe2c55' },
+  { name: 'S9 · Learning Layer',     desc: 'เรียนรู้จากผลลัพธ์จริง',             pct: 78, color: '#06b6d4' },
+  { name: 'S10 · Trend Analyzer',    desc: 'วิเคราะห์เทรนด์ TikTok ตามสินค้า',  pct: 88, color: '#f97316', isNew: true },
+  { name: 'S11 · Hashtag Generator', desc: 'สร้าง Hashtag Set อัจฉริยะ',         pct: 91, color: '#ec4899', isNew: true },
+  { name: 'S12 · SEO Thai',          desc: 'Keyword ภาษาไทย + Title formula',    pct: 85, color: '#84cc16', isNew: true },
+  { name: 'S13 · Sentiment Scanner', desc: 'วิเคราะห์ความรู้สึกจากรีวิว',        pct: 82, color: '#a855f7', isNew: true },
+  { name: 'S14 · Video Script',      desc: 'Script + Storyboard ครบทุกฉาก',      pct: 79, color: '#ef4444', isNew: true },
+  { name: 'S15 · Multi-Language',    desc: 'แปล 5 ภาษา เจาะตลาด ASEAN',          pct: 86, color: '#14b8a6', isNew: true },
 ];
 
 const PLATFORMS_STATUS = [
@@ -198,15 +205,18 @@ const DashboardPage = ({ onLogout }) => {
 
           {/* Right: AI Skills */}
           <div>
-            <div className="pro-section-title">🧠 9-Skills AI Framework</div>
+            <div className="pro-section-title">🧠 15-Skills AI Framework</div>
             <div className="pro-skills-list glass-panel">
               <div className="pro-skills-header">
-                ระบบ AI ของ Openthai.ai ประกอบด้วย 9 ทักษะหลัก พัฒนาเฉพาะสำหรับสินค้าไทยและตลาด ASEAN
+                ระบบ AI ของ Openthai.ai ประกอบด้วย 15 ทักษะ (S1–S15) พัฒนาเฉพาะสำหรับสินค้าไทยและตลาด ASEAN
               </div>
               {AI_SKILLS.map((s, i) => (
-                <div key={i} className="pro-skill-row">
+                <div key={i} className="pro-skill-row" style={{ cursor: s.isNew ? 'pointer' : 'default' }} onClick={() => s.isNew && navigate('/skills')}>
                   <div className="pro-skill-header-row">
-                    <span className="pro-skill-name">{s.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="pro-skill-name">{s.name}</span>
+                      {s.isNew && <span style={{ fontSize: 9, background: s.color, color: '#fff', borderRadius: 5, padding: '1px 5px', fontWeight: 700 }}>NEW</span>}
+                    </div>
                     <span className="pro-skill-pct" style={{ color: s.color }}>{s.pct}%</span>
                   </div>
                   <div className="pro-skill-desc">{s.desc}</div>
@@ -215,9 +225,14 @@ const DashboardPage = ({ onLogout }) => {
                   </div>
                 </div>
               ))}
-              <button className="pro-view-all-btn" onClick={() => navigate('/ai-tools')}>
-                ดูเครื่องมือ AI ทั้งหมด →
-              </button>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <button className="pro-view-all-btn" onClick={() => navigate('/skills')}>
+                  ✨ ใช้ Skills ใหม่ S10-S15 →
+                </button>
+                <button className="pro-view-all-btn" onClick={() => navigate('/ai-tools')} style={{ background: 'transparent' }}>
+                  ดูเครื่องมือทั้งหมด →
+                </button>
+              </div>
             </div>
           </div>
         </div>

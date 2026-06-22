@@ -22,6 +22,7 @@ import TermsPage from './pages/TermsPage';
 import ContactPage from './pages/ContactPage';
 import BrandMemoryPage from './pages/BrandMemoryPage';
 import AgentPage from './pages/AgentPage';
+import AISkillsPage from './pages/AISkillsPage';
 import TrendingPage from './pages/TrendingPage';
 import ContentCalendarPage from './pages/ContentCalendarPage';
 import PDPABanner from './components/PDPABanner';
@@ -104,6 +105,7 @@ function App() {
             <Route path="/ai-generator" element={isAuthenticated ? <AIGeneratorPage /> : <Navigate to="/login" />} />
             <Route path="/ai-tools" element={isAuthenticated ? <AIToolsHub /> : <Navigate to="/login" />} />
             <Route path="/agent" element={isAuthenticated ? <AgentPage /> : <Navigate to="/login" />} />
+            <Route path="/skills" element={isAuthenticated ? <AISkillsPage /> : <Navigate to="/login" />} />
             {/* Public pages — ไม่ต้อง login */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />

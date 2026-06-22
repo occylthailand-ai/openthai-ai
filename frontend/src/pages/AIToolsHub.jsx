@@ -94,14 +94,21 @@ const TOOLS = [
 ];
 
 const SKILLS_INFO = [
-  { code: 'S1', name: 'RCCF Prompt', desc: 'Role · Context · Command · Format — โครงสร้าง prompt ที่ได้ผลลัพธ์ดีที่สุด', color: '#6366f1' },
-  { code: 'S2', name: 'Taste Check', desc: 'ตรวจสอบความถูกต้องของเนื้อหา วัฒนธรรม และความเหมาะสมสำหรับตลาดไทย', color: '#10b981' },
-  { code: 'S3', name: 'Master Prompt', desc: 'Prompt Engineering ขั้นสูงพัฒนาเฉพาะสำหรับสินค้าไทยและ OTOP', color: '#f59e0b' },
-  { code: 'S5', name: 'Category System', desc: 'ระบบจัดหมวดหมู่สินค้าอัจฉริยะรองรับ 300+ ประเภทสินค้าไทย', color: '#fe2c55' },
-  { code: 'S6', name: 'AI Critic', desc: 'ประเมินคุณภาพคอนเทนต์ 0–10 พร้อมคำแนะนำเฉพาะเจาะจง', color: '#8b5cf6' },
-  { code: 'S7', name: 'Context Card', desc: 'วิเคราะห์บริบทสินค้า, กลุ่มเป้าหมาย, และ positioning ในตลาด', color: '#06b6d4' },
-  { code: 'S8', name: 'Knowledge Base', desc: 'ฐานข้อมูลสินค้า OTOP 300+ รายการ, 5 Hook Types, 35 ประเทศ', color: '#ec4899' },
-  { code: 'S9', name: 'Learning Layer', desc: 'ระบบเรียนรู้จากผลลัพธ์จริง ปรับปรุงคุณภาพคอนเทนต์ต่อเนื่อง', color: '#64748b' },
+  { code: 'S1',  name: 'RCCF Prompt',       desc: 'Role · Context · Command · Format — โครงสร้าง prompt ที่ได้ผลลัพธ์ดีที่สุด', color: '#6366f1' },
+  { code: 'S2',  name: 'Taste Check',        desc: 'ตรวจสอบความถูกต้องของเนื้อหา วัฒนธรรม และความเหมาะสมสำหรับตลาดไทย', color: '#10b981' },
+  { code: 'S3',  name: 'Master Prompt',      desc: 'Prompt Engineering ขั้นสูงพัฒนาเฉพาะสำหรับสินค้าไทยและ OTOP', color: '#f59e0b' },
+  { code: 'S4',  name: 'Image Analysis',     desc: 'วิเคราะห์รูปภาพสินค้าด้วย AI Vision — ดึง product, category, audience อัตโนมัติ', color: '#06b6d4' },
+  { code: 'S5',  name: 'TTS Voice',          desc: 'แปลงข้อความเป็นเสียงพากย์ภาษาไทย สำหรับวิดีโอ TikTok และ Reels', color: '#f59e0b' },
+  { code: 'S6',  name: 'AI Critic',          desc: 'ประเมินคุณภาพคอนเทนต์ 0–10 พร้อมคำแนะนำเฉพาะเจาะจง', color: '#8b5cf6' },
+  { code: 'S7',  name: 'Context Card',       desc: 'วิเคราะห์บริบทสินค้า, กลุ่มเป้าหมาย, และ positioning ในตลาด', color: '#06b6d4' },
+  { code: 'S8',  name: 'LINE OA Connect',    desc: 'ส่งผลลัพธ์ AI เข้า LINE OA อัตโนมัติ — ไม่ต้องก๊อปวาง', color: '#22c55e' },
+  { code: 'S9',  name: 'Learning Layer',     desc: 'ระบบเรียนรู้จากผลลัพธ์จริง ปรับปรุงคุณภาพคอนเทนต์ต่อเนื่อง', color: '#64748b' },
+  { code: 'S10', name: 'Trend Analyzer',     desc: 'วิเคราะห์เทรนด์ TikTok/Shopee ตามสินค้าจริง + แนะนำ Hook ตรงกระแส', color: '#f97316', new: true },
+  { code: 'S11', name: 'Hashtag Generator',  desc: 'สร้าง Hashtag Set อัจฉริยะ แยก Mega / Trending / Niche / ภาษาไทย', color: '#ec4899', new: true },
+  { code: 'S12', name: 'SEO Thai',           desc: 'วิเคราะห์ keyword ภาษาไทย + สูตร title SEO-friendly สำหรับทุกแพลตฟอร์ม', color: '#84cc16', new: true },
+  { code: 'S13', name: 'Sentiment Scanner',  desc: 'วิเคราะห์ความรู้สึกจากคอมเมนต์/รีวิว — รู้ว่าลูกค้ารู้สึกอย่างไรทันที', color: '#a855f7', new: true },
+  { code: 'S14', name: 'Video Script',       desc: 'สร้าง Script + Storyboard วิดีโอ TikTok ครบทุกฉาก พร้อมถ่ายทำได้เลย', color: '#ef4444', new: true },
+  { code: 'S15', name: 'Multi-Language',     desc: 'แปลคอนเทนต์ไทย → อังกฤษ, จีน, มาเลย์, อินโดนีเซีย เจาะตลาด ASEAN', color: '#14b8a6', new: true },
 ];
 
 const PRICING = [
@@ -235,30 +242,58 @@ const AIToolsHub = () => {
       {activeTab === 'skills' && (
         <div className="hub-content">
           <div className="hub-hero">
-            <h1 className="hub-hero-title">9-Skills AI Framework<br /><span style={{ color: '#a5b4fc' }}>พัฒนาเฉพาะสำหรับสินค้าไทย</span></h1>
-            <p className="hub-hero-sub">ระบบ AI ของ Openthai.ai ถูกออกแบบมาเพื่อเข้าใจสินค้า วัฒนธรรม และตลาดไทยอย่างลึกซึ้ง</p>
+            <h1 className="hub-hero-title">15-Skills AI Framework<br /><span style={{ color: '#a5b4fc' }}>พัฒนาเฉพาะสำหรับสินค้าไทย</span></h1>
+            <p className="hub-hero-sub">ระบบ AI ของ Openthai.ai ถูกออกแบบมาเพื่อเข้าใจสินค้า วัฒนธรรม และตลาดไทยอย่างลึกซึ้ง · S10–S15 ใหม่ล่าสุด</p>
+            <div style={{ marginTop: 16 }}>
+              <button
+                onClick={() => navigate('/skills')}
+                style={{ background: 'linear-gradient(135deg,#f97316,#ec4899)', border: 'none', borderRadius: 10, padding: '12px 28px', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                🚀 ทดลอง S10–S15 ได้เลย →
+              </button>
+            </div>
           </div>
+
+          {/* NEW Skills Banner */}
+          <div style={{ background: 'linear-gradient(135deg,rgba(249,115,22,0.08),rgba(168,85,247,0.08))', border: '1px solid rgba(249,115,22,0.2)', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
+            <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 12 }}>✨ Skills ใหม่ S10–S15 — ใช้งานได้แล้ววันนี้</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 8 }}>
+              {SKILLS_INFO.filter(s => s.new).map((s, i) => (
+                <div key={i} style={{ background: '#fff', borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={() => navigate('/skills')}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 11, color: s.color, fontWeight: 700 }}>{s.code}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#1e293b' }}>{s.name}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="hub-skills-grid">
             {SKILLS_INFO.map((s, i) => (
-              <div key={i} className="hub-skill-card glass-panel" style={{ '--sc': s.color }}>
-                <div className="hub-skill-code" style={{ color: s.color }}>{s.code}</div>
+              <div key={i} className="hub-skill-card glass-panel" style={{ '--sc': s.color, cursor: s.new ? 'pointer' : 'default', outline: s.new ? `1px solid ${s.color}30` : 'none' }}
+                onClick={() => s.new && navigate('/skills')}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div className="hub-skill-code" style={{ color: s.color }}>{s.code}</div>
+                  {s.new && <span style={{ fontSize: 9, background: s.color, color: '#fff', borderRadius: 6, padding: '2px 6px', fontWeight: 700 }}>NEW</span>}
+                </div>
                 <h3 className="hub-skill-name" style={{ color: s.color }}>{s.name}</h3>
                 <p className="hub-skill-desc">{s.desc}</p>
                 <div className="hub-skill-bar-bg">
-                  <div className="hub-skill-bar" style={{ background: s.color, width: `${75 + i * 3}%` }} />
+                  <div className="hub-skill-bar" style={{ background: s.color, width: `${Math.min(98, 72 + i * 2)}%` }} />
                 </div>
               </div>
             ))}
           </div>
 
           <div className="hub-framework-note glass-panel">
-            <h3>🧠 ทำไม 9-Skills Framework ถึงแตกต่าง?</h3>
+            <h3>🧠 ทำไม 15-Skills Framework ถึงแตกต่าง?</h3>
             <div className="hub-notes-grid">
               {[
                 { icon: '🇹🇭', title: 'Thai-First AI', desc: 'เข้าใจภาษา วัฒนธรรม และพฤติกรรมผู้บริโภคไทยอย่างแท้จริง' },
                 { icon: '📊', title: 'Data-Driven', desc: 'เรียนรู้จากคอนเทนต์ที่ขายดีจริง 300+ สินค้า OTOP' },
-                { icon: '🔄', title: 'Self-Improving', desc: 'S9 Learning Layer ปรับปรุงคุณภาพทุกครั้งที่ใช้งาน' },
-                { icon: '🌏', title: 'Multi-Market', desc: 'รองรับ 35 ประเทศ ปรับ messaging ตามวัฒนธรรมท้องถิ่น' },
+                { icon: '🔥', title: 'Trend-Aware', desc: 'S10 Trend Analyzer + S11 Hashtag Gen วิเคราะห์กระแสอัตโนมัติ' },
+                { icon: '🌏', title: 'Multi-Market', desc: 'S15 แปล 5 ภาษา เจาะตลาด ASEAN และ 35 ประเทศทั่วโลก' },
               ].map((n, i) => (
                 <div key={i} className="hub-note-item glass-panel">
                   <span className="hub-note-icon">{n.icon}</span>
