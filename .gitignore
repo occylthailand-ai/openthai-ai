@@ -31,7 +31,11 @@ backend/data/entitlements.json
 # หมายเหตุ: backend/data/system_charter.json ไม่ include ตรงนี้ — commit ได้ (static config)
 
 # IDE / Editor folders
-.claude/
+# .claude/settings.json และ .claude/scripts/ ถูก track โดย git (project-wide hooks)
+.claude/*.jsonl
+.claude/todos/
+.claude/cache/
+.claude/projects/
 .cursor/
 .history/
 .snapshots/
