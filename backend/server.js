@@ -46,8 +46,15 @@ function checkAdminKey(provided) {
   return !!key && provided === key;
 }
 function adminDenyMessage() {
-  return resolveAdminKey() ? 'Unauthorized — ต้องการ Admin Key' : 'ระบบยังไม่ได้ตั้งค่า ADMIN_KEY ใน production';
+  return 'Unauthorized';
 }
+
+// Domain URL — ใช้แทน hardcoded domain ในอีเมล/ลิงก์ทุกที่
+const DOMAIN_URL = (process.env.DOMAIN_URL || process.env.FRONTEND_URL || 'https://www.openthai-ai.com').replace(/\/$/, '');
+const STORE_EMAIL = process.env.STORE_PRODUCER_EMAIL || 'store@openthai-ai.com';
+
+// adminLimiter — กันการ brute-force admin key (แยกจาก paymentLimiter)
+const adminLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { success: false, message: 'Too many requests' } });
 
 // บน Vercel: ไฟล์ static อ่านได้จาก repo, ไฟล์ writable ต้องใช้ /tmp
 // Local: ทุกอย่างอยู่ใน backend/data/
@@ -332,7 +339,7 @@ app.get('/api/usage', async (req, res) => {
 });
 
 // GET /api/credits/admin/summary — สรุปเศรษฐกิจเครดิต (Admin Key)
-app.get('/api/credits/admin/summary', async (req, res) => {
+app.get('/api/credits/admin/summary', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, ...(await credits.adminSummary()) }); }
@@ -340,7 +347,7 @@ app.get('/api/credits/admin/summary', async (req, res) => {
 });
 
 // GET /api/producers/admin/summary — สรุปผู้ผลิตที่สมัคร (Admin Key)
-app.get('/api/producers/admin/summary', async (req, res) => {
+app.get('/api/producers/admin/summary', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, ...(await producers.summary()) }); }
@@ -348,7 +355,7 @@ app.get('/api/producers/admin/summary', async (req, res) => {
 });
 
 // GET /api/producers/admin/list — รายชื่อผู้ผลิตทั้งหมด (Admin Key)
-app.get('/api/producers/admin/list', async (req, res) => {
+app.get('/api/producers/admin/list', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, producers: await producers.all() }); }
@@ -356,7 +363,7 @@ app.get('/api/producers/admin/list', async (req, res) => {
 });
 
 // POST /api/producers/admin/status — อนุมัติ/เปลี่ยนสถานะผู้ผลิต (Admin Key)
-app.post('/api/producers/admin/status', async (req, res) => {
+app.post('/api/producers/admin/status', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await producers.setStatus(req.body?.email, req.body?.status);
@@ -469,7 +476,7 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
     const amount = (p.price || 0) * qty;
 
     // สร้างออเดอร์ (ติดตามได้ในระบบเดียวกับ marketplace)
-    const ord = await orders.place({ producer_email: 'store@openthai-ai.com', product_name: p.name, price: p.price, qty, customer_name, contact, address, note: `ร้าน Openthai · SKU ${p.sku}` });
+    const ord = await orders.place({ producer_email: STORE_EMAIL, product_name: p.name, price: p.price, qty, customer_name, contact, address, note: `ร้าน Openthai · SKU ${p.sku}` });
     const orderId = ord.id;
 
     const finalizePaid = async (charge) => {
@@ -543,7 +550,7 @@ app.post('/api/leads/admin/broadcast', broadcastLimiter, async (req, res) => {
     <div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">Openthai.ai</h1></div>
     <div style="padding:26px;font-size:15px;line-height:1.7;color:#e2e8f0;">${safe}</div>
     <div style="padding:16px;text-align:center;font-size:12px;color:#64748b;border-top:1px solid rgba(255,255,255,0.08);">
-      <a href="https://www.openthai-ai.com" style="color:#6366f1;">openthai-ai.com</a> · ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ Openthai.ai
+      <a href="${DOMAIN_URL}" style="color:#6366f1;">openthai-ai.com</a> · ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ Openthai.ai
     </div></div>`;
 
   let sent = 0;
@@ -609,11 +616,11 @@ async function sendAffiliateWelcome(to, name, refCode, refLink) {
             </tr>
           </table>
           <div style="text-align:center;">
-            <a href="https://www.openthai-ai.com/affiliate/dashboard?ref=${refCode}" style="display:inline-block;background:linear-gradient(135deg,#fe2c55,#6366f1);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">📊 เปิด Dashboard ของฉัน</a>
+            <a href="${DOMAIN_URL}/affiliate/dashboard?ref=${encodeURIComponent(refCode)}" style="display:inline-block;background:linear-gradient(135deg,#fe2c55,#6366f1);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">📊 เปิด Dashboard ของฉัน</a>
           </div>
         </div>
         <div style="padding:16px;text-align:center;border-top:1px solid rgba(255,255,255,0.08);font-size:12px;color:#475569;">
-          Openthai.ai • <a href="https://www.openthai-ai.com" style="color:#6366f1;">openthai-ai.com</a>
+          Openthai.ai • <a href="${DOMAIN_URL}" style="color:#6366f1;">openthai-ai.com</a>
         </div>
       </div>`,
     });
@@ -652,7 +659,7 @@ async function sendPaymentReceipt(to, { plan, amount_thb, charge_id, paid_at, me
           </table>
         </div>
         <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
-          Openthai.ai • <a href="https://www.openthai-ai.com" style="color:#6366f1;">openthai-ai.com</a>
+          Openthai.ai • <a href="${DOMAIN_URL}" style="color:#6366f1;">openthai-ai.com</a>
         </div>
       </div>`,
     });
@@ -692,7 +699,7 @@ async function sendOrderNotification(order) {
           </table>
         </div>
         <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
-          Openthai.ai • <a href="https://www.openthai-ai.com/admin" style="color:#6366f1;">จัดการออเดอร์ใน Admin</a>
+          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">จัดการออเดอร์ใน Admin</a>
         </div>
       </div>`,
     });
@@ -716,7 +723,7 @@ async function sendLowStockAlert(product) {
           <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">⚠️ สต๊อกใกล้หมด</h1></div>
           <div style="padding:24px;font-size:15px;line-height:1.7;">
             <b>${product.name}</b> (SKU ${product.sku})<br>เหลือ <b style="color:#ef4444;">${product.stock}</b> ชิ้น · จุดเตือน ${product.low_stock}<br><br>
-            👉 ควรเติมสต๊อกที่ <a href="https://www.openthai-ai.com/admin" style="color:#6366f1;">Admin → คลังสินค้า</a>
+            👉 ควรเติมสต๊อกที่ <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">Admin → คลังสินค้า</a>
           </div></div>`,
       });
     } catch (e) { console.error('Low-stock email error:', e.message); }
@@ -786,21 +793,29 @@ app.post('/api/affiliate/apply', affiliateLimiter, async (req, res) => {
   try {
     const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link } = req.body;
     if (!name || !email) return res.status(400).json({ success: false, message: 'ต้องการชื่อและอีเมล' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ success: false, message: 'รูปแบบอีเมลไม่ถูกต้อง' });
+    }
+    const safeEmail = email.toLowerCase().trim();
+    // ref_code ต้องเป็นตัวอักษร/ตัวเลขเท่านั้น
+    const proposedCode = ref_code ? ref_code.replace(/[^A-Z0-9a-z_-]/g, '') : '';
 
     // ป้องกันสมัครซ้ำ
-    if (affiliates.find((a) => a.email === email)) {
+    if (affiliates.find((a) => a.email === safeEmail)) {
       return res.status(409).json({ success: false, message: 'อีเมลนี้สมัครไปแล้ว' });
     }
 
+    const finalCode = proposedCode || `AFF${Date.now().toString().slice(-6)}`;
     const record = {
       id: Date.now().toString(),
-      name, email, phone: phone || '',
+      name: String(name).trim().slice(0, 100),
+      email: safeEmail, phone: String(phone || '').slice(0, 20),
       platform: platform || 'TikTok',
-      followers: followers || '',
-      channel_url: channel_url || '',
-      note: note || '',
-      ref_code: ref_code || `AFF${Date.now().toString().slice(-6)}`,
-      ref_link: ref_link || `https://www.openthai-ai.com/?ref=${ref_code}`,
+      followers: String(followers || '').slice(0, 50),
+      channel_url: String(channel_url || '').slice(0, 200),
+      note: String(note || '').slice(0, 500),
+      ref_code: finalCode,
+      ref_link: ref_link || `${DOMAIN_URL}/?ref=${encodeURIComponent(finalCode)}`,
       tier: 'starter',
       commission_rate: 0.20,
       total_sales: 0,
@@ -811,10 +826,10 @@ app.post('/api/affiliate/apply', affiliateLimiter, async (req, res) => {
 
     affiliates.push(record);
     await saveAffiliate(record);
-    console.log(`✅ Affiliate สมัครใหม่: ${name} (${email}) — Ref: ${record.ref_code}`);
+    console.log(`✅ Affiliate สมัครใหม่: ${name} (${safeEmail}) — Ref: ${record.ref_code}`);
 
     // ส่ง welcome email + dispatch webhook (async — ไม่บล็อก response)
-    sendAffiliateWelcome(email, name, record.ref_code, record.ref_link);
+    sendAffiliateWelcome(safeEmail, name, record.ref_code, record.ref_link);
     webhooks.dispatch('affiliate.joined', { name, ref_code: record.ref_code, platform: record.platform });
 
     res.json({
@@ -978,7 +993,7 @@ app.post('/api/waitlist', waitlistLimiter, (req, res) => {
         from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
         to: sanitizedEmail,
         subject: '🎉 ยืนยันการลงทะเบียน Openthai.ai',
-        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:500px;margin:0 auto;border-radius:16px;overflow:hidden;"><div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:28px;text-align:center;"><h1 style="margin:0;font-size:22px;">🎉 ยินดีต้อนรับ!</h1></div><div style="padding:24px;"><p style="font-size:14px;color:#cbd5e1;">ขอบคุณที่สนใจ <strong>Openthai.ai</strong> เราจะแจ้งเตือนคุณทันทีที่มีสิทธิพิเศษ</p><div style="text-align:center;margin:20px 0;"><a href="https://www.openthai-ai.com" style="background:linear-gradient(135deg,#fe2c55,#6366f1);color:#fff;text-decoration:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;">🚀 ลองใช้ฟรีตอนนี้เลย</a></div></div></div>`,
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:500px;margin:0 auto;border-radius:16px;overflow:hidden;"><div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:28px;text-align:center;"><h1 style="margin:0;font-size:22px;">🎉 ยินดีต้อนรับ!</h1></div><div style="padding:24px;"><p style="font-size:14px;color:#cbd5e1;">ขอบคุณที่สนใจ <strong>Openthai.ai</strong> เราจะแจ้งเตือนคุณทันทีที่มีสิทธิพิเศษ</p><div style="text-align:center;margin:20px 0;"><a href="${DOMAIN_URL}" style="background:linear-gradient(135deg,#fe2c55,#6366f1);color:#fff;text-decoration:none;padding:12px 24px;border-radius:50px;font-weight:700;font-size:14px;">🚀 ลองใช้ฟรีตอนนี้เลย</a></div></div></div>`,
       }).catch(console.error);
     }
 
@@ -1459,7 +1474,8 @@ app.post('/api/tts', express.json({ limit: '10kb' }), async (req, res) => {
     res.set('Cache-Control', 'no-store');
     return res.send(Buffer.from(buffer));
   } catch (err) {
-    return res.status(500).json({ error: err.message, fallback: true });
+    console.error('[tts] ElevenLabs error:', err.message);
+    return res.status(500).json({ error: 'Text-to-speech ขัดข้องชั่วคราว', fallback: true });
   }
 });
 
@@ -2801,9 +2817,10 @@ const PAID_PLANS = new Set(['pro', 'premier']);
 const _usage = new Map();            // key: "YYYY-MM-DD:identity" → count
 const today = () => new Date().toISOString().slice(0, 10);
 
-// อ่านอีเมล user จาก header/body (frontend เก็บไว้ใน localStorage แล้วแนบมา)
+// อ่านอีเมล user จาก header/body — ตรวจรูปแบบก่อนใช้เป็น identity key
 function userEmailFrom(req) {
-  return (req.headers['x-user-email'] || req.body?.email || req.query?.email || '').toString().trim().toLowerCase();
+  const raw = (req.headers['x-user-email'] || req.body?.email || req.query?.email || '').toString().trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw) ? raw : '';
 }
 
 // เช็คโควต้า — paid = ไม่จำกัด, free = จำกัดต่อวันตาม IP+email
@@ -2879,9 +2896,10 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       mock_mode:     true,
       message:       '⚠️ MOCK MODE — ไม่มีการตัดเงินจริง ต้องตั้งค่า OMISE_SECRET_KEY ใน production',
     };
-    payments.unshift({ ...mock, method, email: email || null, paid_at: isCard ? new Date().toISOString() : null, createdAt: new Date().toISOString() });
+    const validEmail = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.toLowerCase() : null;
+    payments.unshift({ ...mock, method, email: validEmail, paid_at: isCard ? new Date().toISOString() : null, createdAt: new Date().toISOString() });
     savePayments(payments);
-    if (isCard && email) grantEntitlement(email, plan, { source: 'mock-card' });
+    if (isCard && validEmail) grantEntitlement(validEmail, plan, { source: 'mock-card' });
     return res.json({ success: true, ...mock });
   }
 
@@ -3105,9 +3123,22 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
       if (rec && !rec.paid_at) {
         rec.status = 'successful'; rec.paid_at = data.paid_at; savePayments(payments);
         const email = rec.email || data.metadata?.email;
+        const amountThb = data.amount / 100;
         if (email && rec.plan) {
           grantEntitlement(email, rec.plan, { source: 'webhook' });
-          sendPaymentReceipt(email, { plan: rec.plan, amount_thb: data.amount / 100, charge_id: data.id, paid_at: data.paid_at, method: rec.method });
+          sendPaymentReceipt(email, { plan: rec.plan, amount_thb: amountThb, charge_id: data.id, paid_at: data.paid_at, method: rec.method });
+          // อัปเดต affiliate total_earned ถ้าชำระผ่าน ref link
+          const refCode = data.metadata?.ref_code;
+          if (refCode) {
+            const aff = affiliates.find(a => a.ref_code === refCode);
+            if (aff) {
+              const commission = +(amountThb * (aff.commission_rate || 0.20)).toFixed(2);
+              aff.total_sales = (aff.total_sales || 0) + 1;
+              aff.total_earned = +((aff.total_earned || 0) + commission).toFixed(2);
+              saveAffiliate(aff).catch(e => console.warn('[affiliate] update earned failed:', e.message));
+              addLog('info', 'Affiliate', `commission +${commission}฿ → ${refCode} (${aff.name})`);
+            }
+          }
         }
       }
       webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
@@ -3125,7 +3156,8 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
 // POST /api/n8n/trigger — n8n calls this to trigger actions in Openthai.ai
 app.post('/api/n8n/trigger', async (req, res) => {
   const { action, payload, secret } = req.body || {};
-  if (secret !== (process.env.N8N_WEBHOOK_SECRET || 'openthai-n8n-secret')) {
+  const n8nSecret = process.env.N8N_WEBHOOK_SECRET;
+  if (!n8nSecret || secret !== n8nSecret) {
     return res.status(401).json({ error: 'Invalid secret' });
   }
   addLog('info', 'n8n', `Trigger: ${action}`);
@@ -3499,6 +3531,12 @@ async function startServer() {
     console.log(`   Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? '✅ Configured' : '⚠️  Not configured'}`);
     console.log(`   Recovery    : ${process.env.RECOVERY_CODES ? '✅ Codes set' : '⚠️  No codes in .env'}`);
     console.log(`   IS_VERCEL   : ${IS_VERCEL ? '✅ Serverless mode' : '⚠️  Local mode'}`);
+    console.log(`   Supabase    : ${_useSB ? '✅ Connected' : '⚠️  ไม่ได้ตั้ง (fallback เป็น /tmp)'}`);
+    console.log(`   Omise Pay   : ${process.env.OMISE_SECRET_KEY ? '✅ Configured' : '⚠️  Mock mode — ไม่ตัดเงินจริง'}`);
+    console.log(`   LINE Bot    : ${process.env.LINE_CHANNEL_TOKEN ? '✅ Configured' : 'ℹ️  Disabled (optional)'}`);
+    console.log(`   ElevenLabs  : ${process.env.ELEVENLABS_API_KEY ? '✅ Configured' : 'ℹ️  Disabled (optional)'}`);
+    console.log(`   SMTP Email  : ${process.env.SMTP_USER ? '✅ Configured' : 'ℹ️  Disabled (optional)'}`);
+    console.log(`   Domain URL  : ${DOMAIN_URL}`);
     console.log(`   Health      : http://localhost:${PORT}/api/health`);
     console.log(`   API Docs    : http://localhost:${PORT}/api-docs`);
     console.log(`   OpenAPI     : http://localhost:${PORT}/api/openapi.json`);

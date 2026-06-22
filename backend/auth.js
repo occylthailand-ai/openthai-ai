@@ -70,7 +70,16 @@ export async function getAdminUsers() {
     const plain = process.env.ADMIN_PASSWORD_PLAIN || '1234';
     const hashed = await hashPassword(plain);
     _adminUsers.push({ username, password: hashed, role: 'admin' });
-    console.log(`[auth] default admin: ${username} / ${plain}  ← เปลี่ยนใน .env ด้วย!`);
+    if (plain === '1234' || plain === 'change-me-admin-password') {
+      const isVercel = !!process.env.VERCEL;
+      if (isVercel) {
+        console.error('[auth] ❌ PRODUCTION: ADMIN_PASSWORD_PLAIN ไม่ได้ตั้ง — กรุณาตั้ง ADMIN_PASSWORD_PLAIN ใน Vercel Environment Variables ก่อน deploy');
+      } else {
+        console.warn('[auth] ⚠️  Dev default admin: admin / 1234 — ตั้ง ADMIN_PASSWORD_PLAIN ใน .env ก่อน go-live');
+      }
+    } else {
+      console.log(`[auth] default admin loaded: ${username} (จาก ADMIN_PASSWORD_PLAIN)`);
+    }
   }
 
   return _adminUsers;
@@ -107,7 +116,8 @@ function loadUsedCodes() {
 function saveUsedCode(code) {
   const used = loadUsedCodes();
   used.push({ code: hashCodeForStorage(code), usedAt: new Date().toISOString() });
-  fs.writeFileSync(USED_CODES_FILE, JSON.stringify(used, null, 2));
+  const pruned = used.slice(-500); // เก็บแค่ 500 รายการล่าสุด
+  fs.writeFileSync(USED_CODES_FILE, JSON.stringify(pruned, null, 2));
 }
 
 function hashCodeForStorage(code) {
