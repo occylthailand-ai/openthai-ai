@@ -2,7 +2,7 @@
 // PromptPay QR · Credit Card · Subscription Billing
 // Docs: https://docs.opn.ooo/
 
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 const OMISE_API_URL = 'https://api.omise.co';
 
@@ -138,9 +138,19 @@ export async function cancelSubscription(subscription_id) {
 // ── Verify Omise Webhook Signature ─────────────────────────────────────────────
 export function verifyOmiseWebhook(rawBody, signatureHeader) {
   const secret = process.env.OMISE_WEBHOOK_SECRET;
-  if (!secret) return true; // skip verification if not configured
+  if (!secret) {
+    // ⚠️ Fail-closed ใน production: ไม่มี secret = ปฏิเสธทุก webhook (กัน webhook ปลอม)
+    // โหมด local dev เท่านั้นที่ข้ามการตรวจได้ เพื่อความสะดวกตอนทดสอบ
+    const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+    return !isProd;
+  }
+  if (!signatureHeader) return false;
   const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
-  return signatureHeader === expected;
+  // timing-safe compare
+  const a = Buffer.from(signatureHeader);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
 
 // ── Create Omise Plans (run once at setup) ─────────────────────────────────────

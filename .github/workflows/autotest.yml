@@ -1,0 +1,29 @@
+name: 🔁 Autotest 24/7
+
+# รันชุดเทส + ตรวจ + บูตทั้งโปรเจกต์ ซ้ำอัตโนมัติตามเวลา (นอกเหนือจากทุก push)
+# — จับ regression / ช่องโหว่ dependency ใหม่ที่เพิ่งประกาศ แม้ไม่มีใคร push โค้ด
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # ทุก 6 ชั่วโมง
+  workflow_dispatch:
+  push:
+    branches: ['claude/**']
+
+jobs:
+  autotest:
+    name: 🤖 Full Auto Test Loop
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci || npm install
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci || npm install
+      - name: Run autotest (--once)
+        run: bash scripts/autotest.sh --once

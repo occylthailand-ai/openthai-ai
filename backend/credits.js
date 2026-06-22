@@ -197,5 +197,5 @@ export function createCredits(dataDir) {
   }
 
   console.log(`[credits] ledger mode: ${useSB ? 'Supabase' : 'file'}`);
-  return { router, identityFrom, hasCredit, consumeCredit, pub, peekDiscount, consumeDiscount, adminSummary, SPIN_PRIZES };
+  return { router, identityFrom, hasCredit, consumeCredit, pub, peekDiscount, consumeDiscount, adminSummary, SPIN_PRIZES, grant: addCredits };
 }

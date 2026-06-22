@@ -8,8 +8,19 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const USED_CODES_FILE = path.join(__dirname, '.used-recovery-codes.json');
 
+// Production = live deploy (Vercel) หรือ NODE_ENV=production
+// ในโหมด production ห้าม fallback ค่า default สาธารณะ (admin/1234 ฯลฯ)
+export const IS_PROD = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+
 // ─── JWT ─────────────────────────────────────────────────────────────────────
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+// ⚠️ production ต้องตั้ง JWT_SECRET เอง — ถ้าใช้ค่าสุ่ม token จะใช้ไม่ได้หลัง restart
+// และ instance แต่ละตัว (serverless) จะ verify ข้ามกันไม่ได้
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  if (IS_PROD) {
+    console.error('[auth] ⛔ production: ไม่ได้ตั้ง JWT_SECRET — token จะไม่เสถียร! โปรดตั้งใน env');
+  }
+  return crypto.randomBytes(32).toString('hex');
+})();
 const JWT_EXPIRES = '7d';
 
 export function signToken(payload) {
@@ -65,12 +76,19 @@ export async function getAdminUsers() {
   }
 
   // Dev fallback: ADMIN_USERNAME + ADMIN_PASSWORD_PLAIN
+  // ⚠️ Fail-closed ใน production: ถ้าไม่ตั้ง ADMIN_USERS/ADMIN_PASSWORD_PLAIN
+  //    จะ "ไม่มี" admin user เลย (login ล้มเหลวทุกครั้ง) แทนที่จะเปิด admin/1234
   if (_adminUsers.length === 0) {
-    const username = process.env.ADMIN_USERNAME || 'admin';
-    const plain = process.env.ADMIN_PASSWORD_PLAIN || '1234';
-    const hashed = await hashPassword(plain);
-    _adminUsers.push({ username, password: hashed, role: 'admin' });
-    console.log(`[auth] default admin: ${username} / ${plain}  ← เปลี่ยนใน .env ด้วย!`);
+    const plain = process.env.ADMIN_PASSWORD_PLAIN;
+    if (IS_PROD && !plain) {
+      console.warn('[auth] ⚠️  production: ไม่ได้ตั้ง ADMIN_USERS หรือ ADMIN_PASSWORD_PLAIN — ปิดการ login ด้วย password (ใช้ Google OAuth / override / recovery แทน)');
+    } else {
+      const username = process.env.ADMIN_USERNAME || 'admin';
+      const pw = plain || '1234';
+      const hashed = await hashPassword(pw);
+      _adminUsers.push({ username, password: hashed, role: 'admin' });
+      if (!plain) console.log(`[auth] default DEV admin: ${username} / ${pw}  ← เปลี่ยนใน .env ด้วย! (ใช้ได้เฉพาะ local)`);
+    }
   }
 
   return _adminUsers;

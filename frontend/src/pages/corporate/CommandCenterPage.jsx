@@ -20,11 +20,16 @@ const CommandCenterPage = () => {
   const [kpis, setKpis]     = useState(null);
   const [filter, setFilter] = useState('all');
   const [saving, setSaving] = useState(null);
+  const [mythos, setMythos] = useState(null);
 
   useEffect(() => {
     fetch(apiUrl('/api/corporate/tasks')).then(r => r.json()).then(d => setTasks(d.data || [])).catch(() => {});
     fetch(apiUrl('/api/corporate/kpis')).then(r => r.json()).then(d => setKpis(d.data)).catch(() => {});
+    fetch(apiUrl('/api/mythos/status')).then(r => r.json()).then(setMythos).catch(() => {});
   }, []);
+
+  const MYTHOS_STATUS_COLOR = { active: '#10b981', degraded: '#f59e0b', external: '#6366f1', down: '#ef4444' };
+  const MYTHOS_OVERALL = { healthy: { c: '#10b981', t: 'ปกติทุกระบบ' }, warn: { c: '#f59e0b', t: 'มีระบบทำงานจำกัด' }, critical: { c: '#ef4444', t: 'มีระบบล่ม' } };
 
   const updateTask = async (id, status) => {
     setSaving(id);
@@ -52,6 +57,32 @@ const CommandCenterPage = () => {
 
   return (
     <CorporateLayout title="🎯 Command Center" subtitle="ท่าน Mythos · ติดตามงานทุกแผนก · KPI Dashboard · Executive Oversight">
+
+      {/* Mythos — สถานะระบบสดจริง (เทพ → ระบบจริง) */}
+      {mythos?.gods && (
+        <div style={{ ...card({ marginBottom: '20px' }), borderLeft: `3px solid ${(MYTHOS_OVERALL[mythos.overall] || {}).c || '#6b7280'}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '18px', fontWeight: 800 }}>⚡ Mythos</span>
+            <span style={{ fontSize: '11px', padding: '2px 10px', borderRadius: '8px', fontWeight: 700, background: `${(MYTHOS_OVERALL[mythos.overall] || {}).c}20`, color: (MYTHOS_OVERALL[mythos.overall] || {}).c }}>
+              {(MYTHOS_OVERALL[mythos.overall] || {}).t || mythos.overall}
+            </span>
+            <span style={{ fontSize: '11px', color: '#6b7280' }}>uptime {mythos.uptime_sec}s · {mythos.commands} heartbeats</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '8px' }}>
+            {mythos.gods.map(g => (
+              <div key={g.id} title={`${g.detail}\nระบบจริง: ${(g.real || []).join(', ')}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: `1px solid ${MYTHOS_STATUS_COLOR[g.status]}30` }}>
+                <span style={{ fontSize: '18px' }}>{g.icon}</span>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700 }}>{g.name}</div>
+                  <div style={{ fontSize: '9px', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.role}</div>
+                </div>
+                <span style={{ marginLeft: 'auto', width: '8px', height: '8px', borderRadius: '50%', background: MYTHOS_STATUS_COLOR[g.status], flexShrink: 0 }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Summary Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '24px' }}>

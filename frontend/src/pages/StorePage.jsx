@@ -77,7 +77,8 @@ function BuyModal({ product, t, onClose }) {
     setBusy(true); setErr('');
     try {
       const ref = (() => { try { return localStorage.getItem('otai_ref') || ''; } catch { return ''; } })();
-      const r = await fetch(apiUrl('/api/shop/checkout'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: product.id, ref, ...form }) }).then(x => x.json());
+      const invite = (() => { try { return localStorage.getItem('otai_invite') || ''; } catch { return ''; } })();
+      const r = await fetch(apiUrl('/api/shop/checkout'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: product.id, ref, invite, ...form }) }).then(x => x.json());
       if (r.success) setRes(r); else setErr(r.error || t('mk.ord.err'));
     } catch { setErr('เชื่อมต่อไม่ได้'); }
     finally { setBusy(false); }

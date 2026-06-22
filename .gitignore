@@ -97,3 +97,12 @@ openthai-commerce-engine_1.jsx
 "การฟอร์มทีมงาน.txt"
 "Facebook + ทดสอบ LINE Broadcast.txt"
 "logo (2).png"
+
+# Python artifacts (cowork automation)
+__pycache__/
+*.pyc
+
+# Cowork runtime folders (generated at runtime, not committed)
+cowork/input/
+cowork/output/
+cowork/logs/
