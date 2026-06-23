@@ -57,6 +57,7 @@ import PromoEnginePage from './pages/PromoEnginePage';
 import DailyPRPage from './pages/DailyPRPage';
 import UltraPromoPage from './pages/UltraPromoPage';
 import GlobalPRPage from './pages/GlobalPRPage';
+import ContentBenchmarkPage from './pages/ContentBenchmarkPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -114,6 +115,7 @@ function App() {
             <Route path="/daily-pr" element={isAuthenticated ? <DailyPRPage /> : <Navigate to="/login" />} />
             <Route path="/ultra-promo" element={isAuthenticated ? <UltraPromoPage /> : <Navigate to="/login" />} />
             <Route path="/global-pr" element={isAuthenticated ? <GlobalPRPage /> : <Navigate to="/login" />} />
+            <Route path="/benchmark" element={isAuthenticated ? <ContentBenchmarkPage /> : <Navigate to="/login" />} />
             {/* Public pages — ไม่ต้อง login */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />

@@ -1952,6 +1952,164 @@ app.post('/api/skills/cultural-wisdom', generateLimiter, async (req, res) => {
   });
 });
 
+// Content Benchmark — เทียบสื่อกับตลาด 5 มิติ
+app.post('/api/content-benchmark', generateLimiter, async (req, res) => {
+  const { content, platform = 'tiktok', language = 'thai', category = 'ทั่วไป' } = req.body || {};
+  if (!content?.trim()) return res.status(400).json({ error: 'content required' });
+
+  const platformCtx = {
+    tiktok:    'TikTok / TikTok Shop — วิดีโอสั้น Hook 3 วินาที ภาษาสนุก กระตุ้น FOMO',
+    facebook:  'Facebook — โพสต์ยาว เล่าเรื่อง Social Proof ภาพประกอบ',
+    instagram: 'Instagram — Aesthetic caption สั้นกระชับ Hashtag 20-30 ตัว',
+    line:      'LINE OA — สั้น กระชับ ลิงก์ชัด Push notification',
+    shopee:    'Shopee — คีย์เวิร์ด SEO ราคา โปรโมชั่น Badge',
+    x:         'X (Twitter) — กระชับ 280 ตัวอักษร ความเห็น Trending topic',
+    linkedin:  'LinkedIn — Professional B2B ข้อมูล Case Study',
+    youtube:   'YouTube — Title SEO Thumbnail hook Description keyword',
+  };
+
+  const prompt = `คุณเป็น Senior Content Strategist และ Social Media Analyst ระดับโลก เชี่ยวชาญตลาดไทยและ Digital Marketing 2025-2026
+
+วิเคราะห์ content ต่อไปนี้เทียบกับมาตรฐาน Top Performer ในตลาด:
+
+=== CONTENT ที่ต้องวิเคราะห์ ===
+${content.slice(0, 2000)}
+=== สิ้นสุด CONTENT ===
+
+Platform: ${platformCtx[platform] || platform}
+ภาษา: ${language}
+หมวดหมู่: ${category}
+
+วิเคราะห์ 5 มิติเทียบ Top 10% Content ในตลาดปัจจุบัน:
+
+1. ความทันสมัย — ใช้ภาษา/สไตล์ปี 2025-2026 ไหม มี Gen-Z appeal ไหม
+2. คำที่ติดเทรนด์ — ใช้คำฮิตที่กำลังไวรัลไหม เช่น "ปัง", "ตรง", "เห็นผลจริง", "ต้องลอง", "FOMO", "Exclusive"
+3. ความน่าอ่าน — Hook ดึงดูดไหม ประโยคสั้น/ยาวเหมาะไหม คำนิยามชัดน่าอ่านไหม
+4. Hashtag เทรนด์ — # ที่ใช้ตรงกับ Trending Hashtag ของ Platform นั้นไหม ขาด # สำคัญไหม
+5. มาตรฐานตลาด — เทียบกับ Top Performer จริงๆ ของ Platform + Category นี้ ห่างกันแค่ไหน
+
+ตอบ JSON เท่านั้น ไม่มีข้อความอื่น:
+{
+  "overall_score": <0-100>,
+  "grade": "<A+|A|B+|B|C+|C|D>",
+  "verdict": "<สรุปประโยคเดียว ชัดเจน>",
+  "dimensions": {
+    "modernity":       {"score":<0-100>,"label":"ทันสมัย","verdict":"<ดีมาก|ดี|ปานกลาง|ต้องปรับ>","detail":"<วิเคราะห์>","tip":"<คำแนะนำ>"},
+    "trend_words":     {"score":<0-100>,"label":"คำเทรนด์","verdict":"<...>","found":["<คำที่พบและดี>"],"missing":["<คำที่ขาดแต่ควรมี>"],"tip":"<คำแนะนำ>"},
+    "readability":     {"score":<0-100>,"label":"น่าอ่าน","verdict":"<...>","detail":"<วิเคราะห์>","tip":"<คำแนะนำ>"},
+    "hashtags":        {"score":<0-100>,"label":"Hashtag เทรนด์","verdict":"<...>","found":["<#ที่ใช้และดี>"],"missing_hot":["<#ที่ขาดแต่กำลังฮิตมาก>"],"tip":"<คำแนะนำ>"},
+    "market_standard": {"score":<0-100>,"label":"มาตรฐานตลาด","verdict":"<...>","detail":"<เทียบ Top Performer>","tip":"<คำแนะนำ>"}
+  },
+  "market_comparison": {
+    "top_example": "<ตัวอย่าง content สไตล์ Top Performer สำหรับ Platform+Category นี้ — เขียนเต็มๆ เหมือน content จริง>",
+    "strengths": ["<จุดแข็งของ content นี้>","<จุดแข็ง 2>"],
+    "gaps": ["<สิ่งที่ขาดเมื่อเทียบตลาด>","<gap 2>","<gap 3>"],
+    "competitor_tactics": ["<กลยุทธ์ที่ Top Performer ใช้>","<tactic 2>","<tactic 3>"]
+  },
+  "trending_now": {
+    "words": ["<คำที่กำลังฮิต 5-8 คำ>"],
+    "phrases": ["<วลีฮิต 3-5 วลี>"],
+    "hashtags": ["<#เทรนด์ที่ฮิตมากใน Platform นี้ 8-12 ตัว>"]
+  },
+  "improved": {
+    "headline": "<Headline ที่ปรับแล้ว ดีกว่าเดิม ใช้คำเทรนด์>",
+    "body": "<Body ที่ปรับแล้ว — สั้นกระชับกว่า ดึงดูดกว่า>",
+    "cta": "<CTA ที่แรงกว่าเดิม>",
+    "hashtags": ["<#เทรนด์1>","<#เทรนด์2>","<#เทรนด์3>","<#เทรนด์4>","<#เทรนด์5>","<#เทรนด์6>"]
+  }
+}`;
+
+  try {
+    const raw = await callAI(prompt, 4000);
+    const data = parseAIJson(raw);
+    return res.json({ ok: true, source: anthropic ? 'claude' : 'gemini', ...data });
+  } catch (e) {
+    addLog('warn', 'ContentBenchmark', e.message);
+  }
+
+  // Mock fallback — platform-aware
+  const platformScores = {
+    tiktok:    { mod: 72, trend: 65, read: 78, hash: 60, mkt: 70 },
+    facebook:  { mod: 78, trend: 70, read: 82, hash: 68, mkt: 75 },
+    instagram: { mod: 74, trend: 68, read: 80, hash: 55, mkt: 72 },
+    shopee:    { mod: 76, trend: 72, read: 75, hash: 70, mkt: 73 },
+  };
+  const s = platformScores[platform] || { mod: 74, trend: 68, read: 78, hash: 62, mkt: 72 };
+  const overall = Math.round((s.mod + s.trend + s.read + s.hash + s.mkt) / 5);
+  const grade = overall >= 90 ? 'A+' : overall >= 85 ? 'A' : overall >= 78 ? 'B+' : overall >= 70 ? 'B' : overall >= 62 ? 'C+' : 'C';
+
+  const trendWordsByPlatform = {
+    tiktok:    ['ปังมาก', 'ทำแล้วไม่ผิดหวัง', 'FOMO', 'ต้องลอง', 'เห็นผลจริง', 'ดีงาม', 'สตรอง'],
+    facebook:  ['รีวิวจริง', 'ของแท้จากโรงงาน', 'ส่งตรงจากแหล่ง', 'คุ้มมาก', 'บอกต่อ'],
+    instagram: ['Aesthetic', 'Vibe', 'Minimal', 'Must-have', 'Game changer', 'Glow up'],
+    shopee:    ['ราคาโรงงาน', 'ส่งฟรี', 'ของแท้', 'คุณภาพดี ราคาถูก', 'สต็อกจำกัด'],
+  };
+  const trendHashByPlatform = {
+    tiktok:    ['#รีวิว', '#ของดีบอกต่อ', '#tiktokshopthailand', '#สินค้าไทย', '#ของมันต้องมี', '#ไวรัล', '#fyp', '#foryou', '#ช็อปออนไลน์'],
+    facebook:  ['#รีวิวจริง', '#สินค้าไทย', '#OTOP', '#ของดี', '#ขายออนไลน์', '#ธุรกิจไทย'],
+    instagram: ['#thaiproduct', '#ootd', '#lifestyle', '#aesthetic', '#MadeInThailand', '#instagood'],
+    shopee:    ['#Shopee', '#ช้อปปี้', '#สินค้าแนะนำ', '#ของถูกดี', '#ลดราคา'],
+  };
+  const tw = trendWordsByPlatform[platform] || trendWordsByPlatform.tiktok;
+  const th = trendHashByPlatform[platform] || trendHashByPlatform.tiktok;
+
+  res.json({
+    ok: true, source: 'mock', overall_score: overall, grade,
+    verdict: `Content มีคุณภาพระดับ ${grade} — ดีแต่ยังมีช่องว่างจาก Top Performer ในตลาด ${6 - Math.round(overall/20)} จุดหลัก`,
+    dimensions: {
+      modernity: {
+        score: s.mod, label: 'ทันสมัย',
+        verdict: s.mod >= 80 ? 'ดีมาก' : s.mod >= 70 ? 'ดี' : 'ต้องปรับ',
+        detail: `ภาษาที่ใช้อยู่ในระดับ${s.mod >= 75 ? 'ทันสมัยดี' : 'ค่อนข้างเป็นทางการเกินไป'} สำหรับ ${platform} ปี 2026 ควรเพิ่มความ casual และ conversational มากขึ้น`,
+        tip: 'เพิ่มคำสแลงที่ฮิตปัจจุบัน เช่น "ปัง", "ตรง", "สตรอง" และ Emoji ที่เกี่ยวข้อง',
+      },
+      trend_words: {
+        score: s.trend, label: 'คำเทรนด์',
+        verdict: s.trend >= 75 ? 'ดี' : 'ปานกลาง',
+        found: tw.slice(0, 2),
+        missing: tw.slice(2, 5),
+        tip: `เพิ่มคำ: "${tw.slice(2, 4).join('", "')}" เพื่อให้ติดเทรนด์มากขึ้น`,
+      },
+      readability: {
+        score: s.read, label: 'น่าอ่าน',
+        verdict: s.read >= 80 ? 'ดีมาก' : 'ดี',
+        detail: `Hook ของ content นี้${s.read >= 80 ? 'ดึงดูดใจดี' : 'ยังไม่แรงพอ ควรขึ้นต้นด้วยคำถามหรือ pain point ของลูกค้า'} ความยาวประโยค${s.read >= 78 ? 'เหมาะสม' : 'ยาวเกินไป ควรตัดให้สั้น กระชับ อ่านง่ายขึ้น'}`,
+        tip: 'ขึ้นต้นด้วยคำถาม หรือ Pain point เช่น "เคยเจอปัญหา...ไหม?" แล้วตามด้วยวิธีแก้',
+      },
+      hashtags: {
+        score: s.hash, label: 'Hashtag เทรนด์',
+        verdict: s.hash >= 70 ? 'ดี' : 'ต้องปรับ',
+        found: th.slice(0, 3),
+        missing_hot: th.slice(3, 6),
+        tip: `เพิ่ม: ${th.slice(3, 6).map(h => h).join(' ')} — กำลังฮิตมากใน ${platform} ขณะนี้`,
+      },
+      market_standard: {
+        score: s.mkt, label: 'มาตรฐานตลาด',
+        verdict: s.mkt >= 75 ? 'ดี' : 'ปานกลาง',
+        detail: `เทียบกับ Top 10% Content ใน ${platform} หมวด${category} — content นี้อยู่ในระดับ Top ${100 - s.mkt}% ยังห่างจาก viral content ที่ได้ Engagement สูงสุดในตลาด`,
+        tip: 'Top Performer มักใช้ Social Proof (ตัวเลขลูกค้า, รีวิว), Scarcity (สต็อกจำกัด, หมดแล้ว) และ Clear CTA ที่กระชับ',
+      },
+    },
+    market_comparison: {
+      top_example: `🔥 [ตัวอย่าง Top Performer ${platform}/${category}]\n"❌ เคยซื้อของออนไลน์แล้วผิดหวังบ้างไหม?\n✅ ลองมาทางนี้เลย! ของแท้ 100% รีวิวจริงจากลูกค้ากว่า 50,000 คน ⭐4.9/5\n💥 สั่งวันนี้ ส่งพรุ่งนี้ + ลด 30% เฉพาะ 24 ชม.\n👇 กด Link ด้านล่างได้เลย!"`,
+      strengths: ['ข้อมูลครบถ้วน ครอบคลุมทุกมิติ', 'โครงสร้าง Headline-Body-CTA ชัดเจน', 'ภาษาเข้าใจง่าย'],
+      gaps: ['ขาด Social Proof (ตัวเลขลูกค้า, รีวิว)', 'ไม่มี Urgency/Scarcity element', `Hashtag ยังน้อยกว่า Top Performer ที่ใช้ ${platform === 'instagram' ? '25-30' : '8-12'} ตัว`, 'Hook ยังไม่แรงพอ — ควรขึ้นต้นด้วย Pain หรือคำถาม'],
+      competitor_tactics: ['เปิดด้วยคำถามหรือ Pain point ของลูกค้าเสมอ', 'ใส่ตัวเลข Social Proof ที่ชัดเจน เช่น "50,000+ คนใช้แล้ว"', 'สร้าง Urgency ด้วย "เฉพาะวันนี้" หรือ "สต็อกจำกัด"', 'ใช้ Emoji เพื่อ Break ข้อความและดึงสายตา'],
+    },
+    trending_now: {
+      words: tw,
+      phrases: ['เห็นผลจริง ไม่ต้องรอนาน', 'ส่งตรงจากโรงงาน ราคาถูกกว่า', 'ลูกค้ากว่า X คนบอกต่อ', 'สั่งตอนนี้ หมดแล้วหมดเลย'],
+      hashtags: th,
+    },
+    improved: {
+      headline: `😱 หยุดก่อน! ยังไม่ได้ลอง [สินค้า] อยู่หรือนี่? ลูกค้ากว่า 50,000 คนบอกว่า "เปลี่ยนชีวิต"`,
+      body: `✅ ของแท้ 100% จากโรงงานไทย\n⭐ รีวิว 4.9/5 ไม่แต่งเติม\n🚀 ส่งฟรีทั่วไทย วันนี้เท่านั้น!\n💥 ลด ${platform === 'shopee' ? '40%' : '30%'} — สต็อกจำกัด หมดแล้วหมดเลย`,
+      cta: `👇 สั่งเลยก่อนหมด → [ลิงก์] หรือ DM ได้ทันที!`,
+      hashtags: th.slice(0, 6),
+    },
+  });
+});
+
 // Ultra Promo Engine — 10-Module Expert Marketing System
 app.post('/api/ultra-promo', generateLimiter, async (req, res) => {
   const {
