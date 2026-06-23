@@ -10,6 +10,7 @@ const DURATIONS  = [15, 30, 60, 90];
 const LANGS      = ['ภาษาไทย', 'English', '中文', 'Bahasa Melayu', 'Bahasa Indonesia'];
 
 const TABS = [
+  { id: 'learning',    icon: '🧬', label: 'Learning Layer',    color: '#06b6d4', skill: 'S9' },
   { id: 'trend',       icon: '🔥', label: 'Trend Analyzer',    color: '#f97316', skill: 'S10' },
   { id: 'hashtag',     icon: '#️⃣', label: 'Hashtag Generator', color: '#ec4899', skill: 'S11' },
   { id: 'seo',         icon: '📈', label: 'SEO Thai',          color: '#84cc16', skill: 'S12' },
@@ -62,6 +63,217 @@ function CopyBtn({ text }) {
     <button onClick={copy} style={{ background: copied ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.08)', border: `1px solid ${copied ? 'rgba(16,185,129,0.3)' : 'rgba(99,102,241,0.25)'}`, borderRadius: 8, padding: '5px 12px', color: copied ? '#10b981' : '#6366f1', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
       {copied ? '✅ คัดลอกแล้ว' : '📋 คัดลอก'}
     </button>
+  );
+}
+
+// ─── Tab: Learning Layer (S9) ────────────────────────────────────────────────
+const CONTENT_TYPES = ['Hook', 'Caption', 'Script', 'Review', 'Email', 'Line Message', 'Ad Copy', 'Story'];
+const RATE_TONES    = ['สนุก/ขำ', 'จริงจัง', 'อบอุ่น', 'กระตุ้น', 'สุภาพ', 'ตรงไปตรงมา'];
+
+function TabLearningLayer() {
+  const { showToast } = useToast();
+  const [sub, setSub] = useState('patterns');
+  const [rateForm, setRateForm] = useState({ content_type: 'Hook', platform: 'TikTok', tone: 'สนุก/ขำ', rating: 0, output_snippet: '' });
+  const [enhForm, setEnhForm] = useState({ content: '', content_type: 'Hook', platform: 'TikTok' });
+  const [patterns, setPatterns] = useState(null);
+  const [enhanced, setEnhanced] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [rateLoading, setRateLoading] = useState(false);
+
+  const loadPatterns = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/skills/learning/patterns'));
+      const d = await res.json();
+      setPatterns(d);
+    } catch { showToast('ไม่สามารถโหลด patterns ได้', 'error'); }
+    setLoading(false);
+  };
+
+  const submitRating = async () => {
+    if (!rateForm.rating) { showToast('กรุณาให้คะแนน 1-5 ดาว', 'error'); return; }
+    setRateLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/skills/learning/rate'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rateForm) });
+      const d = await res.json();
+      if (d.success) { showToast(`บันทึกแล้ว ✅ รวม ${d.total_ratings} ratings`, 'success'); setRateForm(f => ({ ...f, rating: 0, output_snippet: '' })); }
+    } catch { showToast('เกิดข้อผิดพลาด', 'error'); }
+    setRateLoading(false);
+  };
+
+  const runEnhance = async () => {
+    if (!enhForm.content.trim()) { showToast('กรุณาใส่ content ที่ต้องการปรับปรุง', 'error'); return; }
+    setLoading(true); setEnhanced(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/learning/enhance'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(enhForm) });
+      const d = await res.json();
+      if (d.success) setEnhanced(d); else showToast(d.error || 'เกิดข้อผิดพลาด', 'error');
+    } catch { showToast('ไม่สามารถเชื่อมต่อได้', 'error'); }
+    setLoading(false);
+  };
+
+  React.useEffect(() => { if (sub === 'patterns') loadPatterns(); }, [sub]);
+
+  const cyan = '#06b6d4';
+  const subBtn = (id, label) => (
+    <button key={id} onClick={() => setSub(id)} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${sub === id ? cyan : 'rgba(0,0,0,0.1)'}`, background: sub === id ? cyan : 'transparent', color: sub === id ? '#fff' : '#64748b', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>{label}</button>
+  );
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {subBtn('patterns', '📊 Pattern Memory')}
+        {subBtn('rate', '⭐ ให้คะแนน')}
+        {subBtn('enhance', '✨ AI Enhance')}
+      </div>
+
+      {/* ── Patterns ── */}
+      {sub === 'patterns' && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div style={card({ borderLeft: `4px solid ${cyan}` })}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontWeight: 800, fontSize: 14, color: cyan }}>🧬 Content Pattern Memory</div>
+              <button onClick={loadPatterns} style={{ ...btnSt, width: 'auto', padding: '6px 14px', fontSize: 12, background: cyan }}>{loading ? '⏳' : '🔄 รีเฟรช'}</button>
+            </div>
+            {patterns && (
+              <>
+                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>
+                  รวม <strong>{patterns.total_ratings}</strong> feedback · <strong>{patterns.patterns?.length}</strong> patterns
+                </div>
+                {patterns.patterns?.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '24px 0', color: '#94a3b8', fontSize: 13 }}>ยังไม่มี patterns — ไปที่ "ให้คะแนน" เพื่อเริ่มสอน AI ของคุณ</div>
+                )}
+                {patterns.patterns?.map((p, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>{p.content_type} · {p.platform}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>Tone ที่ดีสุด: {p.top_tone} · {p.count} ratings</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: p.avg_rating >= 4 ? '#10b981' : p.avg_rating >= 3 ? '#f59e0b' : '#ef4444' }}>{p.avg_rating}</div>
+                      <div style={{ fontSize: 10, color: '#94a3b8' }}>avg/5</div>
+                    </div>
+                  </div>
+                ))}
+                {patterns.recent_feedback?.length > 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <div style={{ fontWeight: 700, fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>FEEDBACK ล่าสุด</div>
+                    {patterns.recent_feedback.map((r, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: '#475569', padding: '4px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                        <span>{'⭐'.repeat(r.rating)}</span>
+                        <span style={{ flex: 1 }}>{r.content_type} · {r.platform}</span>
+                        <span style={{ color: '#94a3b8' }}>{r.tone}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Rate ── */}
+      {sub === 'rate' && (
+        <div style={card()}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: cyan, marginBottom: 16 }}>⭐ สอน AI ด้วยการให้คะแนน</div>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+              <div>
+                <label style={labelSt}>ประเภท Content *</label>
+                <select style={{ ...inputSt, cursor: 'pointer' }} value={rateForm.content_type} onChange={e => setRateForm(f => ({ ...f, content_type: e.target.value }))}>
+                  {CONTENT_TYPES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelSt}>แพลตฟอร์ม</label>
+                <select style={{ ...inputSt, cursor: 'pointer' }} value={rateForm.platform} onChange={e => setRateForm(f => ({ ...f, platform: e.target.value }))}>
+                  {PLATFORMS.map(p => <option key={p}>{p}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={labelSt}>Tone ที่ใช้</label>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {RATE_TONES.map(t => (
+                  <button key={t} onClick={() => setRateForm(f => ({ ...f, tone: t }))}
+                    style={{ padding: '5px 12px', borderRadius: 20, border: `1px solid ${rateForm.tone === t ? cyan : 'rgba(0,0,0,0.1)'}`, background: rateForm.tone === t ? `${cyan}18` : 'transparent', color: rateForm.tone === t ? cyan : '#64748b', fontSize: 12, cursor: 'pointer', fontWeight: rateForm.tone === t ? 700 : 400 }}>{t}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label style={labelSt}>Content Snippet (ตัวอย่าง)</label>
+              <textarea style={{ ...inputSt, minHeight: 70, resize: 'vertical' }} placeholder="วาง content ที่คุณสร้าง (ไม่บังคับ)" value={rateForm.output_snippet} onChange={e => setRateForm(f => ({ ...f, output_snippet: e.target.value }))} />
+            </div>
+            <div>
+              <label style={labelSt}>คะแนน *</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button key={n} onClick={() => setRateForm(f => ({ ...f, rating: n }))}
+                    style={{ fontSize: 28, background: 'none', border: 'none', cursor: 'pointer', opacity: rateForm.rating >= n ? 1 : 0.3, transition: 'opacity .2s' }}>⭐</button>
+                ))}
+                {rateForm.rating > 0 && <span style={{ fontSize: 13, color: '#64748b', alignSelf: 'center' }}>{rateForm.rating}/5</span>}
+              </div>
+            </div>
+            <button style={{ ...btnSt, background: rateLoading ? '#94a3b8' : `linear-gradient(135deg,${cyan},#0891b2)` }} onClick={submitRating} disabled={rateLoading}>
+              {rateLoading ? '⏳ กำลังบันทึก...' : '✅ บันทึก Feedback'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Enhance ── */}
+      {sub === 'enhance' && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div style={card()}>
+            <div style={{ fontWeight: 800, fontSize: 14, color: cyan, marginBottom: 16 }}>✨ AI Enhance — ปรับปรุง Content ด้วย Pattern Memory</div>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div>
+                <label style={labelSt}>Content ที่ต้องการปรับปรุง *</label>
+                <textarea style={{ ...inputSt, minHeight: 100, resize: 'vertical' }} placeholder="วาง content ที่ต้องการให้ AI ปรับปรุง..." value={enhForm.content} onChange={e => setEnhForm(f => ({ ...f, content: e.target.value }))} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+                <div>
+                  <label style={labelSt}>ประเภท</label>
+                  <select style={{ ...inputSt, cursor: 'pointer' }} value={enhForm.content_type} onChange={e => setEnhForm(f => ({ ...f, content_type: e.target.value }))}>
+                    {CONTENT_TYPES.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelSt}>แพลตฟอร์ม</label>
+                  <select style={{ ...inputSt, cursor: 'pointer' }} value={enhForm.platform} onChange={e => setEnhForm(f => ({ ...f, platform: e.target.value }))}>
+                    {PLATFORMS.map(p => <option key={p}>{p}</option>)}
+                  </select>
+                </div>
+              </div>
+              <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${cyan},#0891b2)` }} onClick={runEnhance} disabled={loading}>
+                {loading ? '⏳ กำลังปรับปรุง...' : '✨ ปรับปรุง Content'}
+              </button>
+            </div>
+          </div>
+
+          {enhanced && (
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div style={card({ borderLeft: `4px solid ${cyan}` })}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: cyan }}>✨ Content ที่ปรับปรุงแล้ว</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span style={{ fontSize: 12, color: '#f59e0b', fontWeight: 700 }}>⭐ {enhanced.score_prediction}/5</span>
+                    <CopyBtn text={enhanced.enhanced || ''} />
+                  </div>
+                </div>
+                <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#166534', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{enhanced.enhanced}</div>
+              </div>
+              <div style={card()}>
+                <div style={{ fontWeight: 700, fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>การเปลี่ยนแปลง</div>
+                {enhanced.changes?.map((c, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '3px 0' }}>✅ {c}</div>)}
+                {enhanced.why && <div style={{ marginTop: 10, fontSize: 12, color: '#64748b', background: '#f8fafc', borderRadius: 8, padding: '8px 12px' }}>💡 {enhanced.why}</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1006,7 +1218,7 @@ export default function AISkillsPage() {
         <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>🧠 AI Skills Hub</div>
-          <div style={{ fontSize: 11, color: '#94a3b8' }}>S10–S17 · Trend · Hashtag · SEO · Sentiment · Video · Translate · Prompt Builder · Cultural Wisdom</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>S9–S17 · Learning · Trend · Hashtag · SEO · Sentiment · Video · Translate · Prompt Builder · Cultural Wisdom</div>
         </div>
         <button onClick={() => navigate('/ai-generator')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⚡ AI Generator</button>
       </header>
@@ -1035,6 +1247,7 @@ export default function AISkillsPage() {
 
       {/* Content */}
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 5% 0' }}>
+        {tab === 'learning'  && <TabLearningLayer />}
         {tab === 'trend'     && <TabTrend />}
         {tab === 'hashtag'   && <TabHashtag />}
         {tab === 'seo'       && <TabSEO />}

@@ -18,45 +18,48 @@ Commits ahead of main : $AHEAD
 Last   : $LAST
 
 ── สถานะโปรเจค ────────────────────────────
-✅ Frontend : React + Vite — ธีมสีขาว/ขาว
+✅ Frontend : React + Vite — ธีมสีขาว/ขาว + Mobile Responsive
 ✅ Backend  : Express ES Modules — Vercel Serverless
 ✅ AI Router: Claude (Anthropic) → Gemini → Mock fallback
 ✅ Auth     : JWT — login/dashboard ป้องกันแล้ว
 ✅ Payment  : Omise PromptPay + Card
 ✅ DB       : Supabase PostgreSQL
+✅ PWA      : manifest.json + sw.js + icons 192/512
 
-── 16-Skills AI Framework (S1–S16) ─────────
-S1  RCCF Prompt       ✅ /api/generate
-S2  Taste Check       ✅ /api/generate
-S3  Master Prompt     ✅ /api/generate
-S4  Image Analysis    ✅ /api/analyze-image
-S5  TTS Voice         ⚠️  ต้องการ ELEVENLABS_API_KEY
-S6  AI Critic         ✅ /api/critic
-S7  Context Card      ✅ /api/context-card
-S8  LINE OA Connect   ⚠️  ต้องการ LINE_CHANNEL_TOKEN
-S9  Learning Layer    ⚠️  partial
-S10 Trend Analyzer    ✅ /api/skills/trend
-S11 Hashtag Generator ✅ /api/skills/hashtag
-S12 SEO Thai          ✅ /api/skills/seo
-S13 Sentiment Scanner ✅ /api/skills/sentiment
-S14 Video Script      ✅ /api/skills/video-script
-S15 Multi-Language    ✅ /api/skills/translate
-S16 Prompt Builder    ✅ /api/skills/prompt-builder
-    (Zero-shot · Few-shot · CoT · ToT · Role · Instruction)
+── 18-Skills AI Framework (S1–S18) ─────────
+S1  RCCF Prompt        ✅ /api/generate
+S2  Taste Check        ✅ /api/generate
+S3  Master Prompt      ✅ /api/generate
+S4  Image Analysis     ✅ /api/analyze-image
+S5  TTS Voice          ⚠️  ต้องการ ELEVENLABS_API_KEY
+S6  AI Critic          ✅ /api/critic
+S7  Context Card       ✅ /api/context-card
+S8  LINE OA Connect    ⚠️  ต้องการ LINE_CHANNEL_TOKEN
+S9  Learning Layer     ✅ /api/skills/learning/*
+S10 Trend Analyzer     ✅ /api/skills/trend
+S11 Hashtag Generator  ✅ /api/skills/hashtag
+S12 SEO Thai           ✅ /api/skills/seo
+S13 Sentiment Scanner  ✅ /api/skills/sentiment
+S14 Video Script       ✅ /api/skills/video-script
+S15 Multi-Language     ✅ /api/skills/translate
+S16 Prompt Builder     ✅ /api/skills/prompt-builder
+S17 Cultural Wisdom    ✅ /api/skills/cultural-wisdom
+S18 Sales Conv. Engine ✅ /api/skills/promo-engine
 
 ── Route Map ───────────────────────────────
-/              LandingPage    (public)
-/login         LoginPage      (public)
-/dashboard     DashboardPage  (auth)
-/ai-generator  AIGeneratorPage (auth)
-/ai-tools      AIToolsHub     (auth)
-/skills        AISkillsPage   (auth) ← S10–S16
-/agent         AgentPage      (auth)
+/              LandingPage      (public)
+/login         LoginPage        (public)
+/dashboard     DashboardPage    (auth)
+/ai-generator  AIGeneratorPage  (auth)
+/ai-tools      AIToolsHub       (auth)
+/skills        AISkillsPage     (auth) ← S9–S18
+/promo-engine  PromoEnginePage  (auth) ← S18 flagship
+/agent         AgentPage        (auth)
 /voice         VoiceCommandPage (public)
 /video         VideoGeneratorPage (auth)
-/corporate/*   Corporate suite (auth)
-/portals/*     Portal Hub     (public)
-/payment       PaymentPage    (public)
+/corporate/*   Corporate suite  (auth)
+/portals/*     Portal Hub       (public)
+/payment       PaymentPage      (public)
 
 ── ACTION ITEMS ────────────────────────────
 ❶ ตั้ง Environment Variables ใน Vercel Dashboard:
@@ -78,21 +81,23 @@ S16 Prompt Builder    ✅ /api/skills/prompt-builder
 ❹ ตรวจสอบ deploy:
    https://www.openthai-ai.com/api/health
 
-── งานที่ทำไปแล้ว (session ล่าสุด) ─────────
-✅ เพิ่ม S10-S15 AI Skills Hub (Trend/Hashtag/SEO/Sentiment/Video/Translate)
-✅ เพิ่ม S16 Prompt Builder (Zero-shot/Few-shot/CoT/ToT/Role/Instruction)
-✅ ธีมสีขาวทั้งระบบ
-✅ branch claude/thai-session-1atnql merge เข้า main แล้ว
+── งานที่ทำแล้ว (session ปัจจุบัน) ──────────
+✅ S17 Cultural Wisdom (ปรัชญาจีน/ไทย/พุทธ · 八德 · พระไตรปิฎก)
+✅ S18 Sales Conversion Engine (Hook·Psychology·Platform·Copy·Video·Price·Objections·Funnel)
+✅ S9 Learning Layer — feedback loop + pattern memory
+✅ Mobile Responsive — CSS variables --cols-2/3, scroll-snap, touch targets
+✅ PWA icons 192×192 & 512×512 generated
+✅ Merge to main
 
 ── งานที่รอดำเนินการ ─────────────────────
-⏳ S17 Cultural Wisdom — ปรัชญาจีน/ไทย/พุทธ
-   (ข้อมูล: 八德 忠孝仁爱礼义廉耻, 四书五经, พระไตรปิฎก)
+⏳ ตั้ง env vars ใน Vercel (ทำในหน้า Vercel Dashboard)
+⏳ รัน SQL migration ใน Supabase SQL Editor
 ══════════════════════════════════════════
 INSTRUCTION: สรุปสถานะสั้นๆ และถามว่าวันนี้ต้องการทำอะไรต่อ"
 
 # Output JSON for the hook system
 printf '%s' "$CONTEXT" | jq -Rs '{
-  systemMessage: ("📋 openthai-ai — โหลดสถานะโปรเจคแล้ว branch: '"$BRANCH"' | 16 Skills Active"),
+  systemMessage: ("📋 openthai-ai — โหลดสถานะโปรเจคแล้ว branch: '"$BRANCH"' | 18 Skills Active"),
   hookSpecificOutput: {
     hookEventName: "SessionStart",
     additionalContext: .
