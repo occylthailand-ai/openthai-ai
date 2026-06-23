@@ -1501,6 +1501,139 @@ Content เดิม:
   });
 });
 
+// ── Daily PR Content Generator ────────────────────────────────────────────────
+const PR_DAILY_FILE = () => {
+  const dir = WRITE_DATA_DIR;
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return join(dir, 'pr-daily-plan.json');
+};
+function loadPRPlan() {
+  const f = PR_DAILY_FILE();
+  if (!existsSync(f)) return {};
+  try { return JSON.parse(readFileSync(f, 'utf8')); } catch { return {}; }
+}
+function savePRPlan(data) { writeFileSync(PR_DAILY_FILE(), JSON.stringify(data, null, 2)); }
+
+app.post('/api/pr/daily-content', generateLimiter, async (req, res) => {
+  const {
+    date, topic, product = '', event_type = 'promotion',
+    channels = ['Facebook','TikTok','LINE','X','Email'],
+    tone = 'สนุก/กระตุ้น', audience = 'ผู้บริโภคทั่วไป',
+  } = req.body || {};
+  if (!date || !topic?.trim()) return res.status(400).json({ error: 'date and topic required' });
+
+  const dateObj = new Date(date);
+  const dayTH = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัส','ศุกร์','เสาร์'][dateObj.getDay()];
+  const dateLabel = `${dateObj.getDate()} ธันวาคม ${dateObj.getFullYear() + 543}`;
+
+  const prompt = `คุณเป็น PR Manager มืออาชีพของ Openthai.ai สร้างสื่อประชาสัมพันธ์ครบทุกช่องทางสำหรับ:
+
+วันที่: ${dateLabel} (วัน${dayTH})
+หัวข้อ/กิจกรรม: "${topic}"${product ? `\nสินค้า/แบรนด์: ${product}` : ''}
+ประเภท: ${event_type}
+โทน: ${tone}
+กลุ่มเป้าหมาย: ${audience}
+ช่องทาง: ${channels.join(', ')}
+
+ตอบ JSON เดียว ไม่ต้องอธิบาย:
+{
+  "headline": "หัวข้อข่าว PR หลัก (กระชับ สะดุดตา)",
+  "key_message": "สารสำคัญที่ต้องการสื่อ 1 ประโยค",
+  "facebook": {
+    "post": "โพสต์ Facebook ยาว 150-250 คำ เน้น storytelling",
+    "cta": "CTA ปิดท้าย"
+  },
+  "tiktok": {
+    "hook": "Hook 3 วินาทีแรก (ต้องหยุดนิ้วได้)",
+    "script": "Script TikTok 30-45 วินาที แบ่งเป็น Scene",
+    "caption": "Caption + hashtags"
+  },
+  "line": {
+    "broadcast": "ข้อความ LINE Broadcast กระชับ 80-120 คำ",
+    "rich_menu_cta": "ข้อความปุ่ม CTA"
+  },
+  "x": {
+    "thread": ["Tweet 1 (hook)", "Tweet 2 (detail)", "Tweet 3 (cta)"]
+  },
+  "email": {
+    "subject": "Subject line ที่ open rate สูง",
+    "preheader": "Preheader text",
+    "body_intro": "ย่อหน้าเปิด 2-3 ประโยค",
+    "body_main": "เนื้อหาหลัก 100-150 คำ",
+    "cta_button": "ข้อความปุ่ม CTA"
+  },
+  "press_release": {
+    "headline": "หัวข้อข่าว formal สำหรับสื่อมวลชน",
+    "lead": "Lead paragraph ตอบ 5W1H",
+    "quote": "Quote จาก CEO/ตัวแทน"
+  },
+  "hashtags": ["#hashtag1","#hashtag2","#hashtag3","#hashtag4","#hashtag5"],
+  "image_concept": "แนวคิดภาพ/creative direction สำหรับทีมออกแบบ",
+  "best_post_time": "เวลาที่ดีที่สุดในการโพสต์"
+}`;
+
+  try {
+    const text = await callAI(prompt, 3000);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', date, topic, ...d });
+  } catch (e) { addLog('warn', 'PR/DailyContent', e.message); }
+
+  // Mock fallback
+  res.json({
+    success: true, source: 'mock', date, topic,
+    headline: `${topic} — Openthai.ai ขอเชิญร่วมงาน ${dateLabel}`,
+    key_message: `${topic} เป็นโอกาสพิเศษที่ Openthai.ai มอบให้ทุกท่าน`,
+    facebook: {
+      post: `✨ ${topic}\n\nวันที่ ${dateLabel} นี้ Openthai.ai มีข่าวดีมาแจ้งทุกท่าน!\n\n${product ? `"${product}" ` : ''}เราพร้อมมอบประสบการณ์ที่ดีที่สุดให้กับคุณ ด้วยเทคโนโลยี AI ที่ทรงพลังที่สุดในไทย\n\n👉 อย่าพลาด! สมัครฟรีได้เลยที่ openthai-ai.com\n\n#Openthai #AI #ไทย`,
+      cta: '🔗 คลิกเพื่อดูรายละเอียด',
+    },
+    tiktok: {
+      hook: `หยุด! วันที่ 20 ธันวาคมนี้ ${topic} จะเปลี่ยนชีวิตคุณ`,
+      script: `[Scene 1 0-5s] Hook: "คุณรู้ไหมว่า..."\n[Scene 2 5-15s] ปัญหาที่ทุกคนเจอ\n[Scene 3 15-25s] วิธีแก้จาก Openthai.ai\n[Scene 4 25-30s] CTA: "ลองฟรีเลย!"`,
+      caption: `${topic} 🚀 ${product || 'Openthai.ai'} #AI #ไทย #เทคโนโลยี #SME`,
+    },
+    line: {
+      broadcast: `🎉 ${topic}\n\nสวัสดีครับ! วันที่ ${dateLabel} นี้ Openthai.ai มีโปรพิเศษสำหรับสมาชิก LINE ทุกท่าน\n\n${product ? `🛍️ ${product}\n\n` : ''}📌 ข้อเสนอนี้มีจำนวนจำกัด อย่าพลาดนะครับ!`,
+      rich_menu_cta: '🔥 ดูโปรโมชั่น',
+    },
+    x: {
+      thread: [
+        `🚨 Breaking: ${topic} — Openthai.ai #AI #Thailand`,
+        `รายละเอียด: ${product || 'ระบบ AI ใหม่ของเรา'} พร้อมให้บริการแล้ว ครอบคลุมทุกความต้องการของนักการตลาดไทย`,
+        `🔗 ทดลองใช้ฟรีได้เลย openthai-ai.com — RT เพื่อแชร์ให้เพื่อน! #Openthai #AIMarketing`,
+      ],
+    },
+    email: {
+      subject: `[Openthai.ai] ${topic} — ข่าวพิเศษสำหรับคุณ`,
+      preheader: `อย่าพลาด! โอกาสพิเศษวันที่ ${dateLabel}`,
+      body_intro: `สวัสดีครับ ทีม Openthai.ai มีข่าวดีมาแจ้งให้ทราบ เกี่ยวกับ "${topic}" ซึ่งจะเริ่มต้นในวันที่ ${dateLabel} นี้`,
+      body_main: `${product ? `"${product}" ` : ''}เราพัฒนาระบบ AI ที่ช่วยให้คุณสร้างคอนเทนต์ได้เร็วขึ้น 10 เท่า เข้าใจตลาดไทยจริงๆ ไม่ใช่แค่แปลจากภาษาต่างประเทศ ทดลองใช้ฟรีได้เลยวันนี้`,
+      cta_button: '🚀 เริ่มใช้งานฟรี',
+    },
+    press_release: {
+      headline: `Openthai.ai ประกาศ "${topic}" ยกระดับการตลาดดิจิทัลของ SME ไทย`,
+      lead: `กรุงเทพฯ, ${dateLabel} — Openthai.ai บริษัท AI Marketing ชั้นนำของไทย ประกาศ "${topic}" เพื่อตอบสนองความต้องการของผู้ประกอบการ SME และ OTOP ทั่วประเทศ`,
+      quote: `"นี่คือก้าวสำคัญของ Openthai.ai ในการทำให้ AI เข้าถึงได้ง่ายสำหรับทุกคน" — ผู้บริหาร Openthai.ai`,
+    },
+    hashtags: ['#Openthai', '#AIMarketing', '#DigitalThailand', '#SMEไทย', '#คอนเทนต์AI'],
+    image_concept: `ภาพ flat design โทนแดง-ดำ มีตัวอักษร "${topic}" ขนาดใหญ่ background gradient จาก #080812 → #fe2c55 มี sparkle effect`,
+    best_post_time: 'Facebook: 19:00-21:00 · TikTok: 20:00-22:00 · LINE: 07:00-09:00 · Email: 08:00-09:00',
+  });
+});
+
+// PR Daily Plan — save/load
+app.get('/api/pr/daily-plan', (req, res) => {
+  res.json({ success: true, plan: loadPRPlan() });
+});
+app.post('/api/pr/daily-plan', (req, res) => {
+  const { date, data } = req.body || {};
+  if (!date) return res.status(400).json({ error: 'date required' });
+  const plan = loadPRPlan();
+  if (data === null) { delete plan[date]; } else { plan[date] = { ...plan[date], ...data, updatedAt: Date.now() }; }
+  savePRPlan(plan);
+  res.json({ success: true });
+});
+
 // S17 · POST /api/skills/cultural-wisdom — ปรัชญาจีน/ไทย/พุทธ Cultural Wisdom Engine
 app.post('/api/skills/cultural-wisdom', generateLimiter, async (req, res) => {
   const { situation, tradition = 'all', purpose = 'general' } = req.body || {};

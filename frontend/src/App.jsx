@@ -54,6 +54,7 @@ import GovIntlPortalPage from './pages/portals/GovIntlPortalPage';
 import IntlOrgPortalPage from './pages/portals/IntlOrgPortalPage';
 import FoundationPortalPage from './pages/portals/FoundationPortalPage';
 import PromoEnginePage from './pages/PromoEnginePage';
+import DailyPRPage from './pages/DailyPRPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -108,6 +109,7 @@ function App() {
             <Route path="/agent" element={isAuthenticated ? <AgentPage /> : <Navigate to="/login" />} />
             <Route path="/skills" element={isAuthenticated ? <AISkillsPage /> : <Navigate to="/login" />} />
             <Route path="/promo-engine" element={isAuthenticated ? <PromoEnginePage /> : <Navigate to="/login" />} />
+            <Route path="/daily-pr" element={isAuthenticated ? <DailyPRPage /> : <Navigate to="/login" />} />
             {/* Public pages — ไม่ต้อง login */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
