@@ -5375,6 +5375,306 @@ async function startServer() {
   });
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// A — Auto-Post Scheduler  /api/scheduler/*
+// ══════════════════════════════════════════════════════════════════════════════
+const schedulerStore = { posts: [] };
+
+app.post('/api/scheduler/create', generateLimiter, (req, res) => {
+  const { platform, content, scheduled_at, audience, language = 'thai' } = req.body || {};
+  if (!content?.trim() || !platform || !scheduled_at) return res.status(400).json({ error: 'content, platform, scheduled_at required' });
+  const post = {
+    id: `sch_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+    platform, content, audience: audience || 'general', language,
+    scheduled_at, status: 'pending', created_at: new Date().toISOString(),
+  };
+  schedulerStore.posts.unshift(post);
+  if (schedulerStore.posts.length > 200) schedulerStore.posts = schedulerStore.posts.slice(0, 200);
+  res.json({ ok: true, post });
+});
+
+app.get('/api/scheduler/list', (req, res) => {
+  const { platform, status } = req.query;
+  let posts = schedulerStore.posts;
+  if (platform) posts = posts.filter(p => p.platform === platform);
+  if (status)   posts = posts.filter(p => p.status === status);
+  res.json({ ok: true, posts, total: posts.length });
+});
+
+app.post('/api/scheduler/execute/:id', (req, res) => {
+  const post = schedulerStore.posts.find(p => p.id === req.params.id);
+  if (!post) return res.status(404).json({ error: 'post not found' });
+  post.status = 'published';
+  post.published_at = new Date().toISOString();
+  post.reach_mock = Math.floor(Math.random() * 9000) + 1000;
+  res.json({ ok: true, post });
+});
+
+app.delete('/api/scheduler/:id', (req, res) => {
+  const idx = schedulerStore.posts.findIndex(p => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  schedulerStore.posts.splice(idx, 1);
+  res.json({ ok: true });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// B — Analytics Dashboard  /api/analytics/*
+// ══════════════════════════════════════════════════════════════════════════════
+app.get('/api/analytics/summary', (req, res) => {
+  const published = schedulerStore.posts.filter(p => p.status === 'published');
+  const totalReach = published.reduce((s, p) => s + (p.reach_mock || 0), 0);
+  res.json({
+    ok: true,
+    summary: {
+      total_posts: schedulerStore.posts.length,
+      published: published.length,
+      pending: schedulerStore.posts.filter(p => p.status === 'pending').length,
+      total_reach: totalReach,
+      avg_engagement: published.length ? (totalReach * 0.048).toFixed(0) : 0,
+      top_platform: 'TikTok',
+      content_score_avg: 8.4,
+    },
+    platform_breakdown: [
+      { platform: 'TikTok',    reach: 42800, engagement: 6.2, posts: 18, color: '#fe2c55' },
+      { platform: 'Facebook',  reach: 31200, engagement: 3.8, posts: 24, color: '#1877f2' },
+      { platform: 'LINE',      reach: 28900, engagement: 4.1, posts: 16, color: '#06c755' },
+      { platform: 'Instagram', reach: 19400, engagement: 5.3, posts: 12, color: '#e1306c' },
+      { platform: 'Shopee',    reach: 15600, engagement: 2.9, posts:  9, color: '#f97316' },
+    ],
+    audience_breakdown: [
+      { audience: 'ผู้บริโภค',      posts: 22, reach: 48200 },
+      { audience: 'ผู้ขาย',         posts: 18, reach: 31400 },
+      { audience: 'SME ไทย',        posts: 14, reach: 24800 },
+      { audience: 'เกษตรกรรม',      posts: 11, reach: 18900 },
+      { audience: 'ตัวแทนจำหน่าย', posts:  9, reach: 14200 },
+    ],
+    weekly_trend: [
+      { day: 'จ', reach: 8200 }, { day: 'อ', reach: 12400 }, { day: 'พ', reach: 9800 },
+      { day: 'พฤ', reach: 15600 }, { day: 'ศ', reach: 18200 }, { day: 'ส', reach: 22400 }, { day: 'อา', reach: 19800 },
+    ],
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// C — Image Prompt Generator  /api/skills/image-prompt
+// ══════════════════════════════════════════════════════════════════════════════
+app.post('/api/skills/image-prompt', generateLimiter, async (req, res) => {
+  const { product, category = 'สินค้าไทย', platform = 'tiktok', mood = 'vibrant', style = 'photorealistic', audience = 'consumer' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `สร้าง Image Prompt สำหรับ AI Image Generator (Midjourney / DALL-E / Stable Diffusion)
+สินค้า: "${product}"
+หมวดหมู่: ${category}
+Platform: ${platform}
+Mood: ${mood}
+Style: ${style}
+กลุ่มเป้าหมาย: ${audience}
+
+ตอบ JSON เท่านั้น:
+{
+  "midjourney": "prompt สำหรับ Midjourney — รายละเอียดมาก ใส่ style parameters",
+  "dalle": "prompt สำหรับ DALL-E 3 — ภาษาอังกฤษ ชัดเจน descriptive",
+  "stable_diffusion": "prompt สำหรับ Stable Diffusion — ใส่ negative prompt ด้วย",
+  "negative_prompt": "สิ่งที่ไม่ต้องการในภาพ",
+  "composition": "คำแนะนำ composition/framing",
+  "color_palette": ["#hex1","#hex2","#hex3"],
+  "thai_caption": "caption ภาษาไทยสำหรับโพสต์",
+  "en_caption": "English caption for the post",
+  "style_tags": ["tag1","tag2","tag3"]
+}`;
+
+  try {
+    const raw = await callAI(prompt, 2000);
+    const data = parseAIJson(raw);
+    return res.json({ ok: true, source: anthropic ? 'claude' : 'gemini', ...data });
+  } catch (e) { addLog('warn', 'ImagePrompt', e.message); }
+
+  const styleMap = { photorealistic: 'hyperrealistic photography', illustrative: 'digital illustration', minimal: 'minimalist flat design', luxury: 'luxury editorial photography' };
+  const moodMap = { vibrant: 'vibrant colorful energetic', elegant: 'elegant sophisticated moody', natural: 'natural organic earthy tones', bold: 'bold graphic high contrast' };
+  const st = styleMap[style] || 'photorealistic';
+  const md = moodMap[mood] || 'vibrant colorful';
+
+  res.json({
+    ok: true, source: 'mock',
+    midjourney: `"${product}" Thai premium ${category} product, ${st}, ${md}, Thai cultural elements, golden hour lighting, shot on Sony A7R5, bokeh background, commercial advertising, 4K ultra detailed --ar 9:16 --style raw --stylize 750 --v 6`,
+    dalle: `A stunning commercial photograph of "${product}", a premium Thai ${category} product. ${md} aesthetic with ${st} quality. Professional product photography with Thai cultural elements, soft natural lighting, clean background. Perfect for ${platform} marketing. High-end advertising quality.`,
+    stable_diffusion: `(masterpiece:1.4), (best quality:1.4), commercial product photo, "${product}", Thai ${category}, ${st}, ${md}, Thai traditional elements, professional lighting, advertising, 8k uhd, sharp focus, (colorful:1.2)`,
+    negative_prompt: 'blurry, low quality, amateur, dark, cluttered background, text overlay, watermark, distorted, ugly, bad anatomy',
+    composition: `Rule of thirds — สินค้าอยู่ 1/3 ซ้าย พื้นหลัง Thai elements ด้านขวา แสงจากซ้ายบน Golden ratio framing เหมาะสำหรับ ${platform}`,
+    color_palette: ['#D4AF37', '#8B0000', '#F5F5DC'],
+    thai_caption: `✨ "${product}" คุณภาพไทยระดับพรีเมียม — ${category} ที่คุณต้องลอง`,
+    en_caption: `Discover the finest of Thailand — "${product}" crafted with authentic Thai excellence`,
+    style_tags: [st, md, 'Thai Premium', category, platform + ' Ready'],
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// D — Product Catalog AI  /api/catalog-ai/generate
+// ══════════════════════════════════════════════════════════════════════════════
+app.post('/api/catalog-ai/generate', generateLimiter, async (req, res) => {
+  const { product, category = 'สินค้าไทย', price = '', usp = '', specs = '', certifications = '', moq = '' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `สร้าง Product Catalog 3 ภาษา (ไทย/อังกฤษ/จีน) สำหรับสินค้าไทยส่งออก
+สินค้า: "${product}"
+หมวดหมู่: ${category}
+ราคา: ${price || 'ไม่ระบุ'}
+จุดเด่น/USP: ${usp || 'คุณภาพไทยระดับส่งออก'}
+Spec/รายละเอียด: ${specs || 'ไม่ระบุ'}
+ใบรับรอง: ${certifications || 'มาตรฐานไทย'}
+MOQ: ${moq || 'ไม่ระบุ'}
+
+ตอบ JSON เท่านั้น:
+{
+  "thai": {
+    "product_name":"...","tagline":"...","description":"2-3 ประโยค",
+    "features":["จุดเด่น 1","จุดเด่น 2","จุดเด่น 3","จุดเด่น 4"],
+    "specs_table":[{"key":"ขนาด","value":"..."},{"key":"น้ำหนัก","value":"..."},{"key":"วัสดุ","value":"..."}],
+    "certifications":["..."],"cta":"..."
+  },
+  "english": {
+    "product_name":"...","tagline":"...","description":"...",
+    "features":["...","...","...","..."],
+    "specs_table":[{"key":"Size","value":"..."},{"key":"Weight","value":"..."},{"key":"Material","value":"..."}],
+    "certifications":["..."],"cta":"..."
+  },
+  "chinese": {
+    "product_name":"...","tagline":"...","description":"...",
+    "features":["...","...","...","..."],
+    "specs_table":[{"key":"尺寸","value":"..."},{"key":"重量","value":"..."},{"key":"材质","value":"..."}],
+    "certifications":["..."],"cta":"..."
+  },
+  "export_info": {
+    "hs_code_suggestion":"...","packaging":"...","shelf_life":"...",
+    "moq":"${moq || 'ติดต่อสอบถาม'}","lead_time":"...","incoterms":["FOB","CIF","EXW"]
+  }
+}`;
+
+  try {
+    const raw = await callAI(prompt, 3000);
+    const data = parseAIJson(raw);
+    return res.json({ ok: true, source: anthropic ? 'claude' : 'gemini', ...data });
+  } catch (e) { addLog('warn', 'CatalogAI', e.message); }
+
+  const p = product; const u = usp || 'คุณภาพไทยระดับส่งออก';
+  res.json({
+    ok: true, source: 'mock',
+    thai: {
+      product_name: p, tagline: `${p} — ${u}`,
+      description: `"${p}" ผลิตจากวัตถุดิบไทยคัดสรรคุณภาพสูง ${u} ผ่านกระบวนการผลิตมาตรฐานสากล GMP/HACCP ปลอดภัย 100% พร้อมส่งออกทั่วโลก`,
+      features: [`✅ ${u}`, '✅ ผ่านมาตรฐาน GMP/HACCP', '✅ วัตถุดิบไทย 100%', '✅ บรรจุภัณฑ์ส่งออกระดับสากล'],
+      specs_table: [{ key: 'หมวดหมู่', value: category }, { key: 'ราคา', value: price || 'ติดต่อสอบถาม' }, { key: 'MOQ', value: moq || 'ติดต่อสอบถาม' }, { key: 'ใบรับรอง', value: certifications || 'GMP, HACCP' }],
+      certifications: (certifications || 'GMP, HACCP').split(',').map(s => s.trim()),
+      cta: `สั่งซื้อ "${p}" วันนี้ — ส่งทั่วโลก`,
+    },
+    english: {
+      product_name: p, tagline: `${p} — Premium Thai Quality for Global Markets`,
+      description: `"${p}" is crafted from Thailand's finest ingredients with strict international quality standards. ${u}. GMP/HACCP certified, 100% safe, export-ready worldwide.`,
+      features: [`✅ ${u}`, '✅ GMP/HACCP Certified', '✅ 100% Thai Origin', '✅ Export-Standard Packaging'],
+      specs_table: [{ key: 'Category', value: category }, { key: 'Price', value: price || 'Contact us' }, { key: 'MOQ', value: moq || 'Contact us' }, { key: 'Certifications', value: certifications || 'GMP, HACCP' }],
+      certifications: (certifications || 'GMP, HACCP').split(',').map(s => s.trim()),
+      cta: `Order "${p}" Now — Worldwide Shipping Available`,
+    },
+    chinese: {
+      product_name: p, tagline: `${p} — 面向全球市场的泰国优质产品`,
+      description: `"${p}"采用泰国优质原料精心制作，严格遵守国际质量标准。${u}。获GMP/HACCP认证，100%安全，符合全球出口标准。`,
+      features: [`✅ ${u}`, '✅ GMP/HACCP认证', '✅ 100%泰国原产', '✅ 出口标准包装'],
+      specs_table: [{ key: '类别', value: category }, { key: '价格', value: price || '请咨询' }, { key: '起订量', value: moq || '请咨询' }, { key: '认证', value: certifications || 'GMP, HACCP' }],
+      certifications: (certifications || 'GMP, HACCP').split(',').map(s => s.trim()),
+      cta: `立即订购"${p}" — 全球配送`,
+    },
+    export_info: {
+      hs_code_suggestion: '2106.90 (อาหารปรุงแต่ง) / ตรวจสอบตาม category จริง',
+      packaging: 'Corrugated export carton, inner packaging vacuum-sealed',
+      shelf_life: '12-24 เดือน (ขึ้นอยู่กับประเภทสินค้า)',
+      moq: moq || 'ติดต่อสอบถาม',
+      lead_time: '2-4 สัปดาห์หลังยืนยันออเดอร์',
+      incoterms: ['FOB Bangkok', 'CIF Destination', 'EXW Factory'],
+    },
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// E — KOL Brief Generator  /api/skills/kol-brief
+// ══════════════════════════════════════════════════════════════════════════════
+app.post('/api/skills/kol-brief', generateLimiter, async (req, res) => {
+  const { product, category = 'สินค้าไทย', platform = 'tiktok', region = 'thailand', usp = '', target_audience = 'ผู้บริโภคทั่วไป', budget_tier = 'mid' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const tierMap = { nano: 'Nano (1K-10K followers)', micro: 'Micro (10K-100K)', mid: 'Mid-tier (100K-1M)', macro: 'Macro (1M+)' };
+  const prompt = `สร้าง KOL Brief ครบถ้วนสำหรับแคมเปญ Influencer Marketing
+สินค้า: "${product}"
+หมวดหมู่: ${category}
+Platform: ${platform}
+ภูมิภาค/ตลาด: ${region}
+USP: ${usp || 'คุณภาพไทยระดับส่งออก'}
+กลุ่มเป้าหมาย: ${target_audience}
+ระดับ KOL: ${tierMap[budget_tier] || tierMap.mid}
+
+ตอบ JSON เท่านั้น:
+{
+  "campaign_name":"...",
+  "objective":"...",
+  "kol_profile":{"followers_range":"...","niche":["..."],"tone":"...","demographics":"..."},
+  "key_messages":["message1","message2","message3"],
+  "content_brief":{"hook":"Hook 3วิแรก","talking_points":["point1","point2","point3"],"dos":["...","...","..."],"donts":["...","..."]},
+  "deliverables":[{"type":"TikTok Video","duration":"60s","quantity":2,"deadline":"7 days"},{"type":"Story","duration":"15s","quantity":3,"deadline":"3 days"}],
+  "hashtags_mandatory":["#...","#...","#..."],
+  "hashtags_suggested":["#...","#..."],
+  "compensation":{"type":"Product + Cash","estimate":"...","notes":"..."},
+  "kpi":{"primary":"Views","target":"100,000+","secondary":"CTR","target2":"3%+"},
+  "script_outline":"เส้นทาง content ตั้งแต่ต้นจนจบ"
+}`;
+
+  try {
+    const raw = await callAI(prompt, 3000);
+    const data = parseAIJson(raw);
+    return res.json({ ok: true, source: anthropic ? 'claude' : 'gemini', ...data });
+  } catch (e) { addLog('warn', 'KOLBrief', e.message); }
+
+  const p = product;
+  res.json({
+    ok: true, source: 'mock',
+    campaign_name: `${p} × KOL Campaign — Authentic Thai Story`,
+    objective: `สร้าง Awareness และกระตุ้น Purchase Intent สำหรับ "${p}" ผ่าน Authentic Content บน ${platform}`,
+    kol_profile: {
+      followers_range: tierMap[budget_tier],
+      niche: [category, 'Lifestyle', 'Thai Products', 'Review'],
+      tone: 'Authentic · Friendly · Trustworthy — ไม่ formal เกินไป',
+      demographics: `${target_audience} อายุ 22-45 สนใจ${category} มีกำลังซื้อ`,
+    },
+    key_messages: [
+      `"${p}" คุณภาพไทยที่คุณวางใจได้ — ${usp || 'ทำจากวัตถุดิบไทยแท้'}`,
+      'ไม่ใช่แค่สินค้า — คือการสนับสนุนผู้ผลิตไทย',
+      'ลองแล้วจะรู้ว่าทำไมคนไทยถึงรักสินค้าไทย',
+    ],
+    content_brief: {
+      hook: `"ถ้าคุณยังไม่รู้จัก ${p}... คุณพลาดมากเลยนะ 😱" หรือ "ทำไมคนญี่ปุ่นถึงซื้อ${p}กลับบ้าน?"`,
+      talking_points: [
+        `จุดเด่นของ "${p}" — ${usp || 'วัตถุดิบไทยแท้ คุณภาพสูง'}`,
+        'วิธีใช้ / วิธีกิน / Demo จริง — แสดงให้เห็น Before/After',
+        'ราคาเข้าถึงได้ + ซื้อง่าย + ลิงก์ในไบโอ',
+      ],
+      dos: ['พูดจากประสบการณ์จริง', 'แสดง Product จริงชัดเจน', 'ใส่ CTA ที่ชัดเจน', 'เปิดเผยว่าเป็น Partnership (#ad)'],
+      donts: ['ห้ามอ้างสรรพคุณเกินจริง', 'ห้ามเปรียบเทียบดูถูกคู่แข่ง', 'ห้ามตัดต่อเกินจนดูไม่ Authentic'],
+    },
+    deliverables: [
+      { type: `${platform.toUpperCase()} Video`, duration: '45-60s', quantity: 2, deadline: '7 วันหลังรับสินค้า' },
+      { type: 'Story / Reels', duration: '15s', quantity: 3, deadline: '3 วันหลังรับสินค้า' },
+      { type: 'Static Post + Caption', duration: '-', quantity: 1, deadline: '5 วันหลังรับสินค้า' },
+    ],
+    hashtags_mandatory: [`#${p.replace(/\s/g,'')}`, '#สินค้าไทย', '#OpenThaiAI', '#ThaiProducts'],
+    hashtags_suggested: [`#${category.replace(/\s/g,'')}`, '#ของดีไทย', '#รีวิว', '#แนะนำ', '#MadeInThailand'],
+    compensation: {
+      type: 'Product + Cash',
+      estimate: budget_tier === 'nano' ? '500-2,000 บาท + สินค้า' : budget_tier === 'micro' ? '3,000-15,000 บาท + สินค้า' : budget_tier === 'mid' ? '20,000-80,000 บาท + สินค้า' : '100,000+ บาท + สินค้า',
+      notes: 'ต่อรองได้ตาม Engagement Rate จริง — ดู ER > Followers',
+    },
+    kpi: { primary: 'Views', target: budget_tier === 'nano' ? '5,000+' : budget_tier === 'micro' ? '50,000+' : '500,000+', secondary: 'CTR to Link', target2: '3%+' },
+    script_outline: `[0-3s] Hook — ดึงดูดความสนใจ · [3-15s] Problem/Story — เล่าว่าทำไมถึงลอง "${p}" · [15-40s] Demo — แสดงสินค้าจริง ใช้จริง · [40-55s] Result/Review — ผลลัพธ์จริง · [55-60s] CTA — บอกซื้อได้ที่ไหน ราคาเท่าไหร่`,
+  });
+});
+
 // ── Export app สำหรับ Vercel Serverless (api/index.js import ไปใช้) ──────────
 export { app };
 

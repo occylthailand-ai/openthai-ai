@@ -10,6 +10,11 @@ const STATS = [
 ];
 
 const QUICK_ACTIONS = [
+  { icon: '📅', label: 'Auto-Post Scheduler', desc: 'วางตารางโพสต์อัตโนมัติ · TikTok · Facebook · LINE · Shopee · 8 Platforms', route: '/scheduler', color: '#10b981', hot: true },
+  { icon: '📊', label: 'Analytics Pro', desc: 'Reach · Engagement · Conversion · Platform Breakdown · Weekly Trend', route: '/analytics-pro', color: '#f59e0b', hot: true },
+  { icon: '🎨', label: 'Image Prompt AI', desc: 'Prompt สำหรับ Midjourney · DALL-E · SD · ทุก Mood · ทุก Style', route: '/image-prompt', color: '#ec4899', hot: true },
+  { icon: '🏪', label: 'Product Catalog AI', desc: 'Catalog 3 ภาษา · Export Info · HS Code · FOB/CIF · MOQ', route: '/catalog-ai', color: '#6366f1', hot: true },
+  { icon: '🌟', label: 'KOL Brief Generator', desc: 'Brief ครบ · Nano→Macro · Script · Hashtag · KPI · ทุก Platform', route: '/kol-brief', color: '#f97316', hot: true },
   { icon: '🔍', label: 'Content Benchmark', desc: 'เทียบสื่อกับ Top Performer ตลาดจริง · 5 มิติ · ทันสมัย · เทรนด์ · Hashtag', route: '/benchmark', color: '#6366f1', hot: true },
   { icon: '🌐', label: 'Global PR Creator', desc: '3 ภาษา · 5 กลุ่มเป้าหมาย · 7 ทวีป · TH/EN/ZH ครบจบ', route: '/global-pr', color: '#10b981', hot: true },
   { icon: '📣', label: 'Daily PR Creator', desc: 'สร้างสื่อ PR ทุกช่องทาง · ปฏิทินธันวาคม · 🚀 Launch 20/12', route: '/daily-pr', color: '#dc2626', hot: true },

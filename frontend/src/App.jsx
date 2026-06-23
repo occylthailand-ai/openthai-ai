@@ -58,6 +58,11 @@ import DailyPRPage from './pages/DailyPRPage';
 import UltraPromoPage from './pages/UltraPromoPage';
 import GlobalPRPage from './pages/GlobalPRPage';
 import ContentBenchmarkPage from './pages/ContentBenchmarkPage';
+import SchedulerPage from './pages/SchedulerPage';
+import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
+import ImagePromptPage from './pages/ImagePromptPage';
+import CatalogAIPage from './pages/CatalogAIPage';
+import KOLBriefPage from './pages/KOLBriefPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -116,6 +121,11 @@ function App() {
             <Route path="/ultra-promo" element={isAuthenticated ? <UltraPromoPage /> : <Navigate to="/login" />} />
             <Route path="/global-pr" element={isAuthenticated ? <GlobalPRPage /> : <Navigate to="/login" />} />
             <Route path="/benchmark" element={isAuthenticated ? <ContentBenchmarkPage /> : <Navigate to="/login" />} />
+            <Route path="/scheduler" element={isAuthenticated ? <SchedulerPage /> : <Navigate to="/login" />} />
+            <Route path="/analytics-pro" element={isAuthenticated ? <AnalyticsDashboardPage /> : <Navigate to="/login" />} />
+            <Route path="/image-prompt" element={isAuthenticated ? <ImagePromptPage /> : <Navigate to="/login" />} />
+            <Route path="/catalog-ai" element={isAuthenticated ? <CatalogAIPage /> : <Navigate to="/login" />} />
+            <Route path="/kol-brief" element={isAuthenticated ? <KOLBriefPage /> : <Navigate to="/login" />} />
             {/* Public pages — ไม่ต้อง login */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
