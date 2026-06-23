@@ -11,6 +11,7 @@ const STATS = [
 
 const QUICK_ACTIONS = [
   { icon: '📣', label: 'Daily PR Creator', desc: 'สร้างสื่อ PR ทุกช่องทาง · ปฏิทินธันวาคม · 🚀 Launch 20/12', route: '/daily-pr', color: '#dc2626', hot: true },
+  { icon: '💥', label: 'Ultra Promo Engine', desc: '10 โมดูล · Hook 3วิ · Psychology · KOL Brief · Funnel ครบจบ', route: '/ultra-promo', color: '#7c3aed', hot: true },
   { icon: '🚀', label: 'Sales Conversion Engine', desc: 'Hook · Psychology · Copy · Video · Funnel ครบทุกมิติ', route: '/promo-engine', color: '#f97316', hot: true },
   { icon: '🤖', label: 'AI Generator', desc: 'สร้างคอนเทนต์ด้วย AI', route: '/ai-generator', color: '#6366f1', hot: true },
   { icon: '🧠', label: 'AI Skills Hub', desc: 'Trend · Hashtag · SEO · Video · แปลภาษา · ปัญญาโบราณ', route: '/skills', color: '#f97316', hot: true },
