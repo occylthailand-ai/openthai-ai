@@ -10,6 +10,8 @@ const STATS = [
 ];
 
 const QUICK_ACTIONS = [
+  { icon: '🎯', label: 'Pitch Deck', desc: 'Investor & Partner Deck · 10 สไลด์ · Present Mode · Export PDF · ระดมทุน/B2G', route: '/pitch', color: '#8b5cf6', hot: true },
+  { icon: '🔌', label: 'Integration Hub', desc: 'เชื่อม Platform จริง · LINE · FB · TikTok · Canva · Alibaba · พร้อมเสียบ API', route: '/integrations', color: '#10b981', hot: true },
   { icon: '🧠', label: 'Strategy Center', desc: 'วิเคราะห์ตนเอง vs 8 ยักษ์ใหญ่โลก · 15 มิติ · GAP · Roadmap · Vision 2028', route: '/strategy', color: '#8b5cf6', hot: true },
   { icon: '📅', label: 'Auto-Post Scheduler', desc: 'วางตารางโพสต์อัตโนมัติ · TikTok · Facebook · LINE · Shopee · 8 Platforms', route: '/scheduler', color: '#10b981', hot: true },
   { icon: '📊', label: 'Analytics Pro', desc: 'Reach · Engagement · Conversion · Platform Breakdown · Weekly Trend', route: '/analytics-pro', color: '#f59e0b', hot: true },

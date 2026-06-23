@@ -64,6 +64,8 @@ import ImagePromptPage from './pages/ImagePromptPage';
 import CatalogAIPage from './pages/CatalogAIPage';
 import KOLBriefPage from './pages/KOLBriefPage';
 import StrategyCenterPage from './pages/StrategyCenterPage';
+import PitchDeckPage from './pages/PitchDeckPage';
+import IntegrationHubPage from './pages/IntegrationHubPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -128,6 +130,8 @@ function App() {
             <Route path="/catalog-ai" element={isAuthenticated ? <CatalogAIPage /> : <Navigate to="/login" />} />
             <Route path="/kol-brief" element={isAuthenticated ? <KOLBriefPage /> : <Navigate to="/login" />} />
             <Route path="/strategy" element={isAuthenticated ? <StrategyCenterPage /> : <Navigate to="/login" />} />
+            <Route path="/pitch" element={isAuthenticated ? <PitchDeckPage /> : <Navigate to="/login" />} />
+            <Route path="/integrations" element={isAuthenticated ? <IntegrationHubPage /> : <Navigate to="/login" />} />
             {/* Public pages — ไม่ต้อง login */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
