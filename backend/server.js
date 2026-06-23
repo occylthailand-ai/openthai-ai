@@ -1647,14 +1647,16 @@ app.post('/api/pr/global-content', generateLimiter, async (req, res) => {
 โอกาส/งาน: "${event_type}"
 น้ำเสียง: "${tone}"
 
-สร้างสื่อประชาสัมพันธ์ครบถ้วนสำหรับ 3 ภาษา × 5 กลุ่มเป้าหมาย
+สร้างสื่อประชาสัมพันธ์ครบถ้วนสำหรับ 3 ภาษา × 7 กลุ่มเป้าหมาย
 
 กลุ่มเป้าหมาย:
 - producer: ผู้ผลิต/โรงงาน (B2B ต้องการพันธมิตรผลิต)
 - seller: ผู้ขาย/ร้านค้า (B2B ต้องการสต็อกขายต่อ)
 - consumer: ผู้บริโภคปลายทาง (B2C ซื้อใช้เอง)
-- distributor: ตัวแทนจำหน่ายในประเทศ (B2B ระจาย)
+- distributor: ตัวแทนจำหน่ายในประเทศ (B2B กระจาย)
 - intl_agent: ตัวแทนข้ามชาติ/ส่งออก (B2B ระหว่างประเทศ)
+- sme: SME ไทย ธุรกิจขนาดกลาง-เล็ก (ต้องการ AI ทดแทนทีม Marketing)
+- agri: เกษตรกรรม/ผลิตภัณฑ์การเกษตร (Farm-to-Table, ส่งออก, Organic, GI)
 
 ตอบเป็น JSON เท่านั้น:
 {
@@ -1663,21 +1665,27 @@ app.post('/api/pr/global-content', generateLimiter, async (req, res) => {
     "seller":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
     "consumer":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
     "distributor":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
-    "intl_agent":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."}
+    "intl_agent":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "sme":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "agri":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."}
   },
   "english": {
     "producer":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
     "seller":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
     "consumer":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
     "distributor":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
-    "intl_agent":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."}
+    "intl_agent":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "sme":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "agri":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."}
   },
   "chinese": {
     "producer":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
     "seller":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
     "consumer":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
     "distributor":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
-    "intl_agent":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."}
+    "intl_agent":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "sme":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "agri":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."}
   },
   "continental": {
     "asia":{"focus":"...","key_markets":["..."],"strategy":"...","channels":["..."]},
@@ -1739,6 +1747,20 @@ app.post('/api/pr/global-content', generateLimiter, async (req, res) => {
         hashtags: ['#ThaiExport', '#สินค้าไทยส่งออก', '#GlobalBusiness', '#OTOP'],
         key_message: `"${p}" Thai Premium Quality — Certified & Ready to Export Worldwide`,
       },
+      sme: {
+        headline: `💼 SME ไทย — ไม่ต้องจ้าง Agency แพง! AI ทำให้คุณได้เลย`,
+        body: `"${p}" คือตัวอย่างของ SME ไทยที่ใช้ AI แทนทีม Marketing ได้จริง OpenThai AI ช่วยสร้างแบรนด์ออนไลน์ครบวงจร คอนเทนต์ขายสินค้า 3 ภาษา วิเคราะห์คู่แข่งเรียลไทม์ และวางแผน PR รายเดือน ${u} ลดต้นทุน Marketing ได้ทันที เริ่มต้นได้วันนี้`,
+        cta: 'ทดลองใช้ฟรี 14 วัน — ไม่ต้องใช้บัตรเครดิต',
+        hashtags: ['#SMEไทย', '#ThaiSME', '#AIMarketing', '#ธุรกิจไทย', '#ลดต้นทุน'],
+        key_message: `SME ไทยมี AI Marketing เป็นของตัวเองได้ — เริ่มต้นง่าย ราคาที่เข้าถึงได้`,
+      },
+      agri: {
+        headline: `🌾 เกษตรกรไทย — ขายตรงถึงผู้บริโภคทั่วโลก ด้วย AI ที่เข้าใจเรื่องเกษตร`,
+        body: `"${p}" ผลิตภัณฑ์เกษตรไทยคุณภาพสูง ${u} OpenThai AI ช่วยเล่าเรื่อง Farm-to-Table ใน 3 ภาษา สร้างเนื้อหาสำหรับตลาด EU/USA/Japan ที่ต้องการ Organic และ GI สร้าง Video Script ให้ลูกค้าเห็นไร่นาจริง รองรับใบรับรอง Organic · GAP · GI ช่วยสร้างเอกสารประกอบ`,
+        cta: 'เริ่มส่งออกสินค้าเกษตรไทยวันนี้ → openthai-ai.com',
+        hashtags: ['#เกษตรกรไทย', '#ThaiAgriculture', '#FarmToTable', '#OrganicThai', '#GAPCertified', '#สินค้าเกษตรไทย'],
+        key_message: `เกษตรกรไทยส่งออกได้ — ด้วย AI ที่เข้าใจเรื่องเกษตรและตลาดโลก`,
+      },
     },
     english: {
       producer: {
@@ -1776,6 +1798,20 @@ app.post('/api/pr/global-content', generateLimiter, async (req, res) => {
         hashtags: ['#ThaiExport', '#GlobalTrade', '#ASEAN', '#InternationalBusiness'],
         key_message: `"${p}" — Thailand's premium certified product ready for every global market`,
       },
+      sme: {
+        headline: `💼 Thai SMEs — No Expensive Agency Needed. Let AI Do It For You.`,
+        body: `"${p}" proves that Thai SMEs can compete at a global level with AI-powered marketing. OpenThai AI is your complete marketing department — tri-lingual content for all major platforms, real-time competitor analysis, and monthly PR plans. ${u}. Reduce marketing costs dramatically and start growing today.`,
+        cta: 'Start Your 14-Day Free Trial — No Credit Card Required',
+        hashtags: ['#ThaiSME', '#SMEThailand', '#AIMarketing', '#SmallBusiness', '#GrowWithAI'],
+        key_message: `Thai SMEs can now own their AI Marketing — affordable, powerful, built for Thailand`,
+      },
+      agri: {
+        headline: `🌾 Thai Farmers & Agri-Brands — Sell Direct to the World with AI`,
+        body: `"${p}" is a world-class Thai agricultural product that deserves a global audience. ${u}. OpenThai AI creates compelling Farm-to-Table stories in Thai, English, and Chinese — tailored for EU, USA, and Japanese markets that demand Organic, GAP, and GI certification. Includes video scripts showcasing your real farm and documentation support for export certifications.`,
+        cta: 'Start Exporting Thai Agriculture Today → openthai-ai.com',
+        hashtags: ['#ThaiAgriculture', '#FarmToTable', '#OrganicThai', '#GAPCertified', '#ThaiExport', '#AgriTech'],
+        key_message: `Thai agricultural products deserve global recognition — AI-powered storytelling makes it happen`,
+      },
     },
     chinese: {
       producer: {
@@ -1812,6 +1848,20 @@ app.post('/api/pr/global-content', generateLimiter, async (req, res) => {
         cta: '联系出口部门 — 提供免费样品及认证资料',
         hashtags: ['#泰国出口', '#国际贸易', '#东盟', '#全球业务'],
         key_message: `"${p}" — 通过认证、面向全球市场的泰国优质出口产品`,
+      },
+      sme: {
+        headline: `💼 泰国中小企业 — 无需昂贵代理公司，AI为您打理一切`,
+        body: `"${p}"证明了泰国中小企业可以借助AI营销在全球竞争。OpenThai AI是您完整的营销部门——三语内容覆盖所有主要平台、实时竞品分析和月度PR计划。${u}。大幅降低营销成本，立即开始增长。`,
+        cta: '开始14天免费试用 — 无需信用卡',
+        hashtags: ['#泰国中小企业', '#AI营销', '#小微企业', '#泰国创业', '#用AI增长'],
+        key_message: `泰国中小企业现在也能拥有自己的AI营销——实惠、强大、专为泰国打造`,
+      },
+      agri: {
+        headline: `🌾 泰国农业品牌 — 用AI直达全球消费者`,
+        body: `"${p}"是世界级的泰国农产品，理应走向全球。${u}。OpenThai AI用泰语、英语和中文创作引人入胜的农场直供故事，专为需要有机、GAP和地理标志认证的欧盟、美国和日本市场量身定制。包含展示真实农场的视频脚本和出口认证文件支持。`,
+        cta: '立即开始出口泰国农产品 → openthai-ai.com',
+        hashtags: ['#泰国农业', '#农场直供', '#有机泰国', '#GAP认证', '#泰国出口', '#农业科技'],
+        key_message: `泰国农产品值得全球认可——AI驱动的故事讲述让梦想成真`,
       },
     },
     continental: {

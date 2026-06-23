@@ -14,6 +14,8 @@ const AUDIENCES = [
   { id: 'consumer',    icon: '👥', label: 'ผู้บริโภค',      labelEn: 'Consumer',      labelZh: '消费者' },
   { id: 'distributor', icon: '🤝', label: 'ตัวแทนจำหน่าย', labelEn: 'Distributor',   labelZh: '分销商' },
   { id: 'intl_agent',  icon: '🌍', label: 'ตัวแทนข้ามชาติ',labelEn: 'Intl. Agent',   labelZh: '跨国代理' },
+  { id: 'sme',         icon: '💼', label: 'SME ไทย',        labelEn: 'Thai SME',      labelZh: '泰国中小企业' },
+  { id: 'agri',        icon: '🌾', label: 'เกษตรกรรม',     labelEn: 'Agriculture',   labelZh: '农业产品' },
 ];
 
 const CONTINENTS = [
