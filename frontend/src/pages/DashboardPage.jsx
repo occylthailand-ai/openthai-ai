@@ -10,8 +10,9 @@ const STATS = [
 ];
 
 const QUICK_ACTIONS = [
+  { icon: '🚀', label: 'Sales Conversion Engine', desc: 'Hook · Psychology · Copy · Video · Funnel ครบทุกมิติ', route: '/promo-engine', color: '#dc2626', hot: true },
   { icon: '🤖', label: 'AI Generator', desc: 'สร้างคอนเทนต์ด้วย AI', route: '/ai-generator', color: '#6366f1', hot: true },
-  { icon: '🧠', label: 'AI Skills Hub', desc: 'Trend · Hashtag · SEO · Video · แปลภาษา', route: '/skills', color: '#f97316', hot: true },
+  { icon: '🧠', label: 'AI Skills Hub', desc: 'Trend · Hashtag · SEO · Video · แปลภาษา · ปัญญาโบราณ', route: '/skills', color: '#f97316', hot: true },
   { icon: '🦾', label: 'AI Agent', desc: 'ตั้งแล้วลืม · 24/7 Auto', route: '/agent', color: '#10b981', hot: true },
   { icon: '🔥', label: 'Trending Now', desc: 'Hashtag ยอดนิยมวันนี้', route: '/trending', color: '#fe2c55' },
   { icon: '📅', label: 'Content Calendar', desc: 'วางแผนโพสต์ 30 วัน', route: '/calendar', color: '#f59e0b' },

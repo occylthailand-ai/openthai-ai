@@ -1513,6 +1513,277 @@ app.post('/api/skills/cultural-wisdom', generateLimiter, async (req, res) => {
   });
 });
 
+// S18 · POST /api/skills/promo-engine — Sales Conversion Engine (ครบทุกมิติ)
+app.post('/api/skills/promo-engine', generateLimiter, async (req, res) => {
+  const { product, price = '', category = 'OTOP', target = 'ทั่วไป', usp, platform = 'ทุกแพลตฟอร์ม', tone = 'สนุก/ขำ', competitor = '' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+  if (!usp?.trim())     return res.status(400).json({ error: 'usp required' });
+
+  const prompt = `คุณเป็น Sales Conversion Strategist + Copywriting Expert ระดับโลก ผสม Claude Hopkins, Gary Halbert, David Ogilvy และ นักการตลาดดิจิทัลไทยชั้นนำ
+เชี่ยวชาญ: TikTok Marketing, Facebook Ads, E-commerce Thai (Shopee/Lazada), Consumer Psychology Thailand
+
+─── ข้อมูลสินค้า ───
+สินค้า: "${product.slice(0, 200)}"
+ราคา: ${price || 'ไม่ระบุ'}
+หมวด: ${category}
+กลุ่มเป้าหมาย: ${target}
+จุดเด่น/USP: "${usp.slice(0, 400)}"
+แพลตฟอร์มหลัก: ${platform}
+โทน: ${tone}
+${competitor ? `คู่แข่ง: ${competitor}` : ''}
+
+─── ภารกิจ ───
+สร้าง Sales Conversion Engine ครบทุกมิติสำหรับสินค้านี้ ตอบกลับ JSON เท่านั้น:
+
+{
+  "hooks": {
+    "shock": ["hook ที่ทำให้ตกใจหยุดดูทันที 1","hook 2","hook 3"],
+    "curiosity": ["hook กระตุ้นความอยากรู้ 1","hook 2","hook 3"],
+    "pain_point": ["hook โดนใจปัญหา 1","hook 2","hook 3"],
+    "promise": ["hook สัญญาผลลัพธ์ชัดเจน 1","hook 2","hook 3"],
+    "story": ["hook เล่าเรื่องดึงดูด 1","hook 2"],
+    "power_opener": "hook ที่ดีที่สุดสำหรับสินค้านี้ — เลือกจาก 5 ประเภทข้างต้น"
+  },
+  "psychology": {
+    "core_desire": "ความต้องการลึกสุดที่ผู้ซื้อต้องการ (ไม่ใช่แค่ฟีเจอร์)",
+    "core_fear": "ความกลัวหรือปัญหาหลักก่อนซื้อ",
+    "buyer_persona": "คำอธิบาย persona 3-4 ประโยค — ชีวิต ปัญหา ความฝัน",
+    "fomo_triggers": ["trigger 1","trigger 2","trigger 3","trigger 4"],
+    "decision_blockers": ["blocker 1","blocker 2","blocker 3"],
+    "emotional_journey": "เส้นทางอารมณ์จาก ไม่รู้จัก → สนใจ → อยากได้ → ซื้อ"
+  },
+  "platform_packages": {
+    "tiktok": {
+      "hook": "hook 3วิแรก",
+      "script": "script เต็ม 30-60 วินาที มี [0s] [5s] [15s] [25s] timestamp",
+      "cta": "call to action ปิดท้าย",
+      "sound_tip": "แนะนำ vibe เสียง/เพลง"
+    },
+    "facebook": {
+      "headline": "headline โฆษณา",
+      "body": "body copy 3-4 ย่อหน้า",
+      "cta": "CTA button text + ประโยคปิด"
+    },
+    "instagram": {
+      "caption": "caption พร้อม emoji และ hashtag 5 ตัว",
+      "bio_link_text": "ข้อความชี้ไป bio link",
+      "story_idea": "แนวคิด Story 5-frame"
+    },
+    "shopee": {
+      "title": "ชื่อสินค้า SEO-optimized ≤120 ตัวอักษร",
+      "description": "คำอธิบายสินค้า Shopee 200-300 คำ",
+      "keywords": ["keyword1","keyword2","keyword3","keyword4","keyword5","keyword6","keyword7","keyword8"]
+    },
+    "lazada": {
+      "title": "ชื่อสินค้า Lazada format",
+      "bullets": ["จุดเด่น 1","จุดเด่น 2","จุดเด่น 3","จุดเด่น 4","จุดเด่น 5"],
+      "tags": ["tag1","tag2","tag3","tag4","tag5"]
+    },
+    "line": {
+      "broadcast": "ข้อความ LINE Broadcast พร้อม emoji ≤300 ตัวอักษร"
+    }
+  },
+  "copy_arsenal": {
+    "headlines": ["headline 1","headline 2","headline 3","headline 4","headline 5"],
+    "short_captions": ["caption สั้น ≤30 คำ 1","caption 2","caption 3"],
+    "pas_copy": "Problem:\\n[ปัญหา]\\n\\nAgitate:\\n[ขยายความเจ็บปวด]\\n\\nSolution:\\n[สินค้าคุณแก้ได้อย่างไร]",
+    "long_form": "long-form copy 150-250 คำ สไตล์ advertorial",
+    "cta_variants": ["CTA 1","CTA 2","CTA 3","CTA 4","CTA 5","CTA 6"]
+  },
+  "video_blueprint": {
+    "total_duration": "30s / 45s / 60s",
+    "format": "9:16 Vertical",
+    "music_mood": "แนวเพลงที่เหมาะ",
+    "scenes": [
+      {"second":"0-3","emotion":"ชื่ออารมณ์","visual":"สิ่งที่เห็นในภาพ","script":"คำพูด/caption","direction":"กล้อง/มุมถ่าย"},
+      {"second":"3-8","emotion":"...","visual":"...","script":"...","direction":"..."},
+      {"second":"8-20","emotion":"...","visual":"...","script":"...","direction":"..."},
+      {"second":"20-30","emotion":"...","visual":"...","script":"...","direction":"..."}
+    ],
+    "key_moments": ["moment สำคัญ 1","moment 2","moment 3"],
+    "broll_ideas": ["broll idea 1","broll 2","broll 3","broll 4","broll 5"]
+  },
+  "price_psychology": {
+    "anchoring_script": "script เปรียบเทียบราคา ทำให้รู้สึกคุ้มค่า",
+    "urgency_triggers": ["trigger 1","trigger 2","trigger 3"],
+    "bundle_ideas": ["bundle idea 1","bundle 2","bundle 3"],
+    "guarantee_script": "script การรับประกัน/คืนเงิน ลด risk",
+    "bonus_ideas": ["bonus 1","bonus 2","bonus 3"]
+  },
+  "objection_killers": [
+    {"objection":"ข้อโต้แย้ง 1","killer_response":"response ที่ปิดได้ทันที","proof_type":"Social Proof / Guarantee / Demo / Data"},
+    {"objection":"ข้อโต้แย้ง 2","killer_response":"...","proof_type":"..."},
+    {"objection":"ข้อโต้แย้ง 3","killer_response":"...","proof_type":"..."},
+    {"objection":"ข้อโต้แย้ง 4","killer_response":"...","proof_type":"..."},
+    {"objection":"ข้อโต้แย้ง 5","killer_response":"...","proof_type":"..."}
+  ],
+  "funnel_strategy": {
+    "awareness": {"content_type":"TikTok Hook, FB Reach","message":"สารสำคัญระยะ Top","platform":"TikTok, Facebook","kpi":"Reach 10k / CPM ≤฿30"},
+    "interest":  {"content_type":"รีวิว, Demo","message":"สารสำคัญระยะ Mid","platform":"IG, YouTube","kpi":"Engagement Rate >5%"},
+    "decision":  {"content_type":"Testimonial, เปรียบเทียบ","message":"สารปิดการตัดสินใจ","platform":"Shopee, Facebook Retarget","kpi":"Add-to-cart rate >8%"},
+    "action":    {"content_type":"Flash Sale, Limited","message":"ปิดการขายทันที","platform":"LINE Broadcast, Shopee","kpi":"Conversion >3%"},
+    "repurchase":{"content_type":"Thank you + Next offer","message":"รักษาลูกค้าและกระตุ้นซื้อซ้ำ","platform":"LINE OA, Email","kpi":"Repeat purchase 30d >20%"}
+  }
+}`;
+
+  try {
+    const text = await callAI(prompt, 4096);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) {
+    addLog('warn', 'Skills/PromoEngine', e.message);
+  }
+
+  // Mock fallback
+  const pName = product.slice(0, 40);
+  res.json({
+    success: true, source: 'mock',
+    hooks: {
+      shock: [
+        `"หยุด! คุณกำลังจ่ายแพงเกินไปสำหรับ${pName} แบบที่ไม่ได้ผล"`,
+        `"99% ของคนใช้ ${pName} ผิดวิธี — คุณเป็นคนนั้นอยู่ไหม?"`,
+        `"ทดสอบแล้ว! ${pName} นี้เปลี่ยนชีวิตฉันใน 7 วัน"`,
+      ],
+      curiosity: [
+        `"เหตุผลที่ทุกคนพูดถึง ${pName} นี้คืออะไร?"`,
+        `"ลองดูสิว่าทำไม ${pName} นี้ถึงหมดสต็อกใน 3 ชั่วโมง"`,
+        `"ความลับที่ผู้ผลิต ${pName} ไม่อยากให้คุณรู้"`,
+      ],
+      pain_point: [
+        `"เบื่อกับ [ปัญหา] ที่ไม่มีทางออก? ${pName} คือคำตอบ"`,
+        `"ใช้เงินไปเท่าไหร่แล้วกับสินค้าที่ไม่ได้ผล?"`,
+        `"ถ้าคุณเคยรู้สึก [ปัญหา] วิดีโอนี้สำหรับคุณโดยเฉพาะ"`,
+      ],
+      promise: [
+        `"${pName} รับประกัน: เห็นผลใน 7 วัน หรือคืนเงิน"`,
+        `"เปลี่ยน [ปัญหา] เป็น [ผลลัพธ์] ด้วย ${pName}"`,
+        `"ผลลัพธ์จริง ไม่ตกแต่ง — ดูได้เลย"`,
+      ],
+      story: [
+        `"3 ปีก่อนฉันเคยเป็นแบบนี้ จนได้ลอง ${pName}..."`,
+        `"ลูกค้าส่งรีวิวมาว่า '${pName} เปลี่ยนชีวิตฉัน' — นี่คือเรื่องราวเธอ"`,
+      ],
+      power_opener: `"หยุด! คุณกำลังจ่ายแพงเกินไปสำหรับ${pName} แบบที่ไม่ได้ผล — ดูสิ่งที่แตกต่าง"`,
+    },
+    psychology: {
+      core_desire: `ต้องการ [ผลลัพธ์ที่ดี] จาก ${pName} อย่างรวดเร็ว โดยไม่ต้องเสียเงินมาก`,
+      core_fear: `กลัวซื้อแล้วไม่ได้ผล เสียเงินฟรี และถูกคนอื่นมองว่าโง่ที่หลงเชื่อ`,
+      buyer_persona: `คือคนที่เคยลองสินค้าหลายตัวแต่ไม่ได้ผล พวกเขาสงสัยทุกอย่าง แต่ยังค้นหาคำตอบอยู่ พวกเขาต้องการ proof จริงๆ ก่อนตัดสินใจ`,
+      fomo_triggers: [
+        `"มีคนซื้อแล้ว [X] คนใน 24 ชั่วโมงที่ผ่านมา"`,
+        `"ราคาพิเศษเฉพาะสัปดาห์นี้เท่านั้น"`,
+        `"เพื่อนของคุณหลายคนใช้ ${pName} แล้ว คุณยังไม่ลอง?"`,
+        `"สต็อกเหลือน้อย — ไม่อยากพลาดใช่ไหม?"`,
+      ],
+      decision_blockers: [
+        `"ราคาสูงเกินไปสำหรับสิ่งที่ยังไม่รู้ผล"`,
+        `"กลัวว่าของจะไม่ตรงปก หรือคุณภาพไม่ได้เรื่อง"`,
+        `"ไม่แน่ใจว่าจะเหมาะกับตัวเองหรือเปล่า"`,
+      ],
+      emotional_journey: `ไม่รู้จัก → เห็น hook แล้วอยากรู้ → อ่าน/ดูรีวิวแล้วสนใจ → คิดเรื่องราคาและความเสี่ยง → เห็น guarantee แล้วตัดสินใจซื้อ`,
+    },
+    platform_packages: {
+      tiktok: {
+        hook: `"หยุด! นี่คือ ${pName} ที่ทุกคนตามหา" [แสดงสินค้า]`,
+        script: `[0s] "หยุดก่อน! ${pName} นี้เปลี่ยนทุกอย่าง"\n[5s] "ปัญหาที่คุณเจออยู่คือ [ปัญหา]..."\n[15s] "แต่ ${pName} นี้ [USP] — ดูผลจริงได้เลย"\n[25s] "ราคาแค่ ${price || 'พิเศษ'} กดลิ้งค์ใน bio เลย!"`,
+        cta: `"กดลิ้งค์ใน bio รีบก่อนหมด! 🔥"`,
+        sound_tip: `เลือก trending Thai pop หรือ upbeat instrumental ที่ BPM 120-140 เข้ากับ energy ของ hook`,
+      },
+      facebook: {
+        headline: `"${pName}: ${usp.slice(0, 60)}"`,
+        body: `คุณเคยรู้สึกหงุดหน่ายกับ [ปัญหา] ไหม?\n\nฉันก็เคยเป็นแบบนั้น จนได้ลอง ${pName} — และทุกอย่างเปลี่ยนไป\n\n✅ ${usp}\n✅ เห็นผลจริง ไม่ตกแต่ง\n✅ ${price ? `เพียง ${price}` : 'ราคาพิเศษ'} รับประกันคืนเงิน\n\nลูกค้ากว่า 1,000+ คนบอกว่า "${pName} คือสิ่งที่ดีที่สุดที่เคยลอง"`,
+        cta: `"สั่งซื้อตอนนี้ก่อนหมดสต็อก →"`,
+      },
+      instagram: {
+        caption: `✨ ${pName} — เปลี่ยนชีวิตคุณได้!\n\n${usp}\n\n${price ? `💰 ${price}` : ''} 🔗 Link in bio\n\n#${product.replace(/\s+/g, '')} #สินค้าไทย #รีวิว #ของดี #แนะนำ`,
+        bio_link_text: `"ดู ${pName} ที่ทุกคนพูดถึง 👆"`,
+        story_idea: `Frame1: คำถาม "คุณเคยมีปัญหา [X] ไหม?" | Frame2: ปัญหา | Frame3: Solution ${pName} | Frame4: Before/After | Frame5: CTA swipe up`,
+      },
+      shopee: {
+        title: `${pName} ${category} ${usp.slice(0, 50)} ของแท้ 100% พร้อมส่ง`,
+        description: `🌟 ${pName} — ${usp}\n\n✅ คุณสมบัติหลัก:\n• ${usp}\n• คุณภาพมาตรฐาน\n• ปลอดภัย 100%\n\n📦 รายละเอียด:\n• ราคา: ${price || 'ดูในหน้าสินค้า'}\n• หมวด: ${category}\n\n⭐ รับประกันความพึงพอใจ\n\n🚚 จัดส่งรวดเร็ว 1-3 วัน`,
+        keywords: [product, category, usp.split(' ')[0], 'ของดี', 'ราคาถูก', 'คุณภาพ', 'OTOP', 'สินค้าไทย'],
+      },
+      lazada: {
+        title: `[ของแท้] ${pName} | ${usp.slice(0, 60)} | ส่งฟรี`,
+        bullets: [`✅ ${usp}`, `✅ คุณภาพมาตรฐาน ปลอดภัย`, `✅ ราคา ${price || 'ดีที่สุด'} คุ้มค่า`, `✅ จัดส่งรวดเร็ว 1-3 วัน`, `✅ รับประกันสินค้าแท้ 100%`],
+        tags: [product, category, 'สินค้าไทย', 'OTOP', 'คุณภาพดี'],
+      },
+      line: {
+        broadcast: `🎉 ${pName} มาแล้ว!\n\n✨ ${usp}\n💰 ราคาพิเศษ ${price || 'ติดต่อสอบถาม'}\n\n⏰ สต็อกจำกัด! สั่งตอนนี้ก่อนหมด\n👉 คลิกลิ้งค์สั่งซื้อ: [LINK]\n\n📞 สอบถามเพิ่มเติม: inbox ได้เลย`,
+      },
+    },
+    copy_arsenal: {
+      headlines: [
+        `"${pName}: ${usp.slice(0, 50)}"`,
+        `"ทำไม ${target} ถึงเลือก ${pName}?"`,
+        `"${price ? `เพียง ${price}` : 'ราคาพิเศษ'} สำหรับ ${pName} ที่ [ผลลัพธ์จริง]"`,
+        `"[ปัญหา]? ${pName} แก้ได้ใน 7 วัน"`,
+        `"ลองแล้ว บอกต่อ — ${pName} ที่ทุกคนพูดถึง"`,
+      ],
+      short_captions: [
+        `"${pName} เปลี่ยนชีวิตฉันได้อย่างไร — ดูเลย 👇"`,
+        `"${usp.slice(0, 40)} ในราคา ${price || 'สุดคุ้ม'} 🔥"`,
+        `"ลองแล้วต้องบอกต่อ! ${pName} 💯"`,
+      ],
+      pas_copy: `Problem:\nคุณเคยรู้สึก [ปัญหา] และหาทางออกไม่ได้ใช่ไหม? ลองอะไรก็ไม่ได้ผล เสียเงินไปเยอะ แต่ยังไม่เจอสิ่งที่ใช่\n\nAgitate:\nมันน่าหงุดหน่ายมากเวลาที่ [ปัญหาขยาย] และยิ่งนานวัน [ผลกระทบ] มันยิ่งแย่ลง...\n\nSolution:\n${pName} คือคำตอบที่คุณตามหา — ${usp} พิสูจน์แล้วโดยลูกค้ากว่า 1,000+ คน`,
+      long_form: `ถ้าคุณกำลังมองหา ${pName} ที่ [ผลลัพธ์จริง] — หยุดอ่านตรงนี้ก่อน\n\nเราเข้าใจว่าคุณเคยลองหลายอย่างแต่ไม่ได้ผล นั่นเป็นเพราะสินค้าส่วนใหญ่ไม่ได้ออกแบบมาสำหรับคุณจริงๆ\n\n${pName} แตกต่างตรงที่: ${usp}\n\nลูกค้าของเราบอกว่า "ใช้แล้วเห็นผลจริง ไม่ต้องรอนาน" — นี่ไม่ใช่แค่คำโฆษณา แต่เป็นผลลัพธ์ที่พิสูจน์แล้ว\n\n${price ? `ราคาเพียง ${price}` : 'ราคาสุดคุ้ม'} พร้อมรับประกันความพึงพอใจ ถ้าไม่ดีคืนเงิน 100%`,
+      cta_variants: ['สั่งซื้อเลย →', 'ดูราคาพิเศษ', 'กดรับโปรตอนนี้', 'ไม่ซื้อเดี๋ยวหมด!', 'คลิกสั่งได้เลย', 'รีบก่อนสต็อกหมด 🔥'],
+    },
+    video_blueprint: {
+      total_duration: '30-45 วินาที',
+      format: '9:16 Vertical',
+      music_mood: 'Upbeat Thai Pop หรือ Trending Sound TikTok',
+      scenes: [
+        { second: '0-3s', emotion: '⚡ Shock/Hook', visual: `มือถือหรือหน้าคนถือ ${pName} ระยะใกล้`, script: `"หยุดก่อน! นี่คือ ${pName} ที่ทุกคนตามหา"`, direction: 'Closeup + jump cut' },
+        { second: '3-10s', emotion: '😤 Pain Point', visual: 'แสดงปัญหา B-roll', script: '"คุณเคยเจอ [ปัญหา] ไหม? ฉันก็เคยเป็น..."', direction: 'Medium shot, แสงธรรมชาติ' },
+        { second: '10-25s', emotion: '✨ Solution/Demo', visual: `ใช้งาน ${pName} จริง แสดงผลลัพธ์`, script: `"แต่ตั้งแต่ใช้ ${pName} — [ผลลัพธ์] มันเปลี่ยนทุกอย่าง!"`, direction: 'Before/After split หรือ Demo ชัดๆ' },
+        { second: '25-30s', emotion: '💳 CTA', visual: 'แสดงราคา + ลิ้งค์', script: `"${price ? `เพียง ${price}` : 'ราคาพิเศษ'} — กดลิ้งค์ใน bio ก่อนหมดเลย!"`, direction: 'Text overlay + สินค้า closeup' },
+      ],
+      key_moments: [
+        'วินาที 0-3: MUST stop the scroll — ใช้ visual ที่ผิดปกติ',
+        'วินาที 15-20: แสดง transformation/result ที่ชัดเจนที่สุด',
+        'วินาที 28-30: CTA ชัด พร้อม urgency',
+      ],
+      broll_ideas: ['Unboxing สินค้า', `Before/After ชัดๆ`, 'ลูกค้าจริงใช้งาน', 'Closeup texture/detail', 'Lifestyle ที่เข้ากับ target'],
+    },
+    price_psychology: {
+      anchoring_script: `"ปกติสินค้าแบบนี้ราคา [X] — แต่ ${pName} ของเราให้คุณในราคา ${price || '[ราคาพิเศษ]'} พร้อมของแถมมูลค่า [Y] อีกด้วย"`,
+      urgency_triggers: [
+        `"โปรนี้จบวันอาทิตย์นี้เท่านั้น ⏰"`,
+        `"มีสต็อกเหลือแค่ [X] ชิ้น รีบก่อนพลาด"`,
+        `"ลูกค้า [X] คนกำลังดูสินค้านี้อยู่ตอนนี้"`,
+      ],
+      bundle_ideas: [
+        `ซื้อ 2 ชิ้น ลด 20% + ส่งฟรี`,
+        `Bundle กับสินค้าเสริม ราคาประหยัดกว่าซื้อแยก 30%`,
+        `ซื้อ 1 แถม 1 เฉพาะสัปดาห์นี้`,
+      ],
+      guarantee_script: `"ถ้าใช้แล้วไม่พอใจใน 30 วัน — คืนเงิน 100% ไม่มีข้อแม้ คุณไม่มีอะไรเสีย ลองดูได้เลย"`,
+      bonus_ideas: [
+        `ของแถม: [สินค้าเสริมมูลค่า X]`,
+        `คู่มือการใช้งาน PDF ฟรี`,
+        `เป็นสมาชิก VIP รับส่วนลด 10% ทุกออเดอร์ต่อไป`,
+      ],
+    },
+    objection_killers: [
+      { objection: 'ราคาแพงเกินไป', killer_response: `เทียบกับปัญหาที่คุณเผชิญอยู่ และสิ่งที่เคยเสียเงินไปกับของที่ไม่ได้ผล — ${price || '[ราคา]'} คือการลงทุนที่คุ้มค่าที่สุด และมีรับประกันคืนเงินถ้าไม่ดี`, proof_type: 'Price Comparison + Guarantee' },
+      { objection: 'ของจริงหรือของปลอม?', killer_response: 'เราส่งตรงจากผู้ผลิต มีใบรับรอง [X] พร้อมรหัส QR ยืนยันของแท้ทุกชิ้น', proof_type: 'Certificate + Authenticity Code' },
+      { objection: 'ไม่แน่ใจว่าจะเหมาะกับตัวเอง', killer_response: 'เราเข้าใจ นั่นเป็นเหตุผลที่เราให้ทดลองใช้ฟรี 7 วัน หรือรับประกัน 30 วัน ถ้าไม่เหมาะ — คืนเงินทันที', proof_type: 'Free Trial / Money-Back Guarantee' },
+      { objection: 'เคยลองของแบบนี้มาแล้วไม่ได้ผล', killer_response: `${pName} แตกต่างตรงที่ ${usp} — ลูกค้าที่เคยท้อแท้กับสินค้าอื่น ${product.length > 5 ? 'พบว่าได้ผลกับเราในสัปดาห์แรก' : 'บอกว่านี่คือครั้งแรกที่ได้ผลจริง'}`, proof_type: 'Testimonial + Unique Differentiator' },
+      { objection: 'ส่งนานไหม / ของจะมาถึงไหม?', killer_response: 'จัดส่งผ่าน Kerry/Flash Express มีเลข tracking ทุกออเดอร์ ส่งใน 24 ชั่วโมง ถึงใน 1-3 วันทำการ', proof_type: 'Logistics Proof + Tracking' },
+    ],
+    funnel_strategy: {
+      awareness:  { content_type: 'TikTok Hook, FB Reach Ad', message: `ดึงดูดด้วย hook ที่โดนใจปัญหา + awareness ว่า ${pName} มีอยู่`, platform: 'TikTok, Facebook', kpi: 'Reach 10k+ / CPM ≤฿30' },
+      interest:   { content_type: 'Demo Video, รีวิวจริง', message: `แสดง before/after และ proof ว่า ${pName} ทำงานอย่างไร`, platform: 'Instagram, YouTube', kpi: 'Engagement Rate >5%, View 75%+' },
+      decision:   { content_type: 'Testimonial, เปรียบเทียบ, FAQ', message: `ตอบข้อโต้แย้ง เน้น guarantee + social proof ปิดการตัดสินใจ`, platform: 'Facebook Retarget, Shopee', kpi: 'Add-to-cart >8%, CTR >3%' },
+      action:     { content_type: 'Flash Sale, Limited Offer', message: `urgency + scarcity — "ซื้อตอนนี้ก่อนหมด" พร้อม CTA ชัดเจน`, platform: 'LINE Broadcast, Shopee Push', kpi: 'Conversion Rate >3%, ROAS >3x' },
+      repurchase: { content_type: 'Thank you + Next Product', message: `ขอบคุณ + แนะนำสินค้าเสริม + ส่วนลด VIP รอบถัดไป`, platform: 'LINE OA, Email', kpi: 'Repeat Purchase 30d >20%' },
+    },
+  });
+});
+
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  AI AGENT SCHEDULER
 // ═══════════════════════════════════════════════════════════════════════════════
