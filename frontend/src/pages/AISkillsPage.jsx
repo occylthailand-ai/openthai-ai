@@ -17,7 +17,17 @@ const TABS = [
   { id: 'video',       icon: '🎬', label: 'Video Script',      color: '#ef4444', skill: 'S14' },
   { id: 'translate',   icon: '🌐', label: 'Multi-Language',    color: '#14b8a6', skill: 'S15' },
   { id: 'prompt',      icon: '⚡', label: 'Prompt Builder',    color: '#f59e0b', skill: 'S16' },
+  { id: 'wisdom',      icon: '☯️', label: 'Cultural Wisdom',   color: '#b45309', skill: 'S17' },
 ];
+
+const WISDOM_TRADITIONS = [
+  { id: 'all',      icon: '☯️', label: 'ทุกปรัชญา',   desc: '儒家 + พุทธ + ไทย' },
+  { id: 'chinese',  icon: '🏮', label: 'ปรัชญาจีน',   desc: '八德 忠孝仁爱礼义廉耻' },
+  { id: 'buddhist', icon: '🪷', label: 'พระพุทธศาสนา', desc: 'พระไตรปิฎก ไตรสิกขา' },
+  { id: 'thai',     icon: '🇹🇭', label: 'ปรัชญาไทย',   desc: 'เศรษฐกิจพอเพียง' },
+];
+
+const WISDOM_PURPOSES = ['ทั่วไป', 'ธุรกิจ/การตลาด', 'ภาวะผู้นำ', 'การแก้ปัญหา', 'ความสัมพันธ์', 'การเงิน'];
 
 const PROMPT_TECHNIQUES = [
   { id: 'zero-shot',   icon: '🎯', label: 'Zero-Shot',   desc: 'สั่งตรง ไม่มีตัวอย่าง — เร็ว เหมาะงานง่าย' },
@@ -803,6 +813,185 @@ function TabPromptBuilder() {
   );
 }
 
+// ─── Tab: Cultural Wisdom S17 ─────────────────────────────────────────────────
+function TabCulturalWisdom() {
+  const [form, setForm]     = useState({ situation: '', tradition: 'all', purpose: 'ทั่วไป' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState('');
+
+  const run = async () => {
+    if (!form.situation.trim()) { setError('กรุณาอธิบายสถานการณ์หรือคำถาม'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/cultural-wisdom'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error || 'เกิดข้อผิดพลาด'); } else { setResult(d); }
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  const goldColor = '#b45309';
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      {/* Input Form */}
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: goldColor, marginBottom: 16 }}>☯️ ค้นหาปัญญาโบราณ</div>
+
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div>
+            <label style={labelSt}>สถานการณ์ / คำถาม</label>
+            <textarea
+              value={form.situation}
+              onChange={e => setForm(f => ({ ...f, situation: e.target.value }))}
+              placeholder="เช่น: ธุรกิจกำลังเผชิญการแข่งขันสูง ควรขยายหรือรักษาฐานเดิม? หรือ: จะรับมือกับความขัดแย้งในทีมอย่างไร?"
+              rows={4}
+              style={{ ...inputSt, resize: 'vertical' }}
+            />
+          </div>
+
+          {/* Tradition Selector */}
+          <div>
+            <label style={labelSt}>ประเพณีปัญญา</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8 }}>
+              {WISDOM_TRADITIONS.map(t => (
+                <button key={t.id} onClick={() => setForm(f => ({ ...f, tradition: t.id }))}
+                  style={{ background: form.tradition === t.id ? `rgba(180,83,9,0.1)` : '#f8fafc', border: `2px solid ${form.tradition === t.id ? goldColor : 'rgba(0,0,0,0.08)'}`, borderRadius: 10, padding: '10px 14px', cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
+                  <div style={{ fontSize: 18, marginBottom: 2 }}>{t.icon}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: form.tradition === t.id ? goldColor : '#374151' }}>{t.label}</div>
+                  <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>{t.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Purpose */}
+          <div>
+            <label style={labelSt}>วัตถุประสงค์</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {WISDOM_PURPOSES.map(p => (
+                <button key={p} onClick={() => setForm(f => ({ ...f, purpose: p }))}
+                  style={{ padding: '5px 13px', borderRadius: 20, border: `1px solid ${form.purpose === p ? goldColor : 'rgba(0,0,0,0.1)'}`, background: form.purpose === p ? `rgba(180,83,9,0.1)` : '#f8fafc', color: form.purpose === p ? goldColor : '#64748b', fontSize: 12, cursor: 'pointer', fontWeight: form.purpose === p ? 700 : 400 }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && <div style={{ color: '#ef4444', fontSize: 12, padding: '8px 12px', background: 'rgba(239,68,68,0.06)', borderRadius: 8 }}>{error}</div>}
+
+          <button onClick={run} disabled={loading}
+            style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,#92400e,${goldColor})`, cursor: loading ? 'not-allowed' : 'pointer' }}>
+            {loading ? '⏳ กำลังค้นหาปัญญา...' : '☯️ ค้นหาปัญญาโบราณ'}
+          </button>
+        </div>
+      </div>
+
+      {/* Results */}
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {/* Main Quote */}
+          <div style={{ ...card(), background: 'linear-gradient(135deg,#fef3c7,#fffbeb)', border: `1px solid rgba(180,83,9,0.2)` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: goldColor }}>📜 คำสอนโบราณ</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <SourceBadge source={result.source} />
+                <CopyBtn text={result.wisdom_quote || ''} />
+              </div>
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#92400e', lineHeight: 1.6, marginBottom: 8, fontFamily: "'Georgia',serif" }}>
+              "{result.wisdom_quote}"
+            </div>
+            {result.quote_source && (
+              <div style={{ fontSize: 11, color: '#b45309', marginBottom: 10 }}>— {result.quote_source}</div>
+            )}
+            {result.thai_meaning && (
+              <div style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7, background: 'rgba(180,83,9,0.06)', borderRadius: 8, padding: '10px 14px' }}>
+                {result.thai_meaning}
+              </div>
+            )}
+          </div>
+
+          {/* Virtue Alignment */}
+          {result.virtue_alignment?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: goldColor, marginBottom: 12 }}>🏵️ คุณธรรมที่เกี่ยวข้อง</div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {result.virtue_alignment.map((v, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 12px', background: '#fafaf9', borderRadius: 10, borderLeft: `3px solid ${goldColor}` }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>{v.virtue}</div>
+                      <div style={{ fontSize: 11, color: '#b45309', marginTop: 2 }}>{v.tradition}</div>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b', flex: 2, lineHeight: 1.5 }}>{v.relevance}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Deep Insight */}
+          {result.deep_insight && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: goldColor, marginBottom: 10 }}>🧘 วิเคราะห์เชิงลึก</div>
+              <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.8 }}>{result.deep_insight}</div>
+            </div>
+          )}
+
+          {/* Practical Steps */}
+          {result.practical_steps?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: goldColor, marginBottom: 12 }}>📋 ขั้นตอนปฏิบัติ</div>
+              {result.practical_steps.map((step, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < result.practical_steps.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                  <span style={{ fontSize: 14, color: goldColor, fontWeight: 800, flexShrink: 0, minWidth: 20 }}>{i + 1}.</span>
+                  <span style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{step}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Business Application */}
+          {result.business_application && (
+            <div style={{ ...card(), borderLeft: `3px solid #10b981` }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 8 }}>💼 ประยุกต์ใช้ในธุรกิจ</div>
+              <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.7 }}>{result.business_application}</div>
+            </div>
+          )}
+
+          {/* Additional Wisdom */}
+          {result.additional_wisdom?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: goldColor, marginBottom: 12 }}>📚 ปัญญาเพิ่มเติม</div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {result.additional_wisdom.map((w, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#b45309', marginBottom: 4 }}>{w.tradition}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 4, fontStyle: 'italic' }}>"{w.quote}"</div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{w.meaning}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reflection Question */}
+          {result.reflection_question && (
+            <div style={{ ...card(), background: 'linear-gradient(135deg,#f0fdf4,#f8fafc)', border: '1px solid rgba(16,185,129,0.15)' }}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 8 }}>🪬 คำถามเพื่อขบคิด</div>
+              <div style={{ fontSize: 14, color: '#1e293b', lineHeight: 1.7, fontStyle: 'italic' }}>{result.reflection_question}</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AISkillsPage() {
   const navigate = useNavigate();
@@ -817,7 +1006,7 @@ export default function AISkillsPage() {
         <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>🧠 AI Skills Hub</div>
-          <div style={{ fontSize: 11, color: '#94a3b8' }}>S10–S16 · Trend · Hashtag · SEO · Sentiment · Video · Translate · Prompt Builder</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>S10–S17 · Trend · Hashtag · SEO · Sentiment · Video · Translate · Prompt Builder · Cultural Wisdom</div>
         </div>
         <button onClick={() => navigate('/ai-generator')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⚡ AI Generator</button>
       </header>
@@ -853,6 +1042,7 @@ export default function AISkillsPage() {
         {tab === 'video'     && <TabVideoScript />}
         {tab === 'translate' && <TabTranslate />}
         {tab === 'prompt'    && <TabPromptBuilder />}
+        {tab === 'wisdom'    && <TabCulturalWisdom />}
       </div>
     </div>
   );

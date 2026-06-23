@@ -1424,6 +1424,95 @@ ${output_format ? `รูปแบบผลลัพธ์: ${output_format}` : 
   });
 });
 
+// S17 · POST /api/skills/cultural-wisdom — ปรัชญาจีน/ไทย/พุทธ Cultural Wisdom Engine
+app.post('/api/skills/cultural-wisdom', generateLimiter, async (req, res) => {
+  const { situation, tradition = 'all', purpose = 'general' } = req.body || {};
+  if (!situation?.trim()) return res.status(400).json({ error: 'situation required' });
+
+  const traditionMap = {
+    chinese: 'ปรัชญาจีน (儒家 Confucianism) — 八德: 忠孝仁爱礼义廉耻 และ 四书五经',
+    buddhist: 'พระพุทธศาสนา (Buddhism) — พระไตรปิฎก ไตรสิกขา ศีล สมาธิ ปัญญา',
+    thai: 'ปรัชญาไทย — หลักพระราชดำริ เศรษฐกิจพอเพียง วัฒนธรรมไทย',
+    all: 'สามปรัชญา: Confucianism (儒家) + Buddhism (พุทธ) + ปรัชญาไทย',
+  };
+
+  const prompt = `คุณเป็น ปราชญ์แห่งปัญญาตะวันออก (Oriental Wisdom Master) ผู้เชี่ยวชาญ:
+- ปรัชญาจีน 儒家: 八德 (忠孝仁爱礼义廉耻), 四书 (論語 大學 中庸 孟子), 五经
+- พระพุทธศาสนา: พระไตรปิฎก, ไตรสิกขา (ศีล สมาธิ ปัญญา), อริยสัจ 4, มรรค 8
+- ปรัชญาไทย: เศรษฐกิจพอเพียง, ความกตัญญู, ความสามัคคี
+
+สถานการณ์/คำถาม: "${situation.slice(0, 600)}"
+ประเพณีปัญญา: ${traditionMap[tradition] || traditionMap['all']}
+วัตถุประสงค์: ${purpose}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "wisdom_quote": "คำสอนโบราณที่เกี่ยวข้องที่สุด (ภาษาต้นฉบับ + อักษรโรมัน ถ้ามี)",
+  "quote_source": "แหล่งที่มา เช่น 論語 หรือ ธรรมบท หรือ พระราชดำรัส",
+  "thai_meaning": "ความหมายเป็นภาษาไทยที่เข้าใจง่าย",
+  "virtue_alignment": [{"virtue":"คุณธรรม","tradition":"ปรัชญา","relevance":"ความเกี่ยวข้องกับสถานการณ์"}],
+  "deep_insight": "การวิเคราะห์เชิงลึก 3-4 ประโยค — เชื่อมปัญญาโบราณกับสถานการณ์ปัจจุบัน",
+  "practical_steps": ["ขั้นตอนปฏิบัติ 1 — อิงหลักธรรม","ขั้นตอน 2","ขั้นตอน 3"],
+  "business_application": "การประยุกต์ใช้ในธุรกิจ/การตลาด ถ้าเกี่ยวข้อง",
+  "additional_wisdom": [{"tradition":"ชื่อปรัชญา","quote":"คำสอน","meaning":"ความหมาย"}],
+  "reflection_question": "คำถามให้ขบคิดต่อ"
+}`;
+
+  try {
+    const text = await callAI(prompt, 2048);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) {
+    addLog('warn', 'Skills/CulturalWisdom', e.message);
+  }
+
+  // Mock fallback
+  const mockWisdom = {
+    chinese: {
+      wisdom_quote: '己所不欲，勿施於人 (Jǐ suǒ bù yù, wù shī yú rén)',
+      quote_source: '論語 · 衛靈公 (Analects of Confucius · Chapter 15)',
+      thai_meaning: 'สิ่งที่ตนเองไม่ปรารถนา อย่าทำกับผู้อื่น — Golden Rule แห่งขงจื๊อ',
+    },
+    buddhist: {
+      wisdom_quote: 'ความไม่ประมาทเป็นทางแห่งความไม่ตาย ความประมาทเป็นทางแห่งความตาย',
+      quote_source: 'ธรรมบท · อัปปมาทวรรค (Dhammapada v.21)',
+      thai_meaning: 'อัปปมาทธรรม — ความตื่นตัวและไม่ประมาทในทุกสิ่งนำไปสู่ความสำเร็จ',
+    },
+    thai: {
+      wisdom_quote: '"เศรษฐกิจพอเพียง" — ความพอเพียง พอประมาณ มีเหตุผล มีภูมิคุ้มกัน',
+      quote_source: 'พระราชดำรัสรัชกาลที่ 9',
+      thai_meaning: 'หลักการดำเนินชีวิตและธุรกิจอย่างยั่งยืน ไม่โลภ ไม่เร่งร้อน',
+    },
+    all: {
+      wisdom_quote: '知足者富 (Zhī zú zhě fù) — ผู้รู้จักพอย่อมร่ำรวย',
+      quote_source: '道德經 · 老子 Chapter 33',
+      thai_meaning: 'ความพอใจในสิ่งที่มีคือความมั่งคั่งที่แท้จริง — สอดคล้องกับพุทธธรรมและเศรษฐกิจพอเพียง',
+    },
+  };
+  const base = mockWisdom[tradition] || mockWisdom['all'];
+  res.json({
+    success: true, source: 'mock',
+    ...base,
+    virtue_alignment: [
+      { virtue: '仁 (Rén) — เมตตา', tradition: 'Confucianism', relevance: 'ใส่ใจผู้อื่นในการตัดสินใจ' },
+      { virtue: 'กรุณา (Karunā)', tradition: 'Buddhism', relevance: 'ช่วยเหลือผู้ที่ได้รับผลกระทบ' },
+      { virtue: 'พอเพียง', tradition: 'ปรัชญาไทย', relevance: 'ไม่ตัดสินใจจากความโลภ' },
+    ],
+    deep_insight: `สถานการณ์ที่เผชิญสะท้อนหลักการสำคัญของปรัชญาตะวันออก — ความสำเร็จที่แท้จริงไม่ใช่แค่ผลลัพธ์ภายนอก แต่คือกระบวนการที่มีคุณธรรม ปัญญาโบราณสอนว่าการกระทำด้วยหัวใจที่บริสุทธิ์และเข้าใจบริบทรอบข้างจะนำไปสู่ผลลัพธ์ที่ยั่งยืน ทั้ง 忠 (ความซื่อสัตย์) และ 仁 (ความเมตตา) ต้องทำงานร่วมกัน`,
+    practical_steps: [
+      'หยุดและสังเกต (止) — ก่อนตัดสินใจ ให้ใจสงบ 5 นาที ใคร่ครวญผลกระทบต่อผู้อื่น',
+      'ปรึกษาผู้รู้ (問) — หาความเห็นจากผู้มีประสบการณ์ ตามหลัก 學而時習之',
+      'ลงมือด้วยคุณธรรม (行) — ดำเนินการอย่างซื่อตรงและเมตตา วัดผลทั้งตัวเลขและผลกระทบต่อสังคม',
+    ],
+    business_application: 'หลัก 仁义礼智信 (Ren Yi Li Zhi Xin) ใช้ได้กับการสร้างแบรนด์ที่ยั่งยืน — ลูกค้าไทยให้ความสำคัญกับ "ความจริงใจ" และ "ความกตัญญู" สูงมาก แบรนด์ที่สื่อสารคุณค่าเหล่านี้มักได้ loyalty สูงกว่า',
+    additional_wisdom: [
+      { tradition: 'Buddhism', quote: 'อัปปมาทธรรม — ความไม่ประมาท', meaning: 'ตื่นตัว รอบคอบ ไม่ละเลยรายละเอียด' },
+      { tradition: 'Confucianism', quote: '學而不思則罔，思而不學則殆', meaning: 'เรียนโดยไม่คิดสูญเปล่า คิดโดยไม่เรียนอันตราย' },
+    ],
+    reflection_question: `"ถ้าคำตัดสินใจนี้ถูกตัดสินโดยคนที่คุณเคารพที่สุด พวกเขาจะมองว่าคุณกระทำด้วย 仁 (ความเมตตา) หรือไม่?"`,
+  });
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  AI AGENT SCHEDULER
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1999,6 +2088,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S14', name:'Video Script',     pct:79, color:'#ef4444', category:'video',       status:'✅' },
       { id:'S15', name:'Multi-Language',   pct:86, color:'#14b8a6', category:'translate',   status:'✅' },
       { id:'S16', name:'Prompt Builder',   pct:93, color:'#f59e0b', category:'prompt',      status:'✅' },
+      { id:'S17', name:'Cultural Wisdom',  pct:88, color:'#b45309', category:'wisdom',      status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
