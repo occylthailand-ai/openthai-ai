@@ -2762,6 +2762,22 @@ body, html {
    MOBILE RESPONSIVE — @media breakpoints
    ══════════════════════════════════════════════════════════════════════════ */
 
+/* ── CSS Grid Variables (used by inline-style pages via var()) ────────────── */
+:root {
+  --cols-2: 1fr 1fr;
+  --cols-3: 1fr 1fr 1fr;
+}
+@media (max-width: 640px) {
+  :root {
+    --cols-2: 1fr;
+    --cols-3: 1fr 1fr;
+  }
+}
+
+/* ── Inline-grid helper classes (AISkillsPage / PromoEnginePage) ─────────── */
+.g2 { display: grid; grid-template-columns: var(--cols-2); gap: 12px; }
+.g3 { display: grid; grid-template-columns: var(--cols-3); gap: 12px; }
+
 /* Tablet ≤ 768px */
 @media (max-width: 768px) {
   /* Dashboard: sidebar becomes bottom nav */
@@ -2819,6 +2835,14 @@ body, html {
     right: 10px !important;
     max-width: 100% !important;
   }
+}
+
+/* ── Skills Hub & Promo Engine — mobile tab overflow fix ─────────────────── */
+@media (max-width: 640px) {
+  /* ซ่อน label text บน section tab ที่แคบ ให้เหลือแค่ icon */
+  .section-tab-label { display: none; }
+  /* padding ของ card ลดลงบนมือถือ */
+  .mobile-card-pad { padding: 14px 14px !important; }
 }
 
 /* Mobile ≤ 480px */

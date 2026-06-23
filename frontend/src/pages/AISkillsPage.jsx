@@ -89,7 +89,7 @@ function TabTrend() {
         <div style={{ fontSize: 15, fontWeight: 800, color: '#f97316', marginBottom: 16 }}>🔥 วิเคราะห์เทรนด์ตามสินค้า</div>
         <div style={{ display: 'grid', gap: 12 }}>
           <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น ผ้าไหมมัดหมี่, น้ำพริกเผา" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             <div><label style={labelSt}>หมวดหมู่</label>
               <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
                 {CATEGORIES.map(c => <option key={c}>{c}</option>)}
@@ -126,7 +126,7 @@ function TabTrend() {
             ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>⏰ เวลาดีที่สุด</div>
               <div style={{ fontSize: 13, color: '#f97316', fontWeight: 600 }}>{result.best_timing}</div>
@@ -193,7 +193,7 @@ function TabHashtag() {
         <div style={{ fontSize: 15, fontWeight: 800, color: '#ec4899', marginBottom: 16 }}>#️⃣ สร้าง Hashtag Set อัจฉริยะ</div>
         <div style={{ display: 'grid', gap: 12 }}>
           <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น ผ้าไหมมัดหมี่" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             <div><label style={labelSt}>หมวดหมู่</label>
               <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
                 {CATEGORIES.map(c => <option key={c}>{c}</option>)}
@@ -267,7 +267,7 @@ function TabSEO() {
         <div style={{ fontSize: 15, fontWeight: 800, color: '#84cc16', marginBottom: 16 }}>📈 SEO Thai Keyword Optimizer</div>
         <div style={{ display: 'grid', gap: 12 }}>
           <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น น้ำพริกเผาแม่อรุณ" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             <div><label style={labelSt}>หมวดหมู่</label>
               <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
                 {CATEGORIES.map(c => <option key={c}>{c}</option>)}
@@ -288,7 +288,7 @@ function TabSEO() {
 
       {result && (
         <div style={{ display: 'grid', gap: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: '#84cc16' }}>🔑 Primary Keywords</div>
               {result.primary_keywords?.map((k, i) => (
@@ -310,7 +310,7 @@ function TabSEO() {
             <div style={{ background: '#f0fdf4', border: '1px solid rgba(132,204,22,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#1e293b', fontFamily: 'monospace' }}>{result.title_formula}</div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#f59e0b' }}>🎯 Search Intent</div>
               <div style={{ fontSize: 12, color: '#475569' }}>{result.search_intent}</div>
@@ -392,7 +392,7 @@ function TabSentiment() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             {result.praise_points?.length > 0 && (
               <div style={card({ borderLeft: '4px solid #10b981' })}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: '#10b981' }}>👍 สิ่งที่ชม</div>
@@ -452,7 +452,7 @@ function TabVideoScript() {
         <div style={{ fontSize: 15, fontWeight: 800, color: '#ef4444', marginBottom: 16 }}>🎬 สร้าง Script + Storyboard วิดีโอ</div>
         <div style={{ display: 'grid', gap: 12 }}>
           <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น ผ้าไหมมัดหมี่" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
             <div><label style={labelSt}>หมวดหมู่</label>
               <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
                 {CATEGORIES.map(c => <option key={c}>{c}</option>)}
@@ -517,7 +517,7 @@ function TabVideoScript() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#f97316' }}>📣 CTA ท้ายวิดีโอ</div>
               <div style={{ fontSize: 13, color: '#1e293b', lineHeight: 1.6 }}>{result.cta}</div>
@@ -612,7 +612,7 @@ function TabTranslate() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#14b8a6' }}>🎭 Tone ที่ใช้</div>
               <div style={{ fontSize: 13, color: '#475569' }}>{result.tone}</div>
@@ -857,7 +857,7 @@ function TabCulturalWisdom() {
           {/* Tradition Selector */}
           <div>
             <label style={labelSt}>ประเพณีปัญญา</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 8 }}>
               {WISDOM_TRADITIONS.map(t => (
                 <button key={t.id} onClick={() => setForm(f => ({ ...f, tradition: t.id }))}
                   style={{ background: form.tradition === t.id ? `rgba(180,83,9,0.1)` : '#f8fafc', border: `2px solid ${form.tradition === t.id ? goldColor : 'rgba(0,0,0,0.08)'}`, borderRadius: 10, padding: '10px 14px', cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
@@ -1012,12 +1012,12 @@ export default function AISkillsPage() {
       </header>
 
       {/* Tab Bar */}
-      <div style={{ background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.06)', padding: '0 5%', display: 'flex', gap: 0, overflowX: 'auto' }}>
+      <div style={{ background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.06)', padding: '0 2%', display: 'flex', gap: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ padding: '12px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === t.id ? t.color : 'transparent'}`, color: tab === t.id ? t.color : '#94a3b8', cursor: 'pointer', fontSize: 13, fontWeight: tab === t.id ? 700 : 400, whiteSpace: 'nowrap', transition: 'all .2s' }}>
-            {t.icon} {t.label}
-            <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.7, background: tab === t.id ? t.color : 'transparent', color: tab === t.id ? '#fff' : 'transparent', borderRadius: 6, padding: '1px 5px' }}>{t.skill}</span>
+            style={{ padding: '12px 12px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === t.id ? t.color : 'transparent'}`, color: tab === t.id ? t.color : '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: tab === t.id ? 700 : 400, whiteSpace: 'nowrap', transition: 'all .2s', scrollSnapAlign: 'start', minHeight: 44 }}>
+            {t.icon} <span className="section-tab-label">{t.label}</span>
+            <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.7, background: tab === t.id ? t.color : 'transparent', color: tab === t.id ? '#fff' : 'transparent', borderRadius: 6, padding: '1px 4px' }}>{t.skill}</span>
           </button>
         ))}
       </div>

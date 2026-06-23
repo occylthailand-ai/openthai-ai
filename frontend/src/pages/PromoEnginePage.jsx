@@ -104,7 +104,7 @@ function SectionPsychology({ data }) {
   const p = data?.psychology || {};
   return (
     <div style={{ display: 'grid', gap: 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 14 }}>
         <div style={{ ...cs(), borderLeft: `3px solid #10b981` }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', marginBottom: 6 }}>💚 CORE DESIRE</div>
           <div style={{ fontSize: 13, color: '#1e293b', lineHeight: 1.6 }}>{p.core_desire || '—'}</div>
@@ -552,7 +552,7 @@ export default function PromoEnginePage() {
             <div style={cs()}>
               <div style={{ fontSize: 15, fontWeight: 800, color: '#1e293b', marginBottom: 20 }}>📋 ข้อมูลสินค้า</div>
               <div style={{ display: 'grid', gap: 14 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
                   <div>
                     <label style={lbl}>ชื่อสินค้า *</label>
                     <input value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} placeholder="เช่น: ครีมบำรุงผิวจากสมุนไพร 10 ชนิด" style={inp} />
@@ -568,7 +568,7 @@ export default function PromoEnginePage() {
                   <textarea value={form.usp} onChange={e => setForm(f => ({ ...f, usp: e.target.value }))} placeholder="บอกสิ่งที่ทำให้สินค้านี้พิเศษ เช่น: ส่วนผสม 100% ออร์แกนิค ทดสอบทางคลินิก เห็นผลใน 7 วัน" rows={3} style={{ ...inp, resize: 'vertical' }} />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
                   <div>
                     <label style={lbl}>หมวดสินค้า</label>
                     <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} style={inp}>
@@ -646,11 +646,11 @@ export default function PromoEnginePage() {
             </div>
 
             {/* Section Nav */}
-            <div style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.07)', overflowX: 'auto', display: 'flex' }}>
+            <div style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.07)', overflowX: 'auto', display: 'flex', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}>
               {SECTIONS.map(s => (
                 <button key={s.id} onClick={() => setActiveSection(s.id)}
-                  style={{ padding: '11px 14px', background: 'none', border: 'none', borderBottom: `2px solid ${activeSection === s.id ? s.color : 'transparent'}`, color: activeSection === s.id ? s.color : '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: activeSection === s.id ? 700 : 400, whiteSpace: 'nowrap', transition: 'all .15s' }}>
-                  {s.icon} {s.label}
+                  style={{ padding: '11px 12px', background: 'none', border: 'none', borderBottom: `2px solid ${activeSection === s.id ? s.color : 'transparent'}`, color: activeSection === s.id ? s.color : '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: activeSection === s.id ? 700 : 400, whiteSpace: 'nowrap', transition: 'all .15s', scrollSnapAlign: 'start', minHeight: 44 }}>
+                  <span>{s.icon}</span> <span className="section-tab-label">{s.label}</span>
                 </button>
               ))}
             </div>
