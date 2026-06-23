@@ -10,6 +10,7 @@ const STATS = [
 ];
 
 const QUICK_ACTIONS = [
+  { icon: '🌐', label: 'Global PR Creator', desc: '3 ภาษา · 5 กลุ่มเป้าหมาย · 7 ทวีป · TH/EN/ZH ครบจบ', route: '/global-pr', color: '#10b981', hot: true },
   { icon: '📣', label: 'Daily PR Creator', desc: 'สร้างสื่อ PR ทุกช่องทาง · ปฏิทินธันวาคม · 🚀 Launch 20/12', route: '/daily-pr', color: '#dc2626', hot: true },
   { icon: '💥', label: 'Ultra Promo Engine', desc: '10 โมดูล · Hook 3วิ · Psychology · KOL Brief · Funnel ครบจบ', route: '/ultra-promo', color: '#7c3aed', hot: true },
   { icon: '🚀', label: 'Sales Conversion Engine', desc: 'Hook · Psychology · Copy · Video · Funnel ครบทุกมิติ', route: '/promo-engine', color: '#f97316', hot: true },

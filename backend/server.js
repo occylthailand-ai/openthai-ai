@@ -1634,6 +1634,235 @@ app.post('/api/pr/daily-plan', (req, res) => {
   res.json({ success: true });
 });
 
+// Global PR Creator — 3 ภาษา × 5 กลุ่มเป้าหมาย × 7 ทวีป
+app.post('/api/pr/global-content', generateLimiter, async (req, res) => {
+  const { product, usp = '', category = 'สินค้าไทย', event_type = 'general', tone = 'professional' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็น Global PR Strategist ที่เชี่ยวชาญตลาดไทย อังกฤษ และจีน ระดับโลก
+
+สินค้า/บริการ: "${product}"
+จุดเด่น (USP): "${usp || 'สินค้าไทยคุณภาพสูง'}"
+หมวดหมู่: "${category}"
+โอกาส/งาน: "${event_type}"
+น้ำเสียง: "${tone}"
+
+สร้างสื่อประชาสัมพันธ์ครบถ้วนสำหรับ 3 ภาษา × 5 กลุ่มเป้าหมาย
+
+กลุ่มเป้าหมาย:
+- producer: ผู้ผลิต/โรงงาน (B2B ต้องการพันธมิตรผลิต)
+- seller: ผู้ขาย/ร้านค้า (B2B ต้องการสต็อกขายต่อ)
+- consumer: ผู้บริโภคปลายทาง (B2C ซื้อใช้เอง)
+- distributor: ตัวแทนจำหน่ายในประเทศ (B2B ระจาย)
+- intl_agent: ตัวแทนข้ามชาติ/ส่งออก (B2B ระหว่างประเทศ)
+
+ตอบเป็น JSON เท่านั้น:
+{
+  "thai": {
+    "producer":{"headline":"...","body":"เนื้อหา 3-4 ประโยค","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "seller":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "consumer":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "distributor":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "intl_agent":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."}
+  },
+  "english": {
+    "producer":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "seller":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "consumer":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "distributor":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "intl_agent":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."}
+  },
+  "chinese": {
+    "producer":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "seller":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "consumer":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "distributor":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."},
+    "intl_agent":{"headline":"...","body":"...","cta":"...","hashtags":["#..."],"key_message":"..."}
+  },
+  "continental": {
+    "asia":{"focus":"...","key_markets":["..."],"strategy":"...","channels":["..."]},
+    "europe":{"focus":"...","key_markets":["..."],"strategy":"...","channels":["..."]},
+    "north_america":{"focus":"...","key_markets":["..."],"strategy":"...","channels":["..."]},
+    "south_america":{"focus":"...","key_markets":["..."],"strategy":"...","channels":["..."]},
+    "africa":{"focus":"...","key_markets":["..."],"strategy":"...","channels":["..."]},
+    "oceania":{"focus":"...","key_markets":["..."],"strategy":"...","channels":["..."]},
+    "antarctica":{"focus":"...","key_markets":["..."],"strategy":"...","channels":["..."]},
+    "global_tip":"..."
+  }
+}`;
+
+  try {
+    const raw = await callAI(prompt, 8000);
+    const data = parseAIJson(raw);
+    return res.json({ ok: true, source: anthropic ? 'claude' : 'gemini', ...data });
+  } catch (e) {
+    addLog('warn', 'PR/GlobalContent', e.message);
+  }
+
+  // Mock fallback — product-aware
+  const p = product;
+  const u = usp || 'คุณภาพไทยระดับส่งออก';
+  const mockContent = {
+    thai: {
+      producer: {
+        headline: `🏭 ร่วมผลิต "${p}" — โอกาสทองพันธมิตรการผลิตไทย`,
+        body: `"${p}" กำลังขยายฐานการผลิต มองหาพันธมิตรโรงงานที่มีมาตรฐาน GMP/ISO ${u} รองรับทั้งรูปแบบ OEM และ ODM พร้อมระบบ QC ครบวงจร รายได้ขั้นต่ำ 500,000 บาท/เดือน สัญญาระยะยาว 1-3 ปี`,
+        cta: 'ติดต่อฝ่ายผลิตวันนี้ — รับ Contract ระยะยาวทันที',
+        hashtags: ['#ผู้ผลิตไทย', '#OEMไทย', '#โรงงานไทย', '#โอกาสธุรกิจ'],
+        key_message: `ร่วมสร้าง "${p}" คุณภาพระดับส่งออกกับเรา`,
+      },
+      seller: {
+        headline: `💰 ขาย "${p}" Margin 30-40% ระบบ Support ครบ`,
+        body: `เปิดรับตัวแทนจำหน่าย "${p}" ทั่วประเทศ หมวด${category}ที่ตลาดต้องการสูง Margin 30-40% มีทีม Support ขาย Marketing Co-op Budget และระบบส่งสินค้าฟรีทั่วประเทศ`,
+        cta: 'สมัครเป็นตัวแทนวันนี้ — รับส่วนลด 15% ออเดอร์แรก',
+        hashtags: [`#ขาย${p.replace(/\s/g,'')}`, '#ตัวแทนจำหน่าย', '#รายได้เสริม', '#ขายออนไลน์'],
+        key_message: `ขาย "${p}" รายได้ดี ระบบ support ครบทุกขั้นตอน`,
+      },
+      consumer: {
+        headline: `✨ "${p}" — ${u}`,
+        body: `"${p}" ผลิตจากวัตถุดิบไทยคัดสรร ${u} ผ่านมาตรฐานความปลอดภัยระดับสากล ลูกค้าใช้แล้วกว่า 50,000 ราย รีวิว ⭐4.9/5 ส่งด่วน 24 ชั่วโมง`,
+        cta: 'สั่งซื้อตอนนี้ — ลด 20% + ส่งฟรีทั่วไทย',
+        hashtags: ['#สินค้าไทย', '#คุณภาพดี', '#ของดีบอกต่อ', `#${category}`],
+        key_message: `"${p}" ดีจริง ลูกค้าบอกต่อทั่วประเทศ`,
+      },
+      distributor: {
+        headline: `🤝 "${p}" เปิดรับ Distributor Exclusive ทั่วประเทศ`,
+        body: `มองหา Distributor ระดับจังหวัด/ภูมิภาค สำหรับ "${p}" ให้สิทธิ์ Exclusive เขตพื้นที่ มี Marketing support งบโฆษณาร่วม Training ทีมขาย และ CRM ระบบติดตามยอดขาย`,
+        cta: 'ยื่นใบสมัคร Distributor วันนี้ — สิทธิ์ Exclusive จำกัด',
+        hashtags: ['#Distributor', '#ตัวแทนจำหน่าย', '#ธุรกิจไทย', '#Exclusive'],
+        key_message: `เป็น Distributor "${p}" ได้สิทธิ์ Exclusive รายได้มั่นคงระยะยาว`,
+      },
+      intl_agent: {
+        headline: `🌏 "${p}" — สินค้าไทยพรีเมียม พร้อมส่งออกทั่วโลก`,
+        body: `"${p}" ผ่านมาตรฐานการส่งออก FDA/CE/ISO และ Halal Certification ${u} บรรจุภัณฑ์ส่งออก MOQ ยืดหยุ่น ราคา FOB แข่งขันได้ ตัวแทนข้ามชาติรับ Commission 8-15%`,
+        cta: 'ติดต่อฝ่าย Export วันนี้ — รับ Sample ฟรี',
+        hashtags: ['#ThaiExport', '#สินค้าไทยส่งออก', '#GlobalBusiness', '#OTOP'],
+        key_message: `"${p}" Thai Premium Quality — Certified & Ready to Export Worldwide`,
+      },
+    },
+    english: {
+      producer: {
+        headline: `🏭 Manufacture "${p}" With Us — Premium Thai OEM Partnership`,
+        body: `We are seeking certified manufacturing partners for "${p}", Thailand's leading ${category} product. ${u}. We offer GMP/ISO-certified facilities, full QC support, flexible MOQ, and long-term contracts with guaranteed monthly revenue of THB 500,000+.`,
+        cta: 'Contact Our Manufacturing Division Today — Long-Term Contracts Available',
+        hashtags: ['#ThaiManufacturing', '#OEMPartner', '#MadeInThailand', '#BusinessOpportunity'],
+        key_message: `Partner with us to produce "${p}" — export-grade Thai manufacturing excellence`,
+      },
+      seller: {
+        headline: `💰 Sell "${p}" — 30-40% Margin, Complete Sales Support`,
+        body: `Become an authorized reseller of "${p}", the #1 ${category} in Thailand. ${u}. Enjoy 30-40% margins, full marketing co-op support, free nationwide shipping, dedicated account management, and a proven 8-week fast-start program.`,
+        cta: 'Apply to Become a Reseller Now — 15% Off Your First Order',
+        hashtags: ['#ThaiProducts', '#ResellerOpportunity', '#BusinessGrowth', '#EcommerceTH'],
+        key_message: `High margin, full support — sell "${p}" and scale your business fast`,
+      },
+      consumer: {
+        headline: `✨ "${p}" — Premium Thai Quality You Can Trust`,
+        body: `Discover "${p}", crafted from Thailand's finest ingredients with meticulous quality standards. ${u}. Loved by 50,000+ satisfied customers with a 4.9/5 star rating. FDA-approved, safe for the whole family. Fast 24-hour delivery.`,
+        cta: 'Order Now — 20% Off + Free Shipping',
+        hashtags: ['#MadeInThailand', '#QualityFirst', '#ThaiGoods', '#CustomerApproved'],
+        key_message: `"${p}" — premium Thai quality trusted by thousands worldwide`,
+      },
+      distributor: {
+        headline: `🤝 "${p}" Exclusive Distribution Rights — Territory Available Now`,
+        body: `We are expanding our distribution network for "${p}" across Thailand and regionally. ${u}. Exclusive territorial rights available. Includes marketing co-op funding, sales team training, CRM system access, and dedicated logistics support.`,
+        cta: 'Apply for Exclusive Distribution Rights — Limited Territories Available',
+        hashtags: ['#DistributionRights', '#ExclusivePartner', '#ThaiProducts', '#BusinessOpportunity'],
+        key_message: `Exclusive distribution of "${p}" — build a sustainable business with Thailand's leading brand`,
+      },
+      intl_agent: {
+        headline: `🌏 "${p}" — Thailand's Export-Ready Premium Product for Global Markets`,
+        body: `"${p}" is certified for international markets (FDA/CE/ISO/Halal/GMP). ${u}. Flexible MOQ, export-standard packaging in English/Chinese/Arabic, competitive FOB/CIF pricing. International agents earn 8-15% commission with dedicated export support team.`,
+        cta: 'Contact Our Export Division — Free Samples & Certifications Available',
+        hashtags: ['#ThaiExport', '#GlobalTrade', '#ASEAN', '#InternationalBusiness'],
+        key_message: `"${p}" — Thailand's premium certified product ready for every global market`,
+      },
+    },
+    chinese: {
+      producer: {
+        headline: `🏭 与我们共同生产"${p}" — 优质泰国OEM合作`,
+        body: `我们正在寻找"${p}"的认证生产合作伙伴，这是泰国领先的${category}产品。${u}。我们提供GMP/ISO认证设施、全面质量控制、灵活起订量和长期合同，月收入保证不低于50万泰铢。`,
+        cta: '立即联系制造部门 — 签订长期合同',
+        hashtags: ['#泰国制造', '#OEM合作', '#商业机会', '#泰国出口'],
+        key_message: `与我们合作生产"${p}" — 出口级泰国制造卓越品质`,
+      },
+      seller: {
+        headline: `💰 销售"${p}" — 利润30-40%，全程销售支持`,
+        body: `成为"${p}"授权经销商，泰国${category}领域第一品牌。${u}。享有30-40%高利润、营销联合支持、全国免费送货、专属客户经理和8周快速启动计划。`,
+        cta: '立即申请成为经销商 — 首单享15%折扣',
+        hashtags: ['#泰国产品', '#经销商机会', '#业务增长', '#跨境电商'],
+        key_message: `高利润、全支持 — 销售"${p}"，快速扩大业务`,
+      },
+      consumer: {
+        headline: `✨ "${p}" — 值得信赖的泰国优质精品`,
+        body: `探索"${p}"，采用泰国最优质原料精心制作，品质严格把控。${u}。深受50,000+满意顾客喜爱，评分高达4.9/5星。获FDA认证，全家安心使用，24小时快速配送。`,
+        cta: '立即订购 — 优惠20%+免费送货',
+        hashtags: ['#泰国制造', '#优质产品', '#泰国好物', '#顾客好评'],
+        key_message: `"${p}" — 数万消费者信赖的泰国优质品牌`,
+      },
+      distributor: {
+        headline: `🤝 "${p}"独家分销权 — 区域代理正在招募`,
+        body: `我们正在扩展"${p}"在全国及区域的分销网络。${u}。提供独家区域代理权，包含营销联合资金、销售团队培训、CRM系统和专属物流支持。`,
+        cta: '立即申请独家分销权 — 名额有限',
+        hashtags: ['#分销权', '#独家代理', '#泰国产品', '#商业机会'],
+        key_message: `"${p}"独家分销 — 与泰国领先品牌共建可持续业务`,
+      },
+      intl_agent: {
+        headline: `🌏 "${p}" — 面向全球市场的泰国优质出口产品`,
+        body: `"${p}"已获国际市场认证（FDA/CE/ISO/清真/GMP）。${u}。灵活起订量，英/中/阿出口标准包装，具竞争力的FOB/CIF定价。国际代理商获得8-15%佣金，享专属出口支持团队。`,
+        cta: '联系出口部门 — 提供免费样品及认证资料',
+        hashtags: ['#泰国出口', '#国际贸易', '#东盟', '#全球业务'],
+        key_message: `"${p}" — 通过认证、面向全球市场的泰国优质出口产品`,
+      },
+    },
+    continental: {
+      asia: {
+        focus: 'ตลาดหลัก — ASEAN + จีน + ญี่ปุ่น + เกาหลีใต้',
+        key_markets: ['ไทย', 'จีน', 'ญี่ปุ่น', 'เกาหลีใต้', 'สิงคโปร์', 'มาเลเซีย', 'เวียดนาม', 'อินโดนีเซีย'],
+        strategy: `เน้น KOL Marketing ภาษาท้องถิ่น, Social Commerce (TikTok/Shopee), ใบรับรอง Halal สำหรับตลาด Muslim-majority, แพ็คเกจ Premium สำหรับ JP/KR`,
+        channels: ['TikTok', 'LINE', 'WeChat', 'Shopee', 'Lazada', 'Instagram', 'KakaoTalk'],
+      },
+      europe: {
+        focus: 'ตลาดพรีเมียม — EU + UK สินค้า Sustainable & Organic',
+        key_markets: ['เยอรมนี', 'ฝรั่งเศส', 'สหราชอาณาจักร', 'เนเธอร์แลนด์', 'สวีเดน', 'อิตาลี'],
+        strategy: `ต้องการ CE/Organic/Fair Trade certifications, เน้น sustainability story, GDPR-compliant marketing, B2B ผ่าน Trade Shows (Anuga, SIAL), premium positioning`,
+        channels: ['LinkedIn', 'Instagram', 'Amazon EU', 'Trade Shows', 'B2B Directories'],
+      },
+      north_america: {
+        focus: 'ตลาดใหญ่ที่สุด — USA + Canada ผู้บริโภค Wellness สูง',
+        key_markets: ['สหรัฐอเมริกา', 'แคนาดา', 'เม็กซิโก'],
+        strategy: `Amazon USA Marketplace สำคัญที่สุด, Influencer Marketing บน TikTok/IG, เน้น health benefits & natural ingredients, FDA certification บังคับ`,
+        channels: ['Amazon', 'TikTok', 'Instagram', 'Pinterest', 'Whole Foods Online', 'Facebook'],
+      },
+      south_america: {
+        focus: 'ตลาดเกิดใหม่ไว — บราซิล + โคลอมเบีย + ชิลี',
+        key_markets: ['บราซิล', 'โคลอมเบีย', 'เปรู', 'ชิลี', 'อาร์เจนตินา'],
+        strategy: `Portuguese (บราซิล) + Spanish content บังคับ, Social Commerce สูงมาก, WhatsApp Business เป็น primary channel, Mercado Libre เป็น marketplace หลัก, ราคาแข่งขัน`,
+        channels: ['WhatsApp Business', 'Instagram', 'Mercado Libre', 'YouTube', 'TikTok'],
+      },
+      africa: {
+        focus: 'ตลาดเติบโตสูงสุด — Sub-Saharan Africa + Middle East/North Africa',
+        key_markets: ['แอฟริกาใต้', 'ไนจีเรีย', 'เคนยา', 'UAE', 'ซาอุดิอาระเบีย', 'อียิปต์', 'โมร็อกโก'],
+        strategy: `Halal certification สำคัญมากสำหรับ MENA, Mobile-first (90% ใช้มือถือ), WhatsApp Business เป็น primary, พันธมิตรท้องถิ่น (Local Distributor) สำคัญ, ราคาที่เข้าถึงได้`,
+        channels: ['WhatsApp Business', 'Facebook', 'Instagram', 'Jumia', 'Noon', 'Souq'],
+      },
+      oceania: {
+        focus: 'ตลาดคุณภาพสูง — ออสเตรเลีย + นิวซีแลนด์',
+        key_markets: ['ออสเตรเลีย', 'นิวซีแลนด์', 'ปาปัวนิวกินี', 'ฟิจิ'],
+        strategy: `TGA (Australia) / Medsafe (NZ) certification ถ้าเป็นสุขภาพ, ชุมชน Asian-Australian ใหญ่ชื่นชอบสินค้าไทย, เน้น natural/organic, Amazon AU + Chemist Warehouse Online`,
+        channels: ['Amazon AU', 'Instagram', 'Facebook', 'Chemist Warehouse', 'Woolworths Online', 'TikTok'],
+      },
+      antarctica: {
+        focus: 'ชุมชนวิจัยนานาชาติ ~5,000 คน — ตลาดเฉพาะทาง',
+        key_markets: ['McMurdo Station (USA)', 'Scott Base (NZ)', 'Concordia (EU)', 'Zhongshan (China)'],
+        strategy: `สินค้าต้องทนทานต่อสภาพอากาศรุนแรง (-80°C), บรรจุภัณฑ์พิเศษ, ส่งผ่าน Supply Chain สถานีวิจัย, เหมาะสำหรับ emergency food / research supplies`,
+        channels: ['Email', 'Research Institution Networks', 'Government Procurement', 'Specialized Logistics'],
+      },
+      global_tip: `กลยุทธ์โลก: "${p}" ควรมี (1) Multilingual packaging TH/EN/ZH/AR (2) Certifications ครบ Halal/Organic/ISO/FDA (3) Digital-first ทุก market (4) Local Distributor Network ใน 7 ทวีป (5) Unified Brand Story ที่สื่อถึง "Thai Premium Heritage"`,
+    },
+  };
+  return res.json({ ok: true, source: 'mock', ...mockContent });
+});
+
 // S17 · POST /api/skills/cultural-wisdom — ปรัชญาจีน/ไทย/พุทธ Cultural Wisdom Engine
 app.post('/api/skills/cultural-wisdom', generateLimiter, async (req, res) => {
   const { situation, tradition = 'all', purpose = 'general' } = req.body || {};
