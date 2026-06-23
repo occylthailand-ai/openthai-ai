@@ -43,14 +43,16 @@ const AI_SKILLS = [
   { name: 'S3 · Master Prompt',      desc: 'Prompt Engineering ขั้นสูง',         pct: 92, color: '#10b981' },
   { name: 'S6 · AI Critic',          desc: 'ประเมินคุณภาพคอนเทนต์ 0-10',        pct: 97, color: '#f59e0b' },
   { name: 'S7 · Context Card',       desc: 'วิเคราะห์บริบทสินค้าไทย',            pct: 90, color: '#fe2c55' },
-  { name: 'S9 · Learning Layer',     desc: 'เรียนรู้จากผลลัพธ์จริง',             pct: 78, color: '#06b6d4' },
+  { name: 'S9 · Learning Layer',     desc: 'เรียนรู้จากผลลัพธ์จริง · Pattern Memory', pct: 88, color: '#06b6d4', isNew: true },
   { name: 'S10 · Trend Analyzer',    desc: 'วิเคราะห์เทรนด์ TikTok ตามสินค้า',  pct: 88, color: '#f97316', isNew: true },
   { name: 'S11 · Hashtag Generator', desc: 'สร้าง Hashtag Set อัจฉริยะ',         pct: 91, color: '#ec4899', isNew: true },
   { name: 'S12 · SEO Thai',          desc: 'Keyword ภาษาไทย + Title formula',    pct: 85, color: '#84cc16', isNew: true },
   { name: 'S13 · Sentiment Scanner', desc: 'วิเคราะห์ความรู้สึกจากรีวิว',        pct: 82, color: '#a855f7', isNew: true },
   { name: 'S14 · Video Script',      desc: 'Script + Storyboard ครบทุกฉาก',      pct: 79, color: '#ef4444', isNew: true },
   { name: 'S15 · Multi-Language',    desc: 'แปล 5 ภาษา เจาะตลาด ASEAN',          pct: 86, color: '#14b8a6', isNew: true },
-  { name: 'S16 · Prompt Builder',   desc: 'Zero-shot · Few-shot · CoT · ToT',    pct: 93, color: '#f59e0b', isNew: true },
+  { name: 'S16 · Prompt Builder',    desc: 'Zero-shot · Few-shot · CoT · ToT',    pct: 93, color: '#f59e0b', isNew: true },
+  { name: 'S17 · Cultural Wisdom',   desc: 'ปรัชญาจีน 八德 · พระไตรปิฎก · ไทย',   pct: 88, color: '#b45309', isNew: true },
+  { name: 'S18 · Sales Conv. Engine',desc: 'Hook · Psychology · Funnel ครบทุกมิติ', pct: 88, color: '#dc2626', isNew: true },
 ];
 
 const PLATFORMS_STATUS = [

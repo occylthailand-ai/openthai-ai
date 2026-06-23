@@ -77,9 +77,9 @@ const translations = {
     'features': [
       { icon: '⚡', title: 'สร้างใน 10 วินาที', desc: 'กรอกชื่อสินค้า กด Generate — ได้สคริปต์+แคปชั่น+แฮชแท็กพร้อมโพสต์ทันที' },
       { icon: '🇹🇭', title: 'AI ไทยแท้ 100%', desc: 'เข้าใจวัฒนธรรม ภาษา และเทรนด์คนไทย ไม่ใช่แค่แปลมาจากภาษาอังกฤษ' },
-      { icon: '🎯', title: 'โดนใจทุก Gen', desc: 'ปรับสไตล์ได้ตั้งแต่ Gen Z ไปถึงผู้ใหญ่ — ภาษาธรรมชาติ อ่านแล้วอยากกด Like' },
+      { icon: '🚀', title: 'Sales Conversion Engine', desc: 'Hook · Psychology · Platform Copy · Video · Price · Objection · Funnel — ครบ 8 มิติในคลิกเดียว' },
       { icon: '📊', title: 'AI Critic 9.0', desc: 'ให้คะแนนคอนเทนต์ 0-10 พร้อมคำแนะนำปรับปรุง ก่อนโพสต์จริง' },
-      { icon: '🛒', title: 'ครอบคลุม 241 แพลตฟอร์ม', desc: 'TikTok, Facebook, Instagram, Shopee, Lazada และอีกกว่า 200 ช่องทาง' },
+      { icon: '🧬', title: '18-Skills AI Framework', desc: 'S9–S18: Learning Layer · Trend · Hashtag · SEO · Sentiment · Video · แปลภาษา · Prompt · ปรัชญาตะวันออก' },
       { icon: '💰', title: 'Affiliate Program', desc: 'แชร์ให้เพื่อน — ได้คอมมิชชั่นสูงสุด 40% ทุกออเดอร์ที่ผ่านลิงก์คุณ' },
     ],
     // reviews
@@ -318,9 +318,9 @@ const translations = {
     'features': [
       { icon: '⚡', title: 'Done in 10 seconds', desc: 'Enter a product name, hit Generate — script, caption & hashtags ready to post' },
       { icon: '🇹🇭', title: '100% authentic Thai AI', desc: 'Understands Thai culture, language and trends — not just translated from English' },
-      { icon: '🎯', title: 'Resonates with every gen', desc: 'Tune the style from Gen Z to grown-ups — natural copy people want to like' },
+      { icon: '🚀', title: 'Sales Conversion Engine', desc: 'Hook · Psychology · Platform Copy · Video · Price · Objection · Funnel — all 8 dimensions in one click' },
       { icon: '📊', title: 'AI Critic 9.0', desc: 'Scores your content 0–10 with improvement tips before you post' },
-      { icon: '🛒', title: 'Covers 241 platforms', desc: 'TikTok, Facebook, Instagram, Shopee, Lazada and 200+ more channels' },
+      { icon: '🧬', title: '18-Skills AI Framework', desc: 'S9–S18: Learning Layer · Trend · Hashtag · SEO · Sentiment · Video · Translate · Prompt · Eastern Philosophy' },
       { icon: '💰', title: 'Affiliate Program', desc: 'Share with friends — earn up to 40% commission on every order via your link' },
     ],
     'reviews.badge': 'Reviews',
@@ -555,9 +555,9 @@ const translations = {
     'features': [
       { icon: '⚡', title: '10 秒搞定', desc: '输入产品名，点击生成 — 脚本、文案、标签即刻可发布' },
       { icon: '🇹🇭', title: '100% 正宗泰国 AI', desc: '懂泰国文化、语言与潮流，而非简单从英文翻译' },
-      { icon: '🎯', title: '打动各世代', desc: '风格可从 Z 世代调到长辈 — 自然文案，让人想点赞' },
+      { icon: '🚀', title: '销售转化引擎', desc: 'Hook · 心理学 · 平台文案 · 视频 · 价格 · 异议处理 · 漏斗 — 一键搞定 8 个维度' },
       { icon: '📊', title: 'AI 评论家 9.0', desc: '发布前为内容打 0–10 分并给出改进建议' },
-      { icon: '🛒', title: '覆盖 241 个平台', desc: 'TikTok、Facebook、Instagram、Shopee、Lazada 等 200 多个渠道' },
+      { icon: '🧬', title: '18技能AI框架', desc: 'S9–S18: 学习层 · 趋势 · 标签 · SEO · 情感 · 视频 · 翻译 · Prompt · 东方哲学' },
       { icon: '💰', title: '联盟计划', desc: '分享给朋友 — 通过你的链接每笔订单最高赚 40% 佣金' },
     ],
     'reviews.badge': '评价',
