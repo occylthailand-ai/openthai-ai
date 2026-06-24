@@ -101,3 +101,8 @@ openthai-commerce-engine_1.jsx
 "การฟอร์มทีมงาน.txt"
 "Facebook + ทดสอบ LINE Broadcast.txt"
 "logo (2).png"
+
+# Boot Alert — secrets/state/logs
+boot-alert/.env
+boot-alert/.boot-state.json
+boot-alert/*.log
