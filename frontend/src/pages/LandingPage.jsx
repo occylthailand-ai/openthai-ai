@@ -61,8 +61,10 @@ export default function LandingPage() {
   const [email, setEmail] = useState('');
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [skills, setSkills] = useState(null); // live จาก /api/skills
 
   useEffect(() => { document.title = 'Openthai.ai — สร้างคอนเทนต์ TikTok ปัง ด้วย AI ไทยแท้'; }, []);
+  useEffect(() => { fetch(apiUrl('/api/skills')).then(r => r.json()).then(d => { if (d.success) setSkills(d); }).catch(() => {}); }, []);
 
   const handleFreeStart = () => navigate('/ai-generator');
 
@@ -223,6 +225,29 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+
+      {/* ── AI SKILLS SHOWCASE (live จาก /api/skills) ─────────────────────── */}
+      {skills && (
+        <section style={{ maxWidth: 1000, margin: '0 auto', padding: '0 5% 80px', textAlign: 'center' }}>
+          <SectionBadge>🧠 AI SKILLS</SectionBadge>
+          <SectionTitle>ทักษะ AI ครบจบในที่เดียว</SectionTitle>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap', margin: '28px 0 8px' }}>
+            <div><div style={{ fontSize: 44, fontWeight: 900, background: 'linear-gradient(135deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{skills.total}</div><div style={{ fontSize: 13, color: '#64748b' }}>ทักษะ AI</div></div>
+            <div><div style={{ fontSize: 44, fontWeight: 900, color: '#10b981' }}>{skills.active}</div><div style={{ fontSize: 13, color: '#64748b' }}>พร้อมใช้งาน</div></div>
+            <div><div style={{ fontSize: 44, fontWeight: 900, color: '#f59e0b' }}>{skills.categories?.length || 0}</div><div style={{ fontSize: 13, color: '#64748b' }}>หมวดหมู่</div></div>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 760, margin: '24px auto 0' }}>
+            {skills.skills?.map((s) => (
+              <span key={s.id} style={{ fontSize: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '6px 12px', color: '#cbd5e1' }}>
+                <span style={{ color: '#6366f1', fontWeight: 700 }}>{s.id}</span> {s.name}
+              </span>
+            ))}
+          </div>
+          <button onClick={() => navigate('/skills-catalog')} style={{ marginTop: 28, padding: '12px 28px', borderRadius: 50, fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none', background: 'linear-gradient(135deg,#6366f1,#fe2c55)', color: '#fff' }}>
+            ดูทักษะทั้งหมด →
+          </button>
+        </section>
+      )}
 
       {/* ── REVIEWS ──────────────────────────────────────────────────────── */}
       <section style={{ maxWidth: 960, margin: '0 auto', padding: '0 5% 80px', textAlign: 'center' }}>

@@ -22,7 +22,7 @@ const glass   = {background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,
 const inputSt = {width:'100%',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'10px 13px',color:'#f8fafc',fontSize:13,fontFamily:"'Inter','Sarabun',sans-serif",boxSizing:'border-box',outline:'none'};
 const labelSt = {display:'block',fontSize:11,fontWeight:700,color:'#94a3b8',marginBottom:5,textTransform:'uppercase',letterSpacing:0.5};
 
-const EMPTY_FORM = {name:'',product:'',category:'OTOP',platform:'TikTok',style:'sales',lang:'ภาษาไทย',audience:'ทั่วไป',price:'',schedule:'daily',hour:18,weekDay:1,lineEnabled:false,lineUserId:''};
+const EMPTY_FORM = {name:'',task:'content',product:'',category:'OTOP',platform:'TikTok',style:'sales',lang:'ภาษาไทย',audience:'ทั่วไป',price:'',problem:'',context:'',goal:'ปิดการขายที่เป็นธรรม (win-win ทุกฝ่าย)',stakeholders:'',schedule:'daily',hour:18,weekDay:1,lineEnabled:false,lineUserId:''};
 
 // ─── Permanent system charter (backend/data/system_charter.json) ─────────────
 function CharterStrip() {
@@ -111,7 +111,10 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
   const setB = k => v => setForm(f=>({...f,[k]:v}));
 
   const handleCreate = async () => {
-    if (!form.name||!form.product){toast.error('กรุณาใส่ชื่อ Agent และสินค้า');return;}
+    const isOmni = form.task==='omni-solver';
+    if (!form.name){toast.error('กรุณาใส่ชื่อ Agent');return;}
+    if (isOmni && !form.problem){toast.error('กรุณาใส่ปัญหา/เป้าหมายที่ต้องการให้เฝ้า');return;}
+    if (!isOmni && !form.product){toast.error('กรุณาใส่สินค้า');return;}
     const res = await fetch(apiUrl('/api/agent'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)});
     const d = await res.json();
     if(d.success){toast.success(`🤖 สร้าง Agent "${form.name}" แล้ว`);setShowForm(false);setForm(EMPTY_FORM);onRefresh();}
@@ -187,9 +190,11 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
               <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
                 <PulseDot active={agent.active} />
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:800,fontSize:14}}>{agent.name}</div>
+                  <div style={{fontWeight:800,fontSize:14}}>{agent.task==='omni-solver'&&<span style={{color:'#a78bfa'}}>🧩 </span>}{agent.name}</div>
                   <div style={{fontSize:12,color:'#64748b',marginTop:2}}>
-                    📦 {agent.product} · {agent.platform} · {STYLES.find(s=>s.id===agent.style)?.label}
+                    {agent.task==='omni-solver'
+                      ? <>🧩 Omni-Solver · {(agent.problem||'').slice(0,50)||'เฝ้าเป้าหมาย'}</>
+                      : <>📦 {agent.product} · {agent.platform} · {STYLES.find(s=>s.id===agent.style)?.label}</>}
                   </div>
                 </div>
                 <div style={{padding:'4px 10px',background:'rgba(99,102,241,0.12)',border:'1px solid rgba(99,102,241,0.25)',borderRadius:20,fontSize:11,color:'#a5b4fc',whiteSpace:'nowrap'}}>
@@ -245,27 +250,47 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
           <div style={{background:'#0f0f1a',border:'1px solid rgba(255,255,255,0.12)',borderRadius:20,padding:'28px',maxWidth:560,width:'100%',maxHeight:'90vh',overflowY:'auto'}} onClick={e=>e.stopPropagation()}>
             <div style={{fontSize:16,fontWeight:900,marginBottom:20}}>🤖 สร้าง AI Agent ใหม่</div>
             <div style={{display:'grid',gap:13}}>
+              {/* เลือกประเภท Agent */}
+              <div><label style={labelSt}>ประเภท Agent</label>
+                <div style={{display:'flex',gap:8}}>
+                  {[['content','📝 สร้างคอนเทนต์'],['omni-solver','🧩 Omni-Solver (เฝ้าเป้าหมาย)']].map(([id,lbl])=>(
+                    <button key={id} onClick={setB('task')(id)} style={{flex:1,borderRadius:10,padding:'10px 8px',fontSize:12,fontWeight:700,cursor:'pointer',border:`1.5px solid ${form.task===id?(id==='omni-solver'?'#7c3aed':'#6366f1'):'rgba(255,255,255,0.1)'}`,background:form.task===id?(id==='omni-solver'?'rgba(124,58,237,0.2)':'rgba(99,102,241,0.2)'):'transparent',color:form.task===id?'#c4b5fd':'#64748b'}}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
               <div><label style={labelSt}>ชื่อ Agent *</label><input style={inputSt} placeholder="เช่น ผ้าไหมรายวัน" value={form.name} onChange={set('name')} /></div>
-              <div><label style={labelSt}>สินค้า / หัวข้อ *</label><input style={inputSt} placeholder="เช่น ผ้าไหมมัดหมี่อุบล" value={form.product} onChange={set('product')} /></div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-                <div><label style={labelSt}>หมวดหมู่</label>
-                  <select style={{...inputSt,cursor:'pointer'}} value={form.category} onChange={set('category')}>
-                    {CATEGORIES.map(c=><option key={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div><label style={labelSt}>ราคา</label><input style={inputSt} placeholder="฿590" value={form.price} onChange={set('price')} /></div>
-              </div>
-              <div><label style={labelSt}>กลุ่มเป้าหมาย</label><input style={inputSt} placeholder="เช่น แม่บ้าน คนรักสุขภาพ" value={form.audience} onChange={set('audience')} /></div>
-              <div><label style={labelSt}>แพลตฟอร์ม</label>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                  {PLATFORMS.map(p=><button key={p} onClick={setB('platform')(p)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.platform===p?'#6366f1':'rgba(255,255,255,0.1)'}`,background:form.platform===p?'rgba(99,102,241,0.2)':'transparent',color:form.platform===p?'#a5b4fc':'#64748b'}}>{p}</button>)}
-                </div>
-              </div>
-              <div><label style={labelSt}>สไตล์</label>
-                <div style={{display:'flex',gap:6}}>
-                  {STYLES.map(s=><button key={s.id} onClick={setB('style')(s.id)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.style===s.id?'#6366f1':'rgba(255,255,255,0.1)'}`,background:form.style===s.id?'rgba(99,102,241,0.2)':'transparent',color:form.style===s.id?'#a5b4fc':'#64748b'}}>{s.label}</button>)}
-                </div>
-              </div>
+
+              {form.task==='omni-solver' ? (
+                <>
+                  <div><label style={labelSt}>ปัญหา/เป้าหมายที่ต้องการเฝ้า *</label><textarea style={{...inputSt,minHeight:70,resize:'vertical'}} placeholder="เช่น 'ยอดปิดการขายตก ต้องการแก้แบบเป็นธรรม' / 'คู่แข่งตัดราคา'" value={form.problem} onChange={set('problem')} /></div>
+                  <div><label style={labelSt}>เป้าหมาย</label><input style={inputSt} value={form.goal} onChange={set('goal')} /></div>
+                  <div><label style={labelSt}>ผู้เกี่ยวข้อง / บริบท (ไม่บังคับ)</label><input style={inputSt} placeholder="เช่น ลูกค้า, ทีม, คู่ค้า" value={form.stakeholders} onChange={set('stakeholders')} /></div>
+                  <div style={{fontSize:11,color:'#7c3aed',background:'rgba(124,58,237,0.08)',border:'1px solid rgba(124,58,237,0.2)',borderRadius:10,padding:'8px 12px'}}>🧩 Agent นี้จะวิเคราะห์ 4 ศาสตร์ตามรอบเวลา แล้วส่งแนวทางปิดดีลที่เป็นธรรมเข้า LINE อัตโนมัติ</div>
+                </>
+              ) : (
+                <>
+                  <div><label style={labelSt}>สินค้า / หัวข้อ *</label><input style={inputSt} placeholder="เช่น ผ้าไหมมัดหมี่อุบล" value={form.product} onChange={set('product')} /></div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                    <div><label style={labelSt}>หมวดหมู่</label>
+                      <select style={{...inputSt,cursor:'pointer'}} value={form.category} onChange={set('category')}>
+                        {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div><label style={labelSt}>ราคา</label><input style={inputSt} placeholder="฿590" value={form.price} onChange={set('price')} /></div>
+                  </div>
+                  <div><label style={labelSt}>กลุ่มเป้าหมาย</label><input style={inputSt} placeholder="เช่น แม่บ้าน คนรักสุขภาพ" value={form.audience} onChange={set('audience')} /></div>
+                  <div><label style={labelSt}>แพลตฟอร์ม</label>
+                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                      {PLATFORMS.map(p=><button key={p} onClick={setB('platform')(p)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.platform===p?'#6366f1':'rgba(255,255,255,0.1)'}`,background:form.platform===p?'rgba(99,102,241,0.2)':'transparent',color:form.platform===p?'#a5b4fc':'#64748b'}}>{p}</button>)}
+                    </div>
+                  </div>
+                  <div><label style={labelSt}>สไตล์</label>
+                    <div style={{display:'flex',gap:6}}>
+                      {STYLES.map(s=><button key={s.id} onClick={setB('style')(s.id)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.style===s.id?'#6366f1':'rgba(255,255,255,0.1)'}`,background:form.style===s.id?'rgba(99,102,241,0.2)':'transparent',color:form.style===s.id?'#a5b4fc':'#64748b'}}>{s.label}</button>)}
+                    </div>
+                  </div>
+                </>
+              )}
               <div><label style={labelSt}>Schedule</label>
                 <div style={{display:'flex',gap:6}}>
                   {SCHEDULES.map(s=><button key={s.id} onClick={setB('schedule')(s.id)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.schedule===s.id?'#10b981':'rgba(255,255,255,0.1)'}`,background:form.schedule===s.id?'rgba(16,185,129,0.15)':'transparent',color:form.schedule===s.id?'#6ee7b7':'#64748b'}}>{s.label}</button>)}

@@ -3388,6 +3388,166 @@ app.post('/api/skills/campaign-calendar', generateLimiter, async (req, res) => {
   });
 });
 
+// S25 · POST /api/skills/live-script — Live Selling Script (สคริปต์ไลฟ์ขายของ TikTok/FB/Shopee Live)
+app.post('/api/skills/live-script', generateLimiter, async (req, res) => {
+  const { product, platform = 'TikTok Live', duration = '60 นาที', goal = 'ปิดการขาย', special_offer = '', category = 'OTOP' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นโค้ชไลฟ์ขายของมืออาชีพ (Live Commerce Expert) ที่เชี่ยวชาญตลาดไทย — TikTok Live, Facebook Live, Shopee Live
+รู้จังหวะการเล่า การเรียกยอด การกระตุ้น engagement และปิดการขายแบบแม่ค้าออนไลน์ไทยที่เก่งที่สุด
+
+สินค้า: "${product.slice(0, 200)}" (หมวด ${category}) · แพลตฟอร์ม: ${platform} · ความยาว: ${duration} · เป้าหมาย: ${goal}
+${special_offer ? `โปรพิเศษ: ${special_offer}` : ''}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "summary": "ภาพรวมแผนไลฟ์ 2-3 ประโยค",
+  "opening_hook": "ประโยคเปิดไลฟ์ 30 วินาทีแรกที่ดึงคนให้หยุดดู",
+  "rundown": [
+    {"time":"นาทีที่ X-Y","segment":"ชื่อช่วง","talking_points":"พูดอะไร/ทำอะไร","goal":"เป้าหมายช่วงนี้"}
+  ],
+  "engagement_tactics": ["กิจกรรม/วิธีดึง engagement 1","2","3","4"],
+  "urgency_scripts": ["ประโยคกระตุ้นความเร่งด่วน/ของจะหมด 1","2","3"],
+  "objection_handling": [{"objection":"ลูกค้าถาม/ลังเล","response":"ตอบยังไงให้ปิดได้"}],
+  "closing_scripts": ["ประโยคปิดการขาย/เรียกออเดอร์ 1","2","3"],
+  "cta_cadence": "ควรย้ำ CTA บ่อยแค่ไหน + จังหวะไหน",
+  "tips": ["เคล็ดลับไลฟ์ให้ปัง 1","2","3"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 2560);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/LiveScript', e.message); }
+
+  const pName = product.slice(0, 30);
+  res.json({
+    success: true, source: 'mock',
+    summary: `แผนไลฟ์ขาย ${pName} บน ${platform} ความยาว ${duration} — เปิดด้วย hook แรง วอร์มคนช่วงต้น โชว์สินค้าจริงกลางไลฟ์ แล้วเร่งปิดการขายช่วงท้ายด้วยโปรจำกัดเวลา`,
+    opening_hook: `"สวัสดีค่า! วันนี้มี ${pName} มาให้ทุกคน ใครรอราคานี้อยู่ห้ามไปไหนนะคะ เดี๋ยวมีของแจกด้วย! กดติดตาม+แชร์รัวๆเลยค่า"`,
+    rundown: [
+      { time: 'นาที 0-5', segment: 'เปิดไลฟ์ + เรียกคน', talking_points: 'ทักทาย เรียกชื่อคนดู ชวนกดติดตาม/แชร์ บอกว่าวันนี้มีอะไรพิเศษ', goal: 'ดึงคนเข้าไลฟ์ + วอร์ม' },
+      { time: 'นาที 5-20', segment: 'แนะนำสินค้า + เล่าปัญหา', talking_points: `เล่าว่า ${pName} แก้ปัญหาอะไร โชว์ของจริง จับ สัมผัส ให้เห็นรายละเอียด`, goal: 'สร้างความอยาก' },
+      { time: 'นาที 20-40', segment: 'รีวิว + สาธิต + ตอบคำถาม', talking_points: 'สาธิตการใช้ อ่านรีวิวลูกค้าเก่า ตอบคอมเมนต์สด เล่นเกมแจกของ', goal: 'สร้างความเชื่อใจ + engagement' },
+      { time: 'นาที 40-55', segment: 'เปิดราคา + โปรไลฟ์', talking_points: 'เปิดราคาพิเศษเฉพาะไลฟ์ เทียบราคาปกติ บอกจำนวนจำกัด', goal: 'กระตุ้นการตัดสินใจ' },
+      { time: 'นาที 55-60', segment: 'เร่งปิด + Last call', talking_points: 'นับถอยหลังของหมด ย้ำวิธีสั่ง ยืนยันออเดอร์สด', goal: 'ปิดการขาย' },
+    ],
+    engagement_tactics: ['ตั้งเป้ายอดไลค์ปลดล็อกของแจก', 'เล่นเกมทายราคา/สุ่มแจก', 'เรียกชื่อคนที่คอมเมนต์', 'ปักหมุดโค้ดส่วนลดในคอมเมนต์'],
+    urgency_scripts: ['"ตัวนี้เหลือแค่ 10 ชิ้นสุดท้ายนะคะ!"', '"ราคานี้เฉพาะในไลฟ์เท่านั้น ออกไปแล้วกลับมาเป็นราคาเต็มนะคะ"', '"ใครสั่งใน 5 นาทีนี้ แถมเพิ่มอีก 1 ชิ้นเลยค่า"'],
+    objection_handling: [
+      { objection: 'แพงไป', response: 'เทียบความคุ้ม/ราคาต่อการใช้งาน + ย้ำของแถมเฉพาะไลฟ์' },
+      { objection: 'ขอคิดดูก่อน', response: 'ย้ำว่าโปรหมดเมื่อจบไลฟ์ + รับประกันคืนเงินถ้าไม่พอใจ' },
+      { objection: 'ส่งจริงไหม', response: 'โชว์หลักฐานการส่ง/รีวิวจริง + เลขพัสดุลูกค้าเก่า' },
+    ],
+    closing_scripts: ['"พิมพ์ CF ตามด้วยจำนวนได้เลยค่า เดี๋ยวแม่ค้าจัดให้!"', '"สั่งเลยนะคะ ของมีจำนวนจำกัดจริงๆ"', '"ขอบคุณทุกออเดอร์เลยค่า จัดส่งให้ภายในวันนี้!"'],
+    cta_cadence: 'ย้ำ CTA ทุก 5-7 นาที และถี่ขึ้นเป็นทุก 2 นาทีในช่วง 15 นาทีสุดท้าย',
+    tips: ['ไลฟ์ให้ยาวพอให้อัลกอริทึมดันคนเข้า (45-90 นาที)', 'พลังงานต้องสูงตลอด อย่าปล่อยให้เงียบ', 'เตรียมสต๊อก+ทีมตอบแชทไว้ก่อนเริ่มไลฟ์'],
+  });
+});
+
+// S26 · POST /api/skills/omni-solver — Omni-Solver: เครื่องแก้ปัญหาอัจฉริยะรอบด้าน
+// วิเคราะห์ปัญหาใดก็ได้ผ่าน 4 ศาสตร์ (จิตวิทยา · เรขาคณิตวิเคราะห์ · นิเวศการอยู่รอด · การแข่งขันการค้า)
+// ครบทุกมิติ/มุมมอง/จุดยืน → นำสู่การปิดการขายที่เป็นธรรม (win-win) + ระบบติดตาม 24/7
+async function omniSolve({ problem, context = '', goal = 'ปิดการขายที่เป็นธรรม (win-win ทุกฝ่าย)', stakeholders = '' }) {
+  const prompt = `คุณคือ "Omni-Solver" — เครื่องแก้ปัญหาอัจฉริยะรอบด้านที่วิเคราะห์ปัญหาทุกชนิดผ่าน 4 ศาสตร์พร้อมกัน
+แล้วสังเคราะห์เป็นทางออกที่เป็นธรรมต่อทุกฝ่าย (ไม่เอาเปรียบใคร) มุ่งบรรลุเป้าหมายอย่างยั่งยืน
+
+4 ศาสตร์ที่ต้องใช้วิเคราะห์ (lenses):
+1) จิตวิทยา (Psychology) — แรงจูงใจลึก ความกลัว ความต้องการแท้จริง อคติ การตัดสินใจของมนุษย์ทุกฝ่าย
+2) เรขาคณิตวิเคราะห์ (Analytic Geometry) — มองปัญหาเป็นโครงสร้าง/แรง/เวกเตอร์ หา "จุดคานงัด" (leverage points) ที่ออกแรงน้อยได้ผลมาก
+3) นิเวศการอยู่รอด (Survival Ecology / ป่าดงดิบ) — niche การปรับตัว ทรัพยากร ห่วงโซ่ การอยู่รอดและพึ่งพากันในระบบ
+4) การแข่งขันทางการค้า (Competitive Commerce / Game Theory) — คู่แข่ง การวางตำแหน่ง หมากที่ควรเดิน win-win vs zero-sum
+
+ปัญหา/สถานการณ์: "${problem.slice(0, 600)}"
+${context ? `บริบทเพิ่มเติม: ${context.slice(0, 400)}` : ''}
+เป้าหมาย: ${goal}
+${stakeholders ? `ผู้มีส่วนได้ส่วนเสีย: ${stakeholders}` : ''}
+
+ตอบกลับเป็น JSON เท่านั้น (วิเคราะห์ครบทุกมิติ/มุมมอง/จุดยืน):
+{
+  "summary": "สรุปทางออก 2-3 ประโยค",
+  "problem_reframed": "นิยามปัญหาใหม่ให้คมชัดและแก้ได้จริง",
+  "root_causes": ["รากของปัญหา 1","2","3"],
+  "lenses": {
+    "psychology": {"insight":"ข้อค้นพบเชิงจิตวิทยา","levers":["จุดกระตุ้น 1","2"],"risks":["ความเสี่ยงทางอารมณ์ 1"]},
+    "geometry": {"insight":"มองปัญหาเป็นโครงสร้าง/แรง","leverage_points":["จุดคานงัด 1","2"],"structure":"คำอธิบายโครงสร้างของปัญหา"},
+    "ecology": {"insight":"มุมมองนิเวศ/การอยู่รอด","adaptation":["วิธีปรับตัว 1","2"],"resources":["ทรัพยากร/พันธมิตรที่ควรใช้ 1"]},
+    "competition": {"insight":"มุมมองเกม/คู่แข่ง","moves":["หมากที่ควรเดิน 1","2"],"positioning":"การวางตำแหน่งที่ได้เปรียบอย่างเป็นธรรม"}
+  },
+  "perspectives": [
+    {"stakeholder":"ฝ่าย/มุมมอง","view":"เขามองปัญหานี้อย่างไร","need":"สิ่งที่เขาต้องการจริงๆ"},
+    {"stakeholder":"...","view":"...","need":"..."},
+    {"stakeholder":"...","view":"...","need":"..."}
+  ],
+  "options": [
+    {"option":"ทางเลือก 1","pros":["ข้อดี"],"cons":["ข้อเสีย"],"fairness":"ผลต่อความเป็นธรรมของทุกฝ่าย"},
+    {"option":"ทางเลือก 2","pros":["..."],"cons":["..."],"fairness":"..."}
+  ],
+  "recommended_path": "ทางออกที่แนะนำ + เหตุผลว่าทำไมเป็นธรรมและยั่งยืนที่สุด",
+  "fair_close": {
+    "win_win":"อธิบายว่าทุกฝ่ายได้อะไร (ไม่มีใครเสียเปรียบ)",
+    "script":"สคริปต์/แนวทางการปิดการขายหรือปิดดีลที่เป็นธรรม",
+    "guardrails":["หลักจริยธรรมที่ต้องรักษา 1","2"]
+  },
+  "action_plan": [
+    {"step":"สิ่งที่ต้องทำ","owner":"ฝ่ายที่รับผิดชอบ","when":"กรอบเวลา"},
+    {"step":"...","owner":"...","when":"..."},
+    {"step":"...","owner":"...","when":"..."}
+  ],
+  "monitoring": {"signals":["สัญญาณที่ต้องเฝ้าติดตามต่อเนื่อง 1","2","3"],"review_cadence":"ความถี่ในการทบทวน (เช่น รายวัน/รายสัปดาห์)"}
+}`;
+
+  try {
+    const text = await callAI(prompt, 3072);
+    const d = parseAIJson(text);
+    return { source: anthropic ? 'claude' : 'gemini', ...d };
+  } catch (e) { addLog('warn', 'Skills/OmniSolver', e.message); }
+
+  // Mock fallback — โครงวิเคราะห์ 4 ศาสตร์ (ใช้ได้กับทุกปัญหา)
+  const pr = problem.slice(0, 80);
+  return {
+    source: 'mock',
+    summary: `วิเคราะห์ "${pr}" ครบ 4 ศาสตร์ แล้วเลือกทางออกที่ทุกฝ่ายได้ประโยชน์ร่วมกัน เน้นความเป็นธรรมและความยั่งยืนมากกว่าชัยชนะระยะสั้น`,
+    problem_reframed: `ปัญหาที่แท้จริงไม่ใช่แค่ "${pr}" แต่คือช่องว่างระหว่างสิ่งที่แต่ละฝ่ายต้องการกับสิ่งที่กำลังได้รับ — แก้ที่ช่องว่างนี้`,
+    root_causes: ['ความต้องการแท้จริงของแต่ละฝ่ายยังไม่ถูกพูดออกมาชัด', 'ขาดข้อมูล/ความเชื่อใจระหว่างฝ่าย', 'โครงสร้างผลประโยชน์ยังไม่จัดให้สอดคล้องกัน'],
+    lenses: {
+      psychology: { insight: 'ทุกฝ่ายตัดสินใจจาก "ความกลัวจะเสีย" มากกว่า "ความอยากได้" — ลดความกลัวก่อนจะเปิดใจ', levers: ['ทำให้รู้สึกปลอดภัยและถูกรับฟัง', 'ให้ชนะเล็กๆ ก่อนเพื่อสร้างแรงส่ง'], risks: ['กดดันเร็วไปจะเกิดการต่อต้าน'] },
+      geometry: { insight: 'มองปัญหาเป็นระบบแรงหลายทิศ — หาจุดที่ออกแรงน้อยแต่ขยับทั้งระบบ', leverage_points: ['จุดที่ทุกฝ่ายเห็นพ้องอยู่แล้ว (ใช้เป็นฐาน)', 'ผู้มีอิทธิพลที่ขยับแล้วคนอื่นตาม'], structure: 'ปัญหาเป็นรูปสามเหลี่ยมผลประโยชน์ 3 ฝ่าย — ปรับมุมหนึ่งกระทบอีกสองมุมเสมอ' },
+      ecology: { insight: 'แต่ละฝ่ายคือสิ่งมีชีวิตในระบบนิเวศเดียวกัน — อยู่รอดได้ดีที่สุดเมื่อพึ่งพากัน ไม่ใช่ล่ากันจนสูญพันธุ์', adaptation: ['ปรับบทบาทให้แต่ละฝ่ายมี niche ที่ไม่ทับกัน', 'สร้างความสัมพันธ์แบบพึ่งพา (symbiosis)'], resources: ['พันธมิตร/ทรัพยากรที่ยังไม่ได้ใช้ร่วมกัน'] },
+      competition: { insight: 'เกมนี้ควรเล่นแบบ positive-sum ไม่ใช่ zero-sum — ขยายขนาดเค้กก่อนแบ่ง', moves: ['เปิดข้อมูลที่สร้างความเชื่อใจก่อน', 'เสนอข้อตกลงที่คู่แข่ง/คู่เจรจาปฏิเสธได้ยากเพราะเป็นธรรม'], positioning: 'วางตัวเป็น "ผู้สร้างทางออกที่เป็นธรรม" — ได้เปรียบเชิงชื่อเสียงระยะยาว' },
+    },
+    perspectives: [
+      { stakeholder: 'ฝ่ายเรา', view: 'อยากบรรลุเป้าหมายโดยไม่เสียความสัมพันธ์', need: 'ผลลัพธ์ที่ยั่งยืน + ชื่อเสียงที่ดี' },
+      { stakeholder: 'ลูกค้า/คู่เจรจา', view: 'กลัวถูกเอาเปรียบ', need: 'รู้สึกได้ของคุ้มและถูกปฏิบัติอย่างเป็นธรรม' },
+      { stakeholder: 'ผู้เกี่ยวข้องอื่น/สังคม', view: 'มองหาความโปร่งใส', need: 'กระบวนการที่ตรวจสอบได้และไม่เอาเปรียบ' },
+    ],
+    options: [
+      { option: 'เจรจาแบบเปิดไพ่ (transparency-first)', pros: ['สร้างความเชื่อใจเร็ว', 'ลดการต่อรองที่สูญเปล่า'], cons: ['เปิดเผยข้อมูลบางส่วน'], fairness: 'สูง — ทุกฝ่ายตัดสินใจบนข้อมูลเดียวกัน' },
+      { option: 'เสนอแพ็กเกจหลายระดับให้เลือก', pros: ['ลูกค้ารู้สึกควบคุมได้', 'ปิดได้หลายงบ'], cons: ['ต้องออกแบบข้อเสนอมากขึ้น'], fairness: 'สูง — ให้สิทธิ์เลือกตามกำลัง' },
+    ],
+    recommended_path: 'ผสาน 2 ทางเลือก: เปิดข้อมูลที่สร้างความเชื่อใจ + เสนอทางเลือกหลายระดับ — ปิดดีลด้วยความสมัครใจของทุกฝ่าย เป็นธรรมและทำซ้ำได้',
+    fair_close: {
+      win_win: 'ฝ่ายเราได้ยอด+ลูกค้าประจำ · ลูกค้าได้คุณค่าจริงในราคาที่เลือกเอง · ระบบโดยรวมได้มาตรฐานการค้าที่เป็นธรรม',
+      script: '"เป้าหมายของเราคือให้คุณได้ผลลัพธ์จริง ไม่ใช่แค่ปิดการขาย — เลือกแบบที่เหมาะกับคุณที่สุด แล้วเรารับประกันความพอใจ ถ้าไม่เวิร์กเรายินดีดูแลต่อ"',
+      guardrails: ['ไม่สร้างความเร่งด่วนปลอม/ข้อมูลเท็จ', 'ไม่ปิดการขายที่ลูกค้าไม่ได้ประโยชน์จริง'],
+    },
+    action_plan: [
+      { step: 'ฟังและสรุปความต้องการแท้จริงของแต่ละฝ่ายให้ตรงกัน', owner: 'ฝ่ายขาย/เจรจา', when: 'ทันที' },
+      { step: 'ออกแบบข้อเสนอหลายระดับ + จุดรับประกัน', owner: 'ฝ่ายกลยุทธ์', when: '1-3 วัน' },
+      { step: 'นำเสนอแบบเปิดข้อมูล + ปิดดีลด้วยความสมัครใจ', owner: 'ฝ่ายขาย', when: '3-7 วัน' },
+      { step: 'ติดตามผลหลังปิด + เก็บ feedback ปรับปรุง', owner: 'ฝ่ายดูแลลูกค้า', when: 'ต่อเนื่อง' },
+    ],
+    monitoring: { signals: ['สัญญาณความไม่พอใจ/ลังเลของฝ่ายใดฝ่ายหนึ่ง', 'อัตราการปิดดีล vs ความพึงพอใจหลังปิด', 'การกลับมาซื้อซ้ำ/บอกต่อ (ตัววัดความเป็นธรรม)'], review_cadence: 'ทบทวนรายสัปดาห์ + ตรวจสัญญาณเร่งด่วนรายวัน' },
+  };
+}
+
+app.post('/api/skills/omni-solver', generateLimiter, async (req, res) => {
+  const { problem, context, goal, stakeholders } = req.body || {};
+  if (!problem?.trim()) return res.status(400).json({ error: 'problem required' });
+  const d = await omniSolve({ problem, context, goal, stakeholders });
+  res.json({ success: true, ...d });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3415,6 +3575,8 @@ const SKILLS_REGISTRY = [
   { id: 'S22', name: 'Ad Budget Planner',    category: 'ads',         endpoint: '/api/skills/ad-budget',        method: 'POST', inputs: ['product', 'budget', 'platforms'], status: 'active' },
   { id: 'S23', name: 'Break-even Planner',   category: 'finance',     endpoint: '/api/skills/break-even',       method: 'POST', inputs: ['product', 'price', 'unit_cost', 'fixed_costs'], status: 'active' },
   { id: 'S24', name: 'Campaign Calendar',    category: 'planning',    endpoint: '/api/skills/campaign-calendar',method: 'POST', inputs: ['product', 'category', 'period'], status: 'active' },
+  { id: 'S25', name: 'Live Selling Script',  category: 'live',        endpoint: '/api/skills/live-script',      method: 'POST', inputs: ['product', 'platform', 'duration'], status: 'active' },
+  { id: 'S26', name: 'Omni-Solver',          category: 'solver',      endpoint: '/api/skills/omni-solver',      method: 'POST', inputs: ['problem', 'context', 'goal'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -3509,6 +3671,25 @@ async function runAgent(agent) {
   console.log(`[Agent] 🤖 Running agent "${agent.name}" — ${agent.product}`);
   try {
     writeAgentCheckpoint(agent, 'generating');
+
+    // ── Omni-Solver agent (S26) — เฝ้าเป้าหมาย/ปัญหา 24/7 แล้วแจ้งทางออกที่เป็นธรรม ──
+    if (agent.task === 'omni-solver') {
+      const sol = await omniSolve({ problem: agent.problem || agent.product, context: agent.context || '', goal: agent.goal || undefined, stakeholders: agent.stakeholders || '' });
+      const entry = { ts: new Date().toISOString(), task: 'omni-solver', source: sol.source, summary: sol.summary, problem_reframed: sol.problem_reframed, recommended_path: sol.recommended_path, fair_close: sol.fair_close, omni: sol };
+      agent.lastRun = new Date().toISOString(); agent.lastError = null;
+      agent.results = [entry, ...(agent.results || []).slice(0, 9)];
+      saveAgents(agents); clearAgentCheckpoint();
+      if (agent.lineEnabled && agent.lineUserId && process.env.LINE_CHANNEL_TOKEN) {
+        try {
+          const msg = `🧩 Omni-Solver: "${agent.name}"\n\n🎯 ${sol.problem_reframed || ''}\n\n✅ แนวทางที่แนะนำ:\n${sol.recommended_path || sol.summary || ''}\n\n🤝 ปิดดีลเป็นธรรม:\n${sol.fair_close?.script || ''}`;
+          await sendLine(agent.lineUserId, msg);
+        } catch (lineErr) { try { addLog('warn', 'Agent', `LINE push ไม่สำเร็จ "${agent.name}": ${lineErr.message}`); } catch (_) {} }
+      }
+      console.log(`[Agent] ✅ Omni-Solver done — ${sol.source}`);
+      webhooks.dispatch('agent.completed', { agentId: agent.id, agentName: agent.name, task: 'omni-solver', source: sol.source }, agent.tenantId || null);
+      return entry;
+    }
+
     const result = await smartGenerate({
       product: agent.product, category: agent.category, platform: agent.platform,
       style: agent.style, lang: agent.lang || 'ภาษาไทย',
@@ -3595,12 +3776,18 @@ app.get('/api/agent', (req, res) => {
 });
 
 app.post('/api/agent', (req, res) => {
-  const { name, product, category, platform, style, lang, audience, price, schedule, hour, weekDay, lineEnabled, lineUserId } = req.body || {};
-  if (!name || !product) return res.status(400).json({ success: false, message: 'ต้องการ name และ product' });
+  const { name, product, category, platform, style, lang, audience, price, schedule, hour, weekDay, lineEnabled, lineUserId, task, problem, context, goal, stakeholders } = req.body || {};
+  const isOmni = task === 'omni-solver';
+  if (!name) return res.status(400).json({ success: false, message: 'ต้องการ name' });
+  if (!isOmni && !product) return res.status(400).json({ success: false, message: 'ต้องการ product' });
+  if (isOmni && !problem) return res.status(400).json({ success: false, message: 'Omni-Solver ต้องการ problem' });
   const agent = {
-    id: Date.now().toString(), name, product, category: category || 'ทั่วไป',
+    id: Date.now().toString(), name, task: task || 'content',
+    product: product || '', category: category || 'ทั่วไป',
     platform: platform || 'TikTok', style: style || 'sales',
     lang: lang || 'ภาษาไทย', audience: audience || 'ทั่วไป', price: price || '',
+    // Omni-Solver fields
+    problem: problem || '', context: context || '', goal: goal || '', stakeholders: stakeholders || '',
     schedule: schedule || 'daily', hour: parseInt(hour ?? 18),
     weekDay: parseInt(weekDay ?? 1),
     lineEnabled: !!lineEnabled, lineUserId: lineUserId || '',
@@ -4016,6 +4203,8 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S22', name:'Ad Budget Planner',pct:85, color:'#f43f5e', category:'ads',         status:'✅' },
       { id:'S23', name:'Break-even Planner',pct:87, color:'#0d9488', category:'finance',    status:'✅' },
       { id:'S24', name:'Campaign Calendar',pct:86, color:'#d946ef', category:'planning',    status:'✅' },
+      { id:'S25', name:'Live Selling Script',pct:88, color:'#fb7185', category:'live',      status:'✅' },
+      { id:'S26', name:'Omni-Solver',      pct:90, color:'#7c3aed', category:'solver',     status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },

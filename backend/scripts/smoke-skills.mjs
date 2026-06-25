@@ -11,7 +11,7 @@ const BASE = `http://localhost:${PORT}`;
 // ตัวอย่าง input ครอบคลุมทุก field ที่ skills อาจต้องการ (required fields ของทุก endpoint)
 const SAMPLE = {
   product: 'น้ำพริกเผาทดสอบ', message: 'สินค้าดีไหมคะ ราคาเท่าไหร่', text: 'สินค้าดีมากแนะนำเลย',
-  situation: 'อยากขยายธุรกิจ', goal: 'ยอดขาย', usp: 'อร่อย สะอาด ปลอดภัย', category: 'OTOP',
+  situation: 'อยากขยายธุรกิจ', problem: 'ลูกค้าสนใจแต่ไม่ปิดการขาย', context: 'งบจำกัด', goal: 'ยอดขาย', usp: 'อร่อย สะอาด ปลอดภัย', category: 'OTOP',
   price: 120, cost: 45, unit_cost: 45, fixed_costs: 8000, budget: 10000, competitor_price: 150,
   monthly_volume: 200, sourcing: 'ผสม', platforms: 'TikTok, Facebook', from: 'ภาษาไทย', to: 'English',
   channel: 'แชท', technique: 'role',
