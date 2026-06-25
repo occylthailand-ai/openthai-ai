@@ -3388,6 +3388,63 @@ app.post('/api/skills/campaign-calendar', generateLimiter, async (req, res) => {
   });
 });
 
+// S25 · POST /api/skills/live-script — Live Selling Script (สคริปต์ไลฟ์ขายของ TikTok/FB/Shopee Live)
+app.post('/api/skills/live-script', generateLimiter, async (req, res) => {
+  const { product, platform = 'TikTok Live', duration = '60 นาที', goal = 'ปิดการขาย', special_offer = '', category = 'OTOP' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นโค้ชไลฟ์ขายของมืออาชีพ (Live Commerce Expert) ที่เชี่ยวชาญตลาดไทย — TikTok Live, Facebook Live, Shopee Live
+รู้จังหวะการเล่า การเรียกยอด การกระตุ้น engagement และปิดการขายแบบแม่ค้าออนไลน์ไทยที่เก่งที่สุด
+
+สินค้า: "${product.slice(0, 200)}" (หมวด ${category}) · แพลตฟอร์ม: ${platform} · ความยาว: ${duration} · เป้าหมาย: ${goal}
+${special_offer ? `โปรพิเศษ: ${special_offer}` : ''}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "summary": "ภาพรวมแผนไลฟ์ 2-3 ประโยค",
+  "opening_hook": "ประโยคเปิดไลฟ์ 30 วินาทีแรกที่ดึงคนให้หยุดดู",
+  "rundown": [
+    {"time":"นาทีที่ X-Y","segment":"ชื่อช่วง","talking_points":"พูดอะไร/ทำอะไร","goal":"เป้าหมายช่วงนี้"}
+  ],
+  "engagement_tactics": ["กิจกรรม/วิธีดึง engagement 1","2","3","4"],
+  "urgency_scripts": ["ประโยคกระตุ้นความเร่งด่วน/ของจะหมด 1","2","3"],
+  "objection_handling": [{"objection":"ลูกค้าถาม/ลังเล","response":"ตอบยังไงให้ปิดได้"}],
+  "closing_scripts": ["ประโยคปิดการขาย/เรียกออเดอร์ 1","2","3"],
+  "cta_cadence": "ควรย้ำ CTA บ่อยแค่ไหน + จังหวะไหน",
+  "tips": ["เคล็ดลับไลฟ์ให้ปัง 1","2","3"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 2560);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/LiveScript', e.message); }
+
+  const pName = product.slice(0, 30);
+  res.json({
+    success: true, source: 'mock',
+    summary: `แผนไลฟ์ขาย ${pName} บน ${platform} ความยาว ${duration} — เปิดด้วย hook แรง วอร์มคนช่วงต้น โชว์สินค้าจริงกลางไลฟ์ แล้วเร่งปิดการขายช่วงท้ายด้วยโปรจำกัดเวลา`,
+    opening_hook: `"สวัสดีค่า! วันนี้มี ${pName} มาให้ทุกคน ใครรอราคานี้อยู่ห้ามไปไหนนะคะ เดี๋ยวมีของแจกด้วย! กดติดตาม+แชร์รัวๆเลยค่า"`,
+    rundown: [
+      { time: 'นาที 0-5', segment: 'เปิดไลฟ์ + เรียกคน', talking_points: 'ทักทาย เรียกชื่อคนดู ชวนกดติดตาม/แชร์ บอกว่าวันนี้มีอะไรพิเศษ', goal: 'ดึงคนเข้าไลฟ์ + วอร์ม' },
+      { time: 'นาที 5-20', segment: 'แนะนำสินค้า + เล่าปัญหา', talking_points: `เล่าว่า ${pName} แก้ปัญหาอะไร โชว์ของจริง จับ สัมผัส ให้เห็นรายละเอียด`, goal: 'สร้างความอยาก' },
+      { time: 'นาที 20-40', segment: 'รีวิว + สาธิต + ตอบคำถาม', talking_points: 'สาธิตการใช้ อ่านรีวิวลูกค้าเก่า ตอบคอมเมนต์สด เล่นเกมแจกของ', goal: 'สร้างความเชื่อใจ + engagement' },
+      { time: 'นาที 40-55', segment: 'เปิดราคา + โปรไลฟ์', talking_points: 'เปิดราคาพิเศษเฉพาะไลฟ์ เทียบราคาปกติ บอกจำนวนจำกัด', goal: 'กระตุ้นการตัดสินใจ' },
+      { time: 'นาที 55-60', segment: 'เร่งปิด + Last call', talking_points: 'นับถอยหลังของหมด ย้ำวิธีสั่ง ยืนยันออเดอร์สด', goal: 'ปิดการขาย' },
+    ],
+    engagement_tactics: ['ตั้งเป้ายอดไลค์ปลดล็อกของแจก', 'เล่นเกมทายราคา/สุ่มแจก', 'เรียกชื่อคนที่คอมเมนต์', 'ปักหมุดโค้ดส่วนลดในคอมเมนต์'],
+    urgency_scripts: ['"ตัวนี้เหลือแค่ 10 ชิ้นสุดท้ายนะคะ!"', '"ราคานี้เฉพาะในไลฟ์เท่านั้น ออกไปแล้วกลับมาเป็นราคาเต็มนะคะ"', '"ใครสั่งใน 5 นาทีนี้ แถมเพิ่มอีก 1 ชิ้นเลยค่า"'],
+    objection_handling: [
+      { objection: 'แพงไป', response: 'เทียบความคุ้ม/ราคาต่อการใช้งาน + ย้ำของแถมเฉพาะไลฟ์' },
+      { objection: 'ขอคิดดูก่อน', response: 'ย้ำว่าโปรหมดเมื่อจบไลฟ์ + รับประกันคืนเงินถ้าไม่พอใจ' },
+      { objection: 'ส่งจริงไหม', response: 'โชว์หลักฐานการส่ง/รีวิวจริง + เลขพัสดุลูกค้าเก่า' },
+    ],
+    closing_scripts: ['"พิมพ์ CF ตามด้วยจำนวนได้เลยค่า เดี๋ยวแม่ค้าจัดให้!"', '"สั่งเลยนะคะ ของมีจำนวนจำกัดจริงๆ"', '"ขอบคุณทุกออเดอร์เลยค่า จัดส่งให้ภายในวันนี้!"'],
+    cta_cadence: 'ย้ำ CTA ทุก 5-7 นาที และถี่ขึ้นเป็นทุก 2 นาทีในช่วง 15 นาทีสุดท้าย',
+    tips: ['ไลฟ์ให้ยาวพอให้อัลกอริทึมดันคนเข้า (45-90 นาที)', 'พลังงานต้องสูงตลอด อย่าปล่อยให้เงียบ', 'เตรียมสต๊อก+ทีมตอบแชทไว้ก่อนเริ่มไลฟ์'],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3415,6 +3472,7 @@ const SKILLS_REGISTRY = [
   { id: 'S22', name: 'Ad Budget Planner',    category: 'ads',         endpoint: '/api/skills/ad-budget',        method: 'POST', inputs: ['product', 'budget', 'platforms'], status: 'active' },
   { id: 'S23', name: 'Break-even Planner',   category: 'finance',     endpoint: '/api/skills/break-even',       method: 'POST', inputs: ['product', 'price', 'unit_cost', 'fixed_costs'], status: 'active' },
   { id: 'S24', name: 'Campaign Calendar',    category: 'planning',    endpoint: '/api/skills/campaign-calendar',method: 'POST', inputs: ['product', 'category', 'period'], status: 'active' },
+  { id: 'S25', name: 'Live Selling Script',  category: 'live',        endpoint: '/api/skills/live-script',      method: 'POST', inputs: ['product', 'platform', 'duration'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4016,6 +4074,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S22', name:'Ad Budget Planner',pct:85, color:'#f43f5e', category:'ads',         status:'✅' },
       { id:'S23', name:'Break-even Planner',pct:87, color:'#0d9488', category:'finance',    status:'✅' },
       { id:'S24', name:'Campaign Calendar',pct:86, color:'#d946ef', category:'planning',    status:'✅' },
+      { id:'S25', name:'Live Selling Script',pct:88, color:'#fb7185', category:'live',      status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },

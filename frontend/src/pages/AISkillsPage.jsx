@@ -26,6 +26,7 @@ const TABS = [
   { id: 'adbudget',    icon: '📣', label: 'Ad Budget Planner',  color: '#f43f5e', skill: 'S22', endpoint: '/api/skills/ad-budget' },
   { id: 'breakeven',   icon: '⚖️', label: 'Break-even Planner', color: '#0d9488', skill: 'S23', endpoint: '/api/skills/break-even' },
   { id: 'campaign',    icon: '📆', label: 'Campaign Calendar',  color: '#d946ef', skill: 'S24', endpoint: '/api/skills/campaign-calendar' },
+  { id: 'live',        icon: '🔴', label: 'Live Selling Script', color: '#fb7185', skill: 'S25', endpoint: '/api/skills/live-script' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -1938,6 +1939,125 @@ function TabCampaignCalendar() {
   );
 }
 
+// ─── Tab: Live Selling Script (S25) ───────────────────────────────────────────
+const LIVE_PLATFORMS = ['TikTok Live', 'Facebook Live', 'Shopee Live', 'Lazada Live'];
+const LIVE_DURATIONS = ['30 นาที', '60 นาที', '90 นาที', '120 นาที'];
+
+function TabLiveScript() {
+  const [form, setForm] = useState({ product: '', platform: 'TikTok Live', duration: '60 นาที', goal: 'ปิดการขาย', special_offer: '', category: 'OTOP' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const pink = '#fb7185';
+
+  const run = async () => {
+    if (!form.product.trim()) { setError('กรุณาใส่ชื่อสินค้า'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/live-script'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: pink, marginBottom: 16 }}>🔴 สคริปต์ไลฟ์ขายของ</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น ครีมบำรุงผิว, น้ำพริกเผา" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
+            <div><label style={labelSt}>แพลตฟอร์ม</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}>
+                {LIVE_PLATFORMS.map(p => <option key={p}>{p}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>ความยาว</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))}>
+                {LIVE_DURATIONS.map(d => <option key={d}>{d}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>หมวดหมู่</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          <div><label style={labelSt}>โปรพิเศษในไลฟ์ (ไม่บังคับ)</label><input style={inputSt} placeholder="เช่น ลด 50% เฉพาะไลฟ์, ซื้อ 1 แถม 1" value={form.special_offer} onChange={e => setForm(f => ({ ...f, special_offer: e.target.value }))} /></div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${pink},#f43f5e)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังเขียนสคริปต์...' : '🔴 สร้างสคริปต์ไลฟ์'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {result.opening_hook && (
+            <div style={card({ borderLeft: `4px solid ${pink}` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: pink }}>🎬 เปิดไลฟ์ (30 วิแรก)</span>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><SourceBadge source={result.source} /><CopyBtn text={result.opening_hook} /></div>
+              </div>
+              <div style={{ background: '#fff1f2', borderRadius: 10, padding: '12px 14px', fontSize: 14, color: '#9f1239', lineHeight: 1.6 }}>{result.opening_hook}</div>
+              {result.summary && <div style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>{result.summary}</div>}
+            </div>
+          )}
+
+          {result.rundown?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, color: pink }}>⏱️ ไทม์ไลน์ไลฟ์</div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {result.rundown.map((r, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 12, background: '#f8fafc', borderRadius: 10, padding: '10px 12px' }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', background: pink, borderRadius: 6, padding: '3px 8px', whiteSpace: 'nowrap', height: 'fit-content' }}>{r.time}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{r.segment}</div>
+                      <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>{r.talking_points}</div>
+                      {r.goal && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>🎯 {r.goal}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.engagement_tactics?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 8 }}>🎮 ดึง Engagement</div>{result.engagement_tactics.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.urgency_scripts?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 8 }}>⚡ เร่งความเร่งด่วน</div>{result.urgency_scripts.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>{t}</div>)}</div>}
+          </div>
+
+          {result.objection_handling?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: pink }}>🛡️ รับมือข้อโต้แย้ง</div>
+              {result.objection_handling.map((o, i) => (
+                <div key={i} style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>❓ {o.objection}</div>
+                  <div style={{ fontSize: 12, color: '#059669', marginTop: 2 }}>💬 {o.response}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.closing_scripts?.length > 0 && (
+            <div style={card({ borderLeft: `4px solid #10b981` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: '#059669' }}>🎯 ปิดการขาย</div>
+                <CopyBtn text={result.closing_scripts.join('\n')} />
+              </div>
+              {result.closing_scripts.map((s, i) => <div key={i} style={{ background: '#f0fdf4', borderRadius: 8, padding: '8px 12px', marginBottom: 6, fontSize: 13, color: '#166534' }}>{s}</div>)}
+              {result.cta_cadence && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>📢 {result.cta_cadence}</div>}
+            </div>
+          )}
+
+          {result.tips?.length > 0 && <div style={card({ background: 'rgba(251,113,133,0.05)', borderColor: 'rgba(251,113,133,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#e11d48', marginBottom: 8 }}>💡 เคล็ดลับไลฟ์ปัง</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -2024,7 +2144,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);
