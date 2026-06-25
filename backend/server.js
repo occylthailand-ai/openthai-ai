@@ -3092,6 +3092,45 @@ Lead time จัดหา: ${lead_time || 'ไม่ระบุ'}
   });
 });
 
+// ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
+// GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
+const SKILLS_REGISTRY = [
+  { id: 'S1',  name: 'RCCF Prompt',          category: 'content',     endpoint: '/api/generate',                method: 'POST', inputs: ['product', 'platform', 'tone'], status: 'active' },
+  { id: 'S2',  name: 'Taste Check',          category: 'quality',     endpoint: '/api/generate',                method: 'POST', inputs: ['product'],                      status: 'active' },
+  { id: 'S3',  name: 'Master Prompt',        category: 'prompt',      endpoint: '/api/generate',                method: 'POST', inputs: ['product', 'platform'],          status: 'active' },
+  { id: 'S4',  name: 'Image Analysis',       category: 'vision',      endpoint: '/api/analyze-image',           method: 'POST', inputs: ['image'],                        status: 'active' },
+  { id: 'S5',  name: 'TTS Voice',            category: 'voice',       endpoint: '/api/tts',                     method: 'POST', inputs: ['text'],                         status: 'needs_key', requires: 'ELEVENLABS_API_KEY' },
+  { id: 'S6',  name: 'AI Critic',            category: 'evaluation',  endpoint: '/api/generate',                method: 'POST', inputs: ['product'],                      status: 'active' },
+  { id: 'S7',  name: 'Context Card',         category: 'context',     endpoint: '/api/generate',                method: 'POST', inputs: ['product'],                      status: 'active' },
+  { id: 'S8',  name: 'LINE OA Connect',      category: 'integration', endpoint: '/api/line/send',               method: 'POST', inputs: ['message'],                      status: 'needs_key', requires: 'LINE_CHANNEL_TOKEN' },
+  { id: 'S9',  name: 'Learning Layer',       category: 'learning',    endpoint: '/api/skills/learning/patterns',method: 'GET',  inputs: [],                               status: 'active' },
+  { id: 'S10', name: 'Trend Analyzer',       category: 'trend',       endpoint: '/api/skills/trend',            method: 'POST', inputs: ['product', 'category', 'platform'], status: 'active' },
+  { id: 'S11', name: 'Hashtag Generator',    category: 'hashtag',     endpoint: '/api/skills/hashtag',          method: 'POST', inputs: ['product', 'category', 'platform'], status: 'active' },
+  { id: 'S12', name: 'SEO Thai',             category: 'seo',         endpoint: '/api/skills/seo',              method: 'POST', inputs: ['product', 'category', 'platform'], status: 'active' },
+  { id: 'S13', name: 'Sentiment Scanner',    category: 'sentiment',   endpoint: '/api/skills/sentiment',        method: 'POST', inputs: ['text'],                         status: 'active' },
+  { id: 'S14', name: 'Video Script',         category: 'video',       endpoint: '/api/skills/video-script',     method: 'POST', inputs: ['product', 'duration', 'style'], status: 'active' },
+  { id: 'S15', name: 'Multi-Language',       category: 'translate',   endpoint: '/api/skills/translate',        method: 'POST', inputs: ['text', 'from', 'to'],           status: 'active' },
+  { id: 'S16', name: 'Prompt Builder',       category: 'prompt',      endpoint: '/api/skills/prompt-builder',   method: 'POST', inputs: ['goal', 'technique'],            status: 'active' },
+  { id: 'S17', name: 'Cultural Wisdom',      category: 'wisdom',      endpoint: '/api/skills/cultural-wisdom',  method: 'POST', inputs: ['situation', 'tradition'],       status: 'active' },
+  { id: 'S18', name: 'Sales Conversion Engine', category: 'sales',   endpoint: '/api/skills/promo-engine',     method: 'POST', inputs: ['product', 'usp', 'platform'],   status: 'active' },
+  { id: 'S19', name: 'Supply Chain AI',      category: 'operations',  endpoint: '/api/skills/supply-chain',     method: 'POST', inputs: ['product', 'category', 'sourcing'], status: 'active' },
+];
+
+app.get('/api/skills', (req, res) => {
+  const cat = (req.query.category || '').toLowerCase();
+  const skills = cat ? SKILLS_REGISTRY.filter(s => s.category === cat) : SKILLS_REGISTRY;
+  const categories = [...new Set(SKILLS_REGISTRY.map(s => s.category))];
+  res.json({
+    success: true,
+    total: SKILLS_REGISTRY.length,
+    active: SKILLS_REGISTRY.filter(s => s.status === 'active').length,
+    ai_engine: anthropic ? 'claude' : (gemini ? 'gemini' : 'mock'),
+    categories,
+    skills,
+    ts: new Date().toISOString(),
+  });
+});
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  AI AGENT SCHEDULER

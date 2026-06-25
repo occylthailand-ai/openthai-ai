@@ -32,8 +32,27 @@ export default function SupplyChainPage() {
   const [producers, setProducers] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [ai, setAi] = useState({ open: false, product: '', loading: false, data: null, err: '' });
 
   const keyHeader = useCallback(() => ({ 'x-admin-key': adminKey || ADMIN_KEY_FALLBACK }), [adminKey]);
+
+  // ── ปิดวงจร: ดึงข้อมูลสินค้าจริง → ให้ S19 AI วางแผน supply chain รายสินค้า ──
+  const askAI = async (p) => {
+    const product = p?.name || '';
+    if (!product) return;
+    setAi({ open: true, product, loading: true, data: null, err: '' });
+    try {
+      const monthly_volume = Number.isFinite(+p?.sold) && +p.sold > 0 ? String(p.sold) : '';
+      const res = await fetch(apiUrl('/api/skills/supply-chain'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product, category: p?.category || 'OTOP', monthly_volume, channels: 'ออนไลน์' }),
+      });
+      const d = await res.json();
+      if (!res.ok) setAi(a => ({ ...a, loading: false, err: d.error || 'เกิดข้อผิดพลาด' }));
+      else setAi(a => ({ ...a, loading: false, data: d }));
+    } catch { setAi(a => ({ ...a, loading: false, err: 'ไม่สามารถเชื่อมต่อได้' })); }
+  };
+  const closeAI = () => setAi({ open: false, product: '', loading: false, data: null, err: '' });
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -109,13 +128,17 @@ export default function SupplyChainPage() {
                 <div style={{ display: 'grid', gap: 8 }}>
                   {lowStock.map((p, i) => (
                     <div key={p.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, background: '#fef2f2', borderRadius: 10, padding: '10px 14px' }}>
-                      <div>
+                      <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{p.name}</div>
                         <div style={{ fontSize: 11, color: '#94a3b8' }}>{p.sku || '—'}</div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: '#ef4444' }}>เหลือ {p.stock}</div>
-                        <div style={{ fontSize: 11, color: '#94a3b8' }}>จุดเตือน {p.low_stock}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: '#ef4444' }}>เหลือ {p.stock}</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8' }}>จุดเตือน {p.low_stock}</div>
+                        </div>
+                        <button onClick={() => askAI(p)} title="ให้ AI วางแผนจัดซื้อ/พยากรณ์สินค้านี้"
+                          style={{ background: '#fff', border: `1px solid ${sky}`, color: sky, borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>🤖 AI วางแผน</button>
                       </div>
                     </div>
                   ))}
@@ -137,6 +160,7 @@ export default function SupplyChainPage() {
                         <th style={{ padding: '6px 8px', textAlign: 'right' }}>คงเหลือ</th>
                         <th style={{ padding: '6px 8px', textAlign: 'right' }}>ขายแล้ว</th>
                         <th style={{ padding: '6px 8px', textAlign: 'center' }}>สถานะ</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'center' }}>AI</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -147,6 +171,10 @@ export default function SupplyChainPage() {
                           <td style={{ padding: '8px', textAlign: 'right', color: '#475569' }}>{r.sold}</td>
                           <td style={{ padding: '8px', textAlign: 'center' }}>
                             <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: r.low ? '#ef4444' : '#10b981', borderRadius: 20, padding: '2px 10px' }}>{r.low ? 'สั่งซื้อ' : 'ปกติ'}</span>
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <button onClick={() => askAI(r)} title="ให้ AI วางแผนสินค้านี้"
+                              style={{ background: 'transparent', border: `1px solid ${sky}`, color: sky, borderRadius: 6, padding: '3px 8px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>🤖</button>
                           </td>
                         </tr>
                       ))}
@@ -194,6 +222,62 @@ export default function SupplyChainPage() {
           </div>
         )}
       </div>
+
+      {/* ── AI Strategy Modal (S19 ปิดวงจรกับข้อมูลจริง) ── */}
+      {ai.open && (
+        <div onClick={closeAI} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '5vh 4%', zIndex: 1000, overflowY: 'auto' }}>
+          <div onClick={e => e.stopPropagation()} style={card({ maxWidth: 560, width: '100%', maxHeight: '90vh', overflowY: 'auto' })}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 11, color: sky, fontWeight: 700 }}>🤖 SUPPLY CHAIN AI · S19</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#1e293b' }}>{ai.product}</div>
+              </div>
+              <button onClick={closeAI} style={{ background: '#f1f5f9', border: 'none', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 16, color: '#64748b' }}>✕</button>
+            </div>
+
+            {ai.loading && <div style={{ textAlign: 'center', padding: '30px 0', color: '#64748b', fontSize: 14 }}>⏳ AI กำลังวางแผน supply chain...</div>}
+            {ai.err && <div style={{ color: '#ef4444', fontSize: 13, padding: '10px 0' }}>⚠️ {ai.err}</div>}
+
+            {ai.data && (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {ai.data.summary && (
+                  <div style={{ background: '#f0f9ff', borderRadius: 10, padding: '10px 14px', display: 'flex', gap: 12, alignItems: 'center' }}>
+                    {typeof ai.data.health_score === 'number' && <div style={{ fontSize: 26, fontWeight: 900, color: ai.data.health_score >= 75 ? '#10b981' : ai.data.health_score >= 55 ? '#f59e0b' : '#ef4444' }}>{ai.data.health_score}</div>}
+                    <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{ai.data.summary}</div>
+                  </div>
+                )}
+                {ai.data.demand_forecast && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: sky, marginBottom: 6 }}>📈 พยากรณ์ & จุดสั่งซื้อ</div>
+                    <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>
+                      <div><strong>แนวโน้ม:</strong> {ai.data.demand_forecast.trend}</div>
+                      {ai.data.demand_forecast.safety_stock_advice && <div><strong>Safety stock:</strong> {ai.data.demand_forecast.safety_stock_advice}</div>}
+                      {ai.data.demand_forecast.reorder_point && <div><strong>Reorder point:</strong> {ai.data.demand_forecast.reorder_point}</div>}
+                    </div>
+                  </div>
+                )}
+                {ai.data.action_plan?.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: sky, marginBottom: 6 }}>✅ สิ่งที่ควรทำ</div>
+                    {ai.data.action_plan.slice(0, 4).map((a, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#475569', padding: '3px 0' }}><span style={{ color: sky, fontWeight: 800 }}>{i + 1}.</span><span>{a}</span></div>
+                    ))}
+                  </div>
+                )}
+                {ai.data.risk_management?.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: sky, marginBottom: 6 }}>⚠️ ความเสี่ยงสำคัญ</div>
+                    {ai.data.risk_management.slice(0, 3).map((r, i) => (
+                      <div key={i} style={{ fontSize: 12, color: '#475569', padding: '3px 0' }}>• <strong>{r.risk}</strong> — 🛡️ {r.mitigation}</div>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => navigate('/skills')} style={{ background: `linear-gradient(135deg,${sky},#0284c7)`, border: 'none', borderRadius: 10, padding: '10px', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginTop: 4 }}>เปิดการวิเคราะห์เต็มรูปแบบ →</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
