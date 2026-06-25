@@ -3340,6 +3340,54 @@ ${contribution ? `(กำไรส่วนเกินต่อหน่วย 
   });
 });
 
+// S24 · POST /api/skills/campaign-calendar — Campaign Calendar Planner (ปฏิทินแคมเปญตามเทศกาลไทย)
+app.post('/api/skills/campaign-calendar', generateLimiter, async (req, res) => {
+  const { product, category = 'OTOP', period = 'ทั้งปี', platform = 'TikTok, Shopee' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นนักวางแผนการตลาดตามฤดูกาล (Seasonal Marketing Planner) ที่เชี่ยวชาญปฏิทินเทศกาล/เทรนด์ช้อปปิ้งของไทย
+(ปีใหม่ · ตรุษจีน · วาเลนไทน์ · สงกรานต์ · วันแม่/วันพ่อ · ลอยกระทง · 9.9/10.10/11.11/12.12 · Black Friday · ของฝากเทศกาล)
+
+สินค้า: "${product.slice(0, 200)}" (หมวด ${category}) · ช่วงที่วางแผน: ${period} · ช่องทาง: ${platform}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "summary": "สรุปกลยุทธ์ปฏิทินแคมเปญ 2-3 ประโยค",
+  "events": [
+    {"period":"ช่วงเวลา/เดือน","occasion":"เทศกาล/โอกาส","promo_angle":"มุมโปรโมชั่นที่เข้ากับสินค้า","content_idea":"ไอเดียคอนเทนต์","prep_lead":"ควรเริ่มเตรียมก่อนกี่วัน"}
+  ],
+  "key_dates": ["วันที่ห้ามพลาดสำหรับสินค้านี้ 1","2","3","4"],
+  "always_on_ideas": ["คอนเทนต์ที่ทำได้ตลอดไม่ผูกเทศกาล 1","2","3"],
+  "budget_focus": "ช่วงไหนควรทุ่มงบโฆษณามากที่สุด + เหตุผล",
+  "tips": ["เคล็ดลับการทำแคมเปญตามเทศกาล 1","2","3"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 2560);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/CampaignCalendar', e.message); }
+
+  // Mock fallback — ปฏิทินเทศกาลไทยหลัก
+  const pName = product.slice(0, 30);
+  res.json({
+    success: true, source: 'mock',
+    summary: `วางแคมเปญ ${pName} ตามจังหวะเทศกาลไทยตลอด${period} เน้นช่วงไฮซีซั่นของฝาก (ตรุษจีน · สงกรานต์ · ปลายปี) และ Double-Day Sale (11.11/12.12) เป็นหมุดหมายหลัก`,
+    events: [
+      { period: 'ม.ค. (ก่อนตรุษจีน)', occasion: 'ตรุษจีน · ของฝาก/ของไหว้', promo_angle: 'เซ็ตของขวัญมงคล สีแดง-ทอง', content_idea: 'คลิป "ของฝากตรุษจีนถูกใจผู้ใหญ่"', prep_lead: '30 วัน' },
+      { period: 'ก.พ.', occasion: 'วาเลนไทน์', promo_angle: 'เซ็ตคู่/ของขวัญให้คนพิเศษ', content_idea: 'รีวิว "ของขวัญที่ให้แล้วประทับใจ"', prep_lead: '21 วัน' },
+      { period: 'เม.ย.', occasion: 'สงกรานต์ · ของฝากกลับบ้าน', promo_angle: 'แพ็กเดินทาง/ของฝากญาติ', content_idea: 'คลิป "กลับบ้านทั้งที ฝากอะไรดี"', prep_lead: '30 วัน' },
+      { period: 'ส.ค.', occasion: 'วันแม่', promo_angle: 'ของขวัญขอบคุณแม่ + ห่อพิเศษ', content_idea: 'คอนเทนต์เล่าเรื่องอบอุ่นแทนคำขอบคุณ', prep_lead: '21 วัน' },
+      { period: 'พ.ย.', occasion: '11.11 · Black Friday', promo_angle: 'Flash Sale ลดแรง + bundle', content_idea: 'นับถอยหลัง + รีวิวกระตุ้น FOMO', prep_lead: '30 วัน' },
+      { period: 'ธ.ค.', occasion: '12.12 · ปีใหม่/ของขวัญ', promo_angle: 'เซ็ตของขวัญปีใหม่ พรีเมียม', content_idea: 'Gift Guide "ของขวัญปีใหม่งบ X บาท"', prep_lead: '30 วัน' },
+    ],
+    key_dates: ['11.11 (Double Day ใหญ่สุด)', '12.12 + ปลายปี', 'ก่อนตรุษจีน 2-3 สัปดาห์', 'ก่อนสงกรานต์ 2-3 สัปดาห์'],
+    always_on_ideas: ['รีวิวจากลูกค้าจริง (UGC)', 'Behind the scenes การผลิต/แหล่งที่มา', 'How-to / วิธีใช้สินค้าให้คุ้ม'],
+    budget_focus: 'ทุ่มงบช่วง พ.ย.-ธ.ค. (11.11/12.12/ปีใหม่) มากสุด เพราะ intent ซื้อสูงและของฝากปลายปีพีค',
+    tips: ['เตรียมสต๊อก + คอนเทนต์ล่วงหน้า 3-4 สัปดาห์ก่อนเทศกาล', 'ตั้งราคา anchor ก่อนวันเซลเพื่อให้ส่วนลดน่าเชื่อ', 'ยิงแอด retarget คนที่ดูช่วงก่อนเทศกาลในวัน Double Day'],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3366,6 +3414,7 @@ const SKILLS_REGISTRY = [
   { id: 'S21', name: 'Customer Service AI',  category: 'support',     endpoint: '/api/skills/customer-service', method: 'POST', inputs: ['message', 'product', 'channel'], status: 'active' },
   { id: 'S22', name: 'Ad Budget Planner',    category: 'ads',         endpoint: '/api/skills/ad-budget',        method: 'POST', inputs: ['product', 'budget', 'platforms'], status: 'active' },
   { id: 'S23', name: 'Break-even Planner',   category: 'finance',     endpoint: '/api/skills/break-even',       method: 'POST', inputs: ['product', 'price', 'unit_cost', 'fixed_costs'], status: 'active' },
+  { id: 'S24', name: 'Campaign Calendar',    category: 'planning',    endpoint: '/api/skills/campaign-calendar',method: 'POST', inputs: ['product', 'category', 'period'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -3966,6 +4015,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S21', name:'Customer Service AI',pct:83, color:'#22c55e', category:'support',    status:'✅' },
       { id:'S22', name:'Ad Budget Planner',pct:85, color:'#f43f5e', category:'ads',         status:'✅' },
       { id:'S23', name:'Break-even Planner',pct:87, color:'#0d9488', category:'finance',    status:'✅' },
+      { id:'S24', name:'Campaign Calendar',pct:86, color:'#d946ef', category:'planning',    status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },

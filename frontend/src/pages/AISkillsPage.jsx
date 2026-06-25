@@ -25,6 +25,7 @@ const TABS = [
   { id: 'cs',          icon: '💬', label: 'Customer Service',   color: '#22c55e', skill: 'S21', endpoint: '/api/skills/customer-service' },
   { id: 'adbudget',    icon: '📣', label: 'Ad Budget Planner',  color: '#f43f5e', skill: 'S22', endpoint: '/api/skills/ad-budget' },
   { id: 'breakeven',   icon: '⚖️', label: 'Break-even Planner', color: '#0d9488', skill: 'S23', endpoint: '/api/skills/break-even' },
+  { id: 'campaign',    icon: '📆', label: 'Campaign Calendar',  color: '#d946ef', skill: 'S24', endpoint: '/api/skills/campaign-calendar' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -1844,6 +1845,99 @@ function TabBreakEven() {
   );
 }
 
+// ─── Tab: Campaign Calendar Planner (S24) ─────────────────────────────────────
+const CC_PERIODS = ['ทั้งปี', 'ไตรมาส 1 (ม.ค.-มี.ค.)', 'ไตรมาส 2 (เม.ย.-มิ.ย.)', 'ไตรมาส 3 (ก.ค.-ก.ย.)', 'ไตรมาส 4 (ต.ค.-ธ.ค.)', 'ครึ่งปีหลัง'];
+
+function TabCampaignCalendar() {
+  const [form, setForm] = useState({ product: '', category: 'OTOP', period: 'ทั้งปี', platform: 'TikTok, Shopee' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const fuchsia = '#d946ef';
+
+  const run = async () => {
+    if (!form.product.trim()) { setError('กรุณาใส่ชื่อสินค้า'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/campaign-calendar'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: fuchsia, marginBottom: 16 }}>📆 ปฏิทินแคมเปญตามเทศกาลไทย</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น ของฝากOTOP, ชาสมุนไพร" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>หมวดหมู่</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>ช่วงที่วางแผน</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.period} onChange={e => setForm(f => ({ ...f, period: e.target.value }))}>
+                {CC_PERIODS.map(p => <option key={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+          <div><label style={labelSt}>ช่องทาง</label><input style={inputSt} placeholder="เช่น TikTok, Shopee, Facebook" value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))} /></div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${fuchsia},#c026d3)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังวางปฏิทิน...' : '📆 สร้างปฏิทินแคมเปญ'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {result.summary && (
+            <div style={card({ borderLeft: `4px solid ${fuchsia}` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: fuchsia }}>🗺️ กลยุทธ์ปฏิทิน</span>
+                <SourceBadge source={result.source} />
+              </div>
+              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+            </div>
+          )}
+
+          {result.events?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, color: fuchsia }}>🎉 ไทม์ไลน์แคมเปญ</div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {result.events.map((ev, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 12, borderLeft: `3px solid ${fuchsia}`, paddingLeft: 12 }}>
+                    <div style={{ minWidth: 90 }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: '#1e293b' }}>{ev.period}</div>
+                      {ev.prep_lead && <div style={{ fontSize: 10, color: '#94a3b8' }}>⏳ เตรียม {ev.prep_lead}</div>}
+                    </div>
+                    <div style={{ flex: 1, background: '#fdf4ff', borderRadius: 10, padding: '8px 12px' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#a21caf' }}>{ev.occasion}</div>
+                      {ev.promo_angle && <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>🎯 {ev.promo_angle}</div>}
+                      {ev.content_idea && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>🎬 {ev.content_idea}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.key_dates?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: fuchsia, marginBottom: 8 }}>📌 วันห้ามพลาด</div>{result.key_dates.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {d}</div>)}</div>}
+            {result.always_on_ideas?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: fuchsia, marginBottom: 8 }}>♾️ คอนเทนต์ทำได้ตลอด</div>{result.always_on_ideas.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {d}</div>)}</div>}
+          </div>
+
+          {result.budget_focus && <div style={card({ background: 'rgba(217,70,239,0.04)', borderColor: 'rgba(217,70,239,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#c026d3', marginBottom: 6 }}>💸 ช่วงทุ่มงบ</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.budget_focus}</div></div>}
+          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: fuchsia, marginBottom: 8 }}>💡 เคล็ดลับ</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -1930,7 +2024,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);
