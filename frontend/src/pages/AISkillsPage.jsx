@@ -19,6 +19,7 @@ const TABS = [
   { id: 'translate',   icon: '🌐', label: 'Multi-Language',    color: '#14b8a6', skill: 'S15' },
   { id: 'prompt',      icon: '⚡', label: 'Prompt Builder',    color: '#f59e0b', skill: 'S16' },
   { id: 'wisdom',      icon: '☯️', label: 'Cultural Wisdom',   color: '#b45309', skill: 'S17' },
+  { id: 'supplychain', icon: '🔗', label: 'Supply Chain AI',   color: '#0ea5e9', skill: 'S19' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -1204,6 +1205,224 @@ function TabCulturalWisdom() {
   );
 }
 
+// ─── Tab: Supply Chain AI (S19) ───────────────────────────────────────────────
+const SC_SOURCING = ['ผลิตเอง', 'ในประเทศ', 'นำเข้า', 'ผสม'];
+const SC_SEASONS  = ['ทั้งปี', 'ต้นปี (ม.ค.-มี.ค.)', 'สงกรานต์ (เม.ย.)', 'กลางปี (ก.ค.-ก.ย.)', 'ปลายปี (ต.ค.-ธ.ค.)', 'เทศกาล/ของฝาก'];
+
+function TabSupplyChain() {
+  const [form, setForm] = useState({ product: '', category: 'OTOP', monthly_volume: '', unit_cost: '', sourcing: 'ผสม', lead_time: '', season: 'ทั้งปี', channels: 'ออนไลน์' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const sky = '#0ea5e9';
+
+  const run = async () => {
+    if (!form.product.trim()) { setError('กรุณาใส่ชื่อสินค้า'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/supply-chain'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) { setError(d.error || 'เกิดข้อผิดพลาด'); } else { setResult(d); }
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  const lvlColor = l => (/สูง/.test(l) ? '#10b981' : /ต่ำ/.test(l) ? '#ef4444' : '#f59e0b');
+  const riskColor = l => (/สูง/.test(l) ? '#ef4444' : /ต่ำ/.test(l) ? '#10b981' : '#f59e0b');
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: sky, marginBottom: 16 }}>🔗 วิเคราะห์ห่วงโซ่อุปทาน (Supply Chain)</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น น้ำพริกเผา, ผ้าไหมมัดหมี่, กาแฟดอยช้าง" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>หมวดหมู่</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>แหล่งจัดหา</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.sourcing} onChange={e => setForm(f => ({ ...f, sourcing: e.target.value }))}>
+                {SC_SOURCING.map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>ยอดขาย/เดือน (ชิ้น)</label><input style={inputSt} type="number" placeholder="เช่น 150" value={form.monthly_volume} onChange={e => setForm(f => ({ ...f, monthly_volume: e.target.value }))} /></div>
+            <div><label style={labelSt}>ต้นทุน/หน่วย (บาท)</label><input style={inputSt} type="number" placeholder="เช่น 45" value={form.unit_cost} onChange={e => setForm(f => ({ ...f, unit_cost: e.target.value }))} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>Lead time จัดหา</label><input style={inputSt} placeholder="เช่น 14 วัน" value={form.lead_time} onChange={e => setForm(f => ({ ...f, lead_time: e.target.value }))} /></div>
+            <div><label style={labelSt}>ฤดูกาลขายดี</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.season} onChange={e => setForm(f => ({ ...f, season: e.target.value }))}>
+                {SC_SEASONS.map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+          <div><label style={labelSt}>ช่องทางจัดจำหน่าย</label><input style={inputSt} placeholder="เช่น ออนไลน์, Shopee/Lazada, หน้าร้าน, ส่งต่างจังหวัด" value={form.channels} onChange={e => setForm(f => ({ ...f, channels: e.target.value }))} /></div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${sky},#0284c7)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังวิเคราะห์...' : '🔗 วิเคราะห์ Supply Chain'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {/* Health score + summary */}
+          <div style={{ ...card({ borderLeft: `4px solid ${sky}` }), display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+            {typeof result.health_score === 'number' && (
+              <div style={{ textAlign: 'center', minWidth: 90 }}>
+                <div style={{ fontSize: 38, fontWeight: 900, color: result.health_score >= 75 ? '#10b981' : result.health_score >= 55 ? '#f59e0b' : '#ef4444' }}>{result.health_score}</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>HEALTH /100</div>
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <div style={{ fontWeight: 800, fontSize: 14, color: sky }}>📋 สรุปภาพรวม</div>
+                <SourceBadge source={result.source} />
+              </div>
+              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+            </div>
+          </div>
+
+          {/* Demand forecast */}
+          {result.demand_forecast && (
+            <div style={card()}>
+              <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 12, color: sky }}>📈 พยากรณ์ดีมานด์</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 10, marginBottom: 12 }}>
+                <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 12px' }}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>แนวโน้ม</div><div style={{ fontSize: 13, color: '#1e293b' }}>{result.demand_forecast.trend}</div></div>
+                <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 12px' }}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>ฤดูกาล</div><div style={{ fontSize: 13, color: '#1e293b' }}>{result.demand_forecast.seasonality}</div></div>
+              </div>
+              {result.demand_forecast.monthly_outlook?.length > 0 && (
+                <div style={{ display: 'grid', gap: 6, marginBottom: 12 }}>
+                  {result.demand_forecast.monthly_outlook.map((m, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: '#f8fafc', borderRadius: 8, padding: '8px 12px' }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', minWidth: 110 }}>{m.period}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: lvlColor(m.demand_level), borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>{m.demand_level}</span>
+                      <span style={{ fontSize: 12, color: '#64748b', flex: 1 }}>{m.note}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 10 }}>
+                {result.demand_forecast.safety_stock_advice && <div style={{ background: '#eff6ff', borderRadius: 8, padding: '8px 12px' }}><div style={{ fontSize: 11, color: '#0ea5e9', fontWeight: 700 }}>🛡️ Safety Stock</div><div style={{ fontSize: 12, color: '#475569' }}>{result.demand_forecast.safety_stock_advice}</div></div>}
+                {result.demand_forecast.reorder_point && <div style={{ background: '#eff6ff', borderRadius: 8, padding: '8px 12px' }}><div style={{ fontSize: 11, color: '#0ea5e9', fontWeight: 700 }}>🔄 Reorder Point</div><div style={{ fontSize: 12, color: '#475569' }}>{result.demand_forecast.reorder_point}</div></div>}
+              </div>
+            </div>
+          )}
+
+          {/* Inventory + Sourcing */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.inventory_strategy && (
+              <div style={card()}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: sky }}>📦 กลยุทธ์สต๊อก</div>
+                {Object.entries({ 'ABC': result.inventory_strategy.abc_focus, 'ระดับสต๊อก': result.inventory_strategy.stock_level, 'Turnover': result.inventory_strategy.turnover_tip, 'ของค้าง': result.inventory_strategy.deadstock_risk }).map(([k, v]) => v && (
+                  <div key={k} style={{ marginBottom: 8 }}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>{k}</div><div style={{ fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{v}</div></div>
+                ))}
+              </div>
+            )}
+            {result.sourcing_strategy && (
+              <div style={card()}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: sky }}>🏭 กลยุทธ์จัดซื้อ/จัดหา</div>
+                {result.sourcing_strategy.recommendation && <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.5, marginBottom: 8 }}>{result.sourcing_strategy.recommendation}</div>}
+                {result.sourcing_strategy.supplier_criteria?.length > 0 && (
+                  <><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>เกณฑ์เลือกซัพพลายเออร์</div>
+                  {result.sourcing_strategy.supplier_criteria.map((c, i) => <div key={i} style={{ fontSize: 12, color: '#475569' }}>✓ {c}</div>)}</>
+                )}
+                {result.sourcing_strategy.moq_strategy && <div style={{ marginTop: 8, fontSize: 12, color: '#475569' }}><strong>MOQ:</strong> {result.sourcing_strategy.moq_strategy}</div>}
+                {result.sourcing_strategy.dual_sourcing && <div style={{ marginTop: 6, fontSize: 12, color: '#475569' }}><strong>สำรอง:</strong> {result.sourcing_strategy.dual_sourcing}</div>}
+              </div>
+            )}
+          </div>
+
+          {/* Logistics */}
+          {result.logistics && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: sky }}>🚚 โลจิสติกส์ & การจัดส่ง</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+                {result.logistics.recommended_channels?.length > 0 && (
+                  <div><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>ช่องทางขนส่งแนะนำ</div>{result.logistics.recommended_channels.map((c, i) => <div key={i} style={{ fontSize: 12, color: '#475569' }}>• {c}</div>)}</div>
+                )}
+                {result.logistics.cost_optimization?.length > 0 && (
+                  <div><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>ลดต้นทุนขนส่ง</div>{result.logistics.cost_optimization.map((c, i) => <div key={i} style={{ fontSize: 12, color: '#475569' }}>• {c}</div>)}</div>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 8, marginTop: 10 }}>
+                {result.logistics.delivery_sla && <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>⏱️ SLA</div><div style={{ fontSize: 12, color: '#475569' }}>{result.logistics.delivery_sla}</div></div>}
+                {result.logistics.packaging_tip && <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>📦 บรรจุภัณฑ์</div><div style={{ fontSize: 12, color: '#475569' }}>{result.logistics.packaging_tip}</div></div>}
+                {result.logistics.fulfillment_model && <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>🏬 Fulfillment</div><div style={{ fontSize: 12, color: '#475569' }}>{result.logistics.fulfillment_model}</div></div>}
+              </div>
+            </div>
+          )}
+
+          {/* Cost structure */}
+          {result.cost_structure && (
+            <div style={card({ background: 'rgba(14,165,233,0.04)', borderColor: 'rgba(14,165,233,0.2)' })}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: '#0284c7' }}>💰 โครงสร้างต้นทุน & กำไร</div>
+              {result.cost_structure.landed_cost_factors?.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                  {result.cost_structure.landed_cost_factors.map((c, i) => <span key={i} style={{ fontSize: 12, background: '#fff', border: '1px solid rgba(14,165,233,0.25)', color: '#0284c7', borderRadius: 20, padding: '3px 10px' }}>{c}</span>)}
+                </div>
+              )}
+              {result.cost_structure.margin_protection && <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}><strong>ปกป้องกำไร:</strong> {result.cost_structure.margin_protection}</div>}
+              {result.cost_structure.pricing_note && <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6, marginTop: 4 }}><strong>ตั้งราคา:</strong> {result.cost_structure.pricing_note}</div>}
+            </div>
+          )}
+
+          {/* Risk management */}
+          {result.risk_management?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: sky }}>⚠️ การบริหารความเสี่ยง</div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {result.risk_management.map((r, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px', borderLeft: `3px solid ${riskColor(r.likelihood)}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{r.risk}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: riskColor(r.likelihood), borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>โอกาส {r.likelihood}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>📌 {r.impact}</div>
+                    <div style={{ fontSize: 12, color: '#059669', marginTop: 2 }}>🛡️ {r.mitigation}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action plan + KPIs */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.action_plan?.length > 0 && (
+              <div style={card({ borderLeft: `4px solid ${sky}` })}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: sky }}>✅ แผนปฏิบัติการ</div>
+                {result.action_plan.map((a, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#475569', padding: '4px 0' }}>
+                    <span style={{ color: sky, fontWeight: 800 }}>{i + 1}.</span><span style={{ lineHeight: 1.5 }}>{a}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {result.kpis?.length > 0 && (
+              <div style={card()}>
+                <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: sky }}>📊 KPIs ที่ควรวัด</div>
+                {result.kpis.map((k, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{k.metric}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#0284c7' }}>{k.target}</span>
+                    </div>
+                    {k.why && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{k.why}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AISkillsPage() {
   const navigate = useNavigate();
@@ -1218,7 +1437,7 @@ export default function AISkillsPage() {
         <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>🧠 AI Skills Hub</div>
-          <div style={{ fontSize: 11, color: '#94a3b8' }}>S9–S17 · Learning · Trend · Hashtag · SEO · Sentiment · Video · Translate · Prompt Builder · Cultural Wisdom</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>S9–S19 · Learning · Trend · Hashtag · SEO · Sentiment · Video · Translate · Prompt Builder · Cultural Wisdom · Supply Chain</div>
         </div>
         <button onClick={() => navigate('/ai-generator')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⚡ AI Generator</button>
       </header>
@@ -1256,6 +1475,7 @@ export default function AISkillsPage() {
         {tab === 'translate' && <TabTranslate />}
         {tab === 'prompt'    && <TabPromptBuilder />}
         {tab === 'wisdom'    && <TabCulturalWisdom />}
+        {tab === 'supplychain' && <TabSupplyChain />}
       </div>
     </div>
   );

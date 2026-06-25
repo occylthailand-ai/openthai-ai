@@ -66,6 +66,7 @@ import KOLBriefPage from './pages/KOLBriefPage';
 import StrategyCenterPage from './pages/StrategyCenterPage';
 import PitchDeckPage from './pages/PitchDeckPage';
 import IntegrationHubPage from './pages/IntegrationHubPage';
+import SupplyChainPage from './pages/SupplyChainPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -119,6 +120,7 @@ function App() {
             <Route path="/ai-tools" element={isAuthenticated ? <AIToolsHub /> : <Navigate to="/login" />} />
             <Route path="/agent" element={isAuthenticated ? <AgentPage /> : <Navigate to="/login" />} />
             <Route path="/skills" element={isAuthenticated ? <AISkillsPage /> : <Navigate to="/login" />} />
+            <Route path="/supply-chain" element={isAuthenticated ? <SupplyChainPage /> : <Navigate to="/login" />} />
             <Route path="/promo-engine" element={isAuthenticated ? <PromoEnginePage /> : <Navigate to="/login" />} />
             <Route path="/daily-pr" element={isAuthenticated ? <DailyPRPage /> : <Navigate to="/login" />} />
             <Route path="/ultra-promo" element={isAuthenticated ? <UltraPromoPage /> : <Navigate to="/login" />} />

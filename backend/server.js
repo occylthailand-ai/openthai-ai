@@ -2937,6 +2937,161 @@ ${competitor ? `คู่แข่ง: ${competitor}` : ''}
   });
 });
 
+// S19 · POST /api/skills/supply-chain — Supply Chain AI Strategist (ครบทุกมิติ)
+// วิเคราะห์ห่วงโซ่อุปทานสำหรับ SME/OTOP ไทย: พยากรณ์ดีมานด์ · สต๊อก · จัดซื้อ · โลจิสติกส์ · ความเสี่ยง
+app.post('/api/skills/supply-chain', generateLimiter, async (req, res) => {
+  const {
+    product, category = 'OTOP', monthly_volume = '', unit_cost = '',
+    sourcing = 'ผสม', lead_time = '', season = 'ทั้งปี', channels = 'ออนไลน์',
+  } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นที่ปรึกษา Supply Chain & Operations ระดับโลก ผสมความเชี่ยวชาญ APICS (CPIM/CSCP), Lean, Just-in-Time
+และเข้าใจบริบท SME/OTOP/เกษตรกรไทยอย่างลึกซึ้ง (ฤดูกาล, ต้นทุนขนส่งในประเทศ, ผู้ผลิตรายย่อย, ตลาดออนไลน์ไทย)
+
+─── ข้อมูลธุรกิจ ───
+สินค้า: "${product.slice(0, 200)}"
+หมวด: ${category}
+ยอดขาย/เดือนโดยประมาณ: ${monthly_volume || 'ไม่ระบุ'} ชิ้น
+ต้นทุนต่อหน่วย: ${unit_cost || 'ไม่ระบุ'} บาท
+แหล่งจัดหา: ${sourcing} (ผลิตเอง/ในประเทศ/นำเข้า/ผสม)
+Lead time จัดหา: ${lead_time || 'ไม่ระบุ'}
+ฤดูกาลขายดี: ${season}
+ช่องทางจัดจำหน่าย: ${channels}
+
+─── ภารกิจ ───
+วิเคราะห์ห่วงโซ่อุปทานครบทุกมิติให้ผู้ประกอบการนำไปใช้ได้จริง ตอบกลับเป็น JSON เท่านั้น:
+
+{
+  "health_score": 0-100 (คะแนนความพร้อม supply chain โดยรวมจากข้อมูลที่ให้),
+  "summary": "สรุปภาพรวม 2-3 ประโยค — จุดแข็ง จุดที่ต้องระวัง",
+  "demand_forecast": {
+    "trend": "ขาขึ้น / ทรงตัว / ขาลง — พร้อมเหตุผลสั้นๆ",
+    "seasonality": "อธิบายรูปแบบฤดูกาลของสินค้านี้ในตลาดไทย",
+    "monthly_outlook": [
+      {"period":"ช่วงเดือน เช่น ม.ค.-มี.ค.","demand_level":"สูง/กลาง/ต่ำ","note":"เหตุผล + สิ่งที่ควรเตรียม"},
+      {"period":"...","demand_level":"...","note":"..."},
+      {"period":"...","demand_level":"...","note":"..."},
+      {"period":"...","demand_level":"...","note":"..."}
+    ],
+    "safety_stock_advice": "แนะนำระดับ safety stock + วิธีคำนวณอย่างง่ายสำหรับ SME",
+    "reorder_point": "จุดที่ควรสั่งซื้อใหม่ — อธิบายเป็นสูตร/ตัวเลขเข้าใจง่าย"
+  },
+  "inventory_strategy": {
+    "abc_focus": "สินค้านี้ควรถูกจัดเป็น A/B/C และบริหารอย่างไร",
+    "stock_level": "ระดับสต๊อกที่เหมาะสม + เหตุผล",
+    "turnover_tip": "วิธีเพิ่ม inventory turnover / ลดของค้าง",
+    "deadstock_risk": "ความเสี่ยงของค้างสต๊อก + วิธีป้องกัน"
+  },
+  "sourcing_strategy": {
+    "recommendation": "คำแนะนำเรื่องแหล่งจัดหา (ผลิตเอง vs จ้างผลิต vs นำเข้า) สำหรับสินค้านี้",
+    "supplier_criteria": ["เกณฑ์เลือกซัพพลายเออร์ 1","เกณฑ์ 2","เกณฑ์ 3","เกณฑ์ 4"],
+    "negotiation_tips": ["เคล็ดลับต่อรอง 1","เคล็ดลับ 2","เคล็ดลับ 3"],
+    "moq_strategy": "กลยุทธ์จัดการ MOQ (ขั้นต่ำการสั่ง) ไม่ให้จมทุน",
+    "dual_sourcing": "ควรมีซัพพลายเออร์สำรองไหม + เหตุผล"
+  },
+  "logistics": {
+    "recommended_channels": ["ช่องทางขนส่งที่เหมาะ 1","ช่องทาง 2","ช่องทาง 3"],
+    "cost_optimization": ["วิธีลดต้นทุนขนส่ง 1","วิธี 2","วิธี 3"],
+    "delivery_sla": "เป้าหมายเวลาจัดส่งที่แข่งขันได้ในตลาดไทย",
+    "packaging_tip": "คำแนะนำบรรจุภัณฑ์ — ลดของเสียหาย + ต้นทุน + ภาพลักษณ์",
+    "fulfillment_model": "แนะนำโมเดล fulfillment (self / 3PL / dropship / marketplace warehouse)"
+  },
+  "cost_structure": {
+    "landed_cost_factors": ["ปัจจัยต้นทุนรวมที่ต้องคิด 1","ปัจจัย 2","ปัจจัย 3","ปัจจัย 4"],
+    "margin_protection": "วิธีปกป้องกำไรเมื่อต้นทุน/ขนส่งผันผวน",
+    "pricing_note": "ข้อควรระวังเรื่องการตั้งราคาให้ครอบคลุมต้นทุน supply chain"
+  },
+  "risk_management": [
+    {"risk":"ความเสี่ยง 1","likelihood":"สูง/กลาง/ต่ำ","impact":"ผลกระทบ","mitigation":"วิธีรับมือ"},
+    {"risk":"ความเสี่ยง 2","likelihood":"...","impact":"...","mitigation":"..."},
+    {"risk":"ความเสี่ยง 3","likelihood":"...","impact":"...","mitigation":"..."},
+    {"risk":"ความเสี่ยง 4","likelihood":"...","impact":"...","mitigation":"..."}
+  ],
+  "action_plan": ["สิ่งที่ควรทำทันที 1","ทำใน 30 วัน 2","ทำใน 90 วัน 3","ทำระยะยาว 4","ทำระยะยาว 5"],
+  "kpis": [
+    {"metric":"ชื่อ KPI","target":"เป้าหมาย","why":"ทำไมต้องวัด"},
+    {"metric":"...","target":"...","why":"..."},
+    {"metric":"...","target":"...","why":"..."},
+    {"metric":"...","target":"...","why":"..."}
+  ]
+}`;
+
+  try {
+    const text = await callAI(prompt, 4096);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) {
+    addLog('warn', 'Skills/SupplyChain', e.message);
+  }
+
+  // Mock fallback — ใช้ heuristic เมื่อไม่มี AI key
+  const pName = product.slice(0, 40);
+  const vol = Number(monthly_volume) || 0;
+  const peak = season && season !== 'ทั้งปี' ? season : 'ปลายปี (ต.ค.-ธ.ค.)';
+  res.json({
+    success: true, source: 'mock',
+    health_score: vol > 0 && lead_time ? 72 : 58,
+    summary: `${pName} มีศักยภาพในช่องทาง${channels} จุดที่ต้องโฟกัสคือการจับคู่สต๊อกกับฤดูกาล (${peak}) และลดความเสี่ยงด้าน lead time จากแหล่งจัดหาแบบ${sourcing}`,
+    demand_forecast: {
+      trend: 'ทรงตัวถึงขาขึ้น — ขึ้นกับการทำตลาดออนไลน์อย่างต่อเนื่อง',
+      seasonality: `สินค้ากลุ่ม${category}มักขายดีช่วง${peak} และเทศกาล/ของฝาก — ควรเตรียมสต๊อกล่วงหน้า 1-2 เดือน`,
+      monthly_outlook: [
+        { period: 'ม.ค.-มี.ค.', demand_level: 'กลาง', note: 'หลังปีใหม่ดีมานด์ชะลอ — เคลียร์สต๊อกค้าง + ทำโปรกระตุ้น' },
+        { period: 'เม.ย.-มิ.ย.', demand_level: 'กลาง', note: 'สงกรานต์ของฝากดีช่วงสั้น — เตรียมเซ็ตของขวัญ' },
+        { period: 'ก.ค.-ก.ย.', demand_level: 'ต่ำ', note: 'นอกฤดู — ลดการสั่งผลิต เน้นทดสอบสินค้าใหม่' },
+        { period: 'ต.ค.-ธ.ค.', demand_level: 'สูง', note: 'ไฮซีซั่น/ของฝากปลายปี — สั่งผลิตล่วงหน้า ส.ค.-ก.ย.' },
+      ],
+      safety_stock_advice: 'safety stock ≈ ยอดขายเฉลี่ยต่อวัน × (lead time วัน) × 1.3 (เผื่อความผันผวน 30%)',
+      reorder_point: 'จุดสั่งซื้อใหม่ = (ยอดขายเฉลี่ย/วัน × lead time) + safety stock',
+    },
+    inventory_strategy: {
+      abc_focus: vol > 100 ? 'จัดเป็นกลุ่ม A — ทำยอดหลัก ควรตรวจสต๊อกถี่และไม่ให้ขาด' : 'จัดเป็นกลุ่ม B — ตรวจสต๊อกรายสัปดาห์ก็เพียงพอ',
+      stock_level: 'เก็บสต๊อกพอขาย 4-6 สัปดาห์ + safety stock — หลีกเลี่ยงการสต๊อกเกิน 3 เดือน',
+      turnover_tip: 'ตั้งเป้า inventory turnover ≥ 6 รอบ/ปี — ใช้โปรโมชั่นเคลียร์ของช้าทุกสิ้นไตรมาส',
+      deadstock_risk: 'สินค้าฤดูกาล/มีวันหมดอายุเสี่ยงค้างสูง — ผลิตแบบ batch เล็กถี่ๆ ดีกว่าล็อตใหญ่',
+    },
+    sourcing_strategy: {
+      recommendation: sourcing === 'นำเข้า' ? 'นำเข้า: ล็อกราคา + เผื่อ lead time และความเสี่ยงค่าเงิน/ศุลกากร' : 'ผลิตในประเทศ/จ้างผลิต: ยืดหยุ่นกว่า เหมาะกับ SME ที่ดีมานด์ยังผันผวน',
+      supplier_criteria: ['คุณภาพสม่ำเสมอ (มีมาตรฐาน/อย./มผช.)', 'ความตรงต่อเวลาส่งมอบ', 'ความยืดหยุ่นเรื่อง MOQ', 'เงื่อนไขการชำระเงิน/เครดิตเทอม'],
+      negotiation_tips: ['รวมออเดอร์เพื่อต่อรองราคาต่อหน่วย', 'ขอเครดิตเทอม 30-60 วันเพื่อเสริมสภาพคล่อง', 'ตกลงราคาคงที่เป็นช่วง (lock price) เมื่อนำเข้า'],
+      moq_strategy: 'เริ่มจาก MOQ ต่ำสุดที่ยอมรับได้ ทดสอบตลาดก่อน แล้วค่อยเพิ่มล็อตเมื่อยอดนิ่ง',
+      dual_sourcing: 'ควรมีซัพพลายเออร์สำรองอย่างน้อย 1 ราย — กันความเสี่ยงของขาด/ราคาพุ่ง',
+    },
+    logistics: {
+      recommended_channels: ['ไปรษณีย์ไทย/Flash/J&T สำหรับพัสดุย่อย', 'ขนส่งเหมาเที่ยวเมื่อส่งจำนวนมาก', 'คลัง marketplace (Shopee/Lazada) เพื่อส่งเร็วขึ้น'],
+      cost_optimization: ['เจรจาเรตขนส่งแบบ contract เมื่อยอดส่งสูง', 'รวมออเดอร์/รอบจัดส่งลดค่าเที่ยว', 'เลือกขนาดกล่องมาตรฐานลดค่าน้ำหนักเชิงปริมาตร'],
+      delivery_sla: 'ตั้งเป้าจัดส่งภายในประเทศ 1-3 วันทำการเพื่อแข่งขันบนแพลตฟอร์ม',
+      packaging_tip: 'บรรจุภัณฑ์กันกระแทกพอดีตัว — ลดของเสียหายและต้นทุนน้ำหนักเชิงปริมาตร พร้อมแบรนด์ดิ้งบนกล่อง',
+      fulfillment_model: vol > 200 ? 'พิจารณา 3PL หรือคลัง marketplace เมื่อยอดสูง' : 'Self-fulfillment เพียงพอในช่วงเริ่มต้น',
+    },
+    cost_structure: {
+      landed_cost_factors: ['ต้นทุนสินค้า/วัตถุดิบ', 'ค่าขนส่งขาเข้า + ขาออก', 'ค่าบรรจุภัณฑ์', 'ค่าธรรมเนียมแพลตฟอร์ม/ชำระเงิน'],
+      margin_protection: 'คำนวณ landed cost จริงทุกล็อต ตั้งราคาให้เผื่อค่าขนส่งผันผวน ≥ 10%',
+      pricing_note: 'อย่าตั้งราคาจากต้นทุนสินค้าอย่างเดียว — ต้องรวมค่าขนส่ง บรรจุภัณฑ์ และค่าธรรมเนียมแพลตฟอร์ม',
+    },
+    risk_management: [
+      { risk: 'ของขาดสต๊อกช่วงไฮซีซั่น', likelihood: 'สูง', impact: 'เสียยอดขาย + เสียอันดับร้าน', mitigation: 'สั่งผลิตล่วงหน้า + safety stock + ซัพพลายเออร์สำรอง' },
+      { risk: 'Lead time ผู้ผลิตล่าช้า', likelihood: 'กลาง', impact: 'ส่งช้า ลูกค้าไม่พอใจ', mitigation: 'ทำสัญญา SLA + บัฟเฟอร์เวลาในการวางแผน' },
+      { risk: 'ต้นทุน/ค่าขนส่งพุ่ง', likelihood: 'กลาง', impact: 'กำไรลด', mitigation: 'ล็อกราคาซัพพลายเออร์ + ทบทวนราคาขายเป็นรอบ' },
+      { risk: 'สินค้าค้างสต๊อก (นอกฤดู)', likelihood: 'กลาง', impact: 'จมทุน/ของเสื่อม', mitigation: 'ผลิต batch เล็ก + โปรเคลียร์ของตามรอบ' },
+    ],
+    action_plan: [
+      'ทันที: คำนวณ reorder point + safety stock จากยอดขายจริง',
+      '30 วัน: หาซัพพลายเออร์สำรอง 1 ราย + เจรจาเครดิตเทอม',
+      '90 วัน: ตั้งระบบเตือนสต๊อกต่ำ (ใช้ Inventory ในระบบ)',
+      'ระยะยาว: เจรจาเรตขนส่งแบบ contract เมื่อยอดโต',
+      'ระยะยาว: วางแผนผลิตล่วงหน้าตามปฏิทินฤดูกาล',
+    ],
+    kpis: [
+      { metric: 'Inventory Turnover', target: '≥ 6 รอบ/ปี', why: 'วัดว่าสต๊อกหมุนเร็วไม่จมทุน' },
+      { metric: 'Stockout Rate', target: '< 5%', why: 'วัดโอกาสเสียยอดขายจากของขาด' },
+      { metric: 'On-time Delivery', target: '≥ 95%', why: 'รักษาความพอใจลูกค้า + อันดับร้าน' },
+      { metric: 'Logistics Cost %', target: '< 15% ของราคาขาย', why: 'คุมต้นทุนขนส่งไม่ให้กินกำไร' },
+    ],
+  });
+});
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  AI AGENT SCHEDULER
@@ -3514,6 +3669,8 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S15', name:'Multi-Language',   pct:86, color:'#14b8a6', category:'translate',   status:'✅' },
       { id:'S16', name:'Prompt Builder',   pct:93, color:'#f59e0b', category:'prompt',      status:'✅' },
       { id:'S17', name:'Cultural Wisdom',  pct:88, color:'#b45309', category:'wisdom',      status:'✅' },
+      { id:'S18', name:'Sales Conv. Engine',pct:90, color:'#fe2c55', category:'sales',      status:'✅' },
+      { id:'S19', name:'Supply Chain AI',  pct:84, color:'#0ea5e9', category:'operations',  status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
