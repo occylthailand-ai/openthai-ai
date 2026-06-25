@@ -23,6 +23,7 @@ const TABS = [
   { id: 'supplychain', icon: '🔗', label: 'Supply Chain AI',   color: '#0ea5e9', skill: 'S19', endpoint: '/api/skills/supply-chain' },
   { id: 'pricing',     icon: '💰', label: 'Pricing Optimizer', color: '#6366f1', skill: 'S20', endpoint: '/api/skills/pricing' },
   { id: 'cs',          icon: '💬', label: 'Customer Service',   color: '#22c55e', skill: 'S21', endpoint: '/api/skills/customer-service' },
+  { id: 'adbudget',    icon: '📣', label: 'Ad Budget Planner',  color: '#f43f5e', skill: 'S22', endpoint: '/api/skills/ad-budget' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -1610,6 +1611,138 @@ function TabCustomerService() {
   );
 }
 
+// ─── Tab: Ad Budget Planner (S22) ─────────────────────────────────────────────
+const AD_GOALS = ['ยอดขาย', 'การรับรู้ (Awareness)', 'เก็บ Leads', 'ทราฟฟิกเข้าร้าน'];
+
+function TabAdBudget() {
+  const [form, setForm] = useState({ product: '', budget: '', goal: 'ยอดขาย', platforms: 'TikTok, Facebook', duration: '30 วัน', category: 'OTOP' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const rose = '#f43f5e';
+
+  const run = async () => {
+    if (!form.product.trim()) { setError('กรุณาใส่ชื่อสินค้า'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/ad-budget'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: rose, marginBottom: 16 }}>📣 จัดสรรงบโฆษณาข้ามแพลตฟอร์ม</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น ครีมสมุนไพร, น้ำพริกเผา" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>งบประมาณ (บาท)</label><input style={inputSt} type="number" placeholder="เช่น 10000" value={form.budget} onChange={e => setForm(f => ({ ...f, budget: e.target.value }))} /></div>
+            <div><label style={labelSt}>ระยะเวลา</label><input style={inputSt} placeholder="เช่น 30 วัน" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} /></div>
+          </div>
+          <div><label style={labelSt}>เป้าหมาย</label>
+            <select style={{ ...inputSt, cursor: 'pointer' }} value={form.goal} onChange={e => setForm(f => ({ ...f, goal: e.target.value }))}>
+              {AD_GOALS.map(g => <option key={g}>{g}</option>)}
+            </select>
+          </div>
+          <div><label style={labelSt}>แพลตฟอร์ม (คั่นด้วยจุลภาค)</label><input style={inputSt} placeholder="เช่น TikTok, Facebook, Instagram" value={form.platforms} onChange={e => setForm(f => ({ ...f, platforms: e.target.value }))} /></div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${rose},#e11d48)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังวางแผนงบ...' : '📣 วางแผนงบโฆษณา'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {result.summary && (
+            <div style={card({ borderLeft: `4px solid ${rose}` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: rose }}>🎯 กลยุทธ์การใช้งบ</span>
+                <SourceBadge source={result.source} />
+              </div>
+              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+            </div>
+          )}
+
+          {result.allocation?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 12, color: rose }}>💸 การจัดสรรงบ</div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {result.allocation.map((a, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <span style={{ fontWeight: 800, fontSize: 14, color: '#1e293b' }}>{a.platform}</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: rose }}>{a.amount}{typeof a.percent === 'number' ? ` · ${a.percent}%` : ''}</span>
+                    </div>
+                    {typeof a.percent === 'number' && (
+                      <div style={{ height: 6, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden', marginBottom: 6 }}>
+                        <div style={{ height: '100%', width: `${a.percent}%`, background: rose, borderRadius: 99 }} />
+                      </div>
+                    )}
+                    {a.format && <div style={{ fontSize: 12, color: '#64748b' }}>🎨 {a.format}</div>}
+                    {a.rationale && <div style={{ fontSize: 12, color: '#94a3b8' }}>{a.rationale}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.expected_results && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: rose }}>📊 คาดการณ์ผลลัพธ์</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 10 }}>
+                {Object.entries(result.expected_results).map(([k, v]) => (
+                  <div key={k} style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}>
+                    <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>{k}</div>
+                    <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 700 }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.phasing?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: rose }}>📅 แบ่งเฟสการยิงแอด</div>
+              {result.phasing.map((p, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '8px 0', borderBottom: i < result.phasing.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: '#fff', background: rose, borderRadius: 6, padding: '2px 8px', whiteSpace: 'nowrap' }}>{p.budget}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{p.phase} <span style={{ fontWeight: 400, color: '#94a3b8' }}>· {p.days}</span></div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{p.focus}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.creative_tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: rose, marginBottom: 8 }}>🎨 เคล็ดลับครีเอทีฟ</div>{result.creative_tips.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.scaling_rules?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: rose, marginBottom: 8 }}>⚖️ กฎการเพิ่มงบ</div>{result.scaling_rules.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+          </div>
+
+          {result.bid_strategy && <div style={card({ background: 'rgba(244,63,94,0.04)', borderColor: 'rgba(244,63,94,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#e11d48', marginBottom: 6 }}>🎰 กลยุทธ์ Bid</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.bid_strategy}</div></div>}
+
+          {result.watch_metrics?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: rose }}>👀 ตัวชี้วัดที่ต้องเฝ้า</div>
+              {result.watch_metrics.map((w, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, background: '#f8fafc', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
+                  <div><div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{w.metric}</div><div style={{ fontSize: 11, color: '#94a3b8' }}>{w.action}</div></div>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#e11d48', whiteSpace: 'nowrap' }}>{w.target}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -1696,7 +1829,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);
@@ -1742,6 +1875,7 @@ export default function AISkillsPage() {
           <div style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>🧠 AI Skills Hub</div>
           <div style={{ fontSize: 11, color: '#94a3b8' }}>S9–S21 · Learning · Trend · SEO · Sentiment · Video · Translate · Wisdom · Supply Chain · Pricing · Customer Service</div>
         </div>
+        <button onClick={() => navigate('/skills-catalog')} style={{ background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.25)', borderRadius: 8, padding: '7px 14px', color: '#0ea5e9', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📚 Catalog</button>
         <button onClick={() => navigate('/ai-generator')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⚡ AI Generator</button>
       </header>
 

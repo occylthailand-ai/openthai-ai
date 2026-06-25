@@ -27,11 +27,12 @@ const CAT_META = {
   operations: { icon: '🔗', label: 'ปฏิบัติการ', color: '#0ea5e9' },
   pricing: { icon: '💰', label: 'ตั้งราคา', color: '#6366f1' },
   support: { icon: '💬', label: 'บริการลูกค้า', color: '#22c55e' },
+  ads: { icon: '📣', label: 'โฆษณา', color: '#f43f5e' },
 };
 const catMeta = c => CAT_META[c] || { icon: '✨', label: c, color: '#6366f1' };
 
 // ทักษะ hub (มีหน้าใช้งานใน /skills) — deep-link ตรงแท็บ
-const HUB = new Set(['S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S19', 'S20', 'S21']);
+const HUB = new Set(['S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S19', 'S20', 'S21', 'S22']);
 function routeFor(s) {
   if (s.id === 'S18') return '/promo-engine';
   if (HUB.has(s.id)) return `/skills?skill=${s.id}`;
@@ -66,6 +67,7 @@ export default function SkillsCatalogPage() {
           <div style={{ fontSize: 11, color: '#94a3b8' }}>ทักษะ AI ทั้งหมดในที่เดียว · อัปเดตสดจาก Skills Registry</div>
         </div>
         {reg && <span style={{ fontSize: 12, fontWeight: 700, color: '#0ea5e9', background: 'rgba(14,165,233,0.1)', borderRadius: 20, padding: '4px 12px' }}>{reg.active}/{reg.total} พร้อมใช้ · {reg.ai_engine}</span>}
+        <button onClick={() => navigate('/skills')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 8, padding: '7px 14px', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>🧠 Skills Hub</button>
       </header>
 
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 5% 0', display: 'grid', gap: 20 }}>

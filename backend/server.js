@@ -3193,6 +3193,78 @@ app.post('/api/skills/customer-service', generateLimiter, async (req, res) => {
   });
 });
 
+// S22 · POST /api/skills/ad-budget — Ad Budget Planner (จัดสรรงบโฆษณาข้ามแพลตฟอร์ม)
+app.post('/api/skills/ad-budget', generateLimiter, async (req, res) => {
+  const { product, budget = '', goal = 'ยอดขาย', platforms = 'TikTok, Facebook', duration = '30 วัน', category = 'OTOP' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็น Performance Marketing Strategist ระดับโลก เชี่ยวชาญการจัดสรรงบโฆษณา (media buying) บน TikTok Ads, Meta Ads, Google
+สำหรับ SME/OTOP ไทย เข้าใจ CPM/CPC/ROAS จริงของตลาดไทย
+
+─── ข้อมูล ───
+สินค้า: "${product.slice(0, 200)}" (หมวด ${category})
+งบประมาณ: ${budget || 'ไม่ระบุ'} บาท
+เป้าหมาย: ${goal}
+แพลตฟอร์ม: ${platforms}
+ระยะเวลา: ${duration}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "summary": "สรุปกลยุทธ์การใช้งบ 2-3 ประโยค",
+  "allocation": [
+    {"platform":"ชื่อแพลตฟอร์ม","percent":เลข%,"amount":"จำนวนเงินบาท","format":"รูปแบบโฆษณาที่แนะนำ","rationale":"เหตุผล"}
+  ],
+  "expected_results": {"reach":"ประมาณการ reach","cpm":"~฿ ต่อ 1000 impressions","cpc":"~฿ ต่อคลิก","roas":"คาดการณ์ ROAS","conversions":"ประมาณยอดขาย/leads"},
+  "phasing": [
+    {"phase":"ทดสอบ (Testing)","budget":"% หรือบาท","days":"กี่วัน","focus":"โฟกัสอะไร"},
+    {"phase":"ขยายผล (Scaling)","budget":"...","days":"...","focus":"..."},
+    {"phase":"เก็บเกี่ยว (Retargeting)","budget":"...","days":"...","focus":"..."}
+  ],
+  "bid_strategy": "กลยุทธ์ bid/optimization ที่แนะนำ",
+  "creative_tips": ["เคล็ดลับครีเอทีฟ 1","2","3"],
+  "scaling_rules": ["กฎการเพิ่มงบ 1","2","3"],
+  "watch_metrics": [
+    {"metric":"ตัวชี้วัด","target":"เกณฑ์","action":"ทำอะไรเมื่อถึงเกณฑ์"}
+  ]
+}`;
+
+  try {
+    const text = await callAI(prompt, 2048);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/AdBudget', e.message); }
+
+  const b = Number(budget) || 0;
+  const list = platforms.split(/[,·/]+/).map(s => s.trim()).filter(Boolean);
+  const weights = list.map(p => /tiktok/i.test(p) ? 0.4 : /facebook|meta/i.test(p) ? 0.3 : /instagram/i.test(p) ? 0.15 : /google|youtube/i.test(p) ? 0.1 : 0.2);
+  const wsum = weights.reduce((a, c) => a + c, 0) || 1;
+  const allocation = list.map((p, i) => {
+    const pct = Math.round((weights[i] / wsum) * 100);
+    return { platform: p, percent: pct, amount: b ? `฿${Math.round(b * weights[i] / wsum).toLocaleString('th-TH')}` : `${pct}%`,
+      format: /tiktok/i.test(p) ? 'Spark Ads / วิดีโอ 9:16' : /facebook|meta|instagram/i.test(p) ? 'Advantage+ / Carousel' : 'Search / Performance Max',
+      rationale: /tiktok/i.test(p) ? 'ต้นทุน reach ต่ำ + ไวรัลง่ายในไทย' : 'จับกลุ่ม retarget + คนตั้งใจซื้อ' };
+  });
+  res.json({
+    success: true, source: 'mock',
+    summary: `แบ่งงบ${b ? ` ฿${b.toLocaleString('th-TH')}` : ''}แบบ 70/20/10 (ทดสอบ/ขยาย/รีทาร์เก็ต) เน้น${list[0] || 'TikTok'}เป็นช่องทางหลักเพื่อเป้าหมาย "${goal}" ภายใน ${duration}`,
+    allocation,
+    expected_results: { reach: b ? `~${Math.round(b / 30 * 1000).toLocaleString('th-TH')} คน` : 'ขึ้นกับงบ', cpm: '~฿30-60', cpc: '~฿1-4', roas: 'เป้า ≥ 3x (ขึ้นกับครีเอทีฟ/ราคา)', conversions: b ? `~${Math.round(b / 80)} ออเดอร์ (ที่ CPA ~฿80)` : '—' },
+    phasing: [
+      { phase: 'ทดสอบ (Testing)', budget: '70%', days: '7-10 วัน', focus: 'ทดสอบ 3-5 ครีเอทีฟ × 2-3 กลุ่มเป้าหมาย หา winner' },
+      { phase: 'ขยายผล (Scaling)', budget: '20%', days: '10-15 วัน', focus: 'ทุ่มงบให้ ad ที่ ROAS ดีสุด ค่อยๆเพิ่ม 20%/วัน' },
+      { phase: 'เก็บเกี่ยว (Retargeting)', budget: '10%', days: 'ตลอด', focus: 'ยิงซ้ำคนที่ดู/add-to-cart แต่ยังไม่ซื้อ' },
+    ],
+    bid_strategy: 'เริ่มด้วย Lowest Cost / Highest Volume เก็บ data ก่อน แล้วค่อยเปลี่ยนเป็น Cost Cap เมื่อรู้ CPA จริง',
+    creative_tips: ['Hook 3 วินาทีแรกต้องหยุดนิ้ว', 'ทำหลายเวอร์ชันให้อัลกอริทึมเลือก', 'ใส่ราคา/โปรชัดเจนในวิดีโอ'],
+    scaling_rules: ['เพิ่มงบไม่เกิน 20%/วันกัน learning reset', 'ปิด ad ที่ ROAS < 1.5 หลังใช้งบพอประมาณ', 'แตก ad set ใหม่เมื่อ frequency > 3'],
+    watch_metrics: [
+      { metric: 'ROAS', target: '≥ 3x', action: 'ต่ำกว่า → ปรับครีเอทีฟ/กลุ่มเป้าหมาย' },
+      { metric: 'CPA', target: '≤ กำไรต่อชิ้น', action: 'สูงกว่า → หยุด ad นั้น' },
+      { metric: 'CTR', target: '≥ 1.5%', action: 'ต่ำ → เปลี่ยน hook/ภาพ' },
+    ],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3217,6 +3289,7 @@ const SKILLS_REGISTRY = [
   { id: 'S19', name: 'Supply Chain AI',      category: 'operations',  endpoint: '/api/skills/supply-chain',     method: 'POST', inputs: ['product', 'category', 'sourcing'], status: 'active' },
   { id: 'S20', name: 'Pricing Optimizer',    category: 'pricing',     endpoint: '/api/skills/pricing',          method: 'POST', inputs: ['product', 'cost', 'competitor_price'], status: 'active' },
   { id: 'S21', name: 'Customer Service AI',  category: 'support',     endpoint: '/api/skills/customer-service', method: 'POST', inputs: ['message', 'product', 'channel'], status: 'active' },
+  { id: 'S22', name: 'Ad Budget Planner',    category: 'ads',         endpoint: '/api/skills/ad-budget',        method: 'POST', inputs: ['product', 'budget', 'platforms'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -3815,6 +3888,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S19', name:'Supply Chain AI',  pct:84, color:'#0ea5e9', category:'operations',  status:'✅' },
       { id:'S20', name:'Pricing Optimizer',pct:86, color:'#6366f1', category:'pricing',     status:'✅' },
       { id:'S21', name:'Customer Service AI',pct:83, color:'#22c55e', category:'support',    status:'✅' },
+      { id:'S22', name:'Ad Budget Planner',pct:85, color:'#f43f5e', category:'ads',         status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },

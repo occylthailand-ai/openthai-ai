@@ -26,7 +26,7 @@ Last   : $LAST
 ✅ DB       : Supabase PostgreSQL
 ✅ PWA      : manifest.json + sw.js + icons 192/512
 
-── 18-Skills AI Framework (S1–S18) ─────────
+── 22-Skills AI Framework (S1–S22) ─────────
 S1  RCCF Prompt        ✅ /api/generate
 S2  Taste Check        ✅ /api/generate
 S3  Master Prompt      ✅ /api/generate
@@ -45,6 +45,11 @@ S15 Multi-Language     ✅ /api/skills/translate
 S16 Prompt Builder     ✅ /api/skills/prompt-builder
 S17 Cultural Wisdom    ✅ /api/skills/cultural-wisdom
 S18 Sales Conv. Engine ✅ /api/skills/promo-engine
+S19 Supply Chain AI    ✅ /api/skills/supply-chain
+S20 Pricing Optimizer  ✅ /api/skills/pricing
+S21 Customer Service   ✅ /api/skills/customer-service
+S22 Ad Budget Planner  ✅ /api/skills/ad-budget
+📚 Skills Registry      ✅ /api/skills (catalog · 22 skills)
 
 ── Route Map ───────────────────────────────
 /              LandingPage      (public)
@@ -52,7 +57,9 @@ S18 Sales Conv. Engine ✅ /api/skills/promo-engine
 /dashboard     DashboardPage    (auth)
 /ai-generator  AIGeneratorPage  (auth)
 /ai-tools      AIToolsHub       (auth)
-/skills        AISkillsPage     (auth) ← S9–S18
+/skills        AISkillsPage     (auth) ← S9–S22 · data-driven tabs
+/skills-catalog SkillsCatalogPage (auth) ← catalog 22 skills (live registry)
+/supply-chain  SupplyChainPage  (auth) ← Control Tower + restock + S19 AI
 /promo-engine  PromoEnginePage  (auth) ← S18 flagship
 /agent         AgentPage        (auth)
 /voice         VoiceCommandPage (public)
@@ -97,7 +104,7 @@ INSTRUCTION: สรุปสถานะสั้นๆ และถามว่
 
 # Output JSON for the hook system
 printf '%s' "$CONTEXT" | jq -Rs '{
-  systemMessage: ("📋 openthai-ai — โหลดสถานะโปรเจคแล้ว branch: '"$BRANCH"' | 18 Skills Active"),
+  systemMessage: ("📋 openthai-ai — โหลดสถานะโปรเจคแล้ว branch: '"$BRANCH"' | 22 Skills Active"),
   hookSpecificOutput: {
     hookEventName: "SessionStart",
     additionalContext: .
