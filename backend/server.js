@@ -3445,6 +3445,105 @@ ${special_offer ? `โปรพิเศษ: ${special_offer}` : ''}
   });
 });
 
+// S26 · POST /api/skills/omni-solver — Omni-Solver: เครื่องแก้ปัญหาอัจฉริยะรอบด้าน
+// วิเคราะห์ปัญหาใดก็ได้ผ่าน 4 ศาสตร์ (จิตวิทยา · เรขาคณิตวิเคราะห์ · นิเวศการอยู่รอด · การแข่งขันการค้า)
+// ครบทุกมิติ/มุมมอง/จุดยืน → นำสู่การปิดการขายที่เป็นธรรม (win-win) + ระบบติดตาม 24/7
+app.post('/api/skills/omni-solver', generateLimiter, async (req, res) => {
+  const { problem, context = '', goal = 'ปิดการขายที่เป็นธรรม (win-win ทุกฝ่าย)', stakeholders = '' } = req.body || {};
+  if (!problem?.trim()) return res.status(400).json({ error: 'problem required' });
+
+  const prompt = `คุณคือ "Omni-Solver" — เครื่องแก้ปัญหาอัจฉริยะรอบด้านที่วิเคราะห์ปัญหาทุกชนิดผ่าน 4 ศาสตร์พร้อมกัน
+แล้วสังเคราะห์เป็นทางออกที่เป็นธรรมต่อทุกฝ่าย (ไม่เอาเปรียบใคร) มุ่งบรรลุเป้าหมายอย่างยั่งยืน
+
+4 ศาสตร์ที่ต้องใช้วิเคราะห์ (lenses):
+1) จิตวิทยา (Psychology) — แรงจูงใจลึก ความกลัว ความต้องการแท้จริง อคติ การตัดสินใจของมนุษย์ทุกฝ่าย
+2) เรขาคณิตวิเคราะห์ (Analytic Geometry) — มองปัญหาเป็นโครงสร้าง/แรง/เวกเตอร์ หา "จุดคานงัด" (leverage points) ที่ออกแรงน้อยได้ผลมาก
+3) นิเวศการอยู่รอด (Survival Ecology / ป่าดงดิบ) — niche การปรับตัว ทรัพยากร ห่วงโซ่ การอยู่รอดและพึ่งพากันในระบบ
+4) การแข่งขันทางการค้า (Competitive Commerce / Game Theory) — คู่แข่ง การวางตำแหน่ง หมากที่ควรเดิน win-win vs zero-sum
+
+ปัญหา/สถานการณ์: "${problem.slice(0, 600)}"
+${context ? `บริบทเพิ่มเติม: ${context.slice(0, 400)}` : ''}
+เป้าหมาย: ${goal}
+${stakeholders ? `ผู้มีส่วนได้ส่วนเสีย: ${stakeholders}` : ''}
+
+ตอบกลับเป็น JSON เท่านั้น (วิเคราะห์ครบทุกมิติ/มุมมอง/จุดยืน):
+{
+  "summary": "สรุปทางออก 2-3 ประโยค",
+  "problem_reframed": "นิยามปัญหาใหม่ให้คมชัดและแก้ได้จริง",
+  "root_causes": ["รากของปัญหา 1","2","3"],
+  "lenses": {
+    "psychology": {"insight":"ข้อค้นพบเชิงจิตวิทยา","levers":["จุดกระตุ้น 1","2"],"risks":["ความเสี่ยงทางอารมณ์ 1"]},
+    "geometry": {"insight":"มองปัญหาเป็นโครงสร้าง/แรง","leverage_points":["จุดคานงัด 1","2"],"structure":"คำอธิบายโครงสร้างของปัญหา"},
+    "ecology": {"insight":"มุมมองนิเวศ/การอยู่รอด","adaptation":["วิธีปรับตัว 1","2"],"resources":["ทรัพยากร/พันธมิตรที่ควรใช้ 1"]},
+    "competition": {"insight":"มุมมองเกม/คู่แข่ง","moves":["หมากที่ควรเดิน 1","2"],"positioning":"การวางตำแหน่งที่ได้เปรียบอย่างเป็นธรรม"}
+  },
+  "perspectives": [
+    {"stakeholder":"ฝ่าย/มุมมอง","view":"เขามองปัญหานี้อย่างไร","need":"สิ่งที่เขาต้องการจริงๆ"},
+    {"stakeholder":"...","view":"...","need":"..."},
+    {"stakeholder":"...","view":"...","need":"..."}
+  ],
+  "options": [
+    {"option":"ทางเลือก 1","pros":["ข้อดี"],"cons":["ข้อเสีย"],"fairness":"ผลต่อความเป็นธรรมของทุกฝ่าย"},
+    {"option":"ทางเลือก 2","pros":["..."],"cons":["..."],"fairness":"..."}
+  ],
+  "recommended_path": "ทางออกที่แนะนำ + เหตุผลว่าทำไมเป็นธรรมและยั่งยืนที่สุด",
+  "fair_close": {
+    "win_win":"อธิบายว่าทุกฝ่ายได้อะไร (ไม่มีใครเสียเปรียบ)",
+    "script":"สคริปต์/แนวทางการปิดการขายหรือปิดดีลที่เป็นธรรม",
+    "guardrails":["หลักจริยธรรมที่ต้องรักษา 1","2"]
+  },
+  "action_plan": [
+    {"step":"สิ่งที่ต้องทำ","owner":"ฝ่ายที่รับผิดชอบ","when":"กรอบเวลา"},
+    {"step":"...","owner":"...","when":"..."},
+    {"step":"...","owner":"...","when":"..."}
+  ],
+  "monitoring": {"signals":["สัญญาณที่ต้องเฝ้าติดตามต่อเนื่อง 1","2","3"],"review_cadence":"ความถี่ในการทบทวน (เช่น รายวัน/รายสัปดาห์)"}
+}`;
+
+  try {
+    const text = await callAI(prompt, 3072);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/OmniSolver', e.message); }
+
+  // Mock fallback — โครงวิเคราะห์ 4 ศาสตร์ (ใช้ได้กับทุกปัญหา)
+  const pr = problem.slice(0, 80);
+  res.json({
+    success: true, source: 'mock',
+    summary: `วิเคราะห์ "${pr}" ครบ 4 ศาสตร์ แล้วเลือกทางออกที่ทุกฝ่ายได้ประโยชน์ร่วมกัน เน้นความเป็นธรรมและความยั่งยืนมากกว่าชัยชนะระยะสั้น`,
+    problem_reframed: `ปัญหาที่แท้จริงไม่ใช่แค่ "${pr}" แต่คือช่องว่างระหว่างสิ่งที่แต่ละฝ่ายต้องการกับสิ่งที่กำลังได้รับ — แก้ที่ช่องว่างนี้`,
+    root_causes: ['ความต้องการแท้จริงของแต่ละฝ่ายยังไม่ถูกพูดออกมาชัด', 'ขาดข้อมูล/ความเชื่อใจระหว่างฝ่าย', 'โครงสร้างผลประโยชน์ยังไม่จัดให้สอดคล้องกัน'],
+    lenses: {
+      psychology: { insight: 'ทุกฝ่ายตัดสินใจจาก "ความกลัวจะเสีย" มากกว่า "ความอยากได้" — ลดความกลัวก่อนจะเปิดใจ', levers: ['ทำให้รู้สึกปลอดภัยและถูกรับฟัง', 'ให้ชนะเล็กๆ ก่อนเพื่อสร้างแรงส่ง'], risks: ['กดดันเร็วไปจะเกิดการต่อต้าน'] },
+      geometry: { insight: 'มองปัญหาเป็นระบบแรงหลายทิศ — หาจุดที่ออกแรงน้อยแต่ขยับทั้งระบบ', leverage_points: ['จุดที่ทุกฝ่ายเห็นพ้องอยู่แล้ว (ใช้เป็นฐาน)', 'ผู้มีอิทธิพลที่ขยับแล้วคนอื่นตาม'], structure: 'ปัญหาเป็นรูปสามเหลี่ยมผลประโยชน์ 3 ฝ่าย — ปรับมุมหนึ่งกระทบอีกสองมุมเสมอ' },
+      ecology: { insight: 'แต่ละฝ่ายคือสิ่งมีชีวิตในระบบนิเวศเดียวกัน — อยู่รอดได้ดีที่สุดเมื่อพึ่งพากัน ไม่ใช่ล่ากันจนสูญพันธุ์', adaptation: ['ปรับบทบาทให้แต่ละฝ่ายมี niche ที่ไม่ทับกัน', 'สร้างความสัมพันธ์แบบพึ่งพา (symbiosis)'], resources: ['พันธมิตร/ทรัพยากรที่ยังไม่ได้ใช้ร่วมกัน'] },
+      competition: { insight: 'เกมนี้ควรเล่นแบบ positive-sum ไม่ใช่ zero-sum — ขยายขนาดเค้กก่อนแบ่ง', moves: ['เปิดข้อมูลที่สร้างความเชื่อใจก่อน', 'เสนอข้อตกลงที่คู่แข่ง/คู่เจรจาปฏิเสธได้ยากเพราะเป็นธรรม'], positioning: 'วางตัวเป็น "ผู้สร้างทางออกที่เป็นธรรม" — ได้เปรียบเชิงชื่อเสียงระยะยาว' },
+    },
+    perspectives: [
+      { stakeholder: 'ฝ่ายเรา', view: 'อยากบรรลุเป้าหมายโดยไม่เสียความสัมพันธ์', need: 'ผลลัพธ์ที่ยั่งยืน + ชื่อเสียงที่ดี' },
+      { stakeholder: 'ลูกค้า/คู่เจรจา', view: 'กลัวถูกเอาเปรียบ', need: 'รู้สึกได้ของคุ้มและถูกปฏิบัติอย่างเป็นธรรม' },
+      { stakeholder: 'ผู้เกี่ยวข้องอื่น/สังคม', view: 'มองหาความโปร่งใส', need: 'กระบวนการที่ตรวจสอบได้และไม่เอาเปรียบ' },
+    ],
+    options: [
+      { option: 'เจรจาแบบเปิดไพ่ (transparency-first)', pros: ['สร้างความเชื่อใจเร็ว', 'ลดการต่อรองที่สูญเปล่า'], cons: ['เปิดเผยข้อมูลบางส่วน'], fairness: 'สูง — ทุกฝ่ายตัดสินใจบนข้อมูลเดียวกัน' },
+      { option: 'เสนอแพ็กเกจหลายระดับให้เลือก', pros: ['ลูกค้ารู้สึกควบคุมได้', 'ปิดได้หลายงบ'], cons: ['ต้องออกแบบข้อเสนอมากขึ้น'], fairness: 'สูง — ให้สิทธิ์เลือกตามกำลัง' },
+    ],
+    recommended_path: 'ผสาน 2 ทางเลือก: เปิดข้อมูลที่สร้างความเชื่อใจ + เสนอทางเลือกหลายระดับ — ปิดดีลด้วยความสมัครใจของทุกฝ่าย เป็นธรรมและทำซ้ำได้',
+    fair_close: {
+      win_win: 'ฝ่ายเราได้ยอด+ลูกค้าประจำ · ลูกค้าได้คุณค่าจริงในราคาที่เลือกเอง · ระบบโดยรวมได้มาตรฐานการค้าที่เป็นธรรม',
+      script: '"เป้าหมายของเราคือให้คุณได้ผลลัพธ์จริง ไม่ใช่แค่ปิดการขาย — เลือกแบบที่เหมาะกับคุณที่สุด แล้วเรารับประกันความพอใจ ถ้าไม่เวิร์กเรายินดีดูแลต่อ"',
+      guardrails: ['ไม่สร้างความเร่งด่วนปลอม/ข้อมูลเท็จ', 'ไม่ปิดการขายที่ลูกค้าไม่ได้ประโยชน์จริง'],
+    },
+    action_plan: [
+      { step: 'ฟังและสรุปความต้องการแท้จริงของแต่ละฝ่ายให้ตรงกัน', owner: 'ฝ่ายขาย/เจรจา', when: 'ทันที' },
+      { step: 'ออกแบบข้อเสนอหลายระดับ + จุดรับประกัน', owner: 'ฝ่ายกลยุทธ์', when: '1-3 วัน' },
+      { step: 'นำเสนอแบบเปิดข้อมูล + ปิดดีลด้วยความสมัครใจ', owner: 'ฝ่ายขาย', when: '3-7 วัน' },
+      { step: 'ติดตามผลหลังปิด + เก็บ feedback ปรับปรุง', owner: 'ฝ่ายดูแลลูกค้า', when: 'ต่อเนื่อง' },
+    ],
+    monitoring: { signals: ['สัญญาณความไม่พอใจ/ลังเลของฝ่ายใดฝ่ายหนึ่ง', 'อัตราการปิดดีล vs ความพึงพอใจหลังปิด', 'การกลับมาซื้อซ้ำ/บอกต่อ (ตัววัดความเป็นธรรม)'], review_cadence: 'ทบทวนรายสัปดาห์ + ตรวจสัญญาณเร่งด่วนรายวัน' },
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3473,6 +3572,7 @@ const SKILLS_REGISTRY = [
   { id: 'S23', name: 'Break-even Planner',   category: 'finance',     endpoint: '/api/skills/break-even',       method: 'POST', inputs: ['product', 'price', 'unit_cost', 'fixed_costs'], status: 'active' },
   { id: 'S24', name: 'Campaign Calendar',    category: 'planning',    endpoint: '/api/skills/campaign-calendar',method: 'POST', inputs: ['product', 'category', 'period'], status: 'active' },
   { id: 'S25', name: 'Live Selling Script',  category: 'live',        endpoint: '/api/skills/live-script',      method: 'POST', inputs: ['product', 'platform', 'duration'], status: 'active' },
+  { id: 'S26', name: 'Omni-Solver',          category: 'solver',      endpoint: '/api/skills/omni-solver',      method: 'POST', inputs: ['problem', 'context', 'goal'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4075,6 +4175,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S23', name:'Break-even Planner',pct:87, color:'#0d9488', category:'finance',    status:'✅' },
       { id:'S24', name:'Campaign Calendar',pct:86, color:'#d946ef', category:'planning',    status:'✅' },
       { id:'S25', name:'Live Selling Script',pct:88, color:'#fb7185', category:'live',      status:'✅' },
+      { id:'S26', name:'Omni-Solver',      pct:90, color:'#7c3aed', category:'solver',     status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
