@@ -24,6 +24,7 @@ const TABS = [
   { id: 'pricing',     icon: '💰', label: 'Pricing Optimizer', color: '#6366f1', skill: 'S20', endpoint: '/api/skills/pricing' },
   { id: 'cs',          icon: '💬', label: 'Customer Service',   color: '#22c55e', skill: 'S21', endpoint: '/api/skills/customer-service' },
   { id: 'adbudget',    icon: '📣', label: 'Ad Budget Planner',  color: '#f43f5e', skill: 'S22', endpoint: '/api/skills/ad-budget' },
+  { id: 'breakeven',   icon: '⚖️', label: 'Break-even Planner', color: '#0d9488', skill: 'S23', endpoint: '/api/skills/break-even' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -1743,6 +1744,106 @@ function TabAdBudget() {
   );
 }
 
+// ─── Tab: Break-even & Profit Planner (S23) ───────────────────────────────────
+function TabBreakEven() {
+  const [form, setForm] = useState({ product: '', price: '', unit_cost: '', fixed_costs: '', monthly_target: '' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const teal = '#0d9488';
+
+  const run = async () => {
+    if (!form.product.trim()) { setError('กรุณาใส่ชื่อสินค้า'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/break-even'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  const verdictColor = v => (/✅/.test(v) ? '#10b981' : /🔴/.test(v) ? '#ef4444' : '#f59e0b');
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: teal, marginBottom: 16 }}>⚖️ วางแผนจุดคุ้มทุน + กำไร</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น สบู่สมุนไพร" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>ราคาขาย/หน่วย (บาท)</label><input style={inputSt} type="number" placeholder="เช่น 120" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} /></div>
+            <div><label style={labelSt}>ต้นทุนผันแปร/หน่วย (บาท)</label><input style={inputSt} type="number" placeholder="เช่น 45" value={form.unit_cost} onChange={e => setForm(f => ({ ...f, unit_cost: e.target.value }))} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>ต้นทุนคงที่/เดือน (บาท)</label><input style={inputSt} type="number" placeholder="เช่น 8000" value={form.fixed_costs} onChange={e => setForm(f => ({ ...f, fixed_costs: e.target.value }))} /></div>
+            <div><label style={labelSt}>เป้ายอดขาย/เดือน (ชิ้น)</label><input style={inputSt} type="number" placeholder="เช่น 200 (ไม่บังคับ)" value={form.monthly_target} onChange={e => setForm(f => ({ ...f, monthly_target: e.target.value }))} /></div>
+          </div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${teal},#0f766e)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังคำนวณ...' : '⚖️ คำนวณจุดคุ้มทุน'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {result.health_verdict && (
+            <div style={{ ...card({ borderLeft: `4px solid ${verdictColor(result.health_verdict)}` }) }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: verdictColor(result.health_verdict) }}>📋 ประเมินผล</span>
+                <SourceBadge source={result.source} />
+              </div>
+              <div style={{ fontSize: 14, color: '#1e293b', lineHeight: 1.6, fontWeight: 600 }}>{result.health_verdict}</div>
+              {result.summary && <div style={{ fontSize: 13, color: '#64748b', marginTop: 6, lineHeight: 1.6 }}>{result.summary}</div>}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
+            {result.contribution_margin && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>กำไรส่วนเกิน/หน่วย</div><div style={{ fontSize: 18, fontWeight: 900, color: teal }}>{result.contribution_margin.per_unit}</div><div style={{ fontSize: 11, color: '#94a3b8' }}>{result.contribution_margin.percent}</div></div>}
+            {result.break_even && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>จุดคุ้มทุน</div><div style={{ fontSize: 16, fontWeight: 900, color: '#1e293b' }}>{result.break_even.units}</div><div style={{ fontSize: 11, color: '#94a3b8' }}>{result.break_even.daily_units}</div></div>}
+            {result.break_even && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>ยอดขายคุ้มทุน</div><div style={{ fontSize: 16, fontWeight: 900, color: '#10b981' }}>{result.break_even.revenue}</div></div>}
+          </div>
+
+          {result.scenarios?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: teal }}>🎲 สถานการณ์จำลอง</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 10 }}>
+                {result.scenarios.map((s, i) => {
+                  const neg = /-/.test(String(s.profit));
+                  return (
+                    <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>{s.name}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0' }}>{s.units}</div>
+                      <div style={{ fontSize: 15, fontWeight: 900, color: neg ? '#ef4444' : '#10b981' }}>{s.profit}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {result.profit_projection?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: teal }}>📈 ประมาณการกำไร</div>
+              {result.profit_projection.map((r, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < result.profit_projection.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{r.units}</span>
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>{r.revenue}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: /-/.test(String(r.profit)) ? '#ef4444' : '#10b981' }}>{r.profit}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.pricing_sensitivity && <div style={card({ background: 'rgba(13,148,136,0.04)', borderColor: 'rgba(13,148,136,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 6 }}>🎚️ ผลของการปรับราคา</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.pricing_sensitivity}</div></div>}
+          {result.cash_flow_tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 8 }}>💧 เคล็ดลับสภาพคล่อง</div>{result.cash_flow_tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -1829,7 +1930,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);
