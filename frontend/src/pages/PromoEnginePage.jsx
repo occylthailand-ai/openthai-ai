@@ -524,6 +524,7 @@ export default function PromoEnginePage() {
           <div style={{ fontSize: 16, fontWeight: 900, color: '#1e293b' }}>🚀 Sales Conversion Engine</div>
           <div style={{ fontSize: 11, color: '#94a3b8' }}>S18 · Hook · Psychology · Platform · Copy · Video · Price · Objection · Funnel</div>
         </div>
+        <button onClick={() => navigate('/skills?skill=S20')} title="ตั้งราคาด้วย AI" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8, padding: '6px 14px', color: '#6366f1', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>💰 ตั้งราคา (S20)</button>
         {result && (
           <button onClick={() => setResult(null)} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>🔄 สร้างใหม่</button>
         )}

@@ -21,6 +21,8 @@ const TABS = [
   { id: 'prompt',      icon: '⚡', label: 'Prompt Builder',    color: '#f59e0b', skill: 'S16', endpoint: '/api/skills/prompt-builder' },
   { id: 'wisdom',      icon: '☯️', label: 'Cultural Wisdom',   color: '#b45309', skill: 'S17', endpoint: '/api/skills/cultural-wisdom' },
   { id: 'supplychain', icon: '🔗', label: 'Supply Chain AI',   color: '#0ea5e9', skill: 'S19', endpoint: '/api/skills/supply-chain' },
+  { id: 'pricing',     icon: '💰', label: 'Pricing Optimizer', color: '#6366f1', skill: 'S20', endpoint: '/api/skills/pricing' },
+  { id: 'cs',          icon: '💬', label: 'Customer Service',   color: '#22c55e', skill: 'S21', endpoint: '/api/skills/customer-service' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -1424,6 +1426,190 @@ function TabSupplyChain() {
   );
 }
 
+// ─── Tab: Pricing Optimizer (S20) ─────────────────────────────────────────────
+const PRICE_POSITIONING = ['คุ้มค่า', 'พรีเมียม', 'ราคาประหยัด', 'ระดับกลาง'];
+
+function TabPricing() {
+  const [form, setForm] = useState({ product: '', cost: '', competitor_price: '', category: 'OTOP', target_margin: '', positioning: 'คุ้มค่า' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const indigo = '#6366f1';
+
+  const run = async () => {
+    if (!form.product.trim()) { setError('กรุณาใส่ชื่อสินค้า'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/pricing'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: indigo, marginBottom: 16 }}>💰 ตั้งราคาให้ได้กำไร + แข่งขันได้</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น น้ำพริกเผา, ครีมสมุนไพร" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>ต้นทุน/หน่วย (บาท)</label><input style={inputSt} type="number" placeholder="เช่น 30" value={form.cost} onChange={e => setForm(f => ({ ...f, cost: e.target.value }))} /></div>
+            <div><label style={labelSt}>ราคาคู่แข่ง (บาท)</label><input style={inputSt} type="number" placeholder="เช่น 89" value={form.competitor_price} onChange={e => setForm(f => ({ ...f, competitor_price: e.target.value }))} /></div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>หมวดหมู่</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>การวางตำแหน่ง</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.positioning} onChange={e => setForm(f => ({ ...f, positioning: e.target.value }))}>
+                {PRICE_POSITIONING.map(p => <option key={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${indigo},#8b5cf6)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังคำนวณ...' : '💰 หาราคาที่ดีที่สุด'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div style={{ ...card({ borderLeft: `4px solid ${indigo}` }), textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>💡 ราคาที่แนะนำ</span>
+              <SourceBadge source={result.source} />
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: indigo, lineHeight: 1.4 }}>{result.recommended_price}</div>
+            {result.psychological_price && <div style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>🧠 {result.psychological_price}</div>}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
+            {result.price_range && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>ช่วงราคา</div><div style={{ fontSize: 14, fontWeight: 800, color: '#1e293b' }}>{result.price_range.min} – {result.price_range.max}</div></div>}
+            {result.margin_analysis && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>กำไรขั้นต้น</div><div style={{ fontSize: 14, fontWeight: 800, color: '#10b981' }}>{result.margin_analysis.gross_margin}</div></div>}
+            {result.strategy && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>กลยุทธ์</div><div style={{ fontSize: 12, color: '#475569' }}>{result.strategy}</div></div>}
+          </div>
+
+          {result.margin_analysis?.note && <div style={card({ background: 'rgba(99,102,241,0.04)', borderColor: 'rgba(99,102,241,0.2)' })}><div style={{ fontWeight: 700, fontSize: 12, color: indigo, marginBottom: 4 }}>📊 ข้อสังเกตกำไร</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.margin_analysis.note}</div></div>}
+          {result.competitor_positioning && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 6 }}>🥊 เทียบคู่แข่ง</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.competitor_positioning}</div></div>}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.bundle_options?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 8 }}>📦 ไอเดียจัดเซ็ต</div>{result.bundle_options.map((b, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {b}</div>)}</div>}
+            {result.upsell_ideas?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 8 }}>⬆️ Upsell / Cross-sell</div>{result.upsell_ideas.map((b, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {b}</div>)}</div>}
+          </div>
+
+          {result.discount_strategy && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 6 }}>🏷️ กลยุทธ์ส่วนลด</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.discount_strategy}</div></div>}
+          {result.price_anchoring_tip && <div style={card({ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 6 }}>⚓ เคล็ดลับ Price Anchoring</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.price_anchoring_tip}</div></div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tab: Customer Service AI (S21) ───────────────────────────────────────────
+const CS_CHANNELS = ['แชท', 'คอมเมนต์', 'LINE', 'Messenger', 'โทรศัพท์'];
+const CS_TONES    = ['สุภาพ เป็นมิตร', 'อบอุ่น ดูแลใส่ใจ', 'มืออาชีพ กระชับ', 'สนุก เป็นกันเอง'];
+
+function TabCustomerService() {
+  const [form, setForm] = useState({ message: '', product: '', channel: 'แชท', tone: 'สุภาพ เป็นมิตร' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const green = '#22c55e';
+
+  const run = async () => {
+    if (!form.message.trim()) { setError('กรุณาใส่ข้อความจากลูกค้า'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/customer-service'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  const sentColor = s => ({ positive: '#10b981', neutral: '#f59e0b', negative: '#ef4444' }[s] || '#64748b');
+  const urgColor = u => (/สูง/.test(u) ? '#ef4444' : /ต่ำ/.test(u) ? '#10b981' : '#f59e0b');
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: green, marginBottom: 16 }}>💬 ช่วยตอบลูกค้าอย่างมืออาชีพ</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div>
+            <label style={labelSt}>ข้อความจากลูกค้า *</label>
+            <textarea style={{ ...inputSt, minHeight: 90, resize: 'vertical' }} placeholder="วางข้อความที่ลูกค้าส่งมา เช่น 'ของแพงจัง ลดได้ไหม' / 'ส่งช้ามากเลย'" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
+            <div><label style={labelSt}>สินค้า (ไม่บังคับ)</label><input style={inputSt} placeholder="เช่น ผ้าไหม" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+            <div><label style={labelSt}>ช่องทาง</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.channel} onChange={e => setForm(f => ({ ...f, channel: e.target.value }))}>
+                {CS_CHANNELS.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>โทน</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.tone} onChange={e => setForm(f => ({ ...f, tone: e.target.value }))}>
+                {CS_TONES.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${green},#16a34a)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังร่างคำตอบ...' : '💬 ช่วยตอบลูกค้า'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div style={{ ...card(), display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <SourceBadge source={result.source} />
+            {result.intent && <span style={{ fontSize: 12, fontWeight: 700, background: '#f1f5f9', color: '#475569', borderRadius: 20, padding: '3px 10px' }}>🎯 {result.intent}</span>}
+            {result.sentiment && <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: sentColor(result.sentiment), borderRadius: 20, padding: '3px 10px' }}>{result.sentiment}</span>}
+            {result.urgency && <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: urgColor(result.urgency), borderRadius: 20, padding: '3px 10px' }}>⏱️ {result.urgency}</span>}
+            {result.escalate && <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: '#ef4444', borderRadius: 20, padding: '3px 10px' }}>🚨 ส่งต่อทีม</span>}
+          </div>
+
+          {result.recommended_reply && (
+            <div style={card({ borderLeft: `4px solid ${green}` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: green }}>⭐ คำตอบแนะนำ</div>
+                <CopyBtn text={result.recommended_reply} />
+              </div>
+              <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#166534', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{result.recommended_reply}</div>
+            </div>
+          )}
+
+          {result.suggested_replies?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: green }}>📝 ตัวเลือกคำตอบ</div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {result.suggested_replies.map((r, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: '#f8fafc', borderRadius: 10, padding: '10px 12px' }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: green, flexShrink: 0 }}>{i + 1}</span>
+                    <span style={{ flex: 1, fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{r}</span>
+                    <CopyBtn text={r} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.do_dont?.do?.length > 0 && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#10b981', marginBottom: 8 }}>👍 ควรทำ</div>{result.do_dont.do.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {d}</div>)}</div>}
+            {result.do_dont?.dont?.length > 0 && <div style={card({ borderLeft: '4px solid #ef4444' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 8 }}>🚫 ไม่ควรทำ</div>{result.do_dont.dont.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {d}</div>)}</div>}
+          </div>
+
+          {result.follow_up && <div style={card({ background: 'rgba(34,197,94,0.05)', borderColor: 'rgba(34,197,94,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#16a34a', marginBottom: 6 }}>🔄 ประโยคติดตามผล</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.follow_up}</div></div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -1510,6 +1696,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
+  pricing: TabPricing, cs: TabCustomerService,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);
@@ -1518,7 +1705,12 @@ const GENERIC_COLORS = ['#6366f1', '#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '
 export default function AISkillsPage() {
   const navigate = useNavigate();
   const [registry, setRegistry] = useState(null);
-  const [tab, setTab] = useState('trend');
+  // deep-link: /skills?skill=S20 หรือ /skills?tab=pricing → เปิดแท็บนั้นเลย
+  const [tab, setTab] = useState(() => {
+    const q = new URLSearchParams(window.location.search);
+    const bySkill = TABS.find(t => t.skill === (q.get('skill') || '').toUpperCase());
+    return q.get('tab') || bySkill?.id || 'trend';
+  });
 
   // ดึง Skills Registry — เพิ่มทักษะใหม่ใน backend แล้ว tab โผล่เองโดยไม่ต้องแก้ frontend
   useEffect(() => {
@@ -1548,7 +1740,7 @@ export default function AISkillsPage() {
         <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>🧠 AI Skills Hub</div>
-          <div style={{ fontSize: 11, color: '#94a3b8' }}>S9–S19 · Learning · Trend · Hashtag · SEO · Sentiment · Video · Translate · Prompt Builder · Cultural Wisdom · Supply Chain</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>S9–S21 · Learning · Trend · SEO · Sentiment · Video · Translate · Wisdom · Supply Chain · Pricing · Customer Service</div>
         </div>
         <button onClick={() => navigate('/ai-generator')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⚡ AI Generator</button>
       </header>
