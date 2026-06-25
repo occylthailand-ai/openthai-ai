@@ -3448,10 +3448,7 @@ ${special_offer ? `โปรพิเศษ: ${special_offer}` : ''}
 // S26 · POST /api/skills/omni-solver — Omni-Solver: เครื่องแก้ปัญหาอัจฉริยะรอบด้าน
 // วิเคราะห์ปัญหาใดก็ได้ผ่าน 4 ศาสตร์ (จิตวิทยา · เรขาคณิตวิเคราะห์ · นิเวศการอยู่รอด · การแข่งขันการค้า)
 // ครบทุกมิติ/มุมมอง/จุดยืน → นำสู่การปิดการขายที่เป็นธรรม (win-win) + ระบบติดตาม 24/7
-app.post('/api/skills/omni-solver', generateLimiter, async (req, res) => {
-  const { problem, context = '', goal = 'ปิดการขายที่เป็นธรรม (win-win ทุกฝ่าย)', stakeholders = '' } = req.body || {};
-  if (!problem?.trim()) return res.status(400).json({ error: 'problem required' });
-
+async function omniSolve({ problem, context = '', goal = 'ปิดการขายที่เป็นธรรม (win-win ทุกฝ่าย)', stakeholders = '' }) {
   const prompt = `คุณคือ "Omni-Solver" — เครื่องแก้ปัญหาอัจฉริยะรอบด้านที่วิเคราะห์ปัญหาทุกชนิดผ่าน 4 ศาสตร์พร้อมกัน
 แล้วสังเคราะห์เป็นทางออกที่เป็นธรรมต่อทุกฝ่าย (ไม่เอาเปรียบใคร) มุ่งบรรลุเป้าหมายอย่างยั่งยืน
 
@@ -3503,13 +3500,13 @@ ${stakeholders ? `ผู้มีส่วนได้ส่วนเสีย: 
   try {
     const text = await callAI(prompt, 3072);
     const d = parseAIJson(text);
-    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+    return { source: anthropic ? 'claude' : 'gemini', ...d };
   } catch (e) { addLog('warn', 'Skills/OmniSolver', e.message); }
 
   // Mock fallback — โครงวิเคราะห์ 4 ศาสตร์ (ใช้ได้กับทุกปัญหา)
   const pr = problem.slice(0, 80);
-  res.json({
-    success: true, source: 'mock',
+  return {
+    source: 'mock',
     summary: `วิเคราะห์ "${pr}" ครบ 4 ศาสตร์ แล้วเลือกทางออกที่ทุกฝ่ายได้ประโยชน์ร่วมกัน เน้นความเป็นธรรมและความยั่งยืนมากกว่าชัยชนะระยะสั้น`,
     problem_reframed: `ปัญหาที่แท้จริงไม่ใช่แค่ "${pr}" แต่คือช่องว่างระหว่างสิ่งที่แต่ละฝ่ายต้องการกับสิ่งที่กำลังได้รับ — แก้ที่ช่องว่างนี้`,
     root_causes: ['ความต้องการแท้จริงของแต่ละฝ่ายยังไม่ถูกพูดออกมาชัด', 'ขาดข้อมูล/ความเชื่อใจระหว่างฝ่าย', 'โครงสร้างผลประโยชน์ยังไม่จัดให้สอดคล้องกัน'],
@@ -3541,7 +3538,14 @@ ${stakeholders ? `ผู้มีส่วนได้ส่วนเสีย: 
       { step: 'ติดตามผลหลังปิด + เก็บ feedback ปรับปรุง', owner: 'ฝ่ายดูแลลูกค้า', when: 'ต่อเนื่อง' },
     ],
     monitoring: { signals: ['สัญญาณความไม่พอใจ/ลังเลของฝ่ายใดฝ่ายหนึ่ง', 'อัตราการปิดดีล vs ความพึงพอใจหลังปิด', 'การกลับมาซื้อซ้ำ/บอกต่อ (ตัววัดความเป็นธรรม)'], review_cadence: 'ทบทวนรายสัปดาห์ + ตรวจสัญญาณเร่งด่วนรายวัน' },
-  });
+  };
+}
+
+app.post('/api/skills/omni-solver', generateLimiter, async (req, res) => {
+  const { problem, context, goal, stakeholders } = req.body || {};
+  if (!problem?.trim()) return res.status(400).json({ error: 'problem required' });
+  const d = await omniSolve({ problem, context, goal, stakeholders });
+  res.json({ success: true, ...d });
 });
 
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
@@ -3667,6 +3671,25 @@ async function runAgent(agent) {
   console.log(`[Agent] 🤖 Running agent "${agent.name}" — ${agent.product}`);
   try {
     writeAgentCheckpoint(agent, 'generating');
+
+    // ── Omni-Solver agent (S26) — เฝ้าเป้าหมาย/ปัญหา 24/7 แล้วแจ้งทางออกที่เป็นธรรม ──
+    if (agent.task === 'omni-solver') {
+      const sol = await omniSolve({ problem: agent.problem || agent.product, context: agent.context || '', goal: agent.goal || undefined, stakeholders: agent.stakeholders || '' });
+      const entry = { ts: new Date().toISOString(), task: 'omni-solver', source: sol.source, summary: sol.summary, problem_reframed: sol.problem_reframed, recommended_path: sol.recommended_path, fair_close: sol.fair_close, omni: sol };
+      agent.lastRun = new Date().toISOString(); agent.lastError = null;
+      agent.results = [entry, ...(agent.results || []).slice(0, 9)];
+      saveAgents(agents); clearAgentCheckpoint();
+      if (agent.lineEnabled && agent.lineUserId && process.env.LINE_CHANNEL_TOKEN) {
+        try {
+          const msg = `🧩 Omni-Solver: "${agent.name}"\n\n🎯 ${sol.problem_reframed || ''}\n\n✅ แนวทางที่แนะนำ:\n${sol.recommended_path || sol.summary || ''}\n\n🤝 ปิดดีลเป็นธรรม:\n${sol.fair_close?.script || ''}`;
+          await sendLine(agent.lineUserId, msg);
+        } catch (lineErr) { try { addLog('warn', 'Agent', `LINE push ไม่สำเร็จ "${agent.name}": ${lineErr.message}`); } catch (_) {} }
+      }
+      console.log(`[Agent] ✅ Omni-Solver done — ${sol.source}`);
+      webhooks.dispatch('agent.completed', { agentId: agent.id, agentName: agent.name, task: 'omni-solver', source: sol.source }, agent.tenantId || null);
+      return entry;
+    }
+
     const result = await smartGenerate({
       product: agent.product, category: agent.category, platform: agent.platform,
       style: agent.style, lang: agent.lang || 'ภาษาไทย',
@@ -3753,12 +3776,18 @@ app.get('/api/agent', (req, res) => {
 });
 
 app.post('/api/agent', (req, res) => {
-  const { name, product, category, platform, style, lang, audience, price, schedule, hour, weekDay, lineEnabled, lineUserId } = req.body || {};
-  if (!name || !product) return res.status(400).json({ success: false, message: 'ต้องการ name และ product' });
+  const { name, product, category, platform, style, lang, audience, price, schedule, hour, weekDay, lineEnabled, lineUserId, task, problem, context, goal, stakeholders } = req.body || {};
+  const isOmni = task === 'omni-solver';
+  if (!name) return res.status(400).json({ success: false, message: 'ต้องการ name' });
+  if (!isOmni && !product) return res.status(400).json({ success: false, message: 'ต้องการ product' });
+  if (isOmni && !problem) return res.status(400).json({ success: false, message: 'Omni-Solver ต้องการ problem' });
   const agent = {
-    id: Date.now().toString(), name, product, category: category || 'ทั่วไป',
+    id: Date.now().toString(), name, task: task || 'content',
+    product: product || '', category: category || 'ทั่วไป',
     platform: platform || 'TikTok', style: style || 'sales',
     lang: lang || 'ภาษาไทย', audience: audience || 'ทั่วไป', price: price || '',
+    // Omni-Solver fields
+    problem: problem || '', context: context || '', goal: goal || '', stakeholders: stakeholders || '',
     schedule: schedule || 'daily', hour: parseInt(hour ?? 18),
     weekDay: parseInt(weekDay ?? 1),
     lineEnabled: !!lineEnabled, lineUserId: lineUserId || '',
