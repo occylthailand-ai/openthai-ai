@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useToast } from '../components/ToastContext';
@@ -9,17 +9,18 @@ const CATEGORIES = ['OTOP', 'อาหาร', 'ความงาม', 'สิ�
 const DURATIONS  = [15, 30, 60, 90];
 const LANGS      = ['ภาษาไทย', 'English', '中文', 'Bahasa Melayu', 'Bahasa Indonesia'];
 
+// Tabs ที่มี UI เฉพาะตัว (rich component) — จับคู่กับ registry ผ่าน `endpoint`
 const TABS = [
-  { id: 'learning',    icon: '🧬', label: 'Learning Layer',    color: '#06b6d4', skill: 'S9' },
-  { id: 'trend',       icon: '🔥', label: 'Trend Analyzer',    color: '#f97316', skill: 'S10' },
-  { id: 'hashtag',     icon: '#️⃣', label: 'Hashtag Generator', color: '#ec4899', skill: 'S11' },
-  { id: 'seo',         icon: '📈', label: 'SEO Thai',          color: '#84cc16', skill: 'S12' },
-  { id: 'sentiment',   icon: '💭', label: 'Sentiment Scanner', color: '#a855f7', skill: 'S13' },
-  { id: 'video',       icon: '🎬', label: 'Video Script',      color: '#ef4444', skill: 'S14' },
-  { id: 'translate',   icon: '🌐', label: 'Multi-Language',    color: '#14b8a6', skill: 'S15' },
-  { id: 'prompt',      icon: '⚡', label: 'Prompt Builder',    color: '#f59e0b', skill: 'S16' },
-  { id: 'wisdom',      icon: '☯️', label: 'Cultural Wisdom',   color: '#b45309', skill: 'S17' },
-  { id: 'supplychain', icon: '🔗', label: 'Supply Chain AI',   color: '#0ea5e9', skill: 'S19' },
+  { id: 'learning',    icon: '🧬', label: 'Learning Layer',    color: '#06b6d4', skill: 'S9',  endpoint: '/api/skills/learning/patterns' },
+  { id: 'trend',       icon: '🔥', label: 'Trend Analyzer',    color: '#f97316', skill: 'S10', endpoint: '/api/skills/trend' },
+  { id: 'hashtag',     icon: '#️⃣', label: 'Hashtag Generator', color: '#ec4899', skill: 'S11', endpoint: '/api/skills/hashtag' },
+  { id: 'seo',         icon: '📈', label: 'SEO Thai',          color: '#84cc16', skill: 'S12', endpoint: '/api/skills/seo' },
+  { id: 'sentiment',   icon: '💭', label: 'Sentiment Scanner', color: '#a855f7', skill: 'S13', endpoint: '/api/skills/sentiment' },
+  { id: 'video',       icon: '🎬', label: 'Video Script',      color: '#ef4444', skill: 'S14', endpoint: '/api/skills/video-script' },
+  { id: 'translate',   icon: '🌐', label: 'Multi-Language',    color: '#14b8a6', skill: 'S15', endpoint: '/api/skills/translate' },
+  { id: 'prompt',      icon: '⚡', label: 'Prompt Builder',    color: '#f59e0b', skill: 'S16', endpoint: '/api/skills/prompt-builder' },
+  { id: 'wisdom',      icon: '☯️', label: 'Cultural Wisdom',   color: '#b45309', skill: 'S17', endpoint: '/api/skills/cultural-wisdom' },
+  { id: 'supplychain', icon: '🔗', label: 'Supply Chain AI',   color: '#0ea5e9', skill: 'S19', endpoint: '/api/skills/supply-chain' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -1423,11 +1424,121 @@ function TabSupplyChain() {
   );
 }
 
+// ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
+function JsonView({ data, depth = 0 }) {
+  if (data == null) return null;
+  if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
+    return <span style={{ color: '#475569', fontSize: 13, lineHeight: 1.6 }}>{String(data)}</span>;
+  }
+  if (Array.isArray(data)) {
+    return (
+      <div style={{ display: 'grid', gap: 6 }}>
+        {data.map((v, i) => (
+          <div key={i} style={{ display: 'flex', gap: 8 }}>
+            <span style={{ color: '#0ea5e9', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>•</span>
+            <div style={{ flex: 1 }}><JsonView data={v} depth={depth + 1} /></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  // object
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      {Object.entries(data).map(([k, v]) => (
+        <div key={k} style={depth === 0 ? card({ padding: 14 }) : {}}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#0ea5e9', marginBottom: 4, textTransform: 'capitalize' }}>{k.replace(/_/g, ' ')}</div>
+          <JsonView data={v} depth={depth + 1} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Generic Skill Runner — สร้างฟอร์มจาก registry.inputs แล้วยิงเข้า endpoint อัตโนมัติ ──
+// ทักษะใหม่ที่เพิ่มใน backend registry จะใช้งานได้ทันทีโดยไม่ต้องเขียน UI เฉพาะ
+function GenericSkillRunner({ skill }) {
+  const { showToast } = useToast();
+  const inputs = skill.inputs?.length ? skill.inputs : ['product'];
+  const [form, setForm] = useState(() => Object.fromEntries(inputs.map(k => [k, ''])));
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const color = '#6366f1';
+
+  const run = async () => {
+    const required = inputs[0];
+    if (!String(form[required] || '').trim()) { showToast(`กรุณากรอก ${required}`, 'error'); return; }
+    setLoading(true); setResult(null);
+    try {
+      const res = await fetch(apiUrl(skill.endpoint), { method: skill.method || 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) showToast(d.error || 'เกิดข้อผิดพลาด', 'error'); else setResult(d);
+    } catch { showToast('ไม่สามารถเชื่อมต่อได้', 'error'); }
+    setLoading(false);
+  };
+
+  const { success, source, ...rest } = result || {};
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color, marginBottom: 4 }}>✨ {skill.name}</div>
+        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>{skill.method} {skill.endpoint} · ฟอร์มสร้างอัตโนมัติจาก Skills Registry</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          {inputs.map((field, i) => (
+            <div key={field}>
+              <label style={labelSt}>{field.replace(/_/g, ' ')}{i === 0 ? ' *' : ''}</label>
+              <input style={inputSt} placeholder={`ใส่ ${field}`} value={form[field] || ''} onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))} />
+            </div>
+          ))}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${color},#8b5cf6)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังประมวลผล...' : `✨ รัน ${skill.name}`}
+          </button>
+        </div>
+      </div>
+      {result && (
+        <div style={{ display: 'grid', gap: 12 }}>
+          {source && <div><SourceBadge source={source} /></div>}
+          <JsonView data={rest} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
+const TAB_COMPONENTS = {
+  learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
+  sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
+  prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
+};
+// ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
+const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);
+const GENERIC_COLORS = ['#6366f1', '#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899'];
+
 export default function AISkillsPage() {
   const navigate = useNavigate();
+  const [registry, setRegistry] = useState(null);
   const [tab, setTab] = useState('trend');
-  const activeTab = TABS.find(t => t.id === tab);
+
+  // ดึง Skills Registry — เพิ่มทักษะใหม่ใน backend แล้ว tab โผล่เองโดยไม่ต้องแก้ frontend
+  useEffect(() => {
+    fetch(apiUrl('/api/skills')).then(r => r.json()).then(d => { if (d.success) setRegistry(d); }).catch(() => {});
+  }, []);
+
+  // รวม curated tabs (UI เฉพาะ) + auto tabs จาก registry ที่ยังไม่มี UI
+  const statusByEndpoint = React.useMemo(() => Object.fromEntries((registry?.skills || []).map(s => [s.endpoint, s])), [registry]);
+  const tabs = React.useMemo(() => {
+    const curated = TABS.map(t => ({ ...t, reg: statusByEndpoint[t.endpoint] }));
+    const coveredEndpoints = new Set(TABS.map(t => t.endpoint));
+    const autoTabs = (registry?.skills || [])
+      .filter(s => s.endpoint.startsWith('/api/skills/') && s.method === 'POST' && s.inputs?.length && !coveredEndpoints.has(s.endpoint) && !HUB_EXCLUDE.has(s.endpoint))
+      .map((s, i) => ({ id: `gen:${s.id}`, icon: '✨', label: s.name, color: GENERIC_COLORS[i % GENERIC_COLORS.length], skill: s.id, endpoint: s.endpoint, reg: s, generic: s }));
+    return [...curated, ...autoTabs];
+  }, [registry, statusByEndpoint]);
+
+  const activeTab = tabs.find(t => t.id === tab) || tabs[0];
+  const Custom = activeTab && TAB_COMPONENTS[activeTab.id];
+  const needsKey = activeTab?.reg?.status === 'needs_key';
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#1e293b', fontFamily: "'Inter','Sarabun',sans-serif", paddingBottom: 80 }}>
@@ -1444,10 +1555,11 @@ export default function AISkillsPage() {
 
       {/* Tab Bar */}
       <div style={{ background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.06)', padding: '0 2%', display: 'flex', gap: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}>
-        {TABS.map(t => (
+        {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ padding: '12px 12px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === t.id ? t.color : 'transparent'}`, color: tab === t.id ? t.color : '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: tab === t.id ? 700 : 400, whiteSpace: 'nowrap', transition: 'all .2s', scrollSnapAlign: 'start', minHeight: 44 }}>
             {t.icon} <span className="section-tab-label">{t.label}</span>
+            {t.reg?.status === 'needs_key' && <span title="ต้องตั้งค่า API key" style={{ marginLeft: 3 }}>⚠️</span>}
             <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.7, background: tab === t.id ? t.color : 'transparent', color: tab === t.id ? '#fff' : 'transparent', borderRadius: 6, padding: '1px 4px' }}>{t.skill}</span>
           </button>
         ))}
@@ -1457,25 +1569,22 @@ export default function AISkillsPage() {
       <div style={{ background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.04)', padding: '10px 5%' }}>
         <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 22 }}>{activeTab?.icon}</span>
-          <div>
+          <div style={{ flex: 1 }}>
             <span style={{ fontWeight: 700, fontSize: 13, color: activeTab?.color }}>{activeTab?.label}</span>
             <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>{activeTab?.skill}</span>
           </div>
+          {registry && <span style={{ fontSize: 10, color: '#cbd5e1' }}>{registry.active}/{registry.total} skills · {registry.ai_engine}</span>}
         </div>
       </div>
 
       {/* Content */}
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 5% 0' }}>
-        {tab === 'learning'  && <TabLearningLayer />}
-        {tab === 'trend'     && <TabTrend />}
-        {tab === 'hashtag'   && <TabHashtag />}
-        {tab === 'seo'       && <TabSEO />}
-        {tab === 'sentiment' && <TabSentiment />}
-        {tab === 'video'     && <TabVideoScript />}
-        {tab === 'translate' && <TabTranslate />}
-        {tab === 'prompt'    && <TabPromptBuilder />}
-        {tab === 'wisdom'    && <TabCulturalWisdom />}
-        {tab === 'supplychain' && <TabSupplyChain />}
+        {needsKey && (
+          <div style={{ ...card({ borderLeft: '4px solid #f59e0b' }), marginBottom: 16, fontSize: 13, color: '#92400e', background: 'rgba(245,158,11,0.06)' }}>
+            ⚠️ ทักษะนี้ต้องตั้งค่า <strong>{activeTab.reg.requires}</strong> ก่อนจึงจะใช้งานได้เต็มรูปแบบ
+          </div>
+        )}
+        {Custom ? <Custom /> : activeTab?.generic ? <GenericSkillRunner skill={activeTab.generic} /> : null}
       </div>
     </div>
   );

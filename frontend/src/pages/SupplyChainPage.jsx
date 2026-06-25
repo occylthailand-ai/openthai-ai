@@ -54,6 +54,27 @@ export default function SupplyChainPage() {
   };
   const closeAI = () => setAi({ open: false, product: '', loading: false, data: null, err: '' });
 
+  // ── เติมสต๊อกจริง (ปิดวงจร: รู้ว่าต้องสั่ง → สั่งเลย) ──
+  const [restockingId, setRestockingId] = useState(null);
+  const restock = async (p) => {
+    if (!p?.id) return;
+    const qtyStr = window.prompt(`เติมสต๊อก "${p.name}" — ใส่จำนวนที่รับเข้า (ชิ้น):`, '');
+    if (qtyStr == null) return;
+    const delta = Math.trunc(Number(qtyStr));
+    if (!Number.isFinite(delta) || delta <= 0) { setError('จำนวนต้องเป็นตัวเลขมากกว่า 0'); return; }
+    setRestockingId(p.id); setError('');
+    try {
+      const res = await fetch(apiUrl('/api/inventory/admin/adjust'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...keyHeader() },
+        body: JSON.stringify({ id: p.id, delta, type: 'restock', reason: 'Supply Chain Tower restock' }),
+      });
+      const d = await res.json();
+      if (d.success === false || !res.ok) setError(d.error || 'เติมสต๊อกไม่สำเร็จ');
+      else await load();
+    } catch { setError('เติมสต๊อกไม่สำเร็จ — เชื่อมต่อไม่ได้'); }
+    setRestockingId(null);
+  };
+
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
@@ -137,8 +158,10 @@ export default function SupplyChainPage() {
                           <div style={{ fontSize: 13, fontWeight: 800, color: '#ef4444' }}>เหลือ {p.stock}</div>
                           <div style={{ fontSize: 11, color: '#94a3b8' }}>จุดเตือน {p.low_stock}</div>
                         </div>
+                        <button onClick={() => restock(p)} disabled={restockingId === p.id} title="เติมสต๊อกสินค้านี้"
+                          style={{ background: restockingId === p.id ? '#94a3b8' : '#10b981', border: 'none', color: '#fff', borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>{restockingId === p.id ? '⏳' : '➕ เติมสต๊อก'}</button>
                         <button onClick={() => askAI(p)} title="ให้ AI วางแผนจัดซื้อ/พยากรณ์สินค้านี้"
-                          style={{ background: '#fff', border: `1px solid ${sky}`, color: sky, borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>🤖 AI วางแผน</button>
+                          style={{ background: '#fff', border: `1px solid ${sky}`, color: sky, borderRadius: 8, padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>🤖 AI</button>
                       </div>
                     </div>
                   ))}

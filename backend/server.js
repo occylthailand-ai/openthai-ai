@@ -3092,6 +3092,107 @@ Lead time จัดหา: ${lead_time || 'ไม่ระบุ'}
   });
 });
 
+// S20 · POST /api/skills/pricing — Pricing Optimizer (ตั้งราคาให้ได้กำไร + แข่งขันได้)
+app.post('/api/skills/pricing', generateLimiter, async (req, res) => {
+  const { product, cost = '', competitor_price = '', category = 'OTOP', target_margin = '', positioning = 'คุ้มค่า' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นนักวางกลยุทธ์ราคา (Pricing Strategist) ระดับโลก เชี่ยวชาญ value-based pricing, จิตวิทยาราคา
+และตลาด SME/OTOP/ออนไลน์ไทย (Shopee/Lazada/TikTok Shop)
+
+─── ข้อมูล ───
+สินค้า: "${product.slice(0, 200)}"
+หมวด: ${category}
+ต้นทุนต่อหน่วย: ${cost || 'ไม่ระบุ'} บาท
+ราคาคู่แข่ง: ${competitor_price || 'ไม่ระบุ'} บาท
+กำไรเป้าหมาย: ${target_margin || 'ไม่ระบุ'}
+การวางตำแหน่ง: ${positioning}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "recommended_price": "ราคาที่แนะนำ (บาท) + เหตุผลสั้น",
+  "price_range": {"min":"ราคาต่ำสุดที่ยังมีกำไร","max":"ราคาสูงสุดที่ตลาดรับได้"},
+  "psychological_price": "ราคาจิตวิทยา เช่น 199 แทน 200 + เหตุผล",
+  "strategy": "ชื่อกลยุทธ์ราคา + อธิบาย 2-3 ประโยค",
+  "margin_analysis": {"gross_margin":"% กำไรขั้นต้นโดยประมาณ","note":"ข้อสังเกตเรื่องต้นทุน/กำไร"},
+  "competitor_positioning": "ควรตั้งราคาเทียบคู่แข่งอย่างไร (ถูกกว่า/เท่ากัน/พรีเมียม) + เหตุผล",
+  "bundle_options": ["ไอเดียจัดเซ็ต/แพ็กเพิ่มมูลค่า 1","2","3"],
+  "discount_strategy": "กลยุทธ์ส่วนลด/โปรที่ไม่ทำลายกำไร",
+  "upsell_ideas": ["ไอเดีย upsell/cross-sell 1","2","3"],
+  "price_anchoring_tip": "วิธีตั้ง anchor ให้ลูกค้ารู้สึกคุ้ม"
+}`;
+
+  try {
+    const text = await callAI(prompt, 2048);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/Pricing', e.message); }
+
+  const c = Number(cost) || 0;
+  const rec = c > 0 ? Math.round(c * 2.2 / 10) * 10 + 9 : null;
+  res.json({
+    success: true, source: 'mock',
+    recommended_price: rec ? `${rec} บาท (มาร์กอัป ~2.2x จากต้นทุน เพื่อครอบคลุมค่าขนส่ง/แพลตฟอร์ม + กำไร)` : 'ตั้งจากต้นทุน × 2-2.5 เท่า เผื่อค่าขนส่ง+ค่าธรรมเนียม',
+    price_range: { min: c > 0 ? `${Math.round(c * 1.6)} บาท` : 'ต้นทุน × 1.6', max: c > 0 ? `${Math.round(c * 3)} บาท` : 'ต้นทุน × 3' },
+    psychological_price: rec ? `ตั้ง ${rec} แทนเลขกลม — เลขลงท้าย 9 ทำให้รู้สึกถูกลง` : 'ใช้เลขลงท้าย 9 (เช่น 199, 299)',
+    strategy: `Value-based + Charm pricing — เน้นวางตำแหน่ง "${positioning}" สื่อสารคุณค่าให้ชัดก่อนแจ้งราคา`,
+    margin_analysis: { gross_margin: c > 0 && rec ? `~${Math.round((1 - c / rec) * 100)}%` : 'ตั้งเป้า ≥ 50%', note: 'อย่าลืมหักค่าขนส่ง บรรจุภัณฑ์ และค่าธรรมเนียมแพลตฟอร์มก่อนคิดกำไรสุทธิ' },
+    competitor_positioning: competitor_price ? `ถ้าคุณภาพเหนือกว่า ตั้งใกล้เคียงหรือพรีเมียมกว่าเล็กน้อยได้ ถ้าเท่ากันให้เพิ่มของแถม/บริการแทนการลดราคา` : 'หาราคาคู่แข่ง 3 รายก่อน แล้ววางให้สอดคล้องกับคุณค่าที่สื่อสาร',
+    bundle_options: ['เซ็ตคู่ลดราคาเล็กน้อย', 'แพ็กของฝาก + กล่องพรีเมียม', 'ซื้อ 2 แถมของชิ้นเล็ก'],
+    discount_strategy: 'ใช้ส่วนลดมีเงื่อนไข (ขั้นต่ำ/ช่วงเวลา) แทนลดถาวร — รักษากำไรและความรู้สึกพิเศษ',
+    upsell_ideas: ['เสนอไซซ์ใหญ่คุ้มกว่า', 'เพิ่มบริการห่อของขวัญ', 'สมัครสมาชิกรับซ้ำราคาพิเศษ'],
+    price_anchoring_tip: 'โชว์ราคาเต็มขีดฆ่าคู่กับราคาขายจริง + ระบุ "ประหยัด X บาท"',
+  });
+});
+
+// S21 · POST /api/skills/customer-service — Customer Service AI (ช่วยตอบลูกค้าอย่างมืออาชีพ)
+app.post('/api/skills/customer-service', generateLimiter, async (req, res) => {
+  const { message, product = '', tone = 'สุภาพ เป็นมิตร', channel = 'แชท' } = req.body || {};
+  if (!message?.trim()) return res.status(400).json({ error: 'message required' });
+
+  const prompt = `คุณเป็นผู้เชี่ยวชาญ Customer Experience สำหรับร้านค้าออนไลน์ไทย ช่วยร้านตอบลูกค้าให้ปิดการขาย/แก้ปัญหาได้อย่างมืออาชีพ
+ช่องทาง: ${channel} · โทน: ${tone}${product ? ` · สินค้า: ${product}` : ''}
+
+ข้อความจากลูกค้า: "${message.slice(0, 600)}"
+
+วิเคราะห์และร่างคำตอบ ตอบกลับ JSON เท่านั้น:
+{
+  "intent": "เจตนาของลูกค้า (สอบถาม/ต่อรอง/ตำหนิ/สนใจซื้อ/ติดตามพัสดุ ฯลฯ)",
+  "sentiment": "positive / neutral / negative",
+  "urgency": "สูง / กลาง / ต่ำ",
+  "escalate": true/false (ควรส่งต่อให้คนดูแลไหม),
+  "suggested_replies": ["คำตอบแนะนำแบบที่ 1 (กระชับ)","แบบที่ 2 (อบอุ่น)","แบบที่ 3 (เน้นปิดการขาย)"],
+  "recommended_reply": "คำตอบที่ดีที่สุดสำหรับสถานการณ์นี้",
+  "follow_up": "ประโยคติดตามผล/ชวนคุยต่อ",
+  "do_dont": {"do":["ควรทำ 1","ควรทำ 2"],"dont":["ไม่ควรทำ 1","ไม่ควรทำ 2"]}
+}`;
+
+  try {
+    const text = await callAI(prompt, 2048);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/CustomerService', e.message); }
+
+  const neg = /แพง|ช้า|เสีย|ผิด|ไม่พอใจ|แย่|คืนเงิน|โกง/.test(message);
+  res.json({
+    success: true, source: 'mock',
+    intent: neg ? 'ตำหนิ/ร้องเรียน' : (/ราคา|เท่าไหร่|กี่บาท|ลด/.test(message) ? 'สอบถามราคา/ต่อรอง' : 'สอบถามทั่วไป'),
+    sentiment: neg ? 'negative' : 'neutral',
+    urgency: neg ? 'สูง' : 'กลาง',
+    escalate: neg,
+    suggested_replies: [
+      `สวัสดีค่ะ ขอบคุณที่สอบถามนะคะ ${product ? `เรื่อง${product} ` : ''}ทางร้านยินดีดูแลให้เต็มที่เลยค่ะ 🙏`,
+      `รับทราบค่ะ ทางร้านเข้าใจความรู้สึกของลูกค้า ขออนุญาตช่วยตรวจสอบและดูแลให้เรียบร้อยนะคะ`,
+      `ตอนนี้มีโปรพิเศษอยู่พอดีค่ะ สนใจให้ทางร้านจัดให้เลยไหมคะ จะรีบจัดส่งให้เร็วที่สุดค่ะ ✨`,
+    ],
+    recommended_reply: neg
+      ? `ต้องขออภัยในความไม่สะดวกด้วยนะคะ 🙏 ทางร้านขอช่วยตรวจสอบให้ทันทีค่ะ รบกวนขอเลขคำสั่งซื้อ/รายละเอียดเพิ่มเติม เพื่อดูแลให้เรียบร้อยที่สุดค่ะ`
+      : `สวัสดีค่ะ ขอบคุณที่สนใจนะคะ ${product ? `${product} ` : ''}ทางร้านยินดีให้ข้อมูลเพิ่มเติมเลยค่ะ มีอะไรให้ช่วยดูแลเป็นพิเศษไหมคะ 😊`,
+    follow_up: 'มีอะไรให้ทางร้านช่วยเพิ่มเติมไหมคะ ยินดีดูแลค่ะ 🙏',
+    do_dont: { do: ['ตอบเร็ว สุภาพ เห็นอกเห็นใจ', 'เสนอทางแก้ที่ชัดเจน'], dont: ['ตอบห้วน/โต้เถียงลูกค้า', 'สัญญาเกินจริง'] },
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3114,6 +3215,8 @@ const SKILLS_REGISTRY = [
   { id: 'S17', name: 'Cultural Wisdom',      category: 'wisdom',      endpoint: '/api/skills/cultural-wisdom',  method: 'POST', inputs: ['situation', 'tradition'],       status: 'active' },
   { id: 'S18', name: 'Sales Conversion Engine', category: 'sales',   endpoint: '/api/skills/promo-engine',     method: 'POST', inputs: ['product', 'usp', 'platform'],   status: 'active' },
   { id: 'S19', name: 'Supply Chain AI',      category: 'operations',  endpoint: '/api/skills/supply-chain',     method: 'POST', inputs: ['product', 'category', 'sourcing'], status: 'active' },
+  { id: 'S20', name: 'Pricing Optimizer',    category: 'pricing',     endpoint: '/api/skills/pricing',          method: 'POST', inputs: ['product', 'cost', 'competitor_price'], status: 'active' },
+  { id: 'S21', name: 'Customer Service AI',  category: 'support',     endpoint: '/api/skills/customer-service', method: 'POST', inputs: ['message', 'product', 'channel'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -3710,6 +3813,8 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S17', name:'Cultural Wisdom',  pct:88, color:'#b45309', category:'wisdom',      status:'✅' },
       { id:'S18', name:'Sales Conv. Engine',pct:90, color:'#fe2c55', category:'sales',      status:'✅' },
       { id:'S19', name:'Supply Chain AI',  pct:84, color:'#0ea5e9', category:'operations',  status:'✅' },
+      { id:'S20', name:'Pricing Optimizer',pct:86, color:'#6366f1', category:'pricing',     status:'✅' },
+      { id:'S21', name:'Customer Service AI',pct:83, color:'#22c55e', category:'support',    status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
