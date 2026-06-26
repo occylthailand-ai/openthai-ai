@@ -29,6 +29,7 @@ const TABS = [
   { id: 'live',        icon: '🔴', label: 'Live Selling Script', color: '#fb7185', skill: 'S25', endpoint: '/api/skills/live-script' },
   { id: 'omni',        icon: '🧩', label: 'Omni-Solver',         color: '#7c3aed', skill: 'S26', endpoint: '/api/skills/omni-solver' },
   { id: 'negotiation', icon: '🤝', label: 'Negotiation Coach',   color: '#0891b2', skill: 'S27', endpoint: '/api/skills/negotiation' },
+  { id: 'mediation',   icon: '🕊️', label: 'Conflict Mediator',    color: '#0d9488', skill: 'S28', endpoint: '/api/skills/mediation' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -2321,6 +2322,119 @@ function TabNegotiation() {
   );
 }
 
+// ─── Tab: Conflict Mediator (S28) ─────────────────────────────────────────────
+function TabMediation() {
+  const [form, setForm] = useState({ conflict: '', parties: '', desired_outcome: 'ทางออกที่เป็นธรรมและรักษาความสัมพันธ์' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const teal = '#0d9488';
+
+  const run = async () => {
+    if (!form.conflict.trim()) { setError('กรุณาใส่สถานการณ์ความขัดแย้ง'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/mediation'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: teal, marginBottom: 16 }}>🕊️ ไกล่เกลี่ยความขัดแย้ง (เป็นธรรมทุกฝ่าย)</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>สถานการณ์ความขัดแย้ง *</label><textarea style={{ ...inputSt, minHeight: 80, resize: 'vertical' }} placeholder="เช่น 'หุ้นส่วนเห็นไม่ตรงกันเรื่องแบ่งกำไร' / 'ทีมงานขัดแย้งเรื่องหน้าที่' / 'ลูกค้ากับร้านพิพาทเรื่องคืนสินค้า'" value={form.conflict} onChange={e => setForm(f => ({ ...f, conflict: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>ฝ่ายที่เกี่ยวข้อง</label><input style={inputSt} placeholder="เช่น หุ้นส่วน A, หุ้นส่วน B" value={form.parties} onChange={e => setForm(f => ({ ...f, parties: e.target.value }))} /></div>
+            <div><label style={labelSt}>ผลลัพธ์ที่ต้องการ</label><input style={inputSt} value={form.desired_outcome} onChange={e => setForm(f => ({ ...f, desired_outcome: e.target.value }))} /></div>
+          </div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${teal},#0f766e)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังวิเคราะห์...' : '🕊️ หาทางออกที่เป็นธรรม'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {result.reframe && (
+            <div style={card({ borderLeft: `4px solid ${teal}` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: teal }}>🔄 มองความขัดแย้งใหม่</span>
+                <SourceBadge source={result.source} />
+              </div>
+              <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, lineHeight: 1.6 }}>{result.reframe}</div>
+              {result.root_tension && <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>🎯 ต้นตอ: {result.root_tension}</div>}
+              {result.summary && <div style={{ fontSize: 13, color: '#64748b', marginTop: 6, lineHeight: 1.6 }}>{result.summary}</div>}
+            </div>
+          )}
+
+          {result.parties_analysis?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: teal }}>👥 วิเคราะห์แต่ละฝ่าย</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 10 }}>
+                {result.parties_analysis.map((p, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>{p.party} {p.emotion && <span style={{ fontSize: 11, fontWeight: 400, color: '#94a3b8' }}>· {p.emotion}</span>}</div>
+                    {p.position && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>จุดยืน: {p.position}</div>}
+                    {p.interest && <div style={{ fontSize: 12, color: teal, marginTop: 2 }}>ต้องการจริง: {p.interest}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.common_ground?.length > 0 && (
+            <div style={card({ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' })}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 8 }}>🤝 จุดร่วม</div>
+              {result.common_ground.map((c, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>✓ {c}</div>)}
+            </div>
+          )}
+
+          {result.resolution_options?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: teal }}>⚖️ ทางออก + ความเป็นธรรม</div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {result.resolution_options.map((o, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 2 }}>{o.option}</div>
+                    {o.fairness && <div style={{ fontSize: 12, color: '#059669' }}>⚖️ {o.fairness}</div>}
+                    {o.tradeoffs && <div style={{ fontSize: 12, color: '#94a3b8' }}>↔ {o.tradeoffs}</div>}
+                  </div>
+                ))}
+              </div>
+              {result.recommended_resolution && <div style={{ marginTop: 10, background: '#f0fdfa', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#115e59', lineHeight: 1.6 }}><strong>✅ แนะนำ:</strong> {result.recommended_resolution}</div>}
+            </div>
+          )}
+
+          {result.mediation_script && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: teal }}>💬 สคริปต์ไกล่เกลี่ย</div>
+              {[['opening', '🚀 เปิดวง'], ['reframing', '🔄 ช่วยเข้าใจกัน'], ['closing', '✅ ปิดสู่ข้อตกลง']].map(([k, lbl]) => result.mediation_script[k] && (
+                <div key={k} style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 12px', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: teal }}>{lbl}</span>
+                    <CopyBtn text={result.mediation_script[k]} />
+                  </div>
+                  <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{result.mediation_script[k]}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.ground_rules?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 8 }}>📋 กติกาการคุย</div>{result.ground_rules.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.follow_up && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 6 }}>📡 ติดตามผล</div><div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>{result.follow_up}</div></div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -2407,7 +2521,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);

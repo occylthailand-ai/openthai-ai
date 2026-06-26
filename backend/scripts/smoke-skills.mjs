@@ -12,6 +12,7 @@ const BASE = `http://localhost:${PORT}`;
 const SAMPLE = {
   product: 'น้ำพริกเผาทดสอบ', message: 'สินค้าดีไหมคะ ราคาเท่าไหร่', text: 'สินค้าดีมากแนะนำเลย',
   situation: 'อยากขยายธุรกิจ', problem: 'ลูกค้าสนใจแต่ไม่ปิดการขาย', context: 'งบจำกัด', goal: 'ยอดขาย', usp: 'อร่อย สะอาด ปลอดภัย', category: 'OTOP',
+  conflict: 'หุ้นส่วนเห็นไม่ตรงกันเรื่องแบ่งกำไร', parties: 'หุ้นส่วน A, หุ้นส่วน B',
   price: 120, cost: 45, unit_cost: 45, fixed_costs: 8000, budget: 10000, competitor_price: 150,
   monthly_volume: 200, sourcing: 'ผสม', platforms: 'TikTok, Facebook', from: 'ภาษาไทย', to: 'English',
   channel: 'แชท', technique: 'role',
