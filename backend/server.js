@@ -3607,6 +3607,69 @@ ${constraints ? `ข้อจำกัด: ${constraints}` : ''}
   });
 });
 
+// S28 · POST /api/skills/mediation — Conflict Mediator (ไกล่เกลี่ยความขัดแย้งให้เป็นธรรมทุกฝ่าย)
+app.post('/api/skills/mediation', generateLimiter, async (req, res) => {
+  const { conflict, parties = '', desired_outcome = 'ทางออกที่เป็นธรรมและรักษาความสัมพันธ์' } = req.body || {};
+  if (!conflict?.trim()) return res.status(400).json({ error: 'conflict required' });
+
+  const prompt = `คุณเป็นนักไกล่เกลี่ยข้อพิพาทมืออาชีพ (mediator) ที่เป็นกลาง เน้น interest-based mediation
+ช่วยทุกฝ่ายหาทางออกร่วมที่เป็นธรรมและรักษาความสัมพันธ์ เข้าใจวัฒนธรรมไทย (รักษาน้ำใจ ไม่เสียหน้า)
+
+ความขัดแย้ง: "${conflict.slice(0, 600)}"
+${parties ? `ฝ่ายที่เกี่ยวข้อง: ${parties}` : ''}
+ผลลัพธ์ที่ต้องการ: ${desired_outcome}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "summary": "สรุปแนวทางไกล่เกลี่ย 2-3 ประโยค",
+  "reframe": "นิยามความขัดแย้งใหม่อย่างเป็นกลาง ไม่กล่าวโทษฝ่ายใด",
+  "root_tension": "ต้นตอความตึงเครียดที่แท้จริง",
+  "parties_analysis": [
+    {"party":"ชื่อฝ่าย","position":"จุดยืนที่แสดงออก","interest":"ความต้องการแท้จริงเบื้องหลัง","emotion":"อารมณ์/ความรู้สึก"},
+    {"party":"...","position":"...","interest":"...","emotion":"..."}
+  ],
+  "common_ground": ["จุดร่วมที่ทุกฝ่ายเห็นพ้อง 1","2","3"],
+  "resolution_options": [
+    {"option":"ทางออก 1","fairness":"เป็นธรรมต่อทุกฝ่ายอย่างไร","tradeoffs":"สิ่งที่แต่ละฝ่ายต้องยอม"},
+    {"option":"ทางออก 2","fairness":"...","tradeoffs":"..."}
+  ],
+  "recommended_resolution": "ทางออกที่แนะนำ + เหตุผลว่าเป็นธรรมและยั่งยืนที่สุด",
+  "mediation_script": {"opening":"ประโยคเปิดวงไกล่เกลี่ย","reframing":"ประโยคช่วยให้แต่ละฝ่ายเข้าใจกัน","closing":"ประโยคปิดสู่ข้อตกลง"},
+  "ground_rules": ["กติกาการพูดคุยให้สร้างสรรค์ 1","2","3"],
+  "follow_up": "วิธีติดตามผลหลังตกลงกัน เพื่อป้องกันขัดแย้งซ้ำ"
+}`;
+
+  try {
+    const text = await callAI(prompt, 2560);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/Mediation', e.message); }
+
+  res.json({
+    success: true, source: 'mock',
+    summary: 'ไกล่เกลี่ยแบบเน้นความต้องการแท้จริง (interest-based) — แยกคนออกจากปัญหา หาจุดร่วม แล้วออกแบบทางออกที่ทุกฝ่ายรับได้และรักษาน้ำใจ',
+    reframe: 'ความขัดแย้งนี้ไม่ใช่ "ใครผิดใครถูก" แต่คือความต้องการสองชุดที่ยังไม่ถูกประสานให้ลงตัว',
+    root_tension: 'ความรู้สึกว่าไม่ถูกรับฟัง + กลัวเสียประโยชน์/เสียหน้า มากกว่าตัวประเด็นเอง',
+    parties_analysis: [
+      { party: 'ฝ่าย A', position: 'ยืนยันในสิ่งที่ตัวเองเรียกร้อง', interest: 'ต้องการความเป็นธรรมและการยอมรับ', emotion: 'ผิดหวัง/ไม่ถูกรับฟัง' },
+      { party: 'ฝ่าย B', position: 'ปกป้องจุดยืนตัวเอง', interest: 'ต้องการความมั่นคงและไม่เสียหน้า', emotion: 'กังวล/ตั้งรับ' },
+    ],
+    common_ground: ['ทั้งคู่อยากให้เรื่องจบด้วยดี', 'ทั้งคู่ยังเห็นคุณค่าของความสัมพันธ์/ความร่วมมือ', 'ทั้งคู่ไม่อยากเสียเวลา/ทรัพยากรกับความขัดแย้งยืดเยื้อ'],
+    resolution_options: [
+      { option: 'ตกลงเงื่อนไขกลางที่แบ่งภาระ/ผลประโยชน์อย่างสมดุล', fairness: 'ทั้งสองฝ่ายได้บางส่วนของสิ่งที่ต้องการ', tradeoffs: 'แต่ละฝ่ายยอมลดข้อเรียกร้องสุดโต่งลง' },
+      { option: 'ขยายทางเลือก/ทรัพยากรเพื่อให้ได้มากขึ้นทั้งคู่', fairness: 'เปลี่ยนจากแย่งเค้กเป็นขยายเค้ก', tradeoffs: 'ต้องลงแรง/เวลาสร้างทางเลือกใหม่ร่วมกัน' },
+    ],
+    recommended_resolution: 'เริ่มจากยืนยันจุดร่วม → ให้แต่ละฝ่ายพูดความต้องการจริง → ออกแบบทางออกที่แบ่งสมดุลและเปิดทางขยายผลประโยชน์ร่วม โดยบันทึกข้อตกลงให้ชัดเจน',
+    mediation_script: {
+      opening: '"วันนี้เรามาคุยกันเพื่อหาทางที่ดีต่อทุกคน ไม่ใช่หาคนผิด ขอให้ทุกฝ่ายได้พูดและได้ฟังกันนะครับ"',
+      reframing: '"ที่คุณพูดมา ผมได้ยินว่าสิ่งที่สำคัญกับคุณจริงๆ คือ [ความต้องการ] ใช่ไหมครับ — แล้วของอีกฝ่ายคือ [ความต้องการ]"',
+      closing: '"เราเจอทางที่ทั้งสองฝ่ายรับได้แล้ว ขอสรุปเป็นข้อตกลงร่วมกัน และนัดติดตามผลกันนะครับ"',
+    },
+    ground_rules: ['พูดทีละคน ไม่ขัดจังหวะ', 'พูดถึงปัญหา ไม่โจมตีตัวบุคคล', 'มุ่งหาทางออกร่วม ไม่ใช่เอาชนะ'],
+    follow_up: 'นัดทบทวนข้อตกลงใน 2-4 สัปดาห์ เพื่อเช็กว่าทุกฝ่ายทำตามและไม่มีความตึงเครียดใหม่',
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3637,6 +3700,7 @@ const SKILLS_REGISTRY = [
   { id: 'S25', name: 'Live Selling Script',  category: 'live',        endpoint: '/api/skills/live-script',      method: 'POST', inputs: ['product', 'platform', 'duration'], status: 'active' },
   { id: 'S26', name: 'Omni-Solver',          category: 'solver',      endpoint: '/api/skills/omni-solver',      method: 'POST', inputs: ['problem', 'context', 'goal'], status: 'active' },
   { id: 'S27', name: 'Negotiation Coach',    category: 'negotiation', endpoint: '/api/skills/negotiation',      method: 'POST', inputs: ['situation', 'my_goal', 'their_position'], status: 'active' },
+  { id: 'S28', name: 'Conflict Mediator',    category: 'mediation',   endpoint: '/api/skills/mediation',        method: 'POST', inputs: ['conflict', 'parties', 'desired_outcome'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4266,6 +4330,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S25', name:'Live Selling Script',pct:88, color:'#fb7185', category:'live',      status:'✅' },
       { id:'S26', name:'Omni-Solver',      pct:90, color:'#7c3aed', category:'solver',     status:'✅' },
       { id:'S27', name:'Negotiation Coach',pct:88, color:'#0891b2', category:'negotiation',status:'✅' },
+      { id:'S28', name:'Conflict Mediator',pct:87, color:'#0d9488', category:'mediation',  status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
