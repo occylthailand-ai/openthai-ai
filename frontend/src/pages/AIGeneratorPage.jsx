@@ -451,6 +451,8 @@ const AIGeneratorPage = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [brandLoaded, setBrandLoaded] = useState(false);
   const [usage, setUsage] = useState(null);  // โควต้ารายวันตามแผน
+  const [streamText, setStreamText] = useState('');   // ✍️ เขียนสด (SSE)
+  const [streaming, setStreaming] = useState(false);
 
   // โหลดโควต้าคงเหลือ
   const refreshUsage = () => {
@@ -485,6 +487,37 @@ const AIGeneratorPage = () => {
       }
     } catch (_) {}
   }, []);
+
+  // ✍️ เขียนสด — สตรีมแคปชั่นทีละคำผ่าน SSE (ไหลลื่น เห็นข้อความค่อยๆ ปรากฏ)
+  const handleStream = async () => {
+    if (!form.product.trim() || streaming) return;
+    setStreaming(true); setStreamText('');
+    try {
+      const res = await fetch(apiUrl('/api/generate/stream'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product: form.product, platform: form.platform, category: form.category, audience: form.audience }),
+      });
+      if (!res.ok || !res.body) { toast.error('สตรีมไม่สำเร็จ'); setStreaming(false); return; }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const events = buf.split('\n\n'); buf = events.pop() || '';
+        for (const block of events) {
+          const ev = (block.match(/^event: (.+)$/m) || [])[1];
+          const dataLine = (block.match(/^data: (.+)$/m) || [])[1];
+          if (!dataLine) continue;
+          let payload; try { payload = JSON.parse(dataLine); } catch { continue; }
+          if (ev === 'delta' && payload.text) setStreamText(prev => prev + payload.text);
+          else if (ev === 'error') toast.error(payload.message || 'เกิดข้อผิดพลาด');
+        }
+      }
+    } catch { toast.error('การเชื่อมต่อสตรีมขัดข้อง'); }
+    setStreaming(false);
+  };
 
   const handleGenerate = async () => {
     if (!form.product.trim()) return;
@@ -729,6 +762,22 @@ const AIGeneratorPage = () => {
             {loading ? <><span className="gen-spinner">⚡</span> {t('gen.btn.loading')}</>
               : abMode ? t('gen.btn.ab') : t('gen.btn')}
           </button>
+
+          {/* ✍️ เขียนสด (Streaming/SSE) — แคปชั่นพิมพ์สดทีละคำ */}
+          <button onClick={handleStream} disabled={streaming || !form.product.trim()}
+            style={{ width: '100%', marginTop: 10, background: 'transparent', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 10, padding: '11px', color: streaming ? '#94a3b8' : '#a5b4fc', fontWeight: 700, fontSize: 14, cursor: streaming ? 'default' : 'pointer' }}>
+            {streaming ? '✍️ กำลังเขียนสด...' : '✍️ เขียนแคปชั่นสด (Live)'}
+          </button>
+          {(streaming || streamText) && (
+            <div style={{ marginTop: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 12, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: '#a5b4fc' }}>🌊 เขียนสด {streaming && <span style={{ color: '#10b981' }}>● live</span>}</span>
+                {streamText && !streaming && <button onClick={() => { navigator.clipboard.writeText(streamText).catch(() => {}); toast.success('คัดลอกแล้ว'); }} style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, padding: '4px 10px', color: '#a5b4fc', cursor: 'pointer', fontSize: 12 }}>📋 คัดลอก</button>}
+              </div>
+              <div style={{ fontSize: 14, color: '#e2e8f0', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{streamText}{streaming && <span style={{ animation: 'blink 1s step-start infinite' }}>▋</span>}</div>
+              <style>{'@keyframes blink{50%{opacity:0}}'}</style>
+            </div>
+          )}
 
           {/* โควต้ารายวัน */}
           {usage && (usage.unlimited ? (

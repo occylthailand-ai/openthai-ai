@@ -1139,6 +1139,63 @@ app.post('/api/generate-ab', generateLimiter, async (req, res) => {
   }
 });
 
+// ─── POST /api/generate/stream — สตรีมคำโฆษณาสดทีละคำ (SSE · ChatGPT-style) ──────
+// ไหลลื่นกว่า: ผู้ใช้เห็นข้อความค่อยๆ ปรากฏแทนรอจนเสร็จ
+app.post('/api/generate/stream', generateLimiter, async (req, res) => {
+  const { product, platform = 'TikTok', tone = 'สนุก/กระตุ้น', category = 'OTOP', audience = 'ทั่วไป' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  // SSE headers — ปิด buffering เพื่อให้ไหลทันที
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  const send = (event, data) => { try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch { /* closed */ } };
+  let closed = false;
+  res.on('close', () => { closed = true; }); // client disconnect (ไม่ใช่ req body อ่านจบ)
+
+  const prompt = `เขียนแคปชั่นขายของภาษาไทยที่ปังสำหรับ ${platform} โทน "${tone}"
+สินค้า: "${String(product).slice(0, 200)}" · หมวด: ${category} · กลุ่มเป้าหมาย: ${audience}
+เขียนเป็นข้อความต่อเนื่อง (ไม่ต้องมีหัวข้อ/JSON) มี hook เปิดที่ดึงดูด · ประโยชน์ · call-to-action · อิโมจิพอเหมาะ · แฮชแท็ก 3-5 ตัวท้ายสุด`;
+
+  try {
+    send('start', { source: anthropic ? 'claude' : (gemini ? 'gemini' : 'mock') });
+
+    if (anthropic) {
+      const stream = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001', max_tokens: 1024, stream: true,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      for await (const ev of stream) {
+        if (closed) break;
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) send('delta', { text: ev.delta.text });
+      }
+    } else if (gemini) {
+      const result = await gemini.generateContentStream(prompt);
+      for await (const chunk of result.stream) {
+        if (closed) break;
+        const t = chunk.text(); if (t) send('delta', { text: t });
+      }
+    } else {
+      // Mock — สตรีมทีละคำเพื่อให้เห็น UX จริง
+      const mock = `🔥 หยุดเลื่อน! ${String(product).slice(0, 40)} ที่ทุกคนตามหา มาแล้ว ✨\n\nคุณภาพคัดเกรด ส่งตรงถึงมือคุณ ราคาที่จับต้องได้ รับประกันความพอใจ 💯\n\n👉 ทักแชทสั่งเลยวันนี้ ของมีจำนวนจำกัด!\n\n#${category} #ของดีบอกต่อ #Openthai_ai`;
+      for (const word of mock.split(/(\s+)/)) {
+        if (closed) break;
+        send('delta', { text: word });
+        await new Promise(r => setTimeout(r, 35));
+      }
+    }
+    send('done', { ok: true });
+  } catch (e) {
+    addLog('warn', 'GenerateStream', e.message);
+    send('error', { message: 'เกิดข้อผิดพลาดระหว่างสตรีม' });
+  } finally {
+    try { res.end(); } catch { /* ignore */ }
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  AI SKILLS HUB — S10-S15 (Trend, Hashtag, SEO, Sentiment, Video Script, Translate)
 // ═══════════════════════════════════════════════════════════════════════════════
