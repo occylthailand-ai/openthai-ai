@@ -30,6 +30,7 @@ const TABS = [
   { id: 'omni',        icon: '🧩', label: 'Omni-Solver',         color: '#7c3aed', skill: 'S26', endpoint: '/api/skills/omni-solver' },
   { id: 'negotiation', icon: '🤝', label: 'Negotiation Coach',   color: '#0891b2', skill: 'S27', endpoint: '/api/skills/negotiation' },
   { id: 'mediation',   icon: '🕊️', label: 'Conflict Mediator',    color: '#0d9488', skill: 'S28', endpoint: '/api/skills/mediation' },
+  { id: 'crisis',      icon: '🚨', label: 'Crisis Manager',       color: '#dc2626', skill: 'S29', endpoint: '/api/skills/crisis' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -2435,6 +2436,118 @@ function TabMediation() {
   );
 }
 
+// ─── Tab: Crisis Manager (S29) ────────────────────────────────────────────────
+const CRISIS_CHANNELS = ['โซเชียล', 'Facebook', 'TikTok', 'Twitter/X', 'รีวิว/Pantip', 'สื่อ/ข่าว'];
+const CRISIS_SEVERITY = ['ต่ำ', 'กลาง', 'สูง'];
+
+function TabCrisis() {
+  const [form, setForm] = useState({ situation: '', channel: 'โซเชียล', severity: 'กลาง', brand: '' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const red = '#dc2626';
+
+  const run = async () => {
+    if (!form.situation.trim()) { setError('กรุณาใส่สถานการณ์วิกฤต'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/crisis'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card({ borderTop: `3px solid ${red}` })}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: red, marginBottom: 4 }}>🚨 จัดการวิกฤต / ดราม่า อย่างมีสติ</div>
+        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>ประเมิน · holding statement · do/don't · สคริปต์ตอบ · แผนฟื้นฟู — โปร่งใส เป็นธรรม ไม่กลบเกลื่อน</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>สถานการณ์วิกฤต *</label><textarea style={{ ...inputSt, minHeight: 80, resize: 'vertical' }} placeholder="เช่น 'ลูกค้าโพสต์ว่าเจอสิ่งแปลกปลอมในสินค้า กำลังไวรัล' / 'พนักงานตอบลูกค้าไม่ดีจนเป็นดราม่า'" value={form.situation} onChange={e => setForm(f => ({ ...f, situation: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
+            <div><label style={labelSt}>ช่องทาง</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.channel} onChange={e => setForm(f => ({ ...f, channel: e.target.value }))}>
+                {CRISIS_CHANNELS.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>ความรุนแรง</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.severity} onChange={e => setForm(f => ({ ...f, severity: e.target.value }))}>
+                {CRISIS_SEVERITY.map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>แบรนด์ (ไม่บังคับ)</label><input style={inputSt} placeholder="ชื่อร้าน/แบรนด์" value={form.brand} onChange={e => setForm(f => ({ ...f, brand: e.target.value }))} /></div>
+          </div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${red},#b91c1c)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังวางแผนรับมือ...' : '🚨 วางแผนรับมือวิกฤต'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          <div style={{ ...card({ borderLeft: `4px solid ${red}` }), display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <SourceBadge source={result.source} />
+            {result.severity_assessment && <div style={{ flex: 1, minWidth: 200, fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.severity_assessment}</div>}
+            {result.first_response_window && <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: red, borderRadius: 20, padding: '4px 12px', whiteSpace: 'nowrap' }}>⏱️ {result.first_response_window}</span>}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.do_now?.length > 0 && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 8 }}>✅ ทำทันที</div>{result.do_now.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.dont?.length > 0 && <div style={card({ borderLeft: '4px solid #ef4444' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 8 }}>🚫 ห้ามทำ</div>{result.dont.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+          </div>
+
+          {result.holding_statement && (
+            <div style={card({ background: '#fef2f2', borderColor: 'rgba(220,38,38,0.2)' })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: red }}>⚡ แถลงเบื้องต้น (โพสต์ได้เลย)</div>
+                <CopyBtn text={result.holding_statement} />
+              </div>
+              <div style={{ fontSize: 14, color: '#1e293b', lineHeight: 1.7 }}>{result.holding_statement}</div>
+            </div>
+          )}
+
+          {result.full_statement && (
+            <div style={card()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: red }}>📄 แถลงการณ์เต็ม</div>
+                <CopyBtn text={result.full_statement} />
+              </div>
+              <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{result.full_statement}</div>
+            </div>
+          )}
+
+          {result.reply_templates?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: red }}>💬 สคริปต์ตอบตามสถานการณ์</div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {result.reply_templates.map((r, i) => (
+                  <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{r.scenario}</span>
+                      <CopyBtn text={r.reply} />
+                    </div>
+                    <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{r.reply}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.recovery_plan?.length > 0 && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 8 }}>🌱 แผนฟื้นฟูความเชื่อมั่น</div>{result.recovery_plan.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            <div style={{ display: 'grid', gap: 12 }}>
+              {result.stakeholders?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: red, marginBottom: 8 }}>👥 ต้องสื่อสารกับ</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{result.stakeholders.map((s, i) => <span key={i} style={{ fontSize: 12, background: '#fef2f2', color: red, borderRadius: 20, padding: '3px 10px' }}>{s}</span>)}</div></div>}
+              {result.prevention?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: red, marginBottom: 8 }}>🛡️ ป้องกันซ้ำ</div>{result.prevention.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -2521,7 +2634,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation, crisis: TabCrisis,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);

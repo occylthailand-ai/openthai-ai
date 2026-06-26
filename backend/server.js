@@ -3670,6 +3670,61 @@ ${parties ? `ฝ่ายที่เกี่ยวข้อง: ${parties}` : 
   });
 });
 
+// S29 · POST /api/skills/crisis — Crisis Manager (จัดการวิกฤต/ดราม่า/PR storm อย่างมีสติ)
+app.post('/api/skills/crisis', generateLimiter, async (req, res) => {
+  const { situation, channel = 'โซเชียล', severity = 'กลาง', brand = '' } = req.body || {};
+  if (!situation?.trim()) return res.status(400).json({ error: 'situation required' });
+
+  const prompt = `คุณเป็นผู้เชี่ยวชาญ Crisis Communication & Reputation Management ระดับโลก เข้าใจวัฒนธรรมไทยและพฤติกรรมโซเชียลไทย
+ช่วยแบรนด์รับมือวิกฤต/ดราม่า/คอมเมนต์ลบอย่างมีสติ โปร่งใส เป็นธรรม รักษาความเชื่อมั่นระยะยาว (ไม่กลบเกลื่อน ไม่โกหก)
+
+วิกฤต: "${situation.slice(0, 600)}"
+ช่องทาง: ${channel} · ระดับความรุนแรง: ${severity}${brand ? ` · แบรนด์: ${brand}` : ''}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "severity_assessment": "ประเมินระดับวิกฤตจริง + เหตุผล (อย่าตื่นตระหนกเกิน/ประมาทเกิน)",
+  "first_response_window": "ควรตอบภายในกี่ชั่วโมง + ทำไม",
+  "do_now": ["สิ่งที่ต้องทำทันที 1","2","3"],
+  "dont": ["สิ่งที่ห้ามทำเด็ดขาด 1","2","3"],
+  "holding_statement": "แถลงการณ์เบื้องต้น (สั้น จริงใจ ซื้อเวลาตรวจสอบ) พร้อมโพสต์ได้เลย",
+  "full_statement": "แถลงการณ์เต็ม — ยอมรับ/ขอโทษถ้าผิดจริง · อธิบายข้อเท็จจริง · มาตรการแก้ไข · คำมั่น",
+  "reply_templates": [
+    {"scenario":"ลูกค้าโกรธ/ต่อว่า","reply":"คำตอบที่เห็นอกเห็นใจ + แก้ไข"},
+    {"scenario":"คำถามจากสื่อ/คนนอก","reply":"คำตอบเป็นทางการ"},
+    {"scenario":"ข้อมูลผิด/ข่าวลือ","reply":"ชี้แจงข้อเท็จจริงอย่างสุภาพ"}
+  ],
+  "stakeholders": ["ฝ่ายที่ต้องสื่อสาร 1","2","3"],
+  "recovery_plan": ["ขั้นฟื้นฟูความเชื่อมั่น 1","2","3"],
+  "prevention": ["ป้องกันไม่ให้เกิดซ้ำ 1","2"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 2560);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/Crisis', e.message); }
+
+  const sev = /สูง|รุนแรง|วิกฤต/.test(severity) ? 'สูง' : /ต่ำ|เล็ก/.test(severity) ? 'ต่ำ' : 'กลาง';
+  res.json({
+    success: true, source: 'mock',
+    severity_assessment: `ระดับ ${sev} — ประเมินจากการแพร่กระจายและผลต่อความเชื่อมั่น ตั้งสติก่อน อย่าตอบด้วยอารมณ์`,
+    first_response_window: sev === 'สูง' ? 'ภายใน 1-2 ชั่วโมง — ยิ่งช้ายิ่งบานปลาย' : 'ภายใน 4-6 ชั่วโมง พร้อมข้อมูลที่ตรวจสอบแล้ว',
+    do_now: ['รวบรวมข้อเท็จจริงให้ครบก่อนแถลง', 'ออก holding statement ซื้อเวลา', 'มอบหมายผู้พูดคนเดียว (single voice)'],
+    dont: ['อย่าลบคอมเมนต์/บล็อกจนดูปกปิด', 'อย่าโต้เถียง/ประชดลูกค้า', 'อย่าสัญญาเกินจริงหรือโกหก'],
+    holding_statement: `เรารับทราบเรื่องที่เกิดขึ้นและกำลังตรวจสอบข้อเท็จจริงอย่างเร่งด่วน ขออภัยในความไม่สบายใจ และจะแจ้งความคืบหน้าโดยเร็วที่สุดค่ะ 🙏`,
+    full_statement: `ทางแบรนด์ขอชี้แจงกรณีที่เกิดขึ้น: เราได้ตรวจสอบแล้วและ [ข้อเท็จจริง] หากมีส่วนที่บกพร่องเราขอน้อมรับและขออภัยอย่างจริงใจ พร้อมดำเนินการแก้ไขดังนี้ [มาตรการ] เราให้ความสำคัญกับความไว้วางใจของทุกท่านและจะปรับปรุงไม่ให้เกิดซ้ำ`,
+    reply_templates: [
+      { scenario: 'ลูกค้าโกรธ/ต่อว่า', reply: 'ขอโทษจริงๆ ค่ะที่ทำให้ผิดหวัง ทางเรารับเรื่องไว้แล้วและขอดูแลให้เรียบร้อยที่สุด รบกวนขอรายละเอียดทางข้อความนะคะ' },
+      { scenario: 'คำถามจากสื่อ/คนนอก', reply: 'ขอบคุณสำหรับคำถามค่ะ ขณะนี้อยู่ระหว่างตรวจสอบ เราจะออกแถลงการณ์อย่างเป็นทางการเร็วๆ นี้' },
+      { scenario: 'ข้อมูลผิด/ข่าวลือ', reply: 'ขออนุญาตชี้แจงข้อเท็จจริงค่ะ: [ข้อมูลจริง] หวังว่าจะช่วยให้เข้าใจตรงกันนะคะ 🙏' },
+    ],
+    stakeholders: ['ลูกค้าที่ได้รับผลกระทบ', 'ทีมงาน/พนักงานภายใน', 'สื่อ/พันธมิตร'],
+    recovery_plan: ['ติดตามแก้ไขเคสที่กระทบจนจบ + แจ้งผล', 'สื่อสารบทเรียน/การปรับปรุงอย่างโปร่งใส', 'ทำคอนเทนต์เชิงบวกฟื้นภาพลักษณ์อย่างค่อยเป็นค่อยไป'],
+    prevention: ['ตั้งทีม/คู่มือรับมือวิกฤตล่วงหน้า', 'ตรวจ pain point ที่เป็นชนวนแล้วแก้ที่ต้นเหตุ'],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3701,6 +3756,7 @@ const SKILLS_REGISTRY = [
   { id: 'S26', name: 'Omni-Solver',          category: 'solver',      endpoint: '/api/skills/omni-solver',      method: 'POST', inputs: ['problem', 'context', 'goal'], status: 'active' },
   { id: 'S27', name: 'Negotiation Coach',    category: 'negotiation', endpoint: '/api/skills/negotiation',      method: 'POST', inputs: ['situation', 'my_goal', 'their_position'], status: 'active' },
   { id: 'S28', name: 'Conflict Mediator',    category: 'mediation',   endpoint: '/api/skills/mediation',        method: 'POST', inputs: ['conflict', 'parties', 'desired_outcome'], status: 'active' },
+  { id: 'S29', name: 'Crisis Manager',       category: 'crisis',      endpoint: '/api/skills/crisis',           method: 'POST', inputs: ['situation', 'channel', 'severity'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4331,6 +4387,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S26', name:'Omni-Solver',      pct:90, color:'#7c3aed', category:'solver',     status:'✅' },
       { id:'S27', name:'Negotiation Coach',pct:88, color:'#0891b2', category:'negotiation',status:'✅' },
       { id:'S28', name:'Conflict Mediator',pct:87, color:'#0d9488', category:'mediation',  status:'✅' },
+      { id:'S29', name:'Crisis Manager',   pct:89, color:'#dc2626', category:'crisis',     status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
