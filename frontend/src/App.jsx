@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
 import ScrollToTop from './components/ScrollToTop';
 import { apiUrl } from './apiBase';
+import { hydrateSync } from './cloudSync';
 import VoiceCommander from './components/VoiceCommander';
 
 // หน้าอื่นๆ — lazy load (code-split ต่อ route · โหลดเฉพาะตอนเปิด ลดขนาด bundle แรก)
@@ -94,7 +95,11 @@ function App() {
 
     fetch(apiUrl('/api/auth/verify'), { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(data => { setIsAuthenticated(data.valid === true); })
+      .then(data => {
+        setIsAuthenticated(data.valid === true);
+        // ซิงค์ข้อมูลข้ามอุปกรณ์ (มือถือ/คอม/memory/cloud) เมื่อ token ใช้ได้
+        if (data.valid === true) hydrateSync();
+      })
       .catch(() => { setIsAuthenticated(false); })
       .finally(() => setAuthChecked(true));
   }, []);

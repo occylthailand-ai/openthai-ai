@@ -5020,6 +5020,57 @@ app.get('/api/auth/verify', requireAuth, (req, res) => {
   res.json({ valid: true, user: req.user });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CLOUD SYNC — ซิงค์ข้อมูลผู้ใช้ข้ามอุปกรณ์ (มือถือ + คอม + memory + cloud ตรงกัน)
+//  เก็บ blob JSON ต่อผู้ใช้: Supabase (ถาวร) ถ้ามี, ไม่งั้น file fallback
+// ═══════════════════════════════════════════════════════════════════════════════
+const SYNC_FILE = join(WRITE_DATA_DIR, 'user_sync.json');
+let _syncStore = {};
+try { if (existsSync(SYNC_FILE)) _syncStore = JSON.parse(readFileSync(SYNC_FILE, 'utf8')); } catch { _syncStore = {}; }
+const saveSyncFile = () => { try { writeFileSync(SYNC_FILE, JSON.stringify(_syncStore)); } catch { /* ignore */ } };
+
+const syncUserKey = (req) => String(req.user?.username || req.user?.email || 'anon').toLowerCase();
+
+async function syncRead(userKey) {
+  if (_useSB) {
+    try {
+      const rows = await _sbReq('GET', '/user_sync', { params: { user_key: `eq.${userKey}`, select: 'data', limit: '1' } });
+      if (Array.isArray(rows) && rows[0]) return rows[0].data || {};
+      return {};
+    } catch (e) { try { addLog('warn', 'Sync', `read: ${e.message}`); } catch (_) {} }
+  }
+  return _syncStore[userKey] || {};
+}
+async function syncWrite(userKey, data) {
+  if (_useSB) {
+    try {
+      await _sbReq('POST', '/user_sync', { prefer: 'resolution=merge-duplicates', body: { user_key: userKey, data, updated_at: new Date().toISOString() } });
+      return;
+    } catch (e) { try { addLog('warn', 'Sync', `write: ${e.message}`); } catch (_) {} }
+  }
+  _syncStore[userKey] = data; saveSyncFile();
+}
+
+// GET /api/sync — ดึงข้อมูลที่ซิงค์ไว้ (hydrate ตอนเปิดแอป/ล็อกอินอุปกรณ์ใหม่)
+app.get('/api/sync', requireAuth, async (req, res) => {
+  try {
+    const data = await syncRead(syncUserKey(req));
+    res.json({ success: true, data, storage: _useSB ? 'cloud' : 'file', ts: new Date().toISOString() });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PUT /api/sync — บันทึก (merge เพื่อกันอุปกรณ์หนึ่งเขียนทับของอีกอุปกรณ์)
+app.put('/api/sync', requireAuth, express.json({ limit: '1mb' }), async (req, res) => {
+  try {
+    const incoming = (req.body && typeof req.body.data === 'object' && req.body.data) || {};
+    const key = syncUserKey(req);
+    const current = await syncRead(key);
+    const merged = { ...current, ...incoming, _updated_at: new Date().toISOString() };
+    await syncWrite(key, merged);
+    res.json({ success: true, data: merged, storage: _useSB ? 'cloud' : 'file' });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ─── GET /api/auth/recovery-codes/generate — สร้าง recovery codes ใหม่ ──────
 // ต้องใช้ ADMIN_OVERRIDE_KEY เพื่อขอ codes ใหม่
 app.post('/api/auth/recovery-codes/generate', (req, res) => {
