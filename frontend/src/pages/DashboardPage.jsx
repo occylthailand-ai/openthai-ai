@@ -1,6 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo';
+import { apiUrl } from '../apiBase';
+import { getPref } from '../cloudSync';
 
 const STATS = [
   { icon: '⚡', label: 'คอนเทนต์สร้างแล้ว', value: '24,891', delta: '+12% วันนี้', color: '#6366f1' },
@@ -85,6 +87,21 @@ const DashboardPage = ({ onLogout }) => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('overview');
   const [ticker, setTicker] = useState(24891);
+
+  // ⭐ ทักษะโปรด (ซิงค์ข้ามอุปกรณ์) + ชื่อจาก registry
+  const [favs, setFavs] = useState(() => getPref('fav_skills', []));
+  const [skillMap, setSkillMap] = useState({});
+  useEffect(() => {
+    if (!favs.length) return;
+    fetch(apiUrl('/api/skills')).then(r => r.json()).then(d => {
+      if (d.success) setSkillMap(Object.fromEntries(d.skills.map(s => [s.id, s])));
+    }).catch(() => {});
+  }, [favs.length]);
+  useEffect(() => {
+    const onSync = () => setFavs(getPref('fav_skills', []));
+    window.addEventListener('otai:sync', onSync);
+    return () => window.removeEventListener('otai:sync', onSync);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -177,6 +194,29 @@ const DashboardPage = ({ onLogout }) => {
             </div>
           ))}
         </div>
+
+        {/* ⭐ ทักษะโปรด (ซิงค์ข้ามอุปกรณ์) */}
+        {favs.length > 0 && (
+          <>
+            <div className="pro-section-title">⭐ ทักษะโปรดของคุณ</div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
+              {favs.map(sid => {
+                const s = skillMap[sid];
+                const route = sid === 'S18' ? '/promo-engine' : `/skills?skill=${sid}`;
+                return (
+                  <div key={sid} onClick={() => navigate(route)}
+                    style={{ cursor: 'pointer', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, minWidth: 140 }}>
+                    <span style={{ fontSize: 18 }}>⭐</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#f8fafc' }}>{s?.name || sid}</div>
+                      <div style={{ fontSize: 10, color: '#94a3b8' }}>{sid} · เปิดใช้งาน →</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         {/* Quick Actions */}
         <div className="pro-section-title">⚡ Quick Actions</div>
