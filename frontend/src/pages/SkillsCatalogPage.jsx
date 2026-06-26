@@ -35,11 +35,12 @@ const CAT_META = {
   negotiation: { icon: '🤝', label: 'เจรจาต่อรอง', color: '#0891b2' },
   mediation: { icon: '🕊️', label: 'ไกล่เกลี่ย', color: '#0d9488' },
   crisis: { icon: '🚨', label: 'จัดการวิกฤต', color: '#dc2626' },
+  research: { icon: '🎭', label: 'วิจัย/Persona', color: '#8b5cf6' },
 };
 const catMeta = c => CAT_META[c] || { icon: '✨', label: c, color: '#6366f1' };
 
 // ทักษะ hub (มีหน้าใช้งานใน /skills) — deep-link ตรงแท็บ
-const HUB = new Set(['S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29']);
+const HUB = new Set(['S9', 'S10', 'S11', 'S12', 'S13', 'S14', 'S15', 'S16', 'S17', 'S19', 'S20', 'S21', 'S22', 'S23', 'S24', 'S25', 'S26', 'S27', 'S28', 'S29', 'S30']);
 function routeFor(s) {
   if (s.id === 'S18') return '/promo-engine';
   if (HUB.has(s.id)) return `/skills?skill=${s.id}`;

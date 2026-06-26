@@ -3725,6 +3725,57 @@ app.post('/api/skills/crisis', generateLimiter, async (req, res) => {
   });
 });
 
+// S30 · POST /api/skills/persona — Customer Persona Builder (สร้างตัวตนลูกค้าเชิงลึก)
+app.post('/api/skills/persona', generateLimiter, async (req, res) => {
+  const { product, category = 'OTOP', market = 'ไทย', price = '' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นนักวิจัยตลาดและนักวางกลยุทธ์แบรนด์ระดับโลก เชี่ยวชาญพฤติกรรมผู้บริโภคไทย/อาเซียน
+สร้าง buyer persona เชิงลึกที่นำไปใช้ทำการตลาดได้จริง
+
+สินค้า: "${product.slice(0, 200)}" · หมวด: ${category} · ตลาด: ${market}${price ? ` · ราคา: ${price}` : ''}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "summary": "สรุปภาพรวมกลุ่มเป้าหมาย 2-3 ประโยค",
+  "personas": [
+    {
+      "name": "ชื่อเล่น persona (จำง่าย)",
+      "tagline": "นิยามสั้นๆ ของคนกลุ่มนี้",
+      "demographics": "อายุ · เพศ · อาชีพ · รายได้ · ที่อยู่",
+      "pains": ["ความเจ็บปวด/ปัญหา 1","2","3"],
+      "desires": ["ความต้องการ/ความฝัน 1","2","3"],
+      "buying_triggers": ["อะไรกระตุ้นให้ซื้อ 1","2"],
+      "objections": ["ข้อกังวลก่อนซื้อ 1","2"],
+      "where_to_find": ["ช่องทาง/แพลตฟอร์มที่เจอคนกลุ่มนี้ 1","2","3"],
+      "messaging_hooks": ["ประโยค/มุมสื่อสารที่โดนใจ 1","2"],
+      "content_ideas": ["ไอเดียคอนเทนต์ที่ใช่ 1","2"]
+    },
+    {"name":"...","tagline":"...","demographics":"...","pains":["..."],"desires":["..."],"buying_triggers":["..."],"objections":["..."],"where_to_find":["..."],"messaging_hooks":["..."],"content_ideas":["..."]}
+  ],
+  "primary_persona": "persona ไหนควรโฟกัสเป็นหลัก + เหตุผล",
+  "positioning": "ควรวางตำแหน่งสินค้าอย่างไรให้โดนใจกลุ่มหลัก"
+}`;
+
+  try {
+    const text = await callAI(prompt, 3072);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/Persona', e.message); }
+
+  const pName = product.slice(0, 30);
+  res.json({
+    success: true, source: 'mock',
+    summary: `${pName} เหมาะกับลูกค้า 2 กลุ่มหลัก — กลุ่มที่ตัดสินใจด้วยคุณค่า/คุณภาพ และกลุ่มที่ตัดสินใจด้วยราคา/ความคุ้ม โฟกัสคนละมุมสื่อสาร`,
+    personas: [
+      { name: 'พี่หนูดี (สายคุณภาพ)', tagline: 'ยอมจ่ายเพื่อของดีมีที่มา', demographics: 'อายุ 30-45 · ทำงานประจำ/เจ้าของกิจการ · รายได้ปานกลาง-สูง · เมือง', pains: ['กลัวซื้อของไม่มีคุณภาพ', 'ไม่มีเวลาเลือกเยอะ', 'อยากได้ของที่ไว้ใจได้'], desires: ['ของดีมีมาตรฐาน', 'ภูมิใจที่สนับสนุนของไทย', 'สะดวก รวดเร็ว'], buying_triggers: ['รีวิวจริง + มาตรฐานรับรอง', 'เรื่องราวแบรนด์ที่จริงใจ'], objections: ['ราคาสูงไปไหม', 'ของแท้หรือเปล่า'], where_to_find: ['Facebook', 'IG', 'รีวิว/Pantip'], messaging_hooks: ['"คัดมาแล้วว่าดีจริง"', '"ของไทยคุณภาพส่งออก"'], content_ideas: ['เบื้องหลังการผลิต', 'รีวิวลูกค้าจริง'] },
+      { name: 'น้องคุ้ม (สายคุ้มค่า)', tagline: 'ได้ของดีในราคาที่คุ้ม', demographics: 'อายุ 18-30 · นักศึกษา/เริ่มทำงาน · งบจำกัด · ทั่วประเทศ', pains: ['งบน้อยแต่อยากได้ของดี', 'กลัวโดนหลอก/ของไม่ตรงปก'], desires: ['คุ้มราคา', 'โปร/ส่วนลด', 'ส่งไว'], buying_triggers: ['โปรจำกัดเวลา', 'รีวิว + ยอดขายเยอะ'], objections: ['คุ้มจริงไหม', 'ค่าส่งแพงไหม'], where_to_find: ['TikTok', 'Shopee/Lazada', 'ไลฟ์ขายของ'], messaging_hooks: ['"คุ้มที่สุดในงบนี้"', '"ราคานี้เฉพาะไลฟ์"'], content_ideas: ['คลิปรีวิวเร็วๆ', 'เปรียบเทียบความคุ้ม'] },
+    ],
+    primary_persona: 'เลือกตามช่องทางหลัก: ถ้าเน้น TikTok/ไลฟ์ → "น้องคุ้ม", ถ้าเน้น Facebook/แบรนด์ → "พี่หนูดี"',
+    positioning: `วาง ${pName} ให้สื่อสารคุณค่ากับกลุ่มคุณภาพ และเน้นโปร/ความคุ้มกับกลุ่มราคา — แยกคอนเทนต์ตามกลุ่ม`,
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3757,6 +3808,7 @@ const SKILLS_REGISTRY = [
   { id: 'S27', name: 'Negotiation Coach',    category: 'negotiation', endpoint: '/api/skills/negotiation',      method: 'POST', inputs: ['situation', 'my_goal', 'their_position'], status: 'active' },
   { id: 'S28', name: 'Conflict Mediator',    category: 'mediation',   endpoint: '/api/skills/mediation',        method: 'POST', inputs: ['conflict', 'parties', 'desired_outcome'], status: 'active' },
   { id: 'S29', name: 'Crisis Manager',       category: 'crisis',      endpoint: '/api/skills/crisis',           method: 'POST', inputs: ['situation', 'channel', 'severity'], status: 'active' },
+  { id: 'S30', name: 'Persona Builder',      category: 'research',    endpoint: '/api/skills/persona',          method: 'POST', inputs: ['product', 'category', 'market'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4388,6 +4440,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S27', name:'Negotiation Coach',pct:88, color:'#0891b2', category:'negotiation',status:'✅' },
       { id:'S28', name:'Conflict Mediator',pct:87, color:'#0d9488', category:'mediation',  status:'✅' },
       { id:'S29', name:'Crisis Manager',   pct:89, color:'#dc2626', category:'crisis',     status:'✅' },
+      { id:'S30', name:'Persona Builder',  pct:88, color:'#8b5cf6', category:'research',   status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },

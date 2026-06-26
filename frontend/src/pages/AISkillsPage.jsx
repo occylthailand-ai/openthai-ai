@@ -32,6 +32,7 @@ const TABS = [
   { id: 'negotiation', icon: '🤝', label: 'Negotiation Coach',   color: '#0891b2', skill: 'S27', endpoint: '/api/skills/negotiation' },
   { id: 'mediation',   icon: '🕊️', label: 'Conflict Mediator',    color: '#0d9488', skill: 'S28', endpoint: '/api/skills/mediation' },
   { id: 'crisis',      icon: '🚨', label: 'Crisis Manager',       color: '#dc2626', skill: 'S29', endpoint: '/api/skills/crisis' },
+  { id: 'persona',     icon: '🎭', label: 'Persona Builder',      color: '#8b5cf6', skill: 'S30', endpoint: '/api/skills/persona' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -2549,6 +2550,96 @@ function TabCrisis() {
   );
 }
 
+// ─── Tab: Customer Persona Builder (S30) ──────────────────────────────────────
+function TabPersona() {
+  const [form, setForm] = useState({ product: '', category: 'OTOP', market: 'ไทย', price: '' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const violet = '#8b5cf6';
+
+  const run = async () => {
+    if (!form.product.trim()) { setError('กรุณาใส่ชื่อสินค้า'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/persona'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  const chips = (arr, color) => (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+      {(arr || []).map((x, i) => <span key={i} style={{ fontSize: 12, background: `${color}12`, color, border: `1px solid ${color}33`, borderRadius: 16, padding: '3px 9px' }}>{x}</span>)}
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: violet, marginBottom: 16 }}>🎭 สร้างตัวตนลูกค้า (Buyer Persona)</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น ครีมสมุนไพร, กาแฟดอย, ผ้าไหม" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
+            <div><label style={labelSt}>หมวดหมู่</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>ตลาด</label><input style={inputSt} placeholder="ไทย / ASEAN" value={form.market} onChange={e => setForm(f => ({ ...f, market: e.target.value }))} /></div>
+            <div><label style={labelSt}>ราคา (ไม่บังคับ)</label><input style={inputSt} placeholder="฿290" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} /></div>
+          </div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${violet},#7c3aed)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังสร้าง persona...' : '🎭 สร้าง Buyer Persona'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {result.summary && (
+            <div style={card({ borderLeft: `4px solid ${violet}` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: violet }}>📋 ภาพรวม</span>
+                <SourceBadge source={result.source} />
+              </div>
+              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+            </div>
+          )}
+
+          {result.personas?.map((p, i) => (
+            <div key={i} style={card({ borderTop: `3px solid ${violet}` })}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 16, fontWeight: 900, color: '#1e293b' }}>🎭 {p.name}</span>
+                {p.tagline && <span style={{ fontSize: 12, color: violet, fontStyle: 'italic' }}>{p.tagline}</span>}
+              </div>
+              {p.demographics && <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>{p.demographics}</div>}
+              <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+                {p.pains?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>😣 ความเจ็บปวด</div>{chips(p.pains, '#ef4444')}</div>}
+                {p.desires?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', marginBottom: 4 }}>✨ ความต้องการ</div>{chips(p.desires, '#10b981')}</div>}
+                {p.buying_triggers?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>⚡ กระตุ้นซื้อ</div>{chips(p.buying_triggers, '#f59e0b')}</div>}
+                {p.objections?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>🛑 ข้อกังวล</div>{chips(p.objections, '#64748b')}</div>}
+                {p.where_to_find?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#0ea5e9', marginBottom: 4 }}>📍 เจอได้ที่</div>{chips(p.where_to_find, '#0ea5e9')}</div>}
+                {p.messaging_hooks?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: violet, marginBottom: 4 }}>💬 มุมสื่อสาร</div>{chips(p.messaging_hooks, violet)}</div>}
+              </div>
+              {p.content_ideas?.length > 0 && <div style={{ marginTop: 10 }}><div style={{ fontSize: 11, fontWeight: 700, color: '#ec4899', marginBottom: 4 }}>🎬 ไอเดียคอนเทนต์</div>{chips(p.content_ideas, '#ec4899')}</div>}
+            </div>
+          ))}
+
+          {(result.primary_persona || result.positioning) && (
+            <div style={card({ background: 'rgba(139,92,246,0.05)', borderColor: 'rgba(139,92,246,0.2)' })}>
+              {result.primary_persona && <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: violet }}>🎯 โฟกัสหลัก:</strong> {result.primary_persona}</div>}
+              {result.positioning && <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}><strong style={{ color: violet }}>📐 Positioning:</strong> {result.positioning}</div>}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -2635,7 +2726,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation, crisis: TabCrisis,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation, crisis: TabCrisis, persona: TabPersona,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);
@@ -2670,6 +2761,8 @@ export default function AISkillsPage() {
   // ⭐ โปรด + 🕐 ใช้ล่าสุด — ซิงค์ข้ามอุปกรณ์ผ่าน Cloud Sync
   const [favs, setFavs] = useState(() => getPref('fav_skills', []));
   const [recent, setRecent] = useState(() => getPref('recent_skills', []));
+  const [q, setQ] = useState(''); // ค้นหาแท็บ (30+ ทักษะ)
+  const activeRef = React.useRef(null);
   // รับการอัปเดตจากอุปกรณ์อื่น
   useEffect(() => {
     const onSync = () => { setFavs(getPref('fav_skills', [])); setRecent(getPref('recent_skills', [])); };
@@ -2696,6 +2789,9 @@ export default function AISkillsPage() {
   const Custom = activeTab && TAB_COMPONENTS[activeTab.id];
   const needsKey = activeTab?.reg?.status === 'needs_key';
   const isFav = favs.includes(activeTab?.skill);
+  const shownTabs = q.trim() ? tabs.filter(t => (t.label + ' ' + (t.skill || '')).toLowerCase().includes(q.toLowerCase())) : tabs;
+  // เลื่อนแท็บที่เลือกเข้าจออัตโนมัติ (optimize นำทางใน 30+ แท็บ)
+  useEffect(() => { activeRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); }, [tab]);
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#1e293b', fontFamily: "'Inter','Sarabun',sans-serif", paddingBottom: 80 }}>
@@ -2727,14 +2823,15 @@ export default function AISkillsPage() {
 
       {/* Tab Bar */}
       <div style={{ background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.06)', padding: '0 2%', display: 'flex', gap: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => selectTab(t.id)}
+        {shownTabs.map(t => (
+          <button key={t.id} ref={tab === t.id ? activeRef : null} onClick={() => selectTab(t.id)}
             style={{ padding: '12px 12px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === t.id ? t.color : 'transparent'}`, color: tab === t.id ? t.color : '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: tab === t.id ? 700 : 400, whiteSpace: 'nowrap', transition: 'all .2s', scrollSnapAlign: 'start', minHeight: 44 }}>
             {t.icon} <span className="section-tab-label">{t.label}</span>
             {t.reg?.status === 'needs_key' && <span title="ต้องตั้งค่า API key" style={{ marginLeft: 3 }}>⚠️</span>}
             <span style={{ marginLeft: 4, fontSize: 9, opacity: 0.7, background: tab === t.id ? t.color : 'transparent', color: tab === t.id ? '#fff' : 'transparent', borderRadius: 6, padding: '1px 4px' }}>{t.skill}</span>
           </button>
         ))}
+        {shownTabs.length === 0 && <span style={{ padding: '12px', fontSize: 12, color: '#94a3b8' }}>ไม่พบทักษะที่ตรงกับ "{q}"</span>}
       </div>
 
       {/* Skill Description Banner */}
@@ -2745,6 +2842,8 @@ export default function AISkillsPage() {
             <span style={{ fontWeight: 700, fontSize: 13, color: activeTab?.color }}>{activeTab?.label}</span>
             <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>{activeTab?.skill}</span>
           </div>
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 ค้นหาทักษะ..."
+            style={{ background: '#f8fafc', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 20, padding: '5px 12px', fontSize: 12, color: '#1e293b', outline: 'none', width: 130 }} />
           {activeTab?.skill && (
             <button onClick={() => toggleFav(activeTab.skill)} title={isFav ? 'เอาออกจากโปรด' : 'เพิ่มเป็นโปรด (ซิงค์ทุกอุปกรณ์)'}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 0, opacity: isFav ? 1 : 0.35 }}>{isFav ? '⭐' : '☆'}</button>
