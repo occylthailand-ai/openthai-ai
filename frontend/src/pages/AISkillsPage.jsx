@@ -28,6 +28,7 @@ const TABS = [
   { id: 'campaign',    icon: '📆', label: 'Campaign Calendar',  color: '#d946ef', skill: 'S24', endpoint: '/api/skills/campaign-calendar' },
   { id: 'live',        icon: '🔴', label: 'Live Selling Script', color: '#fb7185', skill: 'S25', endpoint: '/api/skills/live-script' },
   { id: 'omni',        icon: '🧩', label: 'Omni-Solver',         color: '#7c3aed', skill: 'S26', endpoint: '/api/skills/omni-solver' },
+  { id: 'negotiation', icon: '🤝', label: 'Negotiation Coach',   color: '#0891b2', skill: 'S27', endpoint: '/api/skills/negotiation' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -2222,6 +2223,104 @@ function TabOmniSolver() {
   );
 }
 
+// ─── Tab: Negotiation Coach (S27) ─────────────────────────────────────────────
+function TabNegotiation() {
+  const [form, setForm] = useState({ situation: '', my_goal: '', their_position: '', constraints: '' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const cyan = '#0891b2';
+
+  const run = async () => {
+    if (!form.situation.trim()) { setError('กรุณาใส่สถานการณ์เจรจา'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/negotiation'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: cyan, marginBottom: 16 }}>🤝 โค้ชเจรจาต่อรอง (ดีลที่เป็นธรรม)</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>สถานการณ์เจรจา *</label><textarea style={{ ...inputSt, minHeight: 80, resize: 'vertical' }} placeholder="เช่น 'ต่อรองราคากับซัพพลายเออร์' / 'ลูกค้าขอลดราคา 30%' / 'เจรจาสัญญากับคู่ค้า'" value={form.situation} onChange={e => setForm(f => ({ ...f, situation: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            <div><label style={labelSt}>เป้าหมายของเรา</label><input style={inputSt} placeholder="เช่น ได้ราคาทุนต่ำลง 15%" value={form.my_goal} onChange={e => setForm(f => ({ ...f, my_goal: e.target.value }))} /></div>
+            <div><label style={labelSt}>จุดยืนอีกฝ่าย</label><input style={inputSt} placeholder="เช่น ไม่อยากลดราคา" value={form.their_position} onChange={e => setForm(f => ({ ...f, their_position: e.target.value }))} /></div>
+          </div>
+          <div><label style={labelSt}>ข้อจำกัด (ไม่บังคับ)</label><input style={inputSt} placeholder="เช่น งบ เวลา ปริมาณขั้นต่ำ" value={form.constraints} onChange={e => setForm(f => ({ ...f, constraints: e.target.value }))} /></div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${cyan},#0e7490)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังวางกลยุทธ์...' : '🤝 วางกลยุทธ์เจรจา'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {result.summary && (
+            <div style={card({ borderLeft: `4px solid ${cyan}` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: cyan }}>🎯 กลยุทธ์</span>
+                <SourceBadge source={result.source} />
+              </div>
+              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.batna && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>🛡️ BATNA ของเรา</div><div style={{ fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{result.batna}</div></div>}
+            {result.their_likely_batna && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>🧭 BATNA อีกฝ่าย</div><div style={{ fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{result.their_likely_batna}</div></div>}
+          </div>
+          {result.zopa && <div style={card({ background: 'rgba(8,145,178,0.04)', borderColor: 'rgba(8,145,178,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 4 }}>📊 ZOPA (ช่วงที่ตกลงได้)</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.zopa}</div></div>}
+          {result.anchor && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 4 }}>⚓ Anchor (ข้อเสนอเปิด)</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.anchor}</div></div>}
+
+          {result.concession_plan?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: cyan }}>🔄 แผนการยอม-แลก</div>
+              {result.concession_plan.map((c, i) => (
+                <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', marginBottom: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 12, color: '#ef4444' }}>ยอม: {c.give}</span>
+                  <span style={{ color: '#94a3b8' }}>↔</span>
+                  <span style={{ fontSize: 12, color: '#10b981' }}>แลก: {c.get}</span>
+                  {c.when && <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 'auto' }}>⏱️ {c.when}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.scripts && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: cyan }}>💬 สคริปต์เจรจา</div>
+              {[['opening', '🚀 เปิดเจรจา'], ['handling_pushback', '🛡️ รับมือต่อรอง'], ['closing', '✅ ปิดดีล']].map(([k, lbl]) => result.scripts[k] && (
+                <div key={k} style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 12px', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: cyan }}>{lbl}</span>
+                    <CopyBtn text={result.scripts[k]} />
+                  </div>
+                  <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{result.scripts[k]}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.fair_framing && <div style={card({ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 4 }}>⚖️ กรอบดีลที่เป็นธรรม</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.fair_framing}</div></div>}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.tactics?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 8 }}>🎯 เทคนิค</div>{result.tactics.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.red_flags?.length > 0 && <div style={card({ borderLeft: '4px solid #ef4444' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 8 }}>🚩 สัญญาณควรถอย</div>{result.red_flags.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+          </div>
+          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 8 }}>💡 เคล็ดลับ</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -2308,7 +2407,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);

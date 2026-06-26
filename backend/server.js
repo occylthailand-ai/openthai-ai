@@ -3548,6 +3548,65 @@ app.post('/api/skills/omni-solver', generateLimiter, async (req, res) => {
   res.json({ success: true, ...d });
 });
 
+// S27 · POST /api/skills/negotiation — Negotiation Coach (โค้ชเจรจาต่อรองสู่ดีลที่เป็นธรรม)
+app.post('/api/skills/negotiation', generateLimiter, async (req, res) => {
+  const { situation, my_goal = '', their_position = '', constraints = '' } = req.body || {};
+  if (!situation?.trim()) return res.status(400).json({ error: 'situation required' });
+
+  const prompt = `คุณเป็นโค้ชการเจรจาต่อรองระดับโลก (ผสม Harvard Negotiation Project, Chris Voss) ที่เน้นดีลแบบ win-win เป็นธรรมต่อทุกฝ่าย เข้าใจวัฒนธรรมการค้าไทย
+
+สถานการณ์เจรจา: "${situation.slice(0, 500)}"
+${my_goal ? `เป้าหมายของเรา: ${my_goal}` : ''}
+${their_position ? `จุดยืนอีกฝ่าย: ${their_position}` : ''}
+${constraints ? `ข้อจำกัด: ${constraints}` : ''}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "summary": "สรุปกลยุทธ์การเจรจา 2-3 ประโยค",
+  "batna": "ทางเลือกที่ดีที่สุดถ้าดีลนี้ล่ม (BATNA) ของเรา",
+  "their_likely_batna": "ทางเลือกสำรองที่อีกฝ่ายน่าจะมี",
+  "zopa": "ช่วงที่ตกลงกันได้ (ZOPA) โดยประมาณ + เหตุผล",
+  "anchor": "ข้อเสนอเปิดที่ควรตั้ง + เหตุผลเชิงจิตวิทยา",
+  "concession_plan": [
+    {"give":"สิ่งที่เรายอมได้","get":"สิ่งที่ขอแลก","when":"จังหวะที่ควรใช้"},
+    {"give":"...","get":"...","when":"..."}
+  ],
+  "tactics": ["เทคนิคเจรจา 1","2","3","4"],
+  "scripts": {"opening":"ประโยคเปิดเจรจา","handling_pushback":"รับมือเมื่อโดนต่อรองหนัก","closing":"ปิดดีลแบบเป็นธรรม"},
+  "fair_framing": "วิธีกรอบดีลให้ทุกฝ่ายรู้สึกว่าเป็นธรรมและอยากตกลง",
+  "red_flags": ["สัญญาณที่ควรชะลอ/ถอย 1","2"],
+  "tips": ["เคล็ดลับเจรจาให้สำเร็จ 1","2","3"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 2560);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/Negotiation', e.message); }
+
+  res.json({
+    success: true, source: 'mock',
+    summary: `เจรจาแบบ interest-based — โฟกัสที่ "ความต้องการแท้จริง" ของทั้งสองฝ่าย ไม่ใช่จุดยืน แล้วขยายทางเลือกให้ได้ดีลที่เป็นธรรมและทำซ้ำได้`,
+    batna: 'เตรียมทางเลือกสำรองไว้ก่อนเจรจา (เช่น คู่ค้า/ข้อเสนออื่น) เพื่อไม่ต้องยอมเสียเปรียบ',
+    their_likely_batna: 'อีกฝ่ายก็มีทางเลือกสำรอง — ประเมินว่าของเราน่าสนใจกว่าตรงไหน',
+    zopa: 'หาจุดที่ราคา/เงื่อนไขต่ำสุดที่เรารับได้ ทับกับสูงสุดที่อีกฝ่ายยอมจ่าย — ดีลอยู่ในช่วงนี้',
+    anchor: 'เปิดด้วยตัวเลข/เงื่อนไขที่ดีต่อเราแต่มีเหตุผลรองรับ (anchor) — อีกฝ่ายจะปรับเข้าหา',
+    concession_plan: [
+      { give: 'ยืดระยะเวลาส่งมอบ', get: 'เพิ่มจำนวนสั่ง/ราคาต่อหน่วยดีขึ้น', when: 'รอบที่สองของการต่อรอง' },
+      { give: 'ส่วนลดเล็กน้อย', get: 'ชำระเร็วขึ้น/สัญญาระยะยาว', when: 'ใกล้ปิดดีล' },
+    ],
+    tactics: ['ถามคำถามปลายเปิดเพื่อเข้าใจความต้องการจริง', 'ใช้ความเงียบหลังยื่นข้อเสนอ', 'เสนอเป็นแพ็กเกจไม่ใช่ทีละข้อ', 'ยึดหลักเกณฑ์ที่เป็นกลาง (ราคาตลาด/มาตรฐาน)'],
+    scripts: {
+      opening: '"ผม/ดิฉันอยากหาทางที่เวิร์กสำหรับทั้งสองฝ่าย ขอเข้าใจก่อนว่าอะไรสำคัญที่สุดสำหรับคุณในดีลนี้?"',
+      handling_pushback: '"ผมเข้าใจว่างบเป็นเรื่องสำคัญ ถ้าเรื่องราคาคือประเด็นหลัก เราลองดูว่าปรับอะไรได้บ้างที่ทำให้คุ้มขึ้นโดยไม่กระทบคุณภาพ"',
+      closing: '"สรุปแบบนี้ทั้งสองฝ่ายได้สิ่งที่ต้องการ — คุณได้ [X] เราได้ [Y] ตกลงเดินหน้าด้วยกันไหมครับ?"',
+    },
+    fair_framing: 'กรอบดีลด้วยเกณฑ์ที่เป็นกลาง (ราคาตลาด มาตรฐานอุตสาหกรรม) เพื่อให้ทุกฝ่ายรู้สึกว่ายุติธรรม ไม่ใช่แพ้-ชนะ',
+    red_flags: ['อีกฝ่ายเร่งให้ตัดสินใจผิดปกติ', 'ข้อเสนอที่ดีเกินจริงโดยไม่มีเหตุผล'],
+    tips: ['อย่าเจรจาทั้งที่ยังไม่รู้ BATNA ของตัวเอง', 'แยกคนออกจากปัญหา — โจมตีปัญหา ไม่ใช่คน', 'จดบันทึกข้อตกลงเป็นลายลักษณ์อักษรทันที'],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3577,6 +3636,7 @@ const SKILLS_REGISTRY = [
   { id: 'S24', name: 'Campaign Calendar',    category: 'planning',    endpoint: '/api/skills/campaign-calendar',method: 'POST', inputs: ['product', 'category', 'period'], status: 'active' },
   { id: 'S25', name: 'Live Selling Script',  category: 'live',        endpoint: '/api/skills/live-script',      method: 'POST', inputs: ['product', 'platform', 'duration'], status: 'active' },
   { id: 'S26', name: 'Omni-Solver',          category: 'solver',      endpoint: '/api/skills/omni-solver',      method: 'POST', inputs: ['problem', 'context', 'goal'], status: 'active' },
+  { id: 'S27', name: 'Negotiation Coach',    category: 'negotiation', endpoint: '/api/skills/negotiation',      method: 'POST', inputs: ['situation', 'my_goal', 'their_position'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4205,6 +4265,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S24', name:'Campaign Calendar',pct:86, color:'#d946ef', category:'planning',    status:'✅' },
       { id:'S25', name:'Live Selling Script',pct:88, color:'#fb7185', category:'live',      status:'✅' },
       { id:'S26', name:'Omni-Solver',      pct:90, color:'#7c3aed', category:'solver',     status:'✅' },
+      { id:'S27', name:'Negotiation Coach',pct:88, color:'#0891b2', category:'negotiation',status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },

@@ -26,7 +26,7 @@ Last   : $LAST
 ✅ DB       : Supabase PostgreSQL
 ✅ PWA      : manifest.json + sw.js + icons 192/512
 
-── 26-Skills AI Framework (S1–S26) ─────────
+── 27-Skills AI Framework (S1–S27) ─────────
 S1  RCCF Prompt        ✅ /api/generate
 S2  Taste Check        ✅ /api/generate
 S3  Master Prompt      ✅ /api/generate
@@ -53,7 +53,8 @@ S23 Break-even Planner ✅ /api/skills/break-even
 S24 Campaign Calendar  ✅ /api/skills/campaign-calendar
 S25 Live Selling Script ✅ /api/skills/live-script
 S26 Omni-Solver        ✅ /api/skills/omni-solver (4 ศาสตร์ · ปิดดีลเป็นธรรม)
-📚 Skills Registry      ✅ /api/skills (catalog · 26 skills)
+S27 Negotiation Coach  ✅ /api/skills/negotiation
+📚 Skills Registry      ✅ /api/skills (catalog · 27 skills)
 
 ── Route Map ───────────────────────────────
 /              LandingPage      (public)
@@ -61,8 +62,8 @@ S26 Omni-Solver        ✅ /api/skills/omni-solver (4 ศาสตร์ · ป�
 /dashboard     DashboardPage    (auth)
 /ai-generator  AIGeneratorPage  (auth)
 /ai-tools      AIToolsHub       (auth)
-/skills        AISkillsPage     (auth) ← S9–S26 · data-driven tabs
-/skills-catalog SkillsCatalogPage (auth) ← catalog 26 skills (live registry)
+/skills        AISkillsPage     (auth) ← S9–S27 · data-driven tabs
+/skills-catalog SkillsCatalogPage (auth) ← catalog 27 skills (live registry)
 /supply-chain  SupplyChainPage  (auth) ← Control Tower + restock + S19 AI
 /promo-engine  PromoEnginePage  (auth) ← S18 flagship
 /agent         AgentPage        (auth)
@@ -108,7 +109,7 @@ INSTRUCTION: สรุปสถานะสั้นๆ และถามว่
 
 # Output JSON for the hook system
 printf '%s' "$CONTEXT" | jq -Rs '{
-  systemMessage: ("📋 openthai-ai — โหลดสถานะโปรเจคแล้ว branch: '"$BRANCH"' | 26 Skills Active"),
+  systemMessage: ("📋 openthai-ai — โหลดสถานะโปรเจคแล้ว branch: '"$BRANCH"' | 27 Skills Active"),
   hookSpecificOutput: {
     hookEventName: "SessionStart",
     additionalContext: .
