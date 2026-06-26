@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useToast } from '../components/ToastContext';
+import { getPref, syncSetPref } from '../cloudSync';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PLATFORMS  = ['TikTok', 'Facebook', 'Instagram Reels', 'YouTube Shorts', 'LINE', 'Shopee', 'Lazada'];
@@ -2666,9 +2667,35 @@ export default function AISkillsPage() {
     return [...curated, ...autoTabs];
   }, [registry, statusByEndpoint]);
 
+  // ⭐ โปรด + 🕐 ใช้ล่าสุด — ซิงค์ข้ามอุปกรณ์ผ่าน Cloud Sync
+  const [favs, setFavs] = useState(() => getPref('fav_skills', []));
+  const [recent, setRecent] = useState(() => getPref('recent_skills', []));
+  // รับการอัปเดตจากอุปกรณ์อื่น
+  useEffect(() => {
+    const onSync = () => { setFavs(getPref('fav_skills', [])); setRecent(getPref('recent_skills', [])); };
+    window.addEventListener('otai:sync', onSync);
+    return () => window.removeEventListener('otai:sync', onSync);
+  }, []);
+
+  const selectTab = (id) => {
+    setTab(id);
+    const t = tabs.find(x => x.id === id);
+    if (t?.skill) {
+      const next = [t.skill, ...recent.filter(s => s !== t.skill)].slice(0, 6);
+      setRecent(next); syncSetPref('recent_skills', next);
+    }
+  };
+  const toggleFav = (skillId) => {
+    if (!skillId) return;
+    const next = favs.includes(skillId) ? favs.filter(s => s !== skillId) : [skillId, ...favs].slice(0, 12);
+    setFavs(next); syncSetPref('fav_skills', next);
+  };
+  const tabBySkill = (sid) => tabs.find(t => t.skill === sid);
+
   const activeTab = tabs.find(t => t.id === tab) || tabs[0];
   const Custom = activeTab && TAB_COMPONENTS[activeTab.id];
   const needsKey = activeTab?.reg?.status === 'needs_key';
+  const isFav = favs.includes(activeTab?.skill);
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#1e293b', fontFamily: "'Inter','Sarabun',sans-serif", paddingBottom: 80 }}>
@@ -2678,16 +2705,30 @@ export default function AISkillsPage() {
         <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>🧠 AI Skills Hub</div>
-          <div style={{ fontSize: 11, color: '#94a3b8' }}>S9–S21 · Learning · Trend · SEO · Sentiment · Video · Translate · Wisdom · Supply Chain · Pricing · Customer Service</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>S9–S29 · Content · Trend · SEO · Supply Chain · Pricing · Ad Budget · Omni-Solver · Negotiation · Crisis · ฯลฯ</div>
         </div>
         <button onClick={() => navigate('/skills-catalog')} style={{ background: 'rgba(14,165,233,0.1)', border: '1px solid rgba(14,165,233,0.25)', borderRadius: 8, padding: '7px 14px', color: '#0ea5e9', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>📚 Catalog</button>
         <button onClick={() => navigate('/ai-generator')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>⚡ AI Generator</button>
       </header>
 
+      {/* Quick access — ⭐ โปรด + 🕐 ใช้ล่าสุด (ซิงค์ข้ามอุปกรณ์) */}
+      {(favs.length > 0 || recent.length > 0) && (
+        <div style={{ background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.04)', padding: '8px 5%', display: 'flex', gap: 8, overflowX: 'auto', alignItems: 'center', WebkitOverflowScrolling: 'touch' }}>
+          {favs.filter(tabBySkill).length > 0 && <span style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', flexShrink: 0 }}>⭐</span>}
+          {favs.map(sid => { const t = tabBySkill(sid); return t ? (
+            <button key={'f' + sid} onClick={() => selectTab(t.id)} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, border: `1px solid ${t.color}55`, background: `${t.color}12`, color: t.color, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>{t.icon} {t.label}</button>
+          ) : null; })}
+          {recent.filter(s => !favs.includes(s) && tabBySkill(s)).length > 0 && <span style={{ fontSize: 12, color: '#cbd5e1', flexShrink: 0, marginLeft: favs.length ? 6 : 0 }}>🕐</span>}
+          {recent.filter(s => !favs.includes(s)).map(sid => { const t = tabBySkill(sid); return t ? (
+            <button key={'r' + sid} onClick={() => selectTab(t.id)} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, border: '1px solid rgba(0,0,0,0.08)', background: '#f8fafc', color: '#64748b', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>{t.icon} {t.label}</button>
+          ) : null; })}
+        </div>
+      )}
+
       {/* Tab Bar */}
       <div style={{ background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.06)', padding: '0 2%', display: 'flex', gap: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollSnapType: 'x mandatory' }}>
         {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
+          <button key={t.id} onClick={() => selectTab(t.id)}
             style={{ padding: '12px 12px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === t.id ? t.color : 'transparent'}`, color: tab === t.id ? t.color : '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: tab === t.id ? 700 : 400, whiteSpace: 'nowrap', transition: 'all .2s', scrollSnapAlign: 'start', minHeight: 44 }}>
             {t.icon} <span className="section-tab-label">{t.label}</span>
             {t.reg?.status === 'needs_key' && <span title="ต้องตั้งค่า API key" style={{ marginLeft: 3 }}>⚠️</span>}
@@ -2704,6 +2745,10 @@ export default function AISkillsPage() {
             <span style={{ fontWeight: 700, fontSize: 13, color: activeTab?.color }}>{activeTab?.label}</span>
             <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 8 }}>{activeTab?.skill}</span>
           </div>
+          {activeTab?.skill && (
+            <button onClick={() => toggleFav(activeTab.skill)} title={isFav ? 'เอาออกจากโปรด' : 'เพิ่มเป็นโปรด (ซิงค์ทุกอุปกรณ์)'}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: 0, opacity: isFav ? 1 : 0.35 }}>{isFav ? '⭐' : '☆'}</button>
+          )}
           {registry && <span style={{ fontSize: 10, color: '#cbd5e1' }}>{registry.active}/{registry.total} skills · {registry.ai_engine}</span>}
         </div>
       </div>
