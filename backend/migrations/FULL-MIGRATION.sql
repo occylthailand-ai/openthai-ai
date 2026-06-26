@@ -153,6 +153,15 @@ create table if not exists public.entitlements (
 create index if not exists entitlements_status_idx on public.entitlements (status);
 alter table public.entitlements enable row level security;
 
+-- ── Cloud Sync — ข้อมูลผู้ใช้ตรงกันทุกอุปกรณ์ (มือถือ + คอม + memory + cloud) ──
+create table if not exists public.user_sync (
+  user_key   text primary key,
+  data       jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+create index if not exists user_sync_updated_at_idx on public.user_sync (updated_at desc);
+alter table public.user_sync enable row level security;
+
 -- ════════════════════════════════════════════════════════════════════════
 -- เสร็จ! ตารางทั้งหมดเปิด RLS — เข้าถึงได้เฉพาะ service_role (backend)
 -- ════════════════════════════════════════════════════════════════════════
