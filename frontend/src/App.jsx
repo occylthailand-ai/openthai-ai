@@ -1,73 +1,87 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+// Shell components + หน้าแรกสุด — eager (ต้อง paint ทันที)
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import TikTokFeedPage from './pages/TikTokFeedPage';
-import FacebookFeedPage from './pages/FacebookFeedPage';
-import AIGeneratorPage from './pages/AIGeneratorPage';
-import AIToolsHub from './pages/AIToolsHub';
-import AffiliatePage from './pages/AffiliatePage';
-import AffiliateDashboard from './pages/AffiliateDashboard';
 import LandingPage from './pages/LandingPage';
-import PricingPage from './pages/PricingPage';
-import ProducerJoinPage from './pages/ProducerJoinPage';
-import CatalogPage from './pages/CatalogPage';
-import ProducerDirectoryPage from './pages/ProducerDirectoryPage';
-import TrackOrderPage from './pages/TrackOrderPage';
-import StorePage from './pages/StorePage';
-import AdminPage from './pages/AdminPage';
-import NotFoundPage from './pages/NotFoundPage';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsPage from './pages/TermsPage';
-import ContactPage from './pages/ContactPage';
-import BrandMemoryPage from './pages/BrandMemoryPage';
-import AgentPage from './pages/AgentPage';
-import AISkillsPage from './pages/AISkillsPage';
-import TrendingPage from './pages/TrendingPage';
-import ContentCalendarPage from './pages/ContentCalendarPage';
 import PDPABanner from './components/PDPABanner';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/ToastContext';
 import ScrollToTop from './components/ScrollToTop';
 import { apiUrl } from './apiBase';
 import VoiceCommander from './components/VoiceCommander';
-import VoiceCommandPage from './pages/VoiceCommandPage';
-import VideoGeneratorPage from './pages/VideoGeneratorPage';
-import PaymentPage from './pages/PaymentPage';
-import CorporateDashboard from './pages/corporate/CorporateDashboard';
-import InvestorRelationsPage from './pages/corporate/InvestorRelationsPage';
-import CompliancePage from './pages/corporate/CompliancePage';
-import ESGPage from './pages/corporate/ESGPage';
-import HRPage from './pages/corporate/HRPage';
-import GlobalOpsPage from './pages/corporate/GlobalOpsPage';
-import FinancePage from './pages/corporate/FinancePage';
-import BoardPage from './pages/corporate/BoardPage';
-import PRCommsPage from './pages/corporate/PRCommsPage';
-import CommandCenterPage from './pages/corporate/CommandCenterPage';
-import ProgressDashboard from './pages/ProgressDashboard';
-import PortalHubPage from './pages/PortalHubPage';
-import ProducerPortalPage from './pages/portals/ProducerPortalPage';
-import AffiliatePortalPage from './pages/portals/AffiliatePortalPage';
-import CreatorPortalPage from './pages/portals/CreatorPortalPage';
-import GovThaiPortalPage from './pages/portals/GovThaiPortalPage';
-import GovIntlPortalPage from './pages/portals/GovIntlPortalPage';
-import IntlOrgPortalPage from './pages/portals/IntlOrgPortalPage';
-import FoundationPortalPage from './pages/portals/FoundationPortalPage';
-import PromoEnginePage from './pages/PromoEnginePage';
-import DailyPRPage from './pages/DailyPRPage';
-import UltraPromoPage from './pages/UltraPromoPage';
-import GlobalPRPage from './pages/GlobalPRPage';
-import ContentBenchmarkPage from './pages/ContentBenchmarkPage';
-import SchedulerPage from './pages/SchedulerPage';
-import AnalyticsDashboardPage from './pages/AnalyticsDashboardPage';
-import ImagePromptPage from './pages/ImagePromptPage';
-import CatalogAIPage from './pages/CatalogAIPage';
-import KOLBriefPage from './pages/KOLBriefPage';
-import StrategyCenterPage from './pages/StrategyCenterPage';
-import PitchDeckPage from './pages/PitchDeckPage';
-import IntegrationHubPage from './pages/IntegrationHubPage';
-import SupplyChainPage from './pages/SupplyChainPage';
-import SkillsCatalogPage from './pages/SkillsCatalogPage';
+
+// หน้าอื่นๆ — lazy load (code-split ต่อ route · โหลดเฉพาะตอนเปิด ลดขนาด bundle แรก)
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const TikTokFeedPage = lazy(() => import('./pages/TikTokFeedPage'));
+const FacebookFeedPage = lazy(() => import('./pages/FacebookFeedPage'));
+const AIGeneratorPage = lazy(() => import('./pages/AIGeneratorPage'));
+const AIToolsHub = lazy(() => import('./pages/AIToolsHub'));
+const AffiliatePage = lazy(() => import('./pages/AffiliatePage'));
+const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard'));
+const PricingPage = lazy(() => import('./pages/PricingPage'));
+const ProducerJoinPage = lazy(() => import('./pages/ProducerJoinPage'));
+const CatalogPage = lazy(() => import('./pages/CatalogPage'));
+const ProducerDirectoryPage = lazy(() => import('./pages/ProducerDirectoryPage'));
+const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'));
+const StorePage = lazy(() => import('./pages/StorePage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
+const ContactPage = lazy(() => import('./pages/ContactPage'));
+const BrandMemoryPage = lazy(() => import('./pages/BrandMemoryPage'));
+const AgentPage = lazy(() => import('./pages/AgentPage'));
+const AISkillsPage = lazy(() => import('./pages/AISkillsPage'));
+const TrendingPage = lazy(() => import('./pages/TrendingPage'));
+const ContentCalendarPage = lazy(() => import('./pages/ContentCalendarPage'));
+const VoiceCommandPage = lazy(() => import('./pages/VoiceCommandPage'));
+const VideoGeneratorPage = lazy(() => import('./pages/VideoGeneratorPage'));
+const PaymentPage = lazy(() => import('./pages/PaymentPage'));
+const CorporateDashboard = lazy(() => import('./pages/corporate/CorporateDashboard'));
+const InvestorRelationsPage = lazy(() => import('./pages/corporate/InvestorRelationsPage'));
+const CompliancePage = lazy(() => import('./pages/corporate/CompliancePage'));
+const ESGPage = lazy(() => import('./pages/corporate/ESGPage'));
+const HRPage = lazy(() => import('./pages/corporate/HRPage'));
+const GlobalOpsPage = lazy(() => import('./pages/corporate/GlobalOpsPage'));
+const FinancePage = lazy(() => import('./pages/corporate/FinancePage'));
+const BoardPage = lazy(() => import('./pages/corporate/BoardPage'));
+const PRCommsPage = lazy(() => import('./pages/corporate/PRCommsPage'));
+const CommandCenterPage = lazy(() => import('./pages/corporate/CommandCenterPage'));
+const ProgressDashboard = lazy(() => import('./pages/ProgressDashboard'));
+const PortalHubPage = lazy(() => import('./pages/PortalHubPage'));
+const ProducerPortalPage = lazy(() => import('./pages/portals/ProducerPortalPage'));
+const AffiliatePortalPage = lazy(() => import('./pages/portals/AffiliatePortalPage'));
+const CreatorPortalPage = lazy(() => import('./pages/portals/CreatorPortalPage'));
+const GovThaiPortalPage = lazy(() => import('./pages/portals/GovThaiPortalPage'));
+const GovIntlPortalPage = lazy(() => import('./pages/portals/GovIntlPortalPage'));
+const IntlOrgPortalPage = lazy(() => import('./pages/portals/IntlOrgPortalPage'));
+const FoundationPortalPage = lazy(() => import('./pages/portals/FoundationPortalPage'));
+const PromoEnginePage = lazy(() => import('./pages/PromoEnginePage'));
+const DailyPRPage = lazy(() => import('./pages/DailyPRPage'));
+const UltraPromoPage = lazy(() => import('./pages/UltraPromoPage'));
+const GlobalPRPage = lazy(() => import('./pages/GlobalPRPage'));
+const ContentBenchmarkPage = lazy(() => import('./pages/ContentBenchmarkPage'));
+const SchedulerPage = lazy(() => import('./pages/SchedulerPage'));
+const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
+const ImagePromptPage = lazy(() => import('./pages/ImagePromptPage'));
+const CatalogAIPage = lazy(() => import('./pages/CatalogAIPage'));
+const KOLBriefPage = lazy(() => import('./pages/KOLBriefPage'));
+const StrategyCenterPage = lazy(() => import('./pages/StrategyCenterPage'));
+const PitchDeckPage = lazy(() => import('./pages/PitchDeckPage'));
+const IntegrationHubPage = lazy(() => import('./pages/IntegrationHubPage'));
+const SupplyChainPage = lazy(() => import('./pages/SupplyChainPage'));
+const SkillsCatalogPage = lazy(() => import('./pages/SkillsCatalogPage'));
+
+// Fallback ระหว่างโหลดหน้า (lazy chunk)
+function PageLoader() {
+  return (
+    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#94a3b8', fontFamily: "'Inter','Sarabun',sans-serif" }}>
+      <div style={{ width: 36, height: 36, border: '3px solid rgba(99,102,241,0.2)', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'otaSpin 0.8s linear infinite' }} />
+      <div style={{ fontSize: 13 }}>กำลังโหลด…</div>
+      <style>{'@keyframes otaSpin{to{transform:rotate(360deg)}}'}</style>
+    </div>
+  );
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -100,6 +114,7 @@ function App() {
       <ToastProvider>
         <Router>
           <ScrollToTop />
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route
               path="/login"
@@ -183,6 +198,7 @@ function App() {
             <Route path="/portals/foundation" element={<FoundationPortalPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          </Suspense>
           <PDPABanner />
           {/* Voice Commander Widget — ปรากฏทุกหน้าหลัง login */}
           {isAuthenticated && <VoiceCommander mode="widget" />}
