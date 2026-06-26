@@ -86,6 +86,7 @@ S28 Conflict Mediator  ✅ /api/skills/mediation
 
 ❷ รัน SQL migration ใน Supabase SQL Editor:
    backend/migrations/FULL-MIGRATION.sql
+   backend/migrations/005_user_sync.sql (Cloud Sync ข้ามอุปกรณ์)
 
 ❸ Skills ที่ยังต้องการ API Key:
    S5 TTS   → ELEVENLABS_API_KEY

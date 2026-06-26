@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { syncSet } from '../cloudSync';
 
 // ── Supported languages ───────────────────────────────────────────────────────
 export const LANGS = [
@@ -746,9 +747,16 @@ export function LanguageProvider({ children }) {
 
   const setLang = useCallback((l) => {
     setLangState(l);
-    try { localStorage.setItem('otai_lang', l); } catch { /* ignore */ }
+    try { syncSet('otai_lang', l); } catch { try { localStorage.setItem('otai_lang', l); } catch { /* ignore */ } } // ซิงค์ข้ามอุปกรณ์
     try { document.documentElement.lang = l; } catch { /* ignore */ }
   }, []);
+
+  // รับการเปลี่ยนภาษาจากอุปกรณ์อื่น (cloud sync hydrate)
+  useEffect(() => {
+    const onSync = (e) => { const l = e.detail?.otai_lang; if (l && l !== lang) setLangState(l); };
+    window.addEventListener('otai:sync', onSync);
+    return () => window.removeEventListener('otai:sync', onSync);
+  }, [lang]);
 
   const t = useCallback((key) => read(key, lang), [lang]);
 
