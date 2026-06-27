@@ -15,7 +15,7 @@ const SAMPLE = {
   conflict: 'หุ้นส่วนเห็นไม่ตรงกันเรื่องแบ่งกำไร', parties: 'หุ้นส่วน A, หุ้นส่วน B',
   price: 120, cost: 45, unit_cost: 45, fixed_costs: 8000, budget: 10000, competitor_price: 150,
   monthly_volume: 200, sourcing: 'ผสม', platforms: 'TikTok, Facebook', from: 'ภาษาไทย', to: 'English',
-  channel: 'แชท', technique: 'role',
+  channel: 'แชท', technique: 'role', review: 'ของดีมากแต่ส่งช้าไปหน่อยค่ะ', rating: 4,
 };
 
 // DISABLE_RATE_LIMIT ให้ทดสอบทุก skill ติดต่อกันได้ (production ไม่ตั้ง flag นี้)

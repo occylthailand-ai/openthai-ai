@@ -3929,6 +3929,54 @@ app.post('/api/skills/listing', generateLimiter, async (req, res) => {
   });
 });
 
+// S32 · POST /api/skills/review-reply — Review Responder (ตอบรีวิวลูกค้าอย่างมืออาชีพ)
+app.post('/api/skills/review-reply', generateLimiter, async (req, res) => {
+  const { review, product = '', rating = '', channel = 'Shopee', brand = 'ร้านเรา' } = req.body || {};
+  if (!review?.trim()) return res.status(400).json({ error: 'review required' });
+
+  const prompt = `คุณเป็นผู้เชี่ยวชาญดูแลลูกค้าและบริหารชื่อเสียงร้านค้าออนไลน์ไทย (${channel})
+วิเคราะห์รีวิวลูกค้าและร่างคำตอบที่สุภาพ จริงใจ มืออาชีพ รักษาภาพลักษณ์ร้านและเปลี่ยนวิกฤตเป็นโอกาส
+
+รีวิวลูกค้า: "${review.slice(0, 500)}"${product ? `\nสินค้า: ${product.slice(0, 120)}` : ''}${rating ? `\nคะแนน: ${rating} ดาว` : ''}
+ชื่อร้าน/แบรนด์: ${brand}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "sentiment": "positive | neutral | negative",
+  "summary": "สรุปสั้นๆ ว่าลูกค้าพูดถึงอะไร รู้สึกยังไง",
+  "issues": ["ประเด็นที่ลูกค้ากังวล/ติ 1","2"],
+  "reply": "คำตอบหลักที่พร้อมโพสต์ตอบกลับได้ทันที สุภาพ จริงใจ ตรงประเด็น ลงท้ายด้วยน้ำใจ",
+  "reply_variants": ["คำตอบทางเลือกสั้นกว่า/โทนต่าง 1","2"],
+  "action_items": ["สิ่งที่ร้านควรทำต่อ (ภายในร้าน) เพื่อแก้/ป้องกัน 1","2"],
+  "upsell": "ประโยคชวนซื้อซ้ำ/แนะนำสินค้าอื่นแบบเนียนๆ (ถ้าเหมาะ)",
+  "tips": ["เคล็ดลับตอบรีวิวให้ได้ใจลูกค้าและคนอ่าน 1","2"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 2048);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/ReviewReply', e.message); }
+
+  const neg = /แย่|ห่วย|ช้า|เสีย|ผิด|ไม่|โกง|พัง|หาย|ผิดหวัง|แตก/.test(review);
+  const sentiment = neg ? 'negative' : (/ดี|ชอบ|ประทับใจ|เยี่ยม|คุ้ม|ไว|สวย/.test(review) ? 'positive' : 'neutral');
+  res.json({
+    success: true, source: 'mock',
+    sentiment,
+    summary: neg ? 'ลูกค้าไม่พอใจในบางจุดและต้องการให้แก้ไข' : 'ลูกค้าพอใจและให้ผลตอบรับเชิงบวก',
+    issues: neg ? ['ประสบการณ์ไม่เป็นไปตามคาด', 'ต้องการการดูแลเพิ่มเติม'] : [],
+    reply: neg
+      ? `สวัสดีค่ะ ทาง${brand}ต้องขออภัยอย่างสูงสำหรับประสบการณ์ที่ไม่เป็นไปตามที่คาดหวังนะคะ 🙏 ทางร้านขอรับเรื่องนี้ไปปรับปรุงทันที และรบกวนทักแชทเข้ามาเพื่อให้ทางร้านดูแลและแก้ไขให้คุณลูกค้าเป็นกรณีพิเศษค่ะ เราใส่ใจทุกความคิดเห็นจริงๆ ค่ะ`
+      : `ขอบคุณมากๆ เลยค่ะ 🙏❤️ ดีใจสุดๆ ที่คุณลูกค้าพอใจ ทาง${brand}ตั้งใจคัดของดีมาให้เสมอค่ะ ฝากกดติดตามร้านไว้ มีโปรและสินค้าใหม่มาเรื่อยๆ นะคะ แล้วพบกันใหม่ค่ะ 😊`,
+    reply_variants: neg
+      ? ['ขออภัยจริงๆ ค่ะ 🙏 รบกวนทักแชทมานะคะ ทางร้านขอดูแลแก้ไขให้เต็มที่ค่ะ', 'ขอบคุณสำหรับคำติชมค่ะ ทางร้านน้อมรับไปปรับปรุงและพร้อมดูแลคุณลูกค้าค่ะ']
+      : ['ขอบคุณมากค่ะ 😍 ฝากติดตามร้านด้วยนะคะ', 'ดีใจที่ถูกใจค่ะ 🙏 แวะมาอุดหนุนใหม่ได้เสมอนะคะ'],
+    action_items: neg ? ['ติดต่อลูกค้ารายนี้ทางแชทภายใน 24 ชม.', 'ตรวจสอบขั้นตอนที่เป็นปัญหาเพื่อป้องกันซ้ำ'] : ['บันทึกเป็นรีวิวตัวอย่างไว้ใช้การตลาด'],
+    upsell: neg ? '' : 'ครั้งหน้าลองสินค้ารุ่นใหม่ของเราดูนะคะ มีโปรสำหรับลูกค้าเก่าด้วยค่ะ',
+    tips: ['ตอบรีวิวทุกชิ้นภายใน 24 ชม. เพิ่มความน่าเชื่อถือร้าน', 'ตอบรีวิวลบอย่างใจเย็น คนอ่านดูการแก้ปัญหามากกว่าตัวปัญหา'],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3963,6 +4011,7 @@ const SKILLS_REGISTRY = [
   { id: 'S29', name: 'Crisis Manager',       category: 'crisis',      endpoint: '/api/skills/crisis',           method: 'POST', inputs: ['situation', 'channel', 'severity'], status: 'active' },
   { id: 'S30', name: 'Persona Builder',      category: 'research',    endpoint: '/api/skills/persona',          method: 'POST', inputs: ['product', 'category', 'market'], status: 'active' },
   { id: 'S31', name: 'Product Listing Writer',category: 'commerce',   endpoint: '/api/skills/listing',          method: 'POST', inputs: ['product', 'category', 'price'], status: 'active' },
+  { id: 'S32', name: 'Review Responder',     category: 'reputation',  endpoint: '/api/skills/review-reply',     method: 'POST', inputs: ['review', 'product', 'rating'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4596,6 +4645,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S29', name:'Crisis Manager',   pct:89, color:'#dc2626', category:'crisis',     status:'✅' },
       { id:'S30', name:'Persona Builder',  pct:88, color:'#8b5cf6', category:'research',   status:'✅' },
       { id:'S31', name:'Product Listing',  pct:90, color:'#f97316', category:'commerce',   status:'✅' },
+      { id:'S32', name:'Review Responder', pct:90, color:'#14b8a6', category:'reputation', status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
