@@ -33,6 +33,7 @@ const TABS = [
   { id: 'mediation',   icon: '🕊️', label: 'Conflict Mediator',    color: '#0d9488', skill: 'S28', endpoint: '/api/skills/mediation' },
   { id: 'crisis',      icon: '🚨', label: 'Crisis Manager',       color: '#dc2626', skill: 'S29', endpoint: '/api/skills/crisis' },
   { id: 'persona',     icon: '🎭', label: 'Persona Builder',      color: '#8b5cf6', skill: 'S30', endpoint: '/api/skills/persona' },
+  { id: 'listing',     icon: '🛒', label: 'Product Listing',      color: '#f97316', skill: 'S31', endpoint: '/api/skills/listing' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -2640,6 +2641,121 @@ function TabPersona() {
   );
 }
 
+// ─── Tab: Product Listing Writer (S31) ────────────────────────────────────────
+const LISTING_PLATFORMS = ['Shopee', 'Lazada', 'TikTok Shop', 'Facebook'];
+
+function TabListing() {
+  const [form, setForm] = useState({ product: '', category: 'OTOP', price: '', key_features: '', platform: 'Shopee' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const orange = '#f97316';
+
+  const run = async () => {
+    if (!form.product.trim()) { setError('กรุณาใส่ชื่อสินค้า'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/listing'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: orange, marginBottom: 16 }}>🛒 เขียนหน้าสินค้า Marketplace</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>ชื่อสินค้า *</label><input style={inputSt} placeholder="เช่น น้ำพริกเผาแม่อรุณ, ครีมกันแดด" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
+            <div><label style={labelSt}>หมวดหมู่</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>แพลตฟอร์ม</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.platform} onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}>
+                {LISTING_PLATFORMS.map(p => <option key={p}>{p}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>ราคา (ไม่บังคับ)</label><input style={inputSt} placeholder="฿120" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} /></div>
+          </div>
+          <div><label style={labelSt}>จุดเด่น (ไม่บังคับ)</label><input style={inputSt} placeholder="เช่น สูตรดั้งเดิม ไม่ใส่ผงชูรส" value={form.key_features} onChange={e => setForm(f => ({ ...f, key_features: e.target.value }))} /></div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${orange},#ea580c)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังเขียน...' : '🛒 เขียนหน้าสินค้า'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {result.titles?.length > 0 && (
+            <div style={card({ borderTop: `3px solid ${orange}` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: orange }}>📝 ชื่อสินค้า (SEO) — เลือกที่ชอบ</span>
+                <SourceBadge source={result.source} />
+              </div>
+              {result.titles.map((t, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', background: '#fff7ed', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, color: '#1e293b', flex: 1 }}>{t}</span>
+                  <CopyBtn text={t} />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {result.bullets?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: orange, marginBottom: 8 }}>✨ จุดเด่น (Bullet Points)</div>
+              {result.bullets.map((b, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>{b}</div>)}
+            </div>
+          )}
+
+          {result.description && (
+            <div style={card()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: orange }}>📄 คำอธิบายสินค้า</div>
+                <CopyBtn text={result.description} />
+              </div>
+              <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{result.description}</div>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.specs?.length > 0 && (
+              <div style={card()}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: orange, marginBottom: 8 }}>📋 สเปก</div>
+                {result.specs.map((s, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '4px 0', borderBottom: i < result.specs.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                    <span style={{ color: '#94a3b8' }}>{s.label}</span><span style={{ color: '#1e293b', fontWeight: 600 }}>{s.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {result.keywords?.length > 0 && (
+              <div style={card()}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: orange }}>🔑 คีย์เวิร์ด</span>
+                  <CopyBtn text={result.keywords.join(', ')} />
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {result.keywords.map((k, i) => <span key={i} style={{ fontSize: 12, background: `${orange}12`, color: '#ea580c', border: `1px solid ${orange}33`, borderRadius: 16, padding: '3px 9px' }}>{k}</span>)}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {result.shipping_note && <div style={card({ background: 'rgba(249,115,22,0.04)', borderColor: 'rgba(249,115,22,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ea580c', marginBottom: 4 }}>🚚 ข้อความจัดส่ง</div><div style={{ fontSize: 13, color: '#475569' }}>{result.shipping_note}</div></div>}
+          {result.promo_idea && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: orange, marginBottom: 4 }}>🎁 ไอเดียโปรโมชั่น</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.promo_idea}</div></div>}
+          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: orange, marginBottom: 8 }}>💡 เคล็ดลับเพิ่มยอด</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -2726,7 +2842,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation, crisis: TabCrisis, persona: TabPersona,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation, crisis: TabCrisis, persona: TabPersona, listing: TabListing,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);

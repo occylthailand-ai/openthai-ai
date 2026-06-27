@@ -3883,6 +3883,52 @@ app.post('/api/skills/persona', generateLimiter, async (req, res) => {
   });
 });
 
+// S31 · POST /api/skills/listing — Product Listing Writer (หน้าสินค้า marketplace ครบชุด)
+app.post('/api/skills/listing', generateLimiter, async (req, res) => {
+  const { product, category = 'OTOP', price = '', key_features = '', platform = 'Shopee' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นผู้เชี่ยวชาญเขียนหน้าสินค้า e-commerce ไทย (Shopee/Lazada/TikTok Shop) ที่ทำให้สินค้าขายดีและติดอันดับค้นหา
+เขียนหน้าสินค้าครบชุดสำหรับ ${platform}
+
+สินค้า: "${product.slice(0, 200)}" · หมวด: ${category}${price ? ` · ราคา: ${price}` : ''}${key_features ? ` · จุดเด่น: ${key_features.slice(0, 300)}` : ''}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "titles": ["ชื่อสินค้า SEO ≤120 ตัวอักษร (ใส่คีย์เวิร์ดสำคัญ) 1","ชื่อแบบ 2","ชื่อแบบ 3"],
+  "bullets": ["จุดเด่นกระชับ 1","2","3","4","5"],
+  "description": "คำอธิบายสินค้าเต็ม 200-300 คำ มีหัวข้อย่อย · ประโยชน์ · วิธีใช้ · เหตุผลที่ต้องซื้อ",
+  "specs": [{"label":"คุณสมบัติ","value":"ค่า"},{"label":"...","value":"..."},{"label":"...","value":"..."}],
+  "keywords": ["คีย์เวิร์ดค้นหา 1","2","3","4","5","6","7","8"],
+  "shipping_note": "ข้อความเรื่องการจัดส่ง/แพ็กกิ้งที่สร้างความมั่นใจ",
+  "promo_idea": "ไอเดียโปรโมชั่นกระตุ้นการตัดสินใจ",
+  "tips": ["เคล็ดลับเพิ่มยอดขายบนแพลตฟอร์ม 1","2","3"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 3072);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/Listing', e.message); }
+
+  const pName = product.slice(0, 50);
+  res.json({
+    success: true, source: 'mock',
+    titles: [
+      `${pName} ของแท้ คุณภาพดี ส่งไว พร้อมส่ง [${category}]`,
+      `${pName} ราคาส่ง คัดเกรดพรีเมียม รับประกันความพอใจ`,
+      `[ขายดี] ${pName} ของดีบอกต่อ สินค้าไทยคุณภาพ`,
+    ],
+    bullets: ['✅ ของแท้ 100% คัดคุณภาพ', '✅ พร้อมส่ง จัดส่งไว 1-2 วัน', '✅ แพ็กอย่างดี กันกระแทก', '✅ รับประกันความพอใจ', '✅ สอบถามได้ตลอด 24 ชม.'],
+    description: `${pName} — สินค้าคุณภาพคัดเกรดพิเศษ เหมาะสำหรับผู้ที่มองหาของดีในราคาคุ้มค่า\n\n🌟 ทำไมต้องเลือกเรา\nเราคัดสรรเฉพาะสินค้าคุณภาพ ผ่านการตรวจสอบทุกชิ้น ส่งตรงถึงมือคุณอย่างรวดเร็ว\n\n📦 การจัดส่ง\nแพ็กอย่างดี กันกระแทก จัดส่งภายใน 1-2 วันทำการ พร้อมเลขติดตามพัสดุ\n\n💯 รับประกัน\nหากไม่พอใจ ติดต่อเราได้ทันที ดูแลคุณจนพอใจ — สั่งเลยวันนี้!`,
+    specs: [{ label: 'หมวดหมู่', value: category }, { label: 'สภาพ', value: 'ใหม่' }, { label: 'การจัดส่ง', value: '1-2 วันทำการ' }, { label: 'รับประกัน', value: 'ความพอใจ' }],
+    keywords: [pName, `${pName} ราคาส่ง`, `${pName} ของแท้`, `${category} คุณภาพ`, 'ของดีบอกต่อ', 'สินค้าไทย', 'พร้อมส่ง', 'ส่งไว'],
+    shipping_note: '📦 แพ็กอย่างดี กันกระแทก ส่งไว 1-2 วันทำการ มีเลขติดตามพัสดุทุกออเดอร์',
+    promo_idea: 'ซื้อ 2 ชิ้นลดเพิ่ม + ส่งฟรีเมื่อครบยอด — สร้างความเร่งด่วนด้วย "โปรเฉพาะสัปดาห์นี้"',
+    tips: ['ใส่คีย์เวิร์ดในชื่อ 3-5 ตัวเพื่อติดอันดับค้นหา', 'รูปแรกต้องชัด สวย เห็นสินค้าเต็ม', 'ตอบแชทเร็ว = อันดับร้านดีขึ้น'],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -3916,6 +3962,7 @@ const SKILLS_REGISTRY = [
   { id: 'S28', name: 'Conflict Mediator',    category: 'mediation',   endpoint: '/api/skills/mediation',        method: 'POST', inputs: ['conflict', 'parties', 'desired_outcome'], status: 'active' },
   { id: 'S29', name: 'Crisis Manager',       category: 'crisis',      endpoint: '/api/skills/crisis',           method: 'POST', inputs: ['situation', 'channel', 'severity'], status: 'active' },
   { id: 'S30', name: 'Persona Builder',      category: 'research',    endpoint: '/api/skills/persona',          method: 'POST', inputs: ['product', 'category', 'market'], status: 'active' },
+  { id: 'S31', name: 'Product Listing Writer',category: 'commerce',   endpoint: '/api/skills/listing',          method: 'POST', inputs: ['product', 'category', 'price'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4548,6 +4595,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S28', name:'Conflict Mediator',pct:87, color:'#0d9488', category:'mediation',  status:'✅' },
       { id:'S29', name:'Crisis Manager',   pct:89, color:'#dc2626', category:'crisis',     status:'✅' },
       { id:'S30', name:'Persona Builder',  pct:88, color:'#8b5cf6', category:'research',   status:'✅' },
+      { id:'S31', name:'Product Listing',  pct:90, color:'#f97316', category:'commerce',   status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
