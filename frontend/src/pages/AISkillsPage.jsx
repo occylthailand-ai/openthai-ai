@@ -36,6 +36,7 @@ const TABS = [
   { id: 'listing',     icon: '🛒', label: 'Product Listing',      color: '#f97316', skill: 'S31', endpoint: '/api/skills/listing' },
   { id: 'review',      icon: '⭐', label: 'Review Responder',      color: '#14b8a6', skill: 'S32', endpoint: '/api/skills/review-reply' },
   { id: 'bundle',      icon: '🎁', label: 'Bundle & Upsell',       color: '#f59e0b', skill: 'S33', endpoint: '/api/skills/bundle' },
+  { id: 'faq',         icon: '💬', label: 'FAQ & Auto-Reply',       color: '#0ea5e9', skill: 'S34', endpoint: '/api/skills/faq' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -2968,6 +2969,88 @@ function TabBundle() {
   );
 }
 
+// ─── S34 · FAQ & Auto-Reply Builder — คลังคำถาม-คำตอบ + ตอบอัตโนมัติ ─────────────
+const FAQ_CHANNELS = ['LINE/Facebook', 'LINE OA', 'Facebook', 'Instagram', 'Shopee/Lazada'];
+function TabFAQ() {
+  const [form, setForm] = useState({ product: '', category: 'OTOP', channel: 'LINE/Facebook', tone: 'เป็นกันเอง สุภาพ' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const sky = '#0ea5e9';
+
+  const run = async () => {
+    if (!form.product.trim()) { setError('กรุณาใส่ชื่อสินค้า/ร้าน'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/faq'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: sky, marginBottom: 16 }}>💬 สร้างชุดตอบแชทอัตโนมัติ</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>สินค้า/ร้าน *</label><input style={inputSt} placeholder="เช่น น้ำพริกเผาแม่อรุณ, ร้านเสื้อผ้าแฟชั่น" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
+            <div><label style={labelSt}>หมวดหมู่</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>ช่องทาง</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.channel} onChange={e => setForm(f => ({ ...f, channel: e.target.value }))}>
+                {FAQ_CHANNELS.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>โทนการตอบ</label><input style={inputSt} placeholder="เป็นกันเอง สุภาพ" value={form.tone} onChange={e => setForm(f => ({ ...f, tone: e.target.value }))} /></div>
+          </div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${sky},#0284c7)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังสร้าง...' : '💬 สร้าง FAQ & ข้อความตอบอัตโนมัติ'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {result.faqs?.length > 0 && (
+            <div style={card({ borderTop: `3px solid ${sky}` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: sky }}>❓ คำถามที่พบบ่อย ({result.faqs.length})</span>
+                <SourceBadge source={result.source} />
+              </div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {result.faqs.map((f, i) => (
+                  <div key={i} style={{ background: '#f0f9ff', borderRadius: 10, padding: '11px 13px', border: '1px solid rgba(14,165,233,0.15)' }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: '#0284c7', marginBottom: 4 }}>Q: {f.q}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: 13, color: '#475569', lineHeight: 1.6, flex: 1 }}>A: {f.a}</span>
+                      <CopyBtn text={f.a} />
+                    </div>
+                    {f.keywords?.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>{f.keywords.map((k, j) => <span key={j} style={{ fontSize: 11, background: `${sky}15`, color: '#0369a1', borderRadius: 12, padding: '1px 7px' }}>#{k}</span>)}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.greeting && <div style={card()}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}><span style={{ fontWeight: 700, fontSize: 13, color: sky }}>👋 ข้อความทักทาย</span><CopyBtn text={result.greeting} /></div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.greeting}</div></div>}
+            {result.away_message && <div style={card()}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}><span style={{ fontWeight: 700, fontSize: 13, color: sky }}>🌙 นอกเวลาทำการ</span><CopyBtn text={result.away_message} /></div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.away_message}</div></div>}
+          </div>
+
+          {result.closing && <div style={card({ background: 'rgba(14,165,233,0.04)', borderColor: 'rgba(14,165,233,0.2)' })}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}><span style={{ fontWeight: 700, fontSize: 13, color: '#0284c7' }}>✅ ปิดการขาย / ขอบคุณ</span><CopyBtn text={result.closing} /></div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.closing}</div></div>}
+          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: sky, marginBottom: 8 }}>💡 เคล็ดลับตั้งระบบตอบ</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -3054,7 +3137,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation, crisis: TabCrisis, persona: TabPersona, listing: TabListing, review: TabReviewReply, bundle: TabBundle,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation, crisis: TabCrisis, persona: TabPersona, listing: TabListing, review: TabReviewReply, bundle: TabBundle, faq: TabFAQ,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);
