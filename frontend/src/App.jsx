@@ -73,6 +73,7 @@ const IntegrationHubPage = lazy(() => import('./pages/IntegrationHubPage'));
 const SupplyChainPage = lazy(() => import('./pages/SupplyChainPage'));
 const SkillsCatalogPage = lazy(() => import('./pages/SkillsCatalogPage'));
 const StarterKitPage = lazy(() => import('./pages/StarterKitPage'));
+const AssistantPage = lazy(() => import('./pages/AssistantPage'));
 
 // Fallback ระหว่างโหลดหน้า (lazy chunk)
 function PageLoader() {
@@ -144,6 +145,7 @@ function App() {
             <Route path="/skills" element={isAuthenticated ? <AISkillsPage /> : <Navigate to="/login" />} />
             <Route path="/skills-catalog" element={isAuthenticated ? <SkillsCatalogPage /> : <Navigate to="/login" />} />
             <Route path="/starter" element={isAuthenticated ? <StarterKitPage /> : <Navigate to="/login" />} />
+            <Route path="/assistant" element={isAuthenticated ? <AssistantPage /> : <Navigate to="/login" />} />
             <Route path="/supply-chain" element={isAuthenticated ? <SupplyChainPage /> : <Navigate to="/login" />} />
             <Route path="/promo-engine" element={isAuthenticated ? <PromoEnginePage /> : <Navigate to="/login" />} />
             <Route path="/daily-pr" element={isAuthenticated ? <DailyPRPage /> : <Navigate to="/login" />} />

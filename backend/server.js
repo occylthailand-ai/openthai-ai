@@ -1196,6 +1196,56 @@ app.post('/api/generate/stream', generateLimiter, async (req, res) => {
   }
 });
 
+// ─── POST /api/chat/stream — AI ที่ปรึกษาธุรกิจ (แชทสตรีมสด · SSE) ───────────────
+const CHAT_SYSTEM = `คุณคือ "ผู้ช่วย AI ของ Openthai.ai" — ที่ปรึกษาธุรกิจสำหรับ SME/OTOP/ผู้ประกอบการไทย
+ตอบเป็นภาษาไทยที่เป็นกันเอง กระชับ ใช้ได้จริง เน้นการตลาด ขายของออนไลน์ คอนเทนต์ ราคา และการบริหารร้าน
+ถ้าเหมาะสม แนะนำให้ผู้ใช้ลองใช้ทักษะ AI ในระบบ (เช่น ตั้งราคา · สคริปต์ไลฟ์ · วางแคมเปญ)`;
+
+app.post('/api/chat/stream', generateLimiter, async (req, res) => {
+  const raw = Array.isArray(req.body?.messages) ? req.body.messages : [];
+  // sanitize: เก็บ 12 ข้อความล่าสุด · จำกัดความยาว
+  const messages = raw.slice(-12)
+    .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+    .map(m => ({ role: m.role, content: m.content.slice(0, 4000) }));
+  if (!messages.length || messages[messages.length - 1].role !== 'user') {
+    return res.status(400).json({ error: 'ต้องมีข้อความผู้ใช้' });
+  }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no',
+  });
+  const send = (event, data) => { try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch { /* closed */ } };
+  let closed = false;
+  res.on('close', () => { closed = true; });
+
+  try {
+    send('start', { source: anthropic ? 'claude' : (gemini ? 'gemini' : 'mock') });
+
+    if (anthropic) {
+      const stream = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001', max_tokens: 1024, system: CHAT_SYSTEM, stream: true, messages,
+      });
+      for await (const ev of stream) {
+        if (closed) break;
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) send('delta', { text: ev.delta.text });
+      }
+    } else if (gemini) {
+      const convo = messages.map(m => `${m.role === 'user' ? 'ผู้ใช้' : 'ผู้ช่วย'}: ${m.content}`).join('\n');
+      const result = await gemini.generateContentStream(`${CHAT_SYSTEM}\n\n${convo}\nผู้ช่วย:`);
+      for await (const chunk of result.stream) { if (closed) break; const t = chunk.text(); if (t) send('delta', { text: t }); }
+    } else {
+      const q = messages[messages.length - 1].content.slice(0, 40);
+      const mock = `ขอบคุณที่ถามเรื่อง "${q}" นะคะ 😊\n\nสำหรับ SME ไทย แนะนำให้เริ่มจาก: เข้าใจลูกค้าให้ชัด → ทำคอนเทนต์ที่ตรงใจ → ตั้งราคาที่คุ้มทั้งสองฝ่าย\n\nลองใช้ทักษะในระบบช่วยได้นะคะ เช่น 🎭 Persona, 💰 ตั้งราคา, 🔴 สคริปต์ไลฟ์ — อยากให้ช่วยด้านไหนเพิ่มเติมไหมคะ?`;
+      for (const word of mock.split(/(\s+)/)) { if (closed) break; send('delta', { text: word }); await new Promise(r => setTimeout(r, 30)); }
+    }
+    send('done', { ok: true });
+  } catch (e) {
+    addLog('warn', 'ChatStream', e.message);
+    send('error', { message: 'เกิดข้อผิดพลาดระหว่างตอบ' });
+  } finally { try { res.end(); } catch { /* ignore */ } }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  AI SKILLS HUB — S10-S15 (Trend, Hashtag, SEO, Sentiment, Video Script, Translate)
 // ═══════════════════════════════════════════════════════════════════════════════
