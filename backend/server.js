@@ -4024,6 +4024,49 @@ app.post('/api/skills/bundle', generateLimiter, async (req, res) => {
   });
 });
 
+// S34 · POST /api/skills/faq — FAQ & Auto-Reply Builder (คลังคำถาม-คำตอบ + ตอบอัตโนมัติ)
+app.post('/api/skills/faq', generateLimiter, async (req, res) => {
+  const { product, category = 'OTOP', channel = 'LINE/Facebook', tone = 'เป็นกันเอง สุภาพ' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นผู้เชี่ยวชาญระบบตอบแชทร้านค้าออนไลน์ไทย
+สร้างคลังคำถามที่พบบ่อย (FAQ) + ข้อความตอบอัตโนมัติพร้อมใช้ สำหรับร้านที่ขาย "${product.slice(0, 150)}" หมวด ${category}
+ช่องทาง: ${channel} · โทน: ${tone}
+
+ครอบคลุมคำถามจริงที่ลูกค้าไทยถามบ่อย เช่น ราคา/โปร, การจัดส่ง, วิธีสั่งซื้อ/ชำระเงิน, ของแท้/คุณภาพ, การคืนสินค้า, สต็อก
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "faqs": [{"q":"คำถามที่ลูกค้าถามบ่อย","a":"คำตอบพร้อมโพสต์ ชัดเจน สุภาพ","keywords":["คำที่ลูกค้าพิมพ์ที่ trigger คำตอบนี้"]}],
+  "greeting": "ข้อความทักทายอัตโนมัติเมื่อลูกค้าทักมาครั้งแรก",
+  "away_message": "ข้อความตอบนอกเวลาทำการ",
+  "closing": "ข้อความปิดการขาย/ขอบคุณหลังลูกค้าสั่งซื้อ",
+  "tips": ["เคล็ดลับตั้งระบบตอบอัตโนมัติให้ปิดการขายได้ 1","2","3"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 3072);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/FAQ', e.message); }
+
+  const pName = product.slice(0, 40);
+  res.json({
+    success: true, source: 'mock',
+    faqs: [
+      { q: 'ราคาเท่าไหร่คะ/ครับ?', a: `${pName} ราคาเริ่มต้นตามรายละเอียดในโพสต์เลยค่ะ ทักมาแจ้งจำนวนได้เลย เดี๋ยวร้านคำนวณโปร + ค่าส่งให้นะคะ 😊`, keywords: ['ราคา', 'เท่าไหร่', 'กี่บาท'] },
+      { q: 'ส่งกี่วันถึง?', a: 'จัดส่งภายใน 1-2 วันทำการค่ะ มีเลขติดตามพัสดุทุกออเดอร์ ส่งไวแน่นอนนะคะ 📦', keywords: ['ส่ง', 'กี่วัน', 'จัดส่ง', 'ขนส่ง'] },
+      { q: 'ของแท้ไหม?', a: 'ของแท้ 100% คัดคุณภาพทุกชิ้นค่ะ มีลูกค้ารีวิวเยอะมาก มั่นใจได้เลยค่ะ 💯', keywords: ['ของแท้', 'แท้', 'คุณภาพ'] },
+      { q: 'สั่งซื้อยังไง / จ่ายเงินยังไง?', a: 'แจ้งสินค้า+จำนวนทางแชทได้เลยค่ะ โอนผ่านพร้อมเพย์/บัญชีธนาคาร หรือเก็บเงินปลายทางก็ได้นะคะ 🛒', keywords: ['สั่ง', 'ซื้อ', 'จ่าย', 'โอน', 'ปลายทาง'] },
+      { q: 'มีของพร้อมส่งไหม?', a: 'มีของพร้อมส่งค่ะ ทักมาเช็คสต็อกรุ่น/สีที่ต้องการได้เลยนะคะ 😊', keywords: ['สต็อก', 'พร้อมส่ง', 'มีของ'] },
+    ],
+    greeting: `สวัสดีค่ะ 🙏 ยินดีต้อนรับสู่ร้านเรานะคะ สนใจ ${pName} สอบถามได้เลยค่ะ ร้านตอบไว ดูแลดีแน่นอน 😊`,
+    away_message: 'ตอนนี้นอกเวลาทำการค่ะ 🌙 ทิ้งข้อความไว้ได้เลย ร้านจะรีบตอบกลับโดยเร็วที่สุดนะคะ ขอบคุณที่สนใจค่ะ 🙏',
+    closing: 'ขอบคุณมากๆ เลยค่ะ 🙏❤️ ทางร้านจะรีบจัดส่งให้นะคะ ได้รับของแล้วฝากรีวิวด้วยน้า แล้วพบกันใหม่ค่ะ 😊',
+    tips: ['ตั้งคีย์เวิร์ดให้ตรงคำที่ลูกค้าพิมพ์จริง เช่น "เท่าไหร่" "ส่งกี่วัน"', 'ทุกคำตอบควรจบด้วยการชวนคุยต่อหรือปิดการขาย', 'ตอบไวใน 5 นาทีแรกเพิ่มโอกาสปิดการขายมากที่สุด'],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -4060,6 +4103,7 @@ const SKILLS_REGISTRY = [
   { id: 'S31', name: 'Product Listing Writer',category: 'commerce',   endpoint: '/api/skills/listing',          method: 'POST', inputs: ['product', 'category', 'price'], status: 'active' },
   { id: 'S32', name: 'Review Responder',     category: 'reputation',  endpoint: '/api/skills/review-reply',     method: 'POST', inputs: ['review', 'product', 'rating'], status: 'active' },
   { id: 'S33', name: 'Bundle & Upsell Designer', category: 'commerce', endpoint: '/api/skills/bundle',         method: 'POST', inputs: ['product', 'category', 'price'], status: 'active' },
+  { id: 'S34', name: 'FAQ & Auto-Reply Builder', category: 'support', endpoint: '/api/skills/faq',             method: 'POST', inputs: ['product', 'category', 'channel'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4695,6 +4739,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S31', name:'Product Listing',  pct:90, color:'#f97316', category:'commerce',   status:'✅' },
       { id:'S32', name:'Review Responder', pct:90, color:'#14b8a6', category:'reputation', status:'✅' },
       { id:'S33', name:'Bundle & Upsell',  pct:90, color:'#f59e0b', category:'commerce',   status:'✅' },
+      { id:'S34', name:'FAQ & Auto-Reply', pct:90, color:'#0ea5e9', category:'support',    status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
