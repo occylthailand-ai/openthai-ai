@@ -4067,6 +4067,50 @@ app.post('/api/skills/faq', generateLimiter, async (req, res) => {
   });
 });
 
+// S35 · POST /api/skills/broadcast — Broadcast & Re-engagement Writer (ดึงลูกค้าเก่ากลับมาซื้อซ้ำ)
+app.post('/api/skills/broadcast', generateLimiter, async (req, res) => {
+  const { product, category = 'OTOP', channel = 'LINE', goal = 'ดึงลูกค้าเก่ากลับมาซื้อซ้ำ', offer = '' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นผู้เชี่ยวชาญ CRM และการตลาดรักษาฐานลูกค้า (retention) สำหรับร้านค้าออนไลน์ไทย/OTOP
+เขียนชุดข้อความ broadcast เพื่อ "${goal}" ผ่าน ${channel} สำหรับร้านที่ขาย "${product.slice(0, 150)}" หมวด ${category}${offer ? ` · โปรที่มี: ${offer.slice(0, 120)}` : ''}
+
+ข้อความต้องสั้น กระชับ ไม่สแปม มีคุณค่าต่อลูกค้า และกระตุ้นให้กลับมาซื้อ
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "segments": [{"name":"กลุ่มลูกค้า เช่น ซื้อครั้งเดียวหายไป","approach":"ควรสื่อสารยังไง"}],
+  "messages": [{"title":"ชื่อแคมเปญ","body":"ข้อความ broadcast พร้อมส่ง ≤3 บรรทัด","cta":"ปุ่ม/คำกระตุ้น"}],
+  "winback_offer": "ข้อเสนอดึงกลับที่จูงใจแต่ไม่ขาดทุน",
+  "subject_lines": ["หัวข้อ/ประโยคเปิดที่คนอยากกดอ่าน 1","2","3"],
+  "timing": "ช่วงเวลา/ความถี่ที่ควรส่งเพื่อได้ผลดีที่สุด",
+  "tips": ["เคล็ดลับ broadcast ให้ลูกค้าไม่บล็อกและกลับมาซื้อ 1","2","3"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 2560);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/Broadcast', e.message); }
+
+  const pName = product.slice(0, 40);
+  res.json({
+    success: true, source: 'mock',
+    segments: [
+      { name: 'ลูกค้าซื้อครั้งเดียวแล้วหายไป', approach: 'ทักถามความพอใจ + เสนอส่วนลดกลับมาซื้อซ้ำ' },
+      { name: 'ลูกค้าประจำที่เงียบไปนาน', approach: 'ขอบคุณที่เคยอุดหนุน + สิทธิพิเศษลูกค้าเก่า' },
+    ],
+    messages: [
+      { title: 'คิดถึงลูกค้าคนพิเศษ', body: `สวัสดีค่ะ 😊 ${pName} ของเรามีรุ่นใหม่/ล็อตใหม่มาแล้ว! คิดถึงคุณลูกค้าเลยมีส่วนลดพิเศษมาฝากค่ะ`, cta: 'กดรับส่วนลด 👉' },
+      { title: 'สิทธิพิเศษลูกค้าเก่า', body: `ขอบคุณที่เคยอุดหนุน ${pName} นะคะ 🙏 เฉพาะลูกค้าเก่า รับส่วนลดกลับมาช้อปได้เลยค่ะ จำนวนจำกัด!`, cta: 'สั่งเลยก่อนหมด' },
+    ],
+    winback_offer: 'ส่วนลด 10-15% หรือส่งฟรี เฉพาะลูกค้าเก่า ใช้ได้ภายใน 7 วัน — สร้างความเร่งด่วนแต่ไม่ขาดทุน',
+    subject_lines: ['มีของขวัญเล็กๆ มาฝากคุณค่ะ 🎁', `${pName} ล็อตใหม่มาแล้ว — ลูกค้าเก่าได้ก่อนใคร`, 'คิดถึงจัง! กลับมาช้อปรับส่วนลดพิเศษนะคะ'],
+    timing: 'ส่งช่วงเย็น 18:00-20:00 หรือสุดสัปดาห์ · ความถี่ไม่เกิน 1-2 ครั้ง/สัปดาห์',
+    tips: ['เปิดด้วยคุณค่า/ความห่วงใย ไม่ใช่ขายตรงๆ', 'ใส่ deadline ให้รู้สึกเร่งด่วน', 'ปรับข้อความตามกลุ่มลูกค้า อย่าส่งเหมือนกันหมด'],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -4104,6 +4148,7 @@ const SKILLS_REGISTRY = [
   { id: 'S32', name: 'Review Responder',     category: 'reputation',  endpoint: '/api/skills/review-reply',     method: 'POST', inputs: ['review', 'product', 'rating'], status: 'active' },
   { id: 'S33', name: 'Bundle & Upsell Designer', category: 'commerce', endpoint: '/api/skills/bundle',         method: 'POST', inputs: ['product', 'category', 'price'], status: 'active' },
   { id: 'S34', name: 'FAQ & Auto-Reply Builder', category: 'support', endpoint: '/api/skills/faq',             method: 'POST', inputs: ['product', 'category', 'channel'], status: 'active' },
+  { id: 'S35', name: 'Broadcast & Re-engagement', category: 'retention', endpoint: '/api/skills/broadcast',     method: 'POST', inputs: ['product', 'category', 'channel'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4740,6 +4785,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S32', name:'Review Responder', pct:90, color:'#14b8a6', category:'reputation', status:'✅' },
       { id:'S33', name:'Bundle & Upsell',  pct:90, color:'#f59e0b', category:'commerce',   status:'✅' },
       { id:'S34', name:'FAQ & Auto-Reply', pct:90, color:'#0ea5e9', category:'support',    status:'✅' },
+      { id:'S35', name:'Broadcast/Re-engage',pct:90,color:'#ec4899', category:'retention',  status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },

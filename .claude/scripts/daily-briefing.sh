@@ -26,7 +26,7 @@ Last   : $LAST
 ✅ DB       : Supabase PostgreSQL
 ✅ PWA      : manifest.json + sw.js + icons 192/512
 
-── 34-Skills AI Framework (S1–S34) ─────────
+── 35-Skills AI Framework (S1–S35) ─────────
 S1  RCCF Prompt        ✅ /api/generate
 S2  Taste Check        ✅ /api/generate
 S3  Master Prompt      ✅ /api/generate
@@ -61,7 +61,8 @@ S31 Product Listing    ✅ /api/skills/listing
 S32 Review Responder   ✅ /api/skills/review-reply
 S33 Bundle & Upsell    ✅ /api/skills/bundle
 S34 FAQ & Auto-Reply   ✅ /api/skills/faq
-📚 Skills Registry      ✅ /api/skills (catalog · 34 skills)
+S35 Broadcast/Re-engage ✅ /api/skills/broadcast
+📚 Skills Registry      ✅ /api/skills (catalog · 35 skills)
 
 ── Route Map ───────────────────────────────
 /              LandingPage      (public)
@@ -69,8 +70,8 @@ S34 FAQ & Auto-Reply   ✅ /api/skills/faq
 /dashboard     DashboardPage    (auth)
 /ai-generator  AIGeneratorPage  (auth)
 /ai-tools      AIToolsHub       (auth)
-/skills        AISkillsPage     (auth) ← S9–S34 · data-driven tabs
-/skills-catalog SkillsCatalogPage (auth) ← catalog 34 skills (live registry)
+/skills        AISkillsPage     (auth) ← S9–S35 · data-driven tabs
+/skills-catalog SkillsCatalogPage (auth) ← catalog 35 skills (live registry)
 /supply-chain  SupplyChainPage  (auth) ← Control Tower + restock + S19 AI
 /promo-engine  PromoEnginePage  (auth) ← S18 flagship
 /agent         AgentPage        (auth)
