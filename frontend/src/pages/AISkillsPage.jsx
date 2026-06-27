@@ -35,6 +35,7 @@ const TABS = [
   { id: 'persona',     icon: '🎭', label: 'Persona Builder',      color: '#8b5cf6', skill: 'S30', endpoint: '/api/skills/persona' },
   { id: 'listing',     icon: '🛒', label: 'Product Listing',      color: '#f97316', skill: 'S31', endpoint: '/api/skills/listing' },
   { id: 'review',      icon: '⭐', label: 'Review Responder',      color: '#14b8a6', skill: 'S32', endpoint: '/api/skills/review-reply' },
+  { id: 'bundle',      icon: '🎁', label: 'Bundle & Upsell',       color: '#f59e0b', skill: 'S33', endpoint: '/api/skills/bundle' },
 ];
 
 const WISDOM_TRADITIONS = [
@@ -2861,6 +2862,112 @@ function TabReviewReply() {
   );
 }
 
+// ─── S33 · Bundle & Upsell Designer — จัดเซ็ต + ขายพ่วง เพิ่มยอดต่อบิล ───────────
+function TabBundle() {
+  const [form, setForm] = useState({ product: '', category: 'OTOP', price: '', goal: 'เพิ่มยอดต่อบิล' });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const amber = '#f59e0b';
+
+  const run = async () => {
+    if (!form.product.trim()) { setError('กรุณาใส่ชื่อสินค้า'); return; }
+    setLoading(true); setError(''); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/skills/bundle'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const d = await res.json();
+      if (!res.ok) setError(d.error || 'เกิดข้อผิดพลาด'); else setResult(d);
+    } catch { setError('ไม่สามารถเชื่อมต่อได้'); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gap: 20 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: amber, marginBottom: 16 }}>🎁 จัดเซ็ต + ขายพ่วง เพิ่มยอดต่อบิล</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <div><label style={labelSt}>สินค้า/รายการสินค้า *</label><input style={inputSt} placeholder="เช่น น้ำพริกเผา, กาแฟดริป (คั่นด้วยจุลภาคได้)" value={form.product} onChange={e => setForm(f => ({ ...f, product: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
+            <div><label style={labelSt}>หมวดหมู่</label>
+              <select style={{ ...inputSt, cursor: 'pointer' }} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+              </select>
+            </div>
+            <div><label style={labelSt}>ราคาตั้งต้น (ไม่บังคับ)</label><input style={inputSt} placeholder="฿120" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} /></div>
+            <div><label style={labelSt}>เป้าหมาย</label><input style={inputSt} placeholder="เพิ่มยอดต่อบิล" value={form.goal} onChange={e => setForm(f => ({ ...f, goal: e.target.value }))} /></div>
+          </div>
+          {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
+          <button style={{ ...btnSt, background: loading ? '#94a3b8' : `linear-gradient(135deg,${amber},#d97706)` }} onClick={run} disabled={loading}>
+            {loading ? '⏳ กำลังออกแบบเซ็ต...' : '🎁 ออกแบบเซ็ต & ขายพ่วง'}
+          </button>
+        </div>
+      </div>
+
+      {result && (
+        <div style={{ display: 'grid', gap: 16 }}>
+          {result.bundles?.length > 0 && (
+            <div style={card({ borderTop: `3px solid ${amber}` })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontWeight: 800, fontSize: 13, color: amber }}>📦 เซ็ตสินค้าแนะนำ</span>
+                <SourceBadge source={result.source} />
+              </div>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {result.bundles.map((b, i) => (
+                  <div key={i} style={{ background: '#fffbeb', borderRadius: 10, padding: '12px 14px', border: '1px solid rgba(245,158,11,0.2)' }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#d97706', marginBottom: 6 }}>{b.name}</div>
+                    {b.items?.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>{b.items.map((it, j) => <span key={j} style={{ fontSize: 12, background: `${amber}18`, color: '#b45309', borderRadius: 14, padding: '2px 9px' }}>{it}</span>)}</div>}
+                    {b.price_idea && <div style={{ fontSize: 12.5, color: '#475569' }}>💰 {b.price_idea}</div>}
+                    {b.why && <div style={{ fontSize: 12.5, color: '#475569' }}>✨ {b.why}</div>}
+                    {b.target && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>🎯 {b.target}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.upsells?.length > 0 && (
+            <div style={card()}>
+              <div style={{ fontWeight: 700, fontSize: 13, color: amber, marginBottom: 8 }}>⬆️ ข้อเสนอขายพ่วง (Upsell)</div>
+              {result.upsells.map((u, i) => (
+                <div key={i} style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 12px', marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, color: '#94a3b8' }}>{u.trigger} → <span style={{ color: '#d97706', fontWeight: 600 }}>{u.offer}</span></div>
+                  {u.script && <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginTop: 4 }}><span style={{ fontSize: 13, color: '#1e293b' }}>💬 {u.script}</span><CopyBtn text={u.script} /></div>}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
+            {result.cross_sells?.length > 0 && (
+              <div style={card()}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: amber, marginBottom: 8 }}>🔗 เสนอคู่กัน (Cross-sell)</div>
+                {result.cross_sells.map((c, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {c}</div>)}
+              </div>
+            )}
+            {result.tips?.length > 0 && (
+              <div style={card()}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: amber, marginBottom: 8 }}>💡 เคล็ดลับเพิ่มยอดต่อบิล</div>
+                {result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}
+              </div>
+            )}
+          </div>
+
+          {result.anchor_tip && <div style={card({ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#d97706', marginBottom: 4 }}>⚓ เคล็ดวางราคา (Anchoring)</div><div style={{ fontSize: 13, color: '#475569' }}>{result.anchor_tip}</div></div>}
+          {result.promo_copy && (
+            <div style={card()}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontWeight: 700, fontSize: 13, color: amber }}>📣 แคปชั่นโปรโมตเซ็ต</span>
+                <CopyBtn text={result.promo_copy} />
+              </div>
+              <div style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#1e293b', lineHeight: 1.6 }}>{result.promo_copy}</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Generic JSON renderer — แสดงผลลัพธ์ JSON ของทักษะใดก็ได้ให้อ่านง่าย ──────────
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
@@ -2947,7 +3054,7 @@ const TAB_COMPONENTS = {
   learning: TabLearningLayer, trend: TabTrend, hashtag: TabHashtag, seo: TabSEO,
   sentiment: TabSentiment, video: TabVideoScript, translate: TabTranslate,
   prompt: TabPromptBuilder, wisdom: TabCulturalWisdom, supplychain: TabSupplyChain,
-  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation, crisis: TabCrisis, persona: TabPersona, listing: TabListing, review: TabReviewReply,
+  pricing: TabPricing, cs: TabCustomerService, adbudget: TabAdBudget, breakeven: TabBreakEven, campaign: TabCampaignCalendar, live: TabLiveScript, omni: TabOmniSolver, negotiation: TabNegotiation, mediation: TabMediation, crisis: TabCrisis, persona: TabPersona, listing: TabListing, review: TabReviewReply, bundle: TabBundle,
 };
 // ทักษะที่มีหน้าเฉพาะของตัวเอง — ไม่ต้องสร้าง tab อัตโนมัติในนี้
 const HUB_EXCLUDE = new Set(['/api/skills/promo-engine']);
