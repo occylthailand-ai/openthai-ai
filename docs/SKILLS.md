@@ -1,6 +1,6 @@
 # 🧠 OpenThai.ai — AI Skills Framework
 
-ทักษะ AI ทั้งหมด **30 ตัว (S1–S30)** ขับเคลื่อนด้วย AI Router: **Claude (Anthropic) → Gemini → Mock fallback**
+ทักษะ AI ทั้งหมด **31 ตัว (S1–S31)** ขับเคลื่อนด้วย AI Router: **Claude (Anthropic) → Gemini → Mock fallback**
 ทุก endpoint ทำงานได้แม้ไม่มี API key (mock fallback) — ใส่ `ANTHROPIC_API_KEY` หรือ `GEMINI_API_KEY` เพื่อผลลัพธ์จริง
 
 ---
@@ -57,6 +57,7 @@
 | **S28** | **Conflict Mediator** | `POST /api/skills/mediation` | conflict, parties, desired_outcome |
 | **S29** | **Crisis Manager** | `POST /api/skills/crisis` | situation, channel, severity |
 | **S30** | **Persona Builder** | `POST /api/skills/persona` | product, category, market |
+| **S31** | **Product Listing Writer** | `POST /api/skills/listing` | product, category, price |
 
 ---
 
