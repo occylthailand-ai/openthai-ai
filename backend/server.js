@@ -3977,6 +3977,53 @@ app.post('/api/skills/review-reply', generateLimiter, async (req, res) => {
   });
 });
 
+// S33 · POST /api/skills/bundle — Bundle & Upsell Designer (จัดเซ็ต + ขายพ่วง เพิ่มยอดต่อบิล)
+app.post('/api/skills/bundle', generateLimiter, async (req, res) => {
+  const { product, products = '', category = 'OTOP', price = '', goal = 'เพิ่มยอดต่อบิล' } = req.body || {};
+  const main = (product || products || '').trim();
+  if (!main) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นผู้เชี่ยวชาญกลยุทธ์เพิ่มยอดขายต่อบิล (AOV) สำหรับร้านค้าออนไลน์ไทย/OTOP
+ออกแบบชุดสินค้า (bundle) และข้อเสนอขายพ่วง (upsell/cross-sell) ที่ลูกค้าอยากซื้อเพิ่มอย่างเป็นธรรม คุ้มทั้งร้านและลูกค้า
+
+สินค้า/รายการสินค้า: "${main.slice(0, 300)}" · หมวด: ${category}${price ? ` · ราคาตั้งต้น: ${price}` : ''}
+เป้าหมาย: ${goal}
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "bundles": [
+    {"name":"ชื่อเซ็ตน่าซื้อ","items":["สินค้าในเซ็ต 1","2"],"price_idea":"แนวคิดตั้งราคา/ส่วนลดเซ็ต","why":"เหตุผลที่ลูกค้าอยากได้","target":"กลุ่มลูกค้าที่เหมาะ"}
+  ],
+  "upsells": [{"trigger":"เมื่อลูกค้าซื้อ X","offer":"เสนอ Y","script":"ประโยคชวนเนียนๆ"}],
+  "cross_sells": ["สินค้าที่ควรเสนอคู่กัน 1","2","3"],
+  "anchor_tip": "เคล็ดลับวางราคา/เซ็ตให้ตัวเลือกที่อยากขายดูคุ้มที่สุด",
+  "promo_copy": "แคปชั่นสั้นโปรโมตเซ็ตขายดี พร้อมโพสต์",
+  "tips": ["เคล็ดลับเพิ่มยอดต่อบิลอย่างเป็นธรรม 1","2","3"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 2560);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/Bundle', e.message); }
+
+  const pName = main.slice(0, 40);
+  res.json({
+    success: true, source: 'mock',
+    bundles: [
+      { name: `เซ็ตคู่หูคุ้มกว่า — ${pName}`, items: [`${pName} x2`, 'ของแถมพิเศษ'], price_idea: 'ลด 10-15% เมื่อซื้อเป็นเซ็ต เทียบกับซื้อแยก', why: 'ซื้อเผื่อ/แบ่งเพื่อน คุ้มกว่าและประหยัดค่าส่ง', target: 'ลูกค้าซื้อซ้ำ / ซื้อฝาก' },
+      { name: `เซ็ตของขวัญพรีเมียม — ${pName}`, items: [pName, 'แพ็กกล่องของขวัญ', 'การ์ดอวยพร'], price_idea: 'บวกค่าแพ็กพรีเมียม 39-59 บาท', why: 'ซื้อเป็นของฝากได้ทันที ไม่ต้องห่อเอง', target: 'เทศกาล / ของฝาก' },
+    ],
+    upsells: [
+      { trigger: `เมื่อลูกค้าหยิบ ${pName} 1 ชิ้น`, offer: 'เพิ่มอีกชิ้นในราคาพิเศษ', script: 'เพิ่มอีกแค่ชิ้นเดียวรับส่วนลดทันที + ส่งฟรีเลยค่ะ คุ้มกว่าเยอะ!' },
+    ],
+    cross_sells: ['สินค้าหมวดเดียวกันรสชาติ/สีอื่น', 'ของใช้คู่กัน', 'สินค้าขายดีของร้าน'],
+    anchor_tip: 'วางเซ็ตใหญ่ราคาสูงไว้ข้างๆ เซ็ตที่อยากขาย เพื่อให้ตัวเลือกหลักดูคุ้มที่สุด',
+    promo_copy: `🔥 จัดเซ็ตคุ้มกว่า! ${pName} ซื้อเป็นเซ็ตประหยัดกว่าซื้อแยก + ส่งฟรี ทักเลยค่ะ`,
+    tips: ['ตั้งชื่อเซ็ตให้เห็นประโยชน์ชัด เช่น "เซ็ตคุ้ม" "เซ็ตของฝาก"', 'โชว์ราคาเทียบ "ซื้อแยก vs ซื้อเซ็ต" ให้เห็นส่วนต่าง', 'เสนอขายพ่วงตอนลูกค้าตัดสินใจซื้อแล้ว ได้ผลที่สุด'],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -4012,6 +4059,7 @@ const SKILLS_REGISTRY = [
   { id: 'S30', name: 'Persona Builder',      category: 'research',    endpoint: '/api/skills/persona',          method: 'POST', inputs: ['product', 'category', 'market'], status: 'active' },
   { id: 'S31', name: 'Product Listing Writer',category: 'commerce',   endpoint: '/api/skills/listing',          method: 'POST', inputs: ['product', 'category', 'price'], status: 'active' },
   { id: 'S32', name: 'Review Responder',     category: 'reputation',  endpoint: '/api/skills/review-reply',     method: 'POST', inputs: ['review', 'product', 'rating'], status: 'active' },
+  { id: 'S33', name: 'Bundle & Upsell Designer', category: 'commerce', endpoint: '/api/skills/bundle',         method: 'POST', inputs: ['product', 'category', 'price'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4646,6 +4694,7 @@ app.get('/api/system/skills-gap', (req, res) => {
       { id:'S30', name:'Persona Builder',  pct:88, color:'#8b5cf6', category:'research',   status:'✅' },
       { id:'S31', name:'Product Listing',  pct:90, color:'#f97316', category:'commerce',   status:'✅' },
       { id:'S32', name:'Review Responder', pct:90, color:'#14b8a6', category:'reputation', status:'✅' },
+      { id:'S33', name:'Bundle & Upsell',  pct:90, color:'#f59e0b', category:'commerce',   status:'✅' },
     ],
     benchmark: [
       { name:'Thai Language NLP',   ours:97, industry:68, leader:'Openthai.ai 🏆' },
