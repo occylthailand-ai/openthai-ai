@@ -864,6 +864,11 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
   d.setDate(d.getDate() + daysUntil);
   const nextPayout = d.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
+  // ความคืบหน้าสู่ Tier ถัดไป (อีกกี่ดีลถึงค่าคอมขั้นถัดไป)
+  const sales = aff.total_sales || 0;
+  const upcoming = AFFILIATE_TIERS.filter(t => t.min > sales).sort((a, b) => a.min - b.min)[0];
+  const next_tier = upcoming ? { tier: upcoming.tier, rate: upcoming.rate, at_sales: upcoming.min, sales_to_go: upcoming.min - sales } : null;
+
   res.json({
     success: true,
     data: {
@@ -871,6 +876,7 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
       name:            aff.name,
       tier:            aff.tier,
       commission_rate: aff.commission_rate,
+      next_tier,
       total_sales:     aff.total_sales     || 0,
       total_earned:    aff.total_earned    || 0,
       pending_payout:  (aff.total_earned   || 0) - (aff.paid_out || 0),
@@ -6127,18 +6133,43 @@ function grantEntitlement(email, plan, { source = 'payment', subscription_id = n
 
 // เครดิตค่าคอมมิชชั่นให้ affiliate เมื่อมีการขายผ่าน ref link (รองรับทั้ง plan + quickpay)
 // เรียกได้จากทั้ง webhook และ status-poll — ป้องกันเครดิตซ้ำด้วย flag firstTime ฝั่งผู้เรียก
+// เลื่อน Tier อัตโนมัติตามจำนวนดีลสะสม — ยิ่งขายยิ่งได้ค่าคอมเพิ่ม
+// starter 20% (0-9) → pro 30% (10-49) → elite 40% (50+)
+const AFFILIATE_TIERS = [
+  { tier: 'elite',   min: 50, rate: 0.40 },
+  { tier: 'pro',     min: 10, rate: 0.30 },
+  { tier: 'starter', min: 0,  rate: 0.20 },
+];
+function tierForSales(sales) {
+  return AFFILIATE_TIERS.find(t => (sales || 0) >= t.min) || AFFILIATE_TIERS[AFFILIATE_TIERS.length - 1];
+}
+
 function creditAffiliateSale(refCode, amountThb, { charge_id = null } = {}) {
   if (!refCode || !(amountThb > 0)) return null;
   const aff = affiliates.find(a => a.ref_code === refCode);
   if (!aff) return null;
+  // คอมมิชชันของดีลนี้คิดด้วยเรตปัจจุบัน (การเลื่อนขั้นมีผลกับดีลถัดไป)
   const commission = +(amountThb * (aff.commission_rate || 0.20)).toFixed(2);
   aff.total_sales = (aff.total_sales || 0) + 1;
   aff.total_earned = +((aff.total_earned || 0) + commission).toFixed(2);
   aff.recent_sales = [{ amount_thb: amountThb, commission, charge_id, at: new Date().toISOString() }, ...(aff.recent_sales || [])].slice(0, 50);
+
+  // ตรวจเลื่อนขั้นหลังเพิ่มยอดดีล
+  let promoted = null;
+  const target = tierForSales(aff.total_sales);
+  if (target.tier !== (aff.tier || 'starter') && target.rate > (aff.commission_rate || 0.20)) {
+    const from = aff.tier || 'starter';
+    aff.tier = target.tier;
+    aff.commission_rate = target.rate;
+    promoted = { from, to: target.tier, rate: target.rate };
+    addLog('info', 'Affiliate', `🎉 เลื่อนขั้น ${from} → ${target.tier} (${Math.round(target.rate * 100)}%) — ${refCode} (${aff.name})`);
+    webhooks.dispatch('affiliate.tier_up', { ref_code: refCode, from, to: target.tier, rate: target.rate, total_sales: aff.total_sales }, null);
+  }
+
   saveAffiliate(aff).catch(e => console.warn('[affiliate] credit failed:', e.message));
   addLog('info', 'Affiliate', `commission +${commission}฿ → ${refCode} (${aff.name})`);
   webhooks.dispatch('affiliate.sale', { ref_code: refCode, amount_thb: amountThb, commission, charge_id }, null);
-  return { commission, ref_code: refCode };
+  return { commission, ref_code: refCode, promoted };
 }
 
 // คืนสิทธิ์ปัจจุบัน (เช็ควันหมดอายุ) — ถ้าหมดอายุถือเป็น free

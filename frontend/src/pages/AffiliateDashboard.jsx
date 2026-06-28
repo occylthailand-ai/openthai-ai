@@ -209,7 +209,15 @@ export default function AffiliateDashboard() {
 
             {/* Tier Progress */}
             <div style={glass}>
-              <div style={{ fontWeight: 700, marginBottom: 16 }}>🏆 ระดับ & เป้าหมาย</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ fontWeight: 700 }}>🏆 ระดับ & เป้าหมาย</div>
+                <div style={{ fontSize: 12, color: tierColor, fontWeight: 700 }}>ค่าคอมปัจจุบัน {Math.round((data.commission_rate || 0.2) * 100)}%</div>
+              </div>
+              {data.next_tier && (
+                <div style={{ fontSize: 12, color: '#6ee7b7', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 14 }}>
+                  🚀 อีก <strong>{data.next_tier.sales_to_go}</strong> ดีล เลื่อนเป็น <strong style={{ textTransform: 'capitalize' }}>{data.next_tier.tier}</strong> รับค่าคอม <strong>{Math.round(data.next_tier.rate * 100)}%</strong> อัตโนมัติ
+                </div>
+              )}
               {[
                 { label: 'Starter → Pro', current: data.total_sales, target: 10, color: '#10b981' },
                 { label: 'Pro → Elite', current: Math.max(0, data.total_sales - 10), target: 40, color: '#6366f1' },
