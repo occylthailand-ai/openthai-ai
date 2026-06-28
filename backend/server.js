@@ -1301,16 +1301,11 @@ app.post('/api/chat/stream', generateLimiter, async (req, res) => {
 //  AI SKILLS HUB — S10-S15 (Trend, Hashtag, SEO, Sentiment, Video Script, Translate)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-async function callAI(prompt, maxTokens = 1024) {
-  if (anthropic) {
-    const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });
-    return msg.content[0]?.text?.trim() || '';
-  }
-  if (gemini) {
-    const r = await gemini.generateContent(prompt);
-    return r.response.text().trim();
-  }
-  return '';
+// callAI — วิ่งผ่าน Smart Model Router (เลือกถูกสุด + failover + คุมงบ) สำหรับงาน skill ทั่วไป
+// taskType เริ่มต้น 'bulk' (ถูกก่อน) — ส่ง 'heavy' สำหรับงานวิเคราะห์ที่ต้องการคุณภาพ
+async function callAI(prompt, maxTokens = 1024, taskType = 'bulk') {
+  const r = await routeAI(taskType, prompt, { maxTokens });
+  return r.text || '';
 }
 
 function parseAIJson(text) {
@@ -1347,6 +1342,90 @@ async function callGrok(prompt, maxTokens = 700) {
     return data.choices?.[0]?.message?.content?.trim() || null;
   } catch (e) { addLog('warn', 'Council/Grok', e.message); return null; }
 }
+
+// ─── Smart Model Router — เลือกโมเดลถูกสุดที่เหมาะกับงาน + failover + คุมงบ/วัน ─────
+// ลดต้นทุน token: งานหนัก→คุณภาพก่อน, งานปริมาณ→ถูกก่อน, เกินงบ/วัน→Eco Mode (เฉพาะรุ่นถูก)
+// cost ต่อ 1k tokens เป็นค่าประมาณ (USD) — ปรับได้ตามเรตจริงของแต่ละค่าย
+const ROUTER_PROVIDERS = {
+  gemini: { call: callGeminiText, costPer1k: 0.0004, label: 'Gemini Flash' },
+  grok:   { call: callGrok,       costPer1k: 0.0005, label: 'Grok' },
+  claude: { call: callClaude,     costPer1k: 0.0008, label: 'Claude Haiku' },
+};
+const ROUTER_TIERS = {
+  heavy: ['claude', 'gemini', 'grok'],   // งานวิเคราะห์ซับซ้อน — คุณภาพก่อน
+  bulk:  ['gemini', 'grok', 'claude'],   // งานปริมาณ (แคปชั่น/ข้อความสั้น) — ถูกก่อน
+  eco:   ['gemini', 'grok'],             // โหมดประหยัด — เฉพาะรุ่นถูกสุด
+};
+const HEAVY_TASKS = new Set(['heavy', 'heavy_reasoning', 'legal_check', 'anti_fraud', 'analysis']);
+const AI_DAILY_BUDGET_USD = parseFloat(process.env.AI_DAILY_BUDGET_USD || '1.0');
+const routerToday = () => new Date().toISOString().slice(0, 10);
+const routerState = { day: routerToday(), spentUsd: 0, calls: 0, byProvider: {}, health: { gemini: true, grok: true, claude: true }, failCount: {} };
+function routerRollover() {
+  if (routerState.day !== routerToday()) {
+    routerState.day = routerToday(); routerState.spentUsd = 0; routerState.calls = 0;
+    routerState.byProvider = {}; routerState.health = { gemini: true, grok: true, claude: true }; routerState.failCount = {};
+  }
+}
+const estTokens = (s) => Math.ceil((s || '').length / 4);
+const routerEco = () => routerState.spentUsd >= AI_DAILY_BUDGET_USD;
+
+async function routeAI(taskType, prompt, { maxTokens = 700 } = {}) {
+  routerRollover();
+  const eco = routerEco();
+  const tier = eco ? 'eco' : (HEAVY_TASKS.has(taskType) ? 'heavy' : 'bulk');
+  const order = ROUTER_TIERS[tier] || ROUTER_TIERS.bulk;
+  const tried = [];
+  for (const p of order) {
+    const prov = ROUTER_PROVIDERS[p];
+    if (!prov) continue;
+    if (!routerState.health[p]) { tried.push(`${p}:skip(unhealthy)`); continue; }
+    const t0 = Date.now();
+    let text = null;
+    try { text = await prov.call(prompt, maxTokens); } catch (_) { text = null; }
+    if (text) {
+      const tokens = estTokens(prompt) + estTokens(text);
+      const usd = +(tokens / 1000 * prov.costPer1k).toFixed(6);
+      routerState.spentUsd = +(routerState.spentUsd + usd).toFixed(6);
+      routerState.calls++;
+      const bp = routerState.byProvider[p] || { calls: 0, usd: 0, tokens: 0 };
+      bp.calls++; bp.usd = +(bp.usd + usd).toFixed(6); bp.tokens += tokens;
+      routerState.byProvider[p] = bp; routerState.failCount[p] = 0;
+      return { ok: true, provider: p, model: prov.label, tier, eco, text, tokens, cost_usd: usd, latency_ms: Date.now() - t0, tried };
+    }
+    tried.push(`${p}:unavailable`);
+    routerState.failCount[p] = (routerState.failCount[p] || 0) + 1;
+    if (routerState.failCount[p] >= 3) routerState.health[p] = false;  // ปิดชั่วคราวเมื่อล้มซ้ำ (รีเซ็ตรายวัน)
+  }
+  return { ok: false, provider: null, model: null, tier, eco, text: null, tried, reason: 'ไม่มี provider พร้อมใช้ — ตั้ง ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY' };
+}
+
+// GET /api/router/status — แดชบอร์ดต้นทุนโทเคน + สถานะ provider + งบประมาณ
+app.get('/api/router/status', (req, res) => {
+  routerRollover();
+  res.json({
+    success: true,
+    day: routerState.day,
+    spent_usd: routerState.spentUsd,
+    budget_usd: AI_DAILY_BUDGET_USD,
+    budget_used_pct: AI_DAILY_BUDGET_USD > 0 ? +(routerState.spentUsd / AI_DAILY_BUDGET_USD * 100).toFixed(1) : 0,
+    eco_mode: routerEco(),
+    calls: routerState.calls,
+    health: routerState.health,
+    by_provider: routerState.byProvider,
+    providers: Object.entries(ROUTER_PROVIDERS).map(([id, p]) => ({ id, label: p.label, cost_per_1k_usd: p.costPer1k, available: !!process.env[id === 'claude' ? 'ANTHROPIC_API_KEY' : id === 'gemini' ? 'GEMINI_API_KEY' : 'XAI_API_KEY'] })),
+    tiers: ROUTER_TIERS,
+    note: 'cost เป็นค่าประมาณต่อ 1k tokens · เกินงบ/วัน → Eco Mode (เฉพาะรุ่นถูก) · health รีเซ็ตรายวัน',
+  });
+});
+
+// POST /api/router/run — ส่งงานให้ router เลือกโมเดลถูกสุด/สลับค่ายอัตโนมัติ
+app.post('/api/router/run', generateLimiter, async (req, res) => {
+  const prompt = String(req.body?.prompt || '').trim().slice(0, 8000);
+  const taskType = String(req.body?.task_type || 'bulk');
+  if (!prompt) return res.status(400).json({ success: false, error: 'ต้องการ prompt' });
+  const r = await routeAI(taskType, prompt, { maxTokens: Math.min(2000, parseInt(req.body?.max_tokens, 10) || 700) });
+  res.json({ success: r.ok, ...r });
+});
 
 // ─── OpenThaiAi Council — ห้องที่ AI 3 เจ้าช่วยกันวิเคราะห์ + สังเคราะห์ข้อสรุป ────
 const COUNCIL_PERSONAS = {

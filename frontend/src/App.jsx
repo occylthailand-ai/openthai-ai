@@ -44,6 +44,7 @@ const AffiliateProgramsPage = lazy(() => import('./pages/AffiliateProgramsPage')
 const ContentStudioPage = lazy(() => import('./pages/ContentStudioPage'));
 const CouncilPage = lazy(() => import('./pages/CouncilPage'));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
+const RouterStatusPage = lazy(() => import('./pages/RouterStatusPage'));
 const CorporateDashboard = lazy(() => import('./pages/corporate/CorporateDashboard'));
 const InvestorRelationsPage = lazy(() => import('./pages/corporate/InvestorRelationsPage'));
 const CompliancePage = lazy(() => import('./pages/corporate/CompliancePage'));
@@ -201,6 +202,7 @@ function App() {
             <Route path="/council" element={<CouncilPage />} />
             <Route path="/openthaiai" element={<CouncilPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/router" element={<RouterStatusPage />} />
             {/* Corporate System — Public Company */}
             <Route path="/corporate"             element={isAuthenticated ? <CorporateDashboard />    : <Navigate to="/login" />} />
             <Route path="/corporate/board"       element={isAuthenticated ? <BoardPage />             : <Navigate to="/login" />} />
