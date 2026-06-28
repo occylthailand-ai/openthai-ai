@@ -20,6 +20,7 @@ export default function ContentStudioPage() {
   });
   const [form, setForm] = useState({ name: '', price: '', features: '', link: '', hashtags: '' });
   const [sel, setSel] = useState(PLATFORMS.map(p => p.id));
+  const [lang, setLang] = useState('th');
   const [captions, setCaptions] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -64,7 +65,7 @@ export default function ContentStudioPage() {
     try {
       const res = await fetch(apiUrl('/api/captions/generate'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, platforms: sel }),
+        body: JSON.stringify({ ...form, platforms: sel, lang }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'สร้างแคปชั่นไม่สำเร็จ');
@@ -127,6 +128,19 @@ export default function ContentStudioPage() {
             </div>
             <div><label style={lbl}>จุดเด่นสินค้า</label><input style={input} value={form.features} onChange={e => setForm({ ...form, features: e.target.value })} placeholder="กรองฝุ่น PM2.5 ใน 10 นาที เงียบ ประหยัดไฟ" /></div>
             <div><label style={lbl}>แฮชแท็ก (เว้นว่างได้ ระบบใส่ให้)</label><input style={input} value={form.hashtags} onChange={e => setForm({ ...form, hashtags: e.target.value })} placeholder="#ของดีบอกต่อ #รีวิวสินค้า" /></div>
+          </div>
+
+          {/* เลือกภาษา */}
+          <div style={{ marginTop: '16px' }}>
+            <label style={lbl}>ภาษาแคปชั่น</label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {[['th', '🇹🇭 ไทย'], ['en', '🇬🇧 English'], ['zh', '🇨🇳 中文']].map(([id, label]) => (
+                <button key={id} onClick={() => setLang(id)}
+                  style={{ padding: '8px 14px', borderRadius: '20px', border: `1px solid ${lang === id ? '#10b981' : 'rgba(255,255,255,0.15)'}`, background: lang === id ? 'rgba(16,185,129,0.18)' : 'transparent', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* เลือกแพลตฟอร์ม */}

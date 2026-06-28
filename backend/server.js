@@ -1346,37 +1346,57 @@ app.post('/api/skills/hashtag', generateLimiter, async (req, res) => {
 
 // POST /api/captions/generate — สร้างแคปชั่นขายต่อแพลตฟอร์ม (human-in-the-loop)
 // คืนข้อความให้ผู้ใช้ "ก๊อปไปโพสต์เอง" — ไม่โพสต์อัตโนมัติ (ไม่ละเมิด ToS ของแพลตฟอร์ม)
-const HOOKS = ['หยุดเลื่อนก่อน!', 'ของดีบอกต่อ', 'ส่งตรงจากผู้ผลิต', 'รีวิวจริงไม่อวย', 'ไอเทมที่คนตามหา'];
-function buildCaption(platform, p, hook) {
-  const name = p.name || 'สินค้า';
+// แคปชั่นรองรับ 3 ภาษา (th/en/zh) — hook + template ต่อภาษา/แพลตฟอร์ม
+const CAPTION_I18N = {
+  th: {
+    hooks: ['หยุดเลื่อนก่อน!', 'ของดีบอกต่อ', 'ส่งตรงจากผู้ผลิต', 'รีวิวจริงไม่อวย', 'ไอเทมที่คนตามหา'],
+    tags: (n) => `#${n} #ของดีบอกต่อ #รีวิวสินค้า`,
+    tiktok: (h, n, pr, f, l, t) => `🔥 ${h} 🔥\n📌 ${n}${pr ? ` — ${pr}` : ''}\n${f ? `👉 ${f}\n` : ''}สนใจดูลิงก์ในไบโอ 🛒\n${t} #TikTokป้ายยา #fyp`,
+    facebook: (h, n, pr, f, l) => `📢 ${h}\n${n} มารีวิวให้ดูกันจริงๆ${f ? ` — ${f}` : ''}\n${pr ? `ราคา ${pr} ` : ''}สนใจทักแชทหรือดูพิกัดในคอมเมนต์แรกได้เลยครับ 👇${l ? `\n${l}` : ''}`,
+    instagram: (h, n, pr, f, _l, t) => `${h} ✨\n${n}${f ? `\n${f}` : ''}${pr ? `\n💰 ${pr}` : ''}\nDM มาได้เลยถ้าสนใจ 💌\n${t}`,
+    line: (h, n, pr, f, l) => `💚 สิทธิพิเศษเฉพาะเพื่อนใน LINE 💚\n🎁 ${n}${pr ? ` เพียง ${pr}` : ''}\n${f ? `✅ ${f}\n` : ''}🛒 สั่งซื้อ/สอบถามได้เลย${l ? `: ${l}` : ' ในแชทนี้'}`,
+  },
+  en: {
+    hooks: ['Stop scrolling!', 'Must-have item', 'Straight from the maker', 'Honest review', 'Everyone is asking for this'],
+    tags: (n) => `#${n} #musthave #review`,
+    tiktok: (h, n, pr, f, l, t) => `🔥 ${h} 🔥\n📌 ${n}${pr ? ` — ${pr}` : ''}\n${f ? `👉 ${f}\n` : ''}Link in bio 🛒\n${t} #tiktokmademebuyit #fyp`,
+    facebook: (h, n, pr, f, l) => `📢 ${h}\nReal review of ${n}${f ? ` — ${f}` : ''}\n${pr ? `Price ${pr}. ` : ''}DM me or check the first comment for the order link 👇${l ? `\n${l}` : ''}`,
+    instagram: (h, n, pr, f, _l, t) => `${h} ✨\n${n}${f ? `\n${f}` : ''}${pr ? `\n💰 ${pr}` : ''}\nDM me if interested 💌\n${t}`,
+    line: (h, n, pr, f, l) => `💚 Special deal for LINE friends 💚\n🎁 ${n}${pr ? ` only ${pr}` : ''}\n${f ? `✅ ${f}\n` : ''}🛒 Order now${l ? `: ${l}` : ' in this chat'}`,
+  },
+  zh: {
+    hooks: ['别划走！', '好物分享', '工厂直供', '真实测评', '大家都在找的好物'],
+    tags: (n) => `#${n} #好物推荐 #测评`,
+    tiktok: (h, n, pr, f, l, t) => `🔥 ${h} 🔥\n📌 ${n}${pr ? ` — ${pr}` : ''}\n${f ? `👉 ${f}\n` : ''}链接在主页 🛒\n${t} #种草 #fyp`,
+    facebook: (h, n, pr, f, l) => `📢 ${h}\n真实测评 ${n}${f ? ` — ${f}` : ''}\n${pr ? `价格 ${pr}。` : ''}想要的私信我，或看第一条评论的购买链接 👇${l ? `\n${l}` : ''}`,
+    instagram: (h, n, pr, f, _l, t) => `${h} ✨\n${n}${f ? `\n${f}` : ''}${pr ? `\n💰 ${pr}` : ''}\n有兴趣请私信 💌\n${t}`,
+    line: (h, n, pr, f, l) => `💚 LINE好友专属优惠 💚\n🎁 ${n}${pr ? ` 仅需 ${pr}` : ''}\n${f ? `✅ ${f}\n` : ''}🛒 立即下单${l ? `：${l}` : '（本聊天）'}`,
+  },
+};
+function buildCaption(platform, p, hookIdx, lang = 'th') {
+  const L = CAPTION_I18N[lang] || CAPTION_I18N.th;
+  const name = p.name || (lang === 'zh' ? '商品' : lang === 'en' ? 'product' : 'สินค้า');
   const price = p.price ? `฿${Number(p.price).toLocaleString()}` : '';
   const feat = p.features || '';
   const link = p.link || '';
-  const tags = p.hashtags || `#${String(name).replace(/\s+/g, '')} #ของดีบอกต่อ #รีวิวสินค้า`;
-  switch (platform) {
-    case 'tiktok':
-      return `🔥 ${hook} 🔥\n📌 ${name}${price ? ` — ${price}` : ''}\n${feat ? `👉 ${feat}\n` : ''}สนใจดูลิงก์ในไบโอ 🛒\n${tags} #TikTokป้ายยา #fyp`;
-    case 'facebook':
-      return `📢 ${hook}\n${name} มารีวิวให้ดูกันจริงๆ${feat ? ` — ${feat}` : ''}\n${price ? `ราคา ${price} ` : ''}ใครสนใจทักแชทหรือดูพิกัดในคอมเมนต์แรกได้เลยนะครับ 👇${link ? `\n${link}` : ''}`;
-    case 'instagram':
-      return `${hook} ✨\n${name}${feat ? `\n${feat}` : ''}${price ? `\n💰 ${price}` : ''}\nDM มาได้เลยถ้าสนใจ 💌\n${tags}`;
-    case 'line':
-      return `💚 สิทธิพิเศษเฉพาะเพื่อนใน LINE 💚\n🎁 ${name}${price ? ` เพียง ${price}` : ''}\n${feat ? `✅ ${feat}\n` : ''}🛒 สั่งซื้อ/สอบถามได้เลย${link ? `: ${link}` : ' ในแชทนี้'}`;
-    default:
-      return `${name}${price ? ` ${price}` : ''}${link ? ` ${link}` : ''}`;
-  }
+  const tags = p.hashtags || L.tags(String(name).replace(/\s+/g, ''));
+  const hook = L.hooks[hookIdx % L.hooks.length];
+  const fn = L[platform];
+  return fn ? fn(hook, name, price, feat, link, tags) : `${name}${price ? ` ${price}` : ''}${link ? ` ${link}` : ''}`;
 }
 app.post('/api/captions/generate', generateLimiter, (req, res) => {
   const { name, price, features, link, hashtags } = req.body || {};
   if (!name?.trim()) return res.status(400).json({ success: false, error: 'ต้องการชื่อสินค้า (name)' });
+  const lang = ['th', 'en', 'zh'].includes(req.body?.lang) ? req.body.lang : 'th';
   const want = Array.isArray(req.body?.platforms) && req.body.platforms.length
     ? req.body.platforms.filter(pl => ['tiktok', 'facebook', 'instagram', 'line'].includes(pl))
     : ['tiktok', 'facebook', 'instagram', 'line'];
   const product = { name: String(name).slice(0, 120), price, features: String(features || '').slice(0, 300), link: String(link || '').slice(0, 300), hashtags: String(hashtags || '').slice(0, 200) };
   const captions = {};
-  want.forEach((pl, i) => { captions[pl] = buildCaption(pl, product, HOOKS[i % HOOKS.length]); });
+  want.forEach((pl, i) => { captions[pl] = buildCaption(pl, product, i, lang); });
   res.json({
     success: true,
+    lang,
     captions,
     note: 'ก๊อปแคปชั่นไปโพสต์เองในแต่ละแอป — ระบบไม่โพสต์อัตโนมัติ (ป้องกันบัญชีโดนแบนจากการละเมิด ToS)',
   });

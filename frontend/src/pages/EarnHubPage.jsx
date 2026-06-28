@@ -16,6 +16,7 @@ export default function EarnHubPage() {
   const [searchParams] = useSearchParams();
   const ref = (searchParams.get('ref') || '').replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   const [copied, setCopied] = useState('');
+  const [shopProducts, setShopProducts] = useState([]);   // สินค้าจริงจากคลัง
 
   // นับคลิกลิงก์ ref (ครั้งเดียวต่อการเข้าหน้า)
   useEffect(() => {
@@ -25,6 +26,14 @@ export default function EarnHubPage() {
       body: JSON.stringify({ ref }),
     }).catch(() => {});
   }, [ref]);
+
+  // โหลดสินค้าจริงจากคลัง (เพิ่มที่ /admin) มาให้ลูกค้าเห็น+กดซื้อ
+  useEffect(() => {
+    fetch(apiUrl('/api/shop/products'))
+      .then(r => r.json())
+      .then(d => { if (d.success) setShopProducts((d.products || []).filter(p => p.in_stock).slice(0, 12)); })
+      .catch(() => {});
+  }, []);
 
   const refQS = ref ? `&ref=${encodeURIComponent(ref)}` : '';
   const payLink = `/pay?amount=${PACKAGE_PRICE}&label=${encodeURIComponent('แพ็กเกจคอนเทนต์ AI 30 ชิ้น')}${refQS}`;
@@ -77,6 +86,31 @@ export default function EarnHubPage() {
           <a href={payLink} onClick={(e) => { e.preventDefault(); navigate(payLink); }} style={btnPrimary}>📱 สั่งซื้อ — จ่ายพร้อมเพย์ ฿{PACKAGE_PRICE.toLocaleString()}</a>
           <div style={{ fontSize: '12px', color: '#6b7280', textAlign: 'center', marginTop: '10px' }}>สแกนจ่าย → เงินเข้าพร้อมเพย์ → ยืนยันอัตโนมัติ</div>
         </div>
+
+        {/* REAL PRODUCTS — สินค้าจริงจากคลัง */}
+        {shopProducts.length > 0 && (
+          <div style={card}>
+            <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '4px' }}>🛍️ สินค้าพร้อมส่ง</div>
+            <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '14px' }}>กดสั่งซื้อ → จ่ายพร้อมเพย์ → ยืนยันอัตโนมัติ</div>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {shopProducts.map(p => {
+                const buy = `/pay?amount=${encodeURIComponent(p.price || 0)}&label=${encodeURIComponent(p.name || '')}${refQS}`;
+                return (
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+                    {p.image_url
+                      ? <img src={p.image_url} alt="" style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
+                      : <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', flexShrink: 0 }}>📦</div>}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
+                      <div style={{ fontSize: '15px', fontWeight: 900, color: '#6ee7b7' }}>฿{Number(p.price || 0).toLocaleString()}</div>
+                    </div>
+                    <button onClick={() => navigate(buy)} style={{ padding: '10px 16px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontWeight: 800, fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>ซื้อ</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* BECOME AFFILIATE */}
         <div style={card}>
