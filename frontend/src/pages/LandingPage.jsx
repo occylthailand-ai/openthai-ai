@@ -102,6 +102,7 @@ export default function LandingPage() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <LanguageSwitcher />
+          <button onClick={() => navigate('/earn')} style={{ ...ghostBtn, color: '#6ee7b7', borderColor: 'rgba(16,185,129,0.4)' }}>💸 หารายได้</button>
           <button onClick={() => navigate('/affiliate')} style={ghostBtn}>{t('nav.affiliate')}</button>
           <button onClick={() => navigate('/pricing')} style={ghostBtn}>{t('nav.pricing')}</button>
           <button onClick={() => navigate('/login')} style={ghostBtn}>{t('nav.login')}</button>
@@ -141,6 +142,9 @@ export default function LandingPage() {
           </button>
           <button onClick={() => navigate('/pricing')} style={{ ...ghostBtn, fontSize: 15, padding: '14px 28px', borderColor: 'rgba(255,255,255,0.15)' }}>
             {t('hero.ctaPricing')}
+          </button>
+          <button onClick={() => navigate('/earn')} style={{ fontSize: 15, padding: '14px 28px', borderRadius: 50, fontWeight: 800, cursor: 'pointer', border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff' }}>
+            💸 เริ่มหารายได้ ฿1,000/วัน
           </button>
         </div>
 

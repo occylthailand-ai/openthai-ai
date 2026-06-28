@@ -8,7 +8,9 @@
     "sdk:gen": "node sdk-gen.js",
     "sdk:watch": "node --watch sdk-gen.js",
     "preflight": "node preflight.js",
-    "test:smoke": "node scripts/smoke-skills.mjs"
+    "test:smoke": "node scripts/smoke-skills.mjs",
+    "test:affiliate": "node scripts/test-affiliate-flow.mjs",
+    "test:revenue": "node scripts/test-revenue-system.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

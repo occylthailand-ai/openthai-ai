@@ -39,11 +39,33 @@ export default function AffiliateDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [pp, setPp] = useState('');           // พร้อมเพย์สำหรับถอน
+  const [wd, setWd] = useState(null);         // { withdrawals, pending_balance, ... }
+  const [wdBusy, setWdBusy] = useState(false);
 
   // ถ้ามี ref ใน URL โหลดอัตโนมัติ
   useEffect(() => {
     if (refFromUrl) loadDashboard(refFromUrl);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadWithdrawals = (code) => {
+    fetch(apiUrl(`/api/affiliate/withdrawals?ref_code=${encodeURIComponent(code)}`))
+      .then(r => r.json()).then(d => { if (d.success) setWd(d); }).catch(() => {});
+  };
+  const requestWithdraw = async () => {
+    if (!data) return;
+    setWdBusy(true);
+    try {
+      const res = await fetch(apiUrl('/api/affiliate/withdraw'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref_code: data.ref_code, promptpay: pp }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.success) throw new Error(d.error || 'ขอถอนไม่สำเร็จ');
+      toast.success('ส่งคำขอถอนแล้ว รออนุมัติ');
+      loadWithdrawals(data.ref_code);
+    } catch (e) { toast.error(e.message); } finally { setWdBusy(false); }
+  };
 
   const loadDashboard = async (code) => {
     if (!code.trim()) { setError('กรุณากรอก Ref Code'); toast.warn('กรุณากรอก Ref Code'); return; }
@@ -53,6 +75,7 @@ export default function AffiliateDashboard() {
       const json = await res.json();
       if (json.success) {
         setData(json.data);
+        loadWithdrawals(json.data.ref_code);
       } else {
         setError(json.message || 'ไม่พบ Ref Code นี้ในระบบ');
       }
@@ -64,6 +87,9 @@ export default function AffiliateDashboard() {
   };
 
   const refLink = `https://www.openthai-ai.com/?ref=${data?.ref_code || ''}`;
+  // ลิงก์ปิดการขายตรง — จ่ายผ่านลิงก์นี้ = ได้ค่าคอมทันที (QuickPay ฿1,000)
+  const payLink = `https://www.openthai-ai.com/pay?ref=${data?.ref_code || ''}&amount=1000&label=${encodeURIComponent('แพ็กเกจคอนเทนต์ AI 30 ชิ้น')}`;
+  const tiktokDemo = 'https://vt.tiktok.com/ZSCB66nhQ/';
   const tierColor = TIER_COLOR[data?.tier] || '#6366f1';
   const maxBar = Math.max(...(data?.monthly?.map((m) => m.earned) || [1]));
 
@@ -152,6 +178,41 @@ export default function AffiliateDashboard() {
           </a>
         </div>
 
+        {/* QUICKPAY MONEY LINK — จ่ายผ่านลิงก์นี้ = ได้ค่าคอมทันที */}
+        <div style={{ ...glass, border: '1.5px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.06)', marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 20 }}>💰</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: '#6ee7b7', marginBottom: 2, fontWeight: 700 }}>ลิงก์ปิดการขาย ฿1,000 — จ่ายผ่านลิงก์นี้คุณได้ค่าคอม {Math.round((data?.commission_rate || 0.2) * 100)}% (฿{Math.round(1000 * (data?.commission_rate || 0.2))}/ดีล)</div>
+              <div style={{ fontSize: 13, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{payLink}</div>
+            </div>
+            <button onClick={() => copy(payLink, 'paylink')} style={{ ...smallBtn, background: copied === 'paylink' ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7' }}>
+              {copied === 'paylink' ? '✅ คัดลอกแล้ว' : '📋 คัดลอกลิงก์เงิน'}
+            </button>
+            <a href={tiktokDemo} target="_blank" rel="noreferrer" style={{ ...smallBtn, textDecoration: 'none', background: 'rgba(254,44,85,0.15)', border: '1px solid rgba(254,44,85,0.35)', color: '#fda4af' }}>
+              🎬 คลิปขาย TikTok ↗
+            </a>
+          </div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 10, lineHeight: 1.6 }}>
+            วิธีทำเงิน 24/7: แชร์ <strong style={{ color: '#fda4af' }}>คลิป TikTok</strong> + วาง <strong style={{ color: '#6ee7b7' }}>ลิงก์เงิน</strong> นี้ใน bio/คอมเมนต์ → ลูกค้าสแกนจ่ายพร้อมเพย์ → ระบบเครดิตค่าคอมเข้าบัญชีคุณอัตโนมัติ
+          </div>
+
+          {/* ลิงก์ติดตามต่อแพลตฟอร์ม (UTM) — รู้ว่าเงินมาจากช่องไหน */}
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>🔗 ลิงก์ติดตามต่อแพลตฟอร์ม (รู้ว่าเงินมาจากช่องไหน) — กดเพื่อคัดลอก:</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[['tiktok', '🎵 TikTok'], ['facebook', '📘 Facebook'], ['instagram', '📸 Instagram'], ['line', '💚 LINE']].map(([src, label]) => {
+                const tracked = `${payLink}&utm_source=${src}&source=${src}`;
+                return (
+                  <button key={src} onClick={() => copy(tracked, `utm_${src}`)} style={{ ...smallBtn, fontSize: 12, background: copied === `utm_${src}` ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: copied === `utm_${src}` ? '#6ee7b7' : '#cbd5e1' }}>
+                    {copied === `utm_${src}` ? '✅ คัดลอก' : label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* TABS */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
           {[['overview', '📊 ภาพรวม'], ['sales', '📦 ยอดขาย'], ['payout', '💸 รับเงิน'], ['kit', '📦 Marketing Kit']].map(([id, label]) => (
@@ -184,9 +245,77 @@ export default function AffiliateDashboard() {
               )}
             </div>
 
+            {/* Clicks by Source — รู้ว่าคลิกมาจากช่องไหน */}
+            <div style={glass}>
+              <div style={{ fontWeight: 700, marginBottom: 16 }}>🔗 คลิกตามช่องทาง</div>
+              {(() => {
+                const SRC = { tiktok: ['🎵 TikTok', '#fe2c55'], facebook: ['📘 Facebook', '#1877f2'], instagram: ['📸 Instagram', '#e1306c'], line: ['💚 LINE', '#06c755'], youtube: ['▶️ YouTube', '#ff0000'], shopee: ['🛍️ Shopee', '#ee4d2d'], lazada: ['🛒 Lazada', '#0f146d'], x: ['✖️ X', '#94a3b8'], direct: ['🔗 ตรง', '#6366f1'], other: ['🌐 อื่นๆ', '#64748b'] };
+                const entries = Object.entries(data.clicks_by_source || {}).sort((a, b) => b[1] - a[1]);
+                const max = Math.max(1, ...entries.map(([, v]) => v));
+                if (entries.length === 0) return <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 14, textAlign: 'center' }}>ยังไม่มีข้อมูลคลิก — แชร์ลิงก์ติดตามต่อแพลตฟอร์มเพื่อดูว่าช่องไหนเวิร์ค</div>;
+                return (
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {entries.map(([src, n]) => {
+                      const meta = SRC[src] || [src, '#64748b'];
+                      return (
+                        <div key={src}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
+                            <span>{meta[0]}</span><span style={{ color: meta[1], fontWeight: 700 }}>{n} คลิก</span>
+                          </div>
+                          <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${(n / max) * 100}%`, background: meta[1], borderRadius: 4, transition: 'width .4s' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Sales by Source — เงินจริงมาจากช่องไหน */}
+            <div style={glass}>
+              <div style={{ fontWeight: 700, marginBottom: 16 }}>💰 ยอดขายตามช่องทาง</div>
+              {(() => {
+                const SRC = { tiktok: ['🎵 TikTok', '#fe2c55'], facebook: ['📘 Facebook', '#1877f2'], instagram: ['📸 Instagram', '#e1306c'], line: ['💚 LINE', '#06c755'], youtube: ['▶️ YouTube', '#ff0000'], shopee: ['🛍️ Shopee', '#ee4d2d'], lazada: ['🛒 Lazada', '#0f146d'], x: ['✖️ X', '#94a3b8'], direct: ['🔗 ตรง', '#6366f1'], other: ['🌐 อื่นๆ', '#64748b'] };
+                const sales = data.sales_by_source || {};
+                const earned = data.earned_by_source || {};
+                const entries = Object.entries(sales).sort((a, b) => (earned[b[0]] || 0) - (earned[a[0]] || 0));
+                const maxE = Math.max(1, ...entries.map(([k]) => earned[k] || 0));
+                if (entries.length === 0) return <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 14, textAlign: 'center', padding: '0 12px' }}>ยังไม่มียอดขาย — เมื่อมีคนซื้อผ่านลิงก์ติดตาม จะรู้ว่าเงินมาจากช่องไหน</div>;
+                return (
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {entries.map(([src, n]) => {
+                      const meta = SRC[src] || [src, '#64748b'];
+                      const e = earned[src] || 0;
+                      return (
+                        <div key={src}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
+                            <span>{meta[0]} <span style={{ color: '#64748b' }}>· {n} ดีล</span></span>
+                            <span style={{ color: '#10b981', fontWeight: 700 }}>฿{Number(e).toLocaleString()}</span>
+                          </div>
+                          <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${(e / maxE) * 100}%`, background: meta[1], borderRadius: 4, transition: 'width .4s' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
             {/* Tier Progress */}
             <div style={glass}>
-              <div style={{ fontWeight: 700, marginBottom: 16 }}>🏆 ระดับ & เป้าหมาย</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ fontWeight: 700 }}>🏆 ระดับ & เป้าหมาย</div>
+                <div style={{ fontSize: 12, color: tierColor, fontWeight: 700 }}>ค่าคอมปัจจุบัน {Math.round((data.commission_rate || 0.2) * 100)}%</div>
+              </div>
+              {data.next_tier && (
+                <div style={{ fontSize: 12, color: '#6ee7b7', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 14 }}>
+                  🚀 อีก <strong>{data.next_tier.sales_to_go}</strong> ดีล เลื่อนเป็น <strong style={{ textTransform: 'capitalize' }}>{data.next_tier.tier}</strong> รับค่าคอม <strong>{Math.round(data.next_tier.rate * 100)}%</strong> อัตโนมัติ
+                </div>
+              )}
               {[
                 { label: 'Starter → Pro', current: data.total_sales, target: 10, color: '#10b981' },
                 { label: 'Pro → Elite', current: Math.max(0, data.total_sales - 10), target: 40, color: '#6366f1' },
@@ -265,11 +394,39 @@ export default function AffiliateDashboard() {
                   <div style={{ fontSize: 36, fontWeight: 900, color: '#6366f1' }}>฿{data.total_earned.toLocaleString()}</div>
                 </div>
               </div>
-              <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.8 }}>
-                📅 <strong style={{ color: '#f8fafc' }}>จ่ายทุกวันจันทร์</strong> ผ่าน PromptPay หรือ Bank Transfer<br />
-                💳 ขั้นต่ำ ฿100 ต่อครั้ง<br />
-                ⏱ ยอดขายจะ confirm ภายใน 3 วัน<br />
-                📩 แจ้งช่องทางรับเงินได้ที่ <a href="mailto:affiliate@openthai.ai" style={{ color: '#6366f1' }}>affiliate@openthai.ai</a>
+              {/* ฟอร์มขอถอน */}
+              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: '#cbd5e1', marginBottom: 10, fontWeight: 700 }}>📤 ขอถอนเข้าพร้อมเพย์ (ขั้นต่ำ ฿{100})</div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <input value={pp} onChange={e => setPp(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))} inputMode="numeric"
+                    placeholder="เบอร์พร้อมเพย์ 10 หลัก หรือเลขบัตร 13 หลัก"
+                    style={{ flex: 1, minWidth: 220, padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: 14, outline: 'none' }} />
+                  <button onClick={requestWithdraw} disabled={wdBusy || (wd?.pending_balance ?? data.pending_payout) < 100}
+                    style={{ padding: '12px 22px', borderRadius: 10, border: 'none', background: (wdBusy || (wd?.pending_balance ?? data.pending_payout) < 100) ? '#374151' : 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>
+                    {wdBusy ? '⏳' : `ถอน ฿${(wd?.pending_balance ?? data.pending_payout).toLocaleString()}`}
+                  </button>
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>ถอนได้: <strong style={{ color: '#6ee7b7' }}>฿{(wd?.pending_balance ?? data.pending_payout).toLocaleString()}</strong> · จ่ายแล้วสะสม ฿{(wd?.paid_out ?? 0).toLocaleString()}</div>
+              </div>
+
+              {/* ประวัติคำขอถอน */}
+              {wd?.withdrawals?.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 8, fontWeight: 700 }}>ประวัติการถอน</div>
+                  {wd.withdrawals.map(w => {
+                    const st = { pending: ['⏳ รออนุมัติ', '#f59e0b'], approved: ['✅ อนุมัติแล้ว', '#6366f1'], paid: ['💸 จ่ายแล้ว', '#10b981'], rejected: ['❌ ปฏิเสธ', '#ef4444'] }[w.status] || [w.status, '#94a3b8'];
+                    return (
+                      <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, marginBottom: 6, fontSize: 13 }}>
+                        <span>฿{w.amount.toLocaleString()} → {w.promptpay}</span>
+                        <span style={{ color: st[1], fontWeight: 700 }}>{st[0]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.8, marginTop: 14 }}>
+                💳 ขั้นต่ำ ฿100 · ⏱ ยอดขาย confirm ภายใน 3 วัน · แอดมินอนุมัติแล้วโอนเข้าพร้อมเพย์
               </div>
             </div>
           </div>

@@ -37,6 +37,7 @@
     { "path": "/api/system/watchdog",         "schedule": "0 6 * * *"  },
     { "path": "/api/system/news-rag-clear",   "schedule": "0 4 * * *"  },
     { "path": "/api/autopost/process",        "schedule": "0 12 * * *" },
-    { "path": "/api/progress/daily-report",   "schedule": "30 16 * * *" }
+    { "path": "/api/progress/daily-report",   "schedule": "30 16 * * *" },
+    { "path": "/api/scheduler/process",       "schedule": "0 9 * * *" }
   ]
 }

@@ -45,7 +45,21 @@ export default function AdminPage() {
 
   const adminKey = () => sessionStorage.getItem('admin_key') || ADMIN_KEY;
   const [affList, setAffList] = useState([]);   // รายชื่อ affiliate จริง
+  const [wdList, setWdList] = useState([]);     // คำขอถอนเงิน
+  const [schPosts, setSchPosts] = useState([]); // คิว Scheduler
+  const [schDue, setSchDue] = useState(0);
   const apiErr = (label) => (e) => console.error(`[admin] ${label}:`, e?.message || e);
+  const loadWithdrawals = () => fetch(apiUrl('/api/affiliate/withdrawals/admin'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setWdList(d.withdrawals); }).catch(apiErr('withdrawals'));
+  const wdAction = async (id, action) => {
+    await fetch(apiUrl(`/api/affiliate/withdrawals/admin/${id}`), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ action }) }).catch(() => {});
+    loadWithdrawals(); loadAffiliates();
+  };
+  const loadScheduler = () => {
+    fetch(apiUrl('/api/scheduler/list')).then(r => r.json()).then(d => { if (d.ok) setSchPosts(d.posts); }).catch(apiErr('scheduler'));
+    fetch(apiUrl('/api/scheduler/due')).then(r => r.json()).then(d => { if (d.ok) setSchDue(d.count); }).catch(() => {});
+  };
+  const schDelete = async (id) => { await fetch(apiUrl(`/api/scheduler/${id}`), { method: 'DELETE' }).catch(() => {}); loadScheduler(); };
+  const schProcess = async () => { await fetch(apiUrl('/api/scheduler/process'), { method: 'POST' }).catch(() => {}); loadScheduler(); };
   const loadProducers = () => fetch(apiUrl('/api/producers/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setProds(d.producers); else console.warn('[admin] producers:', d.message); }).catch(apiErr('producers'));
   const loadOrders = () => fetch(apiUrl('/api/orders/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setOrds(d.orders); else console.warn('[admin] orders:', d.message); }).catch(apiErr('orders'));
   const loadLeads = () => fetch(apiUrl('/api/leads/admin/search'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setLeads(d); else console.warn('[admin] leads:', d.message); }).catch(apiErr('leads'));
@@ -55,7 +69,7 @@ export default function AdminPage() {
     fetch(apiUrl('/api/inventory/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInvSum(d); }).catch(apiErr('inv-summary'));
     fetch(apiUrl('/api/inventory/admin/sales-report'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setSalesRep(d); }).catch(apiErr('inv-sales'));
   };
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveProduct = async (data) => {
     const r = await fetch(apiUrl('/api/inventory/admin/upsert'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(data) }).then(x => x.json());
@@ -705,17 +719,95 @@ export default function AdminPage() {
                 {affList.length === 0 ? 'ยังไม่มี Affiliate สมัคร' : 'ไม่พบผลลัพธ์'}
               </div>
             )}
+
+            {/* คำขอถอนเงิน */}
+            <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ fontWeight: 700 }}>💸 คำขอถอนเงิน ({wdList.filter(w => w.status === 'pending').length} รออนุมัติ / {wdList.length} ทั้งหมด)</div>
+                <button onClick={loadWithdrawals} style={{ ...tabBtn, padding: '6px 14px', fontSize: 12 }}>🔄 รีเฟรช</button>
+              </div>
+              {wdList.length > 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ color: '#475569', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                        {['Ref','ชื่อ','ยอด','พร้อมเพย์','สถานะ','จัดการ'].map((h) => <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11 }}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {wdList.map((w) => {
+                        const stColor = { pending: '#f59e0b', approved: '#6366f1', paid: '#10b981', rejected: '#ef4444' }[w.status] || '#64748b';
+                        return (
+                          <tr key={w.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#a5b4fc' }}>{w.ref_code}</td>
+                            <td style={{ padding: '10px 12px' }}>{w.name}</td>
+                            <td style={{ padding: '10px 12px', color: '#10b981', fontWeight: 700 }}>฿{Number(w.amount).toLocaleString()}</td>
+                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#cbd5e1' }}>{w.promptpay}</td>
+                            <td style={{ padding: '10px 12px' }}><span style={{ color: stColor, fontSize: 11 }}>● {w.status}</span></td>
+                            <td style={{ padding: '10px 12px' }}>
+                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                {w.status === 'pending' && <>
+                                  <button onClick={() => wdAction(w.id, 'approve')} style={miniBtn('#6366f1')}>อนุมัติ</button>
+                                  <button onClick={() => wdAction(w.id, 'reject')} style={miniBtn('#ef4444')}>ปฏิเสธ</button>
+                                </>}
+                                {w.status === 'approved' && <button onClick={() => wdAction(w.id, 'paid')} style={miniBtn('#10b981')}>✓ จ่ายแล้ว</button>}
+                                {(w.status === 'paid' || w.status === 'rejected') && <span style={{ fontSize: 11, color: '#475569' }}>—</span>}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ padding: '24px 0', textAlign: 'center', color: '#475569', fontSize: 13 }}>ยังไม่มีคำขอถอนเงิน</div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* TAB: CONTENT — ยังไม่มี server-side content log */}
+        {/* TAB: CONTENT — จัดการคิว Scheduler */}
         {tab === 'content' && (
-          <div style={{ ...glass, textAlign: 'center', padding: '60px 24px' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>⚡</div>
-            <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>Content Log ยังไม่พร้อม</div>
-            <div style={{ color: '#64748b', fontSize: 14, maxWidth: 400, margin: '0 auto' }}>
-              ระบบ AI สร้างคอนเทนต์แบบ Stateless — ยังไม่มี backend log เก็บไว้<br />
-              ต้องเพิ่ม <code style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4 }}>/api/content/log</code> ก่อนจึงจะแสดงที่นี่ได้
+          <div style={glass}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+              <div style={{ fontWeight: 700 }}>📅 คิวโพสต์ Scheduler ({schPosts.length}) {schDue > 0 && <span style={{ color: '#f59e0b', fontSize: 12 }}>· 🔔 {schDue} ถึงเวลา</span>}</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={loadScheduler} style={{ ...tabBtn, padding: '6px 14px', fontSize: 12 }}>🔄 รีเฟรช</button>
+                <button onClick={schProcess} disabled={schDue === 0} style={{ ...miniBtn(schDue > 0 ? '#f59e0b' : '#374151'), opacity: schDue > 0 ? 1 : 0.5 }}>⚡ ประมวลผลที่ถึงเวลา</button>
+              </div>
+            </div>
+            {schPosts.length > 0 ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ color: '#475569', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                      {['Platform', 'เนื้อหา', 'เวลาตั้ง', 'สถานะ', ''].map((h) => <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11 }}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schPosts.map((p) => {
+                      const stColor = { pending: '#f59e0b', ready: '#06b6d4', published: '#10b981', failed: '#ef4444' }[p.status] || '#64748b';
+                      return (
+                        <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                          <td style={{ padding: '10px 12px', textTransform: 'capitalize', color: '#a5b4fc' }}>{p.platform}</td>
+                          <td style={{ padding: '10px 12px', color: '#cbd5e1', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.content}</td>
+                          <td style={{ padding: '10px 12px', color: '#64748b', fontSize: 11 }}>{new Date(p.scheduled_at).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
+                          <td style={{ padding: '10px 12px' }}><span style={{ color: stColor, fontSize: 11 }}>● {p.status}</span></td>
+                          <td style={{ padding: '10px 12px' }}><button onClick={() => schDelete(p.id)} style={miniBtn('#ef4444')}>ลบ</button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ padding: '40px 0', textAlign: 'center', color: '#475569', fontSize: 14 }}>
+                ยังไม่มีโพสต์ในคิว — สร้างได้ที่ <a href="/content-studio" style={{ color: '#6366f1' }}>Content Studio</a> หรือ <a href="/scheduler" style={{ color: '#6366f1' }}>Scheduler</a>
+              </div>
+            )}
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 14, lineHeight: 1.6 }}>
+              💚 LINE OA (ช่องที่คุณเป็นเจ้าของ) → broadcast อัตโนมัติเมื่อถึงเวลา · 📲 ช่องอื่น → สถานะ "ready" รอกดโพสต์เอง · cron รันทุก 15 นาที
             </div>
           </div>
         )}

@@ -102,9 +102,10 @@ const PORT = process.env.PORT || 8000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 app.use(cors({ origin: true, credentials: true })); // allow all origins (file://, localhost, Vercel)
-// Skip global JSON parser for LINE webhook — needs raw buffer for HMAC signature verification
+// Skip global JSON parser for signed webhooks — ต้องใช้ raw buffer เพื่อตรวจลายเซ็น HMAC
+// (LINE + Omise payment) ไม่งั้น express.json จะกิน body ก่อน → ตรวจลายเซ็นไม่ผ่านตลอด
 app.use((req, res, next) => {
-  if (req.path === '/api/line/webhook') return next();
+  if (req.path === '/api/line/webhook' || req.path === '/api/payment/webhook') return next();
   express.json({ limit: '50kb' })(req, res, next);
 });
 // image endpoint uses its own larger limit (see /api/analyze-image)
@@ -791,6 +792,22 @@ async function saveAffiliate(record) {
   }
 }
 
+// ─── Withdrawals store (ไฟล์) — คำขอถอนค่าคอมพันธมิตร ────────────────────────
+const WD_FILE = join(WRITE_DATA_DIR, 'withdrawals.json');
+let withdrawals = [];
+try { if (existsSync(WD_FILE)) withdrawals = JSON.parse(readFileSync(WD_FILE, 'utf8')); } catch (_) {}
+function saveWithdrawals() {
+  try {
+    const dir = WD_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(WD_FILE, JSON.stringify(withdrawals, null, 2), 'utf8');
+  } catch (e) { console.error('[withdrawals] save error:', e.message); }
+}
+const WD_MIN = 100;  // ยอดถอนขั้นต่ำ (บาท)
+// ยอดที่ "จองไว้" = คำขอถอนที่ยังไม่จบ (pending/approved) — กันถอนซ้ำเกินยอดจริง
+const reservedFor = (ref) => withdrawals.filter(w => w.ref_code === ref && ['pending', 'approved'].includes(w.status)).reduce((s, w) => s + (w.amount || 0), 0);
+const affPending = (a) => +((a.total_earned || 0) - (a.paid_out || 0) - reservedFor(a.ref_code)).toFixed(2);
+
 // ─── POST /api/affiliate/apply — รับสมัคร Affiliate ──────────────────────────
 
 app.post('/api/affiliate/apply', affiliateLimiter, async (req, res) => {
@@ -863,6 +880,11 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
   d.setDate(d.getDate() + daysUntil);
   const nextPayout = d.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
+  // ความคืบหน้าสู่ Tier ถัดไป (อีกกี่ดีลถึงค่าคอมขั้นถัดไป)
+  const sales = aff.total_sales || 0;
+  const upcoming = AFFILIATE_TIERS.filter(t => t.min > sales).sort((a, b) => a.min - b.min)[0];
+  const next_tier = upcoming ? { tier: upcoming.tier, rate: upcoming.rate, at_sales: upcoming.min, sales_to_go: upcoming.min - sales } : null;
+
   res.json({
     success: true,
     data: {
@@ -870,11 +892,15 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
       name:            aff.name,
       tier:            aff.tier,
       commission_rate: aff.commission_rate,
+      next_tier,
       total_sales:     aff.total_sales     || 0,
       total_earned:    aff.total_earned    || 0,
       pending_payout:  (aff.total_earned   || 0) - (aff.paid_out || 0),
       paid_out:        aff.paid_out        || 0,
       clicks:          aff.clicks          || 0,
+      clicks_by_source: aff.clicks_by_source || {},
+      sales_by_source:  aff.sales_by_source  || {},
+      earned_by_source: aff.earned_by_source || {},
       conversions:     aff.total_sales     || 0,
       conversion_rate: aff.clicks > 0 ? +((aff.total_sales / aff.clicks) * 100).toFixed(1) : 0,
       monthly:         aff.monthly         || [],
@@ -885,6 +911,142 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
       platform:        aff.platform,
     },
   });
+});
+
+// ─── POST /api/affiliate/click — นับคลิกลิงก์ ref (สำหรับ conversion rate) ────
+const affClickLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { success: false } });
+// ช่องทางที่รองรับสำหรับ attribution
+const TRACK_SOURCES = ['tiktok', 'facebook', 'instagram', 'line', 'youtube', 'x', 'shopee', 'lazada', 'direct'];
+const cleanSource = (s) => { const v = String(s || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 20); return TRACK_SOURCES.includes(v) ? v : (v ? 'other' : 'direct'); };
+
+app.post('/api/affiliate/click', affClickLimiter, (req, res) => {
+  const ref = (req.body?.ref || req.query?.ref || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+  const aff = ref && affiliates.find(a => a.ref_code === ref);
+  if (!aff) return res.json({ success: false });
+  aff.clicks = (aff.clicks || 0) + 1;
+  // attribution ตามแหล่งที่มา (utm_source) — รู้ว่าคลิกมาจากแพลตฟอร์มไหน
+  const src = cleanSource(req.body?.source || req.query?.source);
+  aff.clicks_by_source = aff.clicks_by_source || {};
+  aff.clicks_by_source[src] = (aff.clicks_by_source[src] || 0) + 1;
+  saveAffiliate(aff).catch(() => {});
+  res.json({ success: true });
+});
+
+// POST /api/track/link — สร้างลิงก์ติดตาม (UTM + ref) — รู้ว่าเงินมาจากแพลตฟอร์ม/แคมเปญไหน
+app.post('/api/track/link', (req, res) => {
+  let base = String(req.body?.url || '').trim().slice(0, 500);
+  if (!base) return res.status(400).json({ success: false, error: 'ต้องการ url ปลายทาง' });
+  if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
+  let u;
+  try { u = new URL(base); } catch { return res.status(400).json({ success: false, error: 'url ไม่ถูกต้อง' }); }
+  const source = cleanSource(req.body?.source);
+  const campaign = String(req.body?.campaign || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) || 'launch';
+  const ref = String(req.body?.ref || '').replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+  u.searchParams.set('utm_source', source);
+  u.searchParams.set('utm_medium', 'social');
+  u.searchParams.set('utm_campaign', campaign);
+  u.searchParams.set('source', source);          // ให้หน้าเว็บส่งต่อเข้า click attribution ได้
+  if (ref) { u.searchParams.set('ref', ref); }
+  res.json({ success: true, link: u.toString(), source, campaign, ref: ref || null });
+});
+
+// ─── GET /api/affiliate/leaderboard — อันดับพันธมิตร (public · ปิดบังชื่อ) ──────
+// ปิดบังชื่อบางส่วนเพื่อความเป็นส่วนตัว · จัดอันดับตาม total_earned แล้ว total_sales
+function maskName(name) {
+  const s = String(name || '').trim();
+  if (!s) return 'พันธมิตร';
+  const chars = [...s];
+  if (chars.length <= 2) return chars[0] + '*';
+  return chars.slice(0, 2).join('') + '*'.repeat(Math.min(4, chars.length - 2));
+}
+app.get('/api/affiliate/leaderboard', (req, res) => {
+  const limit = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 20));
+  const ranked = affiliates
+    .filter(a => a.status !== 'banned')
+    .map(a => ({
+      name: maskName(a.name),
+      platform: a.platform || '-',
+      tier: a.tier || 'starter',
+      total_sales: a.total_sales || 0,
+      total_earned: +(a.total_earned || 0).toFixed(2),
+      clicks: a.clicks || 0,
+      conversion_rate: a.clicks > 0 ? +((a.total_sales || 0) / a.clicks * 100).toFixed(1) : 0,
+    }))
+    .sort((x, y) => (y.total_earned - x.total_earned) || (y.total_sales - x.total_sales))
+    .slice(0, limit)
+    .map((a, i) => ({ rank: i + 1, ...a }));
+  const totals = affiliates.reduce((t, a) => ({
+    affiliates: t.affiliates + 1,
+    sales: t.sales + (a.total_sales || 0),
+    earned: +(t.earned + (a.total_earned || 0)).toFixed(2),
+  }), { affiliates: 0, sales: 0, earned: 0 });
+  res.json({ success: true, leaderboard: ranked, totals, ts: new Date().toISOString() });
+});
+
+// ─── POST /api/affiliate/withdraw — พันธมิตรขอถอนค่าคอมเข้าพร้อมเพย์ ───────────
+const withdrawLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { success: false, error: 'ขอถอนบ่อยเกินไป กรุณารอ' } });
+app.post('/api/affiliate/withdraw', withdrawLimiter, (req, res) => {
+  const ref = (req.body?.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+  const promptpay = (req.body?.promptpay || '').toString().replace(/[^0-9]/g, '').slice(0, 13);
+  const aff = ref && affiliates.find(a => a.ref_code === ref);
+  if (!aff) return res.status(404).json({ success: false, error: 'ไม่พบพันธมิตรนี้' });
+  if (!/^[0-9]{10}$|^[0-9]{13}$/.test(promptpay)) return res.status(400).json({ success: false, error: 'กรอกพร้อมเพย์ให้ถูกต้อง (เบอร์ 10 หลัก หรือเลขบัตร 13 หลัก)' });
+  const avail = affPending(aff);
+  const amount = req.body?.amount != null ? Math.round(Number(req.body.amount)) : avail;
+  if (!(amount > 0)) return res.status(400).json({ success: false, error: 'ยอดถอนไม่ถูกต้อง' });
+  if (amount < WD_MIN) return res.status(400).json({ success: false, error: `ถอนขั้นต่ำ ฿${WD_MIN}` });
+  if (amount > avail) return res.status(400).json({ success: false, error: `ยอดถอนเกินยอดที่ถอนได้ (คงเหลือ ฿${avail})` });
+
+  const wd = {
+    id: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    ref_code: ref, name: aff.name, amount, promptpay,
+    status: 'pending', requested_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+  };
+  withdrawals.unshift(wd);
+  saveWithdrawals();
+  addLog('info', 'Withdraw', `คำขอถอน ฿${amount} → ${ref} (${aff.name})`);
+  webhooks.dispatch('affiliate.withdraw_requested', { ref_code: ref, amount, id: wd.id }, null);
+  res.json({ success: true, withdrawal: wd, pending_balance: affPending(aff) });
+});
+
+// ─── GET /api/affiliate/withdrawals?ref_code= — รายการคำขอของพันธมิตร ─────────
+app.get('/api/affiliate/withdrawals', (req, res) => {
+  const ref = (req.query.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+  if (!ref) return res.status(400).json({ success: false, error: 'ต้องการ ref_code' });
+  const aff = affiliates.find(a => a.ref_code === ref);
+  const list = withdrawals.filter(w => w.ref_code === ref).map(w => ({ ...w, promptpay: w.promptpay.replace(/(\d{3})\d+(\d{2})/, '$1****$2') }));
+  res.json({ success: true, withdrawals: list, pending_balance: aff ? affPending(aff) : 0, total_earned: aff?.total_earned || 0, paid_out: aff?.paid_out || 0 });
+});
+
+// ─── Admin: รายการ + อนุมัติ/ปฏิเสธ/จ่ายแล้ว (x-admin-key) ────────────────────
+app.get('/api/affiliate/withdrawals/admin', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const status = (req.query.status || '').toString();
+  const list = status ? withdrawals.filter(w => w.status === status) : withdrawals;
+  res.json({ success: true, count: list.length, withdrawals: list });
+});
+app.post('/api/affiliate/withdrawals/admin/:id', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const wd = withdrawals.find(w => w.id === req.params.id);
+  if (!wd) return res.status(404).json({ success: false, error: 'ไม่พบคำขอถอนนี้' });
+  const action = (req.body?.action || '').toString();
+  if (!['approve', 'reject', 'paid'].includes(action)) return res.status(400).json({ success: false, error: 'action ต้องเป็น approve | reject | paid' });
+  if (wd.status === 'paid') return res.status(409).json({ success: false, error: 'คำขอนี้จ่ายเงินไปแล้ว' });
+
+  if (action === 'approve') wd.status = 'approved';
+  else if (action === 'reject') { wd.status = 'rejected'; wd.note = (req.body?.note || '').toString().slice(0, 200); }
+  else if (action === 'paid') {
+    const aff = affiliates.find(a => a.ref_code === wd.ref_code);
+    if (aff) { aff.paid_out = +((aff.paid_out || 0) + wd.amount).toFixed(2); saveAffiliate(aff).catch(() => {}); }
+    wd.status = 'paid'; wd.paid_at = new Date().toISOString();
+  }
+  wd.updated_at = new Date().toISOString();
+  saveWithdrawals();
+  addLog('info', 'Withdraw', `${action} ฿${wd.amount} → ${wd.ref_code} (${wd.id})`);
+  webhooks.dispatch('affiliate.withdraw_updated', { id: wd.id, ref_code: wd.ref_code, status: wd.status, amount: wd.amount }, null);
+  res.json({ success: true, withdrawal: wd });
 });
 
 // ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
@@ -1250,16 +1412,11 @@ app.post('/api/chat/stream', generateLimiter, async (req, res) => {
 //  AI SKILLS HUB — S10-S15 (Trend, Hashtag, SEO, Sentiment, Video Script, Translate)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-async function callAI(prompt, maxTokens = 1024) {
-  if (anthropic) {
-    const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });
-    return msg.content[0]?.text?.trim() || '';
-  }
-  if (gemini) {
-    const r = await gemini.generateContent(prompt);
-    return r.response.text().trim();
-  }
-  return '';
+// callAI — วิ่งผ่าน Smart Model Router (เลือกถูกสุด + failover + คุมงบ) สำหรับงาน skill ทั่วไป
+// taskType เริ่มต้น 'bulk' (ถูกก่อน) — ส่ง 'heavy' สำหรับงานวิเคราะห์ที่ต้องการคุณภาพ
+async function callAI(prompt, maxTokens = 1024, taskType = 'bulk') {
+  const r = await routeAI(taskType, prompt, { maxTokens });
+  return r.text || '';
 }
 
 function parseAIJson(text) {
@@ -1267,6 +1424,162 @@ function parseAIJson(text) {
   if (m) return JSON.parse(m[0]);
   throw new Error('no json');
 }
+
+// ─── Per-provider callers สำหรับ OpenThaiAi Council (Claude · Gemini · Grok) ────
+async function callClaude(prompt, maxTokens = 700) {
+  if (!anthropic) return null;
+  try {
+    const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });
+    return msg.content[0]?.text?.trim() || null;
+  } catch (e) { addLog('warn', 'Council/Claude', e.message); return null; }
+}
+async function callGeminiText(prompt) {
+  if (!gemini) return null;
+  try { const r = await gemini.generateContent(prompt); return r.response.text().trim() || null; }
+  catch (e) { addLog('warn', 'Council/Gemini', e.message); return null; }
+}
+// Grok (xAI) — OpenAI-compatible endpoint
+async function callGrok(prompt, maxTokens = 700) {
+  const key = process.env.XAI_API_KEY;
+  if (!key) return null;
+  try {
+    const res = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: process.env.XAI_MODEL || 'grok-2-latest', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `xAI HTTP ${res.status}`);
+    return data.choices?.[0]?.message?.content?.trim() || null;
+  } catch (e) { addLog('warn', 'Council/Grok', e.message); return null; }
+}
+
+// ─── Smart Model Router — เลือกโมเดลถูกสุดที่เหมาะกับงาน + failover + คุมงบ/วัน ─────
+// ลดต้นทุน token: งานหนัก→คุณภาพก่อน, งานปริมาณ→ถูกก่อน, เกินงบ/วัน→Eco Mode (เฉพาะรุ่นถูก)
+// cost ต่อ 1k tokens เป็นค่าประมาณ (USD) — ปรับได้ตามเรตจริงของแต่ละค่าย
+const ROUTER_PROVIDERS = {
+  gemini: { call: callGeminiText, costPer1k: 0.0004, label: 'Gemini Flash' },
+  grok:   { call: callGrok,       costPer1k: 0.0005, label: 'Grok' },
+  claude: { call: callClaude,     costPer1k: 0.0008, label: 'Claude Haiku' },
+};
+const ROUTER_TIERS = {
+  heavy: ['claude', 'gemini', 'grok'],   // งานวิเคราะห์ซับซ้อน — คุณภาพก่อน
+  bulk:  ['gemini', 'grok', 'claude'],   // งานปริมาณ (แคปชั่น/ข้อความสั้น) — ถูกก่อน
+  eco:   ['gemini', 'grok'],             // โหมดประหยัด — เฉพาะรุ่นถูกสุด
+};
+const HEAVY_TASKS = new Set(['heavy', 'heavy_reasoning', 'legal_check', 'anti_fraud', 'analysis']);
+const AI_DAILY_BUDGET_USD = parseFloat(process.env.AI_DAILY_BUDGET_USD || '1.0');
+const routerToday = () => new Date().toISOString().slice(0, 10);
+const routerState = { day: routerToday(), spentUsd: 0, calls: 0, byProvider: {}, health: { gemini: true, grok: true, claude: true }, failCount: {} };
+function routerRollover() {
+  if (routerState.day !== routerToday()) {
+    routerState.day = routerToday(); routerState.spentUsd = 0; routerState.calls = 0;
+    routerState.byProvider = {}; routerState.health = { gemini: true, grok: true, claude: true }; routerState.failCount = {};
+  }
+}
+const estTokens = (s) => Math.ceil((s || '').length / 4);
+const routerEco = () => routerState.spentUsd >= AI_DAILY_BUDGET_USD;
+
+async function routeAI(taskType, prompt, { maxTokens = 700 } = {}) {
+  routerRollover();
+  const eco = routerEco();
+  const tier = eco ? 'eco' : (HEAVY_TASKS.has(taskType) ? 'heavy' : 'bulk');
+  const order = ROUTER_TIERS[tier] || ROUTER_TIERS.bulk;
+  const tried = [];
+  for (const p of order) {
+    const prov = ROUTER_PROVIDERS[p];
+    if (!prov) continue;
+    if (!routerState.health[p]) { tried.push(`${p}:skip(unhealthy)`); continue; }
+    const t0 = Date.now();
+    let text = null;
+    try { text = await prov.call(prompt, maxTokens); } catch (_) { text = null; }
+    if (text) {
+      const tokens = estTokens(prompt) + estTokens(text);
+      const usd = +(tokens / 1000 * prov.costPer1k).toFixed(6);
+      routerState.spentUsd = +(routerState.spentUsd + usd).toFixed(6);
+      routerState.calls++;
+      const bp = routerState.byProvider[p] || { calls: 0, usd: 0, tokens: 0 };
+      bp.calls++; bp.usd = +(bp.usd + usd).toFixed(6); bp.tokens += tokens;
+      routerState.byProvider[p] = bp; routerState.failCount[p] = 0;
+      return { ok: true, provider: p, model: prov.label, tier, eco, text, tokens, cost_usd: usd, latency_ms: Date.now() - t0, tried };
+    }
+    tried.push(`${p}:unavailable`);
+    routerState.failCount[p] = (routerState.failCount[p] || 0) + 1;
+    if (routerState.failCount[p] >= 3) routerState.health[p] = false;  // ปิดชั่วคราวเมื่อล้มซ้ำ (รีเซ็ตรายวัน)
+  }
+  return { ok: false, provider: null, model: null, tier, eco, text: null, tried, reason: 'ไม่มี provider พร้อมใช้ — ตั้ง ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY' };
+}
+
+// GET /api/router/status — แดชบอร์ดต้นทุนโทเคน + สถานะ provider + งบประมาณ
+app.get('/api/router/status', (req, res) => {
+  routerRollover();
+  res.json({
+    success: true,
+    day: routerState.day,
+    spent_usd: routerState.spentUsd,
+    budget_usd: AI_DAILY_BUDGET_USD,
+    budget_used_pct: AI_DAILY_BUDGET_USD > 0 ? +(routerState.spentUsd / AI_DAILY_BUDGET_USD * 100).toFixed(1) : 0,
+    eco_mode: routerEco(),
+    calls: routerState.calls,
+    health: routerState.health,
+    by_provider: routerState.byProvider,
+    providers: Object.entries(ROUTER_PROVIDERS).map(([id, p]) => ({ id, label: p.label, cost_per_1k_usd: p.costPer1k, available: !!process.env[id === 'claude' ? 'ANTHROPIC_API_KEY' : id === 'gemini' ? 'GEMINI_API_KEY' : 'XAI_API_KEY'] })),
+    tiers: ROUTER_TIERS,
+    note: 'cost เป็นค่าประมาณต่อ 1k tokens · เกินงบ/วัน → Eco Mode (เฉพาะรุ่นถูก) · health รีเซ็ตรายวัน',
+  });
+});
+
+// POST /api/router/run — ส่งงานให้ router เลือกโมเดลถูกสุด/สลับค่ายอัตโนมัติ
+app.post('/api/router/run', generateLimiter, async (req, res) => {
+  const prompt = String(req.body?.prompt || '').trim().slice(0, 8000);
+  const taskType = String(req.body?.task_type || 'bulk');
+  if (!prompt) return res.status(400).json({ success: false, error: 'ต้องการ prompt' });
+  const r = await routeAI(taskType, prompt, { maxTokens: Math.min(2000, parseInt(req.body?.max_tokens, 10) || 700) });
+  res.json({ success: r.ok, ...r });
+});
+
+// ─── OpenThaiAi Council — ห้องที่ AI 3 เจ้าช่วยกันวิเคราะห์ + สังเคราะห์ข้อสรุป ────
+const COUNCIL_PERSONAS = {
+  claude: { name: 'Claude (Anthropic)', role: 'สถาปัตยกรรม · ความปลอดภัย · คุณภาพโค้ด', icon: '🟣' },
+  gemini: { name: 'Gemini (Google)',    role: 'ข้อมูล · ตลาด · SEO · การสเกล',        icon: '🔵' },
+  grok:   { name: 'Grok (xAI)',         role: 'การเติบโต · ไอเดียกล้าได้กล้าเสีย · เรียลไทม์', icon: '⚫' },
+};
+function mockCouncilVoice(provider, topic) {
+  const t = topic.length > 60 ? topic.slice(0, 60) + '…' : topic;
+  const M = {
+    claude: `1) ด้านความน่าเชื่อถือ: "${t}" ต้องมี security + privacy ที่ตรวจสอบได้ (HTTPS, ตรวจลายเซ็น webhook, เก็บความลับใน env)\n2) สถาปัตยกรรม: แยก service ชัด รองรับ scale + มี health/readiness check\n3) คุณภาพ: มี automated test ครอบ flow สำคัญก่อน go-global\n4) ข้อเสนอ: ทำ audit log + เอกสาร API ภาษาอังกฤษให้พาร์ตเนอร์ต่างชาติเชื่อมต่อได้`,
+    gemini: `1) ตลาด: หา niche ที่ OpenThaiAi เด่น (AI คอนเทนต์ไทย→อาเซียน) ก่อนชนรายใหญ่\n2) SEO/Discovery: ทำหน้า landing หลายภาษา + schema markup ให้ติด Google\n3) ข้อมูล: เก็บ metric conversion/retention เพื่อปรับ product ด้วยข้อมูลจริง\n4) ข้อเสนอ: เริ่ม i18n (ไทย/อังกฤษ/จีน) + พิสูจน์ผลด้วย case study ลูกค้าจริง`,
+    grok: `1) การเติบโต: ใช้ creator/affiliate เป็นหัวหอก — ยิ่งแชร์ยิ่งโต (viral loop)\n2) ไอเดียกล้า: ออกฟีเจอร์ที่คู่แข่งยังไม่มี เช่น multi-AI council นี้เป็นจุดขาย\n3) เรียลไทม์: เกาะเทรนด์ + ออกคอนเทนต์เร็ว ชนะด้วยความไว\n4) ข้อเสนอ: ทำ referral rewards + leaderboard กระตุ้นการแข่งขันของพันธมิตร`,
+  };
+  return M[provider] || `วิเคราะห์เบื้องต้นสำหรับ: ${t}`;
+}
+function mockSynthesis(topic) {
+  return `📋 ข้อสรุปร่วม OpenThaiAi Council\nหัวข้อ: ${topic}\n\nแผนปฏิบัติให้เป็นที่ยอมรับในตลาดโลก:\n1) ความน่าเชื่อถือก่อน (Claude): security + test + readiness ครบ → พาร์ตเนอร์กล้าใช้\n2) เจาะ niche + i18n (Gemini): เริ่มจาก AI คอนเทนต์ไทย→อาเซียน ทำหลายภาษา + SEO\n3) โตด้วย viral loop (Grok): affiliate/referral + leaderboard + ออกฟีเจอร์เด่นที่คู่แข่งไม่มี\n4) วัดผลด้วยข้อมูลจริง: ติดตาม conversion/retention แล้ววนปรับ\n\n⚠️ หมายเหตุ: นี่คือโหมดจำลอง (ยังไม่ได้ตั้ง API key ของ AI) — ตั้ง ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY เพื่อให้ AI จริงทั้ง 3 เจ้าวิเคราะห์`;
+}
+app.post('/api/council', generateLimiter, async (req, res) => {
+  const topic = String(req.body?.topic || '').trim().slice(0, 2000);
+  if (!topic) return res.status(400).json({ success: false, error: 'ต้องการหัวข้อที่จะให้ที่ประชุมวิเคราะห์ (topic)' });
+  const base = `คุณกำลังร่วมประชุมในห้อง "OpenThaiAi" กับ AI เจ้าอื่น เพื่อช่วยกันวิเคราะห์และเสนอแนวทางทำให้แพลตฟอร์ม OpenThaiAi เป็นที่ยอมรับในตลาดโลกและเกิดขึ้นจริง
+หัวข้อที่ต้องวิเคราะห์: ${topic}
+ตอบเป็นภาษาไทย สั้นกระชับ เป็นข้อ ๆ (3-5 ข้อ) ในมุมที่คุณถนัด พร้อมข้อเสนอที่ลงมือทำได้จริง`;
+  const persona = (p) => `${base}\n\nบทบาทของคุณในวงประชุม: ${COUNCIL_PERSONAS[p].role}`;
+
+  const [claude, gem, grok] = await Promise.all([
+    callClaude(persona('claude')), callGeminiText(persona('gemini')), callGrok(persona('grok')),
+  ]);
+  const voices = [
+    { id: 'claude', ...COUNCIL_PERSONAS.claude, live: !!claude, text: claude || mockCouncilVoice('claude', topic) },
+    { id: 'gemini', ...COUNCIL_PERSONAS.gemini, live: !!gem,    text: gem    || mockCouncilVoice('gemini', topic) },
+    { id: 'grok',   ...COUNCIL_PERSONAS.grok,   live: !!grok,   text: grok   || mockCouncilVoice('grok', topic) },
+  ];
+  const synthPrompt = `ในฐานะผู้ดำเนินการประชุม OpenThaiAi จงสังเคราะห์ความเห็นจาก AI 3 เจ้าต่อไปนี้ ให้เป็น "ข้อสรุปร่วม + แผนปฏิบัติ 3-5 ข้อ" ที่ทำให้ OpenThaiAi เป็นที่ยอมรับในตลาดโลก ตอบไทย กระชับ ลงมือทำได้จริง:\n\n${voices.map(v => `[${v.name}]\n${v.text}`).join('\n\n')}`;
+  let synthesis = await callClaude(synthPrompt) || await callGeminiText(synthPrompt) || await callGrok(synthPrompt);
+  const synthLive = !!synthesis;
+  if (!synthesis) synthesis = mockSynthesis(topic);
+
+  addLog('info', 'Council', `topic: ${topic.slice(0, 60)} · live: ${voices.filter(v => v.live).map(v => v.id).join(',') || 'none(mock)'}`);
+  res.json({ success: true, room: 'OpenThaiAi', topic, voices, synthesis, synthesis_live: synthLive, any_live: voices.some(v => v.live), ts: new Date().toISOString() });
+});
 
 // S10 · POST /api/skills/trend — วิเคราะห์เทรนด์ตามสินค้า
 app.post('/api/skills/trend', generateLimiter, async (req, res) => {
@@ -1329,6 +1642,64 @@ app.post('/api/skills/hashtag', generateLimiter, async (req, res) => {
     },
     recommended: `#สินค้าไทย #OTOP #TikTokShop #${base} #รีวิวสินค้า #ของดีบ้านเรา #Openthai`,
     tip: 'ใช้ 3-5 mega hashtag + 3-4 niche hashtag ต่อโพสต์ เปลี่ยน set ทุก 3-5 โพสต์เพื่อ reach กลุ่มใหม่',
+  });
+});
+
+// POST /api/captions/generate — สร้างแคปชั่นขายต่อแพลตฟอร์ม (human-in-the-loop)
+// คืนข้อความให้ผู้ใช้ "ก๊อปไปโพสต์เอง" — ไม่โพสต์อัตโนมัติ (ไม่ละเมิด ToS ของแพลตฟอร์ม)
+// แคปชั่นรองรับ 3 ภาษา (th/en/zh) — hook + template ต่อภาษา/แพลตฟอร์ม
+const CAPTION_I18N = {
+  th: {
+    hooks: ['หยุดเลื่อนก่อน!', 'ของดีบอกต่อ', 'ส่งตรงจากผู้ผลิต', 'รีวิวจริงไม่อวย', 'ไอเทมที่คนตามหา'],
+    tags: (n) => `#${n} #ของดีบอกต่อ #รีวิวสินค้า`,
+    tiktok: (h, n, pr, f, l, t) => `🔥 ${h} 🔥\n📌 ${n}${pr ? ` — ${pr}` : ''}\n${f ? `👉 ${f}\n` : ''}สนใจดูลิงก์ในไบโอ 🛒\n${t} #TikTokป้ายยา #fyp`,
+    facebook: (h, n, pr, f, l) => `📢 ${h}\n${n} มารีวิวให้ดูกันจริงๆ${f ? ` — ${f}` : ''}\n${pr ? `ราคา ${pr} ` : ''}สนใจทักแชทหรือดูพิกัดในคอมเมนต์แรกได้เลยครับ 👇${l ? `\n${l}` : ''}`,
+    instagram: (h, n, pr, f, _l, t) => `${h} ✨\n${n}${f ? `\n${f}` : ''}${pr ? `\n💰 ${pr}` : ''}\nDM มาได้เลยถ้าสนใจ 💌\n${t}`,
+    line: (h, n, pr, f, l) => `💚 สิทธิพิเศษเฉพาะเพื่อนใน LINE 💚\n🎁 ${n}${pr ? ` เพียง ${pr}` : ''}\n${f ? `✅ ${f}\n` : ''}🛒 สั่งซื้อ/สอบถามได้เลย${l ? `: ${l}` : ' ในแชทนี้'}`,
+  },
+  en: {
+    hooks: ['Stop scrolling!', 'Must-have item', 'Straight from the maker', 'Honest review', 'Everyone is asking for this'],
+    tags: (n) => `#${n} #musthave #review`,
+    tiktok: (h, n, pr, f, l, t) => `🔥 ${h} 🔥\n📌 ${n}${pr ? ` — ${pr}` : ''}\n${f ? `👉 ${f}\n` : ''}Link in bio 🛒\n${t} #tiktokmademebuyit #fyp`,
+    facebook: (h, n, pr, f, l) => `📢 ${h}\nReal review of ${n}${f ? ` — ${f}` : ''}\n${pr ? `Price ${pr}. ` : ''}DM me or check the first comment for the order link 👇${l ? `\n${l}` : ''}`,
+    instagram: (h, n, pr, f, _l, t) => `${h} ✨\n${n}${f ? `\n${f}` : ''}${pr ? `\n💰 ${pr}` : ''}\nDM me if interested 💌\n${t}`,
+    line: (h, n, pr, f, l) => `💚 Special deal for LINE friends 💚\n🎁 ${n}${pr ? ` only ${pr}` : ''}\n${f ? `✅ ${f}\n` : ''}🛒 Order now${l ? `: ${l}` : ' in this chat'}`,
+  },
+  zh: {
+    hooks: ['别划走！', '好物分享', '工厂直供', '真实测评', '大家都在找的好物'],
+    tags: (n) => `#${n} #好物推荐 #测评`,
+    tiktok: (h, n, pr, f, l, t) => `🔥 ${h} 🔥\n📌 ${n}${pr ? ` — ${pr}` : ''}\n${f ? `👉 ${f}\n` : ''}链接在主页 🛒\n${t} #种草 #fyp`,
+    facebook: (h, n, pr, f, l) => `📢 ${h}\n真实测评 ${n}${f ? ` — ${f}` : ''}\n${pr ? `价格 ${pr}。` : ''}想要的私信我，或看第一条评论的购买链接 👇${l ? `\n${l}` : ''}`,
+    instagram: (h, n, pr, f, _l, t) => `${h} ✨\n${n}${f ? `\n${f}` : ''}${pr ? `\n💰 ${pr}` : ''}\n有兴趣请私信 💌\n${t}`,
+    line: (h, n, pr, f, l) => `💚 LINE好友专属优惠 💚\n🎁 ${n}${pr ? ` 仅需 ${pr}` : ''}\n${f ? `✅ ${f}\n` : ''}🛒 立即下单${l ? `：${l}` : '（本聊天）'}`,
+  },
+};
+function buildCaption(platform, p, hookIdx, lang = 'th') {
+  const L = CAPTION_I18N[lang] || CAPTION_I18N.th;
+  const name = p.name || (lang === 'zh' ? '商品' : lang === 'en' ? 'product' : 'สินค้า');
+  const price = p.price ? `฿${Number(p.price).toLocaleString()}` : '';
+  const feat = p.features || '';
+  const link = p.link || '';
+  const tags = p.hashtags || L.tags(String(name).replace(/\s+/g, ''));
+  const hook = L.hooks[hookIdx % L.hooks.length];
+  const fn = L[platform];
+  return fn ? fn(hook, name, price, feat, link, tags) : `${name}${price ? ` ${price}` : ''}${link ? ` ${link}` : ''}`;
+}
+app.post('/api/captions/generate', generateLimiter, (req, res) => {
+  const { name, price, features, link, hashtags } = req.body || {};
+  if (!name?.trim()) return res.status(400).json({ success: false, error: 'ต้องการชื่อสินค้า (name)' });
+  const lang = ['th', 'en', 'zh'].includes(req.body?.lang) ? req.body.lang : 'th';
+  const want = Array.isArray(req.body?.platforms) && req.body.platforms.length
+    ? req.body.platforms.filter(pl => ['tiktok', 'facebook', 'instagram', 'line'].includes(pl))
+    : ['tiktok', 'facebook', 'instagram', 'line'];
+  const product = { name: String(name).slice(0, 120), price, features: String(features || '').slice(0, 300), link: String(link || '').slice(0, 300), hashtags: String(hashtags || '').slice(0, 200) };
+  const captions = {};
+  want.forEach((pl, i) => { captions[pl] = buildCaption(pl, product, i, lang); });
+  res.json({
+    success: true,
+    lang,
+    captions,
+    note: 'ก๊อปแคปชั่นไปโพสต์เองในแต่ละแอป — ระบบไม่โพสต์อัตโนมัติ (ป้องกันบัญชีโดนแบนจากการละเมิด ToS)',
   });
 });
 
@@ -4318,6 +4689,19 @@ async function sendLine(to, text) {
   return res.json();
 }
 
+// LINE OA Broadcast — ส่งถึงผู้ติดตามทั้งหมดของ OA ที่ "ผู้ใช้เป็นเจ้าของ" (ถูกกฎ ToS)
+async function lineBroadcast(text) {
+  const token = process.env.LINE_CHANNEL_TOKEN;
+  if (!token) throw new Error('LINE_CHANNEL_TOKEN not set');
+  const res = await fetch('https://api.line.me/v2/bot/message/broadcast', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: [{ type: 'text', text: String(text).slice(0, 5000) }] }),
+  });
+  if (!res.ok) throw new Error(`LINE broadcast error ${res.status}`);
+  return res.json().catch(() => ({}));
+}
+
 // ── node-cron: ทุกชั่วโมงที่นาที :05 (local only — Vercel ใช้ Vercel Cron แทน) ─
 if (!IS_VERCEL) cron.schedule('5 * * * *', async () => {
   const now = new Date();
@@ -4925,10 +5309,15 @@ app.get('/api/system/readiness', (req, res) => {
   const has = (v) => !!process.env[v];
   const supabase = has('SUPABASE_URL') && has('SUPABASE_SERVICE_KEY');
   const omiseLive = has('OMISE_SECRET_KEY');
+  const omisePublic = has('OMISE_PUBLIC_KEY');
+  const omiseWebhook = has('OMISE_WEBHOOK_SECRET');
   const ledger = supabase ? 'supabase (ถาวร)' : 'file (ชั่วคราว)';
   const checks = {
     supabase:    { ok: supabase,  detail: supabase ? 'เก็บเครดิต/ผู้ผลิต/ออเดอร์ถาวร' : 'ยังใช้ไฟล์ชั่วคราว — ตั้ง SUPABASE_URL + SUPABASE_SERVICE_KEY' },
-    payments:    { ok: omiseLive, detail: omiseLive ? 'รับเงินจริง (Omise live)' : 'mock mode — ตั้ง OMISE_SECRET_KEY (+ PUBLIC) เพื่อรับเงินจริง' },
+    payments:    { ok: omiseLive, detail: omiseLive
+      ? `รับเงินจริง · SECRET_KEY ✅ · PUBLIC_KEY ${omisePublic ? '✅' : '⚠️ ขาด (จำเป็นเฉพาะจ่ายด้วยบัตร)'} · WEBHOOK_SECRET ${omiseWebhook ? '✅' : '⚠️ ขาด (/pay ยังยืนยันด้วย polling ได้ แต่ควรตั้งเป็น backup)'}`
+      : 'mock mode — ตั้ง OMISE_SECRET_KEY (+ OMISE_PUBLIC_KEY + OMISE_WEBHOOK_SECRET) เพื่อรับเงินจริง' },
+    payment_webhook: { ok: omiseLive && omiseWebhook, detail: !omiseLive ? 'รอตั้ง Omise ก่อน' : omiseWebhook ? 'ยืนยันการจ่ายผ่าน webhook ได้ (ตั้ง URL .../api/payment/webhook ใน Omise ด้วย)' : 'ยังไม่ตั้ง OMISE_WEBHOOK_SECRET — /pay ใช้ polling ยืนยันแทนได้ชั่วคราว' },
     admin_key:   { ok: has('ADMIN_KEY'), detail: has('ADMIN_KEY') ? 'ตั้งแล้ว' : (IS_VERCEL ? '⚠️ ยังไม่ตั้ง — admin จะถูกปฏิเสธบน production' : 'local ใช้ค่า default') },
     line_notify: { ok: has('LINE_NOTIFY_TOKEN'), detail: has('LINE_NOTIFY_TOKEN') ? 'แจ้งเตือนเข้า LINE ได้' : 'optional — ตั้งเพื่อรับแจ้งเตือน' },
     ai:          { ok: !!(anthropic || gemini), detail: anthropic ? 'Claude' : gemini ? 'Gemini' : '⚠️ ไม่มี AI key — ใช้ mock' },
@@ -5945,6 +6334,54 @@ function grantEntitlement(email, plan, { source = 'payment', subscription_id = n
   return ent;
 }
 
+// เครดิตค่าคอมมิชชั่นให้ affiliate เมื่อมีการขายผ่าน ref link (รองรับทั้ง plan + quickpay)
+// เรียกได้จากทั้ง webhook และ status-poll — ป้องกันเครดิตซ้ำด้วย flag firstTime ฝั่งผู้เรียก
+// เลื่อน Tier อัตโนมัติตามจำนวนดีลสะสม — ยิ่งขายยิ่งได้ค่าคอมเพิ่ม
+// starter 20% (0-9) → pro 30% (10-49) → elite 40% (50+)
+const AFFILIATE_TIERS = [
+  { tier: 'elite',   min: 50, rate: 0.40 },
+  { tier: 'pro',     min: 10, rate: 0.30 },
+  { tier: 'starter', min: 0,  rate: 0.20 },
+];
+function tierForSales(sales) {
+  return AFFILIATE_TIERS.find(t => (sales || 0) >= t.min) || AFFILIATE_TIERS[AFFILIATE_TIERS.length - 1];
+}
+
+function creditAffiliateSale(refCode, amountThb, { charge_id = null, source = null } = {}) {
+  if (!refCode || !(amountThb > 0)) return null;
+  const aff = affiliates.find(a => a.ref_code === refCode);
+  if (!aff) return null;
+  // คอมมิชชันของดีลนี้คิดด้วยเรตปัจจุบัน (การเลื่อนขั้นมีผลกับดีลถัดไป)
+  const commission = +(amountThb * (aff.commission_rate || 0.20)).toFixed(2);
+  aff.total_sales = (aff.total_sales || 0) + 1;
+  aff.total_earned = +((aff.total_earned || 0) + commission).toFixed(2);
+  aff.recent_sales = [{ amount_thb: amountThb, commission, charge_id, source: source || 'direct', at: new Date().toISOString() }, ...(aff.recent_sales || [])].slice(0, 50);
+
+  // attribution ยอดขาย/รายได้ตามแหล่งที่มา (รู้ว่า "เงินจริง" มาจากช่องไหน)
+  const src = cleanSource(source);
+  aff.sales_by_source = aff.sales_by_source || {};
+  aff.earned_by_source = aff.earned_by_source || {};
+  aff.sales_by_source[src] = (aff.sales_by_source[src] || 0) + 1;
+  aff.earned_by_source[src] = +((aff.earned_by_source[src] || 0) + commission).toFixed(2);
+
+  // ตรวจเลื่อนขั้นหลังเพิ่มยอดดีล
+  let promoted = null;
+  const target = tierForSales(aff.total_sales);
+  if (target.tier !== (aff.tier || 'starter') && target.rate > (aff.commission_rate || 0.20)) {
+    const from = aff.tier || 'starter';
+    aff.tier = target.tier;
+    aff.commission_rate = target.rate;
+    promoted = { from, to: target.tier, rate: target.rate };
+    addLog('info', 'Affiliate', `🎉 เลื่อนขั้น ${from} → ${target.tier} (${Math.round(target.rate * 100)}%) — ${refCode} (${aff.name})`);
+    webhooks.dispatch('affiliate.tier_up', { ref_code: refCode, from, to: target.tier, rate: target.rate, total_sales: aff.total_sales }, null);
+  }
+
+  saveAffiliate(aff).catch(e => console.warn('[affiliate] credit failed:', e.message));
+  addLog('info', 'Affiliate', `commission +${commission}฿ → ${refCode} (${aff.name})`);
+  webhooks.dispatch('affiliate.sale', { ref_code: refCode, amount_thb: amountThb, commission, charge_id }, null);
+  return { commission, ref_code: refCode, promoted };
+}
+
 // คืนสิทธิ์ปัจจุบัน (เช็ควันหมดอายุ) — ถ้าหมดอายุถือเป็น free
 function getEntitlement(email) {
   if (!email) return { plan: 'free', status: 'none' };
@@ -6119,6 +6556,45 @@ app.get('/api/payment/config', (req, res) => {
   });
 });
 
+// POST /api/quickpay/create — สร้าง PromptPay QR สำหรับขายแพ็กเกจ/สินค้าชิ้นเดียว
+// ยอดกำหนดเองได้ (default ฿1,000). ใช้สำหรับปิดการขายไว ๆ — สแกนจ่าย → เงินเข้า Omise/พร้อมเพย์
+// เช็คสถานะด้วย GET /api/payment/status/:chargeId (generic — ใช้ร่วมกับ flow plan ได้)
+const quickpayLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 20, message: { success: false, error: 'สร้าง QR บ่อยเกินไป กรุณารอสักครู่' } });
+app.post('/api/quickpay/create', quickpayLimiter, async (req, res) => {
+  const amount = Math.max(1, Math.min(100000, Math.round(Number(req.body?.amount_thb) || 1000)));
+  const label = (req.body?.label || 'แพ็กเกจ Openthai.ai').toString().trim().slice(0, 80) || 'แพ็กเกจ Openthai.ai';
+  const buyer = (req.body?.buyer || '').toString().trim().slice(0, 80);
+  const buyerEmail = (req.body?.email || '').toString().trim().toLowerCase();
+  // ref affiliate — รับเฉพาะที่มีอยู่จริง เพื่อเครดิตคอมมิชชั่นตอนจ่ายสำเร็จ
+  const refRaw = (req.body?.ref || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+  const refCode = refRaw && affiliates.some(a => a.ref_code === refRaw) ? refRaw : null;
+  const source = cleanSource(req.body?.source);   // แหล่งที่มา (utm_source) → attribution ยอดขาย
+
+  // Mock mode — ยังไม่ตั้ง Omise (dev/staging) → คืน QR จำลอง ไม่ตัดเงินจริง
+  if (!process.env.OMISE_SECRET_KEY) {
+    const mock = { charge_id: `mock_qp_${Date.now()}`, status: 'pending', amount_thb: amount, qr_image_url: null, expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), promptpay_ref: 'MOCKREF-QP' };
+    // email: null → ข้าม flow ปลดสิทธิ์ plan (quickpay ไม่ผูกกับ subscription plan)
+    payments.unshift({ ...mock, plan: null, method: 'promptpay', kind: 'quickpay', label, buyer, buyer_email: buyerEmail || null, ref_code: refCode, source, email: null, paid_at: null, createdAt: new Date().toISOString() });
+    savePayments(payments);
+    return res.json({ success: true, mock: true, ...mock, label, ref_code: refCode, message: '⚠️ MOCK MODE — ยังไม่ตัดเงินจริง ตั้ง OMISE_SECRET_KEY ใน production เพื่อรับเงินจริง' });
+  }
+
+  try {
+    const charge = await createPromptPayCharge({
+      amount_thb: amount,
+      description: `Openthai.ai QuickPay — ${label}`,
+      metadata: { kind: 'quickpay', label, buyer, email: buyerEmail || '', ref_code: refCode || '', source },
+    });
+    payments.unshift({ ...charge, plan: null, method: 'promptpay', kind: 'quickpay', label, buyer, buyer_email: buyerEmail || null, ref_code: refCode, source, email: null, createdAt: new Date().toISOString() });
+    savePayments(payments);
+    addLog('info', 'QuickPay', `สร้าง QR ฿${amount} — ${label}${refCode ? ` · ref:${refCode}` : ''}${source !== 'direct' ? ` · src:${source}` : ''} (${charge.charge_id})`);
+    return res.json({ success: true, ...charge, label, ref_code: refCode });
+  } catch (e) {
+    addLog('error', 'QuickPay', e.message);
+    return res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // GET /api/payment/entitlement?email= — เช็คแผนที่ user มีสิทธิ์ใช้ตอนนี้
 app.get('/api/payment/entitlement', (req, res) => {
   const email = (req.query.email || '').trim();
@@ -6166,6 +6642,8 @@ app.get('/api/payment/status/:chargeId', async (req, res) => {
         grantEntitlement(rec.email, rec.plan, { source: rec.method || 'promptpay' });
         sendPaymentReceipt(rec.email, { plan: rec.plan, amount_thb: status.amount_thb, charge_id: req.params.chargeId, paid_at: status.paid_at, method: rec.method });
       }
+      // เครดิตค่าคอม affiliate (เฉพาะครั้งแรก — รองรับ quickpay ที่จ่ายผ่าน ref link)
+      if (firstTime) creditAffiliateSale(rec?.ref_code, status.amount_thb, { charge_id: req.params.chargeId, source: rec?.source });
     }
     // Enrich response with stored record so the client can render a full receipt
     res.json({
@@ -6276,19 +6754,9 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
         if (email && rec.plan) {
           grantEntitlement(email, rec.plan, { source: 'webhook' });
           sendPaymentReceipt(email, { plan: rec.plan, amount_thb: amountThb, charge_id: data.id, paid_at: data.paid_at, method: rec.method });
-          // อัปเดต affiliate total_earned ถ้าชำระผ่าน ref link
-          const refCode = data.metadata?.ref_code;
-          if (refCode) {
-            const aff = affiliates.find(a => a.ref_code === refCode);
-            if (aff) {
-              const commission = +(amountThb * (aff.commission_rate || 0.20)).toFixed(2);
-              aff.total_sales = (aff.total_sales || 0) + 1;
-              aff.total_earned = +((aff.total_earned || 0) + commission).toFixed(2);
-              saveAffiliate(aff).catch(e => console.warn('[affiliate] update earned failed:', e.message));
-              addLog('info', 'Affiliate', `commission +${commission}฿ → ${refCode} (${aff.name})`);
-            }
-          }
         }
+        // เครดิต affiliate ถ้าชำระผ่าน ref link (รองรับทั้ง plan + quickpay) — firstTime แล้วจาก !rec.paid_at
+        creditAffiliateSale(rec.ref_code || data.metadata?.ref_code, amountThb, { charge_id: data.id, source: rec.source || data.metadata?.source });
       }
       webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
     }
@@ -6702,7 +7170,17 @@ async function startServer() {
 // ══════════════════════════════════════════════════════════════════════════════
 // A — Auto-Post Scheduler  /api/scheduler/*
 // ══════════════════════════════════════════════════════════════════════════════
+// เก็บถาวร (ไฟล์) เพื่อให้คิวอยู่รอดข้าม restart — ทำงานต่อเนื่องได้จริง
+const SCH_FILE = join(WRITE_DATA_DIR, 'scheduler.json');
 const schedulerStore = { posts: [] };
+try { if (existsSync(SCH_FILE)) schedulerStore.posts = JSON.parse(readFileSync(SCH_FILE, 'utf8')) || []; } catch (_) {}
+function saveScheduler() {
+  try {
+    const dir = SCH_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(SCH_FILE, JSON.stringify(schedulerStore.posts, null, 2), 'utf8');
+  } catch (e) { console.error('[scheduler] save error:', e.message); }
+}
 
 app.post('/api/scheduler/create', generateLimiter, (req, res) => {
   const { platform, content, scheduled_at, audience, language = 'thai' } = req.body || {};
@@ -6714,8 +7192,44 @@ app.post('/api/scheduler/create', generateLimiter, (req, res) => {
   };
   schedulerStore.posts.unshift(post);
   if (schedulerStore.posts.length > 200) schedulerStore.posts = schedulerStore.posts.slice(0, 200);
+  saveScheduler();
   res.json({ ok: true, post });
 });
+
+// GET /api/scheduler/due — โพสต์ที่ถึงเวลาแล้วแต่ยังไม่ได้โพสต์ (pending + scheduled_at <= now)
+app.get('/api/scheduler/due', (req, res) => {
+  const now = Date.now();
+  const due = schedulerStore.posts.filter(p => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
+  res.json({ ok: true, due, count: due.length });
+});
+
+// POST /api/scheduler/process — ประมวลผลโพสต์ที่ถึงเวลา (เรียกเป็นรอบ/โดย uptime pinger)
+// LINE OA (ช่องที่คุณเป็นเจ้าของ + มี token) → broadcast อัตโนมัติ (ถูกกฎ)
+// แพลตฟอร์มอื่น → mark 'ready' (ถึงเวลาโพสต์ — รอคุณกดโพสต์เอง, ToS ห้ามบอทโพสต์)
+// รองรับทั้ง GET (Vercel Cron / uptime pinger) และ POST (เรียกจากหน้าเว็บ)
+async function processScheduler(req, res) {
+  const now = Date.now();
+  const due = schedulerStore.posts.filter(p => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
+  const result = { broadcast: [], ready: [], failed: [] };
+  for (const post of due) {
+    const isLine = ['line', 'line_oa', 'lineoa'].includes(String(post.platform).toLowerCase());
+    if (isLine && process.env.LINE_CHANNEL_TOKEN) {
+      try {
+        await lineBroadcast(post.content);
+        post.status = 'published'; post.published_at = new Date().toISOString(); post.channel = 'line_broadcast';
+        result.broadcast.push(post.id);
+      } catch (e) { post.status = 'failed'; post.error = e.message; result.failed.push(post.id); }
+    } else {
+      // ToS-compliant: ไม่โพสต์แทนในช่องที่ไม่ได้เป็นเจ้าของ — แจ้งเตือนว่าถึงเวลาโพสต์
+      post.status = 'ready'; post.ready_at = new Date().toISOString();
+      result.ready.push(post.id);
+    }
+  }
+  if (due.length) { saveScheduler(); addLog('info', 'Scheduler', `process: broadcast ${result.broadcast.length} · ready ${result.ready.length} · failed ${result.failed.length}`); }
+  res.json({ ok: true, processed: due.length, ...result, ran_at: new Date().toISOString() });
+}
+app.post('/api/scheduler/process', processScheduler);
+app.get('/api/scheduler/process', processScheduler);  // Vercel Cron ยิงด้วย GET
 
 app.get('/api/scheduler/list', (req, res) => {
   const { platform, status } = req.query;
@@ -6731,6 +7245,7 @@ app.post('/api/scheduler/execute/:id', (req, res) => {
   post.status = 'published';
   post.published_at = new Date().toISOString();
   post.reach_mock = Math.floor(Math.random() * 9000) + 1000;
+  saveScheduler();
   res.json({ ok: true, post });
 });
 
@@ -6738,6 +7253,7 @@ app.delete('/api/scheduler/:id', (req, res) => {
   const idx = schedulerStore.posts.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'not found' });
   schedulerStore.posts.splice(idx, 1);
+  saveScheduler();
   res.json({ ok: true });
 });
 

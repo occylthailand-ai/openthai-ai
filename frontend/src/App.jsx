@@ -38,6 +38,13 @@ const ContentCalendarPage = lazy(() => import('./pages/ContentCalendarPage'));
 const VoiceCommandPage = lazy(() => import('./pages/VoiceCommandPage'));
 const VideoGeneratorPage = lazy(() => import('./pages/VideoGeneratorPage'));
 const PaymentPage = lazy(() => import('./pages/PaymentPage'));
+const QuickPayPage = lazy(() => import('./pages/QuickPayPage'));
+const EarnHubPage = lazy(() => import('./pages/EarnHubPage'));
+const AffiliateProgramsPage = lazy(() => import('./pages/AffiliateProgramsPage'));
+const ContentStudioPage = lazy(() => import('./pages/ContentStudioPage'));
+const CouncilPage = lazy(() => import('./pages/CouncilPage'));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
+const RouterStatusPage = lazy(() => import('./pages/RouterStatusPage'));
 const CorporateDashboard = lazy(() => import('./pages/corporate/CorporateDashboard'));
 const InvestorRelationsPage = lazy(() => import('./pages/corporate/InvestorRelationsPage'));
 const CompliancePage = lazy(() => import('./pages/corporate/CompliancePage'));
@@ -184,6 +191,18 @@ function App() {
             <Route path="/voice" element={<VoiceCommandPage />} />
             <Route path="/video" element={isAuthenticated ? <VideoGeneratorPage /> : <Navigate to="/login" />} />
             <Route path="/payment" element={<PaymentPage />} />
+            <Route path="/pay" element={<QuickPayPage />} />
+            <Route path="/quickpay" element={<QuickPayPage />} />
+            <Route path="/earn" element={<EarnHubPage />} />
+            <Route path="/income" element={<EarnHubPage />} />
+            <Route path="/affiliate-programs" element={<AffiliateProgramsPage />} />
+            <Route path="/programs" element={<AffiliateProgramsPage />} />
+            <Route path="/content-studio" element={<ContentStudioPage />} />
+            <Route path="/captions" element={<ContentStudioPage />} />
+            <Route path="/council" element={<CouncilPage />} />
+            <Route path="/openthaiai" element={<CouncilPage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/router" element={<RouterStatusPage />} />
             {/* Corporate System — Public Company */}
             <Route path="/corporate"             element={isAuthenticated ? <CorporateDashboard />    : <Navigate to="/login" />} />
             <Route path="/corporate/board"       element={isAuthenticated ? <BoardPage />             : <Navigate to="/login" />} />

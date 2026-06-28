@@ -33,8 +33,24 @@ export default function SchedulerPage() {
   const [filter, setFilter] = useState('all');
   const [form, setForm] = useState({ platform: 'tiktok', audience: 'ผู้บริโภค', language: 'thai', content: '', scheduled_at: '' });
   const [tab, setTab] = useState('queue');
+  const [due, setDue] = useState(0);
+  const [processing, setProcessing] = useState(false);
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // ตรวจโพสต์ที่ถึงเวลา — LINE OA (ช่องที่คุณเป็นเจ้าของ) broadcast อัตโนมัติ, อื่นๆ mark 'ready'
+  const checkDue = useCallback(async () => {
+    try { const r = await fetch(apiUrl('/api/scheduler/due')); const d = await r.json(); if (d.ok) setDue(d.count); } catch (_) {}
+  }, []);
+  const processDue = async () => {
+    setProcessing(true);
+    try {
+      const r = await fetch(apiUrl('/api/scheduler/process'), { method: 'POST' });
+      const d = await r.json();
+      if (d.ok) { await loadPosts(); await checkDue(); }
+    } catch (_) {}
+    setProcessing(false);
+  };
 
   const loadPosts = useCallback(async () => {
     try {
@@ -44,7 +60,7 @@ export default function SchedulerPage() {
     } catch (_) {}
   }, []);
 
-  useEffect(() => { loadPosts(); }, [loadPosts]);
+  useEffect(() => { loadPosts(); checkDue(); }, [loadPosts, checkDue]);
 
   const submit = async () => {
     if (!form.content.trim() || !form.scheduled_at) return;
@@ -96,6 +112,19 @@ export default function SchedulerPage() {
           </h1>
           <p style={{ color: '#64748b', margin: '6px 0 0', fontSize: 14 }}>วางตารางโพสต์สื่อลง Platform อัตโนมัติ · {posts.length} โพสต์ในคิว</p>
         </div>
+
+        {/* ถึงเวลาโพสต์ */}
+        {due > 0 && (
+          <div style={{ ...s.card, border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.08)', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontWeight: 800, color: '#fbbf24' }}>🔔 มี {due} โพสต์ถึงเวลาแล้ว</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>LINE OA (ช่องที่คุณเป็นเจ้าของ) จะ broadcast อัตโนมัติ · แพลตฟอร์มอื่นจะถูกทำเครื่องหมาย "พร้อมโพสต์" ให้คุณก๊อปไปโพสต์เอง</div>
+            </div>
+            <button onClick={processDue} disabled={processing} style={s.btn(processing ? '#374151' : '#f59e0b')}>
+              {processing ? '⏳' : '⚡ ประมวลผลที่ถึงเวลา'}
+            </button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
