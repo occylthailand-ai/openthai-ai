@@ -1280,6 +1280,78 @@ function parseAIJson(text) {
   throw new Error('no json');
 }
 
+// ─── Per-provider callers สำหรับ OpenThaiAi Council (Claude · Gemini · Grok) ────
+async function callClaude(prompt, maxTokens = 700) {
+  if (!anthropic) return null;
+  try {
+    const msg = await anthropic.messages.create({ model: 'claude-haiku-4-5-20251001', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });
+    return msg.content[0]?.text?.trim() || null;
+  } catch (e) { addLog('warn', 'Council/Claude', e.message); return null; }
+}
+async function callGeminiText(prompt) {
+  if (!gemini) return null;
+  try { const r = await gemini.generateContent(prompt); return r.response.text().trim() || null; }
+  catch (e) { addLog('warn', 'Council/Gemini', e.message); return null; }
+}
+// Grok (xAI) — OpenAI-compatible endpoint
+async function callGrok(prompt, maxTokens = 700) {
+  const key = process.env.XAI_API_KEY;
+  if (!key) return null;
+  try {
+    const res = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: process.env.XAI_MODEL || 'grok-2-latest', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `xAI HTTP ${res.status}`);
+    return data.choices?.[0]?.message?.content?.trim() || null;
+  } catch (e) { addLog('warn', 'Council/Grok', e.message); return null; }
+}
+
+// ─── OpenThaiAi Council — ห้องที่ AI 3 เจ้าช่วยกันวิเคราะห์ + สังเคราะห์ข้อสรุป ────
+const COUNCIL_PERSONAS = {
+  claude: { name: 'Claude (Anthropic)', role: 'สถาปัตยกรรม · ความปลอดภัย · คุณภาพโค้ด', icon: '🟣' },
+  gemini: { name: 'Gemini (Google)',    role: 'ข้อมูล · ตลาด · SEO · การสเกล',        icon: '🔵' },
+  grok:   { name: 'Grok (xAI)',         role: 'การเติบโต · ไอเดียกล้าได้กล้าเสีย · เรียลไทม์', icon: '⚫' },
+};
+function mockCouncilVoice(provider, topic) {
+  const t = topic.length > 60 ? topic.slice(0, 60) + '…' : topic;
+  const M = {
+    claude: `1) ด้านความน่าเชื่อถือ: "${t}" ต้องมี security + privacy ที่ตรวจสอบได้ (HTTPS, ตรวจลายเซ็น webhook, เก็บความลับใน env)\n2) สถาปัตยกรรม: แยก service ชัด รองรับ scale + มี health/readiness check\n3) คุณภาพ: มี automated test ครอบ flow สำคัญก่อน go-global\n4) ข้อเสนอ: ทำ audit log + เอกสาร API ภาษาอังกฤษให้พาร์ตเนอร์ต่างชาติเชื่อมต่อได้`,
+    gemini: `1) ตลาด: หา niche ที่ OpenThaiAi เด่น (AI คอนเทนต์ไทย→อาเซียน) ก่อนชนรายใหญ่\n2) SEO/Discovery: ทำหน้า landing หลายภาษา + schema markup ให้ติด Google\n3) ข้อมูล: เก็บ metric conversion/retention เพื่อปรับ product ด้วยข้อมูลจริง\n4) ข้อเสนอ: เริ่ม i18n (ไทย/อังกฤษ/จีน) + พิสูจน์ผลด้วย case study ลูกค้าจริง`,
+    grok: `1) การเติบโต: ใช้ creator/affiliate เป็นหัวหอก — ยิ่งแชร์ยิ่งโต (viral loop)\n2) ไอเดียกล้า: ออกฟีเจอร์ที่คู่แข่งยังไม่มี เช่น multi-AI council นี้เป็นจุดขาย\n3) เรียลไทม์: เกาะเทรนด์ + ออกคอนเทนต์เร็ว ชนะด้วยความไว\n4) ข้อเสนอ: ทำ referral rewards + leaderboard กระตุ้นการแข่งขันของพันธมิตร`,
+  };
+  return M[provider] || `วิเคราะห์เบื้องต้นสำหรับ: ${t}`;
+}
+function mockSynthesis(topic) {
+  return `📋 ข้อสรุปร่วม OpenThaiAi Council\nหัวข้อ: ${topic}\n\nแผนปฏิบัติให้เป็นที่ยอมรับในตลาดโลก:\n1) ความน่าเชื่อถือก่อน (Claude): security + test + readiness ครบ → พาร์ตเนอร์กล้าใช้\n2) เจาะ niche + i18n (Gemini): เริ่มจาก AI คอนเทนต์ไทย→อาเซียน ทำหลายภาษา + SEO\n3) โตด้วย viral loop (Grok): affiliate/referral + leaderboard + ออกฟีเจอร์เด่นที่คู่แข่งไม่มี\n4) วัดผลด้วยข้อมูลจริง: ติดตาม conversion/retention แล้ววนปรับ\n\n⚠️ หมายเหตุ: นี่คือโหมดจำลอง (ยังไม่ได้ตั้ง API key ของ AI) — ตั้ง ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY เพื่อให้ AI จริงทั้ง 3 เจ้าวิเคราะห์`;
+}
+app.post('/api/council', generateLimiter, async (req, res) => {
+  const topic = String(req.body?.topic || '').trim().slice(0, 2000);
+  if (!topic) return res.status(400).json({ success: false, error: 'ต้องการหัวข้อที่จะให้ที่ประชุมวิเคราะห์ (topic)' });
+  const base = `คุณกำลังร่วมประชุมในห้อง "OpenThaiAi" กับ AI เจ้าอื่น เพื่อช่วยกันวิเคราะห์และเสนอแนวทางทำให้แพลตฟอร์ม OpenThaiAi เป็นที่ยอมรับในตลาดโลกและเกิดขึ้นจริง
+หัวข้อที่ต้องวิเคราะห์: ${topic}
+ตอบเป็นภาษาไทย สั้นกระชับ เป็นข้อ ๆ (3-5 ข้อ) ในมุมที่คุณถนัด พร้อมข้อเสนอที่ลงมือทำได้จริง`;
+  const persona = (p) => `${base}\n\nบทบาทของคุณในวงประชุม: ${COUNCIL_PERSONAS[p].role}`;
+
+  const [claude, gem, grok] = await Promise.all([
+    callClaude(persona('claude')), callGeminiText(persona('gemini')), callGrok(persona('grok')),
+  ]);
+  const voices = [
+    { id: 'claude', ...COUNCIL_PERSONAS.claude, live: !!claude, text: claude || mockCouncilVoice('claude', topic) },
+    { id: 'gemini', ...COUNCIL_PERSONAS.gemini, live: !!gem,    text: gem    || mockCouncilVoice('gemini', topic) },
+    { id: 'grok',   ...COUNCIL_PERSONAS.grok,   live: !!grok,   text: grok   || mockCouncilVoice('grok', topic) },
+  ];
+  const synthPrompt = `ในฐานะผู้ดำเนินการประชุม OpenThaiAi จงสังเคราะห์ความเห็นจาก AI 3 เจ้าต่อไปนี้ ให้เป็น "ข้อสรุปร่วม + แผนปฏิบัติ 3-5 ข้อ" ที่ทำให้ OpenThaiAi เป็นที่ยอมรับในตลาดโลก ตอบไทย กระชับ ลงมือทำได้จริง:\n\n${voices.map(v => `[${v.name}]\n${v.text}`).join('\n\n')}`;
+  let synthesis = await callClaude(synthPrompt) || await callGeminiText(synthPrompt) || await callGrok(synthPrompt);
+  const synthLive = !!synthesis;
+  if (!synthesis) synthesis = mockSynthesis(topic);
+
+  addLog('info', 'Council', `topic: ${topic.slice(0, 60)} · live: ${voices.filter(v => v.live).map(v => v.id).join(',') || 'none(mock)'}`);
+  res.json({ success: true, room: 'OpenThaiAi', topic, voices, synthesis, synthesis_live: synthLive, any_live: voices.some(v => v.live), ts: new Date().toISOString() });
+});
+
 // S10 · POST /api/skills/trend — วิเคราะห์เทรนด์ตามสินค้า
 app.post('/api/skills/trend', generateLimiter, async (req, res) => {
   const { product, category, platform } = req.body || {};
