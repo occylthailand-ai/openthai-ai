@@ -28,6 +28,8 @@ backend/data/agent_checkpoint.json
 backend/data/waitlist.json
 backend/data/payments.json
 backend/data/entitlements.json
+backend/data/withdrawals.json
+backend/data/scheduler.json
 # หมายเหตุ: backend/data/system_charter.json ไม่ include ตรงนี้ — commit ได้ (static config)
 
 # IDE / Editor folders

@@ -4660,6 +4660,19 @@ async function sendLine(to, text) {
   return res.json();
 }
 
+// LINE OA Broadcast — ส่งถึงผู้ติดตามทั้งหมดของ OA ที่ "ผู้ใช้เป็นเจ้าของ" (ถูกกฎ ToS)
+async function lineBroadcast(text) {
+  const token = process.env.LINE_CHANNEL_TOKEN;
+  if (!token) throw new Error('LINE_CHANNEL_TOKEN not set');
+  const res = await fetch('https://api.line.me/v2/bot/message/broadcast', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: [{ type: 'text', text: String(text).slice(0, 5000) }] }),
+  });
+  if (!res.ok) throw new Error(`LINE broadcast error ${res.status}`);
+  return res.json().catch(() => ({}));
+}
+
 // ── node-cron: ทุกชั่วโมงที่นาที :05 (local only — Vercel ใช้ Vercel Cron แทน) ─
 if (!IS_VERCEL) cron.schedule('5 * * * *', async () => {
   const now = new Date();
@@ -7120,7 +7133,17 @@ async function startServer() {
 // ══════════════════════════════════════════════════════════════════════════════
 // A — Auto-Post Scheduler  /api/scheduler/*
 // ══════════════════════════════════════════════════════════════════════════════
+// เก็บถาวร (ไฟล์) เพื่อให้คิวอยู่รอดข้าม restart — ทำงานต่อเนื่องได้จริง
+const SCH_FILE = join(WRITE_DATA_DIR, 'scheduler.json');
 const schedulerStore = { posts: [] };
+try { if (existsSync(SCH_FILE)) schedulerStore.posts = JSON.parse(readFileSync(SCH_FILE, 'utf8')) || []; } catch (_) {}
+function saveScheduler() {
+  try {
+    const dir = SCH_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(SCH_FILE, JSON.stringify(schedulerStore.posts, null, 2), 'utf8');
+  } catch (e) { console.error('[scheduler] save error:', e.message); }
+}
 
 app.post('/api/scheduler/create', generateLimiter, (req, res) => {
   const { platform, content, scheduled_at, audience, language = 'thai' } = req.body || {};
@@ -7132,7 +7155,40 @@ app.post('/api/scheduler/create', generateLimiter, (req, res) => {
   };
   schedulerStore.posts.unshift(post);
   if (schedulerStore.posts.length > 200) schedulerStore.posts = schedulerStore.posts.slice(0, 200);
+  saveScheduler();
   res.json({ ok: true, post });
+});
+
+// GET /api/scheduler/due — โพสต์ที่ถึงเวลาแล้วแต่ยังไม่ได้โพสต์ (pending + scheduled_at <= now)
+app.get('/api/scheduler/due', (req, res) => {
+  const now = Date.now();
+  const due = schedulerStore.posts.filter(p => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
+  res.json({ ok: true, due, count: due.length });
+});
+
+// POST /api/scheduler/process — ประมวลผลโพสต์ที่ถึงเวลา (เรียกเป็นรอบ/โดย uptime pinger)
+// LINE OA (ช่องที่คุณเป็นเจ้าของ + มี token) → broadcast อัตโนมัติ (ถูกกฎ)
+// แพลตฟอร์มอื่น → mark 'ready' (ถึงเวลาโพสต์ — รอคุณกดโพสต์เอง, ToS ห้ามบอทโพสต์)
+app.post('/api/scheduler/process', async (req, res) => {
+  const now = Date.now();
+  const due = schedulerStore.posts.filter(p => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
+  const result = { broadcast: [], ready: [], failed: [] };
+  for (const post of due) {
+    const isLine = ['line', 'line_oa', 'lineoa'].includes(String(post.platform).toLowerCase());
+    if (isLine && process.env.LINE_CHANNEL_TOKEN) {
+      try {
+        await lineBroadcast(post.content);
+        post.status = 'published'; post.published_at = new Date().toISOString(); post.channel = 'line_broadcast';
+        result.broadcast.push(post.id);
+      } catch (e) { post.status = 'failed'; post.error = e.message; result.failed.push(post.id); }
+    } else {
+      // ToS-compliant: ไม่โพสต์แทนในช่องที่ไม่ได้เป็นเจ้าของ — แจ้งเตือนว่าถึงเวลาโพสต์
+      post.status = 'ready'; post.ready_at = new Date().toISOString();
+      result.ready.push(post.id);
+    }
+  }
+  if (due.length) saveScheduler();
+  res.json({ ok: true, processed: due.length, ...result });
 });
 
 app.get('/api/scheduler/list', (req, res) => {
@@ -7149,6 +7205,7 @@ app.post('/api/scheduler/execute/:id', (req, res) => {
   post.status = 'published';
   post.published_at = new Date().toISOString();
   post.reach_mock = Math.floor(Math.random() * 9000) + 1000;
+  saveScheduler();
   res.json({ ok: true, post });
 });
 
@@ -7156,6 +7213,7 @@ app.delete('/api/scheduler/:id', (req, res) => {
   const idx = schedulerStore.posts.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'not found' });
   schedulerStore.posts.splice(idx, 1);
+  saveScheduler();
   res.json({ ok: true });
 });
 
