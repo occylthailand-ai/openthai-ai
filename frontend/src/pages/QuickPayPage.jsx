@@ -27,6 +27,17 @@ const QuickPayPage = () => {
   const [amount, setAmount] = useState(Number.isFinite(qpAmount) && qpAmount > 0 ? qpAmount : 1000);
   const [label, setLabel] = useState(searchParams.get('label') || 'แพ็กเกจ Openthai.ai — เริ่มต้นทำการตลาดด้วย AI');
   const [buyer, setBuyer] = useState('');
+  // ref affiliate — มาจาก ?ref= บนลิงก์ที่ affiliate แชร์ → ใช้เครดิตคอมมิชชั่นตอนจ่าย
+  const ref = (searchParams.get('ref') || '').replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+
+  // นับคลิกลิงก์ ref ครั้งเดียวต่อการเข้าหน้า (สำหรับ conversion rate ของ affiliate)
+  useEffect(() => {
+    if (!ref) return;
+    fetch(apiUrl('/api/affiliate/click'), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ref }),
+    }).catch(() => {});
+  }, [ref]);
 
   const [step, setStep] = useState('offer');   // offer | qr | success
   const [loading, setLoading] = useState(false);
@@ -67,7 +78,7 @@ const QuickPayPage = () => {
       const res = await fetch(apiUrl('/api/quickpay/create'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount_thb: amt, label, buyer }),
+        body: JSON.stringify({ amount_thb: amt, label, buyer, ref }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'สร้าง QR ไม่สำเร็จ');
@@ -108,6 +119,11 @@ const QuickPayPage = () => {
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '12px', padding: '8px 16px', borderRadius: '20px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
                 🎬 ดูคลิปรีวิวบน TikTok
               </a>
+              {ref && (
+                <div style={{ marginTop: '12px', fontSize: '12px', color: '#6ee7b7', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '20px', padding: '6px 14px', display: 'inline-block' }}>
+                  🤝 ผ่านลิงก์พันธมิตร: {ref}
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: '16px' }}>

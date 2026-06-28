@@ -64,6 +64,9 @@ export default function AffiliateDashboard() {
   };
 
   const refLink = `https://www.openthai-ai.com/?ref=${data?.ref_code || ''}`;
+  // ลิงก์ปิดการขายตรง — จ่ายผ่านลิงก์นี้ = ได้ค่าคอมทันที (QuickPay ฿1,000)
+  const payLink = `https://www.openthai-ai.com/pay?ref=${data?.ref_code || ''}&amount=1000&label=${encodeURIComponent('แพ็กเกจคอนเทนต์ AI 30 ชิ้น')}`;
+  const tiktokDemo = 'https://vt.tiktok.com/ZSCB66nhQ/';
   const tierColor = TIER_COLOR[data?.tier] || '#6366f1';
   const maxBar = Math.max(...(data?.monthly?.map((m) => m.earned) || [1]));
 
@@ -150,6 +153,26 @@ export default function AffiliateDashboard() {
           <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(refLink)}`} target="_blank" rel="noreferrer" style={{ ...smallBtn, textDecoration: 'none', background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)', color: '#93c5fd' }}>
             FB ↗
           </a>
+        </div>
+
+        {/* QUICKPAY MONEY LINK — จ่ายผ่านลิงก์นี้ = ได้ค่าคอมทันที */}
+        <div style={{ ...glass, border: '1.5px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.06)', marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 20 }}>💰</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: '#6ee7b7', marginBottom: 2, fontWeight: 700 }}>ลิงก์ปิดการขาย ฿1,000 — จ่ายผ่านลิงก์นี้คุณได้ค่าคอม {Math.round((data?.commission_rate || 0.2) * 100)}% (฿{Math.round(1000 * (data?.commission_rate || 0.2))}/ดีล)</div>
+              <div style={{ fontSize: 13, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{payLink}</div>
+            </div>
+            <button onClick={() => copy(payLink, 'paylink')} style={{ ...smallBtn, background: copied === 'paylink' ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#6ee7b7' }}>
+              {copied === 'paylink' ? '✅ คัดลอกแล้ว' : '📋 คัดลอกลิงก์เงิน'}
+            </button>
+            <a href={tiktokDemo} target="_blank" rel="noreferrer" style={{ ...smallBtn, textDecoration: 'none', background: 'rgba(254,44,85,0.15)', border: '1px solid rgba(254,44,85,0.35)', color: '#fda4af' }}>
+              🎬 คลิปขาย TikTok ↗
+            </a>
+          </div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 10, lineHeight: 1.6 }}>
+            วิธีทำเงิน 24/7: แชร์ <strong style={{ color: '#fda4af' }}>คลิป TikTok</strong> + วาง <strong style={{ color: '#6ee7b7' }}>ลิงก์เงิน</strong> นี้ใน bio/คอมเมนต์ → ลูกค้าสแกนจ่ายพร้อมเพย์ → ระบบเครดิตค่าคอมเข้าบัญชีคุณอัตโนมัติ
+          </div>
         </div>
 
         {/* TABS */}

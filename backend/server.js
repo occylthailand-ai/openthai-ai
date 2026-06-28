@@ -887,6 +887,17 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
   });
 });
 
+// ─── POST /api/affiliate/click — นับคลิกลิงก์ ref (สำหรับ conversion rate) ────
+const affClickLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { success: false } });
+app.post('/api/affiliate/click', affClickLimiter, (req, res) => {
+  const ref = (req.body?.ref || req.query?.ref || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+  const aff = ref && affiliates.find(a => a.ref_code === ref);
+  if (!aff) return res.json({ success: false });
+  aff.clicks = (aff.clicks || 0) + 1;
+  saveAffiliate(aff).catch(() => {});
+  res.json({ success: true });
+});
+
 // ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
 app.get('/api/affiliate/list', (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
@@ -5945,6 +5956,22 @@ function grantEntitlement(email, plan, { source = 'payment', subscription_id = n
   return ent;
 }
 
+// เครดิตค่าคอมมิชชั่นให้ affiliate เมื่อมีการขายผ่าน ref link (รองรับทั้ง plan + quickpay)
+// เรียกได้จากทั้ง webhook และ status-poll — ป้องกันเครดิตซ้ำด้วย flag firstTime ฝั่งผู้เรียก
+function creditAffiliateSale(refCode, amountThb, { charge_id = null } = {}) {
+  if (!refCode || !(amountThb > 0)) return null;
+  const aff = affiliates.find(a => a.ref_code === refCode);
+  if (!aff) return null;
+  const commission = +(amountThb * (aff.commission_rate || 0.20)).toFixed(2);
+  aff.total_sales = (aff.total_sales || 0) + 1;
+  aff.total_earned = +((aff.total_earned || 0) + commission).toFixed(2);
+  aff.recent_sales = [{ amount_thb: amountThb, commission, charge_id, at: new Date().toISOString() }, ...(aff.recent_sales || [])].slice(0, 50);
+  saveAffiliate(aff).catch(e => console.warn('[affiliate] credit failed:', e.message));
+  addLog('info', 'Affiliate', `commission +${commission}฿ → ${refCode} (${aff.name})`);
+  webhooks.dispatch('affiliate.sale', { ref_code: refCode, amount_thb: amountThb, commission, charge_id }, null);
+  return { commission, ref_code: refCode };
+}
+
 // คืนสิทธิ์ปัจจุบัน (เช็ควันหมดอายุ) — ถ้าหมดอายุถือเป็น free
 function getEntitlement(email) {
   if (!email) return { plan: 'free', status: 'none' };
@@ -6128,26 +6155,29 @@ app.post('/api/quickpay/create', quickpayLimiter, async (req, res) => {
   const label = (req.body?.label || 'แพ็กเกจ Openthai.ai').toString().trim().slice(0, 80) || 'แพ็กเกจ Openthai.ai';
   const buyer = (req.body?.buyer || '').toString().trim().slice(0, 80);
   const buyerEmail = (req.body?.email || '').toString().trim().toLowerCase();
+  // ref affiliate — รับเฉพาะที่มีอยู่จริง เพื่อเครดิตคอมมิชชั่นตอนจ่ายสำเร็จ
+  const refRaw = (req.body?.ref || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+  const refCode = refRaw && affiliates.some(a => a.ref_code === refRaw) ? refRaw : null;
 
   // Mock mode — ยังไม่ตั้ง Omise (dev/staging) → คืน QR จำลอง ไม่ตัดเงินจริง
   if (!process.env.OMISE_SECRET_KEY) {
     const mock = { charge_id: `mock_qp_${Date.now()}`, status: 'pending', amount_thb: amount, qr_image_url: null, expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), promptpay_ref: 'MOCKREF-QP' };
     // email: null → ข้าม flow ปลดสิทธิ์ plan (quickpay ไม่ผูกกับ subscription plan)
-    payments.unshift({ ...mock, plan: null, method: 'promptpay', kind: 'quickpay', label, buyer, buyer_email: buyerEmail || null, email: null, paid_at: null, createdAt: new Date().toISOString() });
+    payments.unshift({ ...mock, plan: null, method: 'promptpay', kind: 'quickpay', label, buyer, buyer_email: buyerEmail || null, ref_code: refCode, email: null, paid_at: null, createdAt: new Date().toISOString() });
     savePayments(payments);
-    return res.json({ success: true, mock: true, ...mock, label, message: '⚠️ MOCK MODE — ยังไม่ตัดเงินจริง ตั้ง OMISE_SECRET_KEY ใน production เพื่อรับเงินจริง' });
+    return res.json({ success: true, mock: true, ...mock, label, ref_code: refCode, message: '⚠️ MOCK MODE — ยังไม่ตัดเงินจริง ตั้ง OMISE_SECRET_KEY ใน production เพื่อรับเงินจริง' });
   }
 
   try {
     const charge = await createPromptPayCharge({
       amount_thb: amount,
       description: `Openthai.ai QuickPay — ${label}`,
-      metadata: { kind: 'quickpay', label, buyer, email: buyerEmail || '' },
+      metadata: { kind: 'quickpay', label, buyer, email: buyerEmail || '', ref_code: refCode || '' },
     });
-    payments.unshift({ ...charge, plan: null, method: 'promptpay', kind: 'quickpay', label, buyer, buyer_email: buyerEmail || null, email: null, createdAt: new Date().toISOString() });
+    payments.unshift({ ...charge, plan: null, method: 'promptpay', kind: 'quickpay', label, buyer, buyer_email: buyerEmail || null, ref_code: refCode, email: null, createdAt: new Date().toISOString() });
     savePayments(payments);
-    addLog('info', 'QuickPay', `สร้าง QR ฿${amount} — ${label} (${charge.charge_id})`);
-    return res.json({ success: true, ...charge, label });
+    addLog('info', 'QuickPay', `สร้าง QR ฿${amount} — ${label}${refCode ? ` · ref:${refCode}` : ''} (${charge.charge_id})`);
+    return res.json({ success: true, ...charge, label, ref_code: refCode });
   } catch (e) {
     addLog('error', 'QuickPay', e.message);
     return res.status(500).json({ success: false, error: e.message });
@@ -6201,6 +6231,8 @@ app.get('/api/payment/status/:chargeId', async (req, res) => {
         grantEntitlement(rec.email, rec.plan, { source: rec.method || 'promptpay' });
         sendPaymentReceipt(rec.email, { plan: rec.plan, amount_thb: status.amount_thb, charge_id: req.params.chargeId, paid_at: status.paid_at, method: rec.method });
       }
+      // เครดิตค่าคอม affiliate (เฉพาะครั้งแรก — รองรับ quickpay ที่จ่ายผ่าน ref link)
+      if (firstTime) creditAffiliateSale(rec?.ref_code, status.amount_thb, { charge_id: req.params.chargeId });
     }
     // Enrich response with stored record so the client can render a full receipt
     res.json({
@@ -6311,19 +6343,9 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
         if (email && rec.plan) {
           grantEntitlement(email, rec.plan, { source: 'webhook' });
           sendPaymentReceipt(email, { plan: rec.plan, amount_thb: amountThb, charge_id: data.id, paid_at: data.paid_at, method: rec.method });
-          // อัปเดต affiliate total_earned ถ้าชำระผ่าน ref link
-          const refCode = data.metadata?.ref_code;
-          if (refCode) {
-            const aff = affiliates.find(a => a.ref_code === refCode);
-            if (aff) {
-              const commission = +(amountThb * (aff.commission_rate || 0.20)).toFixed(2);
-              aff.total_sales = (aff.total_sales || 0) + 1;
-              aff.total_earned = +((aff.total_earned || 0) + commission).toFixed(2);
-              saveAffiliate(aff).catch(e => console.warn('[affiliate] update earned failed:', e.message));
-              addLog('info', 'Affiliate', `commission +${commission}฿ → ${refCode} (${aff.name})`);
-            }
-          }
         }
+        // เครดิต affiliate ถ้าชำระผ่าน ref link (รองรับทั้ง plan + quickpay) — firstTime แล้วจาก !rec.paid_at
+        creditAffiliateSale(rec.ref_code || data.metadata?.ref_code, amountThb, { charge_id: data.id });
       }
       webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
     }
