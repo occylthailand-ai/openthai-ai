@@ -24,10 +24,30 @@ export default function ContentStudioPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState('');
+  const [catalog, setCatalog] = useState(null);   // สินค้าจริงจากคลัง (/api/shop/products)
+  const [catalogLoading, setCatalogLoading] = useState(false);
 
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(products)); }, [products]);
 
   const togglePlatform = (id) => setSel(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+
+  // ดึงสินค้าจริงจากคลัง (เพิ่มได้ที่ /admin → คลังสินค้า) มาสร้างแคปชั่น
+  const loadCatalog = async () => {
+    setCatalogLoading(true); setError('');
+    try {
+      const res = await fetch(apiUrl('/api/shop/products'));
+      const data = await res.json();
+      if (!data.success) throw new Error('โหลดคลังสินค้าไม่สำเร็จ');
+      setCatalog(data.products || []);
+    } catch (e) { setError(e.message); } finally { setCatalogLoading(false); }
+  };
+
+  // เลือกสินค้าจริง → เติมฟอร์ม + สร้างลิงก์ /pay (พร้อมเพย์) อัตโนมัติ
+  const pickCatalogProduct = (p) => {
+    const payLink = `${window.location.origin}/pay?amount=${encodeURIComponent(p.price || 0)}&label=${encodeURIComponent(p.name || '')}`;
+    setForm({ name: p.name || '', price: p.price || '', features: p.description || '', link: payLink, hashtags: '' });
+    setCaptions(null); setCatalog(null);
+  };
 
   const saveProduct = () => {
     if (!form.name.trim()) { setError('กรอกชื่อสินค้าก่อน'); return; }
@@ -67,6 +87,34 @@ export default function ContentStudioPage() {
       </div>
 
       <div style={{ maxWidth: '880px', margin: '0 auto', padding: '24px 20px', display: 'grid', gap: '20px' }}>
+
+        {/* ดึงสินค้าจริงจากคลัง */}
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 800 }}>🏭 สินค้าจริงจากคลัง</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>เพิ่มสินค้าได้ที่ <strong style={{ color: '#a5b4fc', cursor: 'pointer' }} onClick={() => navigate('/admin')}>/admin → คลังสินค้า</strong> แล้วดึงมาสร้างแคปชั่น + ลิงก์ /pay อัตโนมัติ</div>
+            </div>
+            <button onClick={loadCatalog} disabled={catalogLoading} style={{ padding: '10px 16px', borderRadius: '10px', border: '1px solid rgba(99,102,241,0.4)', background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              {catalogLoading ? '⏳ กำลังโหลด…' : '📦 ดึงสินค้าจริง'}
+            </button>
+          </div>
+          {catalog && (
+            <div style={{ marginTop: '14px', display: 'grid', gap: '8px' }}>
+              {catalog.length === 0 && <div style={{ fontSize: '13px', color: '#94a3b8' }}>ยังไม่มีสินค้าในคลัง — ไปเพิ่มที่ <strong style={{ color: '#a5b4fc', cursor: 'pointer' }} onClick={() => navigate('/admin')}>/admin</strong> ก่อน</div>}
+              {catalog.map(p => (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px' }}>
+                  {p.image_url && <img src={p.image_url} alt="" style={{ width: '40px', height: '40px', borderRadius: '8px', objectFit: 'cover' }} />}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}{p.price ? ` · ฿${Number(p.price).toLocaleString()}` : ''}</div>
+                    <div style={{ fontSize: '12px', color: p.in_stock ? '#6ee7b7' : '#fca5a5' }}>{p.in_stock ? `มีสต๊อก ${p.stock}` : 'หมดสต๊อก'}</div>
+                  </div>
+                  <button onClick={() => pickCatalogProduct(p)} style={{ padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.12)', color: '#6ee7b7', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>เลือก</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* ฟอร์มสินค้า */}
         <div style={card}>
