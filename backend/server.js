@@ -4975,10 +4975,15 @@ app.get('/api/system/readiness', (req, res) => {
   const has = (v) => !!process.env[v];
   const supabase = has('SUPABASE_URL') && has('SUPABASE_SERVICE_KEY');
   const omiseLive = has('OMISE_SECRET_KEY');
+  const omisePublic = has('OMISE_PUBLIC_KEY');
+  const omiseWebhook = has('OMISE_WEBHOOK_SECRET');
   const ledger = supabase ? 'supabase (ถาวร)' : 'file (ชั่วคราว)';
   const checks = {
     supabase:    { ok: supabase,  detail: supabase ? 'เก็บเครดิต/ผู้ผลิต/ออเดอร์ถาวร' : 'ยังใช้ไฟล์ชั่วคราว — ตั้ง SUPABASE_URL + SUPABASE_SERVICE_KEY' },
-    payments:    { ok: omiseLive, detail: omiseLive ? 'รับเงินจริง (Omise live)' : 'mock mode — ตั้ง OMISE_SECRET_KEY (+ PUBLIC) เพื่อรับเงินจริง' },
+    payments:    { ok: omiseLive, detail: omiseLive
+      ? `รับเงินจริง · SECRET_KEY ✅ · PUBLIC_KEY ${omisePublic ? '✅' : '⚠️ ขาด (จำเป็นเฉพาะจ่ายด้วยบัตร)'} · WEBHOOK_SECRET ${omiseWebhook ? '✅' : '⚠️ ขาด (/pay ยังยืนยันด้วย polling ได้ แต่ควรตั้งเป็น backup)'}`
+      : 'mock mode — ตั้ง OMISE_SECRET_KEY (+ OMISE_PUBLIC_KEY + OMISE_WEBHOOK_SECRET) เพื่อรับเงินจริง' },
+    payment_webhook: { ok: omiseLive && omiseWebhook, detail: !omiseLive ? 'รอตั้ง Omise ก่อน' : omiseWebhook ? 'ยืนยันการจ่ายผ่าน webhook ได้ (ตั้ง URL .../api/payment/webhook ใน Omise ด้วย)' : 'ยังไม่ตั้ง OMISE_WEBHOOK_SECRET — /pay ใช้ polling ยืนยันแทนได้ชั่วคราว' },
     admin_key:   { ok: has('ADMIN_KEY'), detail: has('ADMIN_KEY') ? 'ตั้งแล้ว' : (IS_VERCEL ? '⚠️ ยังไม่ตั้ง — admin จะถูกปฏิเสธบน production' : 'local ใช้ค่า default') },
     line_notify: { ok: has('LINE_NOTIFY_TOKEN'), detail: has('LINE_NOTIFY_TOKEN') ? 'แจ้งเตือนเข้า LINE ได้' : 'optional — ตั้งเพื่อรับแจ้งเตือน' },
     ai:          { ok: !!(anthropic || gemini), detail: anthropic ? 'Claude' : gemini ? 'Gemini' : '⚠️ ไม่มี AI key — ใช้ mock' },
