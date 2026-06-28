@@ -273,6 +273,38 @@ export default function AffiliateDashboard() {
               })()}
             </div>
 
+            {/* Sales by Source — เงินจริงมาจากช่องไหน */}
+            <div style={glass}>
+              <div style={{ fontWeight: 700, marginBottom: 16 }}>💰 ยอดขายตามช่องทาง</div>
+              {(() => {
+                const SRC = { tiktok: ['🎵 TikTok', '#fe2c55'], facebook: ['📘 Facebook', '#1877f2'], instagram: ['📸 Instagram', '#e1306c'], line: ['💚 LINE', '#06c755'], youtube: ['▶️ YouTube', '#ff0000'], shopee: ['🛍️ Shopee', '#ee4d2d'], lazada: ['🛒 Lazada', '#0f146d'], x: ['✖️ X', '#94a3b8'], direct: ['🔗 ตรง', '#6366f1'], other: ['🌐 อื่นๆ', '#64748b'] };
+                const sales = data.sales_by_source || {};
+                const earned = data.earned_by_source || {};
+                const entries = Object.entries(sales).sort((a, b) => (earned[b[0]] || 0) - (earned[a[0]] || 0));
+                const maxE = Math.max(1, ...entries.map(([k]) => earned[k] || 0));
+                if (entries.length === 0) return <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 14, textAlign: 'center', padding: '0 12px' }}>ยังไม่มียอดขาย — เมื่อมีคนซื้อผ่านลิงก์ติดตาม จะรู้ว่าเงินมาจากช่องไหน</div>;
+                return (
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {entries.map(([src, n]) => {
+                      const meta = SRC[src] || [src, '#64748b'];
+                      const e = earned[src] || 0;
+                      return (
+                        <div key={src}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
+                            <span>{meta[0]} <span style={{ color: '#64748b' }}>· {n} ดีล</span></span>
+                            <span style={{ color: '#10b981', fontWeight: 700 }}>฿{Number(e).toLocaleString()}</span>
+                          </div>
+                          <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${(e / maxE) * 100}%`, background: meta[1], borderRadius: 4, transition: 'width .4s' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
             {/* Tier Progress */}
             <div style={glass}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>

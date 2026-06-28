@@ -79,7 +79,7 @@ const QuickPayPage = () => {
       const res = await fetch(apiUrl('/api/quickpay/create'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount_thb: amt, label, buyer, ref }),
+        body: JSON.stringify({ amount_thb: amt, label, buyer, ref, source: searchParams.get('utm_source') || searchParams.get('source') || '' }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'สร้าง QR ไม่สำเร็จ');
