@@ -6119,6 +6119,41 @@ app.get('/api/payment/config', (req, res) => {
   });
 });
 
+// POST /api/quickpay/create — สร้าง PromptPay QR สำหรับขายแพ็กเกจ/สินค้าชิ้นเดียว
+// ยอดกำหนดเองได้ (default ฿1,000). ใช้สำหรับปิดการขายไว ๆ — สแกนจ่าย → เงินเข้า Omise/พร้อมเพย์
+// เช็คสถานะด้วย GET /api/payment/status/:chargeId (generic — ใช้ร่วมกับ flow plan ได้)
+const quickpayLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 20, message: { success: false, error: 'สร้าง QR บ่อยเกินไป กรุณารอสักครู่' } });
+app.post('/api/quickpay/create', quickpayLimiter, async (req, res) => {
+  const amount = Math.max(1, Math.min(100000, Math.round(Number(req.body?.amount_thb) || 1000)));
+  const label = (req.body?.label || 'แพ็กเกจ Openthai.ai').toString().trim().slice(0, 80) || 'แพ็กเกจ Openthai.ai';
+  const buyer = (req.body?.buyer || '').toString().trim().slice(0, 80);
+  const buyerEmail = (req.body?.email || '').toString().trim().toLowerCase();
+
+  // Mock mode — ยังไม่ตั้ง Omise (dev/staging) → คืน QR จำลอง ไม่ตัดเงินจริง
+  if (!process.env.OMISE_SECRET_KEY) {
+    const mock = { charge_id: `mock_qp_${Date.now()}`, status: 'pending', amount_thb: amount, qr_image_url: null, expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), promptpay_ref: 'MOCKREF-QP' };
+    // email: null → ข้าม flow ปลดสิทธิ์ plan (quickpay ไม่ผูกกับ subscription plan)
+    payments.unshift({ ...mock, plan: null, method: 'promptpay', kind: 'quickpay', label, buyer, buyer_email: buyerEmail || null, email: null, paid_at: null, createdAt: new Date().toISOString() });
+    savePayments(payments);
+    return res.json({ success: true, mock: true, ...mock, label, message: '⚠️ MOCK MODE — ยังไม่ตัดเงินจริง ตั้ง OMISE_SECRET_KEY ใน production เพื่อรับเงินจริง' });
+  }
+
+  try {
+    const charge = await createPromptPayCharge({
+      amount_thb: amount,
+      description: `Openthai.ai QuickPay — ${label}`,
+      metadata: { kind: 'quickpay', label, buyer, email: buyerEmail || '' },
+    });
+    payments.unshift({ ...charge, plan: null, method: 'promptpay', kind: 'quickpay', label, buyer, buyer_email: buyerEmail || null, email: null, createdAt: new Date().toISOString() });
+    savePayments(payments);
+    addLog('info', 'QuickPay', `สร้าง QR ฿${amount} — ${label} (${charge.charge_id})`);
+    return res.json({ success: true, ...charge, label });
+  } catch (e) {
+    addLog('error', 'QuickPay', e.message);
+    return res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // GET /api/payment/entitlement?email= — เช็คแผนที่ user มีสิทธิ์ใช้ตอนนี้
 app.get('/api/payment/entitlement', (req, res) => {
   const email = (req.query.email || '').trim();
