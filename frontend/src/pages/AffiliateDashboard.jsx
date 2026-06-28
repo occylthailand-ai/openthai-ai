@@ -196,6 +196,21 @@ export default function AffiliateDashboard() {
           <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 10, lineHeight: 1.6 }}>
             วิธีทำเงิน 24/7: แชร์ <strong style={{ color: '#fda4af' }}>คลิป TikTok</strong> + วาง <strong style={{ color: '#6ee7b7' }}>ลิงก์เงิน</strong> นี้ใน bio/คอมเมนต์ → ลูกค้าสแกนจ่ายพร้อมเพย์ → ระบบเครดิตค่าคอมเข้าบัญชีคุณอัตโนมัติ
           </div>
+
+          {/* ลิงก์ติดตามต่อแพลตฟอร์ม (UTM) — รู้ว่าเงินมาจากช่องไหน */}
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>🔗 ลิงก์ติดตามต่อแพลตฟอร์ม (รู้ว่าเงินมาจากช่องไหน) — กดเพื่อคัดลอก:</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[['tiktok', '🎵 TikTok'], ['facebook', '📘 Facebook'], ['instagram', '📸 Instagram'], ['line', '💚 LINE']].map(([src, label]) => {
+                const tracked = `${payLink}&utm_source=${src}&source=${src}`;
+                return (
+                  <button key={src} onClick={() => copy(tracked, `utm_${src}`)} style={{ ...smallBtn, fontSize: 12, background: copied === `utm_${src}` ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: copied === `utm_${src}` ? '#6ee7b7' : '#cbd5e1' }}>
+                    {copied === `utm_${src}` ? '✅ คัดลอก' : label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* TABS */}

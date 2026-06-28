@@ -33,9 +33,10 @@ const QuickPayPage = () => {
   // นับคลิกลิงก์ ref ครั้งเดียวต่อการเข้าหน้า (สำหรับ conversion rate ของ affiliate)
   useEffect(() => {
     if (!ref) return;
+    const source = searchParams.get('utm_source') || searchParams.get('source') || '';
     fetch(apiUrl('/api/affiliate/click'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ref }),
+      body: JSON.stringify({ ref, source }),
     }).catch(() => {});
   }, [ref]);
 

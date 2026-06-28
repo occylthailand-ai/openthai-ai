@@ -898,6 +898,7 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
       pending_payout:  (aff.total_earned   || 0) - (aff.paid_out || 0),
       paid_out:        aff.paid_out        || 0,
       clicks:          aff.clicks          || 0,
+      clicks_by_source: aff.clicks_by_source || {},
       conversions:     aff.total_sales     || 0,
       conversion_rate: aff.clicks > 0 ? +((aff.total_sales / aff.clicks) * 100).toFixed(1) : 0,
       monthly:         aff.monthly         || [],
@@ -912,13 +913,39 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
 
 // ─── POST /api/affiliate/click — นับคลิกลิงก์ ref (สำหรับ conversion rate) ────
 const affClickLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { success: false } });
+// ช่องทางที่รองรับสำหรับ attribution
+const TRACK_SOURCES = ['tiktok', 'facebook', 'instagram', 'line', 'youtube', 'x', 'shopee', 'lazada', 'direct'];
+const cleanSource = (s) => { const v = String(s || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 20); return TRACK_SOURCES.includes(v) ? v : (v ? 'other' : 'direct'); };
+
 app.post('/api/affiliate/click', affClickLimiter, (req, res) => {
   const ref = (req.body?.ref || req.query?.ref || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   const aff = ref && affiliates.find(a => a.ref_code === ref);
   if (!aff) return res.json({ success: false });
   aff.clicks = (aff.clicks || 0) + 1;
+  // attribution ตามแหล่งที่มา (utm_source) — รู้ว่าคลิกมาจากแพลตฟอร์มไหน
+  const src = cleanSource(req.body?.source || req.query?.source);
+  aff.clicks_by_source = aff.clicks_by_source || {};
+  aff.clicks_by_source[src] = (aff.clicks_by_source[src] || 0) + 1;
   saveAffiliate(aff).catch(() => {});
   res.json({ success: true });
+});
+
+// POST /api/track/link — สร้างลิงก์ติดตาม (UTM + ref) — รู้ว่าเงินมาจากแพลตฟอร์ม/แคมเปญไหน
+app.post('/api/track/link', (req, res) => {
+  let base = String(req.body?.url || '').trim().slice(0, 500);
+  if (!base) return res.status(400).json({ success: false, error: 'ต้องการ url ปลายทาง' });
+  if (!/^https?:\/\//i.test(base)) base = 'https://' + base;
+  let u;
+  try { u = new URL(base); } catch { return res.status(400).json({ success: false, error: 'url ไม่ถูกต้อง' }); }
+  const source = cleanSource(req.body?.source);
+  const campaign = String(req.body?.campaign || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) || 'launch';
+  const ref = String(req.body?.ref || '').replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+  u.searchParams.set('utm_source', source);
+  u.searchParams.set('utm_medium', 'social');
+  u.searchParams.set('utm_campaign', campaign);
+  u.searchParams.set('source', source);          // ให้หน้าเว็บส่งต่อเข้า click attribution ได้
+  if (ref) { u.searchParams.set('ref', ref); }
+  res.json({ success: true, link: u.toString(), source, campaign, ref: ref || null });
 });
 
 // ─── GET /api/affiliate/leaderboard — อันดับพันธมิตร (public · ปิดบังชื่อ) ──────
