@@ -41,6 +41,7 @@ const PaymentPage = lazy(() => import('./pages/PaymentPage'));
 const QuickPayPage = lazy(() => import('./pages/QuickPayPage'));
 const EarnHubPage = lazy(() => import('./pages/EarnHubPage'));
 const AffiliateProgramsPage = lazy(() => import('./pages/AffiliateProgramsPage'));
+const ContentStudioPage = lazy(() => import('./pages/ContentStudioPage'));
 const CorporateDashboard = lazy(() => import('./pages/corporate/CorporateDashboard'));
 const InvestorRelationsPage = lazy(() => import('./pages/corporate/InvestorRelationsPage'));
 const CompliancePage = lazy(() => import('./pages/corporate/CompliancePage'));
@@ -193,6 +194,8 @@ function App() {
             <Route path="/income" element={<EarnHubPage />} />
             <Route path="/affiliate-programs" element={<AffiliateProgramsPage />} />
             <Route path="/programs" element={<AffiliateProgramsPage />} />
+            <Route path="/content-studio" element={<ContentStudioPage />} />
+            <Route path="/captions" element={<ContentStudioPage />} />
             {/* Corporate System — Public Company */}
             <Route path="/corporate"             element={isAuthenticated ? <CorporateDashboard />    : <Navigate to="/login" />} />
             <Route path="/corporate/board"       element={isAuthenticated ? <BoardPage />             : <Navigate to="/login" />} />

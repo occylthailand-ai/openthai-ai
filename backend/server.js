@@ -1344,6 +1344,44 @@ app.post('/api/skills/hashtag', generateLimiter, async (req, res) => {
   });
 });
 
+// POST /api/captions/generate — สร้างแคปชั่นขายต่อแพลตฟอร์ม (human-in-the-loop)
+// คืนข้อความให้ผู้ใช้ "ก๊อปไปโพสต์เอง" — ไม่โพสต์อัตโนมัติ (ไม่ละเมิด ToS ของแพลตฟอร์ม)
+const HOOKS = ['หยุดเลื่อนก่อน!', 'ของดีบอกต่อ', 'ส่งตรงจากผู้ผลิต', 'รีวิวจริงไม่อวย', 'ไอเทมที่คนตามหา'];
+function buildCaption(platform, p, hook) {
+  const name = p.name || 'สินค้า';
+  const price = p.price ? `฿${Number(p.price).toLocaleString()}` : '';
+  const feat = p.features || '';
+  const link = p.link || '';
+  const tags = p.hashtags || `#${String(name).replace(/\s+/g, '')} #ของดีบอกต่อ #รีวิวสินค้า`;
+  switch (platform) {
+    case 'tiktok':
+      return `🔥 ${hook} 🔥\n📌 ${name}${price ? ` — ${price}` : ''}\n${feat ? `👉 ${feat}\n` : ''}สนใจดูลิงก์ในไบโอ 🛒\n${tags} #TikTokป้ายยา #fyp`;
+    case 'facebook':
+      return `📢 ${hook}\n${name} มารีวิวให้ดูกันจริงๆ${feat ? ` — ${feat}` : ''}\n${price ? `ราคา ${price} ` : ''}ใครสนใจทักแชทหรือดูพิกัดในคอมเมนต์แรกได้เลยนะครับ 👇${link ? `\n${link}` : ''}`;
+    case 'instagram':
+      return `${hook} ✨\n${name}${feat ? `\n${feat}` : ''}${price ? `\n💰 ${price}` : ''}\nDM มาได้เลยถ้าสนใจ 💌\n${tags}`;
+    case 'line':
+      return `💚 สิทธิพิเศษเฉพาะเพื่อนใน LINE 💚\n🎁 ${name}${price ? ` เพียง ${price}` : ''}\n${feat ? `✅ ${feat}\n` : ''}🛒 สั่งซื้อ/สอบถามได้เลย${link ? `: ${link}` : ' ในแชทนี้'}`;
+    default:
+      return `${name}${price ? ` ${price}` : ''}${link ? ` ${link}` : ''}`;
+  }
+}
+app.post('/api/captions/generate', generateLimiter, (req, res) => {
+  const { name, price, features, link, hashtags } = req.body || {};
+  if (!name?.trim()) return res.status(400).json({ success: false, error: 'ต้องการชื่อสินค้า (name)' });
+  const want = Array.isArray(req.body?.platforms) && req.body.platforms.length
+    ? req.body.platforms.filter(pl => ['tiktok', 'facebook', 'instagram', 'line'].includes(pl))
+    : ['tiktok', 'facebook', 'instagram', 'line'];
+  const product = { name: String(name).slice(0, 120), price, features: String(features || '').slice(0, 300), link: String(link || '').slice(0, 300), hashtags: String(hashtags || '').slice(0, 200) };
+  const captions = {};
+  want.forEach((pl, i) => { captions[pl] = buildCaption(pl, product, HOOKS[i % HOOKS.length]); });
+  res.json({
+    success: true,
+    captions,
+    note: 'ก๊อปแคปชั่นไปโพสต์เองในแต่ละแอป — ระบบไม่โพสต์อัตโนมัติ (ป้องกันบัญชีโดนแบนจากการละเมิด ToS)',
+  });
+});
+
 // S12 · POST /api/skills/seo — SEO Thai Keyword Optimizer
 app.post('/api/skills/seo', generateLimiter, async (req, res) => {
   const { product, category, platform } = req.body || {};
