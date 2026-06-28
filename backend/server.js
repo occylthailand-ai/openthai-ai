@@ -7196,7 +7196,8 @@ app.get('/api/scheduler/due', (req, res) => {
 // POST /api/scheduler/process — ประมวลผลโพสต์ที่ถึงเวลา (เรียกเป็นรอบ/โดย uptime pinger)
 // LINE OA (ช่องที่คุณเป็นเจ้าของ + มี token) → broadcast อัตโนมัติ (ถูกกฎ)
 // แพลตฟอร์มอื่น → mark 'ready' (ถึงเวลาโพสต์ — รอคุณกดโพสต์เอง, ToS ห้ามบอทโพสต์)
-app.post('/api/scheduler/process', async (req, res) => {
+// รองรับทั้ง GET (Vercel Cron / uptime pinger) และ POST (เรียกจากหน้าเว็บ)
+async function processScheduler(req, res) {
   const now = Date.now();
   const due = schedulerStore.posts.filter(p => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
   const result = { broadcast: [], ready: [], failed: [] };
@@ -7214,9 +7215,11 @@ app.post('/api/scheduler/process', async (req, res) => {
       result.ready.push(post.id);
     }
   }
-  if (due.length) saveScheduler();
-  res.json({ ok: true, processed: due.length, ...result });
-});
+  if (due.length) { saveScheduler(); addLog('info', 'Scheduler', `process: broadcast ${result.broadcast.length} · ready ${result.ready.length} · failed ${result.failed.length}`); }
+  res.json({ ok: true, processed: due.length, ...result, ran_at: new Date().toISOString() });
+}
+app.post('/api/scheduler/process', processScheduler);
+app.get('/api/scheduler/process', processScheduler);  // Vercel Cron ยิงด้วย GET
 
 app.get('/api/scheduler/list', (req, res) => {
   const { platform, status } = req.query;
