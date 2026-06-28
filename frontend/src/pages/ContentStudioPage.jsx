@@ -21,6 +21,9 @@ export default function ContentStudioPage() {
   const [form, setForm] = useState({ name: '', price: '', features: '', link: '', hashtags: '' });
   const [sel, setSel] = useState(PLATFORMS.map(p => p.id));
   const [lang, setLang] = useState('th');
+  const [schedAt, setSchedAt] = useState('');     // เวลาตั้งโพสต์ (datetime-local)
+  const [queuing, setQueuing] = useState(false);
+  const [queuedMsg, setQueuedMsg] = useState('');
   const [captions, setCaptions] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -74,6 +77,26 @@ export default function ContentStudioPage() {
   };
 
   const copy = (text, key) => { navigator.clipboard.writeText(text).catch(() => {}); setCopied(key); setTimeout(() => setCopied(''), 2000); };
+
+  // ส่งแคปชั่นที่สร้างแล้วเข้าคิว Scheduler (ตั้งเวลา) — cron จะประมวลผล:
+  // LINE OA → broadcast อัตโนมัติ · ช่องอื่น → เตือนให้กดโพสต์เอง (ToS-compliant)
+  const queueAll = async () => {
+    if (!captions || !schedAt) { setQueuedMsg('เลือกเวลาตั้งโพสต์ก่อน'); return; }
+    setQueuing(true); setQueuedMsg('');
+    const scheduled_at = new Date(schedAt).toISOString();
+    try {
+      const entries = Object.entries(captions);
+      let ok = 0;
+      for (const [platform, content] of entries) {
+        const res = await fetch(apiUrl('/api/scheduler/create'), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform, content, scheduled_at, language: lang, audience: 'consumer' }),
+        });
+        if (res.ok) ok++;
+      }
+      setQueuedMsg(`✅ ส่งเข้าคิวแล้ว ${ok}/${entries.length} แพลตฟอร์ม — ดูที่หน้า Scheduler`);
+    } catch (e) { setQueuedMsg('ส่งเข้าคิวไม่สำเร็จ'); } finally { setQueuing(false); }
+  };
 
   const bg = 'linear-gradient(135deg, #0f0f1a 0%, #1a0a2e 50%, #0a1628 100%)';
   const card = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '20px' };
@@ -171,6 +194,22 @@ export default function ContentStudioPage() {
           <div style={{ display: 'grid', gap: '12px' }}>
             <div style={{ fontSize: '12px', color: '#6ee7b7', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px', padding: '10px 14px' }}>
               ✅ ก๊อปแคปชั่นไปโพสต์เองในแต่ละแอป — ระบบไม่โพสต์อัตโนมัติ (ป้องกันบัญชีโดนแบนจากการละเมิด ToS)
+            </div>
+
+            {/* ส่งเข้าคิว Scheduler (ตั้งเวลา) */}
+            <div style={{ ...card, border: '1px solid rgba(99,102,241,0.3)' }}>
+              <div style={{ fontSize: '14px', fontWeight: 800, marginBottom: '4px' }}>⏰ ตั้งเวลาเข้าคิว Scheduler</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '10px' }}>ถึงเวลาแล้ว LINE OA จะ broadcast อัตโนมัติ · ช่องอื่นระบบจะเตือนให้คุณกดโพสต์</div>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <input type="datetime-local" value={schedAt} onChange={e => setSchedAt(e.target.value)}
+                  style={{ flex: 1, minWidth: '200px', padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '14px', outline: 'none', colorScheme: 'dark' }} />
+                <button onClick={queueAll} disabled={queuing || !schedAt}
+                  style={{ padding: '11px 20px', borderRadius: '10px', border: 'none', background: (queuing || !schedAt) ? '#374151' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontWeight: 800, cursor: (queuing || !schedAt) ? 'not-allowed' : 'pointer' }}>
+                  {queuing ? '⏳' : '📥 ส่งเข้าคิวทุกแพลตฟอร์ม'}
+                </button>
+                <button onClick={() => navigate('/scheduler')} style={{ padding: '11px 16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#cbd5e1', fontWeight: 700, cursor: 'pointer' }}>เปิด Scheduler →</button>
+              </div>
+              {queuedMsg && <div style={{ fontSize: '13px', color: queuedMsg.startsWith('✅') ? '#6ee7b7' : '#fca5a5', marginTop: '10px' }}>{queuedMsg}</div>}
             </div>
             {PLATFORMS.filter(p => captions[p.id]).map(p => (
               <div key={p.id} style={card}>
