@@ -40,6 +40,7 @@ const VideoGeneratorPage = lazy(() => import('./pages/VideoGeneratorPage'));
 const PaymentPage = lazy(() => import('./pages/PaymentPage'));
 const QuickPayPage = lazy(() => import('./pages/QuickPayPage'));
 const EarnHubPage = lazy(() => import('./pages/EarnHubPage'));
+const AffiliateProgramsPage = lazy(() => import('./pages/AffiliateProgramsPage'));
 const CorporateDashboard = lazy(() => import('./pages/corporate/CorporateDashboard'));
 const InvestorRelationsPage = lazy(() => import('./pages/corporate/InvestorRelationsPage'));
 const CompliancePage = lazy(() => import('./pages/corporate/CompliancePage'));
@@ -190,6 +191,8 @@ function App() {
             <Route path="/quickpay" element={<QuickPayPage />} />
             <Route path="/earn" element={<EarnHubPage />} />
             <Route path="/income" element={<EarnHubPage />} />
+            <Route path="/affiliate-programs" element={<AffiliateProgramsPage />} />
+            <Route path="/programs" element={<AffiliateProgramsPage />} />
             {/* Corporate System — Public Company */}
             <Route path="/corporate"             element={isAuthenticated ? <CorporateDashboard />    : <Navigate to="/login" />} />
             <Route path="/corporate/board"       element={isAuthenticated ? <BoardPage />             : <Navigate to="/login" />} />

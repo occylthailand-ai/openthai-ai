@@ -83,6 +83,7 @@ export default function EarnHubPage() {
           <div style={{ fontSize: '16px', fontWeight: 800, marginBottom: '6px' }}>🤝 อยากให้คนอื่นช่วยขาย?</div>
           <div style={{ fontSize: '14px', color: '#cbd5e1', marginBottom: '14px', lineHeight: 1.6 }}>สมัครเป็นพันธมิตร รับค่าคอม <strong style={{ color: '#6ee7b7' }}>20–40%</strong> ต่อดีล · ได้ลิงก์เงิน + คลิป TikTok ไปแชร์ · ระบบเครดิตค่าคอมอัตโนมัติ</div>
           <button onClick={() => navigate('/affiliate')} style={btnGhost}>สมัครพันธมิตร / เปิด Dashboard →</button>
+          <button onClick={() => navigate(`/affiliate-programs${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`)} style={{ ...btnGhost, marginTop: '10px' }}>🔗 ดูโปรแกรม Affiliate ทั้งหมด (50+) →</button>
         </div>
 
         {/* SHARE THIS ENVIRONMENT */}
