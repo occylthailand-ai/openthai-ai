@@ -102,9 +102,10 @@ const PORT = process.env.PORT || 8000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 app.use(cors({ origin: true, credentials: true })); // allow all origins (file://, localhost, Vercel)
-// Skip global JSON parser for LINE webhook — needs raw buffer for HMAC signature verification
+// Skip global JSON parser for signed webhooks — ต้องใช้ raw buffer เพื่อตรวจลายเซ็น HMAC
+// (LINE + Omise payment) ไม่งั้น express.json จะกิน body ก่อน → ตรวจลายเซ็นไม่ผ่านตลอด
 app.use((req, res, next) => {
-  if (req.path === '/api/line/webhook') return next();
+  if (req.path === '/api/line/webhook' || req.path === '/api/payment/webhook') return next();
   express.json({ limit: '50kb' })(req, res, next);
 });
 // image endpoint uses its own larger limit (see /api/analyze-image)
