@@ -45,7 +45,13 @@ export default function AdminPage() {
 
   const adminKey = () => sessionStorage.getItem('admin_key') || ADMIN_KEY;
   const [affList, setAffList] = useState([]);   // รายชื่อ affiliate จริง
+  const [wdList, setWdList] = useState([]);     // คำขอถอนเงิน
   const apiErr = (label) => (e) => console.error(`[admin] ${label}:`, e?.message || e);
+  const loadWithdrawals = () => fetch(apiUrl('/api/affiliate/withdrawals/admin'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setWdList(d.withdrawals); }).catch(apiErr('withdrawals'));
+  const wdAction = async (id, action) => {
+    await fetch(apiUrl(`/api/affiliate/withdrawals/admin/${id}`), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ action }) }).catch(() => {});
+    loadWithdrawals(); loadAffiliates();
+  };
   const loadProducers = () => fetch(apiUrl('/api/producers/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setProds(d.producers); else console.warn('[admin] producers:', d.message); }).catch(apiErr('producers'));
   const loadOrders = () => fetch(apiUrl('/api/orders/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setOrds(d.orders); else console.warn('[admin] orders:', d.message); }).catch(apiErr('orders'));
   const loadLeads = () => fetch(apiUrl('/api/leads/admin/search'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setLeads(d); else console.warn('[admin] leads:', d.message); }).catch(apiErr('leads'));
@@ -55,7 +61,7 @@ export default function AdminPage() {
     fetch(apiUrl('/api/inventory/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInvSum(d); }).catch(apiErr('inv-summary'));
     fetch(apiUrl('/api/inventory/admin/sales-report'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setSalesRep(d); }).catch(apiErr('inv-sales'));
   };
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveProduct = async (data) => {
     const r = await fetch(apiUrl('/api/inventory/admin/upsert'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(data) }).then(x => x.json());
@@ -705,6 +711,51 @@ export default function AdminPage() {
                 {affList.length === 0 ? 'ยังไม่มี Affiliate สมัคร' : 'ไม่พบผลลัพธ์'}
               </div>
             )}
+
+            {/* คำขอถอนเงิน */}
+            <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                <div style={{ fontWeight: 700 }}>💸 คำขอถอนเงิน ({wdList.filter(w => w.status === 'pending').length} รออนุมัติ / {wdList.length} ทั้งหมด)</div>
+                <button onClick={loadWithdrawals} style={{ ...tabBtn, padding: '6px 14px', fontSize: 12 }}>🔄 รีเฟรช</button>
+              </div>
+              {wdList.length > 0 ? (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ color: '#475569', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                        {['Ref','ชื่อ','ยอด','พร้อมเพย์','สถานะ','จัดการ'].map((h) => <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 11 }}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {wdList.map((w) => {
+                        const stColor = { pending: '#f59e0b', approved: '#6366f1', paid: '#10b981', rejected: '#ef4444' }[w.status] || '#64748b';
+                        return (
+                          <tr key={w.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#a5b4fc' }}>{w.ref_code}</td>
+                            <td style={{ padding: '10px 12px' }}>{w.name}</td>
+                            <td style={{ padding: '10px 12px', color: '#10b981', fontWeight: 700 }}>฿{Number(w.amount).toLocaleString()}</td>
+                            <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#cbd5e1' }}>{w.promptpay}</td>
+                            <td style={{ padding: '10px 12px' }}><span style={{ color: stColor, fontSize: 11 }}>● {w.status}</span></td>
+                            <td style={{ padding: '10px 12px' }}>
+                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                {w.status === 'pending' && <>
+                                  <button onClick={() => wdAction(w.id, 'approve')} style={miniBtn('#6366f1')}>อนุมัติ</button>
+                                  <button onClick={() => wdAction(w.id, 'reject')} style={miniBtn('#ef4444')}>ปฏิเสธ</button>
+                                </>}
+                                {w.status === 'approved' && <button onClick={() => wdAction(w.id, 'paid')} style={miniBtn('#10b981')}>✓ จ่ายแล้ว</button>}
+                                {(w.status === 'paid' || w.status === 'rejected') && <span style={{ fontSize: 11, color: '#475569' }}>—</span>}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ padding: '24px 0', textAlign: 'center', color: '#475569', fontSize: 13 }}>ยังไม่มีคำขอถอนเงิน</div>
+              )}
+            </div>
           </div>
         )}
 
