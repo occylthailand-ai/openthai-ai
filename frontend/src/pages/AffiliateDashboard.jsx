@@ -245,6 +245,34 @@ export default function AffiliateDashboard() {
               )}
             </div>
 
+            {/* Clicks by Source — รู้ว่าคลิกมาจากช่องไหน */}
+            <div style={glass}>
+              <div style={{ fontWeight: 700, marginBottom: 16 }}>🔗 คลิกตามช่องทาง</div>
+              {(() => {
+                const SRC = { tiktok: ['🎵 TikTok', '#fe2c55'], facebook: ['📘 Facebook', '#1877f2'], instagram: ['📸 Instagram', '#e1306c'], line: ['💚 LINE', '#06c755'], youtube: ['▶️ YouTube', '#ff0000'], shopee: ['🛍️ Shopee', '#ee4d2d'], lazada: ['🛒 Lazada', '#0f146d'], x: ['✖️ X', '#94a3b8'], direct: ['🔗 ตรง', '#6366f1'], other: ['🌐 อื่นๆ', '#64748b'] };
+                const entries = Object.entries(data.clicks_by_source || {}).sort((a, b) => b[1] - a[1]);
+                const max = Math.max(1, ...entries.map(([, v]) => v));
+                if (entries.length === 0) return <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 14, textAlign: 'center' }}>ยังไม่มีข้อมูลคลิก — แชร์ลิงก์ติดตามต่อแพลตฟอร์มเพื่อดูว่าช่องไหนเวิร์ค</div>;
+                return (
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    {entries.map(([src, n]) => {
+                      const meta = SRC[src] || [src, '#64748b'];
+                      return (
+                        <div key={src}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
+                            <span>{meta[0]}</span><span style={{ color: meta[1], fontWeight: 700 }}>{n} คลิก</span>
+                          </div>
+                          <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${(n / max) * 100}%`, background: meta[1], borderRadius: 4, transition: 'width .4s' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
             {/* Tier Progress */}
             <div style={glass}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
