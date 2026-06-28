@@ -17,6 +17,7 @@ function formatThaiDateTime(iso) {
 }
 
 const PRESET_AMOUNTS = [199, 499, 1000, 1990];
+const TIKTOK_DEMO = 'https://vt.tiktok.com/ZSCB66nhQ/';
 
 const QuickPayPage = () => {
   const navigate = useNavigate();
@@ -103,6 +104,10 @@ const QuickPayPage = () => {
                 <span style={{ fontSize: '20px', fontWeight: 400 }}>฿</span>{Number(amount).toLocaleString()}
               </div>
               <div style={{ fontSize: '14px', color: '#d0d0e0' }}>{label}</div>
+              <a href={TIKTOK_DEMO} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '12px', padding: '8px 16px', borderRadius: '20px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: '13px', fontWeight: 600, textDecoration: 'none' }}>
+                🎬 ดูคลิปรีวิวบน TikTok
+              </a>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
