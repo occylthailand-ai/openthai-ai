@@ -120,6 +120,8 @@ export default function EarnHubPage() {
           <button onClick={() => navigate(`/affiliate-programs${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`)} style={{ ...btnGhost, marginTop: '10px' }}>🔗 ดูโปรแกรม Affiliate ทั้งหมด (50+) →</button>
           <button onClick={() => navigate('/content-studio')} style={{ ...btnGhost, marginTop: '10px' }}>✍️ Content Studio — สร้างแคปชั่นขาย →</button>
           <button onClick={() => navigate('/leaderboard')} style={{ ...btnGhost, marginTop: '10px' }}>🏆 อันดับพันธมิตร (Leaderboard) →</button>
+          <button onClick={() => navigate('/council')} style={{ ...btnGhost, marginTop: '10px' }}>🏛️ OpenThaiAi Council — AI 3 เจ้าวิเคราะห์ →</button>
+          <button onClick={() => navigate('/router')} style={{ ...btnGhost, marginTop: '10px' }}>🧠 Smart Model Router — ต้นทุน AI →</button>
         </div>
 
         {/* SHARE THIS ENVIRONMENT */}

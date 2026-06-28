@@ -39,11 +39,33 @@ export default function AffiliateDashboard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
+  const [pp, setPp] = useState('');           // พร้อมเพย์สำหรับถอน
+  const [wd, setWd] = useState(null);         // { withdrawals, pending_balance, ... }
+  const [wdBusy, setWdBusy] = useState(false);
 
   // ถ้ามี ref ใน URL โหลดอัตโนมัติ
   useEffect(() => {
     if (refFromUrl) loadDashboard(refFromUrl);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadWithdrawals = (code) => {
+    fetch(apiUrl(`/api/affiliate/withdrawals?ref_code=${encodeURIComponent(code)}`))
+      .then(r => r.json()).then(d => { if (d.success) setWd(d); }).catch(() => {});
+  };
+  const requestWithdraw = async () => {
+    if (!data) return;
+    setWdBusy(true);
+    try {
+      const res = await fetch(apiUrl('/api/affiliate/withdraw'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref_code: data.ref_code, promptpay: pp }),
+      });
+      const d = await res.json();
+      if (!res.ok || !d.success) throw new Error(d.error || 'ขอถอนไม่สำเร็จ');
+      toast.success('ส่งคำขอถอนแล้ว รออนุมัติ');
+      loadWithdrawals(data.ref_code);
+    } catch (e) { toast.error(e.message); } finally { setWdBusy(false); }
+  };
 
   const loadDashboard = async (code) => {
     if (!code.trim()) { setError('กรุณากรอก Ref Code'); toast.warn('กรุณากรอก Ref Code'); return; }
@@ -53,6 +75,7 @@ export default function AffiliateDashboard() {
       const json = await res.json();
       if (json.success) {
         setData(json.data);
+        loadWithdrawals(json.data.ref_code);
       } else {
         setError(json.message || 'ไม่พบ Ref Code นี้ในระบบ');
       }
@@ -296,11 +319,39 @@ export default function AffiliateDashboard() {
                   <div style={{ fontSize: 36, fontWeight: 900, color: '#6366f1' }}>฿{data.total_earned.toLocaleString()}</div>
                 </div>
               </div>
-              <div style={{ fontSize: 14, color: '#94a3b8', lineHeight: 1.8 }}>
-                📅 <strong style={{ color: '#f8fafc' }}>จ่ายทุกวันจันทร์</strong> ผ่าน PromptPay หรือ Bank Transfer<br />
-                💳 ขั้นต่ำ ฿100 ต่อครั้ง<br />
-                ⏱ ยอดขายจะ confirm ภายใน 3 วัน<br />
-                📩 แจ้งช่องทางรับเงินได้ที่ <a href="mailto:affiliate@openthai.ai" style={{ color: '#6366f1' }}>affiliate@openthai.ai</a>
+              {/* ฟอร์มขอถอน */}
+              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: '#cbd5e1', marginBottom: 10, fontWeight: 700 }}>📤 ขอถอนเข้าพร้อมเพย์ (ขั้นต่ำ ฿{100})</div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <input value={pp} onChange={e => setPp(e.target.value.replace(/[^0-9]/g, '').slice(0, 13))} inputMode="numeric"
+                    placeholder="เบอร์พร้อมเพย์ 10 หลัก หรือเลขบัตร 13 หลัก"
+                    style={{ flex: 1, minWidth: 220, padding: '12px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: 14, outline: 'none' }} />
+                  <button onClick={requestWithdraw} disabled={wdBusy || (wd?.pending_balance ?? data.pending_payout) < 100}
+                    style={{ padding: '12px 22px', borderRadius: 10, border: 'none', background: (wdBusy || (wd?.pending_balance ?? data.pending_payout) < 100) ? '#374151' : 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>
+                    {wdBusy ? '⏳' : `ถอน ฿${(wd?.pending_balance ?? data.pending_payout).toLocaleString()}`}
+                  </button>
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>ถอนได้: <strong style={{ color: '#6ee7b7' }}>฿{(wd?.pending_balance ?? data.pending_payout).toLocaleString()}</strong> · จ่ายแล้วสะสม ฿{(wd?.paid_out ?? 0).toLocaleString()}</div>
+              </div>
+
+              {/* ประวัติคำขอถอน */}
+              {wd?.withdrawals?.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 8, fontWeight: 700 }}>ประวัติการถอน</div>
+                  {wd.withdrawals.map(w => {
+                    const st = { pending: ['⏳ รออนุมัติ', '#f59e0b'], approved: ['✅ อนุมัติแล้ว', '#6366f1'], paid: ['💸 จ่ายแล้ว', '#10b981'], rejected: ['❌ ปฏิเสธ', '#ef4444'] }[w.status] || [w.status, '#94a3b8'];
+                    return (
+                      <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, marginBottom: 6, fontSize: 13 }}>
+                        <span>฿{w.amount.toLocaleString()} → {w.promptpay}</span>
+                        <span style={{ color: st[1], fontWeight: 700 }}>{st[0]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.8, marginTop: 14 }}>
+                💳 ขั้นต่ำ ฿100 · ⏱ ยอดขาย confirm ภายใน 3 วัน · แอดมินอนุมัติแล้วโอนเข้าพร้อมเพย์
               </div>
             </div>
           </div>

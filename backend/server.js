@@ -792,6 +792,22 @@ async function saveAffiliate(record) {
   }
 }
 
+// ─── Withdrawals store (ไฟล์) — คำขอถอนค่าคอมพันธมิตร ────────────────────────
+const WD_FILE = join(WRITE_DATA_DIR, 'withdrawals.json');
+let withdrawals = [];
+try { if (existsSync(WD_FILE)) withdrawals = JSON.parse(readFileSync(WD_FILE, 'utf8')); } catch (_) {}
+function saveWithdrawals() {
+  try {
+    const dir = WD_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(WD_FILE, JSON.stringify(withdrawals, null, 2), 'utf8');
+  } catch (e) { console.error('[withdrawals] save error:', e.message); }
+}
+const WD_MIN = 100;  // ยอดถอนขั้นต่ำ (บาท)
+// ยอดที่ "จองไว้" = คำขอถอนที่ยังไม่จบ (pending/approved) — กันถอนซ้ำเกินยอดจริง
+const reservedFor = (ref) => withdrawals.filter(w => w.ref_code === ref && ['pending', 'approved'].includes(w.status)).reduce((s, w) => s + (w.amount || 0), 0);
+const affPending = (a) => +((a.total_earned || 0) - (a.paid_out || 0) - reservedFor(a.ref_code)).toFixed(2);
+
 // ─── POST /api/affiliate/apply — รับสมัคร Affiliate ──────────────────────────
 
 app.post('/api/affiliate/apply', affiliateLimiter, async (req, res) => {
@@ -936,6 +952,72 @@ app.get('/api/affiliate/leaderboard', (req, res) => {
     earned: +(t.earned + (a.total_earned || 0)).toFixed(2),
   }), { affiliates: 0, sales: 0, earned: 0 });
   res.json({ success: true, leaderboard: ranked, totals, ts: new Date().toISOString() });
+});
+
+// ─── POST /api/affiliate/withdraw — พันธมิตรขอถอนค่าคอมเข้าพร้อมเพย์ ───────────
+const withdrawLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { success: false, error: 'ขอถอนบ่อยเกินไป กรุณารอ' } });
+app.post('/api/affiliate/withdraw', withdrawLimiter, (req, res) => {
+  const ref = (req.body?.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+  const promptpay = (req.body?.promptpay || '').toString().replace(/[^0-9]/g, '').slice(0, 13);
+  const aff = ref && affiliates.find(a => a.ref_code === ref);
+  if (!aff) return res.status(404).json({ success: false, error: 'ไม่พบพันธมิตรนี้' });
+  if (!/^[0-9]{10}$|^[0-9]{13}$/.test(promptpay)) return res.status(400).json({ success: false, error: 'กรอกพร้อมเพย์ให้ถูกต้อง (เบอร์ 10 หลัก หรือเลขบัตร 13 หลัก)' });
+  const avail = affPending(aff);
+  const amount = req.body?.amount != null ? Math.round(Number(req.body.amount)) : avail;
+  if (!(amount > 0)) return res.status(400).json({ success: false, error: 'ยอดถอนไม่ถูกต้อง' });
+  if (amount < WD_MIN) return res.status(400).json({ success: false, error: `ถอนขั้นต่ำ ฿${WD_MIN}` });
+  if (amount > avail) return res.status(400).json({ success: false, error: `ยอดถอนเกินยอดที่ถอนได้ (คงเหลือ ฿${avail})` });
+
+  const wd = {
+    id: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    ref_code: ref, name: aff.name, amount, promptpay,
+    status: 'pending', requested_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+  };
+  withdrawals.unshift(wd);
+  saveWithdrawals();
+  addLog('info', 'Withdraw', `คำขอถอน ฿${amount} → ${ref} (${aff.name})`);
+  webhooks.dispatch('affiliate.withdraw_requested', { ref_code: ref, amount, id: wd.id }, null);
+  res.json({ success: true, withdrawal: wd, pending_balance: affPending(aff) });
+});
+
+// ─── GET /api/affiliate/withdrawals?ref_code= — รายการคำขอของพันธมิตร ─────────
+app.get('/api/affiliate/withdrawals', (req, res) => {
+  const ref = (req.query.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
+  if (!ref) return res.status(400).json({ success: false, error: 'ต้องการ ref_code' });
+  const aff = affiliates.find(a => a.ref_code === ref);
+  const list = withdrawals.filter(w => w.ref_code === ref).map(w => ({ ...w, promptpay: w.promptpay.replace(/(\d{3})\d+(\d{2})/, '$1****$2') }));
+  res.json({ success: true, withdrawals: list, pending_balance: aff ? affPending(aff) : 0, total_earned: aff?.total_earned || 0, paid_out: aff?.paid_out || 0 });
+});
+
+// ─── Admin: รายการ + อนุมัติ/ปฏิเสธ/จ่ายแล้ว (x-admin-key) ────────────────────
+app.get('/api/affiliate/withdrawals/admin', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const status = (req.query.status || '').toString();
+  const list = status ? withdrawals.filter(w => w.status === status) : withdrawals;
+  res.json({ success: true, count: list.length, withdrawals: list });
+});
+app.post('/api/affiliate/withdrawals/admin/:id', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const wd = withdrawals.find(w => w.id === req.params.id);
+  if (!wd) return res.status(404).json({ success: false, error: 'ไม่พบคำขอถอนนี้' });
+  const action = (req.body?.action || '').toString();
+  if (!['approve', 'reject', 'paid'].includes(action)) return res.status(400).json({ success: false, error: 'action ต้องเป็น approve | reject | paid' });
+  if (wd.status === 'paid') return res.status(409).json({ success: false, error: 'คำขอนี้จ่ายเงินไปแล้ว' });
+
+  if (action === 'approve') wd.status = 'approved';
+  else if (action === 'reject') { wd.status = 'rejected'; wd.note = (req.body?.note || '').toString().slice(0, 200); }
+  else if (action === 'paid') {
+    const aff = affiliates.find(a => a.ref_code === wd.ref_code);
+    if (aff) { aff.paid_out = +((aff.paid_out || 0) + wd.amount).toFixed(2); saveAffiliate(aff).catch(() => {}); }
+    wd.status = 'paid'; wd.paid_at = new Date().toISOString();
+  }
+  wd.updated_at = new Date().toISOString();
+  saveWithdrawals();
+  addLog('info', 'Withdraw', `${action} ฿${wd.amount} → ${wd.ref_code} (${wd.id})`);
+  webhooks.dispatch('affiliate.withdraw_updated', { id: wd.id, ref_code: wd.ref_code, status: wd.status, amount: wd.amount }, null);
+  res.json({ success: true, withdrawal: wd });
 });
 
 // ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
