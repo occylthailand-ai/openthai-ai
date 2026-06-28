@@ -899,6 +899,39 @@ app.post('/api/affiliate/click', affClickLimiter, (req, res) => {
   res.json({ success: true });
 });
 
+// ─── GET /api/affiliate/leaderboard — อันดับพันธมิตร (public · ปิดบังชื่อ) ──────
+// ปิดบังชื่อบางส่วนเพื่อความเป็นส่วนตัว · จัดอันดับตาม total_earned แล้ว total_sales
+function maskName(name) {
+  const s = String(name || '').trim();
+  if (!s) return 'พันธมิตร';
+  const chars = [...s];
+  if (chars.length <= 2) return chars[0] + '*';
+  return chars.slice(0, 2).join('') + '*'.repeat(Math.min(4, chars.length - 2));
+}
+app.get('/api/affiliate/leaderboard', (req, res) => {
+  const limit = Math.max(1, Math.min(50, parseInt(req.query.limit, 10) || 20));
+  const ranked = affiliates
+    .filter(a => a.status !== 'banned')
+    .map(a => ({
+      name: maskName(a.name),
+      platform: a.platform || '-',
+      tier: a.tier || 'starter',
+      total_sales: a.total_sales || 0,
+      total_earned: +(a.total_earned || 0).toFixed(2),
+      clicks: a.clicks || 0,
+      conversion_rate: a.clicks > 0 ? +((a.total_sales || 0) / a.clicks * 100).toFixed(1) : 0,
+    }))
+    .sort((x, y) => (y.total_earned - x.total_earned) || (y.total_sales - x.total_sales))
+    .slice(0, limit)
+    .map((a, i) => ({ rank: i + 1, ...a }));
+  const totals = affiliates.reduce((t, a) => ({
+    affiliates: t.affiliates + 1,
+    sales: t.sales + (a.total_sales || 0),
+    earned: +(t.earned + (a.total_earned || 0)).toFixed(2),
+  }), { affiliates: 0, sales: 0, earned: 0 });
+  res.json({ success: true, leaderboard: ranked, totals, ts: new Date().toISOString() });
+});
+
 // ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
 app.get('/api/affiliate/list', (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;

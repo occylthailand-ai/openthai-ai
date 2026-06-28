@@ -119,6 +119,7 @@ export default function EarnHubPage() {
           <button onClick={() => navigate('/affiliate')} style={btnGhost}>สมัครพันธมิตร / เปิด Dashboard →</button>
           <button onClick={() => navigate(`/affiliate-programs${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`)} style={{ ...btnGhost, marginTop: '10px' }}>🔗 ดูโปรแกรม Affiliate ทั้งหมด (50+) →</button>
           <button onClick={() => navigate('/content-studio')} style={{ ...btnGhost, marginTop: '10px' }}>✍️ Content Studio — สร้างแคปชั่นขาย →</button>
+          <button onClick={() => navigate('/leaderboard')} style={{ ...btnGhost, marginTop: '10px' }}>🏆 อันดับพันธมิตร (Leaderboard) →</button>
         </div>
 
         {/* SHARE THIS ENVIRONMENT */}
