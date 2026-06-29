@@ -6,7 +6,7 @@ import { CATEGORIES, PROGRAMS } from '../data/affiliatePrograms';
 // directory โปรแกรมพันธมิตรทั้งหมด — ค้นหา/กรองหมวด → สมัครได้ทันที
 // ปักหมุดลิงก์ /pay ของเรา (เข้าพร้อมเพย์ตรง) ไว้บนสุด
 
-const TIKTOK_URL = 'https://vt.tiktok.com/ZSCB66nhQ/';
+const TIKTOK_URL = 'https://vt.tiktok.com/ZSCUNVd4T/';
 
 export default function AffiliateProgramsPage() {
   const navigate = useNavigate();

@@ -89,7 +89,7 @@ export default function AffiliateDashboard() {
   const refLink = `https://www.openthai-ai.com/?ref=${data?.ref_code || ''}`;
   // ลิงก์ปิดการขายตรง — จ่ายผ่านลิงก์นี้ = ได้ค่าคอมทันที (QuickPay ฿1,000)
   const payLink = `https://www.openthai-ai.com/pay?ref=${data?.ref_code || ''}&amount=1000&label=${encodeURIComponent('แพ็กเกจคอนเทนต์ AI 30 ชิ้น')}`;
-  const tiktokDemo = 'https://vt.tiktok.com/ZSCB66nhQ/';
+  const tiktokDemo = 'https://vt.tiktok.com/ZSCUNVd4T/';
   const tierColor = TIER_COLOR[data?.tier] || '#6366f1';
   const maxBar = Math.max(...(data?.monthly?.map((m) => m.earned) || [1]));
 

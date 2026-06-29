@@ -7,7 +7,7 @@ import { apiUrl } from '../apiBase';
 // รองรับ ?ref=CODE — ส่งต่อไปยังลิงก์จ่าย + นับคลิกให้พันธมิตร
 // แชร์ลิงก์นี้ได้เลย: /earn?ref=CODE
 
-const TIKTOK_URL = 'https://vt.tiktok.com/ZSCB66nhQ/';
+const TIKTOK_URL = 'https://vt.tiktok.com/ZSCUNVd4T/';
 const DAILY_GOAL = 1000;     // เป้า ฿1,000/วัน
 const PACKAGE_PRICE = 1000;  // แพ็กเกจ ฿1,000 = 1 ดีลถึงเป้า
 

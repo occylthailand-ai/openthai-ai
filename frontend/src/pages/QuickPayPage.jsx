@@ -17,7 +17,7 @@ function formatThaiDateTime(iso) {
 }
 
 const PRESET_AMOUNTS = [199, 499, 1000, 1990];
-const TIKTOK_DEMO = 'https://vt.tiktok.com/ZSCB66nhQ/';
+const TIKTOK_DEMO = 'https://vt.tiktok.com/ZSCUNVd4T/';
 
 const QuickPayPage = () => {
   const navigate = useNavigate();
