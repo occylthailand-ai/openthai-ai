@@ -84,8 +84,12 @@ const hasSMTP     = checkEnv('SMTP_HOST',         { required: false, hint: 'ส�
                     checkEnv('SMTP_USER',          { required: false });
                     checkEnv('SMTP_PASS',          { required: false });
 
-checkEnv('GOOGLE_CLIENT_ID',     { required: false, hint: 'Login ด้วย Google' });
+checkEnv('GOOGLE_CLIENT_ID',     { required: false, hint: 'Login ด้วย Google + สำรองขึ้น Google Drive' });
 checkEnv('GOOGLE_CLIENT_SECRET', { required: false });
+checkEnv('GOOGLE_DRIVE_REDIRECT_URI', { required: false, hint: 'callback สำรอง Google Drive (.../api/sync/drive/google/callback)' });
+checkEnv('MS_CLIENT_ID',         { required: false, hint: 'สำรองขึ้น OneDrive (Microsoft Graph)' });
+checkEnv('MS_CLIENT_SECRET',     { required: false });
+checkEnv('MS_REDIRECT_URI',      { required: false, hint: 'callback สำรอง OneDrive (.../api/sync/drive/onedrive/callback)' });
 checkEnv('FRONTEND_URL',         { required: false, hint: 'URL หน้าเว็บ (CORS)' });
 
 // ── 2. Supabase Connection ────────────────────────────────────────────────────

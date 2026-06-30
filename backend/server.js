@@ -95,6 +95,10 @@ import {
   getAdminUsers, checkPassword, checkOverrideKey,
   useRecoveryCode, generateRecoveryCodes, getGoogleAuthUrl, exchangeGoogleCode,
 } from './auth.js';
+import {
+  DRIVE_PROVIDERS, driveConfigured, driveAuthUrl, driveExchange,
+  driveRefresh, driveAccountEmail, driveUpload, driveDownload,
+} from './cloudDrive.js';
 
 const app = express();
 app.set('trust proxy', 1); // Vercel / reverse proxy — needed for express-rate-limit
@@ -5340,6 +5344,8 @@ app.get('/api/health', (req, res) => {
     ai_fallback:   gemini    ? '✅ Gemini Flash Latest' : '⚠️ No GEMINI_API_KEY',
     ai_active:     aiEngine,
     google_oauth:  !!process.env.GOOGLE_CLIENT_ID,
+    drive_google:  driveConfigured('google'),
+    drive_onedrive: driveConfigured('onedrive'),
     affiliates:    affiliates.length,
     waitlist:      waitlist.length,
     agents:        agents.length,
@@ -5873,7 +5879,8 @@ let _syncStore = {};
 try { if (existsSync(SYNC_FILE)) _syncStore = JSON.parse(readFileSync(SYNC_FILE, 'utf8')); } catch { _syncStore = {}; }
 const saveSyncFile = () => { try { writeFileSync(SYNC_FILE, JSON.stringify(_syncStore)); } catch { /* ignore */ } };
 
-const syncUserKey = (req) => String(req.user?.username || req.user?.email || 'anon').toLowerCase();
+const keyFromUser = (u) => String(u?.username || u?.email || 'anon').toLowerCase();
+const syncUserKey = (req) => keyFromUser(req.user);
 
 async function syncRead(userKey) {
   if (_useSB) {
@@ -5912,6 +5919,146 @@ app.put('/api/sync', requireAuth, express.json({ limit: '1mb' }), async (req, re
     const merged = { ...current, ...incoming, _updated_at: new Date().toISOString() };
     await syncWrite(key, merged);
     res.json({ success: true, data: merged, storage: _useSB ? 'cloud' : 'file' });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CLOUD DRIVE BACKUP — สำรองข้อมูลขึ้น Google Drive + OneDrive (ต่อยอด Cloud Sync)
+//  token (refresh_token) เก็บแยกใต้ key 'drive::<user>' → ไม่หลุดออกทาง GET /api/sync
+// ═══════════════════════════════════════════════════════════════════════════════
+const driveKeyFor = (userKey) => `drive::${userKey}`;
+async function driveStoreRead(userKey)        { return await syncRead(driveKeyFor(userKey)); }
+async function driveStoreWrite(userKey, rec)  { return await syncWrite(driveKeyFor(userKey), rec); }
+
+// ขอ access_token สดจาก refresh_token ที่เก็บไว้ (+ เก็บ refresh_token ใหม่ถ้า provider หมุน)
+async function driveAccess(userKey, provider) {
+  const store = await driveStoreRead(userKey);
+  const conn = store?.[provider];
+  if (!conn?.refresh_token) throw new Error(`${provider} ยังไม่ได้เชื่อมต่อ`);
+  const t = await driveRefresh(provider, conn.refresh_token);
+  if (t.refresh_token && t.refresh_token !== conn.refresh_token) {
+    conn.refresh_token = t.refresh_token;
+    store[provider] = conn;
+    await driveStoreWrite(userKey, store);
+  }
+  return t.access_token;
+}
+
+// GET /api/sync/drive/status — provider ไหน config/connect แล้ว + สำรองล่าสุดเมื่อไหร่
+app.get('/api/sync/drive/status', requireAuth, async (req, res) => {
+  try {
+    const store = await driveStoreRead(syncUserKey(req));
+    const providers = {};
+    for (const p of DRIVE_PROVIDERS) {
+      const c = store?.[p] || {};
+      providers[p] = {
+        configured: driveConfigured(p),
+        connected: !!c.refresh_token,
+        email: c.email || null,
+        last_backup_at: c.last_backup_at || null,
+        last_restore_at: c.last_restore_at || null,
+      };
+    }
+    res.json({ success: true, providers });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// GET /api/sync/drive/:provider/connect — คืน OAuth consent URL (frontend redirect ไปต่อ)
+app.get('/api/sync/drive/:provider/connect', requireAuth, (req, res) => {
+  const { provider } = req.params;
+  if (!DRIVE_PROVIDERS.includes(provider)) return res.status(404).json({ success: false, error: 'unknown provider' });
+  if (!driveConfigured(provider)) return res.status(503).json({ success: false, error: `${provider} ยังไม่ได้ตั้งค่า (ต้องการ client id/secret)` });
+  // state = token อายุสั้นผูก identity ผู้ใช้ (callback ไม่มี Authorization header)
+  const state = signToken({ username: req.user.username, email: req.user.email, purpose: 'drive', provider });
+  const url = driveAuthUrl(provider, state);
+  if (!url) return res.status(503).json({ success: false, error: 'สร้าง auth url ไม่สำเร็จ' });
+  res.json({ success: true, url });
+});
+
+// GET /api/sync/drive/:provider/callback — OAuth callback (เก็บ refresh_token)
+app.get('/api/sync/drive/:provider/callback', async (req, res) => {
+  const { provider } = req.params;
+  const { code, state, error } = req.query;
+  const back = (status) => res.redirect(`${FRONTEND_URL}/sync?drive=${provider}&status=${status}`);
+  if (error || !code || !state) return back('cancelled');
+  if (!DRIVE_PROVIDERS.includes(provider)) return back('error');
+  try {
+    const payload = verifyToken(String(state));
+    if (!payload || payload.purpose !== 'drive') return back('error');
+    const userKey = keyFromUser(payload);
+
+    const tokens = await driveExchange(provider, String(code));
+    if (!tokens.refresh_token) throw new Error('ไม่ได้รับ refresh_token (ลองถอนสิทธิ์แล้วเชื่อมใหม่)');
+    const email = await driveAccountEmail(provider, tokens.access_token);
+
+    const store = await driveStoreRead(userKey);
+    store[provider] = {
+      refresh_token: tokens.refresh_token,
+      email: email || null,
+      connected_at: new Date().toISOString(),
+      last_backup_at: store?.[provider]?.last_backup_at || null,
+    };
+    await driveStoreWrite(userKey, store);
+    back('connected');
+  } catch (e) {
+    try { addLog('warn', 'Drive', `${provider} callback: ${e.message}`); } catch (_) {}
+    back('error');
+  }
+});
+
+// POST /api/sync/drive/:provider/backup — push ข้อมูล sync ปัจจุบันขึ้น drive
+app.post('/api/sync/drive/:provider/backup', requireAuth, async (req, res) => {
+  const { provider } = req.params;
+  if (!DRIVE_PROVIDERS.includes(provider)) return res.status(404).json({ success: false, error: 'unknown provider' });
+  try {
+    const userKey = syncUserKey(req);
+    const access = await driveAccess(userKey, provider);
+    const payload = JSON.stringify({
+      app: 'openthai-ai', version: 1, user_key: userKey,
+      backed_up_at: new Date().toISOString(),
+      data: await syncRead(userKey),
+    }, null, 2);
+    await driveUpload(provider, access, payload);
+
+    const store = await driveStoreRead(userKey);
+    const ts = new Date().toISOString();
+    if (store[provider]) { store[provider].last_backup_at = ts; await driveStoreWrite(userKey, store); }
+    res.json({ success: true, provider, backed_up_at: ts });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/sync/drive/:provider/restore — ดึง backup จาก drive แล้ว merge เข้า cloud sync
+app.post('/api/sync/drive/:provider/restore', requireAuth, async (req, res) => {
+  const { provider } = req.params;
+  if (!DRIVE_PROVIDERS.includes(provider)) return res.status(404).json({ success: false, error: 'unknown provider' });
+  try {
+    const userKey = syncUserKey(req);
+    const access = await driveAccess(userKey, provider);
+    const raw = await driveDownload(provider, access);
+    if (!raw) return res.json({ success: true, provider, restored: false, message: 'ยังไม่มี backup บน drive นี้' });
+
+    let parsed; try { parsed = JSON.parse(raw); } catch { throw new Error('ไฟล์ backup เสียหาย (ไม่ใช่ JSON)'); }
+    const incoming = (parsed && typeof parsed.data === 'object' && parsed.data) || {};
+    const current = await syncRead(userKey);
+    const merged = { ...current, ...incoming, _updated_at: new Date().toISOString() };
+    await syncWrite(userKey, merged);
+
+    const store = await driveStoreRead(userKey);
+    if (store[provider]) { store[provider].last_restore_at = new Date().toISOString(); await driveStoreWrite(userKey, store); }
+    res.json({ success: true, provider, restored: true, data: merged });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// POST /api/sync/drive/:provider/disconnect — ถอนการเชื่อมต่อ (ลบ token ฝั่งเรา)
+app.post('/api/sync/drive/:provider/disconnect', requireAuth, async (req, res) => {
+  const { provider } = req.params;
+  if (!DRIVE_PROVIDERS.includes(provider)) return res.status(404).json({ success: false, error: 'unknown provider' });
+  try {
+    const userKey = syncUserKey(req);
+    const store = await driveStoreRead(userKey);
+    delete store[provider];
+    await driveStoreWrite(userKey, store);
+    res.json({ success: true, provider, connected: false });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 

@@ -157,6 +157,13 @@ const DashboardPage = ({ onLogout }) => {
             <span style={{ color: '#1877f2', fontWeight: 900 }}>f</span> Facebook Feed
             <span className="nav-badge-new" style={{ background: '#1877f2' }}>LIVE</span>
           </div>
+
+          <div className="nav-separator" />
+          <div className="nav-section-label">ข้อมูล & ซิงค์</div>
+          <div className="nav-link" onClick={() => navigate('/sync')}>
+            <span>🔄</span> ศูนย์ซิงค์ข้อมูล
+            <span className="nav-badge-new" style={{ background: '#8b5cf6' }}>SYNC</span>
+          </div>
         </div>
 
         {/* AI Status Indicator */}

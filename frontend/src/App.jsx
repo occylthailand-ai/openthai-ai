@@ -72,6 +72,7 @@ const ContentBenchmarkPage = lazy(() => import('./pages/ContentBenchmarkPage'));
 const SchedulerPage = lazy(() => import('./pages/SchedulerPage'));
 const AnalyticsDashboardPage = lazy(() => import('./pages/AnalyticsDashboardPage'));
 const ImagePromptPage = lazy(() => import('./pages/ImagePromptPage'));
+const SyncPage = lazy(() => import('./pages/SyncPage'));
 const CatalogAIPage = lazy(() => import('./pages/CatalogAIPage'));
 const KOLBriefPage = lazy(() => import('./pages/KOLBriefPage'));
 const StrategyCenterPage = lazy(() => import('./pages/StrategyCenterPage'));
@@ -167,6 +168,7 @@ function App() {
             <Route path="/strategy" element={isAuthenticated ? <StrategyCenterPage /> : <Navigate to="/login" />} />
             <Route path="/pitch" element={isAuthenticated ? <PitchDeckPage /> : <Navigate to="/login" />} />
             <Route path="/integrations" element={isAuthenticated ? <IntegrationHubPage /> : <Navigate to="/login" />} />
+            <Route path="/sync" element={isAuthenticated ? <SyncPage /> : <Navigate to="/login" />} />
             {/* Public pages — ไม่ต้อง login */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />

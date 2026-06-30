@@ -74,3 +74,35 @@ export function getPref(prefKey, fallback = null) {
   try { const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); return prefKey in prefs ? prefs[prefKey] : fallback; }
   catch { return fallback; }
 }
+
+// ─── Cloud Drive backup (Google Drive + OneDrive) ──────────────────────────────
+const authHeaders = () => { const t = token(); return t ? { Authorization: `Bearer ${t}` } : {}; };
+
+// สถานะการเชื่อมต่อ drive ทั้งหมด (configured/connected/last_backup_at)
+export async function driveStatus() {
+  const t = token(); if (!t) return null;
+  try {
+    const r = await fetch(apiUrl('/api/sync/drive/status'), { headers: authHeaders() });
+    const d = await r.json();
+    return d.success ? d.providers : null;
+  } catch { return null; }
+}
+
+// เริ่มเชื่อม drive — ขอ consent URL แล้วพาไปหน้า OAuth
+export async function driveConnect(provider) {
+  const t = token(); if (!t) return;
+  const r = await fetch(apiUrl(`/api/sync/drive/${provider}/connect`), { headers: authHeaders() });
+  const d = await r.json();
+  if (d.success && d.url) { window.location.href = d.url; return; }
+  throw new Error(d.error || 'เชื่อมต่อไม่สำเร็จ');
+}
+
+async function driveAction(provider, action) {
+  const r = await fetch(apiUrl(`/api/sync/drive/${provider}/${action}`), { method: 'POST', headers: authHeaders() });
+  const d = await r.json();
+  if (!d.success) throw new Error(d.error || `${action} ไม่สำเร็จ`);
+  return d;
+}
+export const driveBackup     = (provider) => driveAction(provider, 'backup');
+export const driveRestore    = (provider) => driveAction(provider, 'restore');
+export const driveDisconnect = (provider) => driveAction(provider, 'disconnect');
