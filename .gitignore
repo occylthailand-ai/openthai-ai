@@ -103,3 +103,5 @@ openthai-commerce-engine_1.jsx
 "การฟอร์มทีมงาน.txt"
 "Facebook + ทดสอบ LINE Broadcast.txt"
 "logo (2).png"
+__pycache__/
+*.pyc

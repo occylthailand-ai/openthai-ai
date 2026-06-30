@@ -4482,6 +4482,53 @@ app.post('/api/skills/broadcast', generateLimiter, async (req, res) => {
   });
 });
 
+// S36 · POST /api/skills/trade-intel — Trade Intelligence (วิเคราะห์ตลาดส่งออก + คู่แข่ง + ผู้ซื้อเป้าหมาย)
+// เชื่อมแนวคิดจาก Trade Engine (services/trade-engine) เข้าสู่เว็บหลัก — ให้ insight ระดับกลยุทธ์ส่งออก
+app.post('/api/skills/trade-intel', generateLimiter, async (req, res) => {
+  const { product, hs_code = '', target_market = '', competitor = '', origin = 'ไทย' } = req.body || {};
+  if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  const prompt = `คุณเป็นนักวิเคราะห์การค้าระหว่างประเทศ (trade intelligence) เชี่ยวชาญข้อมูลส่งออก/นำเข้าและการเจาะตลาดต่างประเทศสำหรับผู้ส่งออกไทย
+วิเคราะห์โอกาสส่งออกสินค้า "${product.slice(0, 150)}" จาก${origin}${hs_code ? ` · HS code ${hs_code}` : ''}${target_market ? ` · ตลาดเป้าหมาย ${target_market}` : ''}${competitor ? ` · คู่แข่งอ้างอิง ${competitor}` : ''}
+
+ให้ insight เชิงปฏิบัติที่ผู้ส่งออกเอาไปใช้ได้จริง อิงหลักการข้อมูลการค้า (shipment data, ผู้ซื้อ, ส่วนแบ่งตลาดตามประเทศ)
+
+ตอบกลับ JSON เท่านั้น:
+{
+  "summary": "บทสรุปโอกาสส่งออกสั้น ๆ 2-3 ประโยค",
+  "hs_suggestion": "พิกัด HS ที่น่าจะตรงกับสินค้านี้ พร้อมเหตุผลสั้น ๆ",
+  "top_markets": [{"country":"ประเทศ","why":"เหตุผลที่น่าเจาะ","demand_signal":"สัญญาณดีมานด์"}],
+  "target_buyers": [{"type":"ประเภทผู้ซื้อ เช่น importer/distributor/retailer","approach":"วิธีเข้าหา"}],
+  "competitor_insight": "คู่แข่งกระจายสินค้ายังไง/ช่องว่างที่เราแทรกได้",
+  "barriers": ["อุปสรรค/กฎระเบียบ/มาตรฐานที่ต้องเตรียม 1","2","3"],
+  "next_actions": ["ขั้นตอนถัดไปที่ทำได้ทันที 1","2","3"]
+}`;
+
+  try {
+    const text = await callAI(prompt, 2560);
+    const d = parseAIJson(text);
+    return res.json({ success: true, source: anthropic ? 'claude' : 'gemini', ...d });
+  } catch (e) { addLog('warn', 'Skills/TradeIntel', e.message); }
+
+  const pName = product.slice(0, 40);
+  res.json({
+    success: true, source: 'mock',
+    summary: `${pName} มีโอกาสส่งออกหากเน้นจุดเด่นด้านคุณภาพ/มาตรฐานไทย และเลือกตลาดที่มีดีมานด์สินค้ากลุ่มนี้ชัดเจน`,
+    hs_suggestion: hs_code ? `ใช้ ${hs_code} ตามที่ระบุ — ตรวจสอบกับกรมศุลกากรปลายทางอีกครั้ง` : 'ระบุประเภทสินค้าให้ชัดเพื่อจับพิกัด HS ที่ถูกต้อง (ช่วยคำนวณภาษีนำเข้าปลายทาง)',
+    top_markets: [
+      { country: target_market || 'สหรัฐอเมริกา', why: 'ตลาดใหญ่ กำลังซื้อสูง นิยมสินค้าคุณภาพจากไทย', demand_signal: 'ปริมาณนำเข้าสินค้ากลุ่มนี้เติบโตต่อเนื่อง' },
+      { country: 'ญี่ปุ่น', why: 'ให้ราคาพรีเมียมกับสินค้ามาตรฐานสูง', demand_signal: 'ผู้บริโภคเน้นความปลอดภัย/แหล่งที่มา' },
+    ],
+    target_buyers: [
+      { type: 'Importer/Distributor', approach: 'หาในงานแสดงสินค้า (trade fair) + ฐานข้อมูลการค้า แล้วยื่นข้อเสนอ MOQ/ราคา FOB ชัดเจน' },
+      { type: 'Retail chain / E-commerce', approach: 'เริ่มจาก marketplace ข้ามพรมแดน ทดสอบตลาดก่อนสั่งล็อตใหญ่' },
+    ],
+    competitor_insight: competitor ? `ศึกษาว่า ${competitor} ส่งให้ผู้ซื้อรายใด/ประเทศใดมากสุด แล้วหาช่องว่าง (เซกเมนต์/ราคา/บริการ) ที่เรายื่นข้อเสนอเหนือกว่าได้` : 'ใช้ข้อมูล shipment ของคู่แข่งดูว่ากระจายไปประเทศ/ผู้ซื้อใด เพื่อหาตลาดที่ยังว่างหรือชิงผู้ซื้อที่ทับซ้อน',
+    barriers: ['มาตรฐาน/ใบรับรองปลายทาง (เช่น FDA, อย., GMP)', 'ภาษีนำเข้า + กฎถิ่นกำเนิดสินค้า (FTA ช่วยลดได้)', 'โลจิสติกส์/อายุสินค้า/บรรจุภัณฑ์สำหรับการขนส่งไกล'],
+    next_actions: ['ยืนยันพิกัด HS + เช็กภาษีนำเข้าตลาดเป้าหมาย', 'เตรียมเอกสาร/ใบรับรองที่ปลายทางต้องการ', 'รวบรวมรายชื่อผู้ซื้อเป้าหมาย 10-20 ราย แล้วเริ่มติดต่อ'],
+  });
+});
+
 // ── Skills Registry — แคตตาล็อกทักษะ machine-readable (discovery · docs · integration · scale) ──
 // GET /api/skills — รายการทักษะทั้งหมดพร้อม endpoint + input ที่จำเป็น ใช้ขับ UI/อินทิเกรชันภายนอกได้
 const SKILLS_REGISTRY = [
@@ -4520,6 +4567,7 @@ const SKILLS_REGISTRY = [
   { id: 'S33', name: 'Bundle & Upsell Designer', category: 'commerce', endpoint: '/api/skills/bundle',         method: 'POST', inputs: ['product', 'category', 'price'], status: 'active' },
   { id: 'S34', name: 'FAQ & Auto-Reply Builder', category: 'support', endpoint: '/api/skills/faq',             method: 'POST', inputs: ['product', 'category', 'channel'], status: 'active' },
   { id: 'S35', name: 'Broadcast & Re-engagement', category: 'retention', endpoint: '/api/skills/broadcast',     method: 'POST', inputs: ['product', 'category', 'channel'], status: 'active' },
+  { id: 'S36', name: 'Trade Intelligence',   category: 'export',      endpoint: '/api/skills/trade-intel',      method: 'POST', inputs: ['product', 'hs_code', 'target_market', 'competitor'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {

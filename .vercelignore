@@ -30,6 +30,9 @@ backend/data/agent_checkpoint.json
 backend/data/waitlist.json
 # backend/data/system_charter.json → DEPLOY ได้ (permanent policy config)
 
+# ── Python trade-engine microservice (deploy แยก ไม่ใช่ Vercel Node) ──────────
+services/trade-engine/
+
 # ── Misc large files ──────────────────────────────────────────────────────────
 all-platform-files/
 oracleJdk-25/
