@@ -27,7 +27,7 @@
 6. LINE Notify Log (fallback — รอ LINE_NOTIFY_TOKEN)
 
 ### API Keys ที่ได้และตั้งค่า
-- **GEMINI_API_KEY**: `AIzaSyC-UfSJYjH-VKF5YSBtTPk5xAD8lXT_WqE`
+- **GEMINI_API_KEY**: `<REDACTED — เก็บใน Vercel env / backend/.env เท่านั้น ห้าม commit ลง repo>`
   - บันทึกใน: `backend/.env` ✅
   - บันทึกใน: n8n workflow node โดยตรง ✅
 
