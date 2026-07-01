@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-01T13:01:55.994Z · branch `claude/ai-coalition-protocol-hp3rga` (2 commit(s) ahead of main)
+Generated: 2026-07-01T13:03:07.680Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -13,16 +13,47 @@ Generated: 2026-07-01T13:01:55.994Z · branch `claude/ai-coalition-protocol-hp3r
 - ℹ️ **7 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql
 
 ## Recent commits
-- 08d98b5 Replace hardcoded session briefing with a real project-status generator (4 minutes ago)
-- 56cdb64 Add order dispute + escrow arbitration system (23 minutes ago)
-- 08a5306 Revenue & Marketing Engine — Affiliate, QuickPay, Content/Scheduler, Attribution (#66) (3 days ago)
-- 92648be feat: S35 Broadcast & Re-engagement Writer — ดึงลูกค้าเก่ากลับมาซื้อซ้ำ (#65) (4 days ago)
-- 1eb171d feat: S34 FAQ & Auto-Reply Builder — คลังคำถาม-คำตอบ + ตอบแชทอัตโนมัติ (#64) (4 days ago)
-- a8282e6 feat: S33 Bundle & Upsell Designer — จัดเซ็ต + ขายพ่วง เพิ่มยอดต่อบิล (#63) (4 days ago)
-- 7fc6be2 feat: S32 Review Responder — ตอบรีวิวลูกค้าอย่างมืออาชีพ (#62) (4 days ago)
-- 62262f8 feat: S31 Product Listing Writer — สร้างหน้าสินค้า Shopee/Lazada/TikTok Shop (#61) (4 days ago)
+- 61dfd14 Deepen Master Context report + add auto-verification + PR gate (15 seconds ago)
 
-## Production health (⚠️ HTTP 403)
+## Production health (✅ reachable)
+```json
+{
+  "status": "ok",
+  "version": "2.1.0",
+  "charter_version": 2,
+  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "ai_primary": "✅ Claude Haiku",
+  "ai_fallback": "✅ Gemini Flash Latest",
+  "ai_active": "claude-haiku-4-5-20251001",
+  "google_oauth": true,
+  "affiliates": 0,
+  "waitlist": 0,
+  "agents": 0,
+  "active_agents": 0,
+  "line_oa": true,
+  "elevenlabs": false,
+  "watchdog": "idle",
+  "last_watchdog": null,
+  "system_logs": 2,
+  "uptime_sec": 0,
+  "memory_mb": "19.4",
+  "services": {
+    "news_rag": "✅ Active",
+    "news_rag_refresh": "✅ Auto cache clear every 4h",
+    "competitor_analysis": "✅ Active",
+    "tts": "⚠️ No API Key",
+    "line_oa": "✅ Active",
+    "auto_heal": "✅ Active (every 30 min)",
+    "agent_cron": "✅ Active (every hour)",
+    "watchdog": "✅ Active",
+    "diagnostics": "✅ Active",
+    "persistence": "✅ system_log + agents.json + agent_checkpoint",
+    "vector_memory": "✅ Active (semantic long-term memory)",
+    "webhook_system": "✅ Active (0 registered)",
+    "multi_tenant": "✅ Active (0 tenants)"
+  }
+}
+```
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
