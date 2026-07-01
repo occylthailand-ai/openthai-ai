@@ -521,6 +521,7 @@ export default function AdminPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12 }}>
                 {[
                   { label: 'ข้อพิพาทเปิดอยู่', v: escrowSum.open_count, c: escrowSum.open_count ? '#ef4444' : '#10b981' },
+                  { label: `เกิน ${escrowSum.sla_hours || 48} ชม. (overdue)`, v: escrowSum.overdue_count, c: escrowSum.overdue_count ? '#ef4444' : '#10b981' },
                   { label: 'พักไว้ (held)', v: baht(escrowSum.escrow?.held), c: '#f59e0b' },
                   { label: 'ปล่อยแล้ว (released)', v: baht(escrowSum.escrow?.released), c: '#10b981' },
                   { label: 'คืนเงินแล้ว (refunded)', v: baht(escrowSum.escrow?.refunded), c: '#6366f1' },
@@ -530,6 +531,12 @@ export default function AdminPage() {
                     <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
                   </div>
                 ))}
+              </div>
+            )}
+            {escrowSum?.overdue_count > 0 && (
+              <div style={{ ...glass, border: '1px solid rgba(239,68,68,0.3)' }}>
+                <div style={{ fontWeight: 700, color: '#fca5a5', marginBottom: 6 }}>⏰ ข้อพิพาทค้างเกิน SLA — ควรรีบตัดสิน</div>
+                {escrowSum.overdue.map((o) => <div key={o.id} style={{ fontSize: 12, color: '#94a3b8' }}>ออเดอร์ {o.order_id} — เปิดมาแล้ว {o.age_hours} ชั่วโมง</div>)}
               </div>
             )}
             <div style={glass}>
@@ -546,6 +553,13 @@ export default function AdminPage() {
                     </div>
                     <div style={{ fontSize: 11, color: STATUS_COLOR[d.status] || '#f59e0b' }}>● {d.status}</div>
                   </div>
+                  {d.counter_response && (
+                    <div style={{ marginTop: 8, padding: 10, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 12 }}>
+                      <div style={{ color: '#6ee7b7', fontWeight: 700 }}>💬 คำชี้แจงจากอีกฝ่าย</div>
+                      <div style={{ color: '#94a3b8', marginTop: 4 }}>{d.counter_response.note}</div>
+                      {d.counter_response.evidence && <div style={{ color: '#64748b', marginTop: 4 }}>📎 {d.counter_response.evidence}</div>}
+                    </div>
+                  )}
                   {d.ai_suggestion && (
                     <div style={{ marginTop: 8, padding: 10, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, fontSize: 12 }}>
                       <div style={{ color: '#a5b4fc', fontWeight: 700 }}>🤖 AI แนะนำ: {d.ai_suggestion.recommendation} (ความมั่นใจ {Math.round((d.ai_suggestion.confidence || 0) * 100)}%)</div>

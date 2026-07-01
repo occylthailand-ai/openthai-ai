@@ -91,8 +91,9 @@ const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { 
 const disputes  = createDisputes(WRITE_DATA_DIR, {
   orders, callAI, parseAIJson,
   notify: {
-    opened:   async (dispute, order) => sendDisputeNotification(dispute, order, 'opened'),
-    resolved: async (dispute, order) => sendDisputeNotification(dispute, order, 'resolved'),
+    opened:    async (dispute, order) => sendDisputeNotification(dispute, order, 'opened'),
+    responded: async (dispute, order) => sendDisputeNotification(dispute, order, 'responded'),
+    resolved:  async (dispute, order) => sendDisputeNotification(dispute, order, 'resolved'),
   },
 });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
@@ -755,40 +756,51 @@ async function sendOrderNotification(order) {
   }
 }
 
-// แจ้งเตือนเมื่อมีการเปิด/ปิดข้อพิพาทคำสั่งซื้อ (escrow) — ถึงผู้ผลิต + สำเนาเจ้าของระบบ
+// แจ้งเตือนเมื่อมีการเปิด/ตอบโต้/ปิดข้อพิพาทคำสั่งซื้อ (escrow) — ถึง "ทั้งสองฝ่าย" + สำเนาเจ้าของระบบ
+// (ก่อนหน้านี้ส่งแค่ผู้ผลิต — พลาดฝั่งผู้ซื้อ ทำให้ไม่เป็นธรรมกับอีกฝ่าย)
+const isEmailLike = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
 async function sendDisputeNotification(dispute, order, phase) {
   const owner = process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
-  const to = order?.producer_email || owner;
-  if (!mailer || !to) return;
-  const isOpened = phase === 'opened';
-  const subject = isOpened
-    ? `⚠️ มีข้อพิพาทใหม่ — ออเดอร์ ${order?.product_name || dispute.order_id}`
-    : `✅ ข้อพิพาทถูกปิดแล้ว — ออเดอร์ ${order?.product_name || dispute.order_id}`;
+  const recipients = new Set();
+  if (order?.producer_email) recipients.add(order.producer_email);
+  if (isEmailLike(order?.contact)) recipients.add(order.contact);
+  if (!recipients.size && owner) recipients.add(owner);
+  if (!mailer || !recipients.size) return;
+
+  const subjectMap = {
+    opened:    `⚠️ มีข้อพิพาทใหม่ — ออเดอร์ ${order?.product_name || dispute.order_id}`,
+    responded: `💬 มีคำชี้แจงใหม่ในข้อพิพาท — ออเดอร์ ${order?.product_name || dispute.order_id}`,
+    resolved:  `✅ ข้อพิพาทถูกปิดแล้ว — ออเดอร์ ${order?.product_name || dispute.order_id}`,
+  };
+  const colorMap = { opened: '#ef4444,#f59e0b', responded: '#6366f1,#8b5cf6', resolved: '#10b981,#059669' };
+  const titleMap = { opened: '⚠️ ข้อพิพาทใหม่', responded: '💬 มีคำชี้แจงใหม่', resolved: '✅ ข้อพิพาทถูกปิดแล้ว' };
+
   try {
     await mailer.sendMail({
       from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
-      to,
-      cc: owner && owner !== to ? owner : undefined,
-      subject,
+      to: [...recipients].join(', '),
+      cc: owner && !recipients.has(owner) ? owner : undefined,
+      subject: subjectMap[phase] || subjectMap.opened,
       html: `
       <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
-        <div style="background:linear-gradient(135deg,${isOpened ? '#ef4444,#f59e0b' : '#10b981,#059669'});padding:28px;text-align:center;">
-          <h1 style="margin:0;font-size:22px;">${isOpened ? '⚠️ ข้อพิพาทใหม่' : '✅ ข้อพิพาทถูกปิดแล้ว'}</h1>
+        <div style="background:linear-gradient(135deg,${colorMap[phase] || colorMap.opened});padding:28px;text-align:center;">
+          <h1 style="margin:0;font-size:22px;">${titleMap[phase] || titleMap.opened}</h1>
         </div>
         <div style="padding:24px;font-size:14px;">
           <table style="width:100%;border-collapse:collapse;">
             <tr><td style="padding:9px 0;color:#94a3b8;">เลขที่ออเดอร์</td><td style="padding:9px 0;text-align:right;font-family:monospace;font-size:12px;">${dispute.order_id}</td></tr>
             <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เปิดโดย</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.opened_by === 'buyer' ? 'ผู้ซื้อ' : 'ผู้ผลิต'}</td></tr>
             <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เหตุผล</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.reason}</td></tr>
-            ${!isOpened ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">คำตัดสิน</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-weight:700;">${dispute.resolution?.decision || '-'}</td></tr>` : ''}
+            ${phase === 'responded' ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">คำชี้แจง</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.counter_response?.note || '-'}</td></tr>` : ''}
+            ${phase === 'resolved' ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">คำตัดสิน</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-weight:700;">${dispute.resolution?.decision || '-'}</td></tr>` : ''}
           </table>
         </div>
         <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
-          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">จัดการข้อพิพาทใน Admin</a>
+          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">จัดการข้อพิพาทใน Admin</a> · เช็คสถานะที่ <code>/api/disputes/${dispute.id}/track</code>
         </div>
       </div>`,
     });
-    console.log(`📧 Dispute (${phase}) notification ส่งให้ ${to} เรียบร้อย`);
+    console.log(`📧 Dispute (${phase}) notification ส่งให้ ${[...recipients].join(', ')} เรียบร้อย`);
   } catch (err) {
     console.error('Dispute email error:', err.message);
   }
