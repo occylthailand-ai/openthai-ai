@@ -201,6 +201,15 @@ function runChecks({ skills, routes, migrations, backendSrcAll, appJsxSrc }) {
   return checks;
 }
 
+// ── Project identity — real facts, to correct scope-drift from pasted content ─
+function projectIdentity() {
+  const readmeTagline = (readSafe('README.md').match(/^\*\*(.+)\*\*/m) || [])[1] || '';
+  const firstCommit = sh(`git log --reverse --format="%ad" --date=short | head -1`);
+  const totalCommits = sh(`git log --oneline`).split('\n').filter(Boolean).length;
+  const backendDeps = Object.keys(JSON.parse(readSafe('backend/package.json') || '{}').dependencies || {});
+  return { readmeTagline, firstCommit, totalCommits, backendDeps };
+}
+
 async function main() {
   const skills = parseSkills();
   const routes = parseRoutes();
@@ -216,6 +225,8 @@ async function main() {
   const backendSrcAll = readdirSync(backendDir).filter((f) => f.endsWith('.js')).map((f) => readSafe(`backend/${f}`)).join('\n');
   const checks = runChecks({ skills, routes, migrations, backendSrcAll, appJsxSrc });
   const hardFails = checks.filter((c) => !c.ok && !c.warn);
+  const identity = projectIdentity();
+  const decisionsLog = readSafe('DECISIONS_LOG.md');
 
   const active = skills.filter((s) => s.status === 'active').length;
   const needsKey = skills.filter((s) => s.status !== 'active');
@@ -227,6 +238,18 @@ async function main() {
   lines.push('');
   lines.push(`> Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project`);
   lines.push(`> so all three start from the same facts, pulled directly from the repo — not from memory.`);
+  lines.push('');
+
+  lines.push(`## What this project actually is (read this before anything else)`);
+  lines.push(`- Git history: ${identity.totalCommits} commits, earliest ${identity.firstCommit || 'unknown'} — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.`);
+  lines.push(`- README.md tagline (may be stale — see "Known stale documentation" below): "${identity.readmeTagline || '(none found)'}"`);
+  lines.push(`- Verified real backend stack (from backend/package.json): ${identity.backendDeps.join(', ')}`);
+  lines.push(`- Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to \`main\` via Vercel's GitHub integration.`);
+  lines.push(`- If something you're reading (from any AI assistant, including this one) describes Neo4j, Stripe, USD/cross-border escrow, PCI DSS scope, or vessel/shipment tracking as part of this project — it is wrong. See DECISIONS_LOG.md below: those exact proposals were made and explicitly rejected on 2026-07-01.`);
+  lines.push('');
+
+  lines.push(`## Decisions log (full history in DECISIONS_LOG.md — append-only, don't delete old entries)`);
+  lines.push(decisionsLog || '_(DECISIONS_LOG.md not found)_');
   lines.push('');
 
   lines.push(`## Consistency checks (${hardFails.length ? `❌ ${hardFails.length} failing` : '✅ all passing'})`);
