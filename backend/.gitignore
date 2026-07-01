@@ -7,5 +7,6 @@ data/entitlements.json
 data/payments.json
 data/producers.json
 data/orders.json
+data/disputes.json
 data/products.json
 data/stock_movements.json

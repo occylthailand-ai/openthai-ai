@@ -28,6 +28,7 @@ import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
+import { createDisputes } from './disputes.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { createIntegrations } from './integrations.js';
@@ -87,6 +88,13 @@ const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
 const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
+const disputes  = createDisputes(WRITE_DATA_DIR, {
+  orders, callAI, parseAIJson,
+  notify: {
+    opened:   async (dispute, order) => sendDisputeNotification(dispute, order, 'opened'),
+    resolved: async (dispute, order) => sendDisputeNotification(dispute, order, 'resolved'),
+  },
+});
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
 const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
 
@@ -116,6 +124,8 @@ app.use(credits.router);
 app.use(producers.router);
 // Order routes — /api/orders
 app.use(orders.router);
+// Order dispute / escrow routes — /api/disputes
+app.use(disputes.router);
 // Inventory / first-party shop routes — /api/shop/products
 app.use(inventory.router);
 
@@ -409,6 +419,37 @@ app.post('/api/orders/admin/deliver', async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await orders.deliver(req.body?.id, req.body || {});
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  res.json({ success: true, ...r });
+});
+
+// ─── Disputes / Escrow admin — list, AI-assist suggestion, resolve (Admin Key) ─
+// GET /api/disputes/admin/summary — สรุปข้อพิพาท + escrow (ใช้เป็น monitoring endpoint ด้วย)
+app.get('/api/disputes/admin/summary', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try { res.json({ success: true, ...(await disputes.summary()) }); }
+  catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/disputes/admin/list', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try { res.json({ success: true, disputes: await disputes.all() }); }
+  catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// POST /api/disputes/admin/ai-suggest — ขอความเห็น AI ประกอบการตัดสินใจ (ไม่ auto-resolve)
+app.post('/api/disputes/admin/ai-suggest', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const r = await disputes.aiSuggest(req.body?.id);
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  res.json({ success: true, ...r });
+});
+// POST /api/disputes/admin/resolve — คำตัดสินสุดท้ายของ admin (favor_supplier/favor_buyer/refund/split)
+app.post('/api/disputes/admin/resolve', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const r = await disputes.resolve(req.body?.id, { decision: req.body?.decision, note: req.body?.note, resolved_by: req.body?.resolved_by || 'admin' });
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
 });
@@ -711,6 +752,45 @@ async function sendOrderNotification(order) {
     console.log(`📧 Order notification ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
     console.error('Order email error:', err.message);
+  }
+}
+
+// แจ้งเตือนเมื่อมีการเปิด/ปิดข้อพิพาทคำสั่งซื้อ (escrow) — ถึงผู้ผลิต + สำเนาเจ้าของระบบ
+async function sendDisputeNotification(dispute, order, phase) {
+  const owner = process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  const to = order?.producer_email || owner;
+  if (!mailer || !to) return;
+  const isOpened = phase === 'opened';
+  const subject = isOpened
+    ? `⚠️ มีข้อพิพาทใหม่ — ออเดอร์ ${order?.product_name || dispute.order_id}`
+    : `✅ ข้อพิพาทถูกปิดแล้ว — ออเดอร์ ${order?.product_name || dispute.order_id}`;
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to,
+      cc: owner && owner !== to ? owner : undefined,
+      subject,
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,${isOpened ? '#ef4444,#f59e0b' : '#10b981,#059669'});padding:28px;text-align:center;">
+          <h1 style="margin:0;font-size:22px;">${isOpened ? '⚠️ ข้อพิพาทใหม่' : '✅ ข้อพิพาทถูกปิดแล้ว'}</h1>
+        </div>
+        <div style="padding:24px;font-size:14px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <tr><td style="padding:9px 0;color:#94a3b8;">เลขที่ออเดอร์</td><td style="padding:9px 0;text-align:right;font-family:monospace;font-size:12px;">${dispute.order_id}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เปิดโดย</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.opened_by === 'buyer' ? 'ผู้ซื้อ' : 'ผู้ผลิต'}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เหตุผล</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.reason}</td></tr>
+            ${!isOpened ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">คำตัดสิน</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-weight:700;">${dispute.resolution?.decision || '-'}</td></tr>` : ''}
+          </table>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
+          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">จัดการข้อพิพาทใน Admin</a>
+        </div>
+      </div>`,
+    });
+    console.log(`📧 Dispute (${phase}) notification ส่งให้ ${to} เรียบร้อย`);
+  } catch (err) {
+    console.error('Dispute email error:', err.message);
   }
 }
 

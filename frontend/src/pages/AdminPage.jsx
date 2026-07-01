@@ -40,6 +40,8 @@ export default function AdminPage() {
   const [invSum, setInvSum] = useState(null);   // สรุปคลัง
   const [salesRep, setSalesRep] = useState(null); // ยอดขาย (ขายแล้ว/เหลือ/แพลตฟอร์ม)
   const [prodEdit, setProdEdit] = useState(null); // สินค้าที่กำลังแก้ (object) / null
+  const [disputes, setDisputes] = useState(null); // ข้อพิพาทคำสั่งซื้อ
+  const [escrowSum, setEscrowSum] = useState(null); // สรุป escrow (held/released/refunded)
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
@@ -69,7 +71,11 @@ export default function AdminPage() {
     fetch(apiUrl('/api/inventory/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInvSum(d); }).catch(apiErr('inv-summary'));
     fetch(apiUrl('/api/inventory/admin/sales-report'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setSalesRep(d); }).catch(apiErr('inv-sales'));
   };
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadDisputes = () => {
+    fetch(apiUrl('/api/disputes/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setDisputes(d.disputes); else console.warn('[admin] disputes:', d.message); }).catch(apiErr('disputes'));
+    fetch(apiUrl('/api/disputes/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setEscrowSum(d); }).catch(apiErr('disputes-summary'));
+  };
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); loadDisputes(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveProduct = async (data) => {
     const r = await fetch(apiUrl('/api/inventory/admin/upsert'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(data) }).then(x => x.json());
@@ -107,6 +113,17 @@ export default function AdminPage() {
     const drop_off = received_by ? '' : (window.prompt('จุดฝากพัสดุ (เช่น ตู้ล็อกเกอร์, รปภ.):') || '');
     await fetch(apiUrl('/api/orders/admin/deliver'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, received_by, drop_off }) });
     loadOrders();
+  };
+  const aiSuggestDispute = async (id) => {
+    const r = await fetch(apiUrl('/api/disputes/admin/ai-suggest'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id }) }).then(x => x.json());
+    if (!r.success) alert(r.error || 'ขอความเห็น AI ไม่สำเร็จ');
+    loadDisputes();
+  };
+  const resolveDispute = async (id, decision) => {
+    const note = window.prompt('หมายเหตุคำตัดสิน (ไม่บังคับ):') || '';
+    const r = await fetch(apiUrl('/api/disputes/admin/resolve'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, decision, note }) }).then(x => x.json());
+    if (!r.success) alert(r.error || 'ตัดสินไม่สำเร็จ');
+    loadDisputes(); loadOrders();
   };
 
   // ดึง overview stats จริง + ยอดขายจริง
@@ -494,6 +511,62 @@ export default function AdminPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* TAB: DISPUTES / ข้อพิพาท + Escrow */}
+        {tab === 'disputes' && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            {escrowSum && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12 }}>
+                {[
+                  { label: 'ข้อพิพาทเปิดอยู่', v: escrowSum.open_count, c: escrowSum.open_count ? '#ef4444' : '#10b981' },
+                  { label: 'พักไว้ (held)', v: baht(escrowSum.escrow?.held), c: '#f59e0b' },
+                  { label: 'ปล่อยแล้ว (released)', v: baht(escrowSum.escrow?.released), c: '#10b981' },
+                  { label: 'คืนเงินแล้ว (refunded)', v: baht(escrowSum.escrow?.refunded), c: '#6366f1' },
+                ].map((s) => (
+                  <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: s.c }}>{s.v}</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={glass}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>⚠️ ข้อพิพาทคำสั่งซื้อ {disputes ? `(${disputes.length})` : ''}</div>
+              {!disputes && <div style={{ color: '#64748b', fontSize: 13 }}>กำลังโหลด…</div>}
+              {disputes && disputes.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีข้อพิพาท</div>}
+              {disputes && disputes.map((d) => (
+                <div key={d.id} style={{ padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>ออเดอร์ {d.order_id} <span style={{ fontSize: 11, color: '#64748b' }}>· เปิดโดย{d.opened_by === 'buyer' ? 'ผู้ซื้อ' : 'ผู้ผลิต'}</span></div>
+                      <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>{d.reason}</div>
+                      {d.evidence && <div style={{ color: '#64748b', fontSize: 12 }}>📎 {d.evidence}</div>}
+                    </div>
+                    <div style={{ fontSize: 11, color: STATUS_COLOR[d.status] || '#f59e0b' }}>● {d.status}</div>
+                  </div>
+                  {d.ai_suggestion && (
+                    <div style={{ marginTop: 8, padding: 10, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, fontSize: 12 }}>
+                      <div style={{ color: '#a5b4fc', fontWeight: 700 }}>🤖 AI แนะนำ: {d.ai_suggestion.recommendation} (ความมั่นใจ {Math.round((d.ai_suggestion.confidence || 0) * 100)}%)</div>
+                      <div style={{ color: '#94a3b8', marginTop: 4 }}>{d.ai_suggestion.reasoning}</div>
+                      <div style={{ color: '#64748b', marginTop: 4, fontStyle: 'italic' }}>เป็นเพียงความเห็นช่วยตัดสินใจ — การตัดสินสุดท้ายเป็นของแอดมิน</div>
+                    </div>
+                  )}
+                  {d.resolution && (
+                    <div style={{ marginTop: 8, fontSize: 12, color: '#6ee7b7' }}>✅ ตัดสินแล้ว: {d.resolution.decision} — {d.resolution.note}</div>
+                  )}
+                  {(d.status === 'open' || d.status === 'ai_reviewed') && (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                      <button onClick={() => aiSuggestDispute(d.id)} style={miniBtn('#6366f1')}>🤖 ขอความเห็น AI</button>
+                      <button onClick={() => resolveDispute(d.id, 'favor_supplier')} style={miniBtn('#10b981')}>ตัดสินให้ผู้ผลิต (ปล่อยเงิน)</button>
+                      <button onClick={() => resolveDispute(d.id, 'favor_buyer')} style={miniBtn('#ef4444')}>ตัดสินให้ผู้ซื้อ (คืนเงิน)</button>
+                      <button onClick={() => resolveDispute(d.id, 'split')} style={miniBtn('#f59e0b')}>แบ่งครึ่ง</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
