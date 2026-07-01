@@ -1,60 +1,67 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-01T12:58:07.029Z · branch `claude/ai-coalition-protocol-hp3rga` (1 commit(s) ahead of main)
+Generated: 2026-07-01T13:01:55.994Z · branch `claude/ai-coalition-protocol-hp3rga` (2 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
+## Consistency checks (✅ all passing)
+- ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
+- ✅ **Route components exist on disk** — all 79 route components resolved
+- ✅ **No duplicate skill IDs** — all skill IDs unique
+- ✅ **No duplicate route paths** — all route paths unique
+- ℹ️ **7 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql
+
 ## Recent commits
-- 56cdb64 Add order dispute + escrow arbitration system (19 minutes ago)
+- 08d98b5 Replace hardcoded session briefing with a real project-status generator (4 minutes ago)
+- 56cdb64 Add order dispute + escrow arbitration system (23 minutes ago)
 - 08a5306 Revenue & Marketing Engine — Affiliate, QuickPay, Content/Scheduler, Attribution (#66) (3 days ago)
 - 92648be feat: S35 Broadcast & Re-engagement Writer — ดึงลูกค้าเก่ากลับมาซื้อซ้ำ (#65) (4 days ago)
 - 1eb171d feat: S34 FAQ & Auto-Reply Builder — คลังคำถาม-คำตอบ + ตอบแชทอัตโนมัติ (#64) (4 days ago)
 - a8282e6 feat: S33 Bundle & Upsell Designer — จัดเซ็ต + ขายพ่วง เพิ่มยอดต่อบิล (#63) (4 days ago)
 - 7fc6be2 feat: S32 Review Responder — ตอบรีวิวลูกค้าอย่างมืออาชีพ (#62) (4 days ago)
 - 62262f8 feat: S31 Product Listing Writer — สร้างหน้าสินค้า Shopee/Lazada/TikTok Shop (#61) (4 days ago)
-- 0df824c feat: AI ที่ปรึกษาธุรกิจ (Chat Assistant) — แชทสตรีมสด + จำข้ามอุปกรณ์ (#60) (4 days ago)
 
 ## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
 |---|---|---|---|
-| S1 | RCCF Prompt | `/api/generate` | active |
-| S2 | Taste Check | `/api/generate` | active |
-| S3 | Master Prompt | `/api/generate` | active |
-| S4 | Image Analysis | `/api/analyze-image` | active |
-| S5 | TTS Voice | `/api/tts` | needs_key (needs `ELEVENLABS_API_KEY`) |
-| S6 | AI Critic | `/api/generate` | active |
-| S7 | Context Card | `/api/generate` | active |
-| S8 | LINE OA Connect | `/api/line/send` | needs_key (needs `LINE_CHANNEL_TOKEN`) |
-| S9 | Learning Layer | `/api/skills/learning/patterns` | active |
-| S10 | Trend Analyzer | `/api/skills/trend` | active |
-| S11 | Hashtag Generator | `/api/skills/hashtag` | active |
-| S12 | SEO Thai | `/api/skills/seo` | active |
-| S13 | Sentiment Scanner | `/api/skills/sentiment` | active |
-| S14 | Video Script | `/api/skills/video-script` | active |
-| S15 | Multi-Language | `/api/skills/translate` | active |
-| S16 | Prompt Builder | `/api/skills/prompt-builder` | active |
-| S17 | Cultural Wisdom | `/api/skills/cultural-wisdom` | active |
-| S18 | Sales Conversion Engine | `/api/skills/promo-engine` | active |
-| S19 | Supply Chain AI | `/api/skills/supply-chain` | active |
-| S20 | Pricing Optimizer | `/api/skills/pricing` | active |
-| S21 | Customer Service AI | `/api/skills/customer-service` | active |
-| S22 | Ad Budget Planner | `/api/skills/ad-budget` | active |
-| S23 | Break-even Planner | `/api/skills/break-even` | active |
-| S24 | Campaign Calendar | `/api/skills/campaign-calendar` | active |
-| S25 | Live Selling Script | `/api/skills/live-script` | active |
-| S26 | Omni-Solver | `/api/skills/omni-solver` | active |
-| S27 | Negotiation Coach | `/api/skills/negotiation` | active |
-| S28 | Conflict Mediator | `/api/skills/mediation` | active |
-| S29 | Crisis Manager | `/api/skills/crisis` | active |
-| S30 | Persona Builder | `/api/skills/persona` | active |
-| S31 | Product Listing Writer | `/api/skills/listing` | active |
-| S32 | Review Responder | `/api/skills/review-reply` | active |
-| S33 | Bundle & Upsell Designer | `/api/skills/bundle` | active |
-| S34 | FAQ & Auto-Reply Builder | `/api/skills/faq` | active |
-| S35 | Broadcast & Re-engagement | `/api/skills/broadcast` | active |
+| S1 | RCCF Prompt | `POST /api/generate` | active |
+| S2 | Taste Check | `POST /api/generate` | active |
+| S3 | Master Prompt | `POST /api/generate` | active |
+| S4 | Image Analysis | `POST /api/analyze-image` | active |
+| S5 | TTS Voice | `POST /api/tts` | needs_key (needs `ELEVENLABS_API_KEY`) |
+| S6 | AI Critic | `POST /api/generate` | active |
+| S7 | Context Card | `POST /api/generate` | active |
+| S8 | LINE OA Connect | `POST /api/line/send` | needs_key (needs `LINE_CHANNEL_TOKEN`) |
+| S9 | Learning Layer | `GET /api/skills/learning/patterns` | active |
+| S10 | Trend Analyzer | `POST /api/skills/trend` | active |
+| S11 | Hashtag Generator | `POST /api/skills/hashtag` | active |
+| S12 | SEO Thai | `POST /api/skills/seo` | active |
+| S13 | Sentiment Scanner | `POST /api/skills/sentiment` | active |
+| S14 | Video Script | `POST /api/skills/video-script` | active |
+| S15 | Multi-Language | `POST /api/skills/translate` | active |
+| S16 | Prompt Builder | `POST /api/skills/prompt-builder` | active |
+| S17 | Cultural Wisdom | `POST /api/skills/cultural-wisdom` | active |
+| S18 | Sales Conversion Engine | `POST /api/skills/promo-engine` | active |
+| S19 | Supply Chain AI | `POST /api/skills/supply-chain` | active |
+| S20 | Pricing Optimizer | `POST /api/skills/pricing` | active |
+| S21 | Customer Service AI | `POST /api/skills/customer-service` | active |
+| S22 | Ad Budget Planner | `POST /api/skills/ad-budget` | active |
+| S23 | Break-even Planner | `POST /api/skills/break-even` | active |
+| S24 | Campaign Calendar | `POST /api/skills/campaign-calendar` | active |
+| S25 | Live Selling Script | `POST /api/skills/live-script` | active |
+| S26 | Omni-Solver | `POST /api/skills/omni-solver` | active |
+| S27 | Negotiation Coach | `POST /api/skills/negotiation` | active |
+| S28 | Conflict Mediator | `POST /api/skills/mediation` | active |
+| S29 | Crisis Manager | `POST /api/skills/crisis` | active |
+| S30 | Persona Builder | `POST /api/skills/persona` | active |
+| S31 | Product Listing Writer | `POST /api/skills/listing` | active |
+| S32 | Review Responder | `POST /api/skills/review-reply` | active |
+| S33 | Bundle & Upsell Designer | `POST /api/skills/bundle` | active |
+| S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
+| S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
 ## Route map (79 routes)
 | Path | Component | Access |
@@ -138,6 +145,67 @@ Generated: 2026-07-01T12:58:07.029Z · branch `claude/ai-coalition-protocol-hp3r
 | /portals/intl-org | IntlOrgPortalPage | public |
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
+
+## Backend modules (backend/*.js — 22 files)
+| File | Lines | Purpose (from header comment) |
+|---|---|---|
+| `auth.js` | 190 | JWT |
+| `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
+| `credits.js` | 202 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
+| `disputes.js` | 210 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
+| `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
+| `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
+| `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
+| `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
+| `openapi.js` | 651 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
+| `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
+| `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
+| `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
+| `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
+| `server.js` | 7616 | Vercel serverless detection |
+| `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
+| `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
+| `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
+| `video-generator.js` | 204 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
+| `voice-commander.js` | 259 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
+| `webhook-system.js` | 223 | Push events to registered subscriber endpoints instead of polling. |
+
+## Admin panel tabs (frontend/src/i18n/admin.js)
+- 📊 ภาพรวม
+- 📈 วิเคราะห์
+- 💰 ยอดขาย
+- 🎁 เครดิต
+- 🏭 ผู้ผลิต
+- 📨 เชิญผู้ผลิต
+- 📦 ออเดอร์
+- ⚠️ ข้อพิพาท
+- 🎯 ลูกค้า
+- 📦 คลังสินค้า
+- 👥 ผู้ใช้
+- 🤝 Affiliates
+- ⚡ คอนเทนต์
+- ⚙️ ตั้งค่า
+
+## Scheduled jobs (vercel.json crons)
+- `0 6 * * *` → /api/system/watchdog
+- `0 4 * * *` → /api/system/news-rag-clear
+- `0 12 * * *` → /api/autopost/process
+- `30 16 * * *` → /api/progress/daily-report
+- `0 9 * * *` → /api/scheduler/process
+
+## Environment variables (56 referenced in backend code, 48 documented in .env.example)
+⚠️ Referenced in code but missing from `backend/.env.example`:
+- ADMIN_USERS
+- AI_DAILY_BUDGET_USD
+- CANVA_API_KEY
+- DISABLE_RATE_LIMIT
+- SMTP_PORT
+- TIKTOK_SHOP_KEY
+- VERCEL
+- XAI_API_KEY
+- XAI_MODEL
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.
