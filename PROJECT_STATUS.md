@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T03:21:40.895Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T03:40:38.854Z · branch `claude/ai-coalition-protocol-hp3rga` (14 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 64 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -78,50 +78,19 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ✅ **Route components exist on disk** — all 79 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
-- ℹ️ **7 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql
+- ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 4f09776 chore: regenerate PROJECT_STATUS.md after rebase (24 seconds ago)
+- 57b337f Fix: all 7 /portals/* pages were silently failing to submit (6 seconds ago)
+- 6447e34 chore: sync PROJECT_STATUS.md [skip ci] (19 minutes ago)
+- 4f09776 chore: regenerate PROJECT_STATUS.md after rebase (19 minutes ago)
+- 203e284 Add core-philosophy memory pack: JSON/YAML, integration guide, skill prompt, loaders (20 minutes ago)
+- 7804359 chore: sync PROJECT_STATUS.md [skip ci] (14 hours ago)
+- 41984f3 chore: regenerate PROJECT_STATUS.md after rebase (14 hours ago)
+- c95510d Add project identity anchor + decisions log for cross-AI alignment (14 hours ago)
+- c4348f6 chore: sync PROJECT_STATUS.md [skip ci] (14 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -245,7 +214,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 22 files)
+## Backend modules (backend/*.js — 23 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `auth.js` | 190 | JWT |
@@ -258,12 +227,13 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 651 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `portal-leads.js` | 98 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7628 | Vercel serverless detection |
+| `server.js` | 7668 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
@@ -294,12 +264,13 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
 
-## Environment variables (56 referenced in backend code, 48 documented in .env.example)
+## Environment variables (57 referenced in backend code, 48 documented in .env.example)
 ⚠️ Referenced in code but missing from `backend/.env.example`:
 - ADMIN_USERS
 - AI_DAILY_BUDGET_USD
 - CANVA_API_KEY
 - DISABLE_RATE_LIMIT
+- PORTAL_LEAD_NOTIFY_EMAIL
 - SMTP_PORT
 - TIKTOK_SHOP_KEY
 - VERCEL
@@ -319,6 +290,7 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 004_affiliate_tracking.sql
 - 005_user_sync.sql
 - 006_order_disputes.sql
+- 007_portal_leads.sql
 - FULL-MIGRATION.sql
 - credits-schema.sql
 - orders-schema.sql
