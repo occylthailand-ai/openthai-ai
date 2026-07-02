@@ -11,6 +11,44 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Found and fixed a real HTML-injection gap in 3 cross-party notification emails
+Asked again to scan for new dimensions/gaps. Checked a fresh angle: whether
+user-submitted free text is safe when interpolated into the HTML notification
+emails built throughout this session (`sendOrderNotification`,
+`sendDisputeNotification`, `sendPortalLeadNotification`).
+
+Found a real, demonstrable bug. `orders.js`, `disputes.js`, and
+`portal-leads.js` all use the same `clip()` helper
+(`s.replace(/<[^>]*>/g, '').trim().slice(0, n)`) to strip HTML tags from
+public form input at intake. That regex requires a closing `>` to match — an
+**unclosed** tag like `<img src=x onerror=alert(1)` (no `>`) passes through
+completely untouched, because there's nothing for the regex to match. When
+that survives into the surrounding email HTML template
+(`<td>...${value}...</td>`), the `>` from the template's own `</td>` closes
+the attacker's tag for them, producing a fully valid `<img onerror=...>` in
+the actual email HTML sent.
+
+This isn't a same-user-only risk: `sendOrderNotification` can send to
+`order.producer_email` (a real producer), and `sendDisputeNotification`
+sends to **both** the buyer and the producer — so a malicious value from
+either party could inject HTML rendered in the *other* real party's inbox,
+not just admin's. `sendPortalLeadNotification` sends to admin only.
+
+Verified the exploit concretely before fixing: `clip()` on the payload above
+returns it unmodified, and concatenating it into a `<td>...</td>` template
+produces a real `<img src=x onerror=alert(1)</td>` tag. Fixed with a proper
+HTML-entity-escape function (`escapeHtml` — escapes `&<>"'`) applied at the
+actual point of HTML interpolation in all three functions, not relying on
+the bypassable intake-time `clip()` alone (defense should happen at
+render/output time, not just input time). Re-ran the same exploit
+demonstration after the fix: the payload's `<` becomes `&lt;`, no tag can
+form regardless of what `clip()` missed upstream. Live-tested against a
+running server with the exact bypass payload on both `/api/leads/submit`
+and `/api/orders` — both processed without crashing; the actual email body
+couldn't be observed directly since no SMTP is configured in this sandbox,
+but the escape logic itself was verified in isolation with a real
+before/after transformation.
+
 ### 2026-07-02 — 360° pass across new dimensions (i18n, error handling): found a real gap in AgentPage's response handling
 Asked to check "360 degrees, dimensions and perspectives" instead of repeating
 the same route/auth scans already run twice. Checked two genuinely new angles:
