@@ -40,6 +40,10 @@ export default function AdminPage() {
   const [invSum, setInvSum] = useState(null);   // สรุปคลัง
   const [salesRep, setSalesRep] = useState(null); // ยอดขาย (ขายแล้ว/เหลือ/แพลตฟอร์ม)
   const [prodEdit, setProdEdit] = useState(null); // สินค้าที่กำลังแก้ (object) / null
+  const [disputes, setDisputes] = useState(null); // ข้อพิพาทคำสั่งซื้อ
+  const [escrowSum, setEscrowSum] = useState(null); // สรุป escrow (held/released/refunded)
+  const [reviewQueue, setReviewQueue] = useState(null); // Human review queue (AI-generated content)
+  const [reviewTenant, setReviewTenant] = useState('global');
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
@@ -69,7 +73,19 @@ export default function AdminPage() {
     fetch(apiUrl('/api/inventory/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInvSum(d); }).catch(apiErr('inv-summary'));
     fetch(apiUrl('/api/inventory/admin/sales-report'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setSalesRep(d); }).catch(apiErr('inv-sales'));
   };
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadDisputes = () => {
+    fetch(apiUrl('/api/disputes/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setDisputes(d.disputes); else console.warn('[admin] disputes:', d.message); }).catch(apiErr('disputes'));
+    fetch(apiUrl('/api/disputes/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setEscrowSum(d); }).catch(apiErr('disputes-summary'));
+  };
+  const loadReviewQueue = (tenantId = reviewTenant) => {
+    fetch(apiUrl(`/api/memory/admin/review-queue?tenantId=${encodeURIComponent(tenantId)}`), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setReviewQueue(d); else console.warn('[admin] review-queue:', d.message); }).catch(apiErr('review-queue'));
+  };
+  const submitReview = async (item_id, human_rating, note) => {
+    const r = await fetch(apiUrl('/api/memory/admin/review'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ tenantId: reviewTenant, item_id, human_rating, note, reviewed_by: 'admin' }) }).then(x => x.json());
+    if (!r.success) alert(r.error || 'บันทึกรีวิวไม่สำเร็จ');
+    loadReviewQueue();
+  };
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); loadDisputes(); loadReviewQueue(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveProduct = async (data) => {
     const r = await fetch(apiUrl('/api/inventory/admin/upsert'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(data) }).then(x => x.json());
@@ -107,6 +123,17 @@ export default function AdminPage() {
     const drop_off = received_by ? '' : (window.prompt('จุดฝากพัสดุ (เช่น ตู้ล็อกเกอร์, รปภ.):') || '');
     await fetch(apiUrl('/api/orders/admin/deliver'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, received_by, drop_off }) });
     loadOrders();
+  };
+  const aiSuggestDispute = async (id) => {
+    const r = await fetch(apiUrl('/api/disputes/admin/ai-suggest'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id }) }).then(x => x.json());
+    if (!r.success) alert(r.error || 'ขอความเห็น AI ไม่สำเร็จ');
+    loadDisputes();
+  };
+  const resolveDispute = async (id, decision) => {
+    const note = window.prompt('หมายเหตุคำตัดสิน (ไม่บังคับ):') || '';
+    const r = await fetch(apiUrl('/api/disputes/admin/resolve'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, decision, note }) }).then(x => x.json());
+    if (!r.success) alert(r.error || 'ตัดสินไม่สำเร็จ');
+    loadDisputes(); loadOrders();
   };
 
   // ดึง overview stats จริง + ยอดขายจริง
@@ -497,6 +524,94 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* TAB: DISPUTES / ข้อพิพาท + Escrow */}
+        {tab === 'disputes' && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            {escrowSum && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 12 }}>
+                {[
+                  { label: 'ข้อพิพาทเปิดอยู่', v: escrowSum.open_count, c: escrowSum.open_count ? '#ef4444' : '#10b981' },
+                  { label: `เกิน ${escrowSum.sla_hours || 48} ชม. (overdue)`, v: escrowSum.overdue_count, c: escrowSum.overdue_count ? '#ef4444' : '#10b981' },
+                  { label: 'พักไว้ (held)', v: baht(escrowSum.escrow?.held), c: '#f59e0b' },
+                  { label: 'ปล่อยแล้ว (released)', v: baht(escrowSum.escrow?.released), c: '#10b981' },
+                  { label: 'คืนเงินแล้ว (refunded)', v: baht(escrowSum.escrow?.refunded), c: '#6366f1' },
+                ].map((s) => (
+                  <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: s.c }}>{s.v}</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {escrowSum?.overdue_count > 0 && (
+              <div style={{ ...glass, border: '1px solid rgba(239,68,68,0.3)' }}>
+                <div style={{ fontWeight: 700, color: '#fca5a5', marginBottom: 6 }}>⏰ ข้อพิพาทค้างเกิน SLA — ควรรีบตัดสิน</div>
+                {escrowSum.overdue.map((o) => <div key={o.id} style={{ fontSize: 12, color: '#94a3b8' }}>ออเดอร์ {o.order_id} — เปิดมาแล้ว {o.age_hours} ชั่วโมง</div>)}
+              </div>
+            )}
+            <div style={glass}>
+              <div style={{ fontWeight: 700, marginBottom: 12 }}>⚠️ ข้อพิพาทคำสั่งซื้อ {disputes ? `(${disputes.length})` : ''}</div>
+              {!disputes && <div style={{ color: '#64748b', fontSize: 13 }}>กำลังโหลด…</div>}
+              {disputes && disputes.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีข้อพิพาท</div>}
+              {disputes && disputes.map((d) => (
+                <div key={d.id} style={{ padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                      <div style={{ fontWeight: 700 }}>ออเดอร์ {d.order_id} <span style={{ fontSize: 11, color: '#64748b' }}>· เปิดโดย{d.opened_by === 'buyer' ? 'ผู้ซื้อ' : 'ผู้ผลิต'}</span></div>
+                      <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 2 }}>{d.reason}</div>
+                      {d.evidence && <div style={{ color: '#64748b', fontSize: 12 }}>📎 {d.evidence}</div>}
+                    </div>
+                    <div style={{ fontSize: 11, color: STATUS_COLOR[d.status] || '#f59e0b' }}>● {d.status}</div>
+                  </div>
+                  {d.counter_response && (
+                    <div style={{ marginTop: 8, padding: 10, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 12 }}>
+                      <div style={{ color: '#6ee7b7', fontWeight: 700 }}>💬 คำชี้แจงจากอีกฝ่าย</div>
+                      <div style={{ color: '#94a3b8', marginTop: 4 }}>{d.counter_response.note}</div>
+                      {d.counter_response.evidence && <div style={{ color: '#64748b', marginTop: 4 }}>📎 {d.counter_response.evidence}</div>}
+                    </div>
+                  )}
+                  {d.ai_suggestion && (
+                    <div style={{ marginTop: 8, padding: 10, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, fontSize: 12 }}>
+                      <div style={{ color: '#a5b4fc', fontWeight: 700 }}>🤖 AI แนะนำ: {d.ai_suggestion.recommendation} (ความมั่นใจ {Math.round((d.ai_suggestion.confidence || 0) * 100)}%)</div>
+                      <div style={{ color: '#94a3b8', marginTop: 4 }}>{d.ai_suggestion.reasoning}</div>
+                      <div style={{ color: '#64748b', marginTop: 4, fontStyle: 'italic' }}>เป็นเพียงความเห็นช่วยตัดสินใจ — การตัดสินสุดท้ายเป็นของแอดมิน</div>
+                    </div>
+                  )}
+                  {d.resolution && (
+                    <div style={{ marginTop: 8, fontSize: 12, color: '#6ee7b7' }}>✅ ตัดสินแล้ว: {d.resolution.decision} — {d.resolution.note}</div>
+                  )}
+                  {(d.status === 'open' || d.status === 'ai_reviewed') && (
+                    <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                      <button onClick={() => aiSuggestDispute(d.id)} style={miniBtn('#6366f1')}>🤖 ขอความเห็น AI</button>
+                      <button onClick={() => resolveDispute(d.id, 'favor_supplier')} style={miniBtn('#10b981')}>ตัดสินให้ผู้ผลิต (ปล่อยเงิน)</button>
+                      <button onClick={() => resolveDispute(d.id, 'favor_buyer')} style={miniBtn('#ef4444')}>ตัดสินให้ผู้ซื้อ (คืนเงิน)</button>
+                      <button onClick={() => resolveDispute(d.id, 'split')} style={miniBtn('#f59e0b')}>แบ่งครึ่ง</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: REVIEW — Human-in-the-loop review ของคอนเทนต์ที่ AI สร้าง (S6 AI Critic + S9 Learning Layer) */}
+        {tab === 'review' && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ fontWeight: 700 }}>🧑‍⚖️ ตรวจสอบคุณภาพ (Human Review) {reviewQueue ? `— ${reviewQueue.pending} รอตรวจ / ${reviewQueue.total} ทั้งหมด` : ''}</div>
+              <span style={{ flex: 1 }} />
+              <input value={reviewTenant} onChange={(e) => setReviewTenant(e.target.value)} placeholder="tenantId (default: global)" style={{ ...inputSt, padding: '6px 10px', fontSize: 12, width: 160 }} />
+              <button onClick={() => loadReviewQueue()} style={{ ...tabBtn, padding: '6px 14px', fontSize: 12 }}>🔄 รีเฟรช</button>
+            </div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>
+              คอนเทนต์ที่ AI สร้างและให้คะแนนอัตโนมัติ (S6 AI Critic) — แอดมิน/ผู้เชี่ยวชาญให้คะแนนจริงเพิ่มเติม บันทึกลง vector memory (type: feedback) ผูกกับชิ้นงานเดิม เพื่อปิด loop ระหว่าง AI กับคนจริง
+            </div>
+            {!reviewQueue && <div style={{ color: '#64748b', fontSize: 13 }}>{T.loading}</div>}
+            {reviewQueue && reviewQueue.queue.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีคอนเทนต์ในคิว — จะปรากฏที่นี่หลังมีคนใช้ /ai-generator</div>}
+            {reviewQueue && reviewQueue.queue.map((item) => <ReviewRow key={item.id} item={item} onSubmit={submitReview} />)}
+          </div>
+        )}
+
         {/* TAB: INVENTORY / คลังสินค้า */}
         {tab === 'inventory' && (
           <div style={{ display: 'grid', gap: 16 }}>
@@ -585,7 +700,8 @@ export default function AdminPage() {
           const q = leadQ.trim().toLowerCase();
           const all = leads?.leads || [];
           const list = all.filter((l) => (leadType === 'all' || l.type === leadType) && (!q || [l.name, l.contact, l.detail].some((f) => (f || '').toLowerCase().includes(q))));
-          const TYPE_C = { waitlist: '#06b6d4', affiliate: '#f59e0b', order: '#10b981' };
+          const TYPE_C = { waitlist: '#06b6d4', affiliate: '#f59e0b', order: '#10b981', 'portal:gov-thai': '#3b82f6', 'portal:gov-intl': '#3b82f6', 'portal:intl-org': '#8b5cf6', 'portal:foundation': '#059669', 'portal:creator': '#ec4899', 'portal:affiliate': '#f59e0b', 'portal:producer': '#f97316' };
+          const PORTAL_LABEL = { 'portal:gov-thai': 'Portal: หน่วยงานรัฐไทย', 'portal:gov-intl': 'Portal: หน่วยงานรัฐต่างประเทศ', 'portal:intl-org': 'Portal: องค์กรระหว่างประเทศ', 'portal:foundation': 'Portal: มูลนิธิ/NGO', 'portal:creator': 'Portal: ครีเอเตอร์', 'portal:affiliate': 'Portal: สนใจเป็น Affiliate', 'portal:producer': 'Portal: สนใจเป็นผู้ผลิต' };
           const exportCsv = () => {
             const rows = [['type', 'name', 'contact', 'detail', 'date'], ...list.map((l) => [l.type, l.name, l.contact, l.detail, l.date])];
             const csv = rows.map((r) => r.map((c) => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -600,6 +716,7 @@ export default function AdminPage() {
               <input value={leadQ} onChange={(e) => setLeadQ(e.target.value)} placeholder="🔍 ค้นหาชื่อ/อีเมล/เบอร์/รายละเอียด" style={{ ...inputSt, padding: '8px 12px', fontSize: 13, minWidth: 200, flex: 1, maxWidth: 300 }} />
               <select value={leadType} onChange={(e) => setLeadType(e.target.value)} style={{ ...inputSt, padding: '8px 12px', fontSize: 13, width: 'auto' }}>
                 <option value="all">ทั้งหมด</option><option value="waitlist">Waitlist</option><option value="affiliate">Affiliate</option><option value="order">ลูกค้าสั่งซื้อ</option>
+                {Object.entries(PORTAL_LABEL).map(([t, label]) => <option key={t} value={t}>{label}</option>)}
               </select>
               <button onClick={exportCsv} disabled={!list.length} style={miniBtn('#10b981')}>⬇️ CSV</button>
               <button onClick={() => setBcOpen(true)} style={miniBtn('#6366f1')}>📨 ส่งอีเมล</button>
@@ -607,8 +724,8 @@ export default function AdminPage() {
             {bcOpen && <BroadcastModal adminKey={adminKey} counts={leads?.counts} onClose={() => setBcOpen(false)} />}
             {leads && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, fontSize: 12 }}>
-                {[['waitlist', leads.counts.waitlist], ['affiliate', leads.counts.affiliate], ['order', leads.counts.order]].map(([t, n]) => (
-                  <span key={t} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: '4px 10px', color: TYPE_C[t] }}>{t}: <strong>{n}</strong></span>
+                {[['waitlist', leads.counts.waitlist], ['affiliate', leads.counts.affiliate], ['order', leads.counts.order], ...Object.keys(PORTAL_LABEL).map((t) => [t, leads.counts[t] || 0])].filter(([, n]) => n > 0).map(([t, n]) => (
+                  <span key={t} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: '4px 10px', color: TYPE_C[t] }}>{PORTAL_LABEL[t] || t}: <strong>{n}</strong></span>
                 ))}
               </div>
             )}
@@ -621,7 +738,7 @@ export default function AdminPage() {
                   <tbody>
                     {list.slice(0, 500).map((l, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td style={{ padding: '8px' }}><span style={{ fontSize: 11, color: TYPE_C[l.type] || '#94a3b8', fontWeight: 700 }}>{l.type}</span></td>
+                        <td style={{ padding: '8px' }}><span style={{ fontSize: 11, color: TYPE_C[l.type] || '#94a3b8', fontWeight: 700 }}>{PORTAL_LABEL[l.type] || l.type}</span></td>
                         <td style={{ padding: '8px', fontWeight: 600 }}>{l.name || '-'}</td>
                         <td style={{ padding: '8px', color: '#a5b4fc' }}>{l.contact}</td>
                         <td style={{ padding: '8px', color: '#94a3b8' }}>{l.detail}</td>
@@ -891,6 +1008,54 @@ function InvitePanel() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── Human Review row — ให้คะแนนจริง + คำชี้แจง ต่อชิ้นคอนเทนต์ที่ AI สร้าง ────────
+function ReviewRow({ item, onSubmit }) {
+  const [rating, setRating] = useState(item.human_review?.metadata?.human_rating || 0);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const reviewed = item.reviewed;
+
+  const submit = async () => {
+    if (!rating) return alert('เลือกคะแนนก่อน (1-5)');
+    setBusy(true);
+    await onSubmit(item.id, rating, note);
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ ...glass, opacity: reviewed ? 0.75 : 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <div style={{ fontWeight: 600 }}>{item.text}</div>
+          <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>
+            {item.metadata?.product && `📦 ${item.metadata.product} · `}
+            {item.metadata?.platform && `${item.metadata.platform} · `}
+            {new Date(item.ts).toLocaleString('th-TH')}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 11, color: '#64748b' }}>AI Critic Score</div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: '#a5b4fc' }}>{item.ai_score ?? '—'}/10</div>
+        </div>
+      </div>
+      {reviewed ? (
+        <div style={{ marginTop: 10, padding: 10, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 12 }}>
+          <div style={{ color: '#6ee7b7', fontWeight: 700 }}>✅ ตรวจแล้ว: {item.human_review.metadata.human_rating}/5 โดย {item.human_review.metadata.reviewed_by}</div>
+          {item.human_review.metadata.note && <div style={{ color: '#94a3b8', marginTop: 4 }}>{item.human_review.metadata.note}</div>}
+        </div>
+      ) : (
+        <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button key={n} onClick={() => setRating(n)} style={{ ...miniBtn(n <= rating ? '#f59e0b' : '#374151'), padding: '4px 10px' }}>{n <= rating ? '★' : '☆'}</button>
+          ))}
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุ (ไม่บังคับ) — เช่น ทำไมคะแนนต่างจาก AI" style={{ ...inputSt, flex: 1, minWidth: 200, padding: '6px 10px', fontSize: 12 }} />
+          <button onClick={submit} disabled={busy} style={miniBtn('#10b981')}>{busy ? '...' : '✅ บันทึกรีวิว'}</button>
+        </div>
+      )}
     </div>
   );
 }

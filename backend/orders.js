@@ -66,6 +66,7 @@ export function createOrders(dataDir, opts = {}) {
       amount: price ? price * qty : null,
       note: clip(input.note, 400),
       status: 'new',
+      escrow_status: 'none', // none → held → released|refunded (จัดการผ่าน disputes.js / setEscrowStatus)
       tracking_no: '', carrier: '', delivered_at: '', received_by: '', drop_off: '', proof_note: '',
       history: [hist('new')],
       created_at: now,
@@ -123,6 +124,18 @@ export function createOrders(dataDir, opts = {}) {
     return { ok: true, id, delivered_at: o.delivered_at };
   }
 
+  // ปรับสถานะเงินประกัน (escrow) — ใช้โดย disputes.js ตอนเปิด/ปิดข้อพิพาท หรือ admin ปล่อยเงินตรงๆ
+  const ESCROW_STATUS = ['none', 'held', 'released', 'refunded'];
+  async function setEscrowStatus(id, escrow_status, note) {
+    if (!ESCROW_STATUS.includes(escrow_status)) return { ok: false, error: 'invalid escrow_status' };
+    const o = await getOne(id);
+    if (!o) return { ok: false, error: 'not found' };
+    o.escrow_status = escrow_status;
+    o.history = [...(o.history || []), hist(o.status, note || `escrow:${escrow_status}`)];
+    await persist(o);
+    return { ok: true, id, escrow_status };
+  }
+
   // ติดตามสาธารณะ — ต้องระบุ contact ให้ตรง (กันคนอื่นดู)
   async function track(id, contact) {
     const o = await getOne(id);
@@ -166,5 +179,5 @@ export function createOrders(dataDir, opts = {}) {
     res.json({ success: true, ...r });
   }));
 
-  return { router, place, all, setStatus, ship, deliver, track, summary, ORDER_STATUS };
+  return { router, place, all, getOne, setStatus, setEscrowStatus, ship, deliver, track, summary, ORDER_STATUS, ESCROW_STATUS };
 }

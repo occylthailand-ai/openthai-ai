@@ -1,0 +1,45 @@
+name: 📋 Project Status Sync
+
+# รัน scripts/generate-project-status.mjs ทุก PR:
+#  1. ตรวจ consistency (skill endpoint หาย, route component หาย, id/path ซ้ำ ฯลฯ) — ถ้าพังจะ fail check
+#  2. อัปเดต PROJECT_STATUS.md ให้ตรงกับ repo จริงเสมอ แล้ว commit กลับเข้า branch ของ PR อัตโนมัติ
+#     (ใช้ได้เฉพาะ PR ภายใน repo เดียวกัน — PR จาก fork จะไม่มีสิทธิ์ push กลับ ซึ่งเป็นข้อจำกัดปกติของ GITHUB_TOKEN)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-status:
+    name: 🔎 Verify + sync PROJECT_STATUS.md
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Run project status generator (fails on consistency errors)
+        id: gen
+        run: node scripts/generate-project-status.mjs
+
+      - name: Commit refreshed PROJECT_STATUS.md if it changed
+        if: always()
+        run: |
+          if ! git diff --quiet -- PROJECT_STATUS.md; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add PROJECT_STATUS.md
+            git commit -m "chore: sync PROJECT_STATUS.md [skip ci]"
+            git push origin HEAD:${{ github.head_ref }}
+            echo "📋 PROJECT_STATUS.md updated and pushed"
+          else
+            echo "PROJECT_STATUS.md already up to date"
+          fi

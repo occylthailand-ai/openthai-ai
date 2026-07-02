@@ -28,6 +28,8 @@ import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
+import { createDisputes } from './disputes.js';
+import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { createIntegrations } from './integrations.js';
@@ -87,6 +89,15 @@ const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
 const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
+const disputes  = createDisputes(WRITE_DATA_DIR, {
+  orders, callAI, parseAIJson,
+  notify: {
+    opened:    async (dispute, order) => sendDisputeNotification(dispute, order, 'opened'),
+    responded: async (dispute, order) => sendDisputeNotification(dispute, order, 'responded'),
+    resolved:  async (dispute, order) => sendDisputeNotification(dispute, order, 'resolved'),
+  },
+});
+const portalLeads = createPortalLeads(WRITE_DATA_DIR, { onNewLead: async (lead) => sendPortalLeadNotification(lead) });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
 const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
 
@@ -116,6 +127,10 @@ app.use(credits.router);
 app.use(producers.router);
 // Order routes — /api/orders
 app.use(orders.router);
+// Order dispute / escrow routes — /api/disputes
+app.use(disputes.router);
+// Portal lead capture — /api/leads/submit (the endpoint all 7 /portals/* pages call)
+app.use(portalLeads.router);
 // Inventory / first-party shop routes — /api/shop/products
 app.use(inventory.router);
 
@@ -413,6 +428,37 @@ app.post('/api/orders/admin/deliver', async (req, res) => {
   res.json({ success: true, ...r });
 });
 
+// ─── Disputes / Escrow admin — list, AI-assist suggestion, resolve (Admin Key) ─
+// GET /api/disputes/admin/summary — สรุปข้อพิพาท + escrow (ใช้เป็น monitoring endpoint ด้วย)
+app.get('/api/disputes/admin/summary', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try { res.json({ success: true, ...(await disputes.summary()) }); }
+  catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.get('/api/disputes/admin/list', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try { res.json({ success: true, disputes: await disputes.all() }); }
+  catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// POST /api/disputes/admin/ai-suggest — ขอความเห็น AI ประกอบการตัดสินใจ (ไม่ auto-resolve)
+app.post('/api/disputes/admin/ai-suggest', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const r = await disputes.aiSuggest(req.body?.id);
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  res.json({ success: true, ...r });
+});
+// POST /api/disputes/admin/resolve — คำตัดสินสุดท้ายของ admin (favor_supplier/favor_buyer/refund/split)
+app.post('/api/disputes/admin/resolve', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const r = await disputes.resolve(req.body?.id, { decision: req.body?.decision, note: req.body?.note, resolved_by: req.body?.resolved_by || 'admin' });
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  res.json({ success: true, ...r });
+});
+
 // ─── 360° Progress Tracker ───────────────────────────────────────────────────
 // GET /api/progress/snapshot — snapshot ล่าสุด (public read)
 app.get('/api/progress/snapshot', async (req, res) => {
@@ -522,12 +568,17 @@ app.get('/api/leads/admin/search', async (req, res) => {
     for (const a of affiliates) leads.push({ type: 'affiliate', name: a.name || '', contact: a.email || '', detail: `${a.platform || ''} · ${a.ref_code || ''}`.trim(), date: a.created_at || a.joined_at || '' });
     const ords = await orders.all();
     for (const o of ords) leads.push({ type: 'order', name: o.customer_name || '', contact: o.contact || '', detail: `${o.product_name || ''}${o.amount ? ` · ฿${o.amount}` : ''}`, date: o.created_at || '' });
+    // เติม "portal:" นำหน้า type ของ portal leads กันชนกับ type เดิม (โดยเฉพาะ "affiliate" ที่มาจากคนละ
+    // แหล่ง — affiliate ปกติคือคนที่สมัครจริงแล้ว ส่วน portal:affiliate คือแค่คนกรอกฟอร์มสนใจ ยังไม่ได้สมัคร)
+    const portal = await portalLeads.all();
+    for (const l of portal) leads.push({ type: `portal:${l.type}`, name: l.name || '', contact: l.email || '', detail: Object.entries(l.form_data || {}).filter(([k]) => k !== 'name' && k !== 'email').map(([k, v]) => `${k}: ${v}`).join(' · ').slice(0, 200), date: l.created_at || '' });
 
     let out = leads;
     if (type && type !== 'all') out = out.filter((l) => l.type === type);
     if (q) out = out.filter((l) => [l.name, l.contact, l.detail].some((f) => (f || '').toString().toLowerCase().includes(q)));
     out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     const counts = { all: leads.length, waitlist: leads.filter((l) => l.type === 'waitlist').length, affiliate: leads.filter((l) => l.type === 'affiliate').length, order: leads.filter((l) => l.type === 'order').length };
+    for (const t of portalLeads.KNOWN_TYPES) counts[`portal:${t}`] = leads.filter((l) => l.type === `portal:${t}`).length;
     res.json({ success: true, counts, total: out.length, leads: out.slice(0, 2000) });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -711,6 +762,87 @@ async function sendOrderNotification(order) {
     console.log(`📧 Order notification ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
     console.error('Order email error:', err.message);
+  }
+}
+
+// แจ้งเตือนเมื่อมีการเปิด/ตอบโต้/ปิดข้อพิพาทคำสั่งซื้อ (escrow) — ถึง "ทั้งสองฝ่าย" + สำเนาเจ้าของระบบ
+// (ก่อนหน้านี้ส่งแค่ผู้ผลิต — พลาดฝั่งผู้ซื้อ ทำให้ไม่เป็นธรรมกับอีกฝ่าย)
+const isEmailLike = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
+async function sendDisputeNotification(dispute, order, phase) {
+  const owner = process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  const recipients = new Set();
+  if (order?.producer_email) recipients.add(order.producer_email);
+  if (isEmailLike(order?.contact)) recipients.add(order.contact);
+  if (!recipients.size && owner) recipients.add(owner);
+  if (!mailer || !recipients.size) return;
+
+  const subjectMap = {
+    opened:    `⚠️ มีข้อพิพาทใหม่ — ออเดอร์ ${order?.product_name || dispute.order_id}`,
+    responded: `💬 มีคำชี้แจงใหม่ในข้อพิพาท — ออเดอร์ ${order?.product_name || dispute.order_id}`,
+    resolved:  `✅ ข้อพิพาทถูกปิดแล้ว — ออเดอร์ ${order?.product_name || dispute.order_id}`,
+  };
+  const colorMap = { opened: '#ef4444,#f59e0b', responded: '#6366f1,#8b5cf6', resolved: '#10b981,#059669' };
+  const titleMap = { opened: '⚠️ ข้อพิพาทใหม่', responded: '💬 มีคำชี้แจงใหม่', resolved: '✅ ข้อพิพาทถูกปิดแล้ว' };
+
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to: [...recipients].join(', '),
+      cc: owner && !recipients.has(owner) ? owner : undefined,
+      subject: subjectMap[phase] || subjectMap.opened,
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,${colorMap[phase] || colorMap.opened});padding:28px;text-align:center;">
+          <h1 style="margin:0;font-size:22px;">${titleMap[phase] || titleMap.opened}</h1>
+        </div>
+        <div style="padding:24px;font-size:14px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <tr><td style="padding:9px 0;color:#94a3b8;">เลขที่ออเดอร์</td><td style="padding:9px 0;text-align:right;font-family:monospace;font-size:12px;">${dispute.order_id}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เปิดโดย</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.opened_by === 'buyer' ? 'ผู้ซื้อ' : 'ผู้ผลิต'}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เหตุผล</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.reason}</td></tr>
+            ${phase === 'responded' ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">คำชี้แจง</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.counter_response?.note || '-'}</td></tr>` : ''}
+            ${phase === 'resolved' ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">คำตัดสิน</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-weight:700;">${dispute.resolution?.decision || '-'}</td></tr>` : ''}
+          </table>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
+          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">จัดการข้อพิพาทใน Admin</a> · เช็คสถานะที่ <code>/api/disputes/${dispute.id}/track</code>
+        </div>
+      </div>`,
+    });
+    console.log(`📧 Dispute (${phase}) notification ส่งให้ ${[...recipients].join(', ')} เรียบร้อย`);
+  } catch (err) {
+    console.error('Dispute email error:', err.message);
+  }
+}
+
+// แจ้งเตือนเมื่อมีคนกรอกฟอร์มจากหน้า /portals/* (gov-thai, gov-intl, intl-org, foundation, creator, affiliate, producer)
+const PORTAL_TYPE_LABEL = { 'gov-thai': 'หน่วยงานรัฐไทย', 'gov-intl': 'หน่วยงานรัฐต่างประเทศ', 'intl-org': 'องค์กรระหว่างประเทศ', foundation: 'มูลนิธิ/NGO', creator: 'ครีเอเตอร์', affiliate: 'Affiliate (สนใจ)', producer: 'ผู้ผลิต (สนใจ)' };
+async function sendPortalLeadNotification(lead) {
+  const to = process.env.PORTAL_LEAD_NOTIFY_EMAIL || process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  if (!mailer || !to) return;
+  const label = PORTAL_TYPE_LABEL[lead.type] || lead.type;
+  const fields = Object.entries(lead.form_data || {}).map(([k, v]) => `<tr><td style="padding:7px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">${k}</td><td style="padding:7px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${v}</td></tr>`).join('');
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to,
+      subject: `🌐 มีผู้สนใจใหม่จาก Portal — ${label}`,
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);padding:28px;text-align:center;">
+          <h1 style="margin:0;font-size:22px;">🌐 มีผู้สนใจใหม่ — ${label}</h1>
+        </div>
+        <div style="padding:24px;font-size:14px;">
+          <table style="width:100%;border-collapse:collapse;">${fields}</table>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
+          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">ดูใน Admin → Customers</a>
+        </div>
+      </div>`,
+    });
+    console.log(`📧 Portal lead (${lead.type}) notification ส่งให้ ${to} เรียบร้อย`);
+  } catch (err) {
+    console.error('Portal lead email error:', err.message);
   }
 }
 
@@ -5623,6 +5755,54 @@ app.delete('/api/memory', (req, res) => {
   const tid = req.tenant?.id || req.query.tenantId || 'global';
   const result = memory.clear({ tenantId: tid, type: req.query.type });
   res.json({ success: true, ...result });
+});
+
+// ── Human-in-the-loop review — humans rate/correct AI-generated content (type:'content') ──
+// stored back into the same vector memory as type:'feedback', linked by metadata.reviewed_item_id.
+// This is the real version of "HITL validation": no separate system, reuses what's already deployed.
+// GET /api/memory/admin/review-queue — list content items + whether they've been reviewed (Admin Key)
+app.get('/api/memory/admin/review-queue', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const tenantId = req.query.tenantId || 'global';
+  const limit = Math.min(200, parseInt(req.query.limit, 10) || 50);
+  try {
+    const content = memory.list({ tenantId, type: 'content', limit }).memories;
+    const feedback = memory.list({ tenantId, type: 'feedback', limit: 1000 }).memories;
+    const reviewedMap = new Map();
+    for (const f of feedback) if (f.metadata?.reviewed_item_id) reviewedMap.set(f.metadata.reviewed_item_id, f);
+    const queue = content.map((c) => ({
+      id: c.id, text: c.text, metadata: c.metadata, ts: c.ts,
+      ai_score: c.metadata?.score ?? null,
+      reviewed: reviewedMap.has(c.id),
+      human_review: reviewedMap.get(c.id) || null,
+    }));
+    res.json({ success: true, tenantId, total: queue.length, pending: queue.filter((q) => !q.reviewed).length, queue });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// POST /api/memory/admin/review — submit a human rating/correction on a content item (Admin Key)
+app.post('/api/memory/admin/review', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const { tenantId = 'global', item_id, human_rating, note, corrected_text, reviewed_by } = req.body || {};
+  const rating = Number(human_rating);
+  if (!item_id || !rating || rating < 1 || rating > 5) return res.status(400).json({ success: false, error: 'item_id และ human_rating (1-5) จำเป็นต้องกรอก' });
+  try {
+    const result = await memory.store({
+      tenantId,
+      type: 'feedback',
+      text: (note || corrected_text || `human review: ${rating}/5`).toString().slice(0, 2000),
+      metadata: {
+        reviewed_item_id: item_id,
+        human_rating: rating,
+        note: (note || '').toString().slice(0, 1000),
+        corrected_text: (corrected_text || '').toString().slice(0, 2000),
+        reviewed_by: (reviewed_by || 'admin').toString().slice(0, 80),
+        reviewed_at: new Date().toISOString(),
+      },
+    });
+    res.json({ success: true, ...result });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
