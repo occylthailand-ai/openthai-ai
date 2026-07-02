@@ -29,6 +29,7 @@ import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
 import { createDisputes } from './disputes.js';
+import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
@@ -1711,6 +1712,62 @@ app.post('/api/council', generateLimiter, async (req, res) => {
 
   addLog('info', 'Council', `topic: ${topic.slice(0, 60)} · live: ${voices.filter(v => v.live).map(v => v.id).join(',') || 'none(mock)'}`);
   res.json({ success: true, room: 'OpenThaiAi', topic, voices, synthesis, synthesis_live: synthLive, any_live: voices.some(v => v.live), ts: new Date().toISOString() });
+});
+
+// ─── Thai Function Calling — natural-language Thai command → real tool call ───
+// Uses Claude/Gemini's native tool-use APIs (see backend/agent-tools.js for the
+// schema + why this needs no fine-tuning). No mock fallback here — deciding
+// whether/which tool to call is a real model decision, not something safe to fake.
+const toolContext = () => ({ orders, disputes, skillsRegistry: SKILLS_REGISTRY, webhooks });
+
+async function runAgentCommandClaude(message) {
+  const first = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001', max_tokens: 1024,
+    tools: TOOL_DEFINITIONS,
+    messages: [{ role: 'user', content: message }],
+  });
+  const toolUse = first.content.find((b) => b.type === 'tool_use');
+  if (!toolUse) {
+    return { tool_called: null, tool_input: null, tool_result: null, reply: first.content.find((b) => b.type === 'text')?.text || '' };
+  }
+  const result = await executeTool(toolUse.name, toolUse.input, toolContext());
+  const follow = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001', max_tokens: 1024,
+    tools: TOOL_DEFINITIONS,
+    messages: [
+      { role: 'user', content: message },
+      { role: 'assistant', content: first.content },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUse.id, content: JSON.stringify(result) }] },
+    ],
+  });
+  return { tool_called: toolUse.name, tool_input: toolUse.input, tool_result: result, reply: follow.content.find((b) => b.type === 'text')?.text || '' };
+}
+
+async function runAgentCommandGemini(message) {
+  const model = new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({ model: 'gemini-flash-latest', tools: toGeminiTools() });
+  const chat = model.startChat();
+  const first = await chat.sendMessage(message);
+  const call = first.response.functionCalls?.()?.[0];
+  if (!call) return { tool_called: null, tool_input: null, tool_result: null, reply: first.response.text() };
+  const result = await executeTool(call.name, call.args, toolContext());
+  const follow = await chat.sendMessage([{ functionResponse: { name: call.name, response: result } }]);
+  return { tool_called: call.name, tool_input: call.args, tool_result: result, reply: follow.response.text() };
+}
+
+app.post('/api/agent/command', generateLimiter, async (req, res) => {
+  const message = String(req.body?.message || '').trim().slice(0, 2000);
+  if (!message) return res.status(400).json({ success: false, error: 'ต้องการ message (คำสั่งภาษาไทย)' });
+  try {
+    let out;
+    if (anthropic) out = await runAgentCommandClaude(message);
+    else if (gemini) out = await runAgentCommandGemini(message);
+    else return res.status(503).json({ success: false, error: 'Function calling ต้องการ ANTHROPIC_API_KEY หรือ GEMINI_API_KEY — โมเดลจริงต้องเป็นผู้ตัดสินใจว่าจะเรียกเครื่องมือไหน จึงไม่มีโหมดจำลอง' });
+    addLog('info', 'AgentCommand', `"${message.slice(0, 60)}" → ${out.tool_called || '(no tool)'}`);
+    res.json({ success: true, ...out, available_tools: TOOL_DEFINITIONS.map((t) => t.name) });
+  } catch (e) {
+    addLog('warn', 'AgentCommand', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // S10 · POST /api/skills/trend — วิเคราะห์เทรนด์ตามสินค้า

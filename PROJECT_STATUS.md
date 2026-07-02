@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T04:30:08.475Z · branch `claude/ai-coalition-protocol-hp3rga` (1 commit(s) ahead of main)
+Generated: 2026-07-02T04:44:37.716Z · branch `claude/ai-coalition-protocol-hp3rga` (2 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 74 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 75 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -107,14 +107,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 0b605d1 Log production verification: portal-leads fix confirmed working end-to-end (69 seconds ago)
-- 2675972 Add order dispute + escrow arbitration system (#67) (4 minutes ago)
-- 642d7e9 chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
-- f5c6ce0 chore: regenerate PROJECT_STATUS.md after rebase (7 minutes ago)
-- b23a892 Add real human-in-the-loop review for AI-generated content (7 minutes ago)
-- 7f91ca1 chore: sync PROJECT_STATUS.md [skip ci] (15 minutes ago)
-- 310b903 chore: regenerate PROJECT_STATUS.md after rebase (15 minutes ago)
-- 1f6b4d7 Log rejected claim: OpenThaiAi described as a foundation-model/tokenizer project (15 minutes ago)
+- 1695295 Add CLAUDE.md: durable standing priority + honest boundary on cross-AI coordination (14 minutes ago)
+- 0b605d1 Log production verification: portal-leads fix confirmed working end-to-end (16 minutes ago)
+- 2675972 Add order dispute + escrow arbitration system (#67) (19 minutes ago)
+- 642d7e9 chore: sync PROJECT_STATUS.md [skip ci] (21 minutes ago)
+- f5c6ce0 chore: regenerate PROJECT_STATUS.md after rebase (21 minutes ago)
+- b23a892 Add real human-in-the-loop review for AI-generated content (21 minutes ago)
+- 7f91ca1 chore: sync PROJECT_STATUS.md [skip ci] (29 minutes ago)
+- 310b903 chore: regenerate PROJECT_STATUS.md after rebase (29 minutes ago)
 
 ## Production health (⚠️ HTTP 403)
 
@@ -240,9 +240,10 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 23 files)
+## Backend modules (backend/*.js — 24 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
+| `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `auth.js` | 190 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 202 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
@@ -259,7 +260,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7716 | Vercel serverless detection |
+| `server.js` | 7773 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
@@ -291,18 +292,15 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
 
-## Environment variables (57 referenced in backend code, 48 documented in .env.example)
+## Environment variables (57 referenced in backend code, 51 documented in .env.example)
 ⚠️ Referenced in code but missing from `backend/.env.example`:
 - ADMIN_USERS
-- AI_DAILY_BUDGET_USD
 - CANVA_API_KEY
 - DISABLE_RATE_LIMIT
 - PORTAL_LEAD_NOTIFY_EMAIL
 - SMTP_PORT
 - TIKTOK_SHOP_KEY
 - VERCEL
-- XAI_API_KEY
-- XAI_MODEL
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.
