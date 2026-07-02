@@ -738,7 +738,11 @@ export default function AdminPage() {
                   <tbody>
                     {list.slice(0, 500).map((l, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td style={{ padding: '8px' }}><span style={{ fontSize: 11, color: TYPE_C[l.type] || '#94a3b8', fontWeight: 700 }}>{PORTAL_LABEL[l.type] || l.type}</span></td>
+                        <td style={{ padding: '8px' }}>
+                          <span style={{ fontSize: 11, color: TYPE_C[l.type] || '#94a3b8', fontWeight: 700 }}>{PORTAL_LABEL[l.type] || l.type}</span>
+                          {l.registered === true && <span style={{ marginLeft: 6, fontSize: 10, color: '#10b981' }} title="สมัครเป็นจริงแล้วอัตโนมัติ">✅ สมัครแล้ว</span>}
+                          {l.registered === false && <span style={{ marginLeft: 6, fontSize: 10, color: '#f59e0b' }} title="auto-register ไม่ผ่าน (อีเมลซ้ำ/ข้อมูลไม่ครบ) — ต้องติดตามด้วยมือ">⚠️ ต้องติดตามเอง</span>}
+                        </td>
                         <td style={{ padding: '8px', fontWeight: 600 }}>{l.name || '-'}</td>
                         <td style={{ padding: '8px', color: '#a5b4fc' }}>{l.contact}</td>
                         <td style={{ padding: '8px', color: '#94a3b8' }}>{l.detail}</td>

@@ -14,6 +14,11 @@ export default function IntegrationHubPage() {
   const [testing, setTesting] = useState(null);
   const [testResults, setTestResults] = useState({});
   const [live, setLive] = useState(null);
+  const [composeContent, setComposeContent] = useState('');
+  const [composeLink, setComposeLink] = useState('');
+  const [selectedTargets, setSelectedTargets] = useState([]);
+  const [publishing, setPublishing] = useState(false);
+  const [publishResults, setPublishResults] = useState(null);
 
   const loadStatus = async () => {
     try {
@@ -45,6 +50,31 @@ export default function IntegrationHubPage() {
       setTestResults(prev => ({ ...prev, [id]: { ok: false, reason: 'network error' } }));
     }
     setTesting(null);
+  };
+
+  const toggleTarget = (id) => {
+    setSelectedTargets(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const publishNow = async () => {
+    if (!composeContent.trim() || selectedTargets.length === 0) return;
+    setPublishing(true);
+    setPublishResults(null);
+    const results = {};
+    for (const id of selectedTargets) {
+      try {
+        const r = await fetch(apiUrl(`/api/integrations/${id}/publish`), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: composeContent, link: composeLink || undefined }),
+        });
+        results[id] = await r.json();
+      } catch (e) {
+        results[id] = { ok: false, status: 'error', reason: 'network error' };
+      }
+    }
+    setPublishResults(results);
+    setPublishing(false);
   };
 
   const s = {
@@ -101,6 +131,50 @@ export default function IntegrationHubPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Compose & Publish — โพสต์จริงไปยัง Platform ที่เชื่อมต่อแล้ว */}
+        {data && data.summary.connected > 0 && (
+          <div style={{ ...s.card, border: '1px solid rgba(99,102,241,0.3)' }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: '#a5b4fc' }}>📝 เขียนโพสต์และเผยแพร่จริง</h3>
+            <textarea
+              value={composeContent}
+              onChange={e => setComposeContent(e.target.value)}
+              placeholder="เนื้อหาที่จะโพสต์..."
+              rows={4}
+              style={{ width: '100%', background: '#0a0a12', border: '1px solid #333', color: '#fff', borderRadius: 8, padding: 12, fontSize: 14, boxSizing: 'border-box', marginBottom: 10, fontFamily: 'inherit', resize: 'vertical' }}
+            />
+            <input
+              value={composeLink}
+              onChange={e => setComposeLink(e.target.value)}
+              placeholder="ลิงก์ (ไม่บังคับ) เช่น https://www.openthai-ai.com/portals/producer"
+              style={{ width: '100%', background: '#0a0a12', border: '1px solid #333', color: '#fff', borderRadius: 8, padding: 10, fontSize: 13, boxSizing: 'border-box', marginBottom: 12 }}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+              {data.integrations.filter(i => i.connected).map(i => (
+                <label key={i.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: selectedTargets.includes(i.id) ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${selectedTargets.includes(i.id) ? 'rgba(99,102,241,0.5)' : '#333'}`, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13 }}>
+                  <input type="checkbox" checked={selectedTargets.includes(i.id)} onChange={() => toggleTarget(i.id)} />
+                  {i.icon} {i.name}
+                </label>
+              ))}
+            </div>
+            <button
+              onClick={publishNow}
+              disabled={publishing || !composeContent.trim() || selectedTargets.length === 0}
+              style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: publishing ? 'default' : 'pointer', opacity: (publishing || !composeContent.trim() || selectedTargets.length === 0) ? 0.5 : 1 }}
+            >
+              {publishing ? '⏳ กำลังโพสต์...' : '🚀 โพสต์ทันที'}
+            </button>
+            {publishResults && (
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {Object.entries(publishResults).map(([id, r]) => (
+                  <div key={id} style={{ fontSize: 12, borderRadius: 8, padding: '8px 12px', background: r.ok ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${r.ok ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`, color: r.ok ? '#6ee7b7' : '#fca5a5' }}>
+                    {id}: {r.status === 'published' ? `✅ โพสต์สำเร็จ (post_id: ${r.post_id})` : r.status === 'queued' ? `⏳ ${r.message}` : `⚠️ ${r.reason || r.status}`}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
