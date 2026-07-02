@@ -62,7 +62,7 @@ export default function AdminPage() {
     fetch(apiUrl('/api/scheduler/list')).then(r => r.json()).then(d => { if (d.ok) setSchPosts(d.posts); }).catch(apiErr('scheduler'));
     fetch(apiUrl('/api/scheduler/due')).then(r => r.json()).then(d => { if (d.ok) setSchDue(d.count); }).catch(() => {});
   };
-  const schDelete = async (id) => { await fetch(apiUrl(`/api/scheduler/${id}`), { method: 'DELETE' }).catch(() => {}); loadScheduler(); };
+  const schDelete = async (id) => { await fetch(apiUrl(`/api/scheduler/${id}`), { method: 'DELETE', headers: { 'x-admin-key': adminKey() } }).catch(() => {}); loadScheduler(); };
   const schProcess = async () => { await fetch(apiUrl('/api/scheduler/process'), { method: 'POST' }).catch(() => {}); loadScheduler(); };
   const loadProducers = () => fetch(apiUrl('/api/producers/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setProds(d.producers); else console.warn('[admin] producers:', d.message); }).catch(apiErr('producers'));
   const loadOrders = () => fetch(apiUrl('/api/orders/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setOrds(d.orders); else console.warn('[admin] orders:', d.message); }).catch(apiErr('orders'));

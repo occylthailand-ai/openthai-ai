@@ -5957,8 +5957,10 @@ app.get('/api/webhooks', (req, res) => {
   res.json({ success: true, data: webhooks.list({ tenantId, adminView }) });
 });
 
-// DELETE /api/webhooks/:id — unregister
+// DELETE /api/webhooks/:id — unregister (Admin Key — ไม่มีหน้า UI เรียกอยู่ในปัจจุบัน จึงล็อกได้โดยไม่กระทบของเดิม)
 app.delete('/api/webhooks/:id', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const result = webhooks.remove(req.params.id);
   res.json({ success: true, ...result });
 });
@@ -7559,7 +7561,10 @@ app.post('/api/scheduler/execute/:id', (req, res) => {
   res.json({ ok: true, post });
 });
 
+// ลบโพสต์ในคิว Scheduler (Admin Key) — ต่างจาก /api/scheduler/process ที่ต้องเปิดไว้ให้ Vercel Cron ยิงได้
 app.delete('/api/scheduler/:id', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const idx = schedulerStore.posts.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'not found' });
   schedulerStore.posts.splice(idx, 1);

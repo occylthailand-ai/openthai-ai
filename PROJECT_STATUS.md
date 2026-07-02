@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T06:46:24.278Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T07:02:03.857Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 84 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,36 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Autonomous hourly scan (job 3d2a78bd): fixed 2 unauthenticated deletes, flagged a 3rd for human review
+First run of the recurring `/loop` scan set up this session (hourly, always opens a PR,
+never auto-merges — see the CLAUDE.md standing rule). Systematically checked every
+`app.delete(...)` route in `server.js` for the same class of bug fixed earlier
+(`DELETE /api/memory`): no auth, no rate limit.
+
+**Fixed** (safe — verified nothing legitimate currently calls these unauthenticated):
+- `DELETE /api/webhooks/:id` — nothing in the frontend or `n8n-workflows/*.json` calls
+  it at all; gating it live 401→200-with-key had zero regression risk.
+- `DELETE /api/scheduler/:id` — `AdminPage.jsx`'s `schDelete` called it with no
+  `x-admin-key`, so gating the backend alone would have broken the Admin Panel's own
+  delete button. Fixed both sides together. Left `POST/GET /api/scheduler/process`
+  unauthenticated on purpose — `vercel.json` has Vercel Cron hitting it via GET with no
+  custom headers, so gating it would break the real daily cron job.
+
+**Found but deliberately NOT fixed — needs a human decision:** `/api/agent/*` (GET
+list, POST create, PATCH, DELETE, `/run`) has zero server-side auth despite
+`frontend/src/pages/AgentPage.jsx` living behind an `(auth)` route per the route map.
+Checked why: `AgentPage.jsx` never sends an `Authorization: Bearer` header on any of
+these calls, and `apiBase.js`'s `authHeaders()` only attaches `x-device-id`/
+`x-user-email`, never a JWT — so the page's "auth required" is enforced client-side
+only (a React Router redirect), with nothing server-side backing it. Adding
+`requireAuth` to `/api/agent/*` the way it's used everywhere else in this file would
+break the real page for real logged-in users, since it never sends a token to check.
+Also: agent records have no owner/tenant field at all — `GET /api/agent` returns
+every agent's data to anyone, including `lineUserId` (PII). This needs a real decision
+(should the frontend start attaching JWTs? should agents be scoped by device-id like
+`vector-memory.js` does? was public access intentional for a "try without login"
+flow?) — not a guess baked into an unsupervised autonomous commit.
 
 ### 2026-07-02 — Scoped /api/council to OpenThaiAi-only, structurally not by convention
 User asked for a "command room" where Gemini and Grok can join, restricted to
@@ -154,47 +184,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- bbd517e Scope the Council command room to OpenThaiAi only, structurally (5 minutes ago)
+- 095741b Close env-var docs, fix SMTP_PORT bug, scope Council room to OpenThaiAi only (#69) (14 minutes ago)
+- 6bc7450 chore: sync PROJECT_STATUS.md [skip ci] (16 minutes ago)
+- bbd517e Scope the Council command room to OpenThaiAi only, structurally (21 minutes ago)
+- 1c1fb5f chore: regenerate PROJECT_STATUS.md after rebase (2 hours ago)
+- bfe5351 Close the env-var documentation gap fully + fix a real SMTP bug found doing it (2 hours ago)
+- 6e2592c Portal-leads verification, CLAUDE.md, Thai Function Calling, Council Scan Room + security fix (#68) (2 hours ago)
+- 06ba0cf chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 39f28ef Build the real "combined command room" (Council Scan Room) + fix what it found (2 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -338,7 +337,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7846 | Vercel serverless detection |
+| `server.js` | 7851 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
