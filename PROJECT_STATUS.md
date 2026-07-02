@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T13:04:08.951Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T13:25:39.436Z · branch `claude/ai-coalition-protocol-hp3rga` (11 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 99 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,26 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Follow-up sweep found nothing new in 2 known bug classes; closed a small residual gap from the funnel fix
+Asked to "keep going." Re-ran the same two systematic checks used earlier this
+session (diff frontend `apiUrl()` calls against registered backend routes; audit
+every `DELETE`/admin mutation route for `checkAdminKey`) — found **nothing new**
+in either. All 9 real money/state-changing admin endpoints already gated, no
+orphaned frontend calls, env-var docs still 100%. Not manufacturing busywork to
+pad this out — a clean scan is a legitimate result.
+
+Found one small real gap left over from the producer/affiliate funnel fix itself:
+`GET /api/leads/admin/search` still showed `portal:producer`/`portal:affiliate`
+leads with a stale in-code comment claiming they're "just interest, not applied
+yet" — no longer true after `handleNewPortalLead()` started auto-registering
+them. Fixed by cross-referencing each portal lead's email against the real
+`producers`/`affiliates` records and returning a `registered: true/false/null`
+flag (`null` for categories with no real system to check against, e.g.
+consumer/gov/foundation). Admin Panel's leads tab now shows "✅ สมัครแล้ว" or
+"⚠️ ต้องติดตามเอง" next to producer/affiliate portal leads instead of leaving
+admins to guess whether a lead was actually converted. Verified live: submitted
+a producer lead, confirmed `registered:true` in the API response.
 
 ### 2026-07-02 — Closed 3 real gaps: producer/affiliate portal funnel, /api/agent/* auth, stale README
 Asked for a full project status report, then "what should be developed next." Found
@@ -386,47 +406,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 9bf5bd7 chore: regenerate PROJECT_STATUS.md after rebase (16 seconds ago)
+- acc87fb chore: sync PROJECT_STATUS.md [skip ci] (21 minutes ago)
+- 9bf5bd7 chore: regenerate PROJECT_STATUS.md after rebase (22 minutes ago)
+- 85b6ac7 Fix producer/affiliate portal funnel gap, close /api/agent/* auth gap, rewrite README (23 minutes ago)
+- e83be14 chore: sync PROJECT_STATUS.md [skip ci] (42 minutes ago)
+- 45beec0 chore: regenerate PROJECT_STATUS.md after rebase (42 minutes ago)
+- 2676f45 Add AI Copywriting Templates (AIDA + Live Script) for Affiliate team (43 minutes ago)
+- 09f127e chore: sync PROJECT_STATUS.md [skip ci] (79 minutes ago)
+- 4bed880 chore: regenerate PROJECT_STATUS.md after rebase (80 minutes ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -572,7 +561,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7895 | Vercel serverless detection |
+| `server.js` | 7904 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

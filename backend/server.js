@@ -570,9 +570,18 @@ app.get('/api/leads/admin/search', async (req, res) => {
     const ords = await orders.all();
     for (const o of ords) leads.push({ type: 'order', name: o.customer_name || '', contact: o.contact || '', detail: `${o.product_name || ''}${o.amount ? ` · ฿${o.amount}` : ''}`, date: o.created_at || '' });
     // เติม "portal:" นำหน้า type ของ portal leads กันชนกับ type เดิม (โดยเฉพาะ "affiliate" ที่มาจากคนละ
-    // แหล่ง — affiliate ปกติคือคนที่สมัครจริงแล้ว ส่วน portal:affiliate คือแค่คนกรอกฟอร์มสนใจ ยังไม่ได้สมัคร)
+    // แหล่ง — affiliate ปกติคือคนที่สมัครจริงแล้ว ส่วน portal:affiliate คือคนกรอกฟอร์มสนใจ ซึ่งตอนนี้
+    // handleNewPortalLead() auto-register ต่อให้เป็นใบสมัครจริงทันทีที่กรอกฟอร์มแล้ว (ดู "registered"
+    // ด้านล่าง) — เช็คไขว้กับ producers/affiliates จริงด้วย email เพื่อบอกแอดมินว่าอันไหนสมัครจริงแล้ว
     const portal = await portalLeads.all();
-    for (const l of portal) leads.push({ type: `portal:${l.type}`, name: l.name || '', contact: l.email || '', detail: Object.entries(l.form_data || {}).filter(([k]) => k !== 'name' && k !== 'email').map(([k, v]) => `${k}: ${v}`).join(' · ').slice(0, 200), date: l.created_at || '' });
+    const producerEmails = new Set((await producers.all()).map(p => p.email));
+    const affiliateEmails = new Set(affiliates.map(a => a.email));
+    for (const l of portal) {
+      let registered = null; // null = ไม่มีระบบจริงให้เชื่อม (เช่น consumer/gov/foundation — lead คือระบบทั้งหมดอยู่แล้ว)
+      if (l.type === 'producer') registered = producerEmails.has(l.email);
+      else if (l.type === 'affiliate') registered = affiliateEmails.has(l.email);
+      leads.push({ type: `portal:${l.type}`, name: l.name || '', contact: l.email || '', detail: Object.entries(l.form_data || {}).filter(([k]) => k !== 'name' && k !== 'email').map(([k, v]) => `${k}: ${v}`).join(' · ').slice(0, 200), date: l.created_at || '', registered });
+    }
 
     let out = leads;
     if (type && type !== 'all') out = out.filter((l) => l.type === type);

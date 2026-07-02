@@ -11,6 +11,26 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Follow-up sweep found nothing new in 2 known bug classes; closed a small residual gap from the funnel fix
+Asked to "keep going." Re-ran the same two systematic checks used earlier this
+session (diff frontend `apiUrl()` calls against registered backend routes; audit
+every `DELETE`/admin mutation route for `checkAdminKey`) — found **nothing new**
+in either. All 9 real money/state-changing admin endpoints already gated, no
+orphaned frontend calls, env-var docs still 100%. Not manufacturing busywork to
+pad this out — a clean scan is a legitimate result.
+
+Found one small real gap left over from the producer/affiliate funnel fix itself:
+`GET /api/leads/admin/search` still showed `portal:producer`/`portal:affiliate`
+leads with a stale in-code comment claiming they're "just interest, not applied
+yet" — no longer true after `handleNewPortalLead()` started auto-registering
+them. Fixed by cross-referencing each portal lead's email against the real
+`producers`/`affiliates` records and returning a `registered: true/false/null`
+flag (`null` for categories with no real system to check against, e.g.
+consumer/gov/foundation). Admin Panel's leads tab now shows "✅ สมัครแล้ว" or
+"⚠️ ต้องติดตามเอง" next to producer/affiliate portal leads instead of leaving
+admins to guess whether a lead was actually converted. Verified live: submitted
+a producer lead, confirmed `registered:true` in the API response.
+
 ### 2026-07-02 — Closed 3 real gaps: producer/affiliate portal funnel, /api/agent/* auth, stale README
 Asked for a full project status report, then "what should be developed next." Found
 and fixed three concrete gaps, in the priority order the project owner picked (all
