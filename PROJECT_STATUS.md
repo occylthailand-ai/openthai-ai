@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T06:46:24.278Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T07:03:11.714Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -25,6 +25,36 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Autonomous hourly scan (job 3d2a78bd): fixed 2 unauthenticated deletes, flagged a 3rd for human review
+First run of the recurring `/loop` scan set up this session (hourly, always opens a PR,
+never auto-merges — see the CLAUDE.md standing rule). Systematically checked every
+`app.delete(...)` route in `server.js` for the same class of bug fixed earlier
+(`DELETE /api/memory`): no auth, no rate limit.
+
+**Fixed** (safe — verified nothing legitimate currently calls these unauthenticated):
+- `DELETE /api/webhooks/:id` — nothing in the frontend or `n8n-workflows/*.json` calls
+  it at all; gating it live 401→200-with-key had zero regression risk.
+- `DELETE /api/scheduler/:id` — `AdminPage.jsx`'s `schDelete` called it with no
+  `x-admin-key`, so gating the backend alone would have broken the Admin Panel's own
+  delete button. Fixed both sides together. Left `POST/GET /api/scheduler/process`
+  unauthenticated on purpose — `vercel.json` has Vercel Cron hitting it via GET with no
+  custom headers, so gating it would break the real daily cron job.
+
+**Found but deliberately NOT fixed — needs a human decision:** `/api/agent/*` (GET
+list, POST create, PATCH, DELETE, `/run`) has zero server-side auth despite
+`frontend/src/pages/AgentPage.jsx` living behind an `(auth)` route per the route map.
+Checked why: `AgentPage.jsx` never sends an `Authorization: Bearer` header on any of
+these calls, and `apiBase.js`'s `authHeaders()` only attaches `x-device-id`/
+`x-user-email`, never a JWT — so the page's "auth required" is enforced client-side
+only (a React Router redirect), with nothing server-side backing it. Adding
+`requireAuth` to `/api/agent/*` the way it's used everywhere else in this file would
+break the real page for real logged-in users, since it never sends a token to check.
+Also: agent records have no owner/tenant field at all — `GET /api/agent` returns
+every agent's data to anyone, including `lineUserId` (PII). This needs a real decision
+(should the frontend start attaching JWTs? should agents be scoped by device-id like
+`vector-memory.js` does? was public access intentional for a "try without login"
+flow?) — not a guess baked into an unsupervised autonomous commit.
 
 ### 2026-07-02 — Scoped /api/council to OpenThaiAi-only, structurally not by convention
 User asked for a "command room" where Gemini and Grok can join, restricted to
@@ -154,7 +184,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- bbd517e Scope the Council command room to OpenThaiAi only, structurally (5 minutes ago)
+- 2c56956 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd (52 seconds ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -176,8 +206,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
+  "uptime_sec": 1,
+  "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -338,7 +368,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7846 | Vercel serverless detection |
+| `server.js` | 7851 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

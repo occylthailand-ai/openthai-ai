@@ -11,6 +11,36 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Autonomous hourly scan (job 3d2a78bd): fixed 2 unauthenticated deletes, flagged a 3rd for human review
+First run of the recurring `/loop` scan set up this session (hourly, always opens a PR,
+never auto-merges — see the CLAUDE.md standing rule). Systematically checked every
+`app.delete(...)` route in `server.js` for the same class of bug fixed earlier
+(`DELETE /api/memory`): no auth, no rate limit.
+
+**Fixed** (safe — verified nothing legitimate currently calls these unauthenticated):
+- `DELETE /api/webhooks/:id` — nothing in the frontend or `n8n-workflows/*.json` calls
+  it at all; gating it live 401→200-with-key had zero regression risk.
+- `DELETE /api/scheduler/:id` — `AdminPage.jsx`'s `schDelete` called it with no
+  `x-admin-key`, so gating the backend alone would have broken the Admin Panel's own
+  delete button. Fixed both sides together. Left `POST/GET /api/scheduler/process`
+  unauthenticated on purpose — `vercel.json` has Vercel Cron hitting it via GET with no
+  custom headers, so gating it would break the real daily cron job.
+
+**Found but deliberately NOT fixed — needs a human decision:** `/api/agent/*` (GET
+list, POST create, PATCH, DELETE, `/run`) has zero server-side auth despite
+`frontend/src/pages/AgentPage.jsx` living behind an `(auth)` route per the route map.
+Checked why: `AgentPage.jsx` never sends an `Authorization: Bearer` header on any of
+these calls, and `apiBase.js`'s `authHeaders()` only attaches `x-device-id`/
+`x-user-email`, never a JWT — so the page's "auth required" is enforced client-side
+only (a React Router redirect), with nothing server-side backing it. Adding
+`requireAuth` to `/api/agent/*` the way it's used everywhere else in this file would
+break the real page for real logged-in users, since it never sends a token to check.
+Also: agent records have no owner/tenant field at all — `GET /api/agent` returns
+every agent's data to anyone, including `lineUserId` (PII). This needs a real decision
+(should the frontend start attaching JWTs? should agents be scoped by device-id like
+`vector-memory.js` does? was public access intentional for a "try without login"
+flow?) — not a guess baked into an unsupervised autonomous commit.
+
 ### 2026-07-02 — Scoped /api/council to OpenThaiAi-only, structurally not by convention
 User asked for a "command room" where Gemini and Grok can join, restricted to
 OpenThaiAi only. The room already existed (`/api/council`, live at `/council`)
