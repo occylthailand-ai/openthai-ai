@@ -672,7 +672,8 @@ export default function AdminPage() {
           const q = leadQ.trim().toLowerCase();
           const all = leads?.leads || [];
           const list = all.filter((l) => (leadType === 'all' || l.type === leadType) && (!q || [l.name, l.contact, l.detail].some((f) => (f || '').toLowerCase().includes(q))));
-          const TYPE_C = { waitlist: '#06b6d4', affiliate: '#f59e0b', order: '#10b981' };
+          const TYPE_C = { waitlist: '#06b6d4', affiliate: '#f59e0b', order: '#10b981', 'portal:gov-thai': '#3b82f6', 'portal:gov-intl': '#3b82f6', 'portal:intl-org': '#8b5cf6', 'portal:foundation': '#059669', 'portal:creator': '#ec4899', 'portal:affiliate': '#f59e0b', 'portal:producer': '#f97316' };
+          const PORTAL_LABEL = { 'portal:gov-thai': 'Portal: หน่วยงานรัฐไทย', 'portal:gov-intl': 'Portal: หน่วยงานรัฐต่างประเทศ', 'portal:intl-org': 'Portal: องค์กรระหว่างประเทศ', 'portal:foundation': 'Portal: มูลนิธิ/NGO', 'portal:creator': 'Portal: ครีเอเตอร์', 'portal:affiliate': 'Portal: สนใจเป็น Affiliate', 'portal:producer': 'Portal: สนใจเป็นผู้ผลิต' };
           const exportCsv = () => {
             const rows = [['type', 'name', 'contact', 'detail', 'date'], ...list.map((l) => [l.type, l.name, l.contact, l.detail, l.date])];
             const csv = rows.map((r) => r.map((c) => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -687,6 +688,7 @@ export default function AdminPage() {
               <input value={leadQ} onChange={(e) => setLeadQ(e.target.value)} placeholder="🔍 ค้นหาชื่อ/อีเมล/เบอร์/รายละเอียด" style={{ ...inputSt, padding: '8px 12px', fontSize: 13, minWidth: 200, flex: 1, maxWidth: 300 }} />
               <select value={leadType} onChange={(e) => setLeadType(e.target.value)} style={{ ...inputSt, padding: '8px 12px', fontSize: 13, width: 'auto' }}>
                 <option value="all">ทั้งหมด</option><option value="waitlist">Waitlist</option><option value="affiliate">Affiliate</option><option value="order">ลูกค้าสั่งซื้อ</option>
+                {Object.entries(PORTAL_LABEL).map(([t, label]) => <option key={t} value={t}>{label}</option>)}
               </select>
               <button onClick={exportCsv} disabled={!list.length} style={miniBtn('#10b981')}>⬇️ CSV</button>
               <button onClick={() => setBcOpen(true)} style={miniBtn('#6366f1')}>📨 ส่งอีเมล</button>
@@ -694,8 +696,8 @@ export default function AdminPage() {
             {bcOpen && <BroadcastModal adminKey={adminKey} counts={leads?.counts} onClose={() => setBcOpen(false)} />}
             {leads && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, fontSize: 12 }}>
-                {[['waitlist', leads.counts.waitlist], ['affiliate', leads.counts.affiliate], ['order', leads.counts.order]].map(([t, n]) => (
-                  <span key={t} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: '4px 10px', color: TYPE_C[t] }}>{t}: <strong>{n}</strong></span>
+                {[['waitlist', leads.counts.waitlist], ['affiliate', leads.counts.affiliate], ['order', leads.counts.order], ...Object.keys(PORTAL_LABEL).map((t) => [t, leads.counts[t] || 0])].filter(([, n]) => n > 0).map(([t, n]) => (
+                  <span key={t} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: '4px 10px', color: TYPE_C[t] }}>{PORTAL_LABEL[t] || t}: <strong>{n}</strong></span>
                 ))}
               </div>
             )}
@@ -708,7 +710,7 @@ export default function AdminPage() {
                   <tbody>
                     {list.slice(0, 500).map((l, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                        <td style={{ padding: '8px' }}><span style={{ fontSize: 11, color: TYPE_C[l.type] || '#94a3b8', fontWeight: 700 }}>{l.type}</span></td>
+                        <td style={{ padding: '8px' }}><span style={{ fontSize: 11, color: TYPE_C[l.type] || '#94a3b8', fontWeight: 700 }}>{PORTAL_LABEL[l.type] || l.type}</span></td>
                         <td style={{ padding: '8px', fontWeight: 600 }}>{l.name || '-'}</td>
                         <td style={{ padding: '8px', color: '#a5b4fc' }}>{l.contact}</td>
                         <td style={{ padding: '8px', color: '#94a3b8' }}>{l.detail}</td>

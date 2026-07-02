@@ -29,6 +29,7 @@ import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
 import { createDisputes } from './disputes.js';
+import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { createIntegrations } from './integrations.js';
@@ -96,6 +97,7 @@ const disputes  = createDisputes(WRITE_DATA_DIR, {
     resolved:  async (dispute, order) => sendDisputeNotification(dispute, order, 'resolved'),
   },
 });
+const portalLeads = createPortalLeads(WRITE_DATA_DIR, { onNewLead: async (lead) => sendPortalLeadNotification(lead) });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
 const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
 
@@ -127,6 +129,8 @@ app.use(producers.router);
 app.use(orders.router);
 // Order dispute / escrow routes — /api/disputes
 app.use(disputes.router);
+// Portal lead capture — /api/leads/submit (the endpoint all 7 /portals/* pages call)
+app.use(portalLeads.router);
 // Inventory / first-party shop routes — /api/shop/products
 app.use(inventory.router);
 
@@ -564,12 +568,17 @@ app.get('/api/leads/admin/search', async (req, res) => {
     for (const a of affiliates) leads.push({ type: 'affiliate', name: a.name || '', contact: a.email || '', detail: `${a.platform || ''} · ${a.ref_code || ''}`.trim(), date: a.created_at || a.joined_at || '' });
     const ords = await orders.all();
     for (const o of ords) leads.push({ type: 'order', name: o.customer_name || '', contact: o.contact || '', detail: `${o.product_name || ''}${o.amount ? ` · ฿${o.amount}` : ''}`, date: o.created_at || '' });
+    // เติม "portal:" นำหน้า type ของ portal leads กันชนกับ type เดิม (โดยเฉพาะ "affiliate" ที่มาจากคนละ
+    // แหล่ง — affiliate ปกติคือคนที่สมัครจริงแล้ว ส่วน portal:affiliate คือแค่คนกรอกฟอร์มสนใจ ยังไม่ได้สมัคร)
+    const portal = await portalLeads.all();
+    for (const l of portal) leads.push({ type: `portal:${l.type}`, name: l.name || '', contact: l.email || '', detail: Object.entries(l.form_data || {}).filter(([k]) => k !== 'name' && k !== 'email').map(([k, v]) => `${k}: ${v}`).join(' · ').slice(0, 200), date: l.created_at || '' });
 
     let out = leads;
     if (type && type !== 'all') out = out.filter((l) => l.type === type);
     if (q) out = out.filter((l) => [l.name, l.contact, l.detail].some((f) => (f || '').toString().toLowerCase().includes(q)));
     out.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     const counts = { all: leads.length, waitlist: leads.filter((l) => l.type === 'waitlist').length, affiliate: leads.filter((l) => l.type === 'affiliate').length, order: leads.filter((l) => l.type === 'order').length };
+    for (const t of portalLeads.KNOWN_TYPES) counts[`portal:${t}`] = leads.filter((l) => l.type === `portal:${t}`).length;
     res.json({ success: true, counts, total: out.length, leads: out.slice(0, 2000) });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -803,6 +812,37 @@ async function sendDisputeNotification(dispute, order, phase) {
     console.log(`📧 Dispute (${phase}) notification ส่งให้ ${[...recipients].join(', ')} เรียบร้อย`);
   } catch (err) {
     console.error('Dispute email error:', err.message);
+  }
+}
+
+// แจ้งเตือนเมื่อมีคนกรอกฟอร์มจากหน้า /portals/* (gov-thai, gov-intl, intl-org, foundation, creator, affiliate, producer)
+const PORTAL_TYPE_LABEL = { 'gov-thai': 'หน่วยงานรัฐไทย', 'gov-intl': 'หน่วยงานรัฐต่างประเทศ', 'intl-org': 'องค์กรระหว่างประเทศ', foundation: 'มูลนิธิ/NGO', creator: 'ครีเอเตอร์', affiliate: 'Affiliate (สนใจ)', producer: 'ผู้ผลิต (สนใจ)' };
+async function sendPortalLeadNotification(lead) {
+  const to = process.env.PORTAL_LEAD_NOTIFY_EMAIL || process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
+  if (!mailer || !to) return;
+  const label = PORTAL_TYPE_LABEL[lead.type] || lead.type;
+  const fields = Object.entries(lead.form_data || {}).map(([k, v]) => `<tr><td style="padding:7px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">${k}</td><td style="padding:7px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${v}</td></tr>`).join('');
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to,
+      subject: `🌐 มีผู้สนใจใหม่จาก Portal — ${label}`,
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);padding:28px;text-align:center;">
+          <h1 style="margin:0;font-size:22px;">🌐 มีผู้สนใจใหม่ — ${label}</h1>
+        </div>
+        <div style="padding:24px;font-size:14px;">
+          <table style="width:100%;border-collapse:collapse;">${fields}</table>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
+          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">ดูใน Admin → Customers</a>
+        </div>
+      </div>`,
+    });
+    console.log(`📧 Portal lead (${lead.type}) notification ส่งให้ ${to} เรียบร้อย`);
+  } catch (err) {
+    console.error('Portal lead email error:', err.message);
   }
 }
 

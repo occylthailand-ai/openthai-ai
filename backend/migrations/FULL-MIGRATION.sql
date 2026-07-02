@@ -84,6 +84,20 @@ create index if not exists order_disputes_order_idx  on public.order_disputes (o
 create index if not exists order_disputes_status_idx on public.order_disputes (status);
 alter table public.order_disputes enable row level security;
 
+-- ── portal_leads (ฟอร์มจากหน้า /portals/* — gov-thai, gov-intl, intl-org, foundation, creator, affiliate, producer) ──
+create table if not exists public.portal_leads (
+  id         text primary key,
+  type       text not null,
+  lang       text,
+  name       text,
+  email      text,
+  form_data  jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists portal_leads_type_idx  on public.portal_leads (type);
+create index if not exists portal_leads_email_idx on public.portal_leads (email);
+alter table public.portal_leads enable row level security;
+
 -- ── products (คลังสินค้า first-party) ───────────────────────────────────
 create table if not exists public.products (
   id          text primary key,
