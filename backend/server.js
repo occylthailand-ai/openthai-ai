@@ -5757,6 +5757,54 @@ app.delete('/api/memory', (req, res) => {
   res.json({ success: true, ...result });
 });
 
+// ── Human-in-the-loop review — humans rate/correct AI-generated content (type:'content') ──
+// stored back into the same vector memory as type:'feedback', linked by metadata.reviewed_item_id.
+// This is the real version of "HITL validation": no separate system, reuses what's already deployed.
+// GET /api/memory/admin/review-queue — list content items + whether they've been reviewed (Admin Key)
+app.get('/api/memory/admin/review-queue', (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const tenantId = req.query.tenantId || 'global';
+  const limit = Math.min(200, parseInt(req.query.limit, 10) || 50);
+  try {
+    const content = memory.list({ tenantId, type: 'content', limit }).memories;
+    const feedback = memory.list({ tenantId, type: 'feedback', limit: 1000 }).memories;
+    const reviewedMap = new Map();
+    for (const f of feedback) if (f.metadata?.reviewed_item_id) reviewedMap.set(f.metadata.reviewed_item_id, f);
+    const queue = content.map((c) => ({
+      id: c.id, text: c.text, metadata: c.metadata, ts: c.ts,
+      ai_score: c.metadata?.score ?? null,
+      reviewed: reviewedMap.has(c.id),
+      human_review: reviewedMap.get(c.id) || null,
+    }));
+    res.json({ success: true, tenantId, total: queue.length, pending: queue.filter((q) => !q.reviewed).length, queue });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+// POST /api/memory/admin/review — submit a human rating/correction on a content item (Admin Key)
+app.post('/api/memory/admin/review', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const { tenantId = 'global', item_id, human_rating, note, corrected_text, reviewed_by } = req.body || {};
+  const rating = Number(human_rating);
+  if (!item_id || !rating || rating < 1 || rating > 5) return res.status(400).json({ success: false, error: 'item_id และ human_rating (1-5) จำเป็นต้องกรอก' });
+  try {
+    const result = await memory.store({
+      tenantId,
+      type: 'feedback',
+      text: (note || corrected_text || `human review: ${rating}/5`).toString().slice(0, 2000),
+      metadata: {
+        reviewed_item_id: item_id,
+        human_rating: rating,
+        note: (note || '').toString().slice(0, 1000),
+        corrected_text: (corrected_text || '').toString().slice(0, 2000),
+        reviewed_by: (reviewed_by || 'admin').toString().slice(0, 80),
+        reviewed_at: new Date().toISOString(),
+      },
+    });
+    res.json({ success: true, ...result });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 //  WEBHOOK SYSTEM — Push events to subscribers
 // ═══════════════════════════════════════════════════════════════════════════════

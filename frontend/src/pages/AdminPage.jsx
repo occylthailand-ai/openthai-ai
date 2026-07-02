@@ -42,6 +42,8 @@ export default function AdminPage() {
   const [prodEdit, setProdEdit] = useState(null); // สินค้าที่กำลังแก้ (object) / null
   const [disputes, setDisputes] = useState(null); // ข้อพิพาทคำสั่งซื้อ
   const [escrowSum, setEscrowSum] = useState(null); // สรุป escrow (held/released/refunded)
+  const [reviewQueue, setReviewQueue] = useState(null); // Human review queue (AI-generated content)
+  const [reviewTenant, setReviewTenant] = useState('global');
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
@@ -75,7 +77,15 @@ export default function AdminPage() {
     fetch(apiUrl('/api/disputes/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setDisputes(d.disputes); else console.warn('[admin] disputes:', d.message); }).catch(apiErr('disputes'));
     fetch(apiUrl('/api/disputes/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setEscrowSum(d); }).catch(apiErr('disputes-summary'));
   };
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); loadDisputes(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  const loadReviewQueue = (tenantId = reviewTenant) => {
+    fetch(apiUrl(`/api/memory/admin/review-queue?tenantId=${encodeURIComponent(tenantId)}`), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setReviewQueue(d); else console.warn('[admin] review-queue:', d.message); }).catch(apiErr('review-queue'));
+  };
+  const submitReview = async (item_id, human_rating, note) => {
+    const r = await fetch(apiUrl('/api/memory/admin/review'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ tenantId: reviewTenant, item_id, human_rating, note, reviewed_by: 'admin' }) }).then(x => x.json());
+    if (!r.success) alert(r.error || 'บันทึกรีวิวไม่สำเร็จ');
+    loadReviewQueue();
+  };
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); loadDisputes(); loadReviewQueue(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveProduct = async (data) => {
     const r = await fetch(apiUrl('/api/inventory/admin/upsert'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(data) }).then(x => x.json());
@@ -584,6 +594,24 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* TAB: REVIEW — Human-in-the-loop review ของคอนเทนต์ที่ AI สร้าง (S6 AI Critic + S9 Learning Layer) */}
+        {tab === 'review' && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ fontWeight: 700 }}>🧑‍⚖️ ตรวจสอบคุณภาพ (Human Review) {reviewQueue ? `— ${reviewQueue.pending} รอตรวจ / ${reviewQueue.total} ทั้งหมด` : ''}</div>
+              <span style={{ flex: 1 }} />
+              <input value={reviewTenant} onChange={(e) => setReviewTenant(e.target.value)} placeholder="tenantId (default: global)" style={{ ...inputSt, padding: '6px 10px', fontSize: 12, width: 160 }} />
+              <button onClick={() => loadReviewQueue()} style={{ ...tabBtn, padding: '6px 14px', fontSize: 12 }}>🔄 รีเฟรช</button>
+            </div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>
+              คอนเทนต์ที่ AI สร้างและให้คะแนนอัตโนมัติ (S6 AI Critic) — แอดมิน/ผู้เชี่ยวชาญให้คะแนนจริงเพิ่มเติม บันทึกลง vector memory (type: feedback) ผูกกับชิ้นงานเดิม เพื่อปิด loop ระหว่าง AI กับคนจริง
+            </div>
+            {!reviewQueue && <div style={{ color: '#64748b', fontSize: 13 }}>{T.loading}</div>}
+            {reviewQueue && reviewQueue.queue.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีคอนเทนต์ในคิว — จะปรากฏที่นี่หลังมีคนใช้ /ai-generator</div>}
+            {reviewQueue && reviewQueue.queue.map((item) => <ReviewRow key={item.id} item={item} onSubmit={submitReview} />)}
+          </div>
+        )}
+
         {/* TAB: INVENTORY / คลังสินค้า */}
         {tab === 'inventory' && (
           <div style={{ display: 'grid', gap: 16 }}>
@@ -980,6 +1008,54 @@ function InvitePanel() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── Human Review row — ให้คะแนนจริง + คำชี้แจง ต่อชิ้นคอนเทนต์ที่ AI สร้าง ────────
+function ReviewRow({ item, onSubmit }) {
+  const [rating, setRating] = useState(item.human_review?.metadata?.human_rating || 0);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const reviewed = item.reviewed;
+
+  const submit = async () => {
+    if (!rating) return alert('เลือกคะแนนก่อน (1-5)');
+    setBusy(true);
+    await onSubmit(item.id, rating, note);
+    setBusy(false);
+  };
+
+  return (
+    <div style={{ ...glass, opacity: reviewed ? 0.75 : 1 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 240 }}>
+          <div style={{ fontWeight: 600 }}>{item.text}</div>
+          <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>
+            {item.metadata?.product && `📦 ${item.metadata.product} · `}
+            {item.metadata?.platform && `${item.metadata.platform} · `}
+            {new Date(item.ts).toLocaleString('th-TH')}
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 11, color: '#64748b' }}>AI Critic Score</div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: '#a5b4fc' }}>{item.ai_score ?? '—'}/10</div>
+        </div>
+      </div>
+      {reviewed ? (
+        <div style={{ marginTop: 10, padding: 10, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, fontSize: 12 }}>
+          <div style={{ color: '#6ee7b7', fontWeight: 700 }}>✅ ตรวจแล้ว: {item.human_review.metadata.human_rating}/5 โดย {item.human_review.metadata.reviewed_by}</div>
+          {item.human_review.metadata.note && <div style={{ color: '#94a3b8', marginTop: 4 }}>{item.human_review.metadata.note}</div>}
+        </div>
+      ) : (
+        <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button key={n} onClick={() => setRating(n)} style={{ ...miniBtn(n <= rating ? '#f59e0b' : '#374151'), padding: '4px 10px' }}>{n <= rating ? '★' : '☆'}</button>
+          ))}
+          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุ (ไม่บังคับ) — เช่น ทำไมคะแนนต่างจาก AI" style={{ ...inputSt, flex: 1, minWidth: 200, padding: '6px 10px', fontSize: 12 }} />
+          <button onClick={submit} disabled={busy} style={miniBtn('#10b981')}>{busy ? '...' : '✅ บันทึกรีวิว'}</button>
+        </div>
+      )}
     </div>
   );
 }
