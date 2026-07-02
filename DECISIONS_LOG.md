@@ -11,6 +11,35 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Membership status audit: producers/products/affiliates real, consumers/middlemen didn't exist — built the missing two
+Asked to check real status of 5 membership categories (producers, consumers,
+middlemen, products, affiliates) and build whatever was missing. Checked code
+before reporting anything:
+- **Producers** (`backend/producers.js`), **products** (`backend/inventory.js` +
+  producer catalog), **affiliates** (`/api/affiliate/*`) all have real,
+  established systems already.
+- **Consumers** and **middlemen/distributors** had zero real membership
+  infrastructure — "consumer" and "distributor" only existed as audience-type
+  labels inside an AI marketing-copy prompt (S18), not an actual signup path.
+
+Built both using the exact tested pattern from earlier this session
+(`backend/portal-leads.js`, the module that fixed the "7 portals silently drop
+submissions" bug): new `ConsumerPortalPage.jsx` and `MiddlemanPortalPage.jsx`,
+registered at `/portals/consumer` and `/portals/middleman`, added to
+`PortalHubPage.jsx`'s grid (all 3 languages), added `consumer`/`middleman` to
+`portal-leads.js`'s `KNOWN_TYPES` and the Admin Panel's type/label/color maps.
+
+Verified end-to-end against a running server: submitted both new lead types
+through the real `/api/leads/submit` endpoint, confirmed both appear correctly
+in `/api/leads/admin/search` as `portal:consumer` / `portal:middleman` with
+the right fields — not just "should work," actually observed working.
+
+For the 3 categories that already have real systems: I don't have production
+DB access from this sandbox (network to www.openthai-ai.com is blocked — see
+earlier entries), so I can't report live counts. Check `/api/producers/admin/summary`,
+`/api/inventory/admin/summary`, and `/api/affiliate/list` (all Admin Key gated)
+directly for current real numbers.
+
 ### 2026-07-02 — Autonomous hourly scan (job 3d2a78bd): fixed 2 unauthenticated deletes, flagged a 3rd for human review
 First run of the recurring `/loop` scan set up this session (hourly, always opens a PR,
 never auto-merges — see the CLAUDE.md standing rule). Systematically checked every

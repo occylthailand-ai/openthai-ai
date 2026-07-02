@@ -700,8 +700,8 @@ export default function AdminPage() {
           const q = leadQ.trim().toLowerCase();
           const all = leads?.leads || [];
           const list = all.filter((l) => (leadType === 'all' || l.type === leadType) && (!q || [l.name, l.contact, l.detail].some((f) => (f || '').toLowerCase().includes(q))));
-          const TYPE_C = { waitlist: '#06b6d4', affiliate: '#f59e0b', order: '#10b981', 'portal:gov-thai': '#3b82f6', 'portal:gov-intl': '#3b82f6', 'portal:intl-org': '#8b5cf6', 'portal:foundation': '#059669', 'portal:creator': '#ec4899', 'portal:affiliate': '#f59e0b', 'portal:producer': '#f97316' };
-          const PORTAL_LABEL = { 'portal:gov-thai': 'Portal: หน่วยงานรัฐไทย', 'portal:gov-intl': 'Portal: หน่วยงานรัฐต่างประเทศ', 'portal:intl-org': 'Portal: องค์กรระหว่างประเทศ', 'portal:foundation': 'Portal: มูลนิธิ/NGO', 'portal:creator': 'Portal: ครีเอเตอร์', 'portal:affiliate': 'Portal: สนใจเป็น Affiliate', 'portal:producer': 'Portal: สนใจเป็นผู้ผลิต' };
+          const TYPE_C = { waitlist: '#06b6d4', affiliate: '#f59e0b', order: '#10b981', 'portal:gov-thai': '#3b82f6', 'portal:gov-intl': '#3b82f6', 'portal:intl-org': '#8b5cf6', 'portal:foundation': '#059669', 'portal:creator': '#ec4899', 'portal:affiliate': '#f59e0b', 'portal:producer': '#f97316', 'portal:consumer': '#0ea5e9', 'portal:middleman': '#84cc16' };
+          const PORTAL_LABEL = { 'portal:gov-thai': 'Portal: หน่วยงานรัฐไทย', 'portal:gov-intl': 'Portal: หน่วยงานรัฐต่างประเทศ', 'portal:intl-org': 'Portal: องค์กรระหว่างประเทศ', 'portal:foundation': 'Portal: มูลนิธิ/NGO', 'portal:creator': 'Portal: ครีเอเตอร์', 'portal:affiliate': 'Portal: สนใจเป็น Affiliate', 'portal:producer': 'Portal: สนใจเป็นผู้ผลิต', 'portal:consumer': 'Portal: ผู้บริโภค', 'portal:middleman': 'Portal: คนกลาง/ตัวแทนจำหน่าย' };
           const exportCsv = () => {
             const rows = [['type', 'name', 'contact', 'detail', 'date'], ...list.map((l) => [l.type, l.name, l.contact, l.detail, l.date])];
             const csv = rows.map((r) => r.map((c) => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');

@@ -60,6 +60,8 @@ const PortalHubPage = lazy(() => import('./pages/PortalHubPage'));
 const ProducerPortalPage = lazy(() => import('./pages/portals/ProducerPortalPage'));
 const AffiliatePortalPage = lazy(() => import('./pages/portals/AffiliatePortalPage'));
 const CreatorPortalPage = lazy(() => import('./pages/portals/CreatorPortalPage'));
+const ConsumerPortalPage = lazy(() => import('./pages/portals/ConsumerPortalPage'));
+const MiddlemanPortalPage = lazy(() => import('./pages/portals/MiddlemanPortalPage'));
 const GovThaiPortalPage = lazy(() => import('./pages/portals/GovThaiPortalPage'));
 const GovIntlPortalPage = lazy(() => import('./pages/portals/GovIntlPortalPage'));
 const IntlOrgPortalPage = lazy(() => import('./pages/portals/IntlOrgPortalPage'));
@@ -220,6 +222,8 @@ function App() {
             <Route path="/portals/producer" element={<ProducerPortalPage />} />
             <Route path="/portals/affiliate" element={<AffiliatePortalPage />} />
             <Route path="/portals/creator" element={<CreatorPortalPage />} />
+            <Route path="/portals/consumer" element={<ConsumerPortalPage />} />
+            <Route path="/portals/middleman" element={<MiddlemanPortalPage />} />
             <Route path="/portals/gov-thai" element={<GovThaiPortalPage />} />
             <Route path="/portals/gov-intl" element={<GovIntlPortalPage />} />
             <Route path="/portals/intl-org" element={<IntlOrgPortalPage />} />

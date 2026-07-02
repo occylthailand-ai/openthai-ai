@@ -820,8 +820,8 @@ async function sendDisputeNotification(dispute, order, phase) {
   }
 }
 
-// แจ้งเตือนเมื่อมีคนกรอกฟอร์มจากหน้า /portals/* (gov-thai, gov-intl, intl-org, foundation, creator, affiliate, producer)
-const PORTAL_TYPE_LABEL = { 'gov-thai': 'หน่วยงานรัฐไทย', 'gov-intl': 'หน่วยงานรัฐต่างประเทศ', 'intl-org': 'องค์กรระหว่างประเทศ', foundation: 'มูลนิธิ/NGO', creator: 'ครีเอเตอร์', affiliate: 'Affiliate (สนใจ)', producer: 'ผู้ผลิต (สนใจ)' };
+// แจ้งเตือนเมื่อมีคนกรอกฟอร์มจากหน้า /portals/* (gov-thai, gov-intl, intl-org, foundation, creator, affiliate, producer, consumer, middleman)
+const PORTAL_TYPE_LABEL = { 'gov-thai': 'หน่วยงานรัฐไทย', 'gov-intl': 'หน่วยงานรัฐต่างประเทศ', 'intl-org': 'องค์กรระหว่างประเทศ', foundation: 'มูลนิธิ/NGO', creator: 'ครีเอเตอร์', affiliate: 'Affiliate (สนใจ)', producer: 'ผู้ผลิต (สนใจ)', consumer: 'ผู้บริโภค', middleman: 'คนกลาง/ตัวแทนจำหน่าย' };
 async function sendPortalLeadNotification(lead) {
   const to = process.env.PORTAL_LEAD_NOTIFY_EMAIL || process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
   if (!mailer || !to) return;
