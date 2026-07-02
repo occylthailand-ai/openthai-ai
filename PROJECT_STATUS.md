@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T13:52:23.199Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T14:02:41.051Z · branch `claude/ai-coalition-protocol-hp3rga` (3 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 92 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,44 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Found and fixed a real HTML-injection gap in 3 cross-party notification emails
+Asked again to scan for new dimensions/gaps. Checked a fresh angle: whether
+user-submitted free text is safe when interpolated into the HTML notification
+emails built throughout this session (`sendOrderNotification`,
+`sendDisputeNotification`, `sendPortalLeadNotification`).
+
+Found a real, demonstrable bug. `orders.js`, `disputes.js`, and
+`portal-leads.js` all use the same `clip()` helper
+(`s.replace(/<[^>]*>/g, '').trim().slice(0, n)`) to strip HTML tags from
+public form input at intake. That regex requires a closing `>` to match — an
+**unclosed** tag like `<img src=x onerror=alert(1)` (no `>`) passes through
+completely untouched, because there's nothing for the regex to match. When
+that survives into the surrounding email HTML template
+(`<td>...${value}...</td>`), the `>` from the template's own `</td>` closes
+the attacker's tag for them, producing a fully valid `<img onerror=...>` in
+the actual email HTML sent.
+
+This isn't a same-user-only risk: `sendOrderNotification` can send to
+`order.producer_email` (a real producer), and `sendDisputeNotification`
+sends to **both** the buyer and the producer — so a malicious value from
+either party could inject HTML rendered in the *other* real party's inbox,
+not just admin's. `sendPortalLeadNotification` sends to admin only.
+
+Verified the exploit concretely before fixing: `clip()` on the payload above
+returns it unmodified, and concatenating it into a `<td>...</td>` template
+produces a real `<img src=x onerror=alert(1)</td>` tag. Fixed with a proper
+HTML-entity-escape function (`escapeHtml` — escapes `&<>"'`) applied at the
+actual point of HTML interpolation in all three functions, not relying on
+the bypassable intake-time `clip()` alone (defense should happen at
+render/output time, not just input time). Re-ran the same exploit
+demonstration after the fix: the payload's `<` becomes `&lt;`, no tag can
+form regardless of what `clip()` missed upstream. Live-tested against a
+running server with the exact bypass payload on both `/api/leads/submit`
+and `/api/orders` — both processed without crashing; the actual email body
+couldn't be observed directly since no SMTP is configured in this sandbox,
+but the escape logic itself was verified in isolation with a real
+before/after transformation.
 
 ### 2026-07-02 — 360° pass across new dimensions (i18n, error handling): found a real gap in AgentPage's response handling
 Asked to check "360 degrees, dimensions and perspectives" instead of repeating
@@ -442,47 +480,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 02b0617 Fix AgentPage false-success toasts introduced by today's agent-auth fix (77 seconds ago)
+- e78ed46 Fix HTML-injection gap in 3 cross-party notification emails (58 seconds ago)
+- e6599c5 chore: sync PROJECT_STATUS.md [skip ci] (10 minutes ago)
+- 02b0617 Fix AgentPage false-success toasts introduced by today's agent-auth fix (12 minutes ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (36 minutes ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (4 hours ago)
+- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (6 hours ago)
+- bd5f433 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 2c56956 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -628,7 +635,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7904 | Vercel serverless detection |
+| `server.js` | 7912 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
