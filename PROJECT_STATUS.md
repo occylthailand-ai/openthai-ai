@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T09:36:28.823Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T11:34:06.841Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 88 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,35 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Facebook Page publish UI (the API side already existed)
+Asked to "wire Facebook Page API into integrations.js." Checked first: it was
+already fully wired — `facebookAdapter` in `backend/integrations.js:47-88` has
+real Graph API v21.0 calls for `testConnection()`, `publish()` (posts to
+`/{pageId}/feed`), and `insights()`, reading `FB_PAGE_ID`/`FB_PAGE_TOKEN` from
+env (both already documented in `.env.example`), mounted at
+`POST /api/integrations/facebook/publish` since before this session.
+
+The actual gap was the frontend: `IntegrationHubPage.jsx` only had a "test
+connection" button, no way to compose and publish a real post without calling
+the API directly with curl. Added a compose box (content + optional link +
+target-platform checkboxes for any connected integration) that calls the
+existing `/api/integrations/:id/publish` endpoint and shows the real result
+inline (published/queued/error).
+
+Verified against a local server: with no `FB_PAGE_TOKEN` set, publish
+correctly returns `status:'queued'` with the exact message the frontend
+renders; with a fake token set, `isConnected()` correctly flips to `true` and
+the adapter makes a real call to `graph.facebook.com`, returning `http_403`
+(expected — no valid token in this sandbox) through the same error path the
+UI displays. This is a real, working feature the moment a real `FB_PAGE_TOKEN`
+is set — not a mock.
+
+Scope note: this posts to a **Page the project owner controls** via Meta's
+official Graph API — a different and legitimate case from the "auto-post into
+Facebook groups you don't own" request from earlier the same day, which was
+declined (no credentials exist for that, and it would violate Meta's ToS as
+unsolicited group spam).
 
 ### 2026-07-02 — Completed the 5-category outreach set (in order): consumer, middleman, affiliate copy added; products clarified as derivative of producers
 Continuing the 5 categories in order using the legitimate, consent-based method
@@ -265,47 +294,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 9642742 chore: regenerate PROJECT_STATUS.md after rebase (31 seconds ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (2 hours ago)
+- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (4 hours ago)
+- bd5f433 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 2c56956 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd (5 hours ago)
+- 095741b Close env-var docs, fix SMTP_PORT bug, scope Council room to OpenThaiAi only (#69) (5 hours ago)
+- 6bc7450 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- bbd517e Scope the Council command room to OpenThaiAi only, structurally (5 hours ago)
+- 1c1fb5f chore: regenerate PROJECT_STATUS.md after rebase (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

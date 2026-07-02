@@ -11,6 +11,35 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Facebook Page publish UI (the API side already existed)
+Asked to "wire Facebook Page API into integrations.js." Checked first: it was
+already fully wired — `facebookAdapter` in `backend/integrations.js:47-88` has
+real Graph API v21.0 calls for `testConnection()`, `publish()` (posts to
+`/{pageId}/feed`), and `insights()`, reading `FB_PAGE_ID`/`FB_PAGE_TOKEN` from
+env (both already documented in `.env.example`), mounted at
+`POST /api/integrations/facebook/publish` since before this session.
+
+The actual gap was the frontend: `IntegrationHubPage.jsx` only had a "test
+connection" button, no way to compose and publish a real post without calling
+the API directly with curl. Added a compose box (content + optional link +
+target-platform checkboxes for any connected integration) that calls the
+existing `/api/integrations/:id/publish` endpoint and shows the real result
+inline (published/queued/error).
+
+Verified against a local server: with no `FB_PAGE_TOKEN` set, publish
+correctly returns `status:'queued'` with the exact message the frontend
+renders; with a fake token set, `isConnected()` correctly flips to `true` and
+the adapter makes a real call to `graph.facebook.com`, returning `http_403`
+(expected — no valid token in this sandbox) through the same error path the
+UI displays. This is a real, working feature the moment a real `FB_PAGE_TOKEN`
+is set — not a mock.
+
+Scope note: this posts to a **Page the project owner controls** via Meta's
+official Graph API — a different and legitimate case from the "auto-post into
+Facebook groups you don't own" request from earlier the same day, which was
+declined (no credentials exist for that, and it would violate Meta's ToS as
+unsolicited group spam).
+
 ### 2026-07-02 — Completed the 5-category outreach set (in order): consumer, middleman, affiliate copy added; products clarified as derivative of producers
 Continuing the 5 categories in order using the legitimate, consent-based method
 confirmed the same day (real marketing copy pointing at real forms, not
