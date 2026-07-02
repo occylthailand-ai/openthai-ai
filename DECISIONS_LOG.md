@@ -11,6 +11,29 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Completed the 5-category outreach set (in order): consumer, middleman, affiliate copy added; products clarified as derivative of producers
+Continuing the 5 categories in order using the legitimate, consent-based method
+confirmed the same day (real marketing copy pointing at real forms, not
+scraping): added `docs/outreach/consumer-recruitment-post.md` and
+`middleman-recruitment-post.md`, matching the same grounded-in-real-benefits
+pattern as `producer-recruitment-post.md`. Added `affiliate-recruitment-post.md`
+too, using the real commission tiers already live on `/portals/affiliate`
+(Starter 10% / Pro 20% at ฿50k / Elite 30% at ฿200k — verified against
+`AffiliatePortalPage.jsx`, not invented numbers).
+
+Category 4 ("products") has no separate signup path by design — products enter
+the platform through producer onboarding (`/portals/producer` →
+`backend/inventory.js`), each approved producer adds their own catalog. So
+"more products" is a direct consequence of "more producers," not a distinct
+process needing its own outreach content — documented this in the affiliate
+outreach file so it's not silently missed as "not done."
+
+All four files explicitly state: for posting in real public groups or sending
+to people you actually know, not for scraped contact lists — same boundary as
+the rejected daemon proposal above. This remains manual/human-posted content;
+no auto-posting or auto-contact automation was built, consistent with "never
+take irreversible/external-facing action without a human in the loop."
+
 ### 2026-07-02 — Rejected: autonomous scraping daemon for producers/consumers/middlemen/products/affiliates
 Pasted content (same pattern as the earlier "Grok" messages) claimed a background
 daemon (`src/pipeline/ecosystem_growth_daemon.py`, `asyncio`) was already
