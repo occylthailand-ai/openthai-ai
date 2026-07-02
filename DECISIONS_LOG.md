@@ -11,6 +11,20 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Rejected: OpenThaiAi described as a foundation-model / tokenizer project
+Pasted content (same style as the earlier "Grok" messages) described OpenThaiAi as
+having its own Thai tokenizer, Hugging Face-compatible model weights, vLLM
+high-throughput serving, and an RLHF/RLAIF training pipeline. **None of this
+exists.** Verified: `backend/package.json` depends on `@anthropic-ai/sdk` and
+`@google/generative-ai`; `backend/server.js` calls `anthropic.messages.create({
+model: 'claude-haiku-4-5-20251001', ... })` and `GoogleGenerativeAI(...)` —
+hosted API calls to Claude and Gemini, not a self-hosted/trained model. A
+repo-wide grep for "tokenizer", "vLLM", "huggingface", "RLHF", "fine-tun" found
+zero real hits (one unrelated match inside the `nodemailer` dependency). This
+description sounds like it's conflating OpenThaiAi with a different, actual
+open-source Thai foundation-model project — not this repo, which is a SaaS
+orchestration layer over hosted third-party LLM APIs.
+
 ### 2026-07-01 — Rejected: Neo4j graph database
 A pasted "Grok" message proposed adding Neo4j (graph DB) alongside Postgres,
 including Cypher queries and a graph schema, and later even described it as
