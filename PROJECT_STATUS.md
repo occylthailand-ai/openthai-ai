@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T05:17:17.351Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T05:23:55.299Z · branch `claude/ai-coalition-protocol-hp3rga` (1 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 80 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,22 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Closed the env-var documentation gap fully + fixed a real SMTP bug found while doing it
+Documented the remaining 7 vars the audit had flagged since the first session
+(`ADMIN_USERS`, `CANVA_API_KEY`, `DISABLE_RATE_LIMIT`, `PORTAL_LEAD_NOTIFY_EMAIL`,
+`SMTP_PORT`, `TIKTOK_SHOP_KEY`, `VERCEL`) in `backend/.env.example`.
+`PROJECT_STATUS.md`'s env audit now reads "every env var referenced in backend
+code is documented" for the first time this session.
+
+While documenting `SMTP_PORT`, found it was real code with a real bug: `preflight.js`
+(the diagnostic script) correctly reads `SMTP_PORT` and sets `secure: port === 465`,
+but the actual production mailer in `server.js` — used for every real order/dispute/
+portal-lead email — hardcoded `port: 587, secure: false` and ignored `SMTP_PORT`
+entirely. Anyone setting `SMTP_PORT=465` would see `preflight.js` report success
+while real emails silently used the wrong port/security settings. Fixed: `server.js`'s
+mailer now reads `SMTP_PORT` the same way `preflight.js` does, defaulting to 587
+(unchanged behavior when unset). Verified the port→secure logic against 587/465/2525.
 
 ### 2026-07-02 — Added: Council Scan Room + fixed real security gap it surfaced
 Extended the existing `/api/council` feature (Claude+Gemini+Grok, real API calls,
@@ -125,47 +141,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 39f28ef Build the real "combined command room" (Council Scan Room) + fix what it found (15 minutes ago)
+- bfe5351 Close the env-var documentation gap fully + fix a real SMTP bug found doing it (33 seconds ago)
+- 6e2592c Portal-leads verification, CLAUDE.md, Thai Function Calling, Council Scan Room + security fix (#68) (5 minutes ago)
+- 06ba0cf chore: sync PROJECT_STATUS.md [skip ci] (7 minutes ago)
+- 39f28ef Build the real "combined command room" (Council Scan Room) + fix what it found (22 minutes ago)
+- 7cf9c1e Document XAI env vars + add real Thai Function Calling (tool-use, not fine-tuning) (39 minutes ago)
+- 1695295 Add CLAUDE.md: durable standing priority + honest boundary on cross-AI coordination (54 minutes ago)
+- 0b605d1 Log production verification: portal-leads fix confirmed working end-to-end (55 minutes ago)
+- 2675972 Add order dispute + escrow arbitration system (#67) (58 minutes ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -309,7 +294,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7834 | Vercel serverless detection |
+| `server.js` | 7838 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
@@ -341,15 +326,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
 
-## Environment variables (57 referenced in backend code, 51 documented in .env.example)
-⚠️ Referenced in code but missing from `backend/.env.example`:
-- ADMIN_USERS
-- CANVA_API_KEY
-- DISABLE_RATE_LIMIT
-- PORTAL_LEAD_NOTIFY_EMAIL
-- SMTP_PORT
-- TIKTOK_SHOP_KEY
-- VERCEL
+## Environment variables (57 referenced in backend code, 58 documented in .env.example)
+✅ every env var referenced in backend code is documented in `.env.example`
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.
