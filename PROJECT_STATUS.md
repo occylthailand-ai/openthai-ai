@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T07:03:11.714Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T08:59:48.852Z · branch `claude/ai-coalition-protocol-hp3rga` (1 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 87 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,35 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Membership status audit: producers/products/affiliates real, consumers/middlemen didn't exist — built the missing two
+Asked to check real status of 5 membership categories (producers, consumers,
+middlemen, products, affiliates) and build whatever was missing. Checked code
+before reporting anything:
+- **Producers** (`backend/producers.js`), **products** (`backend/inventory.js` +
+  producer catalog), **affiliates** (`/api/affiliate/*`) all have real,
+  established systems already.
+- **Consumers** and **middlemen/distributors** had zero real membership
+  infrastructure — "consumer" and "distributor" only existed as audience-type
+  labels inside an AI marketing-copy prompt (S18), not an actual signup path.
+
+Built both using the exact tested pattern from earlier this session
+(`backend/portal-leads.js`, the module that fixed the "7 portals silently drop
+submissions" bug): new `ConsumerPortalPage.jsx` and `MiddlemanPortalPage.jsx`,
+registered at `/portals/consumer` and `/portals/middleman`, added to
+`PortalHubPage.jsx`'s grid (all 3 languages), added `consumer`/`middleman` to
+`portal-leads.js`'s `KNOWN_TYPES` and the Admin Panel's type/label/color maps.
+
+Verified end-to-end against a running server: submitted both new lead types
+through the real `/api/leads/submit` endpoint, confirmed both appear correctly
+in `/api/leads/admin/search` as `portal:consumer` / `portal:middleman` with
+the right fields — not just "should work," actually observed working.
+
+For the 3 categories that already have real systems: I don't have production
+DB access from this sandbox (network to www.openthai-ai.com is blocked — see
+earlier entries), so I can't report live counts. Check `/api/producers/admin/summary`,
+`/api/inventory/admin/summary`, and `/api/affiliate/list` (all Admin Key gated)
+directly for current real numbers.
 
 ### 2026-07-02 — Autonomous hourly scan (job 3d2a78bd): fixed 2 unauthenticated deletes, flagged a 3rd for human review
 First run of the recurring `/loop` scan set up this session (hourly, always opens a PR,
@@ -178,53 +207,22 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 79 route components resolved
+- ✅ **Route components exist on disk** — all 81 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 2c56956 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd (52 seconds ago)
+- d19d1c7 Add consumer and middleman portals — the two membership categories that never existed (49 seconds ago)
+- bd5f433 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 2c56956 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd (2 hours ago)
+- 095741b Close env-var docs, fix SMTP_PORT bug, scope Council room to OpenThaiAi only (#69) (2 hours ago)
+- 6bc7450 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- bbd517e Scope the Council command room to OpenThaiAi only, structurally (2 hours ago)
+- 1c1fb5f chore: regenerate PROJECT_STATUS.md after rebase (4 hours ago)
+- bfe5351 Close the env-var documentation gap fully + fix a real SMTP bug found doing it (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.7",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -265,7 +263,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (79 routes)
+## Route map (81 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -342,6 +340,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/producer | ProducerPortalPage | public |
 | /portals/affiliate | AffiliatePortalPage | public |
 | /portals/creator | CreatorPortalPage | public |
+| /portals/consumer | ConsumerPortalPage | public |
+| /portals/middleman | MiddlemanPortalPage | public |
 | /portals/gov-thai | GovThaiPortalPage | public |
 | /portals/gov-intl | GovIntlPortalPage | public |
 | /portals/intl-org | IntlOrgPortalPage | public |
