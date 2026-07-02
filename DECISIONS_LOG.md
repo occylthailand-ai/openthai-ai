@@ -11,6 +11,18 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Fixed + verified in production: all 7 /portals/* pages were silently dropping submissions
+`POST /api/leads/submit` didn't exist in the backend — every one of GovThaiPortalPage,
+GovIntlPortalPage, IntlOrgPortalPage, FoundationPortalPage, CreatorPortalPage,
+AffiliatePortalPage, and ProducerPortalPage called it and silently failed via an
+empty try/catch, showing a fake success message. Fixed by `backend/portal-leads.js`
++ migration `007_portal_leads.sql`. **Verified end-to-end in production, not just
+locally**: project owner ran the migration in Supabase, submitted a real form on
+the live site, and confirmed the row appeared in the `portal_leads` table with all
+submitted fields intact. This is the standard to hold future "it should work" claims
+to — a claim isn't verified until someone (human or AI) actually observed the real
+outcome, not just absence of an error during development.
+
 ### 2026-07-02 — Rejected: OpenThaiAi described as a foundation-model / tokenizer project
 Pasted content (same style as the earlier "Grok" messages) described OpenThaiAi as
 having its own Thai tokenizer, Hugging Face-compatible model weights, vLLM
