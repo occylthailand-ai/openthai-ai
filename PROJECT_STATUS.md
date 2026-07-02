@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T12:06:14.973Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T12:43:47.024Z · branch `claude/ai-coalition-protocol-hp3rga` (6 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 94 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,27 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — AI Copywriting Templates (AIDA + Live Script), 2 new categories added to the real dropdown
+Expanded `docs/outreach/affiliate-sales-scripts.md` into a full
+`docs/outreach/AI_Copywriting_Templates_OTOP.md`: usage rules (no invented
+stats — same rule as every other outreach file), an AIDA framework primer
+grounded in the real `S9 Learning Layer` finding (hook+urgency scores
+highest), AIDA + long-form Live Selling Script templates for 7 categories,
+and a generic cross-category template. Added a JSON twin
+(`ai_copywriting_templates_otop.json`) for programmatic use, same
+markdown+JSON pattern as `docs/ai-memory/core-philosophy.json`.
+
+Two of the requested categories (อาหารสัตว์เลี้ยง / pet food,
+สินค้าดิจิทัล / digital products) didn't exist anywhere in the real system —
+not in `ConsumerPortalPage.jsx`'s `CATEGORIES` dropdown. Rather than write
+copy for categories a real consumer couldn't actually select, added both to
+the real dropdown (`frontend/src/pages/portals/ConsumerPortalPage.jsx`) so
+the docs match what the platform actually supports, not the other way
+around — same principle as every other grounding fix this session.
+Referenced the existing live skills (S18 Sales Conversion Engine, S25 Live
+Selling Script) for AI-generated per-product versions instead of duplicating
+that capability as a static file.
 
 ### 2026-07-02 — Rejected: sending a fabricated outreach DM to a named real person; built the legitimate request instead (affiliate sales-script templates)
 Pasted content (same "Loop #N" self-report pattern as before) included a
@@ -316,47 +337,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 4bed880 chore: regenerate PROJECT_STATUS.md after rebase (18 seconds ago)
+- 2676f45 Add AI Copywriting Templates (AIDA + Live Script) for Affiliate team (65 seconds ago)
+- 09f127e chore: sync PROJECT_STATUS.md [skip ci] (38 minutes ago)
+- 4bed880 chore: regenerate PROJECT_STATUS.md after rebase (38 minutes ago)
+- 4b54808 Add affiliate sales-script templates; decline fabricated outreach DM (39 minutes ago)
+- 80fcb72 chore: sync PROJECT_STATUS.md [skip ci] (68 minutes ago)
+- f5a2148 Add Facebook Page publish UI to Integration Hub (backend API already existed) (70 minutes ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (3 hours ago)
+- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 3,
-  "uptime_sec": 133,
-  "memory_mb": "21.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
