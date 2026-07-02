@@ -11,6 +11,87 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Completed the 5-category outreach set (in order): consumer, middleman, affiliate copy added; products clarified as derivative of producers
+Continuing the 5 categories in order using the legitimate, consent-based method
+confirmed the same day (real marketing copy pointing at real forms, not
+scraping): added `docs/outreach/consumer-recruitment-post.md` and
+`middleman-recruitment-post.md`, matching the same grounded-in-real-benefits
+pattern as `producer-recruitment-post.md`. Added `affiliate-recruitment-post.md`
+too, using the real commission tiers already live on `/portals/affiliate`
+(Starter 10% / Pro 20% at ฿50k / Elite 30% at ฿200k — verified against
+`AffiliatePortalPage.jsx`, not invented numbers).
+
+Category 4 ("products") has no separate signup path by design — products enter
+the platform through producer onboarding (`/portals/producer` →
+`backend/inventory.js`), each approved producer adds their own catalog. So
+"more products" is a direct consequence of "more producers," not a distinct
+process needing its own outreach content — documented this in the affiliate
+outreach file so it's not silently missed as "not done."
+
+All four files explicitly state: for posting in real public groups or sending
+to people you actually know, not for scraped contact lists — same boundary as
+the rejected daemon proposal above. This remains manual/human-posted content;
+no auto-posting or auto-contact automation was built, consistent with "never
+take irreversible/external-facing action without a human in the loop."
+
+### 2026-07-02 — Rejected: autonomous scraping daemon for producers/consumers/middlemen/products/affiliates
+Pasted content (same pattern as the earlier "Grok" messages) claimed a background
+daemon (`src/pipeline/ecosystem_growth_daemon.py`, `asyncio`) was already
+"installed & locked," running 24/7, scanning e-commerce platforms/social media
+for real people's business identities (named individual, Facebook pages, TikTok
+handles, LINE contacts) and auto-drafting outreach to them, with results
+"stored" at `data/ecosystem/...json`. **None of this exists or was built.**
+Verified: no `data/ecosystem/` directory, no `ecosystem_growth_daemon.py`
+anywhere in the repo, no Python runtime in this project at all (`backend/`
+is Node/Express — `backend/package.json` has zero Python deps), no background
+process running. The message itself half-admits this ("จัดเก็บ...ในรูปแบบสมมติ
+เนื่องจากยังไม่มี access จริง" — "stored in hypothetical form, since there's no
+real access yet") while presenting a "🛡️ IMMUTABLE ENGINE ENGAGED / LOCKED"
+status banner as if it were a real completed system.
+
+Beyond the fabrication, the underlying proposal — scrape real people's names/
+contact info off the internet and auto-generate outreach to them without their
+consent — is a legal/consent problem (PDPA), not just an engineering one, and
+is a different and much bigger decision than what was actually confirmed
+earlier the same day ("ดูสถานะจริงของแต่ละกลุ่มตอนนี้" — check current real
+status, not scrape). Asked the project owner directly; confirmed: no scraping
+without consent, recommended path stands. Instead: real, legitimate growth for
+the producer/consumer/middleman categories should go through the actual
+consent-based path that already exists — people submit themselves via
+`/portals/producer` (and the new `/portals/consumer`, `/portals/middleman`) —
+grown by real marketing/outreach content pointing at that real form, not by
+autonomous scraping. See the outreach copy drafted the same day as a concrete
+example of the legitimate version of this idea.
+
+### 2026-07-02 — Membership status audit: producers/products/affiliates real, consumers/middlemen didn't exist — built the missing two
+Asked to check real status of 5 membership categories (producers, consumers,
+middlemen, products, affiliates) and build whatever was missing. Checked code
+before reporting anything:
+- **Producers** (`backend/producers.js`), **products** (`backend/inventory.js` +
+  producer catalog), **affiliates** (`/api/affiliate/*`) all have real,
+  established systems already.
+- **Consumers** and **middlemen/distributors** had zero real membership
+  infrastructure — "consumer" and "distributor" only existed as audience-type
+  labels inside an AI marketing-copy prompt (S18), not an actual signup path.
+
+Built both using the exact tested pattern from earlier this session
+(`backend/portal-leads.js`, the module that fixed the "7 portals silently drop
+submissions" bug): new `ConsumerPortalPage.jsx` and `MiddlemanPortalPage.jsx`,
+registered at `/portals/consumer` and `/portals/middleman`, added to
+`PortalHubPage.jsx`'s grid (all 3 languages), added `consumer`/`middleman` to
+`portal-leads.js`'s `KNOWN_TYPES` and the Admin Panel's type/label/color maps.
+
+Verified end-to-end against a running server: submitted both new lead types
+through the real `/api/leads/submit` endpoint, confirmed both appear correctly
+in `/api/leads/admin/search` as `portal:consumer` / `portal:middleman` with
+the right fields — not just "should work," actually observed working.
+
+For the 3 categories that already have real systems: I don't have production
+DB access from this sandbox (network to www.openthai-ai.com is blocked — see
+earlier entries), so I can't report live counts. Check `/api/producers/admin/summary`,
+`/api/inventory/admin/summary`, and `/api/affiliate/list` (all Admin Key gated)
+directly for current real numbers.
+
 ### 2026-07-02 — Autonomous hourly scan (job 3d2a78bd): fixed 2 unauthenticated deletes, flagged a 3rd for human review
 First run of the recurring `/loop` scan set up this session (hourly, always opens a PR,
 never auto-merges — see the CLAUDE.md standing rule). Systematically checked every

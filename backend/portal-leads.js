@@ -12,7 +12,7 @@ import { join } from 'path';
 
 // ประเภท portal ที่รู้จัก — ยังรับ type อื่นได้ (กันเคส portal ใหม่ในอนาคตที่ลืมเพิ่มที่นี่)
 // แต่ log แจ้งเตือนถ้าเจอ type ที่ไม่รู้จัก
-const KNOWN_TYPES = ['gov-thai', 'gov-intl', 'intl-org', 'foundation', 'creator', 'affiliate', 'producer'];
+const KNOWN_TYPES = ['gov-thai', 'gov-intl', 'intl-org', 'foundation', 'creator', 'affiliate', 'producer', 'consumer', 'middleman'];
 const clip = (s, n = 500) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 const isEmailLike = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
 
