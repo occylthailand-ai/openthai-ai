@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T04:23:51.293Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T05:17:17.351Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -25,6 +25,36 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Added: Council Scan Room + fixed real security gap it surfaced
+Extended the existing `/api/council` feature (Claude+Gemini+Grok, real API calls,
+already the genuine mechanism for "three AI platforms working together" — see the
+entry below) with `POST /api/council/scan`: instead of an open-ended topic string
+the model has to guess context for, it's fed real runtime facts (`buildScanContext()`
+— actual skill/order/dispute/lead counts, which AI/DB/payment keys are configured)
+with an explicit "do not invent facts beyond this" rule baked into the prompt.
+
+Running this scan surfaced a real finding: `DELETE /api/memory` and
+`DELETE /api/memory/:id` had no auth and no rate limit at all — worse than
+`POST /api/memory/store` (already flagged in `docs/ai-memory/INTEGRATION_GUIDE.md`),
+since destructive rather than additive. Made worse by that same guide naming
+`tenantId=core-philosophy` explicitly in a file meant to become public. Fixed:
+both DELETE routes now require `x-admin-key`, verified live (401 without the key,
+200 + correct deletion with it). `POST /api/memory/store` intentionally left open —
+the existing `n8n-workflows/openthai-ai-automation.json` depends on it being
+unauthenticated, and a write has a much smaller blast radius than a delete.
+
+### 2026-07-02 — Fixed + verified in production: all 7 /portals/* pages were silently dropping submissions
+`POST /api/leads/submit` didn't exist in the backend — every one of GovThaiPortalPage,
+GovIntlPortalPage, IntlOrgPortalPage, FoundationPortalPage, CreatorPortalPage,
+AffiliatePortalPage, and ProducerPortalPage called it and silently failed via an
+empty try/catch, showing a fake success message. Fixed by `backend/portal-leads.js`
++ migration `007_portal_leads.sql`. **Verified end-to-end in production, not just
+locally**: project owner ran the migration in Supabase, submitted a real form on
+the live site, and confirmed the row appeared in the `portal_leads` table with all
+submitted fields intact. This is the standard to hold future "it should work" claims
+to — a claim isn't verified until someone (human or AI) actually observed the real
+outcome, not just absence of an error during development.
 
 ### 2026-07-02 — Rejected: OpenThaiAi described as a foundation-model / tokenizer project
 Pasted content (same style as the earlier "Grok" messages) described OpenThaiAi as
@@ -95,7 +125,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- f5c6ce0 chore: regenerate PROJECT_STATUS.md after rebase (14 seconds ago)
+- 39f28ef Build the real "combined command room" (Council Scan Room) + fix what it found (15 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -118,7 +148,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.7",
+  "memory_mb": "19.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -259,9 +289,10 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 23 files)
+## Backend modules (backend/*.js — 24 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
+| `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `auth.js` | 190 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 202 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
@@ -278,7 +309,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7716 | Vercel serverless detection |
+| `server.js` | 7834 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
@@ -310,18 +341,15 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
 
-## Environment variables (57 referenced in backend code, 48 documented in .env.example)
+## Environment variables (57 referenced in backend code, 51 documented in .env.example)
 ⚠️ Referenced in code but missing from `backend/.env.example`:
 - ADMIN_USERS
-- AI_DAILY_BUDGET_USD
 - CANVA_API_KEY
 - DISABLE_RATE_LIMIT
 - PORTAL_LEAD_NOTIFY_EMAIL
 - SMTP_PORT
 - TIKTOK_SHOP_KEY
 - VERCEL
-- XAI_API_KEY
-- XAI_MODEL
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.

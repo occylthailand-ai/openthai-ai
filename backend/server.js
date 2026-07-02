@@ -29,6 +29,7 @@ import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
 import { createDisputes } from './disputes.js';
+import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
@@ -1711,6 +1712,119 @@ app.post('/api/council', generateLimiter, async (req, res) => {
 
   addLog('info', 'Council', `topic: ${topic.slice(0, 60)} · live: ${voices.filter(v => v.live).map(v => v.id).join(',') || 'none(mock)'}`);
   res.json({ success: true, room: 'OpenThaiAi', topic, voices, synthesis, synthesis_live: synthLive, any_live: voices.some(v => v.live), ts: new Date().toISOString() });
+});
+
+// ─── Council Scan Room — 3 AI วิเคราะห์ "สถานะจริงของโปรเจกต์" ไม่ใช่หัวข้อลอยๆ ───
+// ต่างจาก /api/council ตรงที่ context มาจากสถานะรันไทม์จริง (ไม่ใช่ไฟล์ PROJECT_STATUS.md
+// ที่รากของ repo — vercel.json includeFiles: "backend/**" เท่านั้น ไฟล์นอก backend/ จะไม่ถูก
+// bundle ขึ้น Vercel serverless function) และมีกฎกำกับพรอมต์ชัดเจนว่าห้ามมโนข้อเท็จจริง
+async function buildScanContext() {
+  const skillsActive = SKILLS_REGISTRY.filter((s) => s.status === 'active').length;
+  const skillsNeedKey = SKILLS_REGISTRY.filter((s) => s.status !== 'active');
+  const [disputeSummary, orderSummary, producerSummary, portalLeadList] = await Promise.all([
+    disputes.summary(), orders.summary(), producers.summary(), portalLeads.all(),
+  ]);
+  const keys = {
+    anthropic: !!process.env.ANTHROPIC_API_KEY, gemini: !!process.env.GEMINI_API_KEY, xai: !!process.env.XAI_API_KEY,
+    supabase: !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY), omise: !!process.env.OMISE_SECRET_KEY,
+  };
+  return `สถานะจริงของ OpenThaiAi ณ ตอนนี้ (ดึงจากระบบรันไทม์จริง ไม่ใช่การสมมติ):
+- Skills: ${SKILLS_REGISTRY.length} รายการ (${skillsActive} active, ${skillsNeedKey.length} รอ API key: ${skillsNeedKey.map((s) => s.id).join(', ') || '-'})
+- Orders: ${orderSummary.total} รายการ (เก็บข้อมูลโหมด: ${orderSummary.mode})
+- Producers: ${producerSummary.total} ราย (โหมด: ${producerSummary.mode})
+- Disputes: ${disputeSummary.total} รายการ · เปิดอยู่ ${disputeSummary.open_count} · ค้างเกิน SLA ${disputeSummary.overdue_count} (โหมด: ${disputeSummary.mode})
+- Portal leads: ${portalLeadList.length} รายการ (จาก 7 หน้า /portals/*)
+- AI providers ที่มี API key: Claude=${keys.anthropic ? 'มี' : 'ไม่มี'}, Gemini=${keys.gemini ? 'มี' : 'ไม่มี'}, Grok/xAI=${keys.xai ? 'มี' : 'ไม่มี'}
+- Database: Supabase ${keys.supabase ? 'เชื่อมต่อแล้ว' : 'ยังไม่ได้ตั้งค่า (fallback เป็นไฟล์ในเครื่อง)'}
+- Payment: Omise ${keys.omise ? 'ตั้งค่าแล้ว (รับเงินจริง)' : 'ยังไม่ได้ตั้งค่า (mock mode)'}`;
+}
+
+app.post('/api/council/scan', generateLimiter, async (req, res) => {
+  try {
+    const context = await buildScanContext();
+    const base = `คุณกำลังร่วม "ห้องสั่งงานรวม" ของ OpenThaiAi กับ AI เจ้าอื่น เพื่อสแกนและวิเคราะห์สถานะจริงของโปรเจกต์
+กฎสำคัญที่สุด: ห้ามสมมติหรือมโนข้อเท็จจริงใดๆ นอกเหนือจากข้อมูลด้านล่างนี้ ถ้าข้อมูลไม่พอให้วิเคราะห์เรื่องใด ให้บอกตรงๆ ว่าไม่มีข้อมูลพอ แทนที่จะเดา
+
+${context}
+
+จากข้อมูลข้างต้นเท่านั้น วิเคราะห์และเสนอแนะ 3-5 ข้อในมุมที่คุณถนัด`;
+    const persona = (p) => `${base}\n\nบทบาทของคุณในวงนี้: ${COUNCIL_PERSONAS[p].role}`;
+
+    const [claude, gem, grok] = await Promise.all([
+      callClaude(persona('claude')), callGeminiText(persona('gemini')), callGrok(persona('grok')),
+    ]);
+    const voices = [
+      { id: 'claude', ...COUNCIL_PERSONAS.claude, live: !!claude, text: claude || mockCouncilVoice('claude', 'สแกนสถานะโปรเจกต์') },
+      { id: 'gemini', ...COUNCIL_PERSONAS.gemini, live: !!gem, text: gem || mockCouncilVoice('gemini', 'สแกนสถานะโปรเจกต์') },
+      { id: 'grok', ...COUNCIL_PERSONAS.grok, live: !!grok, text: grok || mockCouncilVoice('grok', 'สแกนสถานะโปรเจกต์') },
+    ];
+    const synthPrompt = `สังเคราะห์ผลสแกนจาก AI 3 เจ้าต่อไปนี้ (อ้างอิงเฉพาะข้อมูลจริงที่ให้ไว้ ห้ามเติมข้อมูลใหม่) ให้เป็นรายงาน "ห้องสั่งงานรวม" — สรุปสถานะ + สิ่งที่ควรทำต่อ 3-5 ข้อ เรียงตามความสำคัญ:\n\n${voices.map((v) => `[${v.name}]\n${v.text}`).join('\n\n')}`;
+    let synthesis = await callClaude(synthPrompt) || await callGeminiText(synthPrompt) || await callGrok(synthPrompt);
+    const synthLive = !!synthesis;
+    if (!synthesis) synthesis = `📋 ห้องสั่งงานรวม — สรุปสแกน (โหมดจำลอง เพราะไม่มี AI API key จริง)\n\n${context}\n\n⚠️ ตั้ง ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY เพื่อให้ AI จริงทั้ง 3 เจ้าวิเคราะห์`;
+
+    addLog('info', 'CouncilScan', `live: ${voices.filter((v) => v.live).map((v) => v.id).join(',') || 'none(mock)'}`);
+    res.json({ success: true, room: 'OpenThaiAi Command Room', context, voices, synthesis, synthesis_live: synthLive, any_live: voices.some((v) => v.live), ts: new Date().toISOString() });
+  } catch (e) {
+    addLog('warn', 'CouncilScan', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ─── Thai Function Calling — natural-language Thai command → real tool call ───
+// Uses Claude/Gemini's native tool-use APIs (see backend/agent-tools.js for the
+// schema + why this needs no fine-tuning). No mock fallback here — deciding
+// whether/which tool to call is a real model decision, not something safe to fake.
+const toolContext = () => ({ orders, disputes, skillsRegistry: SKILLS_REGISTRY, webhooks });
+
+async function runAgentCommandClaude(message) {
+  const first = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001', max_tokens: 1024,
+    tools: TOOL_DEFINITIONS,
+    messages: [{ role: 'user', content: message }],
+  });
+  const toolUse = first.content.find((b) => b.type === 'tool_use');
+  if (!toolUse) {
+    return { tool_called: null, tool_input: null, tool_result: null, reply: first.content.find((b) => b.type === 'text')?.text || '' };
+  }
+  const result = await executeTool(toolUse.name, toolUse.input, toolContext());
+  const follow = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001', max_tokens: 1024,
+    tools: TOOL_DEFINITIONS,
+    messages: [
+      { role: 'user', content: message },
+      { role: 'assistant', content: first.content },
+      { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUse.id, content: JSON.stringify(result) }] },
+    ],
+  });
+  return { tool_called: toolUse.name, tool_input: toolUse.input, tool_result: result, reply: follow.content.find((b) => b.type === 'text')?.text || '' };
+}
+
+async function runAgentCommandGemini(message) {
+  const model = new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel({ model: 'gemini-flash-latest', tools: toGeminiTools() });
+  const chat = model.startChat();
+  const first = await chat.sendMessage(message);
+  const call = first.response.functionCalls?.()?.[0];
+  if (!call) return { tool_called: null, tool_input: null, tool_result: null, reply: first.response.text() };
+  const result = await executeTool(call.name, call.args, toolContext());
+  const follow = await chat.sendMessage([{ functionResponse: { name: call.name, response: result } }]);
+  return { tool_called: call.name, tool_input: call.args, tool_result: result, reply: follow.response.text() };
+}
+
+app.post('/api/agent/command', generateLimiter, async (req, res) => {
+  const message = String(req.body?.message || '').trim().slice(0, 2000);
+  if (!message) return res.status(400).json({ success: false, error: 'ต้องการ message (คำสั่งภาษาไทย)' });
+  try {
+    let out;
+    if (anthropic) out = await runAgentCommandClaude(message);
+    else if (gemini) out = await runAgentCommandGemini(message);
+    else return res.status(503).json({ success: false, error: 'Function calling ต้องการ ANTHROPIC_API_KEY หรือ GEMINI_API_KEY — โมเดลจริงต้องเป็นผู้ตัดสินใจว่าจะเรียกเครื่องมือไหน จึงไม่มีโหมดจำลอง' });
+    addLog('info', 'AgentCommand', `"${message.slice(0, 60)}" → ${out.tool_called || '(no tool)'}`);
+    res.json({ success: true, ...out, available_tools: TOOL_DEFINITIONS.map((t) => t.name) });
+  } catch (e) {
+    addLog('warn', 'AgentCommand', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // S10 · POST /api/skills/trend — วิเคราะห์เทรนด์ตามสินค้า
@@ -5743,15 +5857,19 @@ app.get('/api/memory', (req, res) => {
   res.json({ success: true, ...result });
 });
 
-// DELETE /api/memory/:id — ลบ memory รายชิ้น
-app.delete('/api/memory/:id', (req, res) => {
+// DELETE /api/memory/:id — ลบ memory รายชิ้น (Admin Key — เป็นการลบถาวร ไม่ควรเปิดสาธารณะ)
+app.delete('/api/memory/:id', memoryLimiter, (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const tid = req.tenant?.id || req.query.tenantId || 'global';
   const result = memory.delete({ tenantId: tid, id: req.params.id });
   res.json({ success: true, ...result });
 });
 
-// DELETE /api/memory — clear ทั้งหมด (with optional ?type=)
-app.delete('/api/memory', (req, res) => {
+// DELETE /api/memory — clear ทั้งหมด (with optional ?type=) (Admin Key — ลบทั้ง tenant ได้ ยิ่งต้องป้องกัน)
+app.delete('/api/memory', memoryLimiter, (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const tid = req.tenant?.id || req.query.tenantId || 'global';
   const result = memory.clear({ tenantId: tid, type: req.query.type });
   res.json({ success: true, ...result });

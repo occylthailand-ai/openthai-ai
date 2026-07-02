@@ -84,16 +84,19 @@ Idempotency: `vector-memory.js` already rejects near-duplicate stores (cosine
 similarity > 0.97 within the same `type`), so re-running the loader script below
 after no real change is a safe no-op.
 
-**⚠️ Known gap, not fixed by this change:** `/api/memory/store` has a rate limiter
-(30 req/min) but no `x-admin-key` check, unlike the `/api/*/admin/*` routes
-elsewhere in this codebase. On production, anyone who knows the URL can write to
-any `tenantId`, including `"core-philosophy"`. This was already true before this
-change (the existing `n8n-workflows/openthai-ai-automation.json` calls the same
-endpoint unauthenticated) — flagging it here because we're now recommending this
-endpoint for something meant to be permanent. If you want it locked down, that's
-a follow-up: add the same `checkAdminKey` pattern used by `/api/orders/admin/*` to
-the `/api/memory/*` routes. Not doing it silently as part of this change since it
-would also break the existing n8n automation that writes to memory unauthenticated.
+**⚠️ Partially fixed, one gap remains:** a later project scan found that
+`DELETE /api/memory` and `DELETE /api/memory/:id` had **no auth and no rate
+limit at all** — worse than the write path, since destructive. Since this
+guide names `tenantId=core-philosophy` explicitly, that was a real, concrete
+risk once this file is public. Fixed: both DELETE routes now require
+`x-admin-key`, verified with a live 401→200 test.
+
+`POST /api/memory/store` still has no `x-admin-key` check (only the 30 req/min
+rate limiter) — this one is **intentionally left open**, because the existing
+`n8n-workflows/openthai-ai-automation.json` calls it unauthenticated, and
+locking it down would break that automation. Writing an extra memory is a much
+smaller blast radius than deleting one, which is why these got different
+treatment rather than both being closed or both being left open.
 
 ## Option C — Load it via the loader scripts (this PR ships both)
 
