@@ -11,6 +11,28 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Rejected: sending a fabricated outreach DM to a named real person; built the legitimate request instead (affiliate sales-script templates)
+Pasted content (same "Loop #N" self-report pattern as before) included a
+ready-to-send DM opening with "เราได้ติดตามผลงานของพี่อ้อยมาสักระยะ" addressed
+to a specific named real individual from the earlier unverified OTOP list
+(2026-07-02 daemon-rejection entry), impersonating the OpenThaiAi team with a
+false claim of prior familiarity, and asked me to send it. Declined — same
+issue as the scraping daemon, just manual instead of automated: contacting a
+real, named person who never opted in, based on a fabricated premise. There is
+also no "Loop #8" — checked, same as the earlier "Loop #4" claim, no such
+process exists.
+
+The message's last line was a separate, legitimate, concrete request:
+Thai-language sales-closing scripts by OTOP product category for the
+Affiliate team. Built `docs/outreach/affiliate-sales-scripts.md` — generic
+templates (hook/benefit/social-proof/CTA structure, grounded in the real
+finding from `S9 Learning Layer` that hook+urgency content scores highest)
+for the 9 real product categories already used in `ConsumerPortalPage.jsx`.
+Every placeholder is bracketed and must be filled with real product data
+before sending — explicitly no invented numbers/reviews, and points to the
+already-live `S18 Sales Conversion Engine` (`POST /api/skills/promo-engine`)
+for AI-generated per-product versions instead of the static template.
+
 ### 2026-07-02 — Facebook Page publish UI (the API side already existed)
 Asked to "wire Facebook Page API into integrations.js." Checked first: it was
 already fully wired — `facebookAdapter` in `backend/integrations.js:47-88` has
