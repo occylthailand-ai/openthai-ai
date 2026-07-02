@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T04:44:37.716Z · branch `claude/ai-coalition-protocol-hp3rga` (2 commit(s) ahead of main)
+Generated: 2026-07-02T05:01:37.707Z · branch `claude/ai-coalition-protocol-hp3rga` (3 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 75 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 76 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,24 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Added: Council Scan Room + fixed real security gap it surfaced
+Extended the existing `/api/council` feature (Claude+Gemini+Grok, real API calls,
+already the genuine mechanism for "three AI platforms working together" — see the
+entry below) with `POST /api/council/scan`: instead of an open-ended topic string
+the model has to guess context for, it's fed real runtime facts (`buildScanContext()`
+— actual skill/order/dispute/lead counts, which AI/DB/payment keys are configured)
+with an explicit "do not invent facts beyond this" rule baked into the prompt.
+
+Running this scan surfaced a real finding: `DELETE /api/memory` and
+`DELETE /api/memory/:id` had no auth and no rate limit at all — worse than
+`POST /api/memory/store` (already flagged in `docs/ai-memory/INTEGRATION_GUIDE.md`),
+since destructive rather than additive. Made worse by that same guide naming
+`tenantId=core-philosophy` explicitly in a file meant to become public. Fixed:
+both DELETE routes now require `x-admin-key`, verified live (401 without the key,
+200 + correct deletion with it). `POST /api/memory/store` intentionally left open —
+the existing `n8n-workflows/openthai-ai-automation.json` depends on it being
+unauthenticated, and a write has a much smaller blast radius than a delete.
 
 ### 2026-07-02 — Fixed + verified in production: all 7 /portals/* pages were silently dropping submissions
 `POST /api/leads/submit` didn't exist in the backend — every one of GovThaiPortalPage,
@@ -107,14 +125,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 1695295 Add CLAUDE.md: durable standing priority + honest boundary on cross-AI coordination (14 minutes ago)
-- 0b605d1 Log production verification: portal-leads fix confirmed working end-to-end (16 minutes ago)
-- 2675972 Add order dispute + escrow arbitration system (#67) (19 minutes ago)
-- 642d7e9 chore: sync PROJECT_STATUS.md [skip ci] (21 minutes ago)
-- f5c6ce0 chore: regenerate PROJECT_STATUS.md after rebase (21 minutes ago)
-- b23a892 Add real human-in-the-loop review for AI-generated content (21 minutes ago)
-- 7f91ca1 chore: sync PROJECT_STATUS.md [skip ci] (29 minutes ago)
-- 310b903 chore: regenerate PROJECT_STATUS.md after rebase (29 minutes ago)
+- 7cf9c1e Document XAI env vars + add real Thai Function Calling (tool-use, not fine-tuning) (17 minutes ago)
+- 1695295 Add CLAUDE.md: durable standing priority + honest boundary on cross-AI coordination (31 minutes ago)
+- 0b605d1 Log production verification: portal-leads fix confirmed working end-to-end (33 minutes ago)
+- 2675972 Add order dispute + escrow arbitration system (#67) (36 minutes ago)
+- 642d7e9 chore: sync PROJECT_STATUS.md [skip ci] (38 minutes ago)
+- f5c6ce0 chore: regenerate PROJECT_STATUS.md after rebase (38 minutes ago)
+- b23a892 Add real human-in-the-loop review for AI-generated content (38 minutes ago)
+- 7f91ca1 chore: sync PROJECT_STATUS.md [skip ci] (46 minutes ago)
 
 ## Production health (⚠️ HTTP 403)
 
@@ -260,7 +278,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7773 | Vercel serverless detection |
+| `server.js` | 7834 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

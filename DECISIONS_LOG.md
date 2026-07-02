@@ -11,6 +11,24 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Added: Council Scan Room + fixed real security gap it surfaced
+Extended the existing `/api/council` feature (Claude+Gemini+Grok, real API calls,
+already the genuine mechanism for "three AI platforms working together" — see the
+entry below) with `POST /api/council/scan`: instead of an open-ended topic string
+the model has to guess context for, it's fed real runtime facts (`buildScanContext()`
+— actual skill/order/dispute/lead counts, which AI/DB/payment keys are configured)
+with an explicit "do not invent facts beyond this" rule baked into the prompt.
+
+Running this scan surfaced a real finding: `DELETE /api/memory` and
+`DELETE /api/memory/:id` had no auth and no rate limit at all — worse than
+`POST /api/memory/store` (already flagged in `docs/ai-memory/INTEGRATION_GUIDE.md`),
+since destructive rather than additive. Made worse by that same guide naming
+`tenantId=core-philosophy` explicitly in a file meant to become public. Fixed:
+both DELETE routes now require `x-admin-key`, verified live (401 without the key,
+200 + correct deletion with it). `POST /api/memory/store` intentionally left open —
+the existing `n8n-workflows/openthai-ai-automation.json` depends on it being
+unauthenticated, and a write has a much smaller blast radius than a delete.
+
 ### 2026-07-02 — Fixed + verified in production: all 7 /portals/* pages were silently dropping submissions
 `POST /api/leads/submit` didn't exist in the backend — every one of GovThaiPortalPage,
 GovIntlPortalPage, IntlOrgPortalPage, FoundationPortalPage, CreatorPortalPage,
