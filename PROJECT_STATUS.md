@@ -1,13 +1,13 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T12:44:07.018Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T13:03:50.817Z · branch `claude/ai-coalition-protocol-hp3rga` (9 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
-- README.md tagline (may be stale — see "Known stale documentation" below): "AI-powered TikTok content generator สำหรับสินค้าไทยและสินค้าทั่วโลก"
+- Git history: 97 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
 - If something you're reading (from any AI assistant, including this one) describes Neo4j, Stripe, USD/cross-border escrow, PCI DSS scope, or vessel/shipment tracking as part of this project — it is wrong. See DECISIONS_LOG.md below: those exact proposals were made and explicitly rejected on 2026-07-01.
@@ -25,6 +25,55 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Closed 3 real gaps: producer/affiliate portal funnel, /api/agent/* auth, stale README
+Asked for a full project status report, then "what should be developed next." Found
+and fixed three concrete gaps, in the priority order the project owner picked (all
+three):
+
+**1. Producer/affiliate portal → real application funnel (biggest impact).**
+`/portals/producer` and `/portals/affiliate` were submitting into `portal_leads`
+only (the generic interest-form table) and never touched the real registration
+endpoints (`/api/producers/apply`, `/api/affiliate/apply`) that actually create
+approved accounts — a structural duplication with the older `/join` page
+(`ProducerJoinPage`), which does call the real endpoint. Anyone signing up
+through the newer portal pages became a silent lead an admin had to notice and
+manually re-invite. Fixed by extracting `registerAffiliateCore()` out of the
+`/api/affiliate/apply` route (behavior-preserving refactor, verified identical
+responses for success/duplicate/missing-field cases) and adding
+`handleNewPortalLead()`, which now auto-registers producer/affiliate leads
+against the real endpoints right after storing the lead (best-effort — a failed
+auto-register doesn't block the lead being saved). Verified live: a
+`/portals/producer` submission now appears in `/api/producers/admin/list`
+immediately; a `/portals/affiliate` submission gets a real `ref_code` and
+appears in `/api/affiliate/list` immediately. Consumer/middleman/gov/foundation/
+creator leads are untouched — they have no "real application" counterpart to
+connect to, so a lead is correctly the whole system for those.
+
+**2. `/api/agent/*` had zero server-side auth** (flagged in an earlier autonomous
+scan, left unfixed pending a decision). Confirmed `AgentPage.jsx` sends no
+identifying header on any of its 5 calls (uses raw `fetch`, not the `apiFetch`
+helper) — so `GET /api/agent` really did return every agent's data including
+`lineUserId` (PII) to anyone. Fixed with device-id scoping instead of forcing a
+full login: `AgentPage.jsx` now sends `x-device-id` (via `authHeaders()` from
+`apiBase.js`, same header already generated for every browser) on all 5 calls;
+the backend tags each new agent with `owner_device_id` and filters
+GET/PATCH/DELETE/run by it, denying by default (empty list, not everything) if
+no device-id is present. Verified live: device A can list/delete only its own
+agent; device B gets an empty list and a 403 trying to delete device A's agent;
+no header at all gets an empty list, not a full dump. Agents created before this
+fix (no `owner_device_id`) become invisible rather than retroactively assigned —
+storage is a local JSON file (`AGENT_FILE`), not Supabase, so blast radius of
+that is low, and defaulting to "no longer visible" is the safe direction for a
+PII leak fix.
+
+**3. README.md rewritten.** Described FastAPI + Python + Google Sheets + a
+different Claude model id — none of which is the real stack. Rewrote against
+verified facts: Express/Node backend, React+Vite frontend, Supabase Postgres,
+Omise THB-only payments, real pricing pulled from `omise-payment.js`
+(`SUBSCRIPTION_PLANS`: Free ฿0 / Pro ฿20 / Premier ฿30 — the old README said
+฿149/฿299), real `npm install` + `npm run dev` quick start instead of
+`pip install` + `uvicorn`.
 
 ### 2026-07-02 — AI Copywriting Templates (AIDA + Live Script), 2 new categories added to the real dropdown
 Expanded `docs/outreach/affiliate-sales-scripts.md` into a full
@@ -337,47 +386,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 45beec0 chore: regenerate PROJECT_STATUS.md after rebase (17 seconds ago)
+- 85b6ac7 Fix producer/affiliate portal funnel gap, close /api/agent/* auth gap, rewrite README (62 seconds ago)
+- e83be14 chore: sync PROJECT_STATUS.md [skip ci] (20 minutes ago)
+- 45beec0 chore: regenerate PROJECT_STATUS.md after rebase (20 minutes ago)
+- 2676f45 Add AI Copywriting Templates (AIDA + Live Script) for Affiliate team (21 minutes ago)
+- 09f127e chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 4bed880 chore: regenerate PROJECT_STATUS.md after rebase (58 minutes ago)
+- 4b54808 Add affiliate sales-script templates; decline fabricated outreach DM (59 minutes ago)
+- 80fcb72 chore: sync PROJECT_STATUS.md [skip ci] (88 minutes ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -523,7 +541,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7851 | Vercel serverless detection |
+| `server.js` | 7895 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
