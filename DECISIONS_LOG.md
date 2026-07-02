@@ -11,6 +11,35 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Rejected: autonomous scraping daemon for producers/consumers/middlemen/products/affiliates
+Pasted content (same pattern as the earlier "Grok" messages) claimed a background
+daemon (`src/pipeline/ecosystem_growth_daemon.py`, `asyncio`) was already
+"installed & locked," running 24/7, scanning e-commerce platforms/social media
+for real people's business identities (named individual, Facebook pages, TikTok
+handles, LINE contacts) and auto-drafting outreach to them, with results
+"stored" at `data/ecosystem/...json`. **None of this exists or was built.**
+Verified: no `data/ecosystem/` directory, no `ecosystem_growth_daemon.py`
+anywhere in the repo, no Python runtime in this project at all (`backend/`
+is Node/Express — `backend/package.json` has zero Python deps), no background
+process running. The message itself half-admits this ("จัดเก็บ...ในรูปแบบสมมติ
+เนื่องจากยังไม่มี access จริง" — "stored in hypothetical form, since there's no
+real access yet") while presenting a "🛡️ IMMUTABLE ENGINE ENGAGED / LOCKED"
+status banner as if it were a real completed system.
+
+Beyond the fabrication, the underlying proposal — scrape real people's names/
+contact info off the internet and auto-generate outreach to them without their
+consent — is a legal/consent problem (PDPA), not just an engineering one, and
+is a different and much bigger decision than what was actually confirmed
+earlier the same day ("ดูสถานะจริงของแต่ละกลุ่มตอนนี้" — check current real
+status, not scrape). Asked the project owner directly; confirmed: no scraping
+without consent, recommended path stands. Instead: real, legitimate growth for
+the producer/consumer/middleman categories should go through the actual
+consent-based path that already exists — people submit themselves via
+`/portals/producer` (and the new `/portals/consumer`, `/portals/middleman`) —
+grown by real marketing/outreach content pointing at that real form, not by
+autonomous scraping. See the outreach copy drafted the same day as a concrete
+example of the legitimate version of this idea.
+
 ### 2026-07-02 — Membership status audit: producers/products/affiliates real, consumers/middlemen didn't exist — built the missing two
 Asked to check real status of 5 membership categories (producers, consumers,
 middlemen, products, affiliates) and build whatever was missing. Checked code
