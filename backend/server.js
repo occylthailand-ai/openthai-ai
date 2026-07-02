@@ -623,11 +623,15 @@ app.post('/api/leads/admin/broadcast', broadcastLimiter, async (req, res) => {
 });
 
 // ─── Nodemailer transporter ───────────────────────────────────────────────────
+// SMTP_PORT ต้องอ่านจาก env เหมือนที่ preflight.js ทำ — เดิม hardcode 587/secure:false
+// ทำให้ preflight ทดสอบ SMTP_PORT=465 (SSL) ผ่าน แต่ mailer จริงที่ใช้ส่งอีเมลทุกฉบับกลับ
+// ใช้ 587/insecure เสมอ ไม่ตรงกับที่ทดสอบไว้ — ผู้ที่ตั้ง SMTP_PORT=465 อีเมลจริงจะส่งไม่ได้
+const SMTP_PORT = Number(process.env.SMTP_PORT) || 587;
 const mailer = process.env.SMTP_USER
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: 587,
-      secure: false,
+      port: SMTP_PORT,
+      secure: SMTP_PORT === 465,
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
     })
   : null;

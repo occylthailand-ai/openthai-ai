@@ -11,6 +11,22 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Closed the env-var documentation gap fully + fixed a real SMTP bug found while doing it
+Documented the remaining 7 vars the audit had flagged since the first session
+(`ADMIN_USERS`, `CANVA_API_KEY`, `DISABLE_RATE_LIMIT`, `PORTAL_LEAD_NOTIFY_EMAIL`,
+`SMTP_PORT`, `TIKTOK_SHOP_KEY`, `VERCEL`) in `backend/.env.example`.
+`PROJECT_STATUS.md`'s env audit now reads "every env var referenced in backend
+code is documented" for the first time this session.
+
+While documenting `SMTP_PORT`, found it was real code with a real bug: `preflight.js`
+(the diagnostic script) correctly reads `SMTP_PORT` and sets `secure: port === 465`,
+but the actual production mailer in `server.js` — used for every real order/dispute/
+portal-lead email — hardcoded `port: 587, secure: false` and ignored `SMTP_PORT`
+entirely. Anyone setting `SMTP_PORT=465` would see `preflight.js` report success
+while real emails silently used the wrong port/security settings. Fixed: `server.js`'s
+mailer now reads `SMTP_PORT` the same way `preflight.js` does, defaulting to 587
+(unchanged behavior when unset). Verified the port→secure logic against 587/465/2525.
+
 ### 2026-07-02 — Added: Council Scan Room + fixed real security gap it surfaced
 Extended the existing `/api/council` feature (Claude+Gemini+Grok, real API calls,
 already the genuine mechanism for "three AI platforms working together" — see the
