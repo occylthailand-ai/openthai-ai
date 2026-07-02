@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T13:26:09.359Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T13:50:55.072Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 89 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,42 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — 360° pass across new dimensions (i18n, error handling): found a real gap in AgentPage's response handling
+Asked to check "360 degrees, dimensions and perspectives" instead of repeating
+the same route/auth scans already run twice. Checked two genuinely new angles:
+
+**i18n completeness** — `IntegrationHubPage.jsx`'s new compose box (added
+earlier this session) is Thai-only text with no th/en/zh switcher. Checked
+whether that's a bug: `AdminPage.jsx` and `AgentPage.jsx` (both `(auth)`
+internal routes) are *also* Thai-only by established convention, with no
+language switcher at all — only the public `/portals/*` marketing pages get
+full 3-language support. Confirmed consistent with the existing pattern, not
+a bug.
+
+**Error handling** — found a real one. `AgentPage.jsx`'s `handleToggle` and
+`handleDelete` (pre-existing code, only touched today to add the
+`x-device-id` header) never checked the fetch response at all — they always
+showed a success toast regardless of outcome. Before today's `/api/agent/*`
+auth fix this didn't matter (nothing could fail); after it, a cross-device
+403 is a real possible outcome, and the UI would have shown "🗑 ลบ Agent
+แล้ว" / "▶️ เปิด Agent แล้ว" even when the action was actually blocked — my
+own security fix from earlier today introduced a genuine false-positive-
+success bug in the two handlers I didn't originally touch. Also neither of
+the 4 handlers had a try/catch, so a real network failure would throw an
+unhandled rejection and leave `handleRun`'s "running" spinner stuck forever.
+
+Fixed all 4 handlers: check `d.success` before showing a success toast,
+`toast.error(d.message)` otherwise, wrapped in try/catch for network
+failures, `finally` block to always reset the running state. Couldn't fully
+browser-verify (no signup endpoint exists in this codebase to mint a real
+JWT for the app shell's `/api/auth/verify` gate, and the effort to
+reverse-engineer that was disproportionate to this fix's risk) — instead
+verified the exact fetch+parse logic against the real local backend
+end-to-end: cross-device delete correctly returns `{success:false,
+message:'ไม่มีสิทธิ์เข้าถึง agent นี้'}` (frontend would show the real error),
+legitimate owner delete still succeeds normally, and a dead-port fetch
+throws exactly the `TypeError` the new try/catch is built to catch.
 
 ### 2026-07-02 — Follow-up sweep found nothing new in 2 known bug classes; closed a small residual gap from the funnel fix
 Asked to "keep going." Re-ran the same two systematic checks used earlier this
@@ -406,47 +442,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- cf63f23 Follow-up sweep (no new bugs found) + close residual gap from funnel fix (21 seconds ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (24 minutes ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (4 hours ago)
+- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (6 hours ago)
+- bd5f433 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 2c56956 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd (7 hours ago)
+- 095741b Close env-var docs, fix SMTP_PORT bug, scope Council room to OpenThaiAi only (#69) (7 hours ago)
+- 6bc7450 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- bbd517e Scope the Council command room to OpenThaiAi only, structurally (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

@@ -11,6 +11,42 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — 360° pass across new dimensions (i18n, error handling): found a real gap in AgentPage's response handling
+Asked to check "360 degrees, dimensions and perspectives" instead of repeating
+the same route/auth scans already run twice. Checked two genuinely new angles:
+
+**i18n completeness** — `IntegrationHubPage.jsx`'s new compose box (added
+earlier this session) is Thai-only text with no th/en/zh switcher. Checked
+whether that's a bug: `AdminPage.jsx` and `AgentPage.jsx` (both `(auth)`
+internal routes) are *also* Thai-only by established convention, with no
+language switcher at all — only the public `/portals/*` marketing pages get
+full 3-language support. Confirmed consistent with the existing pattern, not
+a bug.
+
+**Error handling** — found a real one. `AgentPage.jsx`'s `handleToggle` and
+`handleDelete` (pre-existing code, only touched today to add the
+`x-device-id` header) never checked the fetch response at all — they always
+showed a success toast regardless of outcome. Before today's `/api/agent/*`
+auth fix this didn't matter (nothing could fail); after it, a cross-device
+403 is a real possible outcome, and the UI would have shown "🗑 ลบ Agent
+แล้ว" / "▶️ เปิด Agent แล้ว" even when the action was actually blocked — my
+own security fix from earlier today introduced a genuine false-positive-
+success bug in the two handlers I didn't originally touch. Also neither of
+the 4 handlers had a try/catch, so a real network failure would throw an
+unhandled rejection and leave `handleRun`'s "running" spinner stuck forever.
+
+Fixed all 4 handlers: check `d.success` before showing a success toast,
+`toast.error(d.message)` otherwise, wrapped in try/catch for network
+failures, `finally` block to always reset the running state. Couldn't fully
+browser-verify (no signup endpoint exists in this codebase to mint a real
+JWT for the app shell's `/api/auth/verify` gate, and the effort to
+reverse-engineer that was disproportionate to this fix's risk) — instead
+verified the exact fetch+parse logic against the real local backend
+end-to-end: cross-device delete correctly returns `{success:false,
+message:'ไม่มีสิทธิ์เข้าถึง agent นี้'}` (frontend would show the real error),
+legitimate owner delete still succeeds normally, and a dead-port fetch
+throws exactly the `TypeError` the new try/catch is built to catch.
+
 ### 2026-07-02 — Follow-up sweep found nothing new in 2 known bug classes; closed a small residual gap from the funnel fix
 Asked to "keep going." Re-ran the same two systematic checks used earlier this
 session (diff frontend `apiUrl()` calls against registered backend routes; audit
