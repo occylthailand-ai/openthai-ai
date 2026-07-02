@@ -115,27 +115,39 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
     if (!form.name){toast.error('กรุณาใส่ชื่อ Agent');return;}
     if (isOmni && !form.problem){toast.error('กรุณาใส่ปัญหา/เป้าหมายที่ต้องการให้เฝ้า');return;}
     if (!isOmni && !form.product){toast.error('กรุณาใส่สินค้า');return;}
-    const res = await fetch(apiUrl('/api/agent'),{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify(form)});
-    const d = await res.json();
-    if(d.success){toast.success(`🤖 สร้าง Agent "${form.name}" แล้ว`);setShowForm(false);setForm(EMPTY_FORM);onRefresh();}
-    else toast.error(d.message||'สร้างไม่สำเร็จ');
+    try {
+      const res = await fetch(apiUrl('/api/agent'),{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify(form)});
+      const d = await res.json();
+      if(d.success){toast.success(`🤖 สร้าง Agent "${form.name}" แล้ว`);setShowForm(false);setForm(EMPTY_FORM);onRefresh();}
+      else toast.error(d.message||'สร้างไม่สำเร็จ');
+    } catch { toast.error('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); }
   };
   const handleRun = async (id,name) => {
     setRunning(id);toast.info(`⚡ กำลังรัน Agent "${name}"...`);
-    const res = await fetch(apiUrl(`/api/agent/${id}/run`),{method:'POST',headers:authHeaders()});
-    const d = await res.json();
-    setRunning('');
-    if(d.success){toast.success(`✅ Agent "${name}" — Score: ${d.data?.criticScore}`);onRefresh();}
-    else toast.error('Agent ทำงานไม่สำเร็จ');
+    try {
+      const res = await fetch(apiUrl(`/api/agent/${id}/run`),{method:'POST',headers:authHeaders()});
+      const d = await res.json();
+      if(d.success){toast.success(`✅ Agent "${name}" — Score: ${d.data?.criticScore}`);onRefresh();}
+      else toast.error(d.message||'Agent ทำงานไม่สำเร็จ');
+    } catch { toast.error('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); }
+    finally { setRunning(''); }
   };
   const handleToggle = async (id,active) => {
-    await fetch(apiUrl(`/api/agent/${id}`),{method:'PATCH',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({active:!active})});
-    onRefresh();toast.info(!active?'▶️ เปิด Agent แล้ว':'⏸ หยุด Agent แล้ว');
+    try {
+      const res = await fetch(apiUrl(`/api/agent/${id}`),{method:'PATCH',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({active:!active})});
+      const d = await res.json();
+      if (d.success) { onRefresh(); toast.info(!active?'▶️ เปิด Agent แล้ว':'⏸ หยุด Agent แล้ว'); }
+      else toast.error(d.message||'ทำรายการไม่สำเร็จ');
+    } catch { toast.error('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); }
   };
   const handleDelete = async (id,name) => {
     if(!confirm(`ลบ Agent "${name}" ใช่ไหม?`))return;
-    await fetch(apiUrl(`/api/agent/${id}`),{method:'DELETE',headers:authHeaders()});
-    toast.warn(`🗑 ลบ Agent "${name}" แล้ว`);onRefresh();
+    try {
+      const res = await fetch(apiUrl(`/api/agent/${id}`),{method:'DELETE',headers:authHeaders()});
+      const d = await res.json();
+      if (d.success) { toast.warn(`🗑 ลบ Agent "${name}" แล้ว`); onRefresh(); }
+      else toast.error(d.message||'ลบไม่สำเร็จ');
+    } catch { toast.error('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); }
   };
 
   return (

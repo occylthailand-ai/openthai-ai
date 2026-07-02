@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T13:26:09.359Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T14:02:59.651Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -25,6 +25,80 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Found and fixed a real HTML-injection gap in 3 cross-party notification emails
+Asked again to scan for new dimensions/gaps. Checked a fresh angle: whether
+user-submitted free text is safe when interpolated into the HTML notification
+emails built throughout this session (`sendOrderNotification`,
+`sendDisputeNotification`, `sendPortalLeadNotification`).
+
+Found a real, demonstrable bug. `orders.js`, `disputes.js`, and
+`portal-leads.js` all use the same `clip()` helper
+(`s.replace(/<[^>]*>/g, '').trim().slice(0, n)`) to strip HTML tags from
+public form input at intake. That regex requires a closing `>` to match — an
+**unclosed** tag like `<img src=x onerror=alert(1)` (no `>`) passes through
+completely untouched, because there's nothing for the regex to match. When
+that survives into the surrounding email HTML template
+(`<td>...${value}...</td>`), the `>` from the template's own `</td>` closes
+the attacker's tag for them, producing a fully valid `<img onerror=...>` in
+the actual email HTML sent.
+
+This isn't a same-user-only risk: `sendOrderNotification` can send to
+`order.producer_email` (a real producer), and `sendDisputeNotification`
+sends to **both** the buyer and the producer — so a malicious value from
+either party could inject HTML rendered in the *other* real party's inbox,
+not just admin's. `sendPortalLeadNotification` sends to admin only.
+
+Verified the exploit concretely before fixing: `clip()` on the payload above
+returns it unmodified, and concatenating it into a `<td>...</td>` template
+produces a real `<img src=x onerror=alert(1)</td>` tag. Fixed with a proper
+HTML-entity-escape function (`escapeHtml` — escapes `&<>"'`) applied at the
+actual point of HTML interpolation in all three functions, not relying on
+the bypassable intake-time `clip()` alone (defense should happen at
+render/output time, not just input time). Re-ran the same exploit
+demonstration after the fix: the payload's `<` becomes `&lt;`, no tag can
+form regardless of what `clip()` missed upstream. Live-tested against a
+running server with the exact bypass payload on both `/api/leads/submit`
+and `/api/orders` — both processed without crashing; the actual email body
+couldn't be observed directly since no SMTP is configured in this sandbox,
+but the escape logic itself was verified in isolation with a real
+before/after transformation.
+
+### 2026-07-02 — 360° pass across new dimensions (i18n, error handling): found a real gap in AgentPage's response handling
+Asked to check "360 degrees, dimensions and perspectives" instead of repeating
+the same route/auth scans already run twice. Checked two genuinely new angles:
+
+**i18n completeness** — `IntegrationHubPage.jsx`'s new compose box (added
+earlier this session) is Thai-only text with no th/en/zh switcher. Checked
+whether that's a bug: `AdminPage.jsx` and `AgentPage.jsx` (both `(auth)`
+internal routes) are *also* Thai-only by established convention, with no
+language switcher at all — only the public `/portals/*` marketing pages get
+full 3-language support. Confirmed consistent with the existing pattern, not
+a bug.
+
+**Error handling** — found a real one. `AgentPage.jsx`'s `handleToggle` and
+`handleDelete` (pre-existing code, only touched today to add the
+`x-device-id` header) never checked the fetch response at all — they always
+showed a success toast regardless of outcome. Before today's `/api/agent/*`
+auth fix this didn't matter (nothing could fail); after it, a cross-device
+403 is a real possible outcome, and the UI would have shown "🗑 ลบ Agent
+แล้ว" / "▶️ เปิด Agent แล้ว" even when the action was actually blocked — my
+own security fix from earlier today introduced a genuine false-positive-
+success bug in the two handlers I didn't originally touch. Also neither of
+the 4 handlers had a try/catch, so a real network failure would throw an
+unhandled rejection and leave `handleRun`'s "running" spinner stuck forever.
+
+Fixed all 4 handlers: check `d.success` before showing a success toast,
+`toast.error(d.message)` otherwise, wrapped in try/catch for network
+failures, `finally` block to always reset the running state. Couldn't fully
+browser-verify (no signup endpoint exists in this codebase to mint a real
+JWT for the app shell's `/api/auth/verify` gate, and the effort to
+reverse-engineer that was disproportionate to this fix's risk) — instead
+verified the exact fetch+parse logic against the real local backend
+end-to-end: cross-device delete correctly returns `{success:false,
+message:'ไม่มีสิทธิ์เข้าถึง agent นี้'}` (frontend would show the real error),
+legitimate owner delete still succeeds normally, and a dead-port fetch
+throws exactly the `TypeError` the new try/catch is built to catch.
 
 ### 2026-07-02 — Follow-up sweep found nothing new in 2 known bug classes; closed a small residual gap from the funnel fix
 Asked to "keep going." Re-ran the same two systematic checks used earlier this
@@ -406,7 +480,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- cf63f23 Follow-up sweep (no new bugs found) + close residual gap from funnel fix (21 seconds ago)
+- 407686e chore: regenerate PROJECT_STATUS.md after rebase (16 seconds ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -429,7 +503,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.1",
+  "memory_mb": "19.0",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -592,7 +666,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7904 | Vercel serverless detection |
+| `server.js` | 7912 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

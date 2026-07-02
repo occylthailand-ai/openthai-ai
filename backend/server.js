@@ -740,6 +740,14 @@ async function sendPaymentReceipt(to, { plan, amount_thb, charge_id, paid_at, me
 }
 
 // แจ้งเตือนผู้ผลิตทางอีเมลเมื่อมีคำสั่งซื้อใหม่ (+ สำเนาถึงเจ้าของระบบ)
+// HTML-escape ก่อนแทรกข้อมูลที่ผู้ใช้กรอกเองลงในอีเมล — clip() ใน orders.js/disputes.js/
+// portal-leads.js ตัด <tag> ด้วย regex ที่ bypass ได้ถ้า input มี "<" ไม่ปิด (เช่น
+// `<img src=x onerror=y` ไม่มี ">") ตัวเปิด tag ที่ไม่สมบูรณ์นี้จะไม่ถูก regex ตัดออก แล้วไป
+// เจอ ">" ตัวถัดไปในเทมเพลต HTML เอง (เช่นจาก </td>) กลายเป็น tag ที่สมบูรณ์โดยไม่ตั้งใจ —
+// อีเมลแจ้งเตือน 3 จุด (order/dispute/portal-lead) ส่งถึงคนจริงข้ามฝ่าย (ลูกค้า↔ผู้ผลิต↔แอดมิน)
+// จึงต้อง escape ที่จุดแทรกลง HTML โดยตรง ไม่พึ่ง clip() ที่ต้นทางอย่างเดียว
+const escapeHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
 async function sendOrderNotification(order) {
   const to = order?.producer_email || process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
   if (!mailer || !to) return; // ไม่มี SMTP → ข้ามเงียบๆ (mock/dev)
@@ -759,12 +767,12 @@ async function sendOrderNotification(order) {
         </div>
         <div style="padding:24px;">
           <table style="width:100%;border-collapse:collapse;font-size:14px;">
-            <tr><td style="padding:9px 0;color:#94a3b8;">สินค้า</td><td style="padding:9px 0;text-align:right;font-weight:700;">${order.product_name}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;">สินค้า</td><td style="padding:9px 0;text-align:right;font-weight:700;">${escapeHtml(order.product_name)}</td></tr>
             <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">จำนวน</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${order.qty}</td></tr>
             <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ยอดรวม</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);color:#10b981;font-weight:700;">${baht(order.amount)}</td></tr>
-            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ชื่อลูกค้า</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${order.customer_name}</td></tr>
-            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ติดต่อลูกค้า</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-weight:700;color:#a5b4fc;">${order.contact}</td></tr>
-            ${order.note ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">หมายเหตุ</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${order.note}</td></tr>` : ''}
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ชื่อลูกค้า</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${escapeHtml(order.customer_name)}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ติดต่อลูกค้า</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-weight:700;color:#a5b4fc;">${escapeHtml(order.contact)}</td></tr>
+            ${order.note ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">หมายเหตุ</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${escapeHtml(order.note)}</td></tr>` : ''}
             <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เลขที่ออเดอร์</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-family:monospace;font-size:12px;">${order.id}</td></tr>
           </table>
         </div>
@@ -813,9 +821,9 @@ async function sendDisputeNotification(dispute, order, phase) {
           <table style="width:100%;border-collapse:collapse;">
             <tr><td style="padding:9px 0;color:#94a3b8;">เลขที่ออเดอร์</td><td style="padding:9px 0;text-align:right;font-family:monospace;font-size:12px;">${dispute.order_id}</td></tr>
             <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เปิดโดย</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.opened_by === 'buyer' ? 'ผู้ซื้อ' : 'ผู้ผลิต'}</td></tr>
-            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เหตุผล</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.reason}</td></tr>
-            ${phase === 'responded' ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">คำชี้แจง</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${dispute.counter_response?.note || '-'}</td></tr>` : ''}
-            ${phase === 'resolved' ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">คำตัดสิน</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-weight:700;">${dispute.resolution?.decision || '-'}</td></tr>` : ''}
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เหตุผล</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${escapeHtml(dispute.reason)}</td></tr>
+            ${phase === 'responded' ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">คำชี้แจง</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${escapeHtml(dispute.counter_response?.note) || '-'}</td></tr>` : ''}
+            ${phase === 'resolved' ? `<tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">คำตัดสิน</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-weight:700;">${escapeHtml(dispute.resolution?.decision) || '-'}</td></tr>` : ''}
           </table>
         </div>
         <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
@@ -835,7 +843,7 @@ async function sendPortalLeadNotification(lead) {
   const to = process.env.PORTAL_LEAD_NOTIFY_EMAIL || process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
   if (!mailer || !to) return;
   const label = PORTAL_TYPE_LABEL[lead.type] || lead.type;
-  const fields = Object.entries(lead.form_data || {}).map(([k, v]) => `<tr><td style="padding:7px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">${k}</td><td style="padding:7px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${v}</td></tr>`).join('');
+  const fields = Object.entries(lead.form_data || {}).map(([k, v]) => `<tr><td style="padding:7px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">${escapeHtml(k)}</td><td style="padding:7px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${escapeHtml(v)}</td></tr>`).join('');
   try {
     await mailer.sendMail({
       from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
