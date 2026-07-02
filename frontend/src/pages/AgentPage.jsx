@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
-import { apiUrl } from '../apiBase';
+import { apiUrl, authHeaders } from '../apiBase';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PLATFORMS  = ['TikTok','Facebook','Instagram Reels','YouTube Shorts','LINE'];
@@ -115,26 +115,26 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
     if (!form.name){toast.error('กรุณาใส่ชื่อ Agent');return;}
     if (isOmni && !form.problem){toast.error('กรุณาใส่ปัญหา/เป้าหมายที่ต้องการให้เฝ้า');return;}
     if (!isOmni && !form.product){toast.error('กรุณาใส่สินค้า');return;}
-    const res = await fetch(apiUrl('/api/agent'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)});
+    const res = await fetch(apiUrl('/api/agent'),{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify(form)});
     const d = await res.json();
     if(d.success){toast.success(`🤖 สร้าง Agent "${form.name}" แล้ว`);setShowForm(false);setForm(EMPTY_FORM);onRefresh();}
     else toast.error(d.message||'สร้างไม่สำเร็จ');
   };
   const handleRun = async (id,name) => {
     setRunning(id);toast.info(`⚡ กำลังรัน Agent "${name}"...`);
-    const res = await fetch(apiUrl(`/api/agent/${id}/run`),{method:'POST'});
+    const res = await fetch(apiUrl(`/api/agent/${id}/run`),{method:'POST',headers:authHeaders()});
     const d = await res.json();
     setRunning('');
     if(d.success){toast.success(`✅ Agent "${name}" — Score: ${d.data?.criticScore}`);onRefresh();}
     else toast.error('Agent ทำงานไม่สำเร็จ');
   };
   const handleToggle = async (id,active) => {
-    await fetch(apiUrl(`/api/agent/${id}`),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({active:!active})});
+    await fetch(apiUrl(`/api/agent/${id}`),{method:'PATCH',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({active:!active})});
     onRefresh();toast.info(!active?'▶️ เปิด Agent แล้ว':'⏸ หยุด Agent แล้ว');
   };
   const handleDelete = async (id,name) => {
     if(!confirm(`ลบ Agent "${name}" ใช่ไหม?`))return;
-    await fetch(apiUrl(`/api/agent/${id}`),{method:'DELETE'});
+    await fetch(apiUrl(`/api/agent/${id}`),{method:'DELETE',headers:authHeaders()});
     toast.warn(`🗑 ลบ Agent "${name}" แล้ว`);onRefresh();
   };
 
@@ -815,7 +815,7 @@ export default function AgentPage() {
   }, []);
 
   const loadAgents = () =>
-    fetch(apiUrl('/api/agent')).then(r=>r.json())
+    fetch(apiUrl('/api/agent'),{headers:authHeaders()}).then(r=>r.json())
       .then(d=>{setAgents(d.data||[]);setLoading(false);})
       .catch(()=>setLoading(false));
 

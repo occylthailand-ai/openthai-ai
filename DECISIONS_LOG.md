@@ -11,6 +11,55 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Closed 3 real gaps: producer/affiliate portal funnel, /api/agent/* auth, stale README
+Asked for a full project status report, then "what should be developed next." Found
+and fixed three concrete gaps, in the priority order the project owner picked (all
+three):
+
+**1. Producer/affiliate portal → real application funnel (biggest impact).**
+`/portals/producer` and `/portals/affiliate` were submitting into `portal_leads`
+only (the generic interest-form table) and never touched the real registration
+endpoints (`/api/producers/apply`, `/api/affiliate/apply`) that actually create
+approved accounts — a structural duplication with the older `/join` page
+(`ProducerJoinPage`), which does call the real endpoint. Anyone signing up
+through the newer portal pages became a silent lead an admin had to notice and
+manually re-invite. Fixed by extracting `registerAffiliateCore()` out of the
+`/api/affiliate/apply` route (behavior-preserving refactor, verified identical
+responses for success/duplicate/missing-field cases) and adding
+`handleNewPortalLead()`, which now auto-registers producer/affiliate leads
+against the real endpoints right after storing the lead (best-effort — a failed
+auto-register doesn't block the lead being saved). Verified live: a
+`/portals/producer` submission now appears in `/api/producers/admin/list`
+immediately; a `/portals/affiliate` submission gets a real `ref_code` and
+appears in `/api/affiliate/list` immediately. Consumer/middleman/gov/foundation/
+creator leads are untouched — they have no "real application" counterpart to
+connect to, so a lead is correctly the whole system for those.
+
+**2. `/api/agent/*` had zero server-side auth** (flagged in an earlier autonomous
+scan, left unfixed pending a decision). Confirmed `AgentPage.jsx` sends no
+identifying header on any of its 5 calls (uses raw `fetch`, not the `apiFetch`
+helper) — so `GET /api/agent` really did return every agent's data including
+`lineUserId` (PII) to anyone. Fixed with device-id scoping instead of forcing a
+full login: `AgentPage.jsx` now sends `x-device-id` (via `authHeaders()` from
+`apiBase.js`, same header already generated for every browser) on all 5 calls;
+the backend tags each new agent with `owner_device_id` and filters
+GET/PATCH/DELETE/run by it, denying by default (empty list, not everything) if
+no device-id is present. Verified live: device A can list/delete only its own
+agent; device B gets an empty list and a 403 trying to delete device A's agent;
+no header at all gets an empty list, not a full dump. Agents created before this
+fix (no `owner_device_id`) become invisible rather than retroactively assigned —
+storage is a local JSON file (`AGENT_FILE`), not Supabase, so blast radius of
+that is low, and defaulting to "no longer visible" is the safe direction for a
+PII leak fix.
+
+**3. README.md rewritten.** Described FastAPI + Python + Google Sheets + a
+different Claude model id — none of which is the real stack. Rewrote against
+verified facts: Express/Node backend, React+Vite frontend, Supabase Postgres,
+Omise THB-only payments, real pricing pulled from `omise-payment.js`
+(`SUBSCRIPTION_PLANS`: Free ฿0 / Pro ฿20 / Premier ฿30 — the old README said
+฿149/฿299), real `npm install` + `npm run dev` quick start instead of
+`pip install` + `uvicorn`.
+
 ### 2026-07-02 — AI Copywriting Templates (AIDA + Live Script), 2 new categories added to the real dropdown
 Expanded `docs/outreach/affiliate-sales-scripts.md` into a full
 `docs/outreach/AI_Copywriting_Templates_OTOP.md`: usage rules (no invented

@@ -98,7 +98,7 @@ const disputes  = createDisputes(WRITE_DATA_DIR, {
     resolved:  async (dispute, order) => sendDisputeNotification(dispute, order, 'resolved'),
   },
 });
-const portalLeads = createPortalLeads(WRITE_DATA_DIR, { onNewLead: async (lead) => sendPortalLeadNotification(lead) });
+const portalLeads = createPortalLeads(WRITE_DATA_DIR, { onNewLead: async (lead) => handleNewPortalLead(lead) });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
 const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
 
@@ -851,6 +851,32 @@ async function sendPortalLeadNotification(lead) {
   }
 }
 
+// /portals/producer และ /portals/affiliate เดิมส่งข้อมูลเข้า portal_leads เฉยๆ (เก็บไว้ดูใน
+// Admin เท่านั้น) โดยไม่เคยเชื่อมกับระบบสมัครจริง (/api/producers/apply, /api/affiliate/apply)
+// เลย — คนสมัครผ่านหน้านี้จึงไม่ได้กลายเป็นผู้ผลิต/affiliate จริงจนกว่าแอดมินจะสังเกตเห็น
+// lead แล้วเชิญให้สมัครซ้ำอีกที ฟังก์ชันนี้ auto-register ต่อให้ทันทีที่ lead เข้ามา
+// (best-effort — ถ้า register ไม่ผ่าน lead ก็ยังถูกบันทึกและแจ้งเตือนตามปกติ)
+async function handleNewPortalLead(lead) {
+  await sendPortalLeadNotification(lead);
+  const fd = lead.form_data || {};
+  try {
+    if (lead.type === 'producer') {
+      const r = await producers.register({
+        company: fd.name, contact_name: fd.name, email: lead.email,
+        phone: fd.phone, product_name: fd.product,
+      });
+      if (r.ok) console.log(`✅ Portal lead (producer) auto-registered เป็นใบสมัครผู้ผลิตจริง: ${lead.email}`);
+      else console.warn(`[portal-leads] producer auto-register ไม่ผ่าน: ${r.error}`);
+    } else if (lead.type === 'affiliate') {
+      const r = await registerAffiliateCore({ name: fd.name, email: lead.email, platform: fd.platform });
+      if (r.ok) console.log(`✅ Portal lead (affiliate) auto-registered เป็น affiliate จริง: ${lead.email} — Ref: ${r.record.ref_code}`);
+      else console.warn(`[portal-leads] affiliate auto-register ไม่ผ่าน: ${r.message}`);
+    }
+  } catch (e) {
+    console.error('[portal-leads] auto-register error:', e.message);
+  }
+}
+
 // แจ้งเตือนเติมสต๊อกเมื่อสินค้าใกล้หมด — อีเมล + LINE + log (ทุกช่องทาง)
 async function sendLowStockAlert(product) {
   const line = `⚠️ สต๊อกใกล้หมด: ${product.name} (${product.sku}) เหลือ ${product.stock} ชิ้น (จุดเตือน ${product.low_stock}) — ควรเติมสต๊อก`;
@@ -929,6 +955,50 @@ async function saveAffiliate(record) {
   }
 }
 
+// สมัคร Affiliate จริง — ใช้ทั้งจาก POST /api/affiliate/apply โดยตรง และจาก portal lead
+// (type:'affiliate') ที่ auto-register ต่อให้อัตโนมัติ ดู handleNewPortalLead ด้านล่าง
+async function registerAffiliateCore(input) {
+  const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link } = input || {};
+  if (!name || !email) return { ok: false, status: 400, message: 'ต้องการชื่อและอีเมล' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, status: 400, message: 'รูปแบบอีเมลไม่ถูกต้อง' };
+  }
+  const safeEmail = email.toLowerCase().trim();
+  const proposedCode = ref_code ? ref_code.replace(/[^A-Z0-9a-z_-]/g, '') : '';
+
+  if (affiliates.find((a) => a.email === safeEmail)) {
+    return { ok: false, status: 409, message: 'อีเมลนี้สมัครไปแล้ว', duplicate: true };
+  }
+
+  const finalCode = proposedCode || `AFF${Date.now().toString().slice(-6)}`;
+  const record = {
+    id: Date.now().toString(),
+    name: String(name).trim().slice(0, 100),
+    email: safeEmail, phone: String(phone || '').slice(0, 20),
+    platform: platform || 'TikTok',
+    followers: String(followers || '').slice(0, 50),
+    channel_url: String(channel_url || '').slice(0, 200),
+    note: String(note || '').slice(0, 500),
+    ref_code: finalCode,
+    ref_link: ref_link || `${DOMAIN_URL}/?ref=${encodeURIComponent(finalCode)}`,
+    tier: 'starter',
+    commission_rate: 0.20,
+    total_sales: 0,
+    total_earned: 0,
+    joined_at: new Date().toISOString(),
+    status: 'active',
+  };
+
+  affiliates.push(record);
+  await saveAffiliate(record);
+  console.log(`✅ Affiliate สมัครใหม่: ${name} (${safeEmail}) — Ref: ${record.ref_code}`);
+
+  sendAffiliateWelcome(safeEmail, name, record.ref_code, record.ref_link);
+  webhooks.dispatch('affiliate.joined', { name, ref_code: record.ref_code, platform: record.platform });
+
+  return { ok: true, record };
+}
+
 // ─── Withdrawals store (ไฟล์) — คำขอถอนค่าคอมพันธมิตร ────────────────────────
 const WD_FILE = join(WRITE_DATA_DIR, 'withdrawals.json');
 let withdrawals = [];
@@ -949,55 +1019,16 @@ const affPending = (a) => +((a.total_earned || 0) - (a.paid_out || 0) - reserved
 
 app.post('/api/affiliate/apply', affiliateLimiter, async (req, res) => {
   try {
-    const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link } = req.body;
-    if (!name || !email) return res.status(400).json({ success: false, message: 'ต้องการชื่อและอีเมล' });
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ success: false, message: 'รูปแบบอีเมลไม่ถูกต้อง' });
-    }
-    const safeEmail = email.toLowerCase().trim();
-    // ref_code ต้องเป็นตัวอักษร/ตัวเลขเท่านั้น
-    const proposedCode = ref_code ? ref_code.replace(/[^A-Z0-9a-z_-]/g, '') : '';
-
-    // ป้องกันสมัครซ้ำ
-    if (affiliates.find((a) => a.email === safeEmail)) {
-      return res.status(409).json({ success: false, message: 'อีเมลนี้สมัครไปแล้ว' });
-    }
-
-    const finalCode = proposedCode || `AFF${Date.now().toString().slice(-6)}`;
-    const record = {
-      id: Date.now().toString(),
-      name: String(name).trim().slice(0, 100),
-      email: safeEmail, phone: String(phone || '').slice(0, 20),
-      platform: platform || 'TikTok',
-      followers: String(followers || '').slice(0, 50),
-      channel_url: String(channel_url || '').slice(0, 200),
-      note: String(note || '').slice(0, 500),
-      ref_code: finalCode,
-      ref_link: ref_link || `${DOMAIN_URL}/?ref=${encodeURIComponent(finalCode)}`,
-      tier: 'starter',
-      commission_rate: 0.20,
-      total_sales: 0,
-      total_earned: 0,
-      joined_at: new Date().toISOString(),
-      status: 'active',
-    };
-
-    affiliates.push(record);
-    await saveAffiliate(record);
-    console.log(`✅ Affiliate สมัครใหม่: ${name} (${safeEmail}) — Ref: ${record.ref_code}`);
-
-    // ส่ง welcome email + dispatch webhook (async — ไม่บล็อก response)
-    sendAffiliateWelcome(safeEmail, name, record.ref_code, record.ref_link);
-    webhooks.dispatch('affiliate.joined', { name, ref_code: record.ref_code, platform: record.platform });
-
+    const r = await registerAffiliateCore(req.body);
+    if (!r.ok) return res.status(r.status).json({ success: false, message: r.message });
     res.json({
       success: true,
       message: 'สมัคร Affiliate สำเร็จ!',
       data: {
-        ref_code: record.ref_code,
-        ref_link: record.ref_link,
-        tier: record.tier,
-        commission_rate: record.commission_rate,
+        ref_code: r.record.ref_code,
+        ref_link: r.record.ref_link,
+        tier: r.record.tier,
+        commission_rate: r.record.commission_rate,
       },
     });
   } catch (err) {
@@ -4984,8 +5015,18 @@ if (!IS_VERCEL) cron.schedule('5 * * * *', async () => {
 if (!IS_VERCEL) console.log('[Scheduler] ✅ Agent cron started (checks every hour at :05 — local only)');
 
 // ── CRUD /api/agent ───────────────────────────────────────────────────────────
+// เดิมไม่มีการยืนยันตัวตนฝั่ง server เลย ทั้งที่ AgentPage.jsx เป็นหน้า (auth) route —
+// GET คืน agent ของทุกคนให้ทุกคนเห็น (รวม lineUserId ที่เป็น PII) และใครก็ PATCH/DELETE/
+// run agent ของคนอื่นได้หมด เพราะหน้าเว็บไม่เคยส่ง token ใดๆ มาเลย (ไม่มีระบบ JWT จริงสำหรับ
+// หน้านี้) แก้ด้วย device-id scoping (เทียบเท่า "auth แบบเบา" ไม่ต้อง login) — ใช้ x-device-id
+// ที่ apiBase.js สร้างให้ทุกเบราว์เซอร์อยู่แล้ว ปลอดภัยกว่าเดิมโดยไม่ต้องบังคับ login ใหม่
+// agent เก่าที่สร้างก่อนแก้ (ไม่มี owner_device_id) จะไม่แสดงให้ใครอีก — ปิด leak เป็นค่าเริ่มต้น
+const agentOwner = (req) => (req.headers['x-device-id'] || '').toString().slice(0, 100);
+
 app.get('/api/agent', (req, res) => {
-  const safe = agents.map(a => ({ ...a, results: (a.results || []).slice(0, 3) }));
+  const owner = agentOwner(req);
+  const mine = owner ? agents.filter(a => a.owner_device_id === owner) : [];
+  const safe = mine.map(a => ({ ...a, results: (a.results || []).slice(0, 3) }));
   res.json({ success: true, data: safe });
 });
 
@@ -4996,7 +5037,7 @@ app.post('/api/agent', (req, res) => {
   if (!isOmni && !product) return res.status(400).json({ success: false, message: 'ต้องการ product' });
   if (isOmni && !problem) return res.status(400).json({ success: false, message: 'Omni-Solver ต้องการ problem' });
   const agent = {
-    id: Date.now().toString(), name, task: task || 'content',
+    id: Date.now().toString(), owner_device_id: agentOwner(req), name, task: task || 'content',
     product: product || '', category: category || 'ทั่วไป',
     platform: platform || 'TikTok', style: style || 'sales',
     lang: lang || 'ภาษาไทย', audience: audience || 'ทั่วไป', price: price || '',
@@ -5014,6 +5055,7 @@ app.post('/api/agent', (req, res) => {
 app.post('/api/agent/:id/run', async (req, res) => {
   const agent = agents.find(a => a.id === req.params.id);
   if (!agent) return res.status(404).json({ success: false, message: 'ไม่พบ agent' });
+  if (agent.owner_device_id !== agentOwner(req)) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์เข้าถึง agent นี้' });
   const result = await runAgent(agent);
   res.json({ success: !!result, data: result });
 });
@@ -5021,7 +5063,8 @@ app.post('/api/agent/:id/run', async (req, res) => {
 app.patch('/api/agent/:id', (req, res) => {
   const idx = agents.findIndex(a => a.id === req.params.id);
   if (idx < 0) return res.status(404).json({ success: false });
-  agents[idx] = { ...agents[idx], ...req.body, id: agents[idx].id };
+  if (agents[idx].owner_device_id !== agentOwner(req)) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์เข้าถึง agent นี้' });
+  agents[idx] = { ...agents[idx], ...req.body, id: agents[idx].id, owner_device_id: agents[idx].owner_device_id };
   saveAgents(agents);
   res.json({ success: true, data: agents[idx] });
 });
@@ -5029,6 +5072,7 @@ app.patch('/api/agent/:id', (req, res) => {
 app.delete('/api/agent/:id', (req, res) => {
   const idx = agents.findIndex(a => a.id === req.params.id);
   if (idx < 0) return res.status(404).json({ success: false });
+  if (agents[idx].owner_device_id !== agentOwner(req)) return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์เข้าถึง agent นี้' });
   agents.splice(idx, 1); saveAgents(agents);
   res.json({ success: true });
 });
