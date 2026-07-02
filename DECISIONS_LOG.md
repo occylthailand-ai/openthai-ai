@@ -11,6 +11,27 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — AI Copywriting Templates (AIDA + Live Script), 2 new categories added to the real dropdown
+Expanded `docs/outreach/affiliate-sales-scripts.md` into a full
+`docs/outreach/AI_Copywriting_Templates_OTOP.md`: usage rules (no invented
+stats — same rule as every other outreach file), an AIDA framework primer
+grounded in the real `S9 Learning Layer` finding (hook+urgency scores
+highest), AIDA + long-form Live Selling Script templates for 7 categories,
+and a generic cross-category template. Added a JSON twin
+(`ai_copywriting_templates_otop.json`) for programmatic use, same
+markdown+JSON pattern as `docs/ai-memory/core-philosophy.json`.
+
+Two of the requested categories (อาหารสัตว์เลี้ยง / pet food,
+สินค้าดิจิทัล / digital products) didn't exist anywhere in the real system —
+not in `ConsumerPortalPage.jsx`'s `CATEGORIES` dropdown. Rather than write
+copy for categories a real consumer couldn't actually select, added both to
+the real dropdown (`frontend/src/pages/portals/ConsumerPortalPage.jsx`) so
+the docs match what the platform actually supports, not the other way
+around — same principle as every other grounding fix this session.
+Referenced the existing live skills (S18 Sales Conversion Engine, S25 Live
+Selling Script) for AI-generated per-product versions instead of duplicating
+that capability as a static file.
+
 ### 2026-07-02 — Rejected: sending a fabricated outreach DM to a named real person; built the legitimate request instead (affiliate sales-script templates)
 Pasted content (same "Loop #N" self-report pattern as before) included a
 ready-to-send DM opening with "เราได้ติดตามผลงานของพี่อ้อยมาสักระยะ" addressed
