@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T05:17:17.351Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-02T06:46:24.278Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -25,6 +25,35 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-02 — Scoped /api/council to OpenThaiAi-only, structurally not by convention
+User asked for a "command room" where Gemini and Grok can join, restricted to
+OpenThaiAi only. The room already existed (`/api/council`, live at `/council`)
+and already lets them join for real once `XAI_API_KEY` is set — but the `topic`
+field was pure free text with zero grounding, so nothing stopped it being used
+to discuss anything unrelated to this project. Fixed by having `/api/council`
+inject the same real runtime context `buildScanContext()` produces (used by
+`/api/council/scan`) into every request, with an explicit instruction to
+decline topics that aren't about OpenThaiAi. This can't be verified against a
+live model from this sandbox (no real API keys here) — only that the context
+is correctly built and included; whether a live model actually honors the
+"stay on topic" instruction needs testing with real credentials.
+
+### 2026-07-02 — Closed the env-var documentation gap fully + fixed a real SMTP bug found while doing it
+Documented the remaining 7 vars the audit had flagged since the first session
+(`ADMIN_USERS`, `CANVA_API_KEY`, `DISABLE_RATE_LIMIT`, `PORTAL_LEAD_NOTIFY_EMAIL`,
+`SMTP_PORT`, `TIKTOK_SHOP_KEY`, `VERCEL`) in `backend/.env.example`.
+`PROJECT_STATUS.md`'s env audit now reads "every env var referenced in backend
+code is documented" for the first time this session.
+
+While documenting `SMTP_PORT`, found it was real code with a real bug: `preflight.js`
+(the diagnostic script) correctly reads `SMTP_PORT` and sets `secure: port === 465`,
+but the actual production mailer in `server.js` — used for every real order/dispute/
+portal-lead email — hardcoded `port: 587, secure: false` and ignored `SMTP_PORT`
+entirely. Anyone setting `SMTP_PORT=465` would see `preflight.js` report success
+while real emails silently used the wrong port/security settings. Fixed: `server.js`'s
+mailer now reads `SMTP_PORT` the same way `preflight.js` does, defaulting to 587
+(unchanged behavior when unset). Verified the port→secure logic against 587/465/2525.
 
 ### 2026-07-02 — Added: Council Scan Room + fixed real security gap it surfaced
 Extended the existing `/api/council` feature (Claude+Gemini+Grok, real API calls,
@@ -125,7 +154,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 39f28ef Build the real "combined command room" (Council Scan Room) + fix what it found (15 minutes ago)
+- bbd517e Scope the Council command room to OpenThaiAi only, structurally (5 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -148,7 +177,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.3",
+  "memory_mb": "19.0",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -309,7 +338,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7834 | Vercel serverless detection |
+| `server.js` | 7846 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
@@ -341,15 +370,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
 
-## Environment variables (57 referenced in backend code, 51 documented in .env.example)
-⚠️ Referenced in code but missing from `backend/.env.example`:
-- ADMIN_USERS
-- CANVA_API_KEY
-- DISABLE_RATE_LIMIT
-- PORTAL_LEAD_NOTIFY_EMAIL
-- SMTP_PORT
-- TIKTOK_SHOP_KEY
-- VERCEL
+## Environment variables (57 referenced in backend code, 58 documented in .env.example)
+✅ every env var referenced in backend code is documented in `.env.example`
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.
