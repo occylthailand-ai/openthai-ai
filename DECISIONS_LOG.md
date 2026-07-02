@@ -11,6 +11,19 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-02 — Scoped /api/council to OpenThaiAi-only, structurally not by convention
+User asked for a "command room" where Gemini and Grok can join, restricted to
+OpenThaiAi only. The room already existed (`/api/council`, live at `/council`)
+and already lets them join for real once `XAI_API_KEY` is set — but the `topic`
+field was pure free text with zero grounding, so nothing stopped it being used
+to discuss anything unrelated to this project. Fixed by having `/api/council`
+inject the same real runtime context `buildScanContext()` produces (used by
+`/api/council/scan`) into every request, with an explicit instruction to
+decline topics that aren't about OpenThaiAi. This can't be verified against a
+live model from this sandbox (no real API keys here) — only that the context
+is correctly built and included; whether a live model actually honors the
+"stay on topic" instruction needs testing with real credentials.
+
 ### 2026-07-02 — Closed the env-var documentation gap fully + fixed a real SMTP bug found while doing it
 Documented the remaining 7 vars the audit had flagged since the first session
 (`ADMIN_USERS`, `CANVA_API_KEY`, `DISABLE_RATE_LIMIT`, `PORTAL_LEAD_NOTIFY_EMAIL`,

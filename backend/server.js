@@ -1696,9 +1696,17 @@ function mockSynthesis(topic) {
 app.post('/api/council', generateLimiter, async (req, res) => {
   const topic = String(req.body?.topic || '').trim().slice(0, 2000);
   if (!topic) return res.status(400).json({ success: false, error: 'ต้องการหัวข้อที่จะให้ที่ประชุมวิเคราะห์ (topic)' });
-  const base = `คุณกำลังร่วมประชุมในห้อง "OpenThaiAi" กับ AI เจ้าอื่น เพื่อช่วยกันวิเคราะห์และเสนอแนวทางทำให้แพลตฟอร์ม OpenThaiAi เป็นที่ยอมรับในตลาดโลกและเกิดขึ้นจริง
-หัวข้อที่ต้องวิเคราะห์: ${topic}
-ตอบเป็นภาษาไทย สั้นกระชับ เป็นข้อ ๆ (3-5 ข้อ) ในมุมที่คุณถนัด พร้อมข้อเสนอที่ลงมือทำได้จริง`;
+  // ห้องนี้เปิดให้ Claude/Gemini/Grok (เมื่อมี API key จริง) เข้าร่วมได้ แต่ต้องผูกกับสถานะจริงของ
+  // OpenThaiAi เสมอ ไม่ใช่ห้องคุยเรื่องทั่วไป — ฉีด context จริง (เหมือน /api/council/scan) เข้าไป
+  // ทุกครั้ง กันไม่ให้กลายเป็น general-purpose 3-AI chatbot ที่หลุด scope ไปเรื่องอื่น
+  const context = await buildScanContext();
+  const base = `คุณกำลังร่วมประชุมในห้อง "OpenThaiAi Command Room" กับ AI เจ้าอื่น ห้องนี้มีไว้คุยเรื่อง OpenThaiAi เท่านั้น
+
+สถานะจริงของ OpenThaiAi (อ้างอิงข้อมูลนี้เสมอ ห้ามมโนข้อเท็จจริงเพิ่ม):
+${context}
+
+หัวข้อที่ต้องวิเคราะห์ (ต้องเชื่อมโยงกับ OpenThaiAi เท่านั้น ถ้าหัวข้อไม่เกี่ยวกับ OpenThaiAi ให้ตอบว่าห้องนี้คุยได้เฉพาะเรื่อง OpenThaiAi แทน): ${topic}
+ตอบเป็นภาษาไทย สั้นกระชับ เป็นข้อ ๆ (3-5 ข้อ) ในมุมที่คุณถนัด พร้อมข้อเสนอที่ลงมือทำได้จริง โดยอิงจากสถานะจริงข้างต้น`;
   const persona = (p) => `${base}\n\nบทบาทของคุณในวงประชุม: ${COUNCIL_PERSONAS[p].role}`;
 
   const [claude, gem, grok] = await Promise.all([
