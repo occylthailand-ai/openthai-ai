@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T17:12:24.101Z · branch `claude/daily-reporter-improvements-8vc9ct` (7 commit(s) ahead of main)
+Generated: 2026-07-03T18:10:30.057Z · branch `claude/daily-reporter-improvements-8vc9ct` (8 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 217 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 91 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,47 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Hourly loop, run 3: same broken-promise bug also hit Creator Portal, but with a bigger gap behind it — flagged, not built
+Owner's flagged vuln from run 1 is still unanswered — left untouched again
+this cycle, per item 8.
+
+Checked the PR's CI/deploy status first (new this cycle: Vercel auto-deploys
+a preview per push — `openthai-ai`, `openthai-ai-backend`, `openthai-ai-npxn`
+all `Ready`, all checks green on PR #79). No reply yet on the flagged vuln.
+
+Swept the remaining `/portals/*` success messages for the same "we'll email
+you" pattern fixed last run. Six are honest already (gov-thai/gov-intl/
+intl-org/producer all promise a **human team follow-up within N hours**,
+which is true — nothing needs to fire immediately; foundation promises
+notification "when the fund activates," a future event with nothing to send
+yet). Affiliate looked risky but is actually fine — checked
+`registerAffiliateCore()` and confirmed it already calls
+`sendAffiliateWelcome()` with the real `ref_code`/`ref_link`, so that
+"link will be sent to your email" promise is genuinely kept today.
+
+**Creator Portal was still broken**: `ok:'ยินดีต้อนรับ! ตรวจสอบอีเมลของท่านเพื่อรับ
+access ครับ'` ("check your email for access") — same as consumer/middleman
+before last run, `handleNewPortalLead()` never emailed creator leads at all.
+Fixed the immediate symptom the same safe way: added a `creator` entry to
+`PORTAL_WELCOME_COPY`, worded like middleman's honest "team will follow up"
+copy rather than falsely implying access was just granted. Verified: booted
+the backend, submitted a real creator lead via `POST /api/leads/submit`
+(succeeded, no errors), and confirmed the exact template output via
+`nodemailer`'s `jsonTransport` in isolation (correct subject/HTML/escaping).
+
+**But the deeper problem is bigger and NOT fixed**: unlike consumer/middleman
+(which only ever promised marketing emails), Creator Portal's "access"
+implies a real login — checked `App.jsx`: `/ai-tools` is gated by
+`isAuthenticated` and redirects to `/login` otherwise. There is no code
+anywhere that auto-creates a login account or grants `/ai-tools` access from
+a Creator Portal submission — a creator who signs up gets a confirmation
+email and then... nothing, unless a human manually does something outside
+this codebase. Building real account auto-provisioning touches the actual
+auth system (`backend/auth.js`) and needs product decisions (auto-create
+credentials? magic-link signup? manual admin approval like producers?) —
+matches item 8 (scope beyond a same-shape email fix, real security surface).
+Flagging for the owner alongside the run-1 vuln rather than guessing.
 
 ### 2026-07-03 — Hourly loop, run 2: consumer/middleman portals promised a follow-up email that was never actually sent — now it is
 Owner's flagged vuln from run 1 (unauthenticated producer-listing overwrite)
@@ -827,54 +868,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b1ae9f1 Send the welcome email consumer/middleman portals already promise users (17 seconds ago)
-- 5d7602e chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
-- e8f2b87 Let admin edit/restock an approved producer's listing without dropping them (55 minutes ago)
-- 4d21f93 chore: sync PROJECT_STATUS.md [skip ci] (78 minutes ago)
-- 8d2c5d5 Queue next hourly-loop task: no self-serve product-listing path for producers (2 hours ago)
-- 94f641c Record standing-order decision: reaffirm no-scraping growth policy, scope to 5 repos (3 hours ago)
-- 1469a0e Fix Daily Status Reporter cron: Vercel invokes via GET, we only handled POST (3 hours ago)
-- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (8 hours ago)
+- c1a9234 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- b1ae9f1 Send the welcome email consumer/middleman portals already promise users (58 minutes ago)
+- 5d7602e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- e8f2b87 Let admin edit/restock an approved producer's listing without dropping them (2 hours ago)
+- 4d21f93 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 8d2c5d5 Queue next hourly-loop task: no self-serve product-listing path for producers (3 hours ago)
+- 94f641c Record standing-order decision: reaffirm no-scraping growth policy, scope to 5 repos (4 hours ago)
+- 1469a0e Fix Daily Status Reporter cron: Vercel invokes via GET, we only handled POST (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -1020,7 +1023,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 189 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8022 | Vercel serverless detection |
+| `server.js` | 8031 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

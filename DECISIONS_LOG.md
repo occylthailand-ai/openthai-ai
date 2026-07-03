@@ -11,6 +11,47 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Hourly loop, run 3: same broken-promise bug also hit Creator Portal, but with a bigger gap behind it — flagged, not built
+Owner's flagged vuln from run 1 is still unanswered — left untouched again
+this cycle, per item 8.
+
+Checked the PR's CI/deploy status first (new this cycle: Vercel auto-deploys
+a preview per push — `openthai-ai`, `openthai-ai-backend`, `openthai-ai-npxn`
+all `Ready`, all checks green on PR #79). No reply yet on the flagged vuln.
+
+Swept the remaining `/portals/*` success messages for the same "we'll email
+you" pattern fixed last run. Six are honest already (gov-thai/gov-intl/
+intl-org/producer all promise a **human team follow-up within N hours**,
+which is true — nothing needs to fire immediately; foundation promises
+notification "when the fund activates," a future event with nothing to send
+yet). Affiliate looked risky but is actually fine — checked
+`registerAffiliateCore()` and confirmed it already calls
+`sendAffiliateWelcome()` with the real `ref_code`/`ref_link`, so that
+"link will be sent to your email" promise is genuinely kept today.
+
+**Creator Portal was still broken**: `ok:'ยินดีต้อนรับ! ตรวจสอบอีเมลของท่านเพื่อรับ
+access ครับ'` ("check your email for access") — same as consumer/middleman
+before last run, `handleNewPortalLead()` never emailed creator leads at all.
+Fixed the immediate symptom the same safe way: added a `creator` entry to
+`PORTAL_WELCOME_COPY`, worded like middleman's honest "team will follow up"
+copy rather than falsely implying access was just granted. Verified: booted
+the backend, submitted a real creator lead via `POST /api/leads/submit`
+(succeeded, no errors), and confirmed the exact template output via
+`nodemailer`'s `jsonTransport` in isolation (correct subject/HTML/escaping).
+
+**But the deeper problem is bigger and NOT fixed**: unlike consumer/middleman
+(which only ever promised marketing emails), Creator Portal's "access"
+implies a real login — checked `App.jsx`: `/ai-tools` is gated by
+`isAuthenticated` and redirects to `/login` otherwise. There is no code
+anywhere that auto-creates a login account or grants `/ai-tools` access from
+a Creator Portal submission — a creator who signs up gets a confirmation
+email and then... nothing, unless a human manually does something outside
+this codebase. Building real account auto-provisioning touches the actual
+auth system (`backend/auth.js`) and needs product decisions (auto-create
+credentials? magic-link signup? manual admin approval like producers?) —
+matches item 8 (scope beyond a same-shape email fix, real security surface).
+Flagging for the owner alongside the run-1 vuln rather than guessing.
+
 ### 2026-07-03 — Hourly loop, run 2: consumer/middleman portals promised a follow-up email that was never actually sent — now it is
 Owner's flagged vuln from run 1 (unauthenticated producer-listing overwrite)
 is still awaiting a decision — did not touch it this cycle, per item 8 of

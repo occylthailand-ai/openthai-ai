@@ -905,6 +905,15 @@ const PORTAL_WELCOME_COPY = {
     en: { subject: '🤝 Distributor application received — OpenThaiAi', title: 'Application received!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for your interest in joining the OpenThaiAi distribution network. We've received your application and our team will contact you to confirm your place in the network.` },
     zh: { subject: '🤝 已收到经销商申请 — OpenThaiAi', title: '已收到申请！', body: (name) => `您好${name ? escapeHtml(name) : ''}，感谢您有意加入 OpenThaiAi 分销网络。我们已收到您的申请，团队将与您联系以确认加入网络。` },
   },
+  // creator: ยังไม่มีระบบสร้างบัญชี/ให้สิทธิ์ login อัตโนมัติจริง (/ai-tools ยัง gate ด้วย
+  // isAuthenticated) เดิม CreatorPortalPage.jsx สัญญาว่า "ตรวจสอบอีเมลเพื่อรับ access" ทั้งที่
+  // ไม่มีอะไรส่งเลย — ใช้ข้อความแบบทีมงานติดต่อกลับ (เหมือน middleman) ไม่ใช่ข้อความแบบ
+  // "สิทธิ์เข้าใช้งานพร้อมแล้ว" เพราะยังไม่มีระบบออกบัญชีอัตโนมัติจริง (ดู DECISIONS_LOG)
+  creator: {
+    th: { subject: '🎬 ได้รับใบสมัคร Creator Program แล้ว — OpenThaiAi', title: 'ได้รับใบสมัครแล้ว!', body: (name) => `สวัสดีคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่สนใจเข้าร่วม Creator Program กับ OpenThaiAi ทีมงานได้รับข้อมูลของคุณแล้ว และจะติดต่อกลับพร้อมรายละเอียดการเข้าใช้งาน` },
+    en: { subject: '🎬 Creator Program application received — OpenThaiAi', title: 'Application received!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for your interest in the OpenThaiAi Creator Program. We've received your info and our team will follow up with access details.` },
+    zh: { subject: '🎬 已收到创作者计划申请 — OpenThaiAi', title: '已收到申请！', body: (name) => `您好${name ? escapeHtml(name) : ''}，感谢您申请加入 OpenThaiAi 创作者计划。我们已收到您的信息，团队将与您联系并提供访问详情。` },
+  },
 };
 async function sendPortalWelcomeEmail(lead) {
   const copySet = PORTAL_WELCOME_COPY[lead.type];
