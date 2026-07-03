@@ -21,6 +21,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref }}
+          # fetch-depth ค่า default (1) = shallow clone — ทำให้ generate-project-status.mjs
+          # ที่อ่าน `git log --oneline`/`git log --reverse` เพื่อนับ commit จริงและวันที่ commit
+          # แรก เห็นแค่ 1 commit เสมอ แล้ว auto-commit ทับค่าที่ถูกต้องด้วยข้อมูลผิดๆ กลับเข้า repo
+          # (พบจริงใน PROJECT_STATUS.md ที่ merge เข้า main หลัง PR #76 — ขึ้น "1 commits, earliest
+          # 2026-07-03" ทั้งที่ประวัติจริงมี 93 commits ย้อนไปถึง 2026-06-16) ต้องดึงประวัติเต็ม
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:

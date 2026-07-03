@@ -11,6 +11,32 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
+Found by accident while investigating a "there are uncommitted changes"
+prompt — the working-tree diff showed the *currently committed* (on `main`,
+via PR #76's auto-sync) `PROJECT_STATUS.md` claimed "Git history: 1 commits,
+earliest 2026-07-03", contradicting the real 93-commit history going back to
+2026-06-16 that every other regeneration this session had shown correctly.
+
+Root cause: `.github/workflows/project-status.yml`'s `actions/checkout@v4`
+step had no `fetch-depth` set, defaulting to a shallow clone (depth 1).
+`scripts/generate-project-status.mjs` computes total commits via
+`git log --oneline` and the earliest commit via `git log --reverse` — both
+see only 1 commit under a shallow checkout, and the workflow then
+auto-commits that wrong count back into the repo as "chore: sync
+PROJECT_STATUS.md [skip ci]". This has silently happened on every PR this
+entire session; it was always immediately overwritten by my own full-history
+regeneration during rebase-conflict resolution (`git checkout --ours`) —
+except this one time, since nothing prompted a fresh regen+commit after the
+last CI auto-commit on the PR #76 branch before merge.
+
+Fixed by adding `fetch-depth: 0` to the checkout step (only `project-status.yml`
+needed it — `test.yml`/`drive-report.yml` don't invoke the generator or read
+git history). Verified: YAML parses correctly
+(`python3 -c "import yaml; yaml.safe_load(...)"`), and regenerating
+`PROJECT_STATUS.md` locally now correctly shows 93 commits/2026-06-16 again,
+repairing the corrupted committed version.
+
 ### 2026-07-03 — Opened the Council Bridge to external platforms/systems, not just the UI form
 Asked to make the Shared Bridge Notes (added the same day) actually open to
 "other people or other platforms," not just the project owner filling in
