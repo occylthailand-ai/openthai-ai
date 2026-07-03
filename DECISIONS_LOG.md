@@ -11,6 +11,64 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Hourly loop, run 5: `all-platform-files` is fabricated sprawl, not a real system — do not build on it; `smart-e` is real, cleaned a hygiene issue there
+Two flagged decisions from runs 1 and 3 are still unanswered — untouched
+again. Checked both PRs for owner replies (comments, not just chat) this
+time too — still only the Vercel bot.
+
+Finished auditing the last 2 of the 5 repos, queued from run 4:
+
+- **`all-platform-files` — same fabrication pattern as the rejected pasted
+  specs earlier in this log, but as an entire repo, not a chat message.**
+  595 files. Opened a sample "roadmap" file
+  (`OpenThaiAI_Alipay_Roadmap.html`): it's just section headers with step
+  counts in parentheses ("35 ขั้นตอน | 6 ส่วน | 1,300M+ Users") and **zero
+  actual content** under any of them — a template, not a real roadmap. There
+  are ~15 substantial `*Onboarding.jsx` files (10-19KB each) but no
+  `package.json`/build config anywhere in the repo, so none of them can
+  actually run. The repo's own `README.md` describes itself as "ThaiForge AI"
+  — Cursor-style Thai coding agent, one-click deploy to Kubernetes/Google
+  Play, and **"OpenThaiGPT Integration (72B / R1 / Typhoon)"** as its "main
+  brain." None of that is real `openthai-ai`: verified stack is Claude/
+  Gemini hosted APIs (`@anthropic-ai/sdk`, `@google/generative-ai`), Express
+  on Vercel, Omise/THB only — no custom model, no Kubernetes, no Google Play
+  pipeline. This is the exact shape of thing `lesson_01_verify_before_build`
+  exists for, just shipped as a whole repo instead of a pasted message.
+  **Not building anything on top of this** — doing so would mean either
+  inventing a huge amount of new backend wiring from scratch (245+ platform
+  integrations, no spec, no owner request) or lending false credibility to
+  content that doesn't describe this project. Flagging for the owner: is
+  this old exploratory/AI-generated scratch work that should be archived, or
+  is there a real intent behind it I'm missing?
+
+- **`smart-e` — genuinely real and functional, verified live, not assumed.**
+  Pure-stdlib Python backend (`server.py`) + a Vite/React frontend
+  `package.json`, single "upload" commit, no README. Before touching
+  anything: booted `server.py`, exercised all 7 `GET /api/*` routes and a
+  `POST /api/products` create — all returned correct real responses (200/
+  201, actual persisted data on read-after-write). Checked its 2 dynamic-SQL
+  sites (`_update_product`/`_update_customer` build `UPDATE ... SET` via
+  f-string) for injection risk — safe, the interpolated `fields` list is
+  built from a hardcoded column whitelist, not user-supplied keys, values
+  still go through `?` placeholders.
+  Found and fixed a real, small, safe issue instead of a fabricated one:
+  the repo had a committed `smart_e.db`/`smart_e.db-journal` and a stray
+  LibreOffice lock file (`.~lock.AI_API_Pricing_2026.xlsx#`). Confirmed via
+  `grep DB_PATH` in both `server.py` and `seed.py` that the app always
+  targets `~/smart_e.db` (home dir) and never the repo-relative file, so the
+  committed DB was always dead weight, not real data. Removed both + the
+  lock file, added `.gitignore`. Re-verified nothing broke: rebooted fresh,
+  confirmed `GET /`, `GET /api/products` (correctly empty on a new DB), and
+  `POST /api/products` all still work identically. Pushed + opened
+  **smart-e PR #1** (first PR in that repo).
+
+All 5 repos now audited at least once. Status: `openthai-ai` (active, real
+work every cycle), `otop-ai-landing` (real gap found and fixed, PR #1 open),
+`smart-e` (real and functional, hygiene fix shipped, PR #1 open),
+`OpenThai-AI-v9.0` (docs skeleton, no build config, flagged not fixed),
+`all-platform-files` (fabricated sprawl, flagged, explicitly not building on
+it).
+
 ### 2026-07-03 — Hourly loop, run 4: expanded to the other 4 repos (as scoped) — built the real otop-ai-landing homepage, found + deliberately skipped a bigger gap in OpenThai-AI-v9.0
 Owner's two flagged decisions (run-1 producer-apply vuln, run-3 creator
 account-provisioning gap) are still unanswered. Left both untouched again.

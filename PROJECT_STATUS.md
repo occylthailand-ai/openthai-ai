@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T19:13:29.072Z · branch `claude/daily-reporter-improvements-8vc9ct` (11 commit(s) ahead of main)
+Generated: 2026-07-03T20:12:10.247Z · branch `claude/daily-reporter-improvements-8vc9ct` (12 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 221 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 95 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,64 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Hourly loop, run 5: `all-platform-files` is fabricated sprawl, not a real system — do not build on it; `smart-e` is real, cleaned a hygiene issue there
+Two flagged decisions from runs 1 and 3 are still unanswered — untouched
+again. Checked both PRs for owner replies (comments, not just chat) this
+time too — still only the Vercel bot.
+
+Finished auditing the last 2 of the 5 repos, queued from run 4:
+
+- **`all-platform-files` — same fabrication pattern as the rejected pasted
+  specs earlier in this log, but as an entire repo, not a chat message.**
+  595 files. Opened a sample "roadmap" file
+  (`OpenThaiAI_Alipay_Roadmap.html`): it's just section headers with step
+  counts in parentheses ("35 ขั้นตอน | 6 ส่วน | 1,300M+ Users") and **zero
+  actual content** under any of them — a template, not a real roadmap. There
+  are ~15 substantial `*Onboarding.jsx` files (10-19KB each) but no
+  `package.json`/build config anywhere in the repo, so none of them can
+  actually run. The repo's own `README.md` describes itself as "ThaiForge AI"
+  — Cursor-style Thai coding agent, one-click deploy to Kubernetes/Google
+  Play, and **"OpenThaiGPT Integration (72B / R1 / Typhoon)"** as its "main
+  brain." None of that is real `openthai-ai`: verified stack is Claude/
+  Gemini hosted APIs (`@anthropic-ai/sdk`, `@google/generative-ai`), Express
+  on Vercel, Omise/THB only — no custom model, no Kubernetes, no Google Play
+  pipeline. This is the exact shape of thing `lesson_01_verify_before_build`
+  exists for, just shipped as a whole repo instead of a pasted message.
+  **Not building anything on top of this** — doing so would mean either
+  inventing a huge amount of new backend wiring from scratch (245+ platform
+  integrations, no spec, no owner request) or lending false credibility to
+  content that doesn't describe this project. Flagging for the owner: is
+  this old exploratory/AI-generated scratch work that should be archived, or
+  is there a real intent behind it I'm missing?
+
+- **`smart-e` — genuinely real and functional, verified live, not assumed.**
+  Pure-stdlib Python backend (`server.py`) + a Vite/React frontend
+  `package.json`, single "upload" commit, no README. Before touching
+  anything: booted `server.py`, exercised all 7 `GET /api/*` routes and a
+  `POST /api/products` create — all returned correct real responses (200/
+  201, actual persisted data on read-after-write). Checked its 2 dynamic-SQL
+  sites (`_update_product`/`_update_customer` build `UPDATE ... SET` via
+  f-string) for injection risk — safe, the interpolated `fields` list is
+  built from a hardcoded column whitelist, not user-supplied keys, values
+  still go through `?` placeholders.
+  Found and fixed a real, small, safe issue instead of a fabricated one:
+  the repo had a committed `smart_e.db`/`smart_e.db-journal` and a stray
+  LibreOffice lock file (`.~lock.AI_API_Pricing_2026.xlsx#`). Confirmed via
+  `grep DB_PATH` in both `server.py` and `seed.py` that the app always
+  targets `~/smart_e.db` (home dir) and never the repo-relative file, so the
+  committed DB was always dead weight, not real data. Removed both + the
+  lock file, added `.gitignore`. Re-verified nothing broke: rebooted fresh,
+  confirmed `GET /`, `GET /api/products` (correctly empty on a new DB), and
+  `POST /api/products` all still work identically. Pushed + opened
+  **smart-e PR #1** (first PR in that repo).
+
+All 5 repos now audited at least once. Status: `openthai-ai` (active, real
+work every cycle), `otop-ai-landing` (real gap found and fixed, PR #1 open),
+`smart-e` (real and functional, hygiene fix shipped, PR #1 open),
+`OpenThai-AI-v9.0` (docs skeleton, no build config, flagged not fixed),
+`all-platform-files` (fabricated sprawl, flagged, explicitly not building on
+it).
 
 ### 2026-07-03 — Hourly loop, run 4: expanded to the other 4 repos (as scoped) — built the real otop-ai-landing homepage, found + deliberately skipped a bigger gap in OpenThai-AI-v9.0
 Owner's two flagged decisions (run-1 producer-apply vuln, run-3 creator
@@ -914,54 +972,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 28f3875 Log run 4: built otop-ai-landing's real homepage, scoped a bigger gap in v9.0 (15 seconds ago)
-- 9eeba28 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 3f79476 Fix Creator Portal's same broken email promise; flag the bigger gap behind it (63 minutes ago)
-- c1a9234 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- b1ae9f1 Send the welcome email consumer/middleman portals already promise users (2 hours ago)
-- 5d7602e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- e8f2b87 Let admin edit/restock an approved producer's listing without dropping them (3 hours ago)
-- 4d21f93 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 8399df6 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 28f3875 Log run 4: built otop-ai-landing's real homepage, scoped a bigger gap in v9.0 (59 minutes ago)
+- 9eeba28 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 3f79476 Fix Creator Portal's same broken email promise; flag the bigger gap behind it (2 hours ago)
+- c1a9234 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- b1ae9f1 Send the welcome email consumer/middleman portals already promise users (3 hours ago)
+- 5d7602e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- e8f2b87 Let admin edit/restock an approved producer's listing without dropping them (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
