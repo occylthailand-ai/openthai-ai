@@ -90,6 +90,35 @@ export function createProducers(dataDir) {
     return { ok: true, email: e, status };
   }
 
+  // แก้ไขข้อมูลสินค้าของผู้ผลิตที่มีอยู่แล้ว (admin เท่านั้น) — เดิมไม่มีทางแก้ไข
+  // product_name/price/stock/description ของผู้ผลิตที่อนุมัติแล้วเลย นอกจากให้ผู้ผลิต
+  // ส่งใบสมัครซ้ำผ่าน /api/producers/apply ซึ่งจะรีเซ็ต status กลับเป็น 'pending' ทุกครั้ง
+  // (หลุดจาก catalog สาธารณะทันที) — ทำให้สต๊อกที่หมดแล้วไม่มีทาง "เติม" กลับได้เลยจริงๆ
+  async function updateListing(email, fields) {
+    const e = (email || '').toString().trim().toLowerCase();
+    if (!isEmail(e)) return { ok: false, error: 'invalid email' };
+    const patch = {};
+    if (fields.product_name !== undefined) patch.product_name = clip(fields.product_name, 120);
+    if (fields.price !== undefined) patch.price = Number(fields.price) > 0 ? Number(fields.price) : null;
+    if (fields.stock !== undefined) patch.stock = (fields.stock === '' || fields.stock == null) ? null : Math.max(0, parseInt(fields.stock, 10) || 0);
+    if (fields.description !== undefined) patch.description = clip(fields.description, 500);
+    if (fields.category !== undefined) patch.category = CATEGORIES.includes(fields.category) ? fields.category : undefined;
+    if (Object.keys(patch).length === 0) return { ok: false, error: 'no fields to update' };
+
+    if (useSB) {
+      try {
+        const rows = await sbReq('GET', '/producers', { params: { email: `eq.${e}`, select: 'email', limit: '1' } });
+        if (!rows || rows.length === 0) return { ok: false, error: 'not found' };
+        await sbReq('PATCH', '/producers', { body: patch, params: { email: `eq.${e}` }, prefer: 'return=minimal' });
+        return { ok: true, email: e, ...patch };
+      } catch (err) { console.warn('[producers] update SB failed, using file:', err.message); }
+    }
+    if (!store[e]) return { ok: false, error: 'not found' };
+    store[e] = { ...store[e], ...patch };
+    saveFile();
+    return { ok: true, email: e, ...patch };
+  }
+
   // catalog สาธารณะ — เฉพาะผู้ผลิตที่อนุมัติแล้ว + มีสินค้า
   async function catalog() {
     const list = await all();
@@ -155,5 +184,5 @@ export function createProducers(dataDir) {
     if (store[e] && store[e].stock != null) { store[e].stock = Math.max(0, store[e].stock - n); saveFile(); }
   }
 
-  return { router, register, all, summary, setStatus, catalog, decrementStock, CATEGORIES };
+  return { router, register, all, summary, setStatus, updateListing, catalog, decrementStock, CATEGORIES };
 }

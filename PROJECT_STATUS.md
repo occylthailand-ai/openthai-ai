@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T15:54:19.475Z · branch `claude/daily-reporter-improvements-8vc9ct` (3 commit(s) ahead of main)
+Generated: 2026-07-03T16:17:09.825Z · branch `claude/daily-reporter-improvements-8vc9ct` (4 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 213 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 87 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,49 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Hourly loop, run 1: admin can now edit/restock an approved producer's listing without knocking them off the catalog; flagged a real pre-existing vuln for owner decision
+Built the task queued in the previous entry, narrowed to what's safely
+completable in one cycle. Confirmed the deeper finding first: `producers.js`'s
+`register()` (`POST /api/producers/apply`) is an unauthenticated upsert keyed
+only by email — anyone who knows (or harvests from the *public*
+`/api/producers/search` response, which includes `email`) an approved
+producer's email can silently overwrite their company/product/price/
+description and forces `status` back to `'pending'`, pulling them off the
+public catalog until an admin re-approves. Real, exploitable, not just
+theoretical. **Not fixing this now** — a proper fix (e.g. email-verified
+magic link) is a genuine product/security decision, matches standing-order
+item 8 ("legal implication / high risk → ask first, don't guess"), and is
+too large to build and verify safely in one hourly cycle. Flagging for the
+project owner to decide the approach next time we talk.
+
+What *was* safe to ship this cycle, using only the admin auth that already
+gates every other producer-admin route (`x-admin-key`, unchanged trust
+model, no new public surface): `producers.updateListing(email, fields)` in
+`backend/producers.js` + `POST /api/producers/admin/update` in `server.js` —
+lets an admin edit `product_name`/`price`/`stock`/`description`/`category`
+for an existing producer **without** touching `status`. Before this, the
+only way to change those fields after signup was re-`apply`, which always
+reset `status` to `'pending'` — so a producer that sold out had genuinely no
+path back to being restocked without disappearing from `/api/catalog` first.
+Added a matching Admin Panel UI (producers tab → "✏️ แก้ไขสินค้า" inline
+form).
+
+Caught a real bug during verification, not after: `AdminPage.jsx` already
+had an unrelated `prodEdit`/`setProdEdit` state (for the *store* inventory
+"add/edit product" modal — a different feature, `backend/inventory.js`).
+Naming my new state the same broke the build (`vite build` failed with
+"symbol already declared") — caught by actually running the build, not by
+inspection. Renamed mine to `prodListingEdit`/`setProdListingEdit`, verified
+both features still work independently: `vite build` clean, then drove both
+UIs in a real Playwright browser (producer edit saves price/stock and stays
+`approved`; store inventory's "＋ เพิ่มสินค้า" modal still opens correctly).
+
+Verified end-to-end against a running backend (not just "should work"):
+applied as a test producer → approved → admin-updated stock 20→999 while
+confirming `status` stayed `approved` throughout and `/api/catalog`
+reflected the new values; confirmed `401` with no admin key and `400` for an
+unknown email.
 
 ### 2026-07-03 — Next concrete task queued for the hourly loop: no self-serve path for a producer to list their own product
 Checked item 4 of the standing order ("ค้นหาสินค้าทุกประเภทเข้าสังกัดแพลตฟอร์ม" — get
@@ -743,54 +786,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 8d2c5d5 Queue next hourly-loop task: no self-serve product-listing path for producers (29 minutes ago)
-- 94f641c Record standing-order decision: reaffirm no-scraping growth policy, scope to 5 repos (87 minutes ago)
+- 4d21f93 chore: sync PROJECT_STATUS.md [skip ci] (23 minutes ago)
+- 8d2c5d5 Queue next hourly-loop task: no self-serve product-listing path for producers (52 minutes ago)
+- 94f641c Record standing-order decision: reaffirm no-scraping growth policy, scope to 5 repos (2 hours ago)
 - 1469a0e Fix Daily Status Reporter cron: Vercel invokes via GET, we only handled POST (2 hours ago)
 - b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (7 hours ago)
 - f3a860d Open the Council Bridge to external platforms/systems (#76) (8 hours ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (9 hours ago)
+- d73b560 Add Shared Bridge Notes to /council (#75) (10 hours ago)
 - f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (10 hours ago)
-- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (12 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -933,10 +938,10 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `portal-leads.js` | 98 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 160 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 189 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7971 | Vercel serverless detection |
+| `server.js` | 7982 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

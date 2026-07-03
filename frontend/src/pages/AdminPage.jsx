@@ -31,6 +31,7 @@ export default function AdminPage() {
   const [credsErr, setCredsErr] = useState('');
   const [prods, setProds] = useState(null);     // ผู้ผลิตที่สมัคร
   const [prodQ, setProdQ] = useState('');       // ค้นหาผู้ผลิต (รวม pending)
+  const [prodListingEdit, setProdListingEdit] = useState(null); // { email, product_name, price, stock, description } — แก้ไขสินค้าผู้ผลิต
   const [ords, setOrds] = useState(null);       // คำสั่งซื้อ
   const [leads, setLeads] = useState(null);     // ลูกค้า/ลีดรวมทุกแหล่ง
   const [leadQ, setLeadQ] = useState('');
@@ -108,6 +109,14 @@ export default function AdminPage() {
 
   const approveProducer = async (email, status) => {
     await fetch(apiUrl('/api/producers/admin/status'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ email, status }) });
+    loadProducers();
+  };
+
+  const saveProducerListing = async () => {
+    if (!prodListingEdit) return;
+    const { email, product_name, price, stock, description } = prodListingEdit;
+    await fetch(apiUrl('/api/producers/admin/update'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ email, product_name, price, stock, description }) });
+    setProdListingEdit(null);
     loadProducers();
   };
   const setOrderStatus = async (id, status) => {
@@ -477,15 +486,29 @@ export default function AdminPage() {
             {prods && prods.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ยังไม่มีผู้สมัคร</div>}
             {prods && prods.length > 0 && list.length === 0 && <div style={{ color: '#64748b', fontSize: 13 }}>ไม่พบผู้ผลิตที่ตรงกับ "{prodQ}"</div>}
             {list.map((p) => (
-              <div key={p.email} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
-                <div style={{ flex: 1, minWidth: 180 }}>
-                  <div style={{ fontWeight: 700 }}>{p.company} <span style={{ color: '#64748b', fontWeight: 400 }}>· {p.category}</span></div>
-                  <div style={{ color: '#64748b', fontSize: 12 }}>{p.contact_name} · {p.email} · {p.phone || '-'}</div>
-                  <div style={{ color: '#94a3b8', fontSize: 12 }}>{p.product_name}{p.price ? ` · ฿${Number(p.price).toLocaleString('th-TH')}` : ''}</div>
+              <div key={p.email} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.04)', fontSize: 13 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <div style={{ fontWeight: 700 }}>{p.company} <span style={{ color: '#64748b', fontWeight: 400 }}>· {p.category}</span></div>
+                    <div style={{ color: '#64748b', fontSize: 12 }}>{p.contact_name} · {p.email} · {p.phone || '-'}</div>
+                    <div style={{ color: '#94a3b8', fontSize: 12 }}>{p.product_name}{p.price ? ` · ฿${Number(p.price).toLocaleString('th-TH')}` : ''}{p.stock != null ? ` · สต๊อก ${p.stock}` : ''}</div>
+                  </div>
+                  <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', color: STATUS_COLOR[p.status] || '#94a3b8' }}>{p.status}</span>
+                  {p.status !== 'approved' && <button onClick={() => approveProducer(p.email, 'approved')} style={miniBtn('#10b981')}>อนุมัติ</button>}
+                  {p.status !== 'rejected' && <button onClick={() => approveProducer(p.email, 'rejected')} style={miniBtn('#ef4444')}>ปฏิเสธ</button>}
+                  <button onClick={() => setProdListingEdit(prodListingEdit?.email === p.email ? null : { email: p.email, product_name: p.product_name || '', price: p.price ?? '', stock: p.stock ?? '', description: p.description || '' })} style={miniBtn('#6366f1')}>
+                    {prodListingEdit?.email === p.email ? 'ยกเลิก' : '✏️ แก้ไขสินค้า'}
+                  </button>
                 </div>
-                <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.06)', color: STATUS_COLOR[p.status] || '#94a3b8' }}>{p.status}</span>
-                {p.status !== 'approved' && <button onClick={() => approveProducer(p.email, 'approved')} style={miniBtn('#10b981')}>อนุมัติ</button>}
-                {p.status !== 'rejected' && <button onClick={() => approveProducer(p.email, 'rejected')} style={miniBtn('#ef4444')}>ปฏิเสธ</button>}
+                {prodListingEdit?.email === p.email && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10, padding: 10, borderRadius: 10, background: 'rgba(99,102,241,0.08)' }}>
+                    <input value={prodListingEdit.product_name} onChange={(e) => setProdListingEdit({ ...prodListingEdit, product_name: e.target.value })} placeholder="ชื่อสินค้า" style={{ ...inputSt, padding: '8px 10px', fontSize: 13, flex: 2, minWidth: 140 }} />
+                    <input type="number" value={prodListingEdit.price} onChange={(e) => setProdListingEdit({ ...prodListingEdit, price: e.target.value })} placeholder="ราคา" style={{ ...inputSt, padding: '8px 10px', fontSize: 13, width: 100 }} />
+                    <input type="number" min="0" value={prodListingEdit.stock} onChange={(e) => setProdListingEdit({ ...prodListingEdit, stock: e.target.value })} placeholder="สต๊อก" style={{ ...inputSt, padding: '8px 10px', fontSize: 13, width: 100 }} />
+                    <input value={prodListingEdit.description} onChange={(e) => setProdListingEdit({ ...prodListingEdit, description: e.target.value })} placeholder="รายละเอียด" style={{ ...inputSt, padding: '8px 10px', fontSize: 13, flex: 2, minWidth: 160 }} />
+                    <button onClick={saveProducerListing} style={miniBtn('#10b981')}>💾 บันทึก</button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -392,6 +392,17 @@ app.post('/api/producers/admin/status', adminLimiter, async (req, res) => {
   res.json({ success: true, ...r });
 });
 
+// POST /api/producers/admin/update — แก้ไขสินค้า/ราคา/สต๊อกของผู้ผลิตที่มีอยู่แล้ว (Admin Key)
+// ไม่แตะ status — ใช้เติมสต๊อกหรือแก้ราคา/รายละเอียดโดยไม่ต้องให้ผู้ผลิตหลุดจาก catalog สาธารณะ
+app.post('/api/producers/admin/update', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const { email, product_name, price, stock, description, category } = req.body || {};
+  const r = await producers.updateListing(email, { product_name, price, stock, description, category });
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  res.json({ success: true, ...r });
+});
+
 // GET /api/orders/admin/summary + /list, POST /api/orders/admin/status (Admin Key)
 app.get('/api/orders/admin/summary', async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;

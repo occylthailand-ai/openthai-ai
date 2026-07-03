@@ -11,6 +11,49 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Hourly loop, run 1: admin can now edit/restock an approved producer's listing without knocking them off the catalog; flagged a real pre-existing vuln for owner decision
+Built the task queued in the previous entry, narrowed to what's safely
+completable in one cycle. Confirmed the deeper finding first: `producers.js`'s
+`register()` (`POST /api/producers/apply`) is an unauthenticated upsert keyed
+only by email — anyone who knows (or harvests from the *public*
+`/api/producers/search` response, which includes `email`) an approved
+producer's email can silently overwrite their company/product/price/
+description and forces `status` back to `'pending'`, pulling them off the
+public catalog until an admin re-approves. Real, exploitable, not just
+theoretical. **Not fixing this now** — a proper fix (e.g. email-verified
+magic link) is a genuine product/security decision, matches standing-order
+item 8 ("legal implication / high risk → ask first, don't guess"), and is
+too large to build and verify safely in one hourly cycle. Flagging for the
+project owner to decide the approach next time we talk.
+
+What *was* safe to ship this cycle, using only the admin auth that already
+gates every other producer-admin route (`x-admin-key`, unchanged trust
+model, no new public surface): `producers.updateListing(email, fields)` in
+`backend/producers.js` + `POST /api/producers/admin/update` in `server.js` —
+lets an admin edit `product_name`/`price`/`stock`/`description`/`category`
+for an existing producer **without** touching `status`. Before this, the
+only way to change those fields after signup was re-`apply`, which always
+reset `status` to `'pending'` — so a producer that sold out had genuinely no
+path back to being restocked without disappearing from `/api/catalog` first.
+Added a matching Admin Panel UI (producers tab → "✏️ แก้ไขสินค้า" inline
+form).
+
+Caught a real bug during verification, not after: `AdminPage.jsx` already
+had an unrelated `prodEdit`/`setProdEdit` state (for the *store* inventory
+"add/edit product" modal — a different feature, `backend/inventory.js`).
+Naming my new state the same broke the build (`vite build` failed with
+"symbol already declared") — caught by actually running the build, not by
+inspection. Renamed mine to `prodListingEdit`/`setProdListingEdit`, verified
+both features still work independently: `vite build` clean, then drove both
+UIs in a real Playwright browser (producer edit saves price/stock and stays
+`approved`; store inventory's "＋ เพิ่มสินค้า" modal still opens correctly).
+
+Verified end-to-end against a running backend (not just "should work"):
+applied as a test producer → approved → admin-updated stock 20→999 while
+confirming `status` stayed `approved` throughout and `/api/catalog`
+reflected the new values; confirmed `401` with no admin key and `400` for an
+unknown email.
+
 ### 2026-07-03 — Next concrete task queued for the hourly loop: no self-serve path for a producer to list their own product
 Checked item 4 of the standing order ("ค้นหาสินค้าทุกประเภทเข้าสังกัดแพลตฟอร์ม" — get
 products onto the platform) against the real code before queuing work. Found:
