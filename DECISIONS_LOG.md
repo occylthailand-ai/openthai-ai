@@ -11,6 +11,24 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Fixed a category enum left inconsistent by my own earlier change
+Asked (in more poetic phrasing) to keep checking every angle for things left
+behind by change/evolution without full cleanup. Checked whether the 2 new
+categories added to `ConsumerPortalPage.jsx` earlier this session
+(อาหารสัตว์เลี้ยง / pet food, สินค้าดิจิทัล / digital products) propagated
+everywhere the same taxonomy is used.
+
+They hadn't: `backend/producers.js` has its own separate `CATEGORIES` array,
+served live to the real producer signup form (`ProducerJoinPage.jsx` fetches
+`GET /api/producers/categories` to build its dropdown) — still missing both.
+A real producer supplying pet food or digital products had no correct option
+and would silently get defaulted to 'อื่นๆ' (`producers.js:43`), while a
+consumer could already correctly express interest in exactly those
+categories. Added both to `producers.js`'s `CATEGORIES`. Verified live:
+`GET /api/producers/categories` now returns both, and submitting a real
+application with `category: 'อาหารสัตว์เลี้ยง'` stores that value directly
+instead of falling back to 'อื่นๆ'.
+
 ### 2026-07-02 — Found and fixed a real HTML-injection gap in 3 cross-party notification emails
 Asked again to scan for new dimensions/gaps. Checked a fresh angle: whether
 user-submitted free text is safe when interpolated into the HTML notification
