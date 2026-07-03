@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T07:38:50.491Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-03T09:18:24.812Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-03 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 93 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,32 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
+Found by accident while investigating a "there are uncommitted changes"
+prompt — the working-tree diff showed the *currently committed* (on `main`,
+via PR #76's auto-sync) `PROJECT_STATUS.md` claimed "Git history: 1 commits,
+earliest 2026-07-03", contradicting the real 93-commit history going back to
+2026-06-16 that every other regeneration this session had shown correctly.
+
+Root cause: `.github/workflows/project-status.yml`'s `actions/checkout@v4`
+step had no `fetch-depth` set, defaulting to a shallow clone (depth 1).
+`scripts/generate-project-status.mjs` computes total commits via
+`git log --oneline` and the earliest commit via `git log --reverse` — both
+see only 1 commit under a shallow checkout, and the workflow then
+auto-commits that wrong count back into the repo as "chore: sync
+PROJECT_STATUS.md [skip ci]". This has silently happened on every PR this
+entire session; it was always immediately overwritten by my own full-history
+regeneration during rebase-conflict resolution (`git checkout --ours`) —
+except this one time, since nothing prompted a fresh regen+commit after the
+last CI auto-commit on the PR #76 branch before merge.
+
+Fixed by adding `fetch-depth: 0` to the checkout step (only `project-status.yml`
+needed it — `test.yml`/`drive-report.yml` don't invoke the generator or read
+git history). Verified: YAML parses correctly
+(`python3 -c "import yaml; yaml.safe_load(...)"`), and regenerating
+`PROJECT_STATUS.md` locally now correctly shows 93 commits/2026-06-16 again,
+repairing the corrupted committed version.
 
 ### 2026-07-03 — Opened the Council Bridge to external platforms/systems, not just the UI form
 Asked to make the Shared Bridge Notes (added the same day) actually open to
@@ -617,47 +643,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 59cf629 Open the Council Bridge to external platforms/systems, not just the UI form (73 seconds ago)
+- f3a860d Open the Council Bridge to external platforms/systems (#76) (81 minutes ago)
+- d73b560 Add Shared Bridge Notes to /council (#75) (3 hours ago)
+- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (3 hours ago)
+- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (5 hours ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (20 hours ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (24 hours ago)
+- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (26 hours ago)
+- bd5f433 chore: sync PROJECT_STATUS.md [skip ci] (26 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
