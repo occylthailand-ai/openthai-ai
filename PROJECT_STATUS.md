@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-02T14:02:59.651Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-03T04:01:42.511Z · branch `claude/ai-coalition-protocol-hp3rga` (6 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 95 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,24 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Fixed a category enum left inconsistent by my own earlier change
+Asked (in more poetic phrasing) to keep checking every angle for things left
+behind by change/evolution without full cleanup. Checked whether the 2 new
+categories added to `ConsumerPortalPage.jsx` earlier this session
+(อาหารสัตว์เลี้ยง / pet food, สินค้าดิจิทัล / digital products) propagated
+everywhere the same taxonomy is used.
+
+They hadn't: `backend/producers.js` has its own separate `CATEGORIES` array,
+served live to the real producer signup form (`ProducerJoinPage.jsx` fetches
+`GET /api/producers/categories` to build its dropdown) — still missing both.
+A real producer supplying pet food or digital products had no correct option
+and would silently get defaulted to 'อื่นๆ' (`producers.js:43`), while a
+consumer could already correctly express interest in exactly those
+categories. Added both to `producers.js`'s `CATEGORIES`. Verified live:
+`GET /api/producers/categories` now returns both, and submitting a real
+application with `category: 'อาหารสัตว์เลี้ยง'` stores that value directly
+instead of falling back to 'อื่นๆ'.
 
 ### 2026-07-02 — Found and fixed a real HTML-injection gap in 3 cross-party notification emails
 Asked again to scan for new dimensions/gaps. Checked a fresh angle: whether
@@ -480,47 +498,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 407686e chore: regenerate PROJECT_STATUS.md after rebase (16 seconds ago)
+- 988644c Add pet-food/digital-product categories to producers.js (left out of an earlier fix) (53 seconds ago)
+- 173a930 chore: sync PROJECT_STATUS.md [skip ci] (14 hours ago)
+- 407686e chore: regenerate PROJECT_STATUS.md after rebase (14 hours ago)
+- e78ed46 Fix HTML-injection gap in 3 cross-party notification emails (14 hours ago)
+- e6599c5 chore: sync PROJECT_STATUS.md [skip ci] (14 hours ago)
+- 02b0617 Fix AgentPage false-success toasts introduced by today's agent-auth fix (14 hours ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (15 hours ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (18 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -663,7 +650,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `portal-leads.js` | 98 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 157 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 160 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `server.js` | 7912 | Vercel serverless detection |
