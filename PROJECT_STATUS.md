@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T18:10:52.365Z · branch `claude/daily-reporter-improvements-8vc9ct` (9 commit(s) ahead of main)
+Generated: 2026-07-03T19:13:05.429Z · branch `claude/daily-reporter-improvements-8vc9ct` (10 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 219 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 93 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,52 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Hourly loop, run 4: expanded to the other 4 repos (as scoped) — built the real otop-ai-landing homepage, found + deliberately skipped a bigger gap in OpenThai-AI-v9.0
+Owner's two flagged decisions (run-1 producer-apply vuln, run-3 creator
+account-provisioning gap) are still unanswered. Left both untouched again.
+
+3 straight cycles only touched `openthai-ai`, despite the owner confirming
+"ทั้ง 5 repo พร้อมกัน" as the standing order's scope. Checked the other 4
+this cycle instead of picking a 4th thing inside `openthai-ai`:
+
+- **`otop-ai-landing`** — real, unambiguous gap, fixed: `index.html` has
+  been a literal 0-byte file since the repo's very first commit
+  (`git log -p -1 -- index.html` shows it was created empty), while
+  `vercel.json` has been actively maintained across 5 separate commits —
+  meaning whatever domain this deploys to has always served a blank page.
+  Built a real single-file landing page (matches the existing
+  `@vercel/static` build config, no new tooling needed), grounded in
+  verified `openthai-ai` facts only — no invented stats/testimonials, since
+  this session has no access to real production numbers. All 5 role CTAs
+  link to the real, already-working portals (`/portals/producer`,
+  `/consumer`, `/middleman`, `/creator`, `/affiliate`) — cross-checked
+  against `openthai-ai/frontend/src/App.jsx`'s actual route table before
+  writing a single link. Verified in a real Playwright browser: served
+  locally, all 13 links resolve correctly, logo loads, zero console/network
+  errors, desktop (1280px) and mobile (390px) screenshots both hold up.
+  Pushed + opened **otop-ai-landing PR #1** (first PR in that repo — none
+  existed on this branch before).
+
+- **`OpenThai-AI-v9.0`** — found a real, bigger issue, deliberately did
+  **not** fix it this cycle: this repo is almost entirely a documentation
+  skeleton (README/CHANGELOG/CONTRIBUTING/ROADMAP/etc., ~9 of its ~10 real
+  commits) with exactly 2 real code files and **no `package.json` or build
+  config of any kind** — it cannot be `npm install`'d or run as-is.
+  `app/affiliate-hub/page.tsx` calls `POST /api/affiliate/apply`, but no
+  matching `app/api/affiliate/apply/route.ts` (or any API route besides
+  `/api/monitor/health`) exists anywhere — the exact "frontend calls a
+  route that was never built" bug already fixed once in `openthai-ai`
+  (`portal-leads.js`). Not fixing it here: doing so for real would mean
+  bootstrapping an entire Next.js app from nothing (dependencies, config,
+  routing conventions) — a foundational architecture decision, not a
+  same-shape bug fix, and per item 8 that's a scope call for the owner, not
+  something to guess into existence unsupervised.
+
+- **`all-platform-files`** and **`smart-e`**: only skimmed directory
+  listings this cycle (platform-onboarding `.jsx` stubs for ~15 external
+  marketplaces; a separate Python project with research docs, respectively)
+  — not deep enough yet to safely act on. Queued for a future cycle.
 
 ### 2026-07-03 — Hourly loop, run 3: same broken-promise bug also hit Creator Portal, but with a bigger gap behind it — flagged, not built
 Owner's flagged vuln from run 1 is still unanswered — left untouched again
@@ -868,54 +914,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 3f79476 Fix Creator Portal's same broken email promise; flag the bigger gap behind it (13 seconds ago)
-- c1a9234 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- b1ae9f1 Send the welcome email consumer/middleman portals already promise users (59 minutes ago)
-- 5d7602e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- e8f2b87 Let admin edit/restock an approved producer's listing without dropping them (2 hours ago)
-- 4d21f93 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 8d2c5d5 Queue next hourly-loop task: no self-serve product-listing path for producers (3 hours ago)
-- 94f641c Record standing-order decision: reaffirm no-scraping growth policy, scope to 5 repos (4 hours ago)
+- 9eeba28 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 3f79476 Fix Creator Portal's same broken email promise; flag the bigger gap behind it (62 minutes ago)
+- c1a9234 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- b1ae9f1 Send the welcome email consumer/middleman portals already promise users (2 hours ago)
+- 5d7602e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- e8f2b87 Let admin edit/restock an approved producer's listing without dropping them (3 hours ago)
+- 4d21f93 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 8d2c5d5 Queue next hourly-loop task: no self-serve product-listing path for producers (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.8",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
