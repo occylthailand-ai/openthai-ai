@@ -11,6 +11,33 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Next concrete task queued for the hourly loop: no self-serve path for a producer to list their own product
+Checked item 4 of the standing order ("ค้นหาสินค้าทุกประเภทเข้าสังกัดแพลตฟอร์ม" — get
+products onto the platform) against the real code before queuing work. Found:
+`backend/inventory.js`'s router only exposes one public route,
+`GET /api/shop/products` — every write path (`upsert`/`adjust`/`remove`) lives
+under `/api/inventory/admin/*`, gated by `x-admin-key` only (`server.js`
+`invAuth`). There is no route at all for an approved producer to submit their
+own product — every product in the store has to be hand-typed by an admin via
+the Admin Panel. That's a real bottleneck against "เข้าตลาดให้เร็วที่สุด" (items
+4, 7) that doesn't require scraping or new auth infrastructure to fix.
+
+Identity pattern to reuse (do not invent JWT/session auth — this codebase
+doesn't have producer login): `backend/disputes.js` verifies the acting party
+by matching a submitted email against the record on file (`order.producer_email`
+lower-cased, `disputes.js:84`), not a token. A self-serve product endpoint
+should do the same — accept `{ producer_email, ...product fields }`, verify
+`producer_email` matches an `approved` row in `backend/producers.js`, then
+create the product in a `pending` state (mirroring the existing producer-
+application pending/approved queue) for one-click admin approval, instead of
+publishing directly. Frontend: extend `ProducerJoinPage.jsx`/producer-facing
+UI with a "list a product" form once approved; Admin Panel needs a pending-
+products approval tab next to the existing pending-producers one.
+
+Queued as the next hourly-loop task rather than rushed in this same turn —
+half-building a moderation queue without verifying the admin-approval UI
+end-to-end would violate the "ship only real, tested things" rule.
+
 ### 2026-07-03 — Project owner issued a 23-point standing order ("คำสั่งถาวร"); reaffirmed no-scraping policy, scoped to all 5 accessible repos, approved hourly autonomous loop
 Project owner sent a permanent standing order covering 23 items: continuous
 24/7 acquisition of producers/consumers/middlemen/products/affiliates (items

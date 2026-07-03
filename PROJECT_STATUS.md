@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T14:26:58.448Z · branch `claude/daily-reporter-improvements-8vc9ct` (1 commit(s) ahead of main)
+Generated: 2026-07-03T15:25:00.099Z · branch `claude/daily-reporter-improvements-8vc9ct` (2 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 84 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 85 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,33 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Next concrete task queued for the hourly loop: no self-serve path for a producer to list their own product
+Checked item 4 of the standing order ("ค้นหาสินค้าทุกประเภทเข้าสังกัดแพลตฟอร์ม" — get
+products onto the platform) against the real code before queuing work. Found:
+`backend/inventory.js`'s router only exposes one public route,
+`GET /api/shop/products` — every write path (`upsert`/`adjust`/`remove`) lives
+under `/api/inventory/admin/*`, gated by `x-admin-key` only (`server.js`
+`invAuth`). There is no route at all for an approved producer to submit their
+own product — every product in the store has to be hand-typed by an admin via
+the Admin Panel. That's a real bottleneck against "เข้าตลาดให้เร็วที่สุด" (items
+4, 7) that doesn't require scraping or new auth infrastructure to fix.
+
+Identity pattern to reuse (do not invent JWT/session auth — this codebase
+doesn't have producer login): `backend/disputes.js` verifies the acting party
+by matching a submitted email against the record on file (`order.producer_email`
+lower-cased, `disputes.js:84`), not a token. A self-serve product endpoint
+should do the same — accept `{ producer_email, ...product fields }`, verify
+`producer_email` matches an `approved` row in `backend/producers.js`, then
+create the product in a `pending` state (mirroring the existing producer-
+application pending/approved queue) for one-click admin approval, instead of
+publishing directly. Frontend: extend `ProducerJoinPage.jsx`/producer-facing
+UI with a "list a product" form once approved; Admin Panel needs a pending-
+products approval tab next to the existing pending-producers one.
+
+Queued as the next hourly-loop task rather than rushed in this same turn —
+half-building a moderation queue without verifying the admin-approval UI
+end-to-end would violate the "ship only real, tested things" rule.
 
 ### 2026-07-03 — Project owner issued a 23-point standing order ("คำสั่งถาวร"); reaffirmed no-scraping policy, scoped to all 5 accessible repos, approved hourly autonomous loop
 Project owner sent a permanent standing order covering 23 items: continuous
@@ -716,14 +743,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 1469a0e Fix Daily Status Reporter cron: Vercel invokes via GET, we only handled POST (24 minutes ago)
-- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (5 hours ago)
-- f3a860d Open the Council Bridge to external platforms/systems (#76) (6 hours ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (8 hours ago)
-- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (8 hours ago)
-- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (10 hours ago)
-- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (25 hours ago)
-- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (29 hours ago)
+- 94f641c Record standing-order decision: reaffirm no-scraping growth policy, scope to 5 repos (58 minutes ago)
+- 1469a0e Fix Daily Status Reporter cron: Vercel invokes via GET, we only handled POST (82 minutes ago)
+- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (6 hours ago)
+- f3a860d Open the Council Bridge to external platforms/systems (#76) (7 hours ago)
+- d73b560 Add Shared Bridge Notes to /council (#75) (9 hours ago)
+- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (9 hours ago)
+- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (11 hours ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (26 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
