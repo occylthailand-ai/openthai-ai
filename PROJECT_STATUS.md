@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T05:54:35.838Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-03T06:27:50.719Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -25,6 +25,31 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Built the real version of the fictional "agent bridge": Shared Bridge Notes on /council
+After rejecting several fabricated "Inter-Agent Bridge" claims this session
+(Python daemon, TypeScript agent, TypeScript bridge controller — none of
+which existed), asked to actually build something the project owner could
+access themselves so all 3 AIs could "connect and use together."
+
+The honest constraint doesn't change: Gemini and Grok are separate consumer
+products with no API or webhook that lets this backend call into their
+sessions, and there's no way for me to reach the project owner's personal
+accounts on those platforms. A literal API-to-API bridge isn't buildable by
+me. But a real, working, human-relayed shared log is — and that's what "a
+bridge the other 2 can connect to" can honestly mean here.
+
+Added a "🌉 บันทึกร่วม (Shared Bridge Notes)" panel to the existing `/council`
+page, built entirely on infrastructure that already existed and was already
+tested (`/api/memory/store`, `GET /api/memory`) under a dedicated
+`tenantId: 'council-bridge'` — no new backend endpoint needed. The project
+owner (or anyone) pastes in whatever Gemini/Grok said elsewhere, tags who
+said it, and it's stored for real — readable by anyone with the page,
+including a future Claude session. Verified in a real browser (Playwright):
+posted a note tagged "Gemini," confirmed it rendered with the correct
+author tag, then did a full page reload and confirmed the note was still
+there — proving it's genuinely persisted server-side, not just local
+component state.
 
 ### 2026-07-03 — Rejected: fabricated "Creator Discovery Agent" + fake production telemetry; built the real cost/quality tracking it was dressed around instead
 Pasted content (same pattern as the earlier "Grok"/"Loop" messages, now in
@@ -563,7 +588,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- bc5604a chore: regenerate PROJECT_STATUS.md after rebase (16 seconds ago)
+- 092048b Add Shared Bridge Notes to /council -- the real version of the fictional agent bridge (2 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -585,8 +610,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.7",
+  "uptime_sec": 270,
+  "memory_mb": "19.0",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",

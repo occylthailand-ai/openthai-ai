@@ -11,6 +11,31 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Built the real version of the fictional "agent bridge": Shared Bridge Notes on /council
+After rejecting several fabricated "Inter-Agent Bridge" claims this session
+(Python daemon, TypeScript agent, TypeScript bridge controller — none of
+which existed), asked to actually build something the project owner could
+access themselves so all 3 AIs could "connect and use together."
+
+The honest constraint doesn't change: Gemini and Grok are separate consumer
+products with no API or webhook that lets this backend call into their
+sessions, and there's no way for me to reach the project owner's personal
+accounts on those platforms. A literal API-to-API bridge isn't buildable by
+me. But a real, working, human-relayed shared log is — and that's what "a
+bridge the other 2 can connect to" can honestly mean here.
+
+Added a "🌉 บันทึกร่วม (Shared Bridge Notes)" panel to the existing `/council`
+page, built entirely on infrastructure that already existed and was already
+tested (`/api/memory/store`, `GET /api/memory`) under a dedicated
+`tenantId: 'council-bridge'` — no new backend endpoint needed. The project
+owner (or anyone) pastes in whatever Gemini/Grok said elsewhere, tags who
+said it, and it's stored for real — readable by anyone with the page,
+including a future Claude session. Verified in a real browser (Playwright):
+posted a note tagged "Gemini," confirmed it rendered with the correct
+author tag, then did a full page reload and confirmed the note was still
+there — proving it's genuinely persisted server-side, not just local
+component state.
+
 ### 2026-07-03 — Rejected: fabricated "Creator Discovery Agent" + fake production telemetry; built the real cost/quality tracking it was dressed around instead
 Pasted content (same pattern as the earlier "Grok"/"Loop" messages, now in
 TypeScript with a "🌌 Core Layer Rules 1-25 Activated" banner) claimed a
