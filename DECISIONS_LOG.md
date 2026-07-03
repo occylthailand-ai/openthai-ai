@@ -11,6 +11,57 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Hourly loop, run 7: closed a promise I myself left half-built two runs ago — real weekly consumer digest, not just softer wording
+3 flagged decisions still unanswered (GitHub tools were also temporarily
+unauthenticated this cycle, so couldn't re-check PR comments — noted, not
+blocking, moved on).
+
+Re-audited my own run-2 fix instead of scanning for something new. The
+consumer welcome email I shipped then says "จะเริ่มส่งสินค้า/โปรโมชั่นในหมวดที่
+คุณสนใจให้ทางอีเมล" — "we'll **start sending** [products in your category]" —
+a future-recurring claim. Checked: nothing recurring existed, only that one
+welcome email. I'd fixed the "zero emails ever sent" bug but left a smaller
+version of the same "promise not backed by code" problem in my own copy.
+
+Two ways to close it: soften the wording again, or actually build the thing.
+Chose to build it — the pieces already existed and were already verified
+real this session: `producers.catalog()` (real approved-producer product
+listings) and `portalLeads.all()` (real consumer signups with their chosen
+`category`, using the same category strings as `producers.js` — confirmed
+still in sync from an earlier fix in this log).
+
+Added `sendConsumerDigest()` to `server.js`: for each consumer lead, filter
+the real catalog by their selected category, email up to 5 real matches
+(producer name, product, real price) if any exist, skip silently if none —
+no fabricated inventory, nothing invented. Wired to `GET+POST
+/api/portals/consumer-digest` with the exact same auth pattern already
+fixed for `/api/progress/daily-report` (`Authorization: Bearer $CRON_SECRET`
+for the real Vercel Cron, `x-admin-key` for a manual trigger) — didn't want
+to reintroduce the bug I fixed two runs ago. Added a weekly cron entry to
+`vercel.json` (Monday 09:00 Thai) so this actually recurs without a human
+remembering to trigger it — otherwise the promise stays exactly as
+unfulfilled as before, just with an extra manual button nobody will click.
+
+This is legitimate, already-consented outreach (people who signed up asking
+for exactly this via the real `/portals/consumer` form), not the
+scraping/cold-outreach pattern the standing order forbids.
+
+Verified two ways since real SMTP isn't available in this sandbox: (1) the
+actual matching/subject/language-selection logic in isolation via
+`nodemailer`'s `jsonTransport` — 3 fake consumers (2 different categories +
+1 with no matching product), confirmed exactly 2 matched with correct
+per-language subjects and the non-producer/non-matching leads correctly
+excluded; (2) the full live pipeline against real registered data — created
+a real approved producer + 2 real consumer leads (one matching, one not)
+through the actual endpoints, hit `/api/portals/consumer-digest`, confirmed
+`total_consumers: 2, skipped_no_match: 1, sent: 0, failed: 1` — the `failed`
+count is the expected outcome of pointing `SMTP_HOST` at a refused local
+connection on purpose (fast-failing stand-in for real SMTP), which itself
+confirms the pipeline correctly identified the 1 real match and attempted
+to send rather than silently swallowing it. Also confirmed the 401/200 auth
+paths (no auth, wrong bearer, correct bearer, `x-admin-key`) all behave
+identically to the already-fixed daily-report route.
+
 ### 2026-07-03 — Hourly loop, run 6: last run's own landing page had a latent deploy bug — caught it before it shipped broken
 3 flagged decisions now pending (run-1 producer vuln, run-3 creator
 account-provisioning gap, run-5 all-platform-files question) — checked all 3

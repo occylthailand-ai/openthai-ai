@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T21:11:58.302Z · branch `claude/daily-reporter-improvements-8vc9ct` (15 commit(s) ahead of main)
+Generated: 2026-07-03T22:12:51.671Z · branch `claude/daily-reporter-improvements-8vc9ct` (16 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 225 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 99 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,57 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Hourly loop, run 7: closed a promise I myself left half-built two runs ago — real weekly consumer digest, not just softer wording
+3 flagged decisions still unanswered (GitHub tools were also temporarily
+unauthenticated this cycle, so couldn't re-check PR comments — noted, not
+blocking, moved on).
+
+Re-audited my own run-2 fix instead of scanning for something new. The
+consumer welcome email I shipped then says "จะเริ่มส่งสินค้า/โปรโมชั่นในหมวดที่
+คุณสนใจให้ทางอีเมล" — "we'll **start sending** [products in your category]" —
+a future-recurring claim. Checked: nothing recurring existed, only that one
+welcome email. I'd fixed the "zero emails ever sent" bug but left a smaller
+version of the same "promise not backed by code" problem in my own copy.
+
+Two ways to close it: soften the wording again, or actually build the thing.
+Chose to build it — the pieces already existed and were already verified
+real this session: `producers.catalog()` (real approved-producer product
+listings) and `portalLeads.all()` (real consumer signups with their chosen
+`category`, using the same category strings as `producers.js` — confirmed
+still in sync from an earlier fix in this log).
+
+Added `sendConsumerDigest()` to `server.js`: for each consumer lead, filter
+the real catalog by their selected category, email up to 5 real matches
+(producer name, product, real price) if any exist, skip silently if none —
+no fabricated inventory, nothing invented. Wired to `GET+POST
+/api/portals/consumer-digest` with the exact same auth pattern already
+fixed for `/api/progress/daily-report` (`Authorization: Bearer $CRON_SECRET`
+for the real Vercel Cron, `x-admin-key` for a manual trigger) — didn't want
+to reintroduce the bug I fixed two runs ago. Added a weekly cron entry to
+`vercel.json` (Monday 09:00 Thai) so this actually recurs without a human
+remembering to trigger it — otherwise the promise stays exactly as
+unfulfilled as before, just with an extra manual button nobody will click.
+
+This is legitimate, already-consented outreach (people who signed up asking
+for exactly this via the real `/portals/consumer` form), not the
+scraping/cold-outreach pattern the standing order forbids.
+
+Verified two ways since real SMTP isn't available in this sandbox: (1) the
+actual matching/subject/language-selection logic in isolation via
+`nodemailer`'s `jsonTransport` — 3 fake consumers (2 different categories +
+1 with no matching product), confirmed exactly 2 matched with correct
+per-language subjects and the non-producer/non-matching leads correctly
+excluded; (2) the full live pipeline against real registered data — created
+a real approved producer + 2 real consumer leads (one matching, one not)
+through the actual endpoints, hit `/api/portals/consumer-digest`, confirmed
+`total_consumers: 2, skipped_no_match: 1, sent: 0, failed: 1` — the `failed`
+count is the expected outcome of pointing `SMTP_HOST` at a refused local
+connection on purpose (fast-failing stand-in for real SMTP), which itself
+confirms the pipeline correctly identified the 1 real match and attempted
+to send rather than silently swallowing it. Also confirmed the 401/200 auth
+paths (no auth, wrong bearer, correct bearer, `x-admin-key`) all behave
+identically to the already-fixed daily-report route.
 
 ### 2026-07-03 — Hourly loop, run 6: last run's own landing page had a latent deploy bug — caught it before it shipped broken
 3 flagged decisions now pending (run-1 producer vuln, run-3 creator
@@ -1013,54 +1064,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 5338162 Log run 6: caught a latent vercel.json routing bug before it shipped broken (16 seconds ago)
-- 7717486 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 9f9f28c Log run 5: all-platform-files is fabricated sprawl, smart-e is real (hygiene fix shipped) (60 minutes ago)
-- 8399df6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 28f3875 Log run 4: built otop-ai-landing's real homepage, scoped a bigger gap in v9.0 (2 hours ago)
-- 9eeba28 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 3f79476 Fix Creator Portal's same broken email promise; flag the bigger gap behind it (3 hours ago)
-- c1a9234 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- efb6ec1 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 5338162 Log run 6: caught a latent vercel.json routing bug before it shipped broken (61 minutes ago)
+- 7717486 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 9f9f28c Log run 5: all-platform-files is fabricated sprawl, smart-e is real (hygiene fix shipped) (2 hours ago)
+- 8399df6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 28f3875 Log run 4: built otop-ai-landing's real homepage, scoped a bigger gap in v9.0 (3 hours ago)
+- 9eeba28 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 3f79476 Fix Creator Portal's same broken email promise; flag the bigger gap behind it (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -1206,7 +1219,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 189 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8031 | Vercel serverless detection |
+| `server.js` | 8101 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
@@ -1238,6 +1251,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `0 12 * * *` → /api/autopost/process
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
+- `0 2 * * 1` → /api/portals/consumer-digest
 
 ## Environment variables (57 referenced in backend code, 58 documented in .env.example)
 ✅ every env var referenced in backend code is documented in `.env.example`

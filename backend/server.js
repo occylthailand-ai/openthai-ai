@@ -514,6 +514,26 @@ async function dailyReportHandler(req, res) {
 app.get('/api/progress/daily-report', dailyReportHandler);
 app.post('/api/progress/daily-report', dailyReportHandler);
 
+// GET+POST /api/portals/consumer-digest — weekly category-matched product digest for consumer
+// leads. Same auth shape as daily-report above: GET+Authorization Bearer for the real Vercel Cron,
+// POST+x-admin-key for a manual trigger from the Admin Panel.
+async function consumerDigestHandler(req, res) {
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const adminOk = checkAdminKey(req.headers['x-admin-key'] || req.query.key);
+  const cronOk  = !!process.env.CRON_SECRET && bearerToken === process.env.CRON_SECRET;
+  if (!adminOk && !cronOk) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try {
+    const result = await sendConsumerDigest();
+    res.json(result);
+  } catch (e) {
+    console.error('[portals/consumer-digest]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+}
+app.get('/api/portals/consumer-digest', consumerDigestHandler);
+app.post('/api/portals/consumer-digest', consumerDigestHandler);
+
 // PATCH /api/progress/kpi — อัปเดต KPI มือ
 app.patch('/api/progress/kpi', async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
@@ -935,6 +955,56 @@ async function sendPortalWelcomeEmail(lead) {
   } catch (err) {
     console.error('Portal welcome email error:', err.message);
   }
+}
+
+// sendPortalWelcomeEmail() บอกผู้บริโภคว่า "จะเริ่มส่งสินค้า/โปรโมชั่นในหมวดที่สนใจให้ทางอีเมล"
+// แต่จนถึงตอนนี้ไม่มีอะไรส่งต่อจริงเลยนอกจากอีเมลต้อนรับฉบับเดียว — เป็นคำสัญญาที่ยังไม่เป็นจริง
+// เหมือนที่เคยแก้ไปแล้วรอบก่อน ฟังก์ชันนี้คือของจริง: ส่งสรุปสินค้าจาก catalog ที่อนุมัติแล้ว
+// ตรงกับหมวดที่ผู้บริโภคเลือกไว้ตอนสมัคร — ใช้ category string เดียวกับที่ producers.js ใช้แล้ว
+// (sync กันไว้ตั้งแต่รอบก่อนหน้านี้) ไม่มีข้อมูลปลอม/แต่งเติม ใช้ producers.catalog() ตรงๆ
+async function sendConsumerDigest() {
+  if (!mailer) return { ok: false, error: 'ไม่มี SMTP_USER — ตั้งค่าก่อนส่ง digest จริง' };
+  const leads = await portalLeads.all();
+  const consumers = leads.filter((l) => l.type === 'consumer' && l.email);
+  const catalog = await producers.catalog();
+  let sent = 0, skipped = 0, failed = 0;
+
+  for (const lead of consumers) {
+    const category = (lead.form_data || {}).category || '';
+    const matches = catalog.filter((p) => p.category === category).slice(0, 5);
+    if (matches.length === 0) { skipped++; continue; }
+    const lang = lead.lang === 'en' ? 'en' : lead.lang === 'zh' ? 'zh' : 'th';
+    const itemsHtml = matches.map((p) => `
+      <tr><td style="padding:9px 0;border-top:1px solid rgba(255,255,255,0.08);">${escapeHtml(p.product_name)} <span style="color:#64748b;font-size:12px;">· ${escapeHtml(p.producer)}</span></td>
+      <td style="padding:9px 0;border-top:1px solid rgba(255,255,255,0.08);text-align:right;font-weight:700;">${p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : '-'}</td></tr>`).join('');
+    const titleByLang = { th: `🛍️ สินค้าใหม่ในหมวด "${category}" ที่คุณสนใจ`, en: `🛍️ New picks in "${category}"`, zh: `🛍️ "${category}" 分类新品` };
+    const introByLang = {
+      th: `สวัสดีคุณ${escapeHtml(lead.name || '')} นี่คือสินค้าจากผู้ผลิตที่ผ่านการรับรองในหมวดที่คุณสนใจ`,
+      en: `Hi ${escapeHtml(lead.name || '')}, here are verified-producer picks in your selected category`,
+      zh: `您好${escapeHtml(lead.name || '')}，以下是您感兴趣分类中的认证生产商产品`,
+    };
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        to: lead.email,
+        subject: titleByLang[lang],
+        html: `
+        <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#06b6d4,#3b82f6);padding:24px;text-align:center;"><h1 style="margin:0;font-size:19px;">${titleByLang[lang]}</h1></div>
+          <div style="padding:24px;font-size:14px;">
+            <p style="margin:0 0 14px;">${introByLang[lang]}</p>
+            <table style="width:100%;border-collapse:collapse;">${itemsHtml}</table>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${DOMAIN_URL}" style="color:#6366f1;">${DOMAIN_URL.replace(/^https?:\/\//, '')}</a></div>
+        </div>`,
+      });
+      sent++;
+    } catch (err) {
+      console.error(`Consumer digest error (${lead.email}):`, err.message);
+      failed++;
+    }
+  }
+  return { ok: true, total_consumers: consumers.length, sent, skipped_no_match: skipped, failed };
 }
 
 // /portals/producer และ /portals/affiliate เดิมส่งข้อมูลเข้า portal_leads เฉยๆ (เก็บไว้ดูใน
