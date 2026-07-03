@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T16:17:32.574Z · branch `claude/daily-reporter-improvements-8vc9ct` (5 commit(s) ahead of main)
+Generated: 2026-07-03T17:11:59.090Z · branch `claude/daily-reporter-improvements-8vc9ct` (6 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 215 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 89 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,47 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Hourly loop, run 2: consumer/middleman portals promised a follow-up email that was never actually sent — now it is
+Owner's flagged vuln from run 1 (unauthenticated producer-listing overwrite)
+is still awaiting a decision — did not touch it this cycle, per item 8 of
+the standing order (don't guess on a flagged legal/security fork).
+
+Scanned `ConsumerPortalPage.jsx`/`MiddlemanPortalPage.jsx` against the real
+backend flow instead. Consumer's success message says (Thai) "เราจะแจ้งสินค้า
+และโปรโมชั่นที่ตรงใจให้ทางอีเมล" ("we'll email you matching deals") and lists
+"AI-personalized recommendations" as a benefit. Checked `handleNewPortalLead()`
+in `server.js`: for `type === 'consumer'` (and `'middleman'`) it only calls
+`sendPortalLeadNotification()`, which emails the **admin** inbox
+(`PORTAL_LEAD_NOTIFY_EMAIL`) — the person who actually submitted the form
+never receives anything. A real, verified broken promise to real users who
+already gave consent by submitting the form (this is not the scraping/
+outreach-to-non-consenting-people pattern the standing order forbids — these
+are people who opted in seconds earlier).
+
+Added `sendPortalWelcomeEmail(lead)` in `server.js`, called from
+`handleNewPortalLead()` for `consumer`/`middleman` leads only (producer/
+affiliate/gov/etc. untouched — verified the function returns `null` for any
+type without copy defined). Copy is deliberately honest, not a restatement
+of the unbuilt "AI-personalized recommendations" claim: confirms signup and
+what's realistic today (product/category emails for consumer; team
+follow-up for middleman), localized to the lead's own `lang` (th/en/zh,
+falls back to th). Reuses the existing `mailer`/`escapeHtml` — no new
+dependency, no new public auth surface, same best-effort "log and continue,
+never throw" pattern as `sendPortalLeadNotification`/`sendLowStockAlert`.
+
+Verified: booted the backend locally (no `SMTP_USER` set in this sandbox, so
+`mailer` is `null` by design) — submitted real consumer + middleman leads via
+`POST /api/leads/submit`, confirmed both succeed with zero errors in the
+server log (graceful no-op is correct here, matches how every other email
+feature in this codebase behaves without SMTP configured). Separately, since
+this sandbox has no real SMTP creds, verified the actual template/copy logic
+in isolation using `nodemailer`'s `jsonTransport` (renders real MIME output
+without a network send): confirmed HTML-escaping of a `<script>` name
+payload, `lang` fallback to `th` when unset, correct `en` copy for
+middleman, and `null`/no-op for `producer` (untouched). Real SMTP delivery
+still needs to be confirmed against production credentials, same caveat as
+every other email feature already shipped in this repo.
 
 ### 2026-07-03 — Hourly loop, run 1: admin can now edit/restock an approved producer's listing without knocking them off the catalog; flagged a real pre-existing vuln for owner decision
 Built the task queued in the previous entry, narrowed to what's safely
@@ -786,54 +827,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- e8f2b87 Let admin edit/restock an approved producer's listing without dropping them (13 seconds ago)
-- 4d21f93 chore: sync PROJECT_STATUS.md [skip ci] (23 minutes ago)
-- 8d2c5d5 Queue next hourly-loop task: no self-serve product-listing path for producers (53 minutes ago)
-- 94f641c Record standing-order decision: reaffirm no-scraping growth policy, scope to 5 repos (2 hours ago)
-- 1469a0e Fix Daily Status Reporter cron: Vercel invokes via GET, we only handled POST (2 hours ago)
-- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (7 hours ago)
-- f3a860d Open the Council Bridge to external platforms/systems (#76) (8 hours ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (10 hours ago)
+- 5d7602e chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
+- e8f2b87 Let admin edit/restock an approved producer's listing without dropping them (55 minutes ago)
+- 4d21f93 chore: sync PROJECT_STATUS.md [skip ci] (78 minutes ago)
+- 8d2c5d5 Queue next hourly-loop task: no self-serve product-listing path for producers (2 hours ago)
+- 94f641c Record standing-order decision: reaffirm no-scraping growth policy, scope to 5 repos (3 hours ago)
+- 1469a0e Fix Daily Status Reporter cron: Vercel invokes via GET, we only handled POST (3 hours ago)
+- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (8 hours ago)
+- f3a860d Open the Council Bridge to external platforms/systems (#76) (9 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -979,7 +982,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 189 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7982 | Vercel serverless detection |
+| `server.js` | 8022 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

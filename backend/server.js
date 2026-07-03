@@ -889,6 +889,45 @@ async function sendPortalLeadNotification(lead) {
   }
 }
 
+// /portals/consumer และ /portals/middleman ทั้งคู่โชว์ข้อความยืนยันฝั่ง frontend ทันทีที่ส่งฟอร์ม
+// (เช่น consumer: "เราจะแจ้งสินค้าและโปรโมชั่นที่ตรงใจให้ทางอีเมล") แต่ sendPortalLeadNotification()
+// ข้างบนส่งอีเมลแจ้งแอดมินเท่านั้น — ผู้สมัครจริงไม่เคยได้รับอีเมลอะไรจากระบบเลยสักฉบับ
+// คำสัญญาที่ให้ไว้บนหน้าเว็บจึงไม่เป็นจริง ฟังก์ชันนี้ส่งอีเมลต้อนรับจริงกลับไปหาผู้สมัคร
+// (best-effort — ถ้าไม่มี SMTP หรือส่งไม่สำเร็จ lead ก็ยังถูกบันทึกตามปกติ ไม่ throw)
+const PORTAL_WELCOME_COPY = {
+  consumer: {
+    th: { subject: '🎉 ยินดีต้อนรับสู่ OpenThaiAi', title: 'ยินดีต้อนรับ!', body: (name) => `สวัสดีคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่สมัครเป็นผู้บริโภคกับ OpenThaiAi ทีมงานได้รับข้อมูลของคุณแล้ว และจะเริ่มส่งสินค้า/โปรโมชั่นในหมวดที่คุณสนใจให้ทางอีเมลนี้` },
+    en: { subject: '🎉 Welcome to OpenThaiAi', title: 'Welcome!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for joining OpenThaiAi as a consumer. We've received your info and will start sending deals/products in your selected category to this email.` },
+    zh: { subject: '🎉 欢迎加入 OpenThaiAi', title: '欢迎！', body: (name) => `您好${name ? escapeHtml(name) : ''}，感谢您注册成为 OpenThaiAi 消费者。我们已收到您的信息，将开始通过此邮箱发送您感兴趣类别的产品和优惠。` },
+  },
+  middleman: {
+    th: { subject: '🤝 ได้รับใบสมัครคนกลาง/ตัวแทนจำหน่ายแล้ว — OpenThaiAi', title: 'ได้รับใบสมัครแล้ว!', body: (name) => `สวัสดีคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่สนใจเข้าร่วมเครือข่ายจัดจำหน่ายกับ OpenThaiAi ทีมงานได้รับใบสมัครแล้ว และจะติดต่อกลับเพื่อยืนยันการเข้าร่วมเครือข่าย` },
+    en: { subject: '🤝 Distributor application received — OpenThaiAi', title: 'Application received!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for your interest in joining the OpenThaiAi distribution network. We've received your application and our team will contact you to confirm your place in the network.` },
+    zh: { subject: '🤝 已收到经销商申请 — OpenThaiAi', title: '已收到申请！', body: (name) => `您好${name ? escapeHtml(name) : ''}，感谢您有意加入 OpenThaiAi 分销网络。我们已收到您的申请，团队将与您联系以确认加入网络。` },
+  },
+};
+async function sendPortalWelcomeEmail(lead) {
+  const copySet = PORTAL_WELCOME_COPY[lead.type];
+  if (!copySet || !mailer || !lead.email) return;
+  const c = copySet[lead.lang] || copySet.th;
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to: lead.email,
+      subject: c.subject,
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#06b6d4,#3b82f6);padding:28px;text-align:center;"><h1 style="margin:0;font-size:22px;">${c.title}</h1></div>
+        <div style="padding:24px;font-size:15px;line-height:1.7;">${c.body(lead.name)}</div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${DOMAIN_URL}" style="color:#6366f1;">${DOMAIN_URL.replace(/^https?:\/\//, '')}</a></div>
+      </div>`,
+    });
+    console.log(`📧 Portal welcome email (${lead.type}) ส่งให้ ${lead.email} เรียบร้อย`);
+  } catch (err) {
+    console.error('Portal welcome email error:', err.message);
+  }
+}
+
 // /portals/producer และ /portals/affiliate เดิมส่งข้อมูลเข้า portal_leads เฉยๆ (เก็บไว้ดูใน
 // Admin เท่านั้น) โดยไม่เคยเชื่อมกับระบบสมัครจริง (/api/producers/apply, /api/affiliate/apply)
 // เลย — คนสมัครผ่านหน้านี้จึงไม่ได้กลายเป็นผู้ผลิต/affiliate จริงจนกว่าแอดมินจะสังเกตเห็น
@@ -896,6 +935,7 @@ async function sendPortalLeadNotification(lead) {
 // (best-effort — ถ้า register ไม่ผ่าน lead ก็ยังถูกบันทึกและแจ้งเตือนตามปกติ)
 async function handleNewPortalLead(lead) {
   await sendPortalLeadNotification(lead);
+  await sendPortalWelcomeEmail(lead);
   const fd = lead.form_data || {};
   try {
     if (lead.type === 'producer') {

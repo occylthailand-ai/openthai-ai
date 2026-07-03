@@ -11,6 +11,47 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Hourly loop, run 2: consumer/middleman portals promised a follow-up email that was never actually sent — now it is
+Owner's flagged vuln from run 1 (unauthenticated producer-listing overwrite)
+is still awaiting a decision — did not touch it this cycle, per item 8 of
+the standing order (don't guess on a flagged legal/security fork).
+
+Scanned `ConsumerPortalPage.jsx`/`MiddlemanPortalPage.jsx` against the real
+backend flow instead. Consumer's success message says (Thai) "เราจะแจ้งสินค้า
+และโปรโมชั่นที่ตรงใจให้ทางอีเมล" ("we'll email you matching deals") and lists
+"AI-personalized recommendations" as a benefit. Checked `handleNewPortalLead()`
+in `server.js`: for `type === 'consumer'` (and `'middleman'`) it only calls
+`sendPortalLeadNotification()`, which emails the **admin** inbox
+(`PORTAL_LEAD_NOTIFY_EMAIL`) — the person who actually submitted the form
+never receives anything. A real, verified broken promise to real users who
+already gave consent by submitting the form (this is not the scraping/
+outreach-to-non-consenting-people pattern the standing order forbids — these
+are people who opted in seconds earlier).
+
+Added `sendPortalWelcomeEmail(lead)` in `server.js`, called from
+`handleNewPortalLead()` for `consumer`/`middleman` leads only (producer/
+affiliate/gov/etc. untouched — verified the function returns `null` for any
+type without copy defined). Copy is deliberately honest, not a restatement
+of the unbuilt "AI-personalized recommendations" claim: confirms signup and
+what's realistic today (product/category emails for consumer; team
+follow-up for middleman), localized to the lead's own `lang` (th/en/zh,
+falls back to th). Reuses the existing `mailer`/`escapeHtml` — no new
+dependency, no new public auth surface, same best-effort "log and continue,
+never throw" pattern as `sendPortalLeadNotification`/`sendLowStockAlert`.
+
+Verified: booted the backend locally (no `SMTP_USER` set in this sandbox, so
+`mailer` is `null` by design) — submitted real consumer + middleman leads via
+`POST /api/leads/submit`, confirmed both succeed with zero errors in the
+server log (graceful no-op is correct here, matches how every other email
+feature in this codebase behaves without SMTP configured). Separately, since
+this sandbox has no real SMTP creds, verified the actual template/copy logic
+in isolation using `nodemailer`'s `jsonTransport` (renders real MIME output
+without a network send): confirmed HTML-escaping of a `<script>` name
+payload, `lang` fallback to `th` when unset, correct `en` copy for
+middleman, and `null`/no-op for `producer` (untouched). Real SMTP delivery
+still needs to be confirmed against production credentials, same caveat as
+every other email feature already shipped in this repo.
+
 ### 2026-07-03 — Hourly loop, run 1: admin can now edit/restock an approved producer's listing without knocking them off the catalog; flagged a real pre-existing vuln for owner decision
 Built the task queued in the previous entry, narrowed to what's safely
 completable in one cycle. Confirmed the deeper finding first: `producers.js`'s
