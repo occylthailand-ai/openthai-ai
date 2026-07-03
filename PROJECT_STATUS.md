@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T09:20:00.146Z · branch `claude/ai-coalition-protocol-hp3rga` (1 commit(s) ahead of main)
+Generated: 2026-07-03T10:18:44.149Z · branch `claude/ai-coalition-protocol-hp3rga` (3 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 210 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 212 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,57 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Health Watch now reports Grok/XAI key status every 10 min (answering "check Grok")
+User asked to check Grok's status. Verified first: `/api/health`
+(`backend/server.js:5650-5689`) only reports `ai_primary` (Claude) and
+`ai_fallback` (Gemini) — it has never checked Grok, so no existing automated
+monitor answers this question. The real source is `GET /api/router/status`
+(`backend/server.js:1699-1714`, no auth required), which returns
+`providers: [{id, label, cost_per_1k_usd, available}]` for claude/gemini/grok,
+where `available` is `!!process.env.XAI_API_KEY` for grok.
+
+Added a new informational step to `.github/workflows/health-watch.yml`
+("Check AI provider keys (Claude / Gemini / Grok)") that curls
+`${PROD_URL}/api/router/status` and prints each provider's availability using
+`jq` (preinstalled on GitHub-hosted runners). Deliberately does not `exit 1`
+on a missing key — a provider key being unset is a configuration choice, not
+an outage, so it must never fail the health check.
+
+First attempt embedded a multi-line Python script inside the YAML `run: |`
+block scalar and broke in two different ways before landing on `jq`:
+1. A `python3 -c "..."` with literal newlines inside the double-quoted string,
+   where the continuation lines sat at column 0 in the YAML source — less
+   indented than the block scalar's required minimum (10 spaces, set by the
+   first line). YAML terminated the block scalar early and tried to parse
+   `import json` as a new mapping key, failing with
+   `could not find expected ':'` — confirmed via
+   `python3 -c "import yaml; yaml.safe_load(open(...))"`.
+2. Reworked as `python3 - <<'PYEOF'` with the heredoc body indented to match
+   the YAML block (10 spaces) for YAML's sake — but Python requires its
+   first top-level statement at column 0; a uniformly-indented heredoc body
+   is invalid Python (`IndentationError: unexpected indent`) since the
+   heredoc passes the leading whitespace through literally.
+
+Both constraints (YAML: lines ≥10 spaces; Python: first statement at column
+0) can't be satisfied by one embedded multi-line script, so replaced it with
+single-line `jq` invocations instead, each a plain `run: |` line at the
+step's normal indentation. Verified: YAML parses
+(`python3 -c "import yaml; yaml.safe_load(open('.github/workflows/health-watch.yml'))"`
+→ `YAML_OK`), and the exact `jq` filter was tested locally against both a
+populated sample `providers` array (correctly prints ✅/⚠️ per provider) and
+an empty/malformed response (`{}`, correctly falls through to the "endpoint
+อาจไม่ตอบ" message) — output matched expectations in both cases.
+
+Immediate answer to "check Grok" without waiting for the next scheduled run:
+hit `https://www.openthai-ai.com/api/router/status` directly (GET, no auth) —
+the `providers` array's `grok` entry's `available` field is the real,
+current answer. This sandbox cannot reach production and
+`workflow_dispatch` can't be triggered manually here (`403 Resource not
+accessible by integration` from `mcp__github__actions_run_trigger`), so this
+direct URL is the fastest ground-truth check available right now; Health
+Watch will additionally print it automatically every 10 minutes going
+forward once this PR merges.
 
 ### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
 Found by accident while investigating a "there are uncommitted changes"
@@ -643,54 +694,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c281a9f Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (85 seconds ago)
-- f3a860d Open the Council Bridge to external platforms/systems (#76) (82 minutes ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (3 hours ago)
-- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (3 hours ago)
-- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (5 hours ago)
-- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (20 hours ago)
-- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (24 hours ago)
-- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (26 hours ago)
+- 7341589 Add Grok/XAI provider-key status to Health Watch monitoring (16 seconds ago)
+- 0b280b6 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- c281a9f Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (60 minutes ago)
+- f3a860d Open the Council Bridge to external platforms/systems (#76) (2 hours ago)
+- d73b560 Add Shared Bridge Notes to /council (#75) (4 hours ago)
+- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (4 hours ago)
+- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (6 hours ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (21 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

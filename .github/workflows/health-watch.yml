@@ -47,6 +47,19 @@ jobs:
             echo "✅ Healthy — ${ELAPSED}ms"
           fi
 
+      # /api/health เช็คแค่ Claude/Gemini — ไม่มีที่ไหนใน automated monitoring เช็ค Grok/XAI
+      # เลยสักที่ ต้องเปิด /api/router/status เอง (ไม่ต้องมี admin key) มาดูเทียบทุกครั้งที่มีคนถาม
+      # ขั้นตอนนี้เป็นข้อมูลอย่างเดียว ไม่ทำให้ workflow fail — ขาด key เป็นทางเลือกตั้งค่า ไม่ใช่ระบบพัง
+      - name: Check AI provider keys (Claude / Gemini / Grok)
+        run: |
+          echo "🔑 $(date -u '+%Y-%m-%d %H:%M:%S UTC') — checking ${PROD_URL}/api/router/status"
+          curl -s --max-time 15 "${PROD_URL}/api/router/status" -o /tmp/router.json || echo '{}' > /tmp/router.json
+          if ! jq -e '.providers | length > 0' /tmp/router.json >/dev/null 2>&1; then
+            echo "   ⚠️ ไม่สามารถอ่านสถานะ provider ได้ (endpoint อาจไม่ตอบ)"
+          else
+            jq -r '.providers[] | "   " + (.label // .id) + ": " + (if .available then "✅" else "⚠️ ไม่ได้ตั้ง key" end)' /tmp/router.json
+          fi
+
       - name: 🔔 LINE Notify on failure
         if: failure()
         env:

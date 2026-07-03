@@ -11,6 +11,57 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Health Watch now reports Grok/XAI key status every 10 min (answering "check Grok")
+User asked to check Grok's status. Verified first: `/api/health`
+(`backend/server.js:5650-5689`) only reports `ai_primary` (Claude) and
+`ai_fallback` (Gemini) — it has never checked Grok, so no existing automated
+monitor answers this question. The real source is `GET /api/router/status`
+(`backend/server.js:1699-1714`, no auth required), which returns
+`providers: [{id, label, cost_per_1k_usd, available}]` for claude/gemini/grok,
+where `available` is `!!process.env.XAI_API_KEY` for grok.
+
+Added a new informational step to `.github/workflows/health-watch.yml`
+("Check AI provider keys (Claude / Gemini / Grok)") that curls
+`${PROD_URL}/api/router/status` and prints each provider's availability using
+`jq` (preinstalled on GitHub-hosted runners). Deliberately does not `exit 1`
+on a missing key — a provider key being unset is a configuration choice, not
+an outage, so it must never fail the health check.
+
+First attempt embedded a multi-line Python script inside the YAML `run: |`
+block scalar and broke in two different ways before landing on `jq`:
+1. A `python3 -c "..."` with literal newlines inside the double-quoted string,
+   where the continuation lines sat at column 0 in the YAML source — less
+   indented than the block scalar's required minimum (10 spaces, set by the
+   first line). YAML terminated the block scalar early and tried to parse
+   `import json` as a new mapping key, failing with
+   `could not find expected ':'` — confirmed via
+   `python3 -c "import yaml; yaml.safe_load(open(...))"`.
+2. Reworked as `python3 - <<'PYEOF'` with the heredoc body indented to match
+   the YAML block (10 spaces) for YAML's sake — but Python requires its
+   first top-level statement at column 0; a uniformly-indented heredoc body
+   is invalid Python (`IndentationError: unexpected indent`) since the
+   heredoc passes the leading whitespace through literally.
+
+Both constraints (YAML: lines ≥10 spaces; Python: first statement at column
+0) can't be satisfied by one embedded multi-line script, so replaced it with
+single-line `jq` invocations instead, each a plain `run: |` line at the
+step's normal indentation. Verified: YAML parses
+(`python3 -c "import yaml; yaml.safe_load(open('.github/workflows/health-watch.yml'))"`
+→ `YAML_OK`), and the exact `jq` filter was tested locally against both a
+populated sample `providers` array (correctly prints ✅/⚠️ per provider) and
+an empty/malformed response (`{}`, correctly falls through to the "endpoint
+อาจไม่ตอบ" message) — output matched expectations in both cases.
+
+Immediate answer to "check Grok" without waiting for the next scheduled run:
+hit `https://www.openthai-ai.com/api/router/status` directly (GET, no auth) —
+the `providers` array's `grok` entry's `available` field is the real,
+current answer. This sandbox cannot reach production and
+`workflow_dispatch` can't be triggered manually here (`403 Resource not
+accessible by integration` from `mcp__github__actions_run_trigger`), so this
+direct URL is the fastest ground-truth check available right now; Health
+Watch will additionally print it automatically every 10 minutes going
+forward once this PR merges.
+
 ### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
 Found by accident while investigating a "there are uncommitted changes"
 prompt — the working-tree diff showed the *currently committed* (on `main`,
