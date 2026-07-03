@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T22:13:13.836Z · branch `claude/daily-reporter-improvements-8vc9ct` (17 commit(s) ahead of main)
+Generated: 2026-07-03T23:11:52.774Z · branch `claude/daily-reporter-improvements-8vc9ct` (19 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 227 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 229 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -1064,14 +1064,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c680a26 Build the real weekly consumer digest the welcome email already promises (12 seconds ago)
-- efb6ec1 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 5338162 Log run 6: caught a latent vercel.json routing bug before it shipped broken (62 minutes ago)
-- 7717486 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 9f9f28c Log run 5: all-platform-files is fabricated sprawl, smart-e is real (hygiene fix shipped) (2 hours ago)
-- 8399df6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 28f3875 Log run 4: built otop-ai-landing's real homepage, scoped a bigger gap in v9.0 (3 hours ago)
-- 9eeba28 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- edf92d6 Fix stale test: DELETE /api/scheduler/:id now requires x-admin-key (17 seconds ago)
+- 977c634 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- c680a26 Build the real weekly consumer digest the welcome email already promises (59 minutes ago)
+- efb6ec1 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 5338162 Log run 6: caught a latent vercel.json routing bug before it shipped broken (2 hours ago)
+- 7717486 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 9f9f28c Log run 5: all-platform-files is fabricated sprawl, smart-e is real (hygiene fix shipped) (3 hours ago)
+- 8399df6 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -1094,7 +1094,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.5",
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
