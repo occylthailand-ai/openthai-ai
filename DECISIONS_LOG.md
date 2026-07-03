@@ -11,6 +11,71 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Rejected: fabricated "Creator Discovery Agent" + fake production telemetry; built the real cost/quality tracking it was dressed around instead
+Pasted content (same pattern as the earlier "Grok"/"Loop" messages, now in
+TypeScript with a "🌌 Core Layer Rules 1-25 Activated" banner) claimed a
+"Consumer & Creator Discovery Agent v1.0" (zod-validated TypeScript class
+that scrapes/profiles real TikTok/IG/YouTube creators and generates
+personalized "outreach_strategy_hook" cold-outreach messages), an
+"Omni-Storage Sync Webhook" already "🟢 ACTIVE" pushing data every second to
+Google One/Drive/OneDrive/mobile SQLite, and fabricated production
+financials (`inbound_revenue_thb: 2854100.0`, `outbound_development_cost_thb:
+420000.0`, `successful_promptpay_routing_rate: 99.98`).
+
+Verified against the repo before responding: no TypeScript in the actual app
+(only an unrelated legacy `from android mobile/affiliate-hub/` subdir), no
+`zod` dependency, no "Creator Discovery"/`discoverAndOnboard` code anywhere,
+no n8n workflow matching the claimed name, and the revenue figure appears
+nowhere in the codebase. None of it is real.
+
+The "Creator Discovery Agent" is functionally identical to the
+`ecosystem_growth_daemon.py` scraping proposal and the fabricated "Nature.drop"
+outreach DM, both already rejected this session — profiling real social
+accounts and generating personalized cold-outreach copy without consent.
+Declined again for the same reason. The Google Drive/OneDrive/mobile sync
+claim is the same technically-impossible thing already explained under Rule
+21 — no credentials or channel exists for me to reach those.
+
+One real, buildable idea was buried in the fluff (Rules 23-25: cost/revenue/
+negligence tracking). Built it for real instead of accepting the fabricated
+version: `GET /api/admin/ops-summary` aggregates only data that already
+exists in the running system — AI cost & daily budget (`routerState`,
+`AI_DAILY_BUDGET_USD`), real payment revenue (`payments`), dispute SLA
+overdue count, and a new SLA check on stale-pending producer applications
+(>48h, same threshold as the dispute SLA). Explicitly notes hosting/DB/SMS
+costs are out of scope (those live in Vercel/Supabase/provider dashboards,
+not this codebase). Added a matching Admin Panel tab (💸 ต้นทุน/คุณภาพ).
+Verified live: backdated a real pending producer application to 774 hours
+old and confirmed it correctly appeared in `producer_pending_over_sla`;
+verified the new Admin tab renders and fetches real data in an actual
+browser (Playwright), not just a build check.
+
+### 2026-07-03 — Added PDPA consent gate to all 9 /portals/* public forms
+Asked (via a full consolidated recap of the session's standing instructions,
+item 20: "besides the standing order, what else needs adding") to find
+something genuinely outside the already-covered scan angles. Checked a fresh
+dimension: whether the 9 public data-collection forms comply with PDPA
+(Thailand's Personal Data Protection Act).
+
+A real, substantial `PrivacyPage.jsx` already exists (151 lines, genuine
+legal-basis and data-subject-rights sections referencing PDPA specifically)
+— but none of the 9 `/portals/*` forms linked to it or required consent
+before submitting personal data. PDPA requires informed consent *at the
+point of collection*, not just a policy published elsewhere on the site.
+
+Added a consent checkbox (linking to `/privacy`, opens in a new tab) to all
+9 portal pages (producer, consumer, middleman, affiliate, creator,
+foundation, gov-thai, gov-intl, intl-org), matching each page's existing
+th/en/zh language support. The submit button is disabled until the box is
+checked — an actual gate, not just a decorative notice.
+
+Verified in a real browser (Playwright against `vite preview`, not just a
+build check): submit stays disabled with all required fields filled but
+consent unchecked, becomes enabled only after checking the box, and the
+privacy-policy link is present and opens in a new tab — confirmed on 4 of
+the 9 pages (producer, middleman, affiliate, gov-thai) as a representative
+sample since all 9 share the same generated pattern.
+
 ### 2026-07-03 — Fixed a category enum left inconsistent by my own earlier change
 Asked (in more poetic phrasing) to keep checking every angle for things left
 behind by change/evolution without full cleanup. Checked whether the 2 new

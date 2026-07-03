@@ -8,10 +8,17 @@ const T = {
   zh: { title:'卖家/联盟门户', sub:'销售OpenThai.ai产品，赚取高达30%的佣金', benefits:['每次销售最高30%佣金','实时追踪仪表板','专属推荐链接','自动结算'], tiers:[{name:'入门级',rate:'10%',min:'0 ฿'},{name:'专业级',rate:'20%',min:'50,000 ฿'},{name:'精英级',rate:'30%',min:'200,000 ฿'}], form:{ name:'姓名', country:'国家', platform:'推广平台', email:'邮箱', submit:'申请联盟', ok:'申请已收到！您的联盟链接将发送到您的邮箱。' } },
 };
 
+const CONSENT_TEXT = {
+  th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#fcd34d' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
+  en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#fcd34d' }}>Privacy Policy (PDPA)</a></>,
+  zh: <>同意根据<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#fcd34d' }}>隐私政策（PDPA）</a>收集和使用我的数据</>,
+};
+
 export default function AffiliatePortalPage() {
   const [lang, setLang] = useState('th');
   const [form, setForm] = useState({ name:'', country:'', platform:'', email:'' });
   const [sent, setSent] = useState(false);
+  const [consent, setConsent] = useState(false);
   const navigate = useNavigate();
   const t = T[lang];
 
@@ -59,7 +66,11 @@ export default function AffiliatePortalPage() {
                   <input required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
                 </div>
               ))}
-              <button type="submit" style={{ width:'100%', background:'#f59e0b', color:'#000', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor:'pointer', marginTop:8 }}>{t.form.submit}</button>
+              <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:16, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>
+                <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
+                <span>{CONSENT_TEXT[lang]}</span>
+              </label>
+              <button type="submit" disabled={!consent} style={{ width:'100%', background:'#f59e0b', color:'#000', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: consent ? 'pointer' : 'not-allowed', opacity: consent ? 1 : 0.5, marginTop:8 }}>{t.form.submit}</button>
             </form>}
           </div>
         </div>

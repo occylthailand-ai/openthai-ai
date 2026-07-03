@@ -7,10 +7,16 @@ const T = {
   en: { title:'Thai Government Agency Portal', sub:'Integrate AI into Thai public services for citizens', services:['AI systems for public services','Big data analytics','Automated chatbot responses','Government reports & dashboards','Cross-border translation system'], form:{ agency:'Agency Name', ministry:'Ministry / Department', name:'Contact Person', position:'Position / Title', email:'Official Email', phone:'Phone', need:'Primary Need', submit:'Submit Cooperation Request', ok:'Thank you! Our Government Relations team will contact you within 48 hours.' } },
 };
 
+const CONSENT_TEXT = {
+  th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#6ee7b7' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
+  en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#6ee7b7' }}>Privacy Policy (PDPA)</a></>,
+};
+
 export default function GovThaiPortalPage() {
   const [lang, setLang] = useState('th');
   const [form, setForm] = useState({ agency:'', ministry:'', name:'', position:'', email:'', phone:'', need:'' });
   const [sent, setSent] = useState(false);
+  const [consent, setConsent] = useState(false);
   const navigate = useNavigate();
   const t = T[lang] || T.th;
 
@@ -56,7 +62,11 @@ export default function GovThaiPortalPage() {
                 <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.need}</label>
                 <textarea rows={3} value={form.need} onChange={e=>setForm({...form,need:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box', resize:'vertical' }} />
               </div>
-              <button type="submit" style={{ width:'100%', background:'#10b981', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor:'pointer' }}>{t.form.submit}</button>
+              <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:14, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>
+                <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
+                <span>{CONSENT_TEXT[lang] || CONSENT_TEXT.th}</span>
+              </label>
+              <button type="submit" disabled={!consent} style={{ width:'100%', background:'#10b981', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: consent ? 'pointer' : 'not-allowed', opacity: consent ? 1 : 0.5 }}>{t.form.submit}</button>
             </form>}
           </div>
         </div>

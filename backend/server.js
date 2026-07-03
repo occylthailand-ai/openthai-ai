@@ -7107,6 +7107,55 @@ app.get('/api/payment/admin/summary', (req, res) => {
   });
 });
 
+// GET /api/admin/ops-summary — รวมต้นทุน(ขาออก)+รายรับ(ขาเข้า)+สัญญาณ "ความหย่อนยาน" จากข้อมูลจริง
+// ที่มีอยู่แล้วในระบบ (ตอบคำสั่งถาวรข้อ 23-25) — ไม่มีตัวเลขสมมติ ทุกค่าคำนวณสดจาก state จริง
+// ต้นทุน hosting/DB/SMS (Vercel/Supabase/Omise fee) อยู่นอกขอบเขต endpoint นี้ — อยู่ใน dashboard
+// ของแต่ละเจ้าเอง ดึงจากในนี้ไม่ได้จริง
+app.get('/api/admin/ops-summary', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try {
+    routerRollover();
+    const isPaid = (p) => p.paid || p.status === 'successful' || p.paid_at;
+    const paid = payments.filter(isPaid);
+    const sum = (arr) => arr.reduce((t, p) => t + (Number(p.amount_thb) || 0), 0);
+
+    const disputeSummary = await disputes.summary();
+    const NEGLIGENCE_HOURS = 48; // เกณฑ์เดียวกับ SLA ข้อพิพาท — ใช้ตรวจ backlog ผู้ผลิตค้างอนุมัตินานด้วย
+    const allProducers = await producers.all();
+    const now = Date.now();
+    const stalePendingProducers = allProducers.filter(p =>
+      p.status === 'pending' && (now - new Date(p.created_at).getTime()) / 3600000 > NEGLIGENCE_HOURS
+    );
+
+    res.json({
+      success: true,
+      generated_at: new Date().toISOString(),
+      cost_outbound: {
+        ai_spent_today_usd: routerState.spentUsd,
+        ai_budget_usd: AI_DAILY_BUDGET_USD,
+        ai_budget_used_pct: AI_DAILY_BUDGET_USD > 0 ? +(routerState.spentUsd / AI_DAILY_BUDGET_USD * 100).toFixed(1) : 0,
+        ai_eco_mode: routerEco(),
+        note: 'ไม่รวมค่า hosting/database/SMTP/SMS — เช็ค dashboard ของ Vercel/Supabase/ผู้ให้บริการนั้นๆ โดยตรง',
+      },
+      revenue_inbound: {
+        total_thb: sum(paid),
+        paid_count: paid.length,
+        pending_count: payments.length - paid.length,
+      },
+      negligence_signals: {
+        dispute_sla_hours: disputeSummary.sla_hours,
+        dispute_overdue_count: disputeSummary.overdue_count,
+        dispute_overdue: disputeSummary.overdue,
+        producer_pending_over_sla_count: stalePendingProducers.length,
+        producer_pending_over_sla: stalePendingProducers.map(p => ({ email: p.email, company: p.company, hours_pending: Math.round((now - new Date(p.created_at).getTime()) / 3600000) })),
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // POST /api/payment/webhook — Omise webhook (signed)
 app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req, res) => {
   const sig = req.headers['x-opn-signature'] || req.headers['x-omise-signature'] || '';

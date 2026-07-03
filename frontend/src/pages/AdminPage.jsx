@@ -44,6 +44,7 @@ export default function AdminPage() {
   const [escrowSum, setEscrowSum] = useState(null); // สรุป escrow (held/released/refunded)
   const [reviewQueue, setReviewQueue] = useState(null); // Human review queue (AI-generated content)
   const [reviewTenant, setReviewTenant] = useState('global');
+  const [opsSummary, setOpsSummary] = useState(null); // ต้นทุน(ขาออก)+รายรับ(ขาเข้า)+สัญญาณความหย่อนยาน
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
@@ -77,6 +78,7 @@ export default function AdminPage() {
     fetch(apiUrl('/api/disputes/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setDisputes(d.disputes); else console.warn('[admin] disputes:', d.message); }).catch(apiErr('disputes'));
     fetch(apiUrl('/api/disputes/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setEscrowSum(d); }).catch(apiErr('disputes-summary'));
   };
+  const loadOpsSummary = () => fetch(apiUrl('/api/admin/ops-summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setOpsSummary(d); else console.warn('[admin] ops-summary:', d.message); }).catch(apiErr('ops-summary'));
   const loadReviewQueue = (tenantId = reviewTenant) => {
     fetch(apiUrl(`/api/memory/admin/review-queue?tenantId=${encodeURIComponent(tenantId)}`), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setReviewQueue(d); else console.warn('[admin] review-queue:', d.message); }).catch(apiErr('review-queue'));
   };
@@ -85,7 +87,7 @@ export default function AdminPage() {
     if (!r.success) alert(r.error || 'บันทึกรีวิวไม่สำเร็จ');
     loadReviewQueue();
   };
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); loadDisputes(); loadReviewQueue(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); loadDisputes(); loadReviewQueue(); loadOpsSummary(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveProduct = async (data) => {
     const r = await fetch(apiUrl('/api/inventory/admin/upsert'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(data) }).then(x => x.json());
@@ -591,6 +593,50 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* TAB: OPS — ต้นทุน(ขาออก)+รายรับ(ขาเข้า)+สัญญาณความหย่อนยาน จากข้อมูลจริงเท่านั้น
+            ไม่รวมค่า hosting/database/SMS — เช็ค dashboard ของผู้ให้บริการนั้นๆ โดยตรง */}
+        {tab === 'ops' && (
+          <div style={{ display: 'grid', gap: 16 }}>
+            {!opsSummary && <div style={{ color: '#64748b', fontSize: 13 }}>กำลังโหลด…</div>}
+            {opsSummary && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12 }}>
+                  {[
+                    { label: 'ต้นทุน AI วันนี้ (USD)', v: `$${opsSummary.cost_outbound.ai_spent_today_usd.toFixed(4)}`, c: '#f59e0b' },
+                    { label: 'งบ AI ต่อวัน (USD)', v: `$${opsSummary.cost_outbound.ai_budget_usd}`, c: '#94a3b8' },
+                    { label: '% งบใช้ไปวันนี้', v: `${opsSummary.cost_outbound.ai_budget_used_pct}%`, c: opsSummary.cost_outbound.ai_budget_used_pct >= 100 ? '#ef4444' : '#10b981' },
+                    { label: 'รายรับสะสม (฿)', v: baht(opsSummary.revenue_inbound.total_thb), c: '#10b981' },
+                    { label: 'ข้อพิพาทค้างเกิน SLA', v: opsSummary.negligence_signals.dispute_overdue_count, c: opsSummary.negligence_signals.dispute_overdue_count ? '#ef4444' : '#10b981' },
+                    { label: 'ใบสมัครผู้ผลิตค้างเกิน SLA', v: opsSummary.negligence_signals.producer_pending_over_sla_count, c: opsSummary.negligence_signals.producer_pending_over_sla_count ? '#ef4444' : '#10b981' },
+                  ].map((s) => (
+                    <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: s.c }}>{s.v}</div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                {opsSummary.cost_outbound.ai_eco_mode && (
+                  <div style={{ ...glass, border: '1px solid rgba(245,158,11,0.3)', color: '#fbbf24', fontSize: 13 }}>
+                    ⚠️ เกินงบ AI ต่อวันแล้ว — ระบบสลับเป็น Eco Mode (ใช้เฉพาะโมเดลราคาถูก) อัตโนมัติ
+                  </div>
+                )}
+                {opsSummary.negligence_signals.producer_pending_over_sla_count > 0 && (
+                  <div style={{ ...glass, border: '1px solid rgba(239,68,68,0.3)' }}>
+                    <div style={{ fontWeight: 700, color: '#fca5a5', marginBottom: 6 }}>⏰ ใบสมัครผู้ผลิตค้างเกิน {opsSummary.negligence_signals.dispute_sla_hours} ชม. — ควรรีบอนุมัติ/ติดต่อกลับ</div>
+                    {opsSummary.negligence_signals.producer_pending_over_sla.map((p) => (
+                      <div key={p.email} style={{ fontSize: 12, color: '#94a3b8' }}>{p.company} ({p.email}) — ค้างมาแล้ว {p.hours_pending} ชั่วโมง</div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ ...glass, fontSize: 12, color: '#64748b' }}>
+                  {opsSummary.cost_outbound.note}
+                </div>
+                <button onClick={loadOpsSummary} style={{ ...tabBtn, padding: '6px 14px', fontSize: 12, width: 'fit-content' }}>🔄 รีเฟรช</button>
+              </>
+            )}
           </div>
         )}
 
