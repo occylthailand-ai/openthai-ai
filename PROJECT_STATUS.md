@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T04:58:26.247Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-03T05:54:17.631Z · branch `claude/ai-coalition-protocol-hp3rga` (3 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 1 commits, earliest 2026-07-03 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 93 commits, earliest 2026-06-16 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,45 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Rejected: fabricated "Creator Discovery Agent" + fake production telemetry; built the real cost/quality tracking it was dressed around instead
+Pasted content (same pattern as the earlier "Grok"/"Loop" messages, now in
+TypeScript with a "🌌 Core Layer Rules 1-25 Activated" banner) claimed a
+"Consumer & Creator Discovery Agent v1.0" (zod-validated TypeScript class
+that scrapes/profiles real TikTok/IG/YouTube creators and generates
+personalized "outreach_strategy_hook" cold-outreach messages), an
+"Omni-Storage Sync Webhook" already "🟢 ACTIVE" pushing data every second to
+Google One/Drive/OneDrive/mobile SQLite, and fabricated production
+financials (`inbound_revenue_thb: 2854100.0`, `outbound_development_cost_thb:
+420000.0`, `successful_promptpay_routing_rate: 99.98`).
+
+Verified against the repo before responding: no TypeScript in the actual app
+(only an unrelated legacy `from android mobile/affiliate-hub/` subdir), no
+`zod` dependency, no "Creator Discovery"/`discoverAndOnboard` code anywhere,
+no n8n workflow matching the claimed name, and the revenue figure appears
+nowhere in the codebase. None of it is real.
+
+The "Creator Discovery Agent" is functionally identical to the
+`ecosystem_growth_daemon.py` scraping proposal and the fabricated "Nature.drop"
+outreach DM, both already rejected this session — profiling real social
+accounts and generating personalized cold-outreach copy without consent.
+Declined again for the same reason. The Google Drive/OneDrive/mobile sync
+claim is the same technically-impossible thing already explained under Rule
+21 — no credentials or channel exists for me to reach those.
+
+One real, buildable idea was buried in the fluff (Rules 23-25: cost/revenue/
+negligence tracking). Built it for real instead of accepting the fabricated
+version: `GET /api/admin/ops-summary` aggregates only data that already
+exists in the running system — AI cost & daily budget (`routerState`,
+`AI_DAILY_BUDGET_USD`), real payment revenue (`payments`), dispute SLA
+overdue count, and a new SLA check on stale-pending producer applications
+(>48h, same threshold as the dispute SLA). Explicitly notes hosting/DB/SMS
+costs are out of scope (those live in Vercel/Supabase/provider dashboards,
+not this codebase). Added a matching Admin Panel tab (💸 ต้นทุน/คุณภาพ).
+Verified live: backdated a real pending producer application to 774 hours
+old and confirmed it correctly appeared in `producer_pending_over_sla`;
+verified the new Admin tab renders and fetches real data in an actual
+browser (Playwright), not just a build check.
 
 ### 2026-07-03 — Added PDPA consent gate to all 9 /portals/* public forms
 Asked (via a full consolidated recap of the session's standing instructions,
@@ -524,47 +563,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 0e3ffc0 Add PDPA consent gate to all 9 public portal forms (70 seconds ago)
+- 2625cf0 Add real cost/revenue/negligence tracking (GET /api/admin/ops-summary + Admin tab) (65 seconds ago)
+- e2b4af7 chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
+- 0e3ffc0 Add PDPA consent gate to all 9 public portal forms (57 minutes ago)
+- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (2 hours ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (16 hours ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (20 hours ago)
+- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (22 hours ago)
+- bd5f433 chore: sync PROJECT_STATUS.md [skip ci] (23 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 645,
-  "memory_mb": "19.7",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -710,7 +718,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 160 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7912 | Vercel serverless detection |
+| `server.js` | 7961 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
@@ -733,6 +741,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - 👥 ผู้ใช้
 - 🤝 Affiliates
 - ⚡ คอนเทนต์
+- 💸 ต้นทุน/คุณภาพ
 - ⚙️ ตั้งค่า
 
 ## Scheduled jobs (vercel.json crons)
