@@ -11,6 +11,35 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Opened the Council Bridge to external platforms/systems, not just the UI form
+Asked to make the Shared Bridge Notes (added the same day) actually open to
+"other people or other platforms," not just the project owner filling in
+the form. Checked the real gap: `POST /api/memory/store` (the endpoint the
+bridge is built on) was already public/unauthenticated by design, but wasn't
+documented anywhere — no external system could discover it existed without
+reading the frontend source.
+
+Fixed with 3 real, verified changes:
+1. Documented `/api/memory/store` and `GET /api/memory` in `backend/openapi.js`
+   under a new "Council Bridge" tag — now discoverable at `/api-docs` like any
+   other real endpoint, with the exact `tenantId`/`type` shape needed to
+   appear on the board.
+2. Added an in-page "🔌 API สำหรับแพลตฟอร์ม/ระบบอื่น" expander directly on
+   `/council` with a working `curl` example — so a developer or an automated
+   system doesn't need to find the OpenAPI docs first.
+3. Added live polling (every 8s) to the notes feed — previously it only
+   loaded once on page mount, so two people/systems posting concurrently
+   would never see each other's notes without a manual reload.
+
+Verified all three live: confirmed both paths appear in the real
+`/api/openapi.json` response; posted a note via raw `curl` with no browser
+involved at all (simulating an external platform), confirmed it appeared on
+page load; then, with the page already open, posted a second note via raw
+`fetch` from within the page context (bypassing the UI form entirely) and
+confirmed it appeared automatically via polling within ~9.5s with zero page
+reload — proving concurrent external posting genuinely works, not just
+"should work."
+
 ### 2026-07-03 — Built the real version of the fictional "agent bridge": Shared Bridge Notes on /council
 After rejecting several fabricated "Inter-Agent Bridge" claims this session
 (Python daemon, TypeScript agent, TypeScript bridge controller — none of
