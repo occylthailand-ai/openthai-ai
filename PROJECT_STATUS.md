@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T20:12:38.452Z · branch `claude/daily-reporter-improvements-8vc9ct` (13 commit(s) ahead of main)
+Generated: 2026-07-03T21:11:34.164Z · branch `claude/daily-reporter-improvements-8vc9ct` (14 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 223 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 97 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,47 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Hourly loop, run 6: last run's own landing page had a latent deploy bug — caught it before it shipped broken
+3 flagged decisions now pending (run-1 producer vuln, run-3 creator
+account-provisioning gap, run-5 all-platform-files question) — checked all 3
+open PRs for owner comments again, still none. Untouched, as before.
+
+Went back to `otop-ai-landing` to verify run-4's landing page more rigorously
+against a real deployment, per this repo's own standard ("locally, then
+ideally against a real deployed instance"). Tried to reach the real Vercel
+preview URL (`curl`, then `WebFetch`) — blocked (network / Vercel preview
+auth, same limitation already hit reaching production earlier this
+session). Tried `vercel build`/`vercel dev` locally instead — both require
+project-linked cloud auth this sandbox doesn't have.
+
+That dead end led to actually re-reading `otop-ai-landing/vercel.json`
+closely instead, which surfaced a real bug that predates this session but
+would have broken the new landing page in production: `routes: [{ "src":
+"/(.*)", "dest": "/index.html" }]` has no filesystem-check step, so — per
+Vercel's own docs/community threads on this exact gotcha — it matches
+*every* request, including `/logo.png`, and would serve `index.html`'s
+bytes instead of the real image. Since last run's landing page references
+`logo.png` in the header and hero section, this would have shipped with a
+guaranteed-broken logo image the moment it reached production, even though
+it "worked" against my earlier local test — because that test used a plain
+`python3 -m http.server`, which doesn't replicate Vercel's actual routing
+and would never have caught this.
+
+Fixed with the standard, documented pattern for legacy `routes`: added
+`{ "handle": "filesystem" }` before the catch-all, so a real static file is
+served directly when one exists, falling back to `index.html` only
+otherwise. Chose to keep the legacy `routes` format (matching the existing
+config, one-line diff) rather than switch to the newer `rewrites` field,
+since I could not confirm from docs alone whether `rewrites` is safe to mix
+with the existing `builds` array, and this sandbox can't verify either way
+against a live deployment.
+
+**Honest limitation, stated plainly**: this fix could not be verified
+end-to-end against a real Vercel deployment (same network/auth block as
+above) — only that it's the officially-documented fix for this exact
+problem, and that the local static-file-server check still passes
+afterward. Worth a real check next time production access is available.
 
 ### 2026-07-03 — Hourly loop, run 5: `all-platform-files` is fabricated sprawl, not a real system — do not build on it; `smart-e` is real, cleaned a hygiene issue there
 Two flagged decisions from runs 1 and 3 are still unanswered — untouched
@@ -972,54 +1013,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 9f9f28c Log run 5: all-platform-files is fabricated sprawl, smart-e is real (hygiene fix shipped) (19 seconds ago)
-- 8399df6 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 28f3875 Log run 4: built otop-ai-landing's real homepage, scoped a bigger gap in v9.0 (59 minutes ago)
-- 9eeba28 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 3f79476 Fix Creator Portal's same broken email promise; flag the bigger gap behind it (2 hours ago)
-- c1a9234 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- b1ae9f1 Send the welcome email consumer/middleman portals already promise users (3 hours ago)
-- 5d7602e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 7717486 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 9f9f28c Log run 5: all-platform-files is fabricated sprawl, smart-e is real (hygiene fix shipped) (59 minutes ago)
+- 8399df6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 28f3875 Log run 4: built otop-ai-landing's real homepage, scoped a bigger gap in v9.0 (2 hours ago)
+- 9eeba28 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 3f79476 Fix Creator Portal's same broken email promise; flag the bigger gap behind it (3 hours ago)
+- c1a9234 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- b1ae9f1 Send the welcome email consumer/middleman portals already promise users (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

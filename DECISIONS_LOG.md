@@ -11,6 +11,47 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Hourly loop, run 6: last run's own landing page had a latent deploy bug — caught it before it shipped broken
+3 flagged decisions now pending (run-1 producer vuln, run-3 creator
+account-provisioning gap, run-5 all-platform-files question) — checked all 3
+open PRs for owner comments again, still none. Untouched, as before.
+
+Went back to `otop-ai-landing` to verify run-4's landing page more rigorously
+against a real deployment, per this repo's own standard ("locally, then
+ideally against a real deployed instance"). Tried to reach the real Vercel
+preview URL (`curl`, then `WebFetch`) — blocked (network / Vercel preview
+auth, same limitation already hit reaching production earlier this
+session). Tried `vercel build`/`vercel dev` locally instead — both require
+project-linked cloud auth this sandbox doesn't have.
+
+That dead end led to actually re-reading `otop-ai-landing/vercel.json`
+closely instead, which surfaced a real bug that predates this session but
+would have broken the new landing page in production: `routes: [{ "src":
+"/(.*)", "dest": "/index.html" }]` has no filesystem-check step, so — per
+Vercel's own docs/community threads on this exact gotcha — it matches
+*every* request, including `/logo.png`, and would serve `index.html`'s
+bytes instead of the real image. Since last run's landing page references
+`logo.png` in the header and hero section, this would have shipped with a
+guaranteed-broken logo image the moment it reached production, even though
+it "worked" against my earlier local test — because that test used a plain
+`python3 -m http.server`, which doesn't replicate Vercel's actual routing
+and would never have caught this.
+
+Fixed with the standard, documented pattern for legacy `routes`: added
+`{ "handle": "filesystem" }` before the catch-all, so a real static file is
+served directly when one exists, falling back to `index.html` only
+otherwise. Chose to keep the legacy `routes` format (matching the existing
+config, one-line diff) rather than switch to the newer `rewrites` field,
+since I could not confirm from docs alone whether `rewrites` is safe to mix
+with the existing `builds` array, and this sandbox can't verify either way
+against a live deployment.
+
+**Honest limitation, stated plainly**: this fix could not be verified
+end-to-end against a real Vercel deployment (same network/auth block as
+above) — only that it's the officially-documented fix for this exact
+problem, and that the local static-file-server check still passes
+afterward. Worth a real check next time production access is available.
+
 ### 2026-07-03 — Hourly loop, run 5: `all-platform-files` is fabricated sprawl, not a real system — do not build on it; `smart-e` is real, cleaned a hygiene issue there
 Two flagged decisions from runs 1 and 3 are still unanswered — untouched
 again. Checked both PRs for owner replies (comments, not just chat) this
