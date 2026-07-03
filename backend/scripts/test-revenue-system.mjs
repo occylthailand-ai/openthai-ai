@@ -85,7 +85,7 @@ await j('POST', '/api/scheduler/create', { platform: 'line', content: 'y', sched
 ok((await j('GET', '/api/scheduler/due')).data.count >= 1, 'due ตรวจตามเวลา');
 r = await j('GET', '/api/scheduler/process');  // GET (Vercel Cron)
 ok(r.data?.ok && r.data.processed >= 1, 'process (GET) ทำงาน');
-ok((await j('DELETE', '/api/scheduler/' + sp.post.id)).data?.ok, 'ลบโพสต์');
+ok((await j('DELETE', '/api/scheduler/' + sp.post.id, null, { 'x-admin-key': ADMIN })).data?.ok, 'ลบโพสต์');
 
 console.log('\n=== Webhook signature guard ===');
 const ev = JSON.stringify({ key: 'charge.complete', data: { id: 'x', paid: true, amount: 100 } });
