@@ -11,6 +11,48 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Hourly loop, run 8: full regression pass across 7 runs of changes — one real (small) find, two false alarms caught before being "fixed"
+3 flagged decisions still unanswered; PR comments re-checked, still nothing
+but the Vercel bot on all 3 PRs.
+
+Instead of scanning for a new feature gap, ran the actual test suites this
+repo already has (`test:smoke`, `test:affiliate`, `test:revenue`) against
+everything built across runs 1-7 — first time this session running the full
+suite, not just the specific endpoints touched each cycle.
+
+- `npm run test:smoke` (27 skills): all pass, no regressions.
+- `test-affiliate-flow.mjs`: first run showed 8/22 failing — looked alarming,
+  but before treating it as a real bug, checked whether *this session's*
+  diffs (confined to lines 100, 392-492, 868-1014 of `server.js`, confirmed
+  via `git diff main --stat`) touch anything near the webhook/commission
+  code (~line 7307) at all. They don't. Re-ran with the exact env vars the
+  script's own header comment specifies (`OMISE_WEBHOOK_SECRET=testsecret`)
+  instead of what I'd started the server with — 22/22 passed. Not a bug,
+  just my own test-setup mistake; would have been a false "found a bug"
+  report if I'd trusted the first run.
+- `test-revenue-system.mjs`: same story on the first pass (wrong `ADMIN_KEY`
+  vs. the script's documented `testadmin` default caused a crash, not a
+  real failure) — but after matching the documented env vars, one real
+  failure survived: "ลบโพสต์" (delete post). Traced it: `DELETE
+  /api/scheduler/:id` was intentionally gated with `x-admin-key` in an
+  earlier autonomous security fix (2026-07-02, this log), but this E2E test
+  was never updated to send the header — it's been asserting against a 401
+  response's shape and failing ever since, a false negative masking as a
+  bug. Fixed the test (added `x-admin-key: ADMIN`), re-ran clean against a
+  fresh server: 26/26 pass.
+
+Also caught and reverted an unrelated mistake before committing: running
+these tests repeatedly wrote real-looking mock affiliate records into the
+tracked `backend/data/affiliates.json` (not gitignored, unlike other local
+data files) — `git checkout --` before staging, so no test fixtures leaked
+into the diff.
+
+Net effect: confirmed no regressions across everything built this session,
+fixed one small piece of real test debt, and — maybe more useful than
+either — didn't chase two false alarms into unnecessary "fixes." Same
+discipline as `lesson_01_verify_before_build`, just applied to my own test
+output instead of a pasted spec.
+
 ### 2026-07-03 — Hourly loop, run 7: closed a promise I myself left half-built two runs ago — real weekly consumer digest, not just softer wording
 3 flagged decisions still unanswered (GitHub tools were also temporarily
 unauthenticated this cycle, so couldn't re-check PR comments — noted, not
