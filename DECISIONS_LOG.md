@@ -11,6 +11,47 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Project owner issued a 23-point standing order ("คำสั่งถาวร"); reaffirmed no-scraping policy, scoped to all 5 accessible repos, approved hourly autonomous loop
+Project owner sent a permanent standing order covering 23 items: continuous
+24/7 acquisition of producers/consumers/middlemen/products/affiliates (items
+1-5), fast honest market entry (6-8, 17), continuous innovation/feedback/
+adaptation (9-14), self-scanning for gaps (15), Thai as the primary language
+for Claude/Gemini/Grok/owner discussion (16), full project status rollup
+(18), "what's next" (19-20), no procrastination — ship only real working
+things (21), work in the real field only (22), and the reminder that every
+360° surface is backed by real code (23).
+
+Items 1-5, read literally as "autonomously find and recruit real people 24/7,"
+are the same proposal already rejected three times this history (the
+`ecosystem_growth_daemon.py` scraping daemon, a fabricated outreach DM to a
+named real person, and the "Creator Discovery Agent" that profiled real
+social accounts) — all declined for the same reason: collecting/contacting
+real people without consent is a PDPA problem, not just an engineering one.
+Flagged this precedent to the owner directly before doing anything. Owner
+confirmed: **keep the existing policy** ("เอาคงเส้นคงวาก็ดีครับ"). Growth for
+all 5 categories continues through the real, already-built consent path
+(`/portals/*` → `portal-leads.js` → auto-registration into
+`producers.js`/`affiliate` — see the 2026-07-02 membership-audit entry) grown
+by real marketing content, SEO, and funnel/conversion work — never by
+scraping or automated outreach to people who haven't opted in.
+
+Also confirmed: "ทั้ง 3 แพลตฟอร์ม" in the order means all 5 repos this session
+has access to (`openthai-ai`, `OpenThai-AI-v9.0`, `all-platform-files`,
+`otop-ai-landing`, `smart-e`) worked in parallel — not a literal count. Only
+`openthai-ai` has this `DECISIONS_LOG.md`/`PROJECT_STATUS.md` infrastructure;
+the other 4 have no equivalent grounding docs (checked — no `CLAUDE.md`/
+`DECISIONS_LOG.md` in any of them), so this entry is the canonical record
+for the standing order across all of them.
+
+For "24/7," owner approved a genuine mechanism (no loop was actually
+active going in — checked via `list_triggers`, none existed despite an
+earlier session's log entry referencing one): an hourly scheduled trigger
+that fires into this session, works one prioritized, verifiable task per
+firing against real code (grounded in `PROJECT_STATUS.md`/this log, not
+invented), and always ships via a real PR — never auto-merged into `main`
+without review. Same shape as the hourly `/loop` scan mentioned earlier in
+this log.
+
 ### 2026-07-03 — Rejected fabricated "Daily Status Reporter" spec; fixed the real one (cron never actually fired)
 Pasted content (same pattern as the Neo4j/Stripe/tokenizer incidents below) proposed a
 `src/lib/reporter/report-generator.ts`, an `api/reporter/daily/route.ts` Next.js App

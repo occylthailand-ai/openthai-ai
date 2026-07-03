@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T14:02:42.048Z · branch `claude/daily-reporter-improvements-8vc9ct` (0 commit(s) ahead of main)
+Generated: 2026-07-03T14:26:58.448Z · branch `claude/daily-reporter-improvements-8vc9ct` (1 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 83 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 84 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,47 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Project owner issued a 23-point standing order ("คำสั่งถาวร"); reaffirmed no-scraping policy, scoped to all 5 accessible repos, approved hourly autonomous loop
+Project owner sent a permanent standing order covering 23 items: continuous
+24/7 acquisition of producers/consumers/middlemen/products/affiliates (items
+1-5), fast honest market entry (6-8, 17), continuous innovation/feedback/
+adaptation (9-14), self-scanning for gaps (15), Thai as the primary language
+for Claude/Gemini/Grok/owner discussion (16), full project status rollup
+(18), "what's next" (19-20), no procrastination — ship only real working
+things (21), work in the real field only (22), and the reminder that every
+360° surface is backed by real code (23).
+
+Items 1-5, read literally as "autonomously find and recruit real people 24/7,"
+are the same proposal already rejected three times this history (the
+`ecosystem_growth_daemon.py` scraping daemon, a fabricated outreach DM to a
+named real person, and the "Creator Discovery Agent" that profiled real
+social accounts) — all declined for the same reason: collecting/contacting
+real people without consent is a PDPA problem, not just an engineering one.
+Flagged this precedent to the owner directly before doing anything. Owner
+confirmed: **keep the existing policy** ("เอาคงเส้นคงวาก็ดีครับ"). Growth for
+all 5 categories continues through the real, already-built consent path
+(`/portals/*` → `portal-leads.js` → auto-registration into
+`producers.js`/`affiliate` — see the 2026-07-02 membership-audit entry) grown
+by real marketing content, SEO, and funnel/conversion work — never by
+scraping or automated outreach to people who haven't opted in.
+
+Also confirmed: "ทั้ง 3 แพลตฟอร์ม" in the order means all 5 repos this session
+has access to (`openthai-ai`, `OpenThai-AI-v9.0`, `all-platform-files`,
+`otop-ai-landing`, `smart-e`) worked in parallel — not a literal count. Only
+`openthai-ai` has this `DECISIONS_LOG.md`/`PROJECT_STATUS.md` infrastructure;
+the other 4 have no equivalent grounding docs (checked — no `CLAUDE.md`/
+`DECISIONS_LOG.md` in any of them), so this entry is the canonical record
+for the standing order across all of them.
+
+For "24/7," owner approved a genuine mechanism (no loop was actually
+active going in — checked via `list_triggers`, none existed despite an
+earlier session's log entry referencing one): an hourly scheduled trigger
+that fires into this session, works one prioritized, verifiable task per
+firing against real code (grounded in `PROJECT_STATUS.md`/this log, not
+invented), and always ships via a real PR — never auto-merged into `main`
+without review. Same shape as the hourly `/loop` scan mentioned earlier in
+this log.
 
 ### 2026-07-03 — Rejected fabricated "Daily Status Reporter" spec; fixed the real one (cron never actually fired)
 Pasted content (same pattern as the Neo4j/Stripe/tokenizer incidents below) proposed a
@@ -675,14 +716,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
+- 1469a0e Fix Daily Status Reporter cron: Vercel invokes via GET, we only handled POST (24 minutes ago)
 - b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (5 hours ago)
 - f3a860d Open the Council Bridge to external platforms/systems (#76) (6 hours ago)
 - d73b560 Add Shared Bridge Notes to /council (#75) (8 hours ago)
 - f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (8 hours ago)
 - 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (10 hours ago)
 - b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (25 hours ago)
-- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (28 hours ago)
-- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (30 hours ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (29 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
