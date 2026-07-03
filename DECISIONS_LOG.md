@@ -11,6 +11,32 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Added PDPA consent gate to all 9 /portals/* public forms
+Asked (via a full consolidated recap of the session's standing instructions,
+item 20: "besides the standing order, what else needs adding") to find
+something genuinely outside the already-covered scan angles. Checked a fresh
+dimension: whether the 9 public data-collection forms comply with PDPA
+(Thailand's Personal Data Protection Act).
+
+A real, substantial `PrivacyPage.jsx` already exists (151 lines, genuine
+legal-basis and data-subject-rights sections referencing PDPA specifically)
+— but none of the 9 `/portals/*` forms linked to it or required consent
+before submitting personal data. PDPA requires informed consent *at the
+point of collection*, not just a policy published elsewhere on the site.
+
+Added a consent checkbox (linking to `/privacy`, opens in a new tab) to all
+9 portal pages (producer, consumer, middleman, affiliate, creator,
+foundation, gov-thai, gov-intl, intl-org), matching each page's existing
+th/en/zh language support. The submit button is disabled until the box is
+checked — an actual gate, not just a decorative notice.
+
+Verified in a real browser (Playwright against `vite preview`, not just a
+build check): submit stays disabled with all required fields filled but
+consent unchecked, becomes enabled only after checking the box, and the
+privacy-policy link is present and opens in a new tab — confirmed on 4 of
+the 9 pages (producer, middleman, affiliate, gov-thai) as a representative
+sample since all 9 share the same generated pattern.
+
 ### 2026-07-03 — Fixed a category enum left inconsistent by my own earlier change
 Asked (in more poetic phrasing) to keep checking every angle for things left
 behind by change/evolution without full cleanup. Checked whether the 2 new
