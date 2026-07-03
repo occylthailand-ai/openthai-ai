@@ -11,6 +11,38 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Rejected fabricated "Daily Status Reporter" spec; fixed the real one (cron never actually fired)
+Pasted content (same pattern as the Neo4j/Stripe/tokenizer incidents below) proposed a
+`src/lib/reporter/report-generator.ts`, an `api/reporter/daily/route.ts` Next.js App
+Router endpoint, and a Supabase `acquisition_pool` table with `lane`/`current_status`
+columns. **None of this exists.** This repo has no `src/lib`, no App Router, no
+TypeScript backend, and no `acquisition_pool` table anywhere — verified by grep and by
+`PROJECT_STATUS.md`. Rejected without building on it.
+
+The real "Daily Status Reporter" is `backend/progress-tracker.js` (10-guild + business
+KPI scorer, Slack-posted), wired to `POST /api/progress/daily-report` in `server.js`
+and scheduled in `vercel.json` as `{ "path": "/api/progress/daily-report", "schedule":
+"30 16 * * *" }`. Investigating it for the legitimate part of the request ("make the
+data more real") surfaced a real bug: **Vercel Cron always invokes via GET and
+authenticates with `Authorization: Bearer $CRON_SECRET`** (confirmed against
+vercel.com/docs/cron-jobs/manage-cron-jobs), but the route was POST-only and checked a
+`x-vercel-cron-secret` header that Vercel never sends. The scheduled report has never
+actually fired in production — only the manual "ส่งรายงานตอนนี้" button in
+`ProgressDashboard.jsx` (POST + `x-admin-key`) ever worked. Fixed: the route now
+handles both GET (real cron, `Authorization: Bearer` check) and POST (admin button,
+`x-admin-key` check), verified locally against both auth shapes plus the 401 rejection
+paths (wrong bearer, no header).
+
+Also replaced one hardcoded KPI with real data: `growth.leads_total` read a literal
+`0` regardless of actual submissions; `progress-tracker.js` now takes `portalLeads` as
+a dependency and counts real rows from `portal_leads`. Verified end-to-end locally:
+submitted a lead via `/api/leads/submit`, confirmed `leads_total` moved from 0 → 1 in
+the next snapshot. Other hardcoded guild KPIs (`affiliates`, `cve_count`,
+`content_pieces`, etc.) were left alone — there's no real data source for them yet
+(e.g. no affiliate-listing function exists despite `backend/data/affiliates.json`;
+`ai_usage_log` table exists in migration 003 but nothing in `backend/*.js` ever writes
+to it), and inventing one wasn't part of this request.
+
 ### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
 Found by accident while investigating a "there are uncommitted changes"
 prompt — the working-tree diff showed the *currently committed* (on `main`,

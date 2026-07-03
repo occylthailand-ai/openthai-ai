@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T09:20:00.146Z · branch `claude/ai-coalition-protocol-hp3rga` (1 commit(s) ahead of main)
+Generated: 2026-07-03T14:02:42.048Z · branch `claude/daily-reporter-improvements-8vc9ct` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 210 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 83 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,38 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Rejected fabricated "Daily Status Reporter" spec; fixed the real one (cron never actually fired)
+Pasted content (same pattern as the Neo4j/Stripe/tokenizer incidents below) proposed a
+`src/lib/reporter/report-generator.ts`, an `api/reporter/daily/route.ts` Next.js App
+Router endpoint, and a Supabase `acquisition_pool` table with `lane`/`current_status`
+columns. **None of this exists.** This repo has no `src/lib`, no App Router, no
+TypeScript backend, and no `acquisition_pool` table anywhere — verified by grep and by
+`PROJECT_STATUS.md`. Rejected without building on it.
+
+The real "Daily Status Reporter" is `backend/progress-tracker.js` (10-guild + business
+KPI scorer, Slack-posted), wired to `POST /api/progress/daily-report` in `server.js`
+and scheduled in `vercel.json` as `{ "path": "/api/progress/daily-report", "schedule":
+"30 16 * * *" }`. Investigating it for the legitimate part of the request ("make the
+data more real") surfaced a real bug: **Vercel Cron always invokes via GET and
+authenticates with `Authorization: Bearer $CRON_SECRET`** (confirmed against
+vercel.com/docs/cron-jobs/manage-cron-jobs), but the route was POST-only and checked a
+`x-vercel-cron-secret` header that Vercel never sends. The scheduled report has never
+actually fired in production — only the manual "ส่งรายงานตอนนี้" button in
+`ProgressDashboard.jsx` (POST + `x-admin-key`) ever worked. Fixed: the route now
+handles both GET (real cron, `Authorization: Bearer` check) and POST (admin button,
+`x-admin-key` check), verified locally against both auth shapes plus the 401 rejection
+paths (wrong bearer, no header).
+
+Also replaced one hardcoded KPI with real data: `growth.leads_total` read a literal
+`0` regardless of actual submissions; `progress-tracker.js` now takes `portalLeads` as
+a dependency and counts real rows from `portal_leads`. Verified end-to-end locally:
+submitted a lead via `/api/leads/submit`, confirmed `leads_total` moved from 0 → 1 in
+the next snapshot. Other hardcoded guild KPIs (`affiliates`, `cve_count`,
+`content_pieces`, etc.) were left alone — there's no real data source for them yet
+(e.g. no affiliate-listing function exists despite `backend/data/affiliates.json`;
+`ai_usage_log` table exists in migration 003 but nothing in `backend/*.js` ever writes
+to it), and inventing one wasn't part of this request.
 
 ### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
 Found by accident while investigating a "there are uncommitted changes"
@@ -643,54 +675,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c281a9f Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (85 seconds ago)
-- f3a860d Open the Council Bridge to external platforms/systems (#76) (82 minutes ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (3 hours ago)
-- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (3 hours ago)
-- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (5 hours ago)
-- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (20 hours ago)
-- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (24 hours ago)
-- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (26 hours ago)
+- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (5 hours ago)
+- f3a860d Open the Council Bridge to external platforms/systems (#76) (6 hours ago)
+- d73b560 Add Shared Bridge Notes to /council (#75) (8 hours ago)
+- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (8 hours ago)
+- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (10 hours ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (25 hours ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (28 hours ago)
+- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (30 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -834,9 +828,9 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
 | `producers.js` | 160 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
-| `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
+| `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7961 | Vercel serverless detection |
+| `server.js` | 7971 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

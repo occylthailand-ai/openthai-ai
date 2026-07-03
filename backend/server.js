@@ -100,7 +100,7 @@ const disputes  = createDisputes(WRITE_DATA_DIR, {
 });
 const portalLeads = createPortalLeads(WRITE_DATA_DIR, { onNewLead: async (lead) => handleNewPortalLead(lead) });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
-const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
+const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory, portalLeads });
 
 import {
   signToken, verifyToken, requireAuth,
@@ -481,17 +481,27 @@ app.get('/api/progress/history', (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// POST /api/progress/daily-report — Vercel Cron trigger (23:30 Thai = 16:30 UTC)
-app.post('/api/progress/daily-report', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key || req.headers['x-vercel-cron-secret'];
-  const adminOk = checkAdminKey(key);
-  const cronOk  = key === process.env.CRON_SECRET;
+// GET+POST /api/progress/daily-report — Vercel Cron trigger (23:30 Thai = 16:30 UTC)
+// Vercel always invokes cron routes via GET and authenticates with `Authorization: Bearer $CRON_SECRET`
+// (https://vercel.com/docs/cron-jobs/manage-cron-jobs) — a POST-only route with no Authorization check
+// never actually fires from the real cron. POST + x-admin-key stays for the "ส่งรายงานตอนนี้" button
+// in ProgressDashboard.jsx.
+async function dailyReportHandler(req, res) {
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const adminOk = checkAdminKey(req.headers['x-admin-key'] || req.query.key);
+  const cronOk  = !!process.env.CRON_SECRET && bearerToken === process.env.CRON_SECRET;
   if (!adminOk && !cronOk) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try {
     const result = await progress.sendDailyReport();
     res.json({ success: true, ...result });
-  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
-});
+  } catch (e) {
+    console.error('[progress/daily-report]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+}
+app.get('/api/progress/daily-report', dailyReportHandler);
+app.post('/api/progress/daily-report', dailyReportHandler);
 
 // PATCH /api/progress/kpi — อัปเดต KPI มือ
 app.patch('/api/progress/kpi', async (req, res) => {

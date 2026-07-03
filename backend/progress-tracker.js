@@ -90,7 +90,7 @@ export function createProgressTracker(dataDir, deps = {}) {
 
   // ดึงข้อมูลจริงจาก subsystems
   async function collectLiveData() {
-    const { producers, orders, inventory, credits: creditsModule } = deps;
+    const { producers, orders, inventory, portalLeads } = deps;
     const live = {};
 
     // Business KPIs
@@ -98,21 +98,26 @@ export function createProgressTracker(dataDir, deps = {}) {
       const prods = await producers?.list?.() ?? [];
       live.producers = prods.length;
       live.producers_approved = prods.filter(p => p.status === 'approved').length;
-    } catch { live.producers = 0; }
+    } catch (e) { console.error('[progress] producers.list failed:', e.message); live.producers = 0; }
 
     try {
       const ords = await orders?.list?.() ?? [];
       live.orders_total = ords.length;
       live.orders_shipped = ords.filter(o => o.status === 'shipped' || o.status === 'delivered').length ?? 0;
       live.revenue_thb = ords.reduce((s, o) => s + (Number(o.amount) || 0), 0);
-    } catch { live.orders_total = 0; live.revenue_thb = 0; }
+    } catch (e) { console.error('[progress] orders.list failed:', e.message); live.orders_total = 0; live.revenue_thb = 0; }
 
     try {
       const invSummary = await inventory?.summary?.() ?? {};
       live.products_live = invSummary.active ?? 0;
       live.products_total = invSummary.products ?? 0;
       live.units_sold = invSummary.unitsSold ?? 0;
-    } catch { live.products_live = 0; }
+    } catch (e) { console.error('[progress] inventory.summary failed:', e.message); live.products_live = 0; }
+
+    try {
+      const leads = await portalLeads?.all?.() ?? [];
+      live.leads_total = leads.length;
+    } catch (e) { console.error('[progress] portalLeads.all failed:', e.message); live.leads_total = 0; }
 
     // System checks
     live.https_ok = true;
@@ -175,7 +180,7 @@ export function createProgressTracker(dataDir, deps = {}) {
       legal:      { compliance_items: 7, pdpa_ok: true, non_mlm_ok: true, tos_live: true },
       blockchain: { otai_whitepaper: true, smart_contract_draft: false, audit_done: false, defi_planned: true },
       devops:     { ci_cd_ok: live.ci_cd_ok, staging_ok: live.staging_ok, deploy_freq_week: 5, mean_recovery_min: 5 },
-      growth:     { affiliates: 0, leads_total: 0, mom_growth_pct: 0, social_channels: 2 },
+      growth:     { affiliates: 0, leads_total: live.leads_total ?? 0, mom_growth_pct: 0, social_channels: 2 },
       content:    { content_pieces: 5, languages: 3, seo_pages: 3, newsletter_subs: 0 },
     };
     return m[guildId] || {};
