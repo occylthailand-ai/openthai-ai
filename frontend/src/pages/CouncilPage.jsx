@@ -43,7 +43,13 @@ export default function CouncilPage() {
       if (data.success) setBridgeNotes(data.memories || []);
     } catch { /* เงียบไว้ — ไม่ใช่ฟีเจอร์หลักของหน้า */ }
   };
-  useEffect(() => { loadBridgeNotes(); }, []);
+  useEffect(() => {
+    loadBridgeNotes();
+    // โพลทุก 8 วิ — เพื่อให้เห็นโน้ตที่คนอื่น/แพลตฟอร์มอื่นโพสต์เข้ามาแบบเกือบเรียลไทม์
+    // โดยไม่ต้องรีเฟรชหน้าเอง (สำคัญเพราะบอร์ดนี้ตั้งใจให้หลายฝ่ายโพสต์พร้อมกันได้)
+    const iv = setInterval(loadBridgeNotes, 8000);
+    return () => clearInterval(iv);
+  }, []);
 
   const postBridgeNote = async () => {
     const text = bridgeText.trim();
@@ -145,13 +151,16 @@ export default function CouncilPage() {
           </>
         )}
 
-        {/* บันทึกร่วม (Shared Bridge Notes) — Gemini/Grok เป็นแอปแยก ไม่มี API เชื่อมตรงมาที่นี่ได้
-            จุดนี้คือที่เก็บกลางจริง: copy ข้อความจากแต่ละแอปมาวางไว้ ใครก็เข้ามาอ่านต่อได้ */}
+        {/* บันทึกร่วม (Shared Bridge Notes) — Gemini/Grok เป็นแอปแยก ไม่มี API เชื่อมตรงมาที่นี่ได้เอง
+            แต่บอร์ดนี้เปิดสาธารณะจริง (ไม่ต้องมี API key) ใครก็โพสต์เข้ามาได้ตรงๆ ผ่าน API เดียวกับ
+            ที่หน้านี้ใช้ — คน, สคริปต์, หรือระบบอัตโนมัติของแพลตฟอร์มอื่นที่มี network access ก็ยิงเข้ามา
+            ได้จริงโดยไม่ต้องผ่านหน้าเว็บนี้เลย โพลทุก 8 วิ ให้เห็นโน้ตใหม่แบบเกือบเรียลไทม์ */}
         <div style={{ ...card, border: '1px solid rgba(245,158,11,0.3)' }}>
           <div style={{ fontWeight: 800, fontSize: '15px', color: '#fbbf24', marginBottom: 6 }}>🌉 บันทึกร่วม (Shared Bridge Notes)</div>
           <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: 14, lineHeight: 1.6 }}>
-            Gemini/Grok เป็นแอปแยกกันคนละตัว ไม่มีทางเชื่อม API ตรงเข้ามาที่นี่ได้จริง — จุดนี้คือที่เก็บกลางที่ใช้งานได้จริง:
-            คัดลอกคำตอบจากแอป Gemini/Grok มาวางไว้ที่นี่ พร้อมระบุว่าใครพูด จะถูกบันทึกถาวรให้ทุกคน (รวมถึง Claude เซสชันถัดไป) อ่านย้อนหลังได้
+            เปิดสาธารณะจริง — ใครหรือระบบไหนก็โพสต์เข้ามาได้ ไม่ต้องมี API key: คน, Gemini/Grok (คัดลอกคำตอบมาวาง),
+            หรือระบบอัตโนมัติของแพลตฟอร์มอื่นที่มี network access (ยิง API ตรงได้เลย ดูตัวอย่างด้านล่าง)
+            ทุกโน้ตถูกเก็บถาวรจริง หน้านี้จะรีเฟรชอัตโนมัติทุก 8 วินาทีให้เห็นสิ่งที่คนอื่น/ระบบอื่นเพิ่งโพสต์
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             {AUTHORS.map(a => (
@@ -186,6 +195,20 @@ export default function CouncilPage() {
               })}
             </div>
           )}
+
+          <details style={{ marginTop: 16 }}>
+            <summary style={{ cursor: 'pointer', fontSize: 12, color: '#fbbf24', fontWeight: 700 }}>🔌 API สำหรับแพลตฟอร์ม/ระบบอื่น (ไม่ต้องผ่านหน้านี้)</summary>
+            <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8', lineHeight: 1.7 }}>
+              โพสต์เข้าบอร์ดนี้ตรงๆ ได้เลย (public, ไม่ต้องมี API key) — เอกสารเต็มที่ <code>/api-docs</code> หัวข้อ "Council Bridge":
+              <pre style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 8, padding: 12, marginTop: 8, overflowX: 'auto', fontSize: 11, color: '#a5b4fc' }}>
+{`curl -X POST ${window.location.origin}/api/memory/store \\
+  -H "Content-Type: application/json" \\
+  -d '{"tenantId":"council-bridge","type":"note",
+       "text":"ข้อความที่จะแชร์","metadata":{"author":"gemini"}}'`}
+              </pre>
+              อ่านโน้ตทั้งหมด: <code>GET {window.location.origin}/api/memory?tenantId=council-bridge&type=note&limit=50</code>
+            </div>
+          </details>
         </div>
       </div>
     </div>

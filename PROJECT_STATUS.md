@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T06:27:50.719Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
+Generated: 2026-07-03T07:38:50.491Z · branch `claude/ai-coalition-protocol-hp3rga` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -25,6 +25,35 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Opened the Council Bridge to external platforms/systems, not just the UI form
+Asked to make the Shared Bridge Notes (added the same day) actually open to
+"other people or other platforms," not just the project owner filling in
+the form. Checked the real gap: `POST /api/memory/store` (the endpoint the
+bridge is built on) was already public/unauthenticated by design, but wasn't
+documented anywhere — no external system could discover it existed without
+reading the frontend source.
+
+Fixed with 3 real, verified changes:
+1. Documented `/api/memory/store` and `GET /api/memory` in `backend/openapi.js`
+   under a new "Council Bridge" tag — now discoverable at `/api-docs` like any
+   other real endpoint, with the exact `tenantId`/`type` shape needed to
+   appear on the board.
+2. Added an in-page "🔌 API สำหรับแพลตฟอร์ม/ระบบอื่น" expander directly on
+   `/council` with a working `curl` example — so a developer or an automated
+   system doesn't need to find the OpenAPI docs first.
+3. Added live polling (every 8s) to the notes feed — previously it only
+   loaded once on page mount, so two people/systems posting concurrently
+   would never see each other's notes without a manual reload.
+
+Verified all three live: confirmed both paths appear in the real
+`/api/openapi.json` response; posted a note via raw `curl` with no browser
+involved at all (simulating an external platform), confirmed it appeared on
+page load; then, with the page already open, posted a second note via raw
+`fetch` from within the page context (bypassing the UI form entirely) and
+confirmed it appeared automatically via polling within ~9.5s with zero page
+reload — proving concurrent external posting genuinely works, not just
+"should work."
 
 ### 2026-07-03 — Built the real version of the fictional "agent bridge": Shared Bridge Notes on /council
 After rejecting several fabricated "Inter-Agent Bridge" claims this session
@@ -588,7 +617,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 092048b Add Shared Bridge Notes to /council -- the real version of the fictional agent bridge (2 minutes ago)
+- 59cf629 Open the Council Bridge to external platforms/systems, not just the UI form (73 seconds ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -610,8 +639,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 270,
-  "memory_mb": "19.0",
+  "uptime_sec": 0,
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -766,7 +795,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
-| `openapi.js` | 651 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
+| `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 98 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
