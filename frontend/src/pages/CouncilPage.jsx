@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 
@@ -11,12 +11,55 @@ const SAMPLE_TOPICS = [
   'ฟีเจอร์ไหนควรทำต่อเพื่อให้แพลตฟอร์มโตเร็วที่สุด',
 ];
 
+// ── บันทึกร่วม (Shared Bridge Notes) ──────────────────────────────────────────
+// Gemini/Grok เป็นแอปแยกกันคนละตัว ไม่มี API ให้เชื่อมตรงจากที่นี่ได้ — "สะพาน" ที่ทำได้จริง
+// คือจุดบันทึกกลางที่คน copy-paste คำตอบจากแต่ละแอปมาเก็บไว้ ให้ทุกคน (รวมถึง Claude ในเซสชัน
+// ถัดไป) อ่านย้อนหลังได้จริง ใช้ /api/memory (ของจริง มีอยู่แล้ว) ภายใต้ tenantId เฉพาะ
+const BRIDGE_TENANT = 'council-bridge';
+const AUTHORS = [
+  { id: 'user', label: '🧑 ฉัน (ท่านประธาน)', color: '#f8fafc' },
+  { id: 'claude', label: '🟣 Claude', color: '#c4b5fd' },
+  { id: 'gemini', label: '🔵 Gemini', color: '#93c5fd' },
+  { id: 'grok', label: '⚫ Grok', color: '#e5e7eb' },
+];
+
 export default function CouncilPage() {
   const navigate = useNavigate();
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+
+  const [bridgeAuthor, setBridgeAuthor] = useState('user');
+  const [bridgeText, setBridgeText] = useState('');
+  const [bridgeNotes, setBridgeNotes] = useState([]);
+  const [bridgeLoading, setBridgeLoading] = useState(false);
+  const [bridgeError, setBridgeError] = useState('');
+
+  const loadBridgeNotes = async () => {
+    try {
+      const res = await fetch(apiUrl(`/api/memory?tenantId=${BRIDGE_TENANT}&type=note&limit=50`));
+      const data = await res.json();
+      if (data.success) setBridgeNotes(data.memories || []);
+    } catch { /* เงียบไว้ — ไม่ใช่ฟีเจอร์หลักของหน้า */ }
+  };
+  useEffect(() => { loadBridgeNotes(); }, []);
+
+  const postBridgeNote = async () => {
+    const text = bridgeText.trim();
+    if (!text) { setBridgeError('พิมพ์ข้อความก่อนบันทึก'); return; }
+    setBridgeError(''); setBridgeLoading(true);
+    try {
+      const res = await fetch(apiUrl('/api/memory/store'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: BRIDGE_TENANT, type: 'note', text, metadata: { author: bridgeAuthor } }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'บันทึกไม่สำเร็จ');
+      setBridgeText('');
+      await loadBridgeNotes();
+    } catch (e) { setBridgeError(e.message); } finally { setBridgeLoading(false); }
+  };
 
   const run = async (t) => {
     const q = (t ?? topic).trim();
@@ -101,6 +144,49 @@ export default function CouncilPage() {
             )}
           </>
         )}
+
+        {/* บันทึกร่วม (Shared Bridge Notes) — Gemini/Grok เป็นแอปแยก ไม่มี API เชื่อมตรงมาที่นี่ได้
+            จุดนี้คือที่เก็บกลางจริง: copy ข้อความจากแต่ละแอปมาวางไว้ ใครก็เข้ามาอ่านต่อได้ */}
+        <div style={{ ...card, border: '1px solid rgba(245,158,11,0.3)' }}>
+          <div style={{ fontWeight: 800, fontSize: '15px', color: '#fbbf24', marginBottom: 6 }}>🌉 บันทึกร่วม (Shared Bridge Notes)</div>
+          <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: 14, lineHeight: 1.6 }}>
+            Gemini/Grok เป็นแอปแยกกันคนละตัว ไม่มีทางเชื่อม API ตรงเข้ามาที่นี่ได้จริง — จุดนี้คือที่เก็บกลางที่ใช้งานได้จริง:
+            คัดลอกคำตอบจากแอป Gemini/Grok มาวางไว้ที่นี่ พร้อมระบุว่าใครพูด จะถูกบันทึกถาวรให้ทุกคน (รวมถึง Claude เซสชันถัดไป) อ่านย้อนหลังได้
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+            {AUTHORS.map(a => (
+              <button key={a.id} onClick={() => setBridgeAuthor(a.id)}
+                style={{ padding: '6px 12px', borderRadius: 16, border: `1px solid ${bridgeAuthor === a.id ? a.color : 'rgba(255,255,255,0.15)'}`, background: bridgeAuthor === a.id ? `${a.color}22` : 'transparent', color: a.color, fontSize: 12, cursor: 'pointer', fontWeight: bridgeAuthor === a.id ? 700 : 400 }}>
+                {a.label}
+              </button>
+            ))}
+          </div>
+          <textarea value={bridgeText} onChange={e => setBridgeText(e.target.value)} rows={3}
+            placeholder="วางข้อความที่ได้จาก Gemini/Grok (หรือพิมพ์ของตัวเอง) ตรงนี้…"
+            style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
+          {bridgeError && <div style={{ color: '#fca5a5', fontSize: 12, marginTop: 8 }}>{bridgeError}</div>}
+          <button onClick={postBridgeNote} disabled={bridgeLoading}
+            style={{ marginTop: 10, padding: '9px 18px', borderRadius: 8, border: 'none', background: bridgeLoading ? '#374151' : '#f59e0b', color: '#000', fontSize: 13, fontWeight: 700, cursor: bridgeLoading ? 'not-allowed' : 'pointer' }}>
+            {bridgeLoading ? 'กำลังบันทึก…' : '📌 บันทึกลงสะพาน'}
+          </button>
+
+          {bridgeNotes.length > 0 && (
+            <div style={{ marginTop: 16, display: 'grid', gap: 10, maxHeight: 360, overflowY: 'auto' }}>
+              {bridgeNotes.map(n => {
+                const a = AUTHORS.find(x => x.id === n.metadata?.author) || AUTHORS[0];
+                return (
+                  <div key={n.id} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, borderLeft: `3px solid ${a.color}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: a.color, fontWeight: 700, marginBottom: 4 }}>
+                      <span>{a.label}</span>
+                      <span style={{ color: '#64748b', fontWeight: 400 }}>{new Date(n.ts).toLocaleString('th-TH')}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: '#e5e7eb', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{n.text}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
