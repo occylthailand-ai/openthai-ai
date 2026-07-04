@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T09:20:00.146Z · branch `claude/ai-coalition-protocol-hp3rga` (1 commit(s) ahead of main)
+Generated: 2026-07-04T08:41:04.416Z · branch `claude/openthaiai-strategy-pivot-zdc1vs` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -26,7 +26,54 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
-### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
+### 2026-07-04 — Strategy pivot (Option 1): sell a human-delivered matching service at ฿15k-25k, built the real /services page + warm-contact scripts
+Project owner pasted an external AI's strategy analysis (100k THB cash goal by
+2026-07-31, 27 days out) and asked for an assessment, then picked its "Option
+1" (sell fast, warm outreach, service not system). Verified the pasted claims
+against the repo first: its core conclusion was right, but "matching system
+partially ready" was inflated — grep confirmed **no matching engine exists**
+(matching is a human looking at Admin Panel leads), and its "5-15% cold reply
+rate" was an invented stat. The decisive real fact: subscription pricing in
+`omise-payment.js` is ฿0/20/30 per month — the platform structurally cannot
+produce ฿100k in 27 days; only selling the owner's own service (platform as
+credibility/tooling) can.
+
+Built Option 1 for real, all verified end-to-end (local backend + Playwright
+in a real browser, 10/10 checks):
+1. **`/services` page** (`ServicePackagesPage.jsx`, Thai-only — the audience
+   is Thai warm contacts): 3 one-time packages (Starter ฿15,000 / Business
+   ฿20,000 / Premium ฿25,000 per org) describing only deliverables that are
+   human-doable or already exist in the system (curated matching from real
+   portal signups, AI content via existing skills, 30/60-day follow-up).
+   Includes a non-removable honesty box: matching is done by the team (not an
+   automated engine), **no sales guarantees, no unverifiable stats** — the
+   same grounding rule as every outreach file. Form = consultation lead (talk
+   before any payment), posts to the existing `/api/leads/submit` with new
+   type `service-package`, PDPA consent gate per the 2026-07-03 standard,
+   and (unlike the older portal forms) checks the response instead of
+   fake-success on silent failure.
+2. **Backend/Admin**: added `service-package` to `portal-leads.js` KNOWN_TYPES
+   (counts work automatically; `registered` stays null — correct, there's no
+   auto-register counterpart for a service sale); Admin Panel type
+   filter/labels/colors updated.
+3. **Discoverability**: banner on `/pricing` (with th/en/zh i18n keys) linking
+   to `/services` — clearly separated from the ฿20-30 subscriptions.
+4. **`docs/outreach/warm-contact-scripts.md`**: 5 scripts (portal signups
+   first — they already consented and self-selected; then known business
+   contacts, phone outline, referral ask, single follow-up) + objection
+   answers. Hard rules baked in: known contacts only (no scraped lists —
+   rejected 3x already), no fake familiarity, no invented numbers, one
+   follow-up max.
+
+Verified live: POST with type `service-package` → appears in
+`/api/leads/admin/search` as `portal:service-package` with correct count;
+browser flow on `vite preview` — consent gate blocks submit until checked,
+Premium selection recorded in the persisted lead, pricing banner navigates to
+`/services`. Existing frontend tests still pass (30/30). Committed
+PROJECT_STATUS.md regen: route table now includes `/services`; its production
+health section reads HTTP 403 because this sandbox can't reach
+www.openthai-ai.com (known limitation) — CI re-syncs it with real health on
+the next PR.
 Found by accident while investigating a "there are uncommitted changes"
 prompt — the working-tree diff showed the *currently committed* (on `main`,
 via PR #76's auto-sync) `PROJECT_STATUS.md` claimed "Git history: 1 commits,
@@ -637,60 +684,22 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 81 route components resolved
+- ✅ **Route components exist on disk** — all 82 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c281a9f Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (85 seconds ago)
-- f3a860d Open the Council Bridge to external platforms/systems (#76) (82 minutes ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (3 hours ago)
-- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (3 hours ago)
-- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (5 hours ago)
-- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (20 hours ago)
-- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (24 hours ago)
-- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (26 hours ago)
+- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (23 hours ago)
+- f3a860d Open the Council Bridge to external platforms/systems (#76) (25 hours ago)
+- d73b560 Add Shared Bridge Notes to /council (#75) (26 hours ago)
+- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (27 hours ago)
+- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (29 hours ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (2 days ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (2 days ago)
+- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (2 days ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -731,7 +740,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (81 routes)
+## Route map (82 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -761,6 +770,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /integrations | IntegrationHubPage | auth |
 | / | LandingPage | public |
 | /pricing | PricingPage | public |
+| /services | ServicePackagesPage | public |
 | /join | ProducerJoinPage | public |
 | /producers | ProducerJoinPage | public |
 | /catalog | CatalogPage | public |

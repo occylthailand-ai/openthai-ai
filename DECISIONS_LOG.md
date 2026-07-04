@@ -11,7 +11,54 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
-### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
+### 2026-07-04 — Strategy pivot (Option 1): sell a human-delivered matching service at ฿15k-25k, built the real /services page + warm-contact scripts
+Project owner pasted an external AI's strategy analysis (100k THB cash goal by
+2026-07-31, 27 days out) and asked for an assessment, then picked its "Option
+1" (sell fast, warm outreach, service not system). Verified the pasted claims
+against the repo first: its core conclusion was right, but "matching system
+partially ready" was inflated — grep confirmed **no matching engine exists**
+(matching is a human looking at Admin Panel leads), and its "5-15% cold reply
+rate" was an invented stat. The decisive real fact: subscription pricing in
+`omise-payment.js` is ฿0/20/30 per month — the platform structurally cannot
+produce ฿100k in 27 days; only selling the owner's own service (platform as
+credibility/tooling) can.
+
+Built Option 1 for real, all verified end-to-end (local backend + Playwright
+in a real browser, 10/10 checks):
+1. **`/services` page** (`ServicePackagesPage.jsx`, Thai-only — the audience
+   is Thai warm contacts): 3 one-time packages (Starter ฿15,000 / Business
+   ฿20,000 / Premium ฿25,000 per org) describing only deliverables that are
+   human-doable or already exist in the system (curated matching from real
+   portal signups, AI content via existing skills, 30/60-day follow-up).
+   Includes a non-removable honesty box: matching is done by the team (not an
+   automated engine), **no sales guarantees, no unverifiable stats** — the
+   same grounding rule as every outreach file. Form = consultation lead (talk
+   before any payment), posts to the existing `/api/leads/submit` with new
+   type `service-package`, PDPA consent gate per the 2026-07-03 standard,
+   and (unlike the older portal forms) checks the response instead of
+   fake-success on silent failure.
+2. **Backend/Admin**: added `service-package` to `portal-leads.js` KNOWN_TYPES
+   (counts work automatically; `registered` stays null — correct, there's no
+   auto-register counterpart for a service sale); Admin Panel type
+   filter/labels/colors updated.
+3. **Discoverability**: banner on `/pricing` (with th/en/zh i18n keys) linking
+   to `/services` — clearly separated from the ฿20-30 subscriptions.
+4. **`docs/outreach/warm-contact-scripts.md`**: 5 scripts (portal signups
+   first — they already consented and self-selected; then known business
+   contacts, phone outline, referral ask, single follow-up) + objection
+   answers. Hard rules baked in: known contacts only (no scraped lists —
+   rejected 3x already), no fake familiarity, no invented numbers, one
+   follow-up max.
+
+Verified live: POST with type `service-package` → appears in
+`/api/leads/admin/search` as `portal:service-package` with correct count;
+browser flow on `vite preview` — consent gate blocks submit until checked,
+Premium selection recorded in the persisted lead, pricing banner navigates to
+`/services`. Existing frontend tests still pass (30/30). Committed
+PROJECT_STATUS.md regen: route table now includes `/services`; its production
+health section reads HTTP 403 because this sandbox can't reach
+www.openthai-ai.com (known limitation) — CI re-syncs it with real health on
+the next PR.
 Found by accident while investigating a "there are uncommitted changes"
 prompt — the working-tree diff showed the *currently committed* (on `main`,
 via PR #76's auto-sync) `PROJECT_STATUS.md` claimed "Git history: 1 commits,

@@ -20,6 +20,7 @@ const AIToolsHub = lazy(() => import('./pages/AIToolsHub'));
 const AffiliatePage = lazy(() => import('./pages/AffiliatePage'));
 const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
+const ServicePackagesPage = lazy(() => import('./pages/ServicePackagesPage'));
 const ProducerJoinPage = lazy(() => import('./pages/ProducerJoinPage'));
 const CatalogPage = lazy(() => import('./pages/CatalogPage'));
 const ProducerDirectoryPage = lazy(() => import('./pages/ProducerDirectoryPage'));
@@ -172,6 +173,7 @@ function App() {
             {/* Public pages — ไม่ต้อง login */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<PricingPage />} />
+            <Route path="/services" element={<ServicePackagesPage />} />
             <Route path="/join" element={<ProducerJoinPage />} />
             <Route path="/producers" element={<ProducerJoinPage />} />
             <Route path="/catalog" element={<CatalogPage />} />

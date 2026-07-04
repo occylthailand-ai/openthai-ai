@@ -87,6 +87,16 @@ export default function PricingPage() {
         ))}
       </section>
 
+      {/* SERVICE PACKAGES BANNER — บริการจับคู่แบบทีมงานทำให้ (คนละอย่างกับ subscription ฿20-30) */}
+      <section style={{ maxWidth: 700, margin: '0 auto', padding: '0 5% 40px', textAlign: 'center' }}>
+        <div style={{ ...card, background: 'linear-gradient(135deg,rgba(99,102,241,0.1),rgba(14,165,233,0.08))', border: '1.5px solid rgba(99,102,241,0.25)' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🤝</div>
+          <h3 style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>{t('pp.svc.title')}</h3>
+          <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>{t('pp.svc.desc')}</p>
+          <button onClick={() => navigate('/services')} style={{ ...primaryBtn, background: 'linear-gradient(135deg,#6366f1,#0ea5e9)' }}>{t('pp.svc.cta')}</button>
+        </div>
+      </section>
+
       {/* AFFILIATE BANNER */}
       <section style={{ maxWidth: 700, margin: '0 auto', padding: '0 5% 80px', textAlign: 'center' }}>
         <div style={{ ...card, background: 'linear-gradient(135deg,rgba(254,44,85,0.08),rgba(99,102,241,0.08))', border: '1.5px solid rgba(99,102,241,0.2)' }}>
