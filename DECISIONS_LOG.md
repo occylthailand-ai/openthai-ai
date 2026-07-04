@@ -11,6 +11,41 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 16: real-browser E2E pass on the actual funnel UI — clean, no code change this run
+5 items still pending an owner decision, unchanged; PR #79's latest deploy
+succeeded.
+
+After 5 straight runs of backend security work (runs 11-15), deliberately
+switched to a different verification angle instead of scanning for more
+endpoint gaps: every check this session so far has been `curl`/API-level or
+the AI-generated `otop-ai-landing` page — **never the actual React frontend
+of `openthai-ai` itself, driven through a real browser.** Booted the real
+backend (port 8000) and the real Vite dev server together (matching how
+this app actually runs, not an isolated API test) and used Playwright to
+click through the funnel a real visitor would use.
+
+- `/portals` hub: all 6 category cards render correctly, both desktop and
+  mobile (390px) viewports.
+- `/portals/consumer`: filled the real form (name, country, email, category,
+  PDPA checkbox) and submitted through the actual UI — first attempt
+  correctly blocked by native browser validation on a required field I'd
+  skipped (not a bug, the form's own validation working as intended); second
+  attempt with all fields completed showed the real success screen. Cross-
+  checked the backend directly afterward (`GET /api/leads/admin/search`) and
+  confirmed the submission that came through the browser was recorded with
+  the exact data typed into the form — the whole pipeline (React form → real
+  fetch → backend → persisted record) is connected correctly end-to-end, not
+  just each piece verified in isolation.
+- `/join` (producer signup): renders correctly, all fields present and
+  correctly laid out.
+- Zero console errors, zero failed requests other than expected sandbox
+  network blocks (Google Fonts / Tag Manager, unrelated to the app).
+
+No bug found this run — logging the clean result honestly rather than
+inventing a change to ship. This closes a real gap in this session's own
+verification coverage: every fix in runs 1-15 was checked against the
+backend directly, never against the actual rendered UI a real person uses.
+
 ### 2026-07-04 — Hourly loop, run 15: last run's webhook fix had a bypass door — found and closed it too
 5 items still pending an owner decision, unchanged. PR #79's latest deploy
 succeeded; still only the Vercel bot on comments.
