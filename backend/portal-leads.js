@@ -93,5 +93,25 @@ export function createPortalLeads(dataDir, opts = {}) {
     res.json({ success: true, id: r.id });
   }));
 
-  return { router, submit, all, KNOWN_TYPES };
+  // ทำเครื่องหมาย unsubscribed สำหรับ lead ทุกรายการที่ email+type ตรงกัน (เช่นเดียวกับ
+  // consumer digest ที่ sendConsumerDigest() ต้องข้ามหลังจากนี้) — PDPA ต้องให้ผู้สมัคร
+  // ถอนความยินยอมได้ ไม่ใช่แค่เก็บข้อมูลไว้แล้วส่งอีเมลต่อเนื่องไปเรื่อยๆ
+  async function unsubscribe(email, type) {
+    const e = (email || '').toString().trim().toLowerCase();
+    if (!e) return { ok: false, error: 'invalid email' };
+    if (useSB) {
+      try {
+        await sbReq('PATCH', '/portal_leads', { body: { unsubscribed: true }, params: { email: `eq.${e}`, type: `eq.${type}` }, prefer: 'return=minimal' });
+        return { ok: true };
+      } catch (err) { console.warn('[portal-leads] unsubscribe SB failed, using file:', err.message); }
+    }
+    let matched = 0;
+    for (const rec of Object.values(store)) {
+      if (rec.email === e && rec.type === type) { rec.unsubscribed = true; matched++; }
+    }
+    if (matched > 0) saveFile();
+    return { ok: true, matched };
+  }
+
+  return { router, submit, all, unsubscribe, KNOWN_TYPES };
 }

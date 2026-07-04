@@ -132,6 +132,18 @@ app.use(orders.router);
 app.use(disputes.router);
 // Portal lead capture — /api/leads/submit (the endpoint all 7 /portals/* pages call)
 app.use(portalLeads.router);
+
+// GET /api/leads/unsubscribe — one-click unsubscribe link in consumer-digest emails (PDPA:
+// ผู้สมัครต้องถอนความยินยอมรับอีเมลต่อเนื่องได้ ไม่ใช่แค่สมัครแล้วไม่มีทางออก)
+app.get('/api/leads/unsubscribe', async (req, res) => {
+  const { email, type, token } = req.query;
+  if (!email || !type || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const expected = unsubToken(String(email).toLowerCase(), String(type));
+  if (token !== expected) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  const r = await portalLeads.unsubscribe(email, type);
+  if (!r.ok) return res.status(400).send(r.error || 'ยกเลิกไม่สำเร็จ');
+  res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยกเลิกรับอีเมลเรียบร้อยแล้ว</div>');
+});
 // Inventory / first-party shop routes — /api/shop/products
 app.use(inventory.router);
 
@@ -962,10 +974,18 @@ async function sendPortalWelcomeEmail(lead) {
 // เหมือนที่เคยแก้ไปแล้วรอบก่อน ฟังก์ชันนี้คือของจริง: ส่งสรุปสินค้าจาก catalog ที่อนุมัติแล้ว
 // ตรงกับหมวดที่ผู้บริโภคเลือกไว้ตอนสมัคร — ใช้ category string เดียวกับที่ producers.js ใช้แล้ว
 // (sync กันไว้ตั้งแต่รอบก่อนหน้านี้) ไม่มีข้อมูลปลอม/แต่งเติม ใช้ producers.catalog() ตรงๆ
+// token ยืนยันตัวก่อน unsubscribe — กันไม่ให้ใครก็ตามที่รู้แค่ email คนอื่นมากด unsubscribe แทนได้
+// ใช้ secret เดียวกับที่ tenant-manager.js ใช้อยู่แล้ว (fallback คงที่ ไม่ใช้ crypto.randomBytes
+// แบบ auth.js เพราะ token นี้ถูกส่งออกไปในอีเมลจริง ต้องยังใช้ได้แม้เซิร์ฟเวอร์ restart)
+const UNSUB_SECRET = process.env.JWT_SECRET || 'openthai-jwt-secret-2026';
+function unsubToken(email, type) {
+  return createHmac('sha256', UNSUB_SECRET).update(`${email}:${type}`).digest('hex').slice(0, 16);
+}
+
 async function sendConsumerDigest() {
   if (!mailer) return { ok: false, error: 'ไม่มี SMTP_USER — ตั้งค่าก่อนส่ง digest จริง' };
   const leads = await portalLeads.all();
-  const consumers = leads.filter((l) => l.type === 'consumer' && l.email);
+  const consumers = leads.filter((l) => l.type === 'consumer' && l.email && !l.unsubscribed);
   const catalog = await producers.catalog();
   let sent = 0, skipped = 0, failed = 0;
 
@@ -983,6 +1003,8 @@ async function sendConsumerDigest() {
       en: `Hi ${escapeHtml(lead.name || '')}, here are verified-producer picks in your selected category`,
       zh: `您好${escapeHtml(lead.name || '')}，以下是您感兴趣分类中的认证生产商产品`,
     };
+    const unsubUrl = `${DOMAIN_URL}/api/leads/unsubscribe?email=${encodeURIComponent(lead.email)}&type=consumer&token=${unsubToken(lead.email, 'consumer')}`;
+    const unsubByLang = { th: 'ยกเลิกรับอีเมลนี้', en: 'Unsubscribe', zh: '取消订阅' };
     try {
       await mailer.sendMail({
         from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
@@ -995,7 +1017,7 @@ async function sendConsumerDigest() {
             <p style="margin:0 0 14px;">${introByLang[lang]}</p>
             <table style="width:100%;border-collapse:collapse;">${itemsHtml}</table>
           </div>
-          <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${DOMAIN_URL}" style="color:#6366f1;">${DOMAIN_URL.replace(/^https?:\/\//, '')}</a></div>
+          <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${DOMAIN_URL}" style="color:#6366f1;">${DOMAIN_URL.replace(/^https?:\/\//, '')}</a> · <a href="${unsubUrl}" style="color:#64748b;">${unsubByLang[lang]}</a></div>
         </div>`,
       });
       sent++;

@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T23:12:52.612Z · branch `claude/daily-reporter-improvements-8vc9ct` (21 commit(s) ahead of main)
+Generated: 2026-07-04T00:11:25.418Z · branch `claude/daily-reporter-improvements-8vc9ct` (22 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 231 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 105 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,39 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-03 — Hourly loop, run 9: the consumer digest I shipped last run had no unsubscribe link — added one, PDPA needs it
+3 flagged decisions still unanswered; re-checked all 3 PR threads again,
+still only the Vercel bot.
+
+Audited my own run-7 work again instead of scanning for something new: the
+weekly consumer digest sends real recurring marketing email to real people,
+but shipped with **zero way to opt out** — checked the whole codebase
+(`grep unsubscribe`), no unsubscribe mechanism exists anywhere for any email
+this app sends. This project has repeatedly emphasized PDPA consent (the
+9-portal consent gate entry earlier in this log) — consent to receive
+something also has to include a real way to withdraw it, not just a
+one-time checkbox at signup. Since I'm the one who just turned a one-time
+welcome email into a recurring one, this was mine to close before letting
+the loop move on to something else.
+
+Added `portalLeads.unsubscribe(email, type)` (flags matching lead records,
+same Supabase/file dual-mode pattern as the rest of that module) and `GET
+/api/leads/unsubscribe` in `server.js`, gated by an HMAC token
+(`unsubToken()`, keyed off the same `JWT_SECRET` `tenant-manager.js` already
+uses as a stable general-purpose secret — deliberately not `auth.js`'s
+`crypto.randomBytes` fallback, since that regenerates on every restart and
+would invalidate every link already mailed out) so a malicious actor can't
+unsubscribe someone else just by knowing their email. `sendConsumerDigest()`
+now filters out `unsubscribed` leads and every digest email includes the
+real unsubscribe link.
+
+Verified live end-to-end, not just code review: registered 2 real consumers
++ 1 approved producer in a matching category, ran the digest
+(`total_consumers: 2`), computed the real HMAC token and hit the
+unsubscribe endpoint for one of them, re-ran the digest — `total_consumers`
+correctly dropped to `1`. Also confirmed the negative paths: missing
+params → 400, wrong/guessed token → 403 (didn't unsubscribe anything).
 
 ### 2026-07-03 — Hourly loop, run 8: full regression pass across 7 runs of changes — one real (small) find, two false alarms caught before being "fixed"
 3 flagged decisions still unanswered; PR comments re-checked, still nothing
@@ -1106,54 +1139,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 351867c Log run 8: full regression pass, one real test fix, two false alarms avoided (45 seconds ago)
-- 938636c chore: sync PROJECT_STATUS.md [skip ci] (58 seconds ago)
-- edf92d6 Fix stale test: DELETE /api/scheduler/:id now requires x-admin-key (77 seconds ago)
-- 977c634 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- c680a26 Build the real weekly consumer digest the welcome email already promises (60 minutes ago)
-- efb6ec1 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 5338162 Log run 6: caught a latent vercel.json routing bug before it shipped broken (2 hours ago)
-- 7717486 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 1c18c2d chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 351867c Log run 8: full regression pass, one real test fix, two false alarms avoided (59 minutes ago)
+- 938636c chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- edf92d6 Fix stale test: DELETE /api/scheduler/:id now requires x-admin-key (60 minutes ago)
+- 977c634 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- c680a26 Build the real weekly consumer digest the welcome email already promises (2 hours ago)
+- efb6ec1 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 5338162 Log run 6: caught a latent vercel.json routing bug before it shipped broken (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -1293,13 +1288,13 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
-| `portal-leads.js` | 98 | Portal Leads — captures submissions from the /portals/* landing pages |
+| `portal-leads.js` | 118 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
 | `producers.js` | 189 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8101 | Vercel serverless detection |
+| `server.js` | 8123 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

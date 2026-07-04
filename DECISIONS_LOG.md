@@ -11,6 +11,39 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Hourly loop, run 9: the consumer digest I shipped last run had no unsubscribe link — added one, PDPA needs it
+3 flagged decisions still unanswered; re-checked all 3 PR threads again,
+still only the Vercel bot.
+
+Audited my own run-7 work again instead of scanning for something new: the
+weekly consumer digest sends real recurring marketing email to real people,
+but shipped with **zero way to opt out** — checked the whole codebase
+(`grep unsubscribe`), no unsubscribe mechanism exists anywhere for any email
+this app sends. This project has repeatedly emphasized PDPA consent (the
+9-portal consent gate entry earlier in this log) — consent to receive
+something also has to include a real way to withdraw it, not just a
+one-time checkbox at signup. Since I'm the one who just turned a one-time
+welcome email into a recurring one, this was mine to close before letting
+the loop move on to something else.
+
+Added `portalLeads.unsubscribe(email, type)` (flags matching lead records,
+same Supabase/file dual-mode pattern as the rest of that module) and `GET
+/api/leads/unsubscribe` in `server.js`, gated by an HMAC token
+(`unsubToken()`, keyed off the same `JWT_SECRET` `tenant-manager.js` already
+uses as a stable general-purpose secret — deliberately not `auth.js`'s
+`crypto.randomBytes` fallback, since that regenerates on every restart and
+would invalidate every link already mailed out) so a malicious actor can't
+unsubscribe someone else just by knowing their email. `sendConsumerDigest()`
+now filters out `unsubscribed` leads and every digest email includes the
+real unsubscribe link.
+
+Verified live end-to-end, not just code review: registered 2 real consumers
++ 1 approved producer in a matching category, ran the digest
+(`total_consumers: 2`), computed the real HMAC token and hit the
+unsubscribe endpoint for one of them, re-ran the digest — `total_consumers`
+correctly dropped to `1`. Also confirmed the negative paths: missing
+params → 400, wrong/guessed token → 403 (didn't unsubscribe anything).
+
 ### 2026-07-03 — Hourly loop, run 8: full regression pass across 7 runs of changes — one real (small) find, two false alarms caught before being "fixed"
 3 flagged decisions still unanswered; PR comments re-checked, still nothing
 but the Vercel bot on all 3 PRs.
