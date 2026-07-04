@@ -11,6 +11,65 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 17: affiliate withdrawal hijack — `promptpay` accepted with zero ownership check, fixed with email confirmation
+
+**Found while re-reading `POST /api/affiliate/withdraw` after the webhook
+data-exfiltration fix from run 15** (same instinct: "what else trusts a
+request-body field as if it were verified identity?"). `AffiliateDashboard.jsx`
+has no login system at all — it's reached purely via `?ref=XXXXX` in the URL,
+and `ref_code` is not a secret: it's embedded in every affiliate's public
+referral link, which affiliates are explicitly encouraged to share on TikTok/
+IG to their followers. The withdrawal endpoint accepted a `promptpay` payout
+number straight from the request body with no check that the caller was the
+real affiliate. Anyone who had ever seen an affiliate's public referral link
+— potentially shared with thousands of followers — could submit a withdrawal
+request that redirected that affiliate's real earned commission to an
+attacker-controlled PromptPay account. Admin approval was already required
+before money actually moves, but the admin has no way to know the PromptPay
+number shown isn't the real affiliate's — so real money was genuinely at risk
+of being paid to the wrong person.
+
+**Why this one got fixed directly (unlike `/api/payment/cancel` in run 13,
+which was flagged instead):** withdrawals already go through an admin-approval
+step before funds move (not instant), affiliates already have a real `email`
+captured at signup (`/api/affiliate/apply`), and adding an email-confirmation
+step only changes the shape of *new* withdrawal requests going forward — it
+doesn't strand any existing user or require inventing an identity system the
+frontend doesn't have, unlike `/api/payment/cancel` where `PaymentPage.jsx`
+has no device-id captured at purchase time to retrofit against.
+
+**Fix:** `POST /api/affiliate/withdraw` no longer creates a withdrawal
+directly. It validates everything as before (ref exists, promptpay format,
+amount within available balance), then stores a `pending` confirmation record
+(`backend/data/withdraw_confirmations.json`, gitignored — added to
+`.gitignore`) and emails a confirmation link to the affiliate's *registered*
+address, signed with the same reusable `unsubToken(id, type)` HMAC helper
+already used for erasure/unsubscribe flows (this time with
+`type='affiliate-withdraw'`). Only `GET /api/affiliate/withdraw/confirm`
+(rate-limited, token-checked) actually creates the real `withdrawals` record
+the admin-approval flow already handles — re-checking the balance is still
+sufficient at confirm time in case another withdrawal was requested in
+between. Updated `AffiliateDashboard.jsx`'s success toast, which previously
+said "request submitted, pending approval" — no longer true since a request
+now isn't created until the email link is clicked.
+
+**Verified live** (local server, fake fast-failing SMTP host to avoid needing
+real credentials, matching the pattern from runs 9/10/12): registered a test
+affiliate, credited it ฿200 real commission via the quickpay+signed-webhook
+path, then confirmed all three cases — (1) `POST /withdraw` creates a pending
+confirmation and does **not** create a visible withdrawal (checked via
+`GET /api/affiliate/withdrawals?ref_code=`, balance stayed ฿200 pending); (2) a
+wrong/guessed token on `GET /confirm` returns 403 with the confirmation record
+left untouched; (3) the correct token (computed with the same `JWT_SECRET`
+the test server used) creates the real withdrawal, balance correctly drops to
+฿0 pending, and the record appears in both the affiliate's own list and the
+admin list; (4) reusing the same correct token a second time returns 404
+since the confirmation was already consumed. Cleaned up test data
+(`backend/data/affiliates.json`/`withdrawals.json` restored to their
+pre-test contents, `withdraw_confirmations.json` removed) before committing.
+
+---
+
 ### 2026-07-04 — Hourly loop, run 16: real-browser E2E pass on the actual funnel UI — clean, no code change this run
 5 items still pending an owner decision, unchanged; PR #79's latest deploy
 succeeded.

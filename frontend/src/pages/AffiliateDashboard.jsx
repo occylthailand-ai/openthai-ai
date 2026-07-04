@@ -62,7 +62,7 @@ export default function AffiliateDashboard() {
       });
       const d = await res.json();
       if (!res.ok || !d.success) throw new Error(d.error || 'ขอถอนไม่สำเร็จ');
-      toast.success('ส่งคำขอถอนแล้ว รออนุมัติ');
+      toast.success(d.message || 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันคำขอถอนเงิน');
       loadWithdrawals(data.ref_code);
     } catch (e) { toast.error(e.message); } finally { setWdBusy(false); }
   };

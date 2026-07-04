@@ -1366,8 +1366,27 @@ app.get('/api/affiliate/leaderboard', (req, res) => {
 });
 
 // ─── POST /api/affiliate/withdraw — พันธมิตรขอถอนค่าคอมเข้าพร้อมเพย์ ───────────
+// AffiliateDashboard.jsx เข้าถึงได้แค่ด้วย ?ref=XXXXX ใน URL — ไม่มี login ใดๆ ทั้งสิ้น และ
+// ref_code ไม่ใช่ความลับ มันคือส่วนหนึ่งของลิงก์รีเฟอร์ที่ affiliate ตั้งใจแชร์ให้สาธารณะ (โพสต์
+// TikTok/IG ของตัวเอง) — เดิม endpoint นี้รับ promptpay จาก request body ตรงๆ ไม่ตรวจสอบความ
+// เป็นเจ้าของเลย ใครก็ตามที่เคยเห็นลิงก์รีเฟอร์ของ affiliate คนไหน (ซึ่งอาจถูกแชร์ไปหาผู้ติดตาม
+// นับพัน) สามารถส่งคำขอถอนเงินค่าคอมของเขาไปเข้าพร้อมเพย์ของตัวเองได้ — ต้องรออนุมัติจากแอดมิน
+// ก็จริง แต่แอดมินไม่มีทางรู้เลยว่าเลขพร้อมเพย์ที่เห็นไม่ใช่ของ affiliate ตัวจริง จึงเสี่ยงเงินจริง
+// หายจริง แก้ด้วยแบบเดียวกับ erasure: ยืนยันผ่านอีเมลที่ลงทะเบียนไว้ก่อน ค่อยสร้างคำขอถอนจริงที่
+// แอดมินเห็น (ไม่กระทบ affiliate จริงที่มีอีเมลลงทะเบียนอยู่แล้วตั้งแต่สมัคร)
+const WD_CONFIRM_FILE = join(WRITE_DATA_DIR, 'withdraw_confirmations.json');
+let withdrawConfirmations = [];
+try { if (existsSync(WD_CONFIRM_FILE)) withdrawConfirmations = JSON.parse(readFileSync(WD_CONFIRM_FILE, 'utf8')); } catch (_) {}
+function saveWithdrawConfirmations() {
+  try {
+    const dir = WD_CONFIRM_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(WD_CONFIRM_FILE, JSON.stringify(withdrawConfirmations, null, 2), 'utf8');
+  } catch (e) { console.error('[withdraw-confirm] save error:', e.message); }
+}
+
 const withdrawLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { success: false, error: 'ขอถอนบ่อยเกินไป กรุณารอ' } });
-app.post('/api/affiliate/withdraw', withdrawLimiter, (req, res) => {
+app.post('/api/affiliate/withdraw', withdrawLimiter, async (req, res) => {
   const ref = (req.body?.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   const promptpay = (req.body?.promptpay || '').toString().replace(/[^0-9]/g, '').slice(0, 13);
   const aff = ref && affiliates.find(a => a.ref_code === ref);
@@ -1378,17 +1397,64 @@ app.post('/api/affiliate/withdraw', withdrawLimiter, (req, res) => {
   if (!(amount > 0)) return res.status(400).json({ success: false, error: 'ยอดถอนไม่ถูกต้อง' });
   if (amount < WD_MIN) return res.status(400).json({ success: false, error: `ถอนขั้นต่ำ ฿${WD_MIN}` });
   if (amount > avail) return res.status(400).json({ success: false, error: `ยอดถอนเกินยอดที่ถอนได้ (คงเหลือ ฿${avail})` });
+  if (!aff.email) return res.status(400).json({ success: false, error: 'บัญชีนี้ไม่มีอีเมลลงทะเบียน ติดต่อแอดมินเพื่อยืนยันตัวตน' });
+  if (!mailer) return res.status(503).json({ success: false, error: 'ระบบยืนยันอีเมลยังไม่พร้อม (ไม่ได้ตั้งค่า SMTP) — ติดต่อแอดมิน' });
+
+  const confirmId = `wdc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const pending = { id: confirmId, ref_code: ref, name: aff.name, amount, promptpay, created_at: new Date().toISOString() };
+  withdrawConfirmations.push(pending);
+  saveWithdrawConfirmations();
+
+  const confirmUrl = `${DOMAIN_URL}/api/affiliate/withdraw/confirm?id=${confirmId}&token=${unsubToken(confirmId, 'affiliate-withdraw')}`;
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to: aff.email,
+      subject: '💰 ยืนยันคำขอถอนเงินค่าคอมมิชชัน — Openthai.ai',
+      html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:520px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#22c55e,#3b82f6);padding:24px;text-align:center;"><h1 style="margin:0;font-size:19px;">ยืนยันคำขอถอนเงิน</h1></div>
+        <div style="padding:24px;font-size:14px;line-height:1.7;">
+          <p>คำขอถอนค่าคอมมิชชัน <strong>฿${amount.toLocaleString('th-TH')}</strong> เข้าพร้อมเพย์เลขที่ <strong>${promptpay}</strong> สำหรับบัญชี <strong>${escapeHtml(ref)}</strong></p>
+          <p style="text-align:center;margin:20px 0;"><a href="${confirmUrl}" style="background:#22c55e;color:#0f0f1a;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700;">ยืนยันคำขอถอนเงิน</a></p>
+          <p style="color:#94a3b8;font-size:12px;">หากคุณไม่ได้ส่งคำขอนี้ ไม่ต้องกดลิงก์ — จะไม่มีการถอนเงินเกิดขึ้นจนกว่าจะยืนยัน</p>
+        </div></div>`,
+    });
+  } catch (e) {
+    console.error('[withdraw] confirm email error:', e.message);
+    return res.status(502).json({ success: false, error: 'ส่งอีเมลยืนยันไม่สำเร็จ ลองใหม่อีกครั้ง' });
+  }
+  addLog('info', 'Withdraw', `ส่งอีเมลยืนยันคำขอถอน ฿${amount} → ${ref} (${aff.name})`);
+  res.json({ success: true, message: `ส่งอีเมลยืนยันไปที่ ${aff.email} แล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันคำขอถอนเงิน`, pending_balance: avail });
+});
+
+// GET /api/affiliate/withdraw/confirm — ยืนยันคำขอถอนผ่านลิงก์ในอีเมล แล้วค่อยสร้างคำขอถอนจริง
+app.get('/api/affiliate/withdraw/confirm', unsubLimiter, (req, res) => {
+  const { id, token } = req.query;
+  if (!id || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  if (token !== unsubToken(String(id), 'affiliate-withdraw')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+
+  const idx = withdrawConfirmations.findIndex(p => p.id === id);
+  if (idx === -1) return res.status(404).send('ไม่พบคำขอนี้ หรือถูกยืนยันไปแล้ว');
+  const pending = withdrawConfirmations[idx];
+  withdrawConfirmations.splice(idx, 1);
+  saveWithdrawConfirmations();
+
+  const aff = affiliates.find(a => a.ref_code === pending.ref_code);
+  const avail = aff ? affPending(aff) : 0;
+  if (!aff || pending.amount > avail) {
+    return res.status(400).send('ยอดคงเหลือไม่พอสำหรับคำขอนี้แล้ว (อาจมีการถอนอื่นไปก่อน) — กรุณาส่งคำขอใหม่');
+  }
 
   const wd = {
     id: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    ref_code: ref, name: aff.name, amount, promptpay,
+    ref_code: pending.ref_code, name: pending.name, amount: pending.amount, promptpay: pending.promptpay,
     status: 'pending', requested_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   };
   withdrawals.unshift(wd);
   saveWithdrawals();
-  addLog('info', 'Withdraw', `คำขอถอน ฿${amount} → ${ref} (${aff.name})`);
-  webhooks.dispatch('affiliate.withdraw_requested', { ref_code: ref, amount, id: wd.id }, null);
-  res.json({ success: true, withdrawal: wd, pending_balance: affPending(aff) });
+  addLog('info', 'Withdraw', `ยืนยันแล้ว: คำขอถอน ฿${wd.amount} → ${wd.ref_code} (${wd.name})`);
+  webhooks.dispatch('affiliate.withdraw_requested', { ref_code: wd.ref_code, amount: wd.amount, id: wd.id }, null);
+  res.send(`<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยืนยันคำขอถอน ฿${wd.amount.toLocaleString('th-TH')} เรียบร้อยแล้ว รอการอนุมัติจากแอดมิน</div>`);
 });
 
 // ─── GET /api/affiliate/withdrawals?ref_code= — รายการคำขอของพันธมิตร ─────────

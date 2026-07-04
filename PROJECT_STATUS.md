@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T08:13:16.770Z · branch `claude/daily-reporter-improvements-8vc9ct` (37 commit(s) ahead of main)
+Generated: 2026-07-04T12:18:38.006Z · branch `claude/daily-reporter-improvements-8vc9ct` (38 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 247 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 121 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,65 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-07-04 — Hourly loop, run 17: affiliate withdrawal hijack — `promptpay` accepted with zero ownership check, fixed with email confirmation
+
+**Found while re-reading `POST /api/affiliate/withdraw` after the webhook
+data-exfiltration fix from run 15** (same instinct: "what else trusts a
+request-body field as if it were verified identity?"). `AffiliateDashboard.jsx`
+has no login system at all — it's reached purely via `?ref=XXXXX` in the URL,
+and `ref_code` is not a secret: it's embedded in every affiliate's public
+referral link, which affiliates are explicitly encouraged to share on TikTok/
+IG to their followers. The withdrawal endpoint accepted a `promptpay` payout
+number straight from the request body with no check that the caller was the
+real affiliate. Anyone who had ever seen an affiliate's public referral link
+— potentially shared with thousands of followers — could submit a withdrawal
+request that redirected that affiliate's real earned commission to an
+attacker-controlled PromptPay account. Admin approval was already required
+before money actually moves, but the admin has no way to know the PromptPay
+number shown isn't the real affiliate's — so real money was genuinely at risk
+of being paid to the wrong person.
+
+**Why this one got fixed directly (unlike `/api/payment/cancel` in run 13,
+which was flagged instead):** withdrawals already go through an admin-approval
+step before funds move (not instant), affiliates already have a real `email`
+captured at signup (`/api/affiliate/apply`), and adding an email-confirmation
+step only changes the shape of *new* withdrawal requests going forward — it
+doesn't strand any existing user or require inventing an identity system the
+frontend doesn't have, unlike `/api/payment/cancel` where `PaymentPage.jsx`
+has no device-id captured at purchase time to retrofit against.
+
+**Fix:** `POST /api/affiliate/withdraw` no longer creates a withdrawal
+directly. It validates everything as before (ref exists, promptpay format,
+amount within available balance), then stores a `pending` confirmation record
+(`backend/data/withdraw_confirmations.json`, gitignored — added to
+`.gitignore`) and emails a confirmation link to the affiliate's *registered*
+address, signed with the same reusable `unsubToken(id, type)` HMAC helper
+already used for erasure/unsubscribe flows (this time with
+`type='affiliate-withdraw'`). Only `GET /api/affiliate/withdraw/confirm`
+(rate-limited, token-checked) actually creates the real `withdrawals` record
+the admin-approval flow already handles — re-checking the balance is still
+sufficient at confirm time in case another withdrawal was requested in
+between. Updated `AffiliateDashboard.jsx`'s success toast, which previously
+said "request submitted, pending approval" — no longer true since a request
+now isn't created until the email link is clicked.
+
+**Verified live** (local server, fake fast-failing SMTP host to avoid needing
+real credentials, matching the pattern from runs 9/10/12): registered a test
+affiliate, credited it ฿200 real commission via the quickpay+signed-webhook
+path, then confirmed all three cases — (1) `POST /withdraw` creates a pending
+confirmation and does **not** create a visible withdrawal (checked via
+`GET /api/affiliate/withdrawals?ref_code=`, balance stayed ฿200 pending); (2) a
+wrong/guessed token on `GET /confirm` returns 403 with the confirmation record
+left untouched; (3) the correct token (computed with the same `JWT_SECRET`
+the test server used) creates the real withdrawal, balance correctly drops to
+฿0 pending, and the record appears in both the affiliate's own list and the
+admin list; (4) reusing the same correct token a second time returns 404
+since the confirmation was already consumed. Cleaned up test data
+(`backend/data/affiliates.json`/`withdrawals.json` restored to their
+pre-test contents, `withdraw_confirmations.json` removed) before committing.
 
 ---
 
@@ -1422,54 +1481,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 20e8b77 Log run 16: real-browser E2E verification of the actual funnel UI, clean pass (13 seconds ago)
-- f4a73e6 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 14d4906 Close the bypass door around last run's webhook fix: /api/n8n/register-webhooks (64 minutes ago)
-- aae495c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 362db7c Fix silent data exfiltration via /api/webhooks -- gate all 4 routes with admin key (2 hours ago)
-- 9c2b904 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- af3804a Rate-limit payment cancel/entitlement; flag the real fix as an owner decision (2 hours ago)
-- 23a48e3 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 79aff67 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 20e8b77 Log run 16: real-browser E2E verification of the actual funnel UI, clean pass (4 hours ago)
+- f4a73e6 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 14d4906 Close the bypass door around last run's webhook fix: /api/n8n/register-webhooks (5 hours ago)
+- aae495c chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 362db7c Fix silent data exfiltration via /api/webhooks -- gate all 4 routes with admin key (6 hours ago)
+- 9c2b904 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- af3804a Rate-limit payment cancel/entitlement; flag the real fix as an owner decision (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 417,
-  "memory_mb": "20.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -1615,7 +1636,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 189 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8209 | Vercel serverless detection |
+| `server.js` | 8275 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
