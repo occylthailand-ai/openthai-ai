@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T19:14:46.931Z · branch `claude/daily-reporter-improvements-8vc9ct` (55 commit(s) ahead of main)
+Generated: 2026-07-04T20:14:03.542Z · branch `claude/daily-reporter-improvements-8vc9ct` (56 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 265 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 139 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-07-04 — Hourly loop, run 26: extended run 21's crawler-preview fix to the other 6 real public pages that had the same defect
+
+**Started by trying to rotate to `all-platform-files`** for this run's other-repo turn, and found something worth recording before moving on: `claude/daily-reporter-improvements-8vc9ct` doesn't actually exist on that repo's remote at all (`git ls-remote origin` shows only `master`) — the local `remotes/origin/...` tracking ref was stale, pointing at the same commit as `master`. Confirmed via `git ls-remote`, not just local state, so this is real: no work has ever actually landed there under the standing order despite it being in scope. Investigated further and every file in that repo (onboarding JSX components, "Roadmap.html" files, a fake `.yml` "workflow" that's actually just a markdown feature list, not real CI config) fits the exact fabricated-content pattern already flagged for the owner in an earlier run — nothing safe to fix there independent of that still-open decision, so didn't force a task into that repo this cycle.
+
+**Pivoted back to `openthai-ai`** and found a direct, narrower continuation of run 21's real fix instead. Run 21 fixed the "shared SPA route serves the homepage's OG tags for every path" defect for the 10 `/portals/*` routes specifically. The exact same defect trivially applies to every other public route, since it's caused by the single catch-all rewrite serving one static `index.html` — confirmed `/catalog`, `/join`, `/find-producers`, `/privacy`, `/terms`, and `/contact` (all real, public, unauthenticated, evergreen pages — verified against `App.jsx`'s route table) all had the identical problem, and were also missing entirely from `sitemap.xml` (same gap run 18 fixed for portals, never extended to these).
+
+**Fix:** renamed run 21's `prerender-portal-meta.mjs` to `prerender-meta.mjs` (it now covers more than portals) and added these 6 routes to its `ROUTES` table, using title/description text pulled verbatim from each page's own real i18n copy (`mk.cat.title`, `mk.join.sub`, etc.) or, for Privacy/Terms/Contact which don't have an i18n "sub" string, a plain factual restatement of the page's real purpose — not invented marketing copy. Added the same 6 URLs to `sitemap.xml` with priority/changefreq matching their real importance (`/catalog` daily — it's live commerce inventory; legal pages yearly/low-priority). Also added `/track` and `/dispute` (run 22/23's pages) to `robots.txt`'s `Disallow` list, since they're personalized utility pages with no evergreen content to index — they were never in the sitemap, so this is a defensive addition, not a behavior change.
+
+**Verified live:** `npm run build` confirmed the renamed `postbuild` hook fires and writes all 16 prerendered files (10 portals + 6 new) correctly; validated `sitemap.xml` is well-formed XML with 20 total `<loc>` entries; served the real `dist/` via `vite preview` and `curl`'d 3 of the 6 new routes raw (simulating a non-JS crawler) — correct titles for all three, plus re-checked one portal route and one unrelated route (`/pricing`) to confirm zero regression from the rename. Loaded `/catalog` in a real headless browser and confirmed the actual interactive page renders correctly (right `<h1>`, zero page errors) — the prerendered title is correctly overridden by the page's own `document.title` once React mounts, exactly as designed.
+
+5 items from earlier runs are still pending an owner decision, unchanged; the `all-platform-files` branch-doesn't-exist-yet finding above is a new observation, not a blocker.
 
 ---
 
@@ -1740,54 +1754,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 200577a Log run 25: smart-e had zero authentication anywhere (full detail in that repo's commit) (17 seconds ago)
-- 1738ab4 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 0261300 Log run 24: otop-ai-landing logo compression (full detail in that repo's commit) (60 minutes ago)
-- bdb53fb chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 171ea40 Let buyers actually open a dispute from /track, closing run 22's queued follow-up (2 hours ago)
-- 805e3fb chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- b0d913c Add a real /dispute status page — the notification email's link went to raw JSON before (3 hours ago)
-- b439317 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 1f5cb9e chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 200577a Log run 25: smart-e had zero authentication anywhere (full detail in that repo's commit) (60 minutes ago)
+- 1738ab4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 0261300 Log run 24: otop-ai-landing logo compression (full detail in that repo's commit) (2 hours ago)
+- bdb53fb chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 171ea40 Let buyers actually open a dispute from /track, closing run 22's queued follow-up (3 hours ago)
+- 805e3fb chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- b0d913c Add a real /dispute status page — the notification email's link went to raw JSON before (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

@@ -11,6 +11,20 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 26: extended run 21's crawler-preview fix to the other 6 real public pages that had the same defect
+
+**Started by trying to rotate to `all-platform-files`** for this run's other-repo turn, and found something worth recording before moving on: `claude/daily-reporter-improvements-8vc9ct` doesn't actually exist on that repo's remote at all (`git ls-remote origin` shows only `master`) — the local `remotes/origin/...` tracking ref was stale, pointing at the same commit as `master`. Confirmed via `git ls-remote`, not just local state, so this is real: no work has ever actually landed there under the standing order despite it being in scope. Investigated further and every file in that repo (onboarding JSX components, "Roadmap.html" files, a fake `.yml` "workflow" that's actually just a markdown feature list, not real CI config) fits the exact fabricated-content pattern already flagged for the owner in an earlier run — nothing safe to fix there independent of that still-open decision, so didn't force a task into that repo this cycle.
+
+**Pivoted back to `openthai-ai`** and found a direct, narrower continuation of run 21's real fix instead. Run 21 fixed the "shared SPA route serves the homepage's OG tags for every path" defect for the 10 `/portals/*` routes specifically. The exact same defect trivially applies to every other public route, since it's caused by the single catch-all rewrite serving one static `index.html` — confirmed `/catalog`, `/join`, `/find-producers`, `/privacy`, `/terms`, and `/contact` (all real, public, unauthenticated, evergreen pages — verified against `App.jsx`'s route table) all had the identical problem, and were also missing entirely from `sitemap.xml` (same gap run 18 fixed for portals, never extended to these).
+
+**Fix:** renamed run 21's `prerender-portal-meta.mjs` to `prerender-meta.mjs` (it now covers more than portals) and added these 6 routes to its `ROUTES` table, using title/description text pulled verbatim from each page's own real i18n copy (`mk.cat.title`, `mk.join.sub`, etc.) or, for Privacy/Terms/Contact which don't have an i18n "sub" string, a plain factual restatement of the page's real purpose — not invented marketing copy. Added the same 6 URLs to `sitemap.xml` with priority/changefreq matching their real importance (`/catalog` daily — it's live commerce inventory; legal pages yearly/low-priority). Also added `/track` and `/dispute` (run 22/23's pages) to `robots.txt`'s `Disallow` list, since they're personalized utility pages with no evergreen content to index — they were never in the sitemap, so this is a defensive addition, not a behavior change.
+
+**Verified live:** `npm run build` confirmed the renamed `postbuild` hook fires and writes all 16 prerendered files (10 portals + 6 new) correctly; validated `sitemap.xml` is well-formed XML with 20 total `<loc>` entries; served the real `dist/` via `vite preview` and `curl`'d 3 of the 6 new routes raw (simulating a non-JS crawler) — correct titles for all three, plus re-checked one portal route and one unrelated route (`/pricing`) to confirm zero regression from the rename. Loaded `/catalog` in a real headless browser and confirmed the actual interactive page renders correctly (right `<h1>`, zero page errors) — the prerendered title is correctly overridden by the page's own `document.title` once React mounts, exactly as designed.
+
+5 items from earlier runs are still pending an owner decision, unchanged; the `all-platform-files` branch-doesn't-exist-yet finding above is a new observation, not a blocker.
+
+---
+
 ### 2026-07-04 — Hourly loop, run 25: `smart-e` repo — the entire API had zero authentication; found while re-auditing that repo after run 20's path fix
 
 **Continued auditing `smart-e`** this run (having fixed its `server.py` frontend-path bug in run 20) — full detail lives in that repo's own commit message (`cfd9caf` on `claude/daily-reporter-improvements-8vc9ct`) since it has no `DECISIONS_LOG.md`; summary here per rule 6.

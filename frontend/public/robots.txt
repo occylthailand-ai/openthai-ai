@@ -13,7 +13,15 @@ Allow: /portals/gov-thai
 Allow: /portals/gov-intl
 Allow: /portals/intl-org
 Allow: /portals/foundation
+Allow: /catalog
+Allow: /join
+Allow: /find-producers
+Allow: /contact
+Allow: /privacy
+Allow: /terms
 Disallow: /dashboard
+Disallow: /track
+Disallow: /dispute
 Disallow: /ai-generator
 Disallow: /ai-tools
 Disallow: /tiktok
