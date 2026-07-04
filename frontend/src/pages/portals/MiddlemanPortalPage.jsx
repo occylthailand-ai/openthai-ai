@@ -55,13 +55,13 @@ export default function MiddlemanPortalPage() {
             <form onSubmit={submit}>
               {[['name',t.form.name],['country',t.form.country],['region',t.form.region],['email',t.form.email],['phone',t.form.phone]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:14 }}>
-                  <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                  <label htmlFor={k} style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
+                  <input id={k} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
                 </div>
               ))}
               <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.business_type}</label>
-                <select value={form.business_type} onChange={e=>setForm({...form,business_type:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
+                <label htmlFor="business_type" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.business_type}</label>
+                <select id="business_type" value={form.business_type} onChange={e=>setForm({...form,business_type:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
                   {BUSINESS_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>

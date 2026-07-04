@@ -57,13 +57,13 @@ export default function CreatorPortalPage() {
             <form onSubmit={submit}>
               {[['name',t.form.name,'text'],['country',t.form.country,'text'],['followers',t.form.followers,'number'],['email',t.form.email,'email']].map(([k,label,type]) => (
                 <div key={k} style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input type={type} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                  <label htmlFor={k} style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
+                  <input id={k} type={type} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
                 </div>
               ))}
               <div style={{ marginBottom:16 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.platform}</label>
-                <select value={form.platform} onChange={e=>setForm({...form,platform:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
+                <label htmlFor="platform" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.platform}</label>
+                <select id="platform" value={form.platform} onChange={e=>setForm({...form,platform:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
                   {t.platforms.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>

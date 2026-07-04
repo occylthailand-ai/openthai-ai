@@ -55,13 +55,13 @@ export default function GovThaiPortalPage() {
             <form onSubmit={submit}>
               {[['agency',t.form.agency],['ministry',t.form.ministry],['name',t.form.name],['position',t.form.position],['email',t.form.email],['phone',t.form.phone]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:14 }}>
-                  <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                  <label htmlFor={k} style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
+                  <input id={k} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
                 </div>
               ))}
               <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.need}</label>
-                <textarea rows={3} value={form.need} onChange={e=>setForm({...form,need:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box', resize:'vertical' }} />
+                <label htmlFor="need" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.need}</label>
+                <textarea id="need" rows={3} value={form.need} onChange={e=>setForm({...form,need:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box', resize:'vertical' }} />
               </div>
               <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:14, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>
                 <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />

@@ -65,28 +65,28 @@ export default function ProducerJoinPage() {
           </div>
         ) : (
           <form onSubmit={submit} style={card}>
-            <Field label={t('mk.join.f.company')}><input style={inp} value={form.company} onChange={set('company')} placeholder={t('mk.join.f.company.ph')} /></Field>
+            <Field label={t('mk.join.f.company')} id="company"><input style={inp} value={form.company} onChange={set('company')} placeholder={t('mk.join.f.company.ph')} /></Field>
             <Row>
-              <Field label={t('mk.join.f.contact')}><input style={inp} value={form.contact_name} onChange={set('contact_name')} placeholder={t('mk.join.f.contact.ph')} /></Field>
-              <Field label={t('mk.join.f.phone')}><input style={inp} value={form.phone} onChange={set('phone')} placeholder="08x-xxx-xxxx" /></Field>
+              <Field label={t('mk.join.f.contact')} id="contact_name"><input style={inp} value={form.contact_name} onChange={set('contact_name')} placeholder={t('mk.join.f.contact.ph')} /></Field>
+              <Field label={t('mk.join.f.phone')} id="phone"><input style={inp} value={form.phone} onChange={set('phone')} placeholder="08x-xxx-xxxx" /></Field>
             </Row>
             <Row>
-              <Field label={t('mk.join.f.email')}><input style={inp} type="email" value={form.email} onChange={set('email')} placeholder="you@email.com" /></Field>
-              <Field label={t('mk.join.f.web')}><input style={inp} value={form.website} onChange={set('website')} placeholder="facebook.com/..." /></Field>
+              <Field label={t('mk.join.f.email')} id="email"><input style={inp} type="email" value={form.email} onChange={set('email')} placeholder="you@email.com" /></Field>
+              <Field label={t('mk.join.f.web')} id="website"><input style={inp} value={form.website} onChange={set('website')} placeholder="facebook.com/..." /></Field>
             </Row>
             <Row>
-              <Field label={t('mk.join.f.cat')}>
+              <Field label={t('mk.join.f.cat')} id="category">
                 <select style={inp} value={form.category} onChange={set('category')}>
                   {cats.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </Field>
-              <Field label={t('mk.join.f.price')}><input style={inp} type="number" value={form.price} onChange={set('price')} placeholder={t('mk.join.f.price.ph')} /></Field>
+              <Field label={t('mk.join.f.price')} id="price"><input style={inp} type="number" value={form.price} onChange={set('price')} placeholder={t('mk.join.f.price.ph')} /></Field>
             </Row>
             <Row>
-              <Field label={t('mk.join.f.product')}><input style={inp} value={form.product_name} onChange={set('product_name')} placeholder={t('mk.join.f.product.ph')} /></Field>
-              <Field label={t('mk.join.f.stock')}><input style={inp} type="number" min="0" value={form.stock} onChange={set('stock')} placeholder="—" /></Field>
+              <Field label={t('mk.join.f.product')} id="product_name"><input style={inp} value={form.product_name} onChange={set('product_name')} placeholder={t('mk.join.f.product.ph')} /></Field>
+              <Field label={t('mk.join.f.stock')} id="stock"><input style={inp} type="number" min="0" value={form.stock} onChange={set('stock')} placeholder="—" /></Field>
             </Row>
-            <Field label={t('mk.join.f.desc')}><textarea style={{ ...inp, minHeight: 80, resize: 'vertical' }} value={form.description} onChange={set('description')} placeholder={t('mk.join.f.desc.ph')} /></Field>
+            <Field label={t('mk.join.f.desc')} id="description"><textarea style={{ ...inp, minHeight: 80, resize: 'vertical' }} value={form.description} onChange={set('description')} placeholder={t('mk.join.f.desc.ph')} /></Field>
             {err && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 4 }}>⚠️ {err}</div>}
             <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', marginTop: 14, opacity: busy ? 0.7 : 1 }}>
               {busy ? t('mk.join.submitting') : t('mk.join.submit')}
@@ -99,10 +99,10 @@ export default function ProducerJoinPage() {
   );
 }
 
-const Field = ({ label, children }) => (
+const Field = ({ label, id, children }) => (
   <div style={{ marginBottom: 14 }}>
-    <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>{label}</label>
-    {children}
+    <label htmlFor={id} style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>{label}</label>
+    {React.cloneElement(children, { id })}
   </div>
 );
 const Row = ({ children }) => <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{children}</div>;

@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T20:14:41.552Z · branch `claude/daily-reporter-improvements-8vc9ct` (57 commit(s) ahead of main)
+Generated: 2026-07-04T21:31:09.266Z · branch `claude/daily-reporter-improvements-8vc9ct` (58 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 267 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 141 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-07-04 — Hourly loop, run 27: screen-reader users could not use any of the 9 `/portals/*` signup forms or `/join` — form fields had no programmatic labels
+
+**New verification technique this run**: installed `axe-core` (industry-standard automated accessibility checker) in a scratch dir and ran it via Playwright against 9 real pages, rather than another manual code-read. This is a genuinely different angle from every previous run's approach (manual grep + reasoning) and immediately surfaced something no amount of visual/functional testing would have caught, since the pages look completely normal to a sighted mouse user.
+
+**Found:** every one of the 9 `/portals/*` consent-based signup forms — the literal centerpiece of this session's work all the way back to the original standing order — plus `/join` (producer signup), render visible `<label>` text and `<input>`/`<select>`/`<textarea>` elements as unconnected sibling DOM nodes, with no `id`/`htmlFor` (or wrapping) association. A sighted user sees "ชื่อบริษัท/ผู้ผลิต" sitting right above the name field and assumes it's labeled; a screen-reader user tabbing through the exact same form hears nothing but "edit text, blank" for every single field — no indication of what to type where. This is a WCAG 2 Level A failure (axe flagged it `critical`), not a cosmetic nitpick: it makes the actual signup mechanism unusable for blind/low-vision producers, consumers, creators, affiliates, and government/NGO contacts — the specific real people this whole `/portals` cluster exists to bring in.
+
+Also flagged, but explicitly **not fixed this cycle**: a `color-contrast` (serious, not critical) violation present on literally every page scanned, including the homepage. Left as a follow-up rather than folded in here — fixing text/background contrast properly means auditing color choices across the whole dark-theme design system, a much larger, more design-judgment-heavy task than mechanically wiring up label associations, and the standing order's "one real task, fully verified" discipline is better served by finishing the narrower critical fix cleanly than starting a broad recolor and not finishing it.
+
+**Fix:** added `htmlFor`/`id` pairs to every form field across all 9 portal pages (using the existing loop variable `k` as the id where fields are rendered via `.map()`, and the matching state key as a literal id for the few standalone fields/selects/textareas outside a loop — `org`/`type` in `IntlOrgPortalPage.jsx`, `need` in `GovThaiPortalPage.jsx`/`GovIntlPortalPage.jsx`, `focus` in `IntlOrgPortalPage.jsx`). For `ProducerJoinPage.jsx`, which uses a shared `Field` wrapper component, added an `id` prop to `Field` that it now passes into its child via `React.cloneElement` rather than touching every call site's underlying input markup.
+
+**Verified live:** re-ran the exact same `axe-core` scan after the fix — 0 `label`/`select-name` violations remaining across all 9 portal pages and `/join` (down from a `critical`-severity violation on 4 pages, `label` failures on 2, `select-name` failures on 4 in the initial scan — some pages had more than one violation type). Also drove a real headless browser to click a field's visible label text directly and confirmed it now correctly moves focus into the associated input (proving the association is real, not just present in markup), then filled and validated the entire producer form end-to-end via `id`-based selectors to confirm nothing was functionally broken by the change.
+
+5 items from earlier runs are still pending an owner decision, unchanged; the site-wide `color-contrast` finding above is a new, lower-priority follow-up item, not a blocker.
 
 ---
 
@@ -1754,54 +1770,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- adbd75c Extend run 21's crawler-preview fix to /catalog, /join, /find-producers, /privacy, /terms, /contact (18 seconds ago)
-- 1f5cb9e chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 200577a Log run 25: smart-e had zero authentication anywhere (full detail in that repo's commit) (60 minutes ago)
-- 1738ab4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 0261300 Log run 24: otop-ai-landing logo compression (full detail in that repo's commit) (2 hours ago)
-- bdb53fb chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 171ea40 Let buyers actually open a dispute from /track, closing run 22's queued follow-up (3 hours ago)
-- 805e3fb chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 906f22e chore: sync PROJECT_STATUS.md [skip ci] (76 minutes ago)
+- adbd75c Extend run 21's crawler-preview fix to /catalog, /join, /find-producers, /privacy, /terms, /contact (77 minutes ago)
+- 1f5cb9e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 200577a Log run 25: smart-e had zero authentication anywhere (full detail in that repo's commit) (2 hours ago)
+- 1738ab4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 0261300 Log run 24: otop-ai-landing logo compression (full detail in that repo's commit) (3 hours ago)
+- bdb53fb chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 171ea40 Let buyers actually open a dispute from /track, closing run 22's queued follow-up (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

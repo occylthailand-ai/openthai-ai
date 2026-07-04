@@ -57,24 +57,24 @@ export default function IntlOrgPortalPage() {
             {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
             <form onSubmit={submit}>
               <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.org}</label>
-                <input required value={form.org} onChange={e=>setForm({...form,org:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                <label htmlFor="org" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.org}</label>
+                <input id="org" required value={form.org} onChange={e=>setForm({...form,org:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
               </div>
               <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.type}</label>
-                <select value={form.type} onChange={e=>setForm({...form,type:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
+                <label htmlFor="type" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.type}</label>
+                <select id="type" value={form.type} onChange={e=>setForm({...form,type:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
                   {ORGS.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
               {[['country',t.form.country],['name',t.form.name],['position',t.form.position],['email',t.form.email]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:14 }}>
-                  <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                  <label htmlFor={k} style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
+                  <input id={k} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
                 </div>
               ))}
               <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.focus}</label>
-                <textarea rows={2} value={form.focus} onChange={e=>setForm({...form,focus:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box', resize:'vertical' }} />
+                <label htmlFor="focus" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.focus}</label>
+                <textarea id="focus" rows={2} value={form.focus} onChange={e=>setForm({...form,focus:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box', resize:'vertical' }} />
               </div>
               <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:14, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>
                 <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
