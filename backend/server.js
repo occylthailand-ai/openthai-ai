@@ -6225,8 +6225,18 @@ app.post('/api/memory/admin/review', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 const webhookLimiter = rateLimit({ windowMs: 60000, max: 20, message: { error: 'Webhook API rate limit' } });
 
-// POST /api/webhooks — ลงทะเบียน webhook
+// req.tenant ถูกตั้งค่าโดย requireTenant() middleware เท่านั้น (tenant-manager.js) ซึ่งไม่ได้
+// ผูกกับกลุ่ม /api/webhooks/* เลย — แปลว่า req.tenant เป็น undefined เสมอสำหรับทุก request
+// ที่มาถึงตรงนี้จริงๆ ทำให้ POST ด้านล่าง tenantId กลายเป็น 'global' เสมอ (ไม่ใช่แค่ fallback)
+// และ GET ด้านล่าง adminView กลายเป็น true เสมอ — ใครก็ตามที่ไม่ต้องล็อกอินสามารถลงทะเบียน
+// webhook แบบ global รับทุก event ของทั้งระบบ (ยอดขาย ค่าคอม ฯลฯ) แบบเงียบๆ ได้ตลอดไป จนกว่า
+// แอดมินจะสังเกตเห็นเอง — ไม่มีหน้า UI เรียก /api/webhooks* เลยสักหน้า (เหมือน DELETE ด้านล่างที่
+// ล็อกไปแล้วก่อนหน้านี้) จึงล็อกทั้งกลุ่มด้วย x-admin-key ได้โดยไม่กระทบของเดิม
+const webhooksAuth = (req, res) => { const key = req.headers['x-admin-key'] || req.query.key; if (!checkAdminKey(key)) { res.status(401).json({ success: false, message: adminDenyMessage() }); return false; } return true; };
+
+// POST /api/webhooks — ลงทะเบียน webhook (Admin Key)
 app.post('/api/webhooks', webhookLimiter, (req, res) => {
+  if (!webhooksAuth(req, res)) return;
   try {
     const { url, events, description } = req.body || {};
     const tenantId = req.tenant?.id || 'global';
@@ -6235,8 +6245,9 @@ app.post('/api/webhooks', webhookLimiter, (req, res) => {
   } catch (e) { res.status(400).json({ success: false, message: e.message }); }
 });
 
-// GET /api/webhooks — list webhooks
+// GET /api/webhooks — list webhooks (Admin Key)
 app.get('/api/webhooks', (req, res) => {
+  if (!webhooksAuth(req, res)) return;
   const tenantId = req.tenant?.id;
   const adminView = !tenantId; // admin sees all
   res.json({ success: true, data: webhooks.list({ tenantId, adminView }) });
@@ -6250,16 +6261,18 @@ app.delete('/api/webhooks/:id', (req, res) => {
   res.json({ success: true, ...result });
 });
 
-// POST /api/webhooks/:id/test — fire test event
+// POST /api/webhooks/:id/test — fire test event (Admin Key)
 app.post('/api/webhooks/:id/test', async (req, res) => {
+  if (!webhooksAuth(req, res)) return;
   try {
     const result = await webhooks.test(req.params.id);
     res.json({ success: true, ...result });
   } catch (e) { res.status(404).json({ success: false, message: e.message }); }
 });
 
-// GET /api/webhooks/logs — delivery log (admin)
+// GET /api/webhooks/logs — delivery log (Admin Key)
 app.get('/api/webhooks/logs', (req, res) => {
+  if (!webhooksAuth(req, res)) return;
   res.json({ success: true, data: webhooks.logs({ limit: parseInt(req.query.limit) || 50 }) });
 });
 
