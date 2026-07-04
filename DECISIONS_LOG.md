@@ -11,6 +11,45 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 11: rate-limited the 2 unsubscribe routes added in runs 9-10; flagging a real operational finding (Vercel free-tier deploy quota now exhausted)
+3 flagged decisions still unanswered (checked PR comments on all 3 PRs
+again). One new, real, non-code finding surfaced this cycle worth its own
+mention: PR #79 got a Vercel bot comment — `Resource is limited - try again
+in 24 hours (more than 100, code: "api-deployments-free-per-day")`. Checked
+why: `otop-ai-landing`'s PR alone is linked to **4** separate Vercel
+projects (`otop-ai-landing`, `-1m4o`, `-45lf`, `-essf`), `openthai-ai`'s PR
+to 3 — every push across 3 repos this loop touches redeploys 8+ Vercel
+projects at once, and 11 hourly cycles did that enough times to exhaust the
+Hobby-plan daily deployment quota. Not a code bug, nothing to fix in this
+repo — flagging it because it's a real constraint on how fast changes
+actually go live, directly relevant to item 7 ("เข้าตลาดให้เร็วที่สุด").
+GitHub pushes/PRs are unaffected; only live-preview builds are blocked for
+~24h. Continuing to push real, verified commits regardless — that part of
+the pipeline still works.
+
+Audited my own last 2 runs before picking something new, same discipline as
+runs 8-10: the 2 unsubscribe routes added in runs 9 and 10
+(`/api/leads/unsubscribe`, `/api/broadcast/unsubscribe`) were the only
+routes in this entire file that touch real user data with **no rate
+limiter** — every comparable endpoint (`applyLimiter`, `submitLimiter`,
+`broadcastLimiter`, `adminLimiter`, etc.) has one. The HMAC token makes
+brute-forcing computationally infeasible on its own, but unlimited requests
+still means unlimited disk writes (`saveFile()`/`saveBroadcastUnsub()` on
+every valid hit) and no defense-in-depth consistent with the rest of the
+codebase. Added `unsubLimiter` (15 min window, max 20) to both routes.
+
+Checked middleman's post-signup value delivery too (same kind of audit that
+found the consumer/creator email gaps) — its promise ("ทีมงานจะติดต่อกลับ") is
+a human-followup claim, same honest shape as producer/gov-thai/gov-intl/
+intl-org, not an automated one nothing backs. No gap there; confirms the
+run-3 assessment was right.
+
+Verified live: booted the server, confirmed a normal request still works,
+then fired 21 rapid requests at `/api/leads/unsubscribe` — the first 19
+correctly returned `403` (invalid token, as expected), the 20th and 21st
+correctly returned `429` (rate limited), matching the configured `max: 20`
+exactly.
+
 ### 2026-07-03 — Hourly loop, run 10: found a bigger, adjacent unsubscribe gap — the admin newsletter broadcast tool had none either
 3 flagged decisions still unanswered; re-checked all 3 PR threads, still
 only the Vercel bot.

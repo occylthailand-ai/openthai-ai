@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T01:11:44.900Z · branch `claude/daily-reporter-improvements-8vc9ct` (25 commit(s) ahead of main)
+Generated: 2026-07-04T02:10:27.006Z · branch `claude/daily-reporter-improvements-8vc9ct` (26 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 235 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 109 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,45 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-04 — Hourly loop, run 11: rate-limited the 2 unsubscribe routes added in runs 9-10; flagging a real operational finding (Vercel free-tier deploy quota now exhausted)
+3 flagged decisions still unanswered (checked PR comments on all 3 PRs
+again). One new, real, non-code finding surfaced this cycle worth its own
+mention: PR #79 got a Vercel bot comment — `Resource is limited - try again
+in 24 hours (more than 100, code: "api-deployments-free-per-day")`. Checked
+why: `otop-ai-landing`'s PR alone is linked to **4** separate Vercel
+projects (`otop-ai-landing`, `-1m4o`, `-45lf`, `-essf`), `openthai-ai`'s PR
+to 3 — every push across 3 repos this loop touches redeploys 8+ Vercel
+projects at once, and 11 hourly cycles did that enough times to exhaust the
+Hobby-plan daily deployment quota. Not a code bug, nothing to fix in this
+repo — flagging it because it's a real constraint on how fast changes
+actually go live, directly relevant to item 7 ("เข้าตลาดให้เร็วที่สุด").
+GitHub pushes/PRs are unaffected; only live-preview builds are blocked for
+~24h. Continuing to push real, verified commits regardless — that part of
+the pipeline still works.
+
+Audited my own last 2 runs before picking something new, same discipline as
+runs 8-10: the 2 unsubscribe routes added in runs 9 and 10
+(`/api/leads/unsubscribe`, `/api/broadcast/unsubscribe`) were the only
+routes in this entire file that touch real user data with **no rate
+limiter** — every comparable endpoint (`applyLimiter`, `submitLimiter`,
+`broadcastLimiter`, `adminLimiter`, etc.) has one. The HMAC token makes
+brute-forcing computationally infeasible on its own, but unlimited requests
+still means unlimited disk writes (`saveFile()`/`saveBroadcastUnsub()` on
+every valid hit) and no defense-in-depth consistent with the rest of the
+codebase. Added `unsubLimiter` (15 min window, max 20) to both routes.
+
+Checked middleman's post-signup value delivery too (same kind of audit that
+found the consumer/creator email gaps) — its promise ("ทีมงานจะติดต่อกลับ") is
+a human-followup claim, same honest shape as producer/gov-thai/gov-intl/
+intl-org, not an automated one nothing backs. No gap there; confirms the
+run-3 assessment was right.
+
+Verified live: booted the server, confirmed a normal request still works,
+then fired 21 rapid requests at `/api/leads/unsubscribe` — the first 19
+correctly returned `403` (invalid token, as expected), the 20th and 21st
+correctly returned `429` (rate limited), matching the configured `max: 20`
+exactly.
 
 ### 2026-07-03 — Hourly loop, run 10: found a bigger, adjacent unsubscribe gap — the admin newsletter broadcast tool had none either
 3 flagged decisions still unanswered; re-checked all 3 PR threads, still
@@ -1176,54 +1215,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 2c9fc06 Add unsubscribe to the admin newsletter broadcast tool too (16 seconds ago)
-- 3a89f61 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 8b1444e Add unsubscribe capability to the consumer digest -- PDPA needs it, not just a signup checkbox (60 minutes ago)
-- 1c18c2d chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 351867c Log run 8: full regression pass, one real test fix, two false alarms avoided (2 hours ago)
-- 938636c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- edf92d6 Fix stale test: DELETE /api/scheduler/:id now requires x-admin-key (2 hours ago)
-- 977c634 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 335f0df chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 2c9fc06 Add unsubscribe to the admin newsletter broadcast tool too (59 minutes ago)
+- 3a89f61 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 8b1444e Add unsubscribe capability to the consumer digest -- PDPA needs it, not just a signup checkbox (2 hours ago)
+- 1c18c2d chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 351867c Log run 8: full regression pass, one real test fix, two false alarms avoided (3 hours ago)
+- 938636c chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- edf92d6 Fix stale test: DELETE /api/scheduler/:id now requires x-admin-key (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -1369,7 +1370,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 189 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8154 | Vercel serverless detection |
+| `server.js` | 8158 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

@@ -135,7 +135,11 @@ app.use(portalLeads.router);
 
 // GET /api/leads/unsubscribe — one-click unsubscribe link in consumer-digest emails (PDPA:
 // ผู้สมัครต้องถอนความยินยอมรับอีเมลต่อเนื่องได้ ไม่ใช่แค่สมัครแล้วไม่มีทางออก)
-app.get('/api/leads/unsubscribe', async (req, res) => {
+// ไม่มี rate limiter ตอนแรก ต่างจาก endpoint อื่นๆ ทั้งหมดในไฟล์นี้ที่แตะข้อมูลผู้ใช้จริง —
+// ถึงแม้ token (HMAC 64-bit) จะ brute-force ยากมาก แต่ไม่มีการจำกัดเลยยังเปิดช่องให้ยิงรัว
+// เขียนไฟล์ได้ไม่จำกัด เพิ่มให้เข้ากับ pattern เดียวกับ applyLimiter/submitLimiter/broadcastLimiter
+const unsubLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { success: false, error: 'ลองบ่อยเกินไป กรุณารอสักครู่' } });
+app.get('/api/leads/unsubscribe', unsubLimiter, async (req, res) => {
   const { email, type, token } = req.query;
   if (!email || !type || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
   const expected = unsubToken(String(email).toLowerCase(), String(type));
@@ -666,7 +670,7 @@ const broadcastUnsubscribed = loadBroadcastUnsub();
 
 // GET /api/broadcast/unsubscribe — เหมือนกับ /api/leads/unsubscribe แต่สำหรับรายชื่อ broadcast
 // ทั่วไปกลุ่มนี้โดยเฉพาะ (reuse unsubToken() ตัวเดียวกัน แค่ต่าง type string)
-app.get('/api/broadcast/unsubscribe', (req, res) => {
+app.get('/api/broadcast/unsubscribe', unsubLimiter, (req, res) => {
   const { email, token } = req.query;
   if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
   const e = String(email).toLowerCase();
