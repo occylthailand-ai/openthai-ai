@@ -94,9 +94,9 @@ export default function KOLBriefPage() {
   const s = {
     page: { minHeight: '100vh', background: '#080812', color: '#fff', padding: '24px 20px', fontFamily: 'system-ui, sans-serif' },
     card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '20px 22px', marginBottom: 16 },
-    lbl: { fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 },
+    lbl: { fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 },
     inp: { width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 14, padding: '10px 14px', outline: 'none', boxSizing: 'border-box' },
-    chip: (sel, color = '#6366f1') => ({ padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: sel ? 700 : 400, background: sel ? `${color}25` : 'rgba(255,255,255,0.05)', color: sel ? '#fff' : '#64748b', border: sel ? `1px solid ${color}60` : '1px solid transparent' }),
+    chip: (sel, color = '#6366f1') => ({ padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: sel ? 700 : 400, background: sel ? `${color}25` : 'rgba(255,255,255,0.05)', color: sel ? '#fff' : '#94a3b8', border: sel ? `1px solid ${color}60` : '1px solid transparent' }),
   };
 
   return (
@@ -106,7 +106,7 @@ export default function KOLBriefPage() {
           <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, background: 'linear-gradient(135deg,#f59e0b,#ef4444)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             🌟 KOL Brief Generator
           </h1>
-          <p style={{ color: '#64748b', margin: '6px 0 0', fontSize: 14 }}>สร้าง Brief ครบสำหรับ Influencer Marketing — ทุก Platform · ทุกภูมิภาค</p>
+          <p style={{ color: '#94a3b8', margin: '6px 0 0', fontSize: 14 }}>สร้าง Brief ครบสำหรับ Influencer Marketing — ทุก Platform · ทุกภูมิภาค</p>
         </div>
 
         <div style={s.card}>
@@ -156,7 +156,7 @@ export default function KOLBriefPage() {
                   border: form.budget_tier === t.id ? `1px solid ${t.color}60` : '1px solid rgba(255,255,255,0.1)',
                 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: form.budget_tier === t.id ? t.color : '#e2e8f0' }}>{t.label}</div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{t.sub}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{t.sub}</div>
                 </button>
               ))}
             </div>
@@ -253,7 +253,7 @@ export default function KOLBriefPage() {
                       <span style={{ fontWeight: 700, color: '#fbbf24', fontSize: 13 }}>{d.type}</span>
                       <span style={{ color: '#94a3b8', fontSize: 12, marginLeft: 8 }}>{d.duration} · ×{d.quantity}</span>
                     </div>
-                    <span style={{ fontSize: 12, color: '#64748b' }}>⏰ {d.deadline}</span>
+                    <span style={{ fontSize: 12, color: '#94a3b8' }}>⏰ {d.deadline}</span>
                   </div>
                 ))}
               </div>

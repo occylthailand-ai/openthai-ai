@@ -151,7 +151,7 @@ export default function AffiliatePage() {
           <div style={{ textAlign: 'center', padding: '20px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 4 }}>{T.calc.result}</div>
             <div style={{ fontSize: 52, fontWeight: 900, color: '#10b981' }}>฿{commission.toLocaleString()}</div>
-            <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>{calc.sales} {T.calc.orders} × ฿{calc.price} × 30% = ฿{commission.toLocaleString()}</div>
+            <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>{calc.sales} {T.calc.orders} × ฿{calc.price} × 30% = ฿{commission.toLocaleString()}</div>
           </div>
         </div>
       </section>
@@ -201,7 +201,7 @@ export default function AffiliatePage() {
               <label style={labelStyle}>{T.f.note}<textarea style={{ ...inputStyle, height: 72, resize: 'vertical' }} placeholder={T.f.note_ph} value={form.note} onChange={set('note')} /></label>
               {error && <div style={{ color: '#ef4444', fontSize: 13, textAlign: 'center' }}>{error}</div>}
               <button type="submit" disabled={loading} style={submitBtn}>{loading ? T.submitting : T.submit}</button>
-              <p style={{ fontSize: 12, color: '#64748b', textAlign: 'center', margin: 0 }}>{T.formnote}</p>
+              <p style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', margin: 0 }}>{T.formnote}</p>
             </form>
           </div>
         ) : (
@@ -210,23 +210,23 @@ export default function AffiliatePage() {
             <h2 style={{ fontSize: 26, fontWeight: 900, marginBottom: 8, color: '#10b981' }}>{T.ok.title}</h2>
             <p style={{ color: '#94a3b8', marginBottom: 24 }}>{T.ok.sub}</p>
             <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>REF CODE</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>REF CODE</div>
               <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: 4, color: '#10b981' }}>{refCode}</div>
             </div>
             <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 16, marginBottom: 24 }}>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>AFFILIATE LINK</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>AFFILIATE LINK</div>
               <div style={{ fontSize: 13, color: '#cbd5e1', wordBreak: 'break-all', marginBottom: 10 }}>{refLink}</div>
               <button onClick={() => copy(refLink, 'reflink')} style={submitBtn}>{copied === 'reflink' ? T.ok.copied : T.ok.copylink}</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
               {[[T.ok.tierLabel, T.ok.tierVal], [T.ok.payLabel, T.ok.payVal], [T.ok.confLabel, T.ok.confVal]].map(([label, val]) => (
                 <div key={label} style={{ ...glassCard, padding: 12, textAlign: 'center' }}>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>{label}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{label}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>{val}</div>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 13, color: '#64748b' }}>{T.ok.team} <strong style={{ color: '#94a3b8' }}>{form.email}</strong></p>
+            <p style={{ fontSize: 13, color: '#94a3b8' }}>{T.ok.team} <strong style={{ color: '#94a3b8' }}>{form.email}</strong></p>
           </div>
         )}
       </section>

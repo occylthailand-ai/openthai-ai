@@ -62,7 +62,7 @@ const PROMPT_TECHNIQUES = [
 function card(extra = {}) {
   return { background: '#ffffff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, padding: 20, ...extra };
 }
-const labelSt = { display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 };
+const labelSt = { display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 };
 const inputSt = { width: '100%', background: '#f8fafc', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 10, padding: '10px 13px', color: '#1e293b', fontSize: 13, fontFamily: "'Inter','Sarabun',sans-serif", boxSizing: 'border-box', outline: 'none' };
 const btnSt   = { background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 10, padding: '12px 24px', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', width: '100%' };
 
@@ -135,7 +135,7 @@ function TabLearningLayer() {
 
   const cyan = '#06b6d4';
   const subBtn = (id, label) => (
-    <button key={id} onClick={() => setSub(id)} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${sub === id ? cyan : 'rgba(0,0,0,0.1)'}`, background: sub === id ? cyan : 'transparent', color: sub === id ? '#fff' : '#64748b', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>{label}</button>
+    <button key={id} onClick={() => setSub(id)} style={{ padding: '8px 16px', borderRadius: 20, border: `1px solid ${sub === id ? cyan : 'rgba(0,0,0,0.1)'}`, background: sub === id ? cyan : 'transparent', color: sub === id ? '#fff' : '#94a3b8', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>{label}</button>
   );
 
   return (
@@ -156,7 +156,7 @@ function TabLearningLayer() {
             </div>
             {patterns && (
               <>
-                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>
+                <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>
                   รวม <strong>{patterns.total_ratings}</strong> feedback · <strong>{patterns.patterns?.length}</strong> patterns
                 </div>
                 {patterns.patterns?.length === 0 && (
@@ -178,7 +178,7 @@ function TabLearningLayer() {
                   <div style={{ marginTop: 16 }}>
                     <div style={{ fontWeight: 700, fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>FEEDBACK ล่าสุด</div>
                     {patterns.recent_feedback.map((r, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: '#475569', padding: '4px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                      <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12, color: '#7c8797', padding: '4px 0', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <span>{'⭐'.repeat(r.rating)}</span>
                         <span style={{ flex: 1 }}>{r.content_type} · {r.platform}</span>
                         <span style={{ color: '#94a3b8' }}>{r.tone}</span>
@@ -216,7 +216,7 @@ function TabLearningLayer() {
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {RATE_TONES.map(t => (
                   <button key={t} onClick={() => setRateForm(f => ({ ...f, tone: t }))}
-                    style={{ padding: '5px 12px', borderRadius: 20, border: `1px solid ${rateForm.tone === t ? cyan : 'rgba(0,0,0,0.1)'}`, background: rateForm.tone === t ? `${cyan}18` : 'transparent', color: rateForm.tone === t ? cyan : '#64748b', fontSize: 12, cursor: 'pointer', fontWeight: rateForm.tone === t ? 700 : 400 }}>{t}</button>
+                    style={{ padding: '5px 12px', borderRadius: 20, border: `1px solid ${rateForm.tone === t ? cyan : 'rgba(0,0,0,0.1)'}`, background: rateForm.tone === t ? `${cyan}18` : 'transparent', color: rateForm.tone === t ? cyan : '#94a3b8', fontSize: 12, cursor: 'pointer', fontWeight: rateForm.tone === t ? 700 : 400 }}>{t}</button>
                 ))}
               </div>
             </div>
@@ -231,7 +231,7 @@ function TabLearningLayer() {
                   <button key={n} onClick={() => setRateForm(f => ({ ...f, rating: n }))}
                     style={{ fontSize: 28, background: 'none', border: 'none', cursor: 'pointer', opacity: rateForm.rating >= n ? 1 : 0.3, transition: 'opacity .2s' }}>⭐</button>
                 ))}
-                {rateForm.rating > 0 && <span style={{ fontSize: 13, color: '#64748b', alignSelf: 'center' }}>{rateForm.rating}/5</span>}
+                {rateForm.rating > 0 && <span style={{ fontSize: 13, color: '#94a3b8', alignSelf: 'center' }}>{rateForm.rating}/5</span>}
               </div>
             </div>
             <button style={{ ...btnSt, background: rateLoading ? '#94a3b8' : `linear-gradient(135deg,${cyan},#0891b2)` }} onClick={submitRating} disabled={rateLoading}>
@@ -285,8 +285,8 @@ function TabLearningLayer() {
               </div>
               <div style={card()}>
                 <div style={{ fontWeight: 700, fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>การเปลี่ยนแปลง</div>
-                {enhanced.changes?.map((c, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '3px 0' }}>✅ {c}</div>)}
-                {enhanced.why && <div style={{ marginTop: 10, fontSize: 12, color: '#64748b', background: '#f8fafc', borderRadius: 8, padding: '8px 12px' }}>💡 {enhanced.why}</div>}
+                {enhanced.changes?.map((c, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '3px 0' }}>✅ {c}</div>)}
+                {enhanced.why && <div style={{ marginTop: 10, fontSize: 12, color: '#94a3b8', background: '#f8fafc', borderRadius: 8, padding: '8px 12px' }}>💡 {enhanced.why}</div>}
               </div>
             </div>
           )}
@@ -350,7 +350,7 @@ function TabTrend() {
               <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 13, color: '#1e293b' }}>{a.angle}</div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 3 }}>{a.desc}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>{a.desc}</div>
                 </div>
                 <span style={{ background: 'rgba(249,115,22,0.1)', color: '#f97316', fontSize: 12, fontWeight: 700, padding: '3px 8px', borderRadius: 20, whiteSpace: 'nowrap', flexShrink: 0 }}>{a.momentum}</span>
               </div>
@@ -364,7 +364,7 @@ function TabTrend() {
             </div>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>🎬 Format ที่นิยม</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>{result.content_format}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>{result.content_format}</div>
             </div>
           </div>
 
@@ -380,7 +380,7 @@ function TabTrend() {
 
           <div style={card({ background: 'rgba(249,115,22,0.04)', borderColor: 'rgba(249,115,22,0.2)' })}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#f97316' }}>🔍 สรุปการวิเคราะห์</div>
-            <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.analysis}</div>
+            <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.analysis}</div>
           </div>
         </div>
       )}
@@ -466,7 +466,7 @@ function TabHashtag() {
 
           <div style={card({ background: 'rgba(236,72,153,0.04)', borderColor: 'rgba(236,72,153,0.2)' })}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#ec4899' }}>💡 เคล็ดลับการใช้งาน</div>
-            <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.tip}</div>
+            <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.tip}</div>
           </div>
         </div>
       )}
@@ -530,7 +530,7 @@ function TabSEO() {
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: '#6366f1' }}>🎯 Long-Tail Keywords</div>
               {result.long_tail?.map((k, i) => (
-                <div key={i} style={{ background: '#f8fafc', borderRadius: 6, padding: '6px 10px', marginBottom: 5, fontSize: 12, color: '#475569', cursor: 'pointer' }}
+                <div key={i} style={{ background: '#f8fafc', borderRadius: 6, padding: '6px 10px', marginBottom: 5, fontSize: 12, color: '#7c8797', cursor: 'pointer' }}
                   onClick={() => navigator.clipboard.writeText(k).catch(() => {})}>{k}</div>
               ))}
             </div>
@@ -544,17 +544,17 @@ function TabSEO() {
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#f59e0b' }}>🎯 Search Intent</div>
-              <div style={{ fontSize: 12, color: '#475569' }}>{result.search_intent}</div>
+              <div style={{ fontSize: 12, color: '#7c8797' }}>{result.search_intent}</div>
             </div>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#6366f1' }}>🕳 Competitor Gap</div>
-              <div style={{ fontSize: 12, color: '#475569' }}>{result.competitor_gap}</div>
+              <div style={{ fontSize: 12, color: '#7c8797' }}>{result.competitor_gap}</div>
             </div>
           </div>
 
           <div style={card({ background: 'rgba(132,204,22,0.04)', borderColor: 'rgba(132,204,22,0.2)' })}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#65a30d' }}>💡 เคล็ดลับการเขียน Description</div>
-            <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.description_tips}</div>
+            <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.description_tips}</div>
           </div>
         </div>
       )}
@@ -580,7 +580,7 @@ function TabSentiment() {
     setLoading(false);
   };
 
-  const sentimentColor = s => ({ positive: '#10b981', neutral: '#f59e0b', negative: '#ef4444' }[s] || '#64748b');
+  const sentimentColor = s => ({ positive: '#10b981', neutral: '#f59e0b', negative: '#ef4444' }[s] || '#94a3b8');
   const sentimentLabel = s => ({ positive: '😊 เชิงบวก', neutral: '😐 เป็นกลาง', negative: '😞 เชิงลบ' }[s] || s);
 
   return (
@@ -612,7 +612,7 @@ function TabSentiment() {
               <div style={{ display: 'grid', gap: 8 }}>
                 {[['Positive', result.breakdown?.positive || 0, '#10b981'], ['Neutral', result.breakdown?.neutral || 0, '#f59e0b'], ['Negative', result.breakdown?.negative || 0, '#ef4444']].map(([label, val, color]) => (
                   <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, color: '#64748b', width: 60 }}>{label}</span>
+                    <span style={{ fontSize: 11, color: '#94a3b8', width: 60 }}>{label}</span>
                     <div style={{ flex: 1, height: 8, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${val}%`, background: color, borderRadius: 99, transition: 'width .6s ease' }} />
                     </div>
@@ -627,13 +627,13 @@ function TabSentiment() {
             {result.praise_points?.length > 0 && (
               <div style={card({ borderLeft: '4px solid #10b981' })}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: '#10b981' }}>👍 สิ่งที่ชม</div>
-                {result.praise_points.map((p, i) => <div key={i} style={{ fontSize: 12, color: '#475569', marginBottom: 4 }}>• {p}</div>)}
+                {result.praise_points.map((p, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', marginBottom: 4 }}>• {p}</div>)}
               </div>
             )}
             {result.pain_points?.length > 0 && (
               <div style={card({ borderLeft: '4px solid #ef4444' })}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: '#ef4444' }}>⚠️ ปัญหาที่พบ</div>
-                {result.pain_points.map((p, i) => <div key={i} style={{ fontSize: 12, color: '#475569', marginBottom: 4 }}>• {p}</div>)}
+                {result.pain_points.map((p, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', marginBottom: 4 }}>• {p}</div>)}
               </div>
             )}
           </div>
@@ -649,7 +649,7 @@ function TabSentiment() {
 
           <div style={card({ background: 'rgba(168,85,247,0.04)', borderColor: 'rgba(168,85,247,0.2)' })}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#9333ea' }}>📋 สรุป</div>
-            <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+            <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.summary}</div>
           </div>
         </div>
       )}
@@ -704,7 +704,7 @@ function TabVideoScript() {
             <div style={{ display: 'flex', gap: 8 }}>
               {[['sales', '💰 ขาย'], ['educational', '🎓 สอน'], ['entertainment', '🎭 บันเทิง']].map(([id, label]) => (
                 <button key={id} onClick={() => setForm(f => ({ ...f, style: id }))}
-                  style={{ flex: 1, padding: '8px 4px', borderRadius: 8, border: `1.5px solid ${form.style === id ? '#ef4444' : 'rgba(0,0,0,0.1)'}`, background: form.style === id ? 'rgba(239,68,68,0.08)' : 'transparent', color: form.style === id ? '#ef4444' : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                  style={{ flex: 1, padding: '8px 4px', borderRadius: 8, border: `1.5px solid ${form.style === id ? '#ef4444' : 'rgba(0,0,0,0.1)'}`, background: form.style === id ? 'rgba(239,68,68,0.08)' : 'transparent', color: form.style === id ? '#ef4444' : '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                   {label}
                 </button>
               ))}
@@ -730,7 +730,7 @@ function TabVideoScript() {
             <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#1e293b', lineHeight: 1.6, marginBottom: 12 }}>
               🎣 Hook: "{result.hook}"
             </div>
-            <div style={{ fontWeight: 700, fontSize: 12, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>🎬 Storyboard</div>
+            <div style={{ fontWeight: 700, fontSize: 12, color: '#94a3b8', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>🎬 Storyboard</div>
             <div style={{ display: 'grid', gap: 8 }}>
               {result.scenes?.map((s, i) => (
                 <div key={i} style={{ background: '#f8fafc', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10, padding: '12px 14px' }}>
@@ -738,10 +738,10 @@ function TabVideoScript() {
                     <span style={{ background: '#ef4444', color: '#fff', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{s.time}</span>
                   </div>
                   <div style={{ display: 'grid', gap: 5, fontSize: 12 }}>
-                    <div><span style={{ color: '#64748b' }}>📢 Script: </span><span style={{ color: '#1e293b', fontWeight: 600 }}>{s.script}</span></div>
-                    <div><span style={{ color: '#64748b' }}>🎥 Visual: </span><span style={{ color: '#475569' }}>{s.visual}</span></div>
-                    <div><span style={{ color: '#64748b' }}>🎵 Sound: </span><span style={{ color: '#475569' }}>{s.sound}</span></div>
-                    {s.action && <div><span style={{ color: '#64748b' }}>🎬 Action: </span><span style={{ color: '#475569' }}>{s.action}</span></div>}
+                    <div><span style={{ color: '#94a3b8' }}>📢 Script: </span><span style={{ color: '#1e293b', fontWeight: 600 }}>{s.script}</span></div>
+                    <div><span style={{ color: '#94a3b8' }}>🎥 Visual: </span><span style={{ color: '#7c8797' }}>{s.visual}</span></div>
+                    <div><span style={{ color: '#94a3b8' }}>🎵 Sound: </span><span style={{ color: '#7c8797' }}>{s.sound}</span></div>
+                    {s.action && <div><span style={{ color: '#94a3b8' }}>🎬 Action: </span><span style={{ color: '#7c8797' }}>{s.action}</span></div>}
                   </div>
                 </div>
               ))}
@@ -755,13 +755,13 @@ function TabVideoScript() {
             </div>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#8b5cf6' }}>🎵 Music Vibe</div>
-              <div style={{ fontSize: 13, color: '#475569' }}>{result.music_vibe}</div>
+              <div style={{ fontSize: 13, color: '#7c8797' }}>{result.music_vibe}</div>
             </div>
           </div>
 
           <div style={card({ background: 'rgba(239,68,68,0.04)', borderColor: 'rgba(239,68,68,0.2)' })}>
             <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#dc2626' }}>📷 เคล็ดลับถ่ายทำ</div>
-            <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.filming_tips}</div>
+            <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.filming_tips}</div>
           </div>
         </div>
       )}
@@ -846,18 +846,18 @@ function TabTranslate() {
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#14b8a6' }}>🎭 Tone ที่ใช้</div>
-              <div style={{ fontSize: 13, color: '#475569' }}>{result.tone}</div>
+              <div style={{ fontSize: 13, color: '#7c8797' }}>{result.tone}</div>
             </div>
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#f97316' }}>📌 Localization Tips</div>
-              <div style={{ fontSize: 12, color: '#475569' }}>{result.localization_tips}</div>
+              <div style={{ fontSize: 12, color: '#7c8797' }}>{result.localization_tips}</div>
             </div>
           </div>
 
           {result.cultural_notes && (
             <div style={card({ background: 'rgba(20,184,166,0.04)', borderColor: 'rgba(20,184,166,0.2)' })}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#0d9488' }}>🌍 Cultural Notes</div>
-              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.cultural_notes}</div>
+              <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.cultural_notes}</div>
             </div>
           )}
         </div>
@@ -916,7 +916,7 @@ function TabPromptBuilder() {
           </div>
 
           <button onClick={() => setShowAdvanced(v => !v)}
-            style={{ background: 'none', border: '1px dashed rgba(0,0,0,0.15)', borderRadius: 8, padding: '8px 14px', color: '#64748b', cursor: 'pointer', fontSize: 12, textAlign: 'left' }}>
+            style={{ background: 'none', border: '1px dashed rgba(0,0,0,0.15)', borderRadius: 8, padding: '8px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 12, textAlign: 'left' }}>
             {showAdvanced ? '▲ ซ่อนตัวเลือกเพิ่มเติม' : '▼ ตัวเลือกเพิ่มเติม (Role / ตัวอย่าง / Format)'}
           </button>
 
@@ -983,7 +983,7 @@ function TabPromptBuilder() {
           {result.why_this_technique && (
             <div style={card({ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.2)' })}>
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#d97706' }}>💡 เหตุผลที่เลือกเทคนิคนี้</div>
-              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.why_this_technique}</div>
+              <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.why_this_technique}</div>
               {result.expected_output_quality && (
                 <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>🎯 คาดหวัง: {result.expected_output_quality}</div>
               )}
@@ -1015,7 +1015,7 @@ function TabPromptBuilder() {
               {result.tips.map((tip, i) => (
                 <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderBottom: i < result.tips.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
                   <span style={{ color: '#f59e0b', fontWeight: 700, flexShrink: 0 }}>{i + 1}.</span>
-                  <span style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{tip}</span>
+                  <span style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.5 }}>{tip}</span>
                 </div>
               ))}
             </div>
@@ -1032,7 +1032,7 @@ function TabPromptBuilder() {
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#6366f1' }}>🔹 {v.label}</span>
                       <CopyBtn text={v.prompt || ''} />
                     </div>
-                    <div style={{ fontSize: 12, color: '#475569', fontFamily: "'Courier New',monospace", lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{v.prompt}</div>
+                    <div style={{ fontSize: 12, color: '#7c8797', fontFamily: "'Courier New',monospace", lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{v.prompt}</div>
                   </div>
                 ))}
               </div>
@@ -1106,7 +1106,7 @@ function TabCulturalWisdom() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {WISDOM_PURPOSES.map(p => (
                 <button key={p} onClick={() => setForm(f => ({ ...f, purpose: p }))}
-                  style={{ padding: '5px 13px', borderRadius: 20, border: `1px solid ${form.purpose === p ? goldColor : 'rgba(0,0,0,0.1)'}`, background: form.purpose === p ? `rgba(180,83,9,0.1)` : '#f8fafc', color: form.purpose === p ? goldColor : '#64748b', fontSize: 12, cursor: 'pointer', fontWeight: form.purpose === p ? 700 : 400 }}>
+                  style={{ padding: '5px 13px', borderRadius: 20, border: `1px solid ${form.purpose === p ? goldColor : 'rgba(0,0,0,0.1)'}`, background: form.purpose === p ? `rgba(180,83,9,0.1)` : '#f8fafc', color: form.purpose === p ? goldColor : '#94a3b8', fontSize: 12, cursor: 'pointer', fontWeight: form.purpose === p ? 700 : 400 }}>
                   {p}
                 </button>
               ))}
@@ -1158,7 +1158,7 @@ function TabCulturalWisdom() {
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>{v.virtue}</div>
                       <div style={{ fontSize: 11, color: '#b45309', marginTop: 2 }}>{v.tradition}</div>
                     </div>
-                    <div style={{ fontSize: 12, color: '#64748b', flex: 2, lineHeight: 1.5 }}>{v.relevance}</div>
+                    <div style={{ fontSize: 12, color: '#94a3b8', flex: 2, lineHeight: 1.5 }}>{v.relevance}</div>
                   </div>
                 ))}
               </div>
@@ -1180,7 +1180,7 @@ function TabCulturalWisdom() {
               {result.practical_steps.map((step, i) => (
                 <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < result.practical_steps.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
                   <span style={{ fontSize: 14, color: goldColor, fontWeight: 800, flexShrink: 0, minWidth: 20 }}>{i + 1}.</span>
-                  <span style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{step}</span>
+                  <span style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{step}</span>
                 </div>
               ))}
             </div>
@@ -1203,7 +1203,7 @@ function TabCulturalWisdom() {
                   <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#b45309', marginBottom: 4 }}>{w.tradition}</div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 4, fontStyle: 'italic' }}>"{w.quote}"</div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{w.meaning}</div>
+                    <div style={{ fontSize: 12, color: '#94a3b8' }}>{w.meaning}</div>
                   </div>
                 ))}
               </div>
@@ -1301,7 +1301,7 @@ function TabSupplyChain() {
                 <div style={{ fontWeight: 800, fontSize: 14, color: sky }}>📋 สรุปภาพรวม</div>
                 <SourceBadge source={result.source} />
               </div>
-              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+              <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.summary}</div>
             </div>
           </div>
 
@@ -1319,14 +1319,14 @@ function TabSupplyChain() {
                     <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: '#f8fafc', borderRadius: 8, padding: '8px 12px' }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b', minWidth: 110 }}>{m.period}</span>
                       <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', background: lvlColor(m.demand_level), borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>{m.demand_level}</span>
-                      <span style={{ fontSize: 12, color: '#64748b', flex: 1 }}>{m.note}</span>
+                      <span style={{ fontSize: 12, color: '#94a3b8', flex: 1 }}>{m.note}</span>
                     </div>
                   ))}
                 </div>
               )}
               <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 10 }}>
-                {result.demand_forecast.safety_stock_advice && <div style={{ background: '#eff6ff', borderRadius: 8, padding: '8px 12px' }}><div style={{ fontSize: 11, color: '#0ea5e9', fontWeight: 700 }}>🛡️ Safety Stock</div><div style={{ fontSize: 12, color: '#475569' }}>{result.demand_forecast.safety_stock_advice}</div></div>}
-                {result.demand_forecast.reorder_point && <div style={{ background: '#eff6ff', borderRadius: 8, padding: '8px 12px' }}><div style={{ fontSize: 11, color: '#0ea5e9', fontWeight: 700 }}>🔄 Reorder Point</div><div style={{ fontSize: 12, color: '#475569' }}>{result.demand_forecast.reorder_point}</div></div>}
+                {result.demand_forecast.safety_stock_advice && <div style={{ background: '#eff6ff', borderRadius: 8, padding: '8px 12px' }}><div style={{ fontSize: 11, color: '#0ea5e9', fontWeight: 700 }}>🛡️ Safety Stock</div><div style={{ fontSize: 12, color: '#7c8797' }}>{result.demand_forecast.safety_stock_advice}</div></div>}
+                {result.demand_forecast.reorder_point && <div style={{ background: '#eff6ff', borderRadius: 8, padding: '8px 12px' }}><div style={{ fontSize: 11, color: '#0ea5e9', fontWeight: 700 }}>🔄 Reorder Point</div><div style={{ fontSize: 12, color: '#7c8797' }}>{result.demand_forecast.reorder_point}</div></div>}
               </div>
             </div>
           )}
@@ -1337,20 +1337,20 @@ function TabSupplyChain() {
               <div style={card()}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: sky }}>📦 กลยุทธ์สต๊อก</div>
                 {Object.entries({ 'ABC': result.inventory_strategy.abc_focus, 'ระดับสต๊อก': result.inventory_strategy.stock_level, 'Turnover': result.inventory_strategy.turnover_tip, 'ของค้าง': result.inventory_strategy.deadstock_risk }).map(([k, v]) => v && (
-                  <div key={k} style={{ marginBottom: 8 }}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>{k}</div><div style={{ fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{v}</div></div>
+                  <div key={k} style={{ marginBottom: 8 }}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>{k}</div><div style={{ fontSize: 12, color: '#7c8797', lineHeight: 1.5 }}>{v}</div></div>
                 ))}
               </div>
             )}
             {result.sourcing_strategy && (
               <div style={card()}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: sky }}>🏭 กลยุทธ์จัดซื้อ/จัดหา</div>
-                {result.sourcing_strategy.recommendation && <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.5, marginBottom: 8 }}>{result.sourcing_strategy.recommendation}</div>}
+                {result.sourcing_strategy.recommendation && <div style={{ fontSize: 12, color: '#7c8797', lineHeight: 1.5, marginBottom: 8 }}>{result.sourcing_strategy.recommendation}</div>}
                 {result.sourcing_strategy.supplier_criteria?.length > 0 && (
                   <><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>เกณฑ์เลือกซัพพลายเออร์</div>
-                  {result.sourcing_strategy.supplier_criteria.map((c, i) => <div key={i} style={{ fontSize: 12, color: '#475569' }}>✓ {c}</div>)}</>
+                  {result.sourcing_strategy.supplier_criteria.map((c, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797' }}>✓ {c}</div>)}</>
                 )}
-                {result.sourcing_strategy.moq_strategy && <div style={{ marginTop: 8, fontSize: 12, color: '#475569' }}><strong>MOQ:</strong> {result.sourcing_strategy.moq_strategy}</div>}
-                {result.sourcing_strategy.dual_sourcing && <div style={{ marginTop: 6, fontSize: 12, color: '#475569' }}><strong>สำรอง:</strong> {result.sourcing_strategy.dual_sourcing}</div>}
+                {result.sourcing_strategy.moq_strategy && <div style={{ marginTop: 8, fontSize: 12, color: '#7c8797' }}><strong>MOQ:</strong> {result.sourcing_strategy.moq_strategy}</div>}
+                {result.sourcing_strategy.dual_sourcing && <div style={{ marginTop: 6, fontSize: 12, color: '#7c8797' }}><strong>สำรอง:</strong> {result.sourcing_strategy.dual_sourcing}</div>}
               </div>
             )}
           </div>
@@ -1361,16 +1361,16 @@ function TabSupplyChain() {
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: sky }}>🚚 โลจิสติกส์ & การจัดส่ง</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
                 {result.logistics.recommended_channels?.length > 0 && (
-                  <div><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>ช่องทางขนส่งแนะนำ</div>{result.logistics.recommended_channels.map((c, i) => <div key={i} style={{ fontSize: 12, color: '#475569' }}>• {c}</div>)}</div>
+                  <div><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>ช่องทางขนส่งแนะนำ</div>{result.logistics.recommended_channels.map((c, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797' }}>• {c}</div>)}</div>
                 )}
                 {result.logistics.cost_optimization?.length > 0 && (
-                  <div><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>ลดต้นทุนขนส่ง</div>{result.logistics.cost_optimization.map((c, i) => <div key={i} style={{ fontSize: 12, color: '#475569' }}>• {c}</div>)}</div>
+                  <div><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>ลดต้นทุนขนส่ง</div>{result.logistics.cost_optimization.map((c, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797' }}>• {c}</div>)}</div>
                 )}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 8, marginTop: 10 }}>
-                {result.logistics.delivery_sla && <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>⏱️ SLA</div><div style={{ fontSize: 12, color: '#475569' }}>{result.logistics.delivery_sla}</div></div>}
-                {result.logistics.packaging_tip && <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>📦 บรรจุภัณฑ์</div><div style={{ fontSize: 12, color: '#475569' }}>{result.logistics.packaging_tip}</div></div>}
-                {result.logistics.fulfillment_model && <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>🏬 Fulfillment</div><div style={{ fontSize: 12, color: '#475569' }}>{result.logistics.fulfillment_model}</div></div>}
+                {result.logistics.delivery_sla && <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>⏱️ SLA</div><div style={{ fontSize: 12, color: '#7c8797' }}>{result.logistics.delivery_sla}</div></div>}
+                {result.logistics.packaging_tip && <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>📦 บรรจุภัณฑ์</div><div style={{ fontSize: 12, color: '#7c8797' }}>{result.logistics.packaging_tip}</div></div>}
+                {result.logistics.fulfillment_model && <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 10px' }}><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>🏬 Fulfillment</div><div style={{ fontSize: 12, color: '#7c8797' }}>{result.logistics.fulfillment_model}</div></div>}
               </div>
             </div>
           )}
@@ -1384,8 +1384,8 @@ function TabSupplyChain() {
                   {result.cost_structure.landed_cost_factors.map((c, i) => <span key={i} style={{ fontSize: 12, background: '#fff', border: '1px solid rgba(14,165,233,0.25)', color: '#0284c7', borderRadius: 20, padding: '3px 10px' }}>{c}</span>)}
                 </div>
               )}
-              {result.cost_structure.margin_protection && <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}><strong>ปกป้องกำไร:</strong> {result.cost_structure.margin_protection}</div>}
-              {result.cost_structure.pricing_note && <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6, marginTop: 4 }}><strong>ตั้งราคา:</strong> {result.cost_structure.pricing_note}</div>}
+              {result.cost_structure.margin_protection && <div style={{ fontSize: 12, color: '#7c8797', lineHeight: 1.6 }}><strong>ปกป้องกำไร:</strong> {result.cost_structure.margin_protection}</div>}
+              {result.cost_structure.pricing_note && <div style={{ fontSize: 12, color: '#7c8797', lineHeight: 1.6, marginTop: 4 }}><strong>ตั้งราคา:</strong> {result.cost_structure.pricing_note}</div>}
             </div>
           )}
 
@@ -1400,7 +1400,7 @@ function TabSupplyChain() {
                       <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{r.risk}</span>
                       <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: riskColor(r.likelihood), borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>โอกาส {r.likelihood}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>📌 {r.impact}</div>
+                    <div style={{ fontSize: 12, color: '#94a3b8' }}>📌 {r.impact}</div>
                     <div style={{ fontSize: 12, color: '#059669', marginTop: 2 }}>🛡️ {r.mitigation}</div>
                   </div>
                 ))}
@@ -1414,7 +1414,7 @@ function TabSupplyChain() {
               <div style={card({ borderLeft: `4px solid ${sky}` })}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: sky }}>✅ แผนปฏิบัติการ</div>
                 {result.action_plan.map((a, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#475569', padding: '4px 0' }}>
+                  <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: '#7c8797', padding: '4px 0' }}>
                     <span style={{ color: sky, fontWeight: 800 }}>{i + 1}.</span><span style={{ lineHeight: 1.5 }}>{a}</span>
                   </div>
                 ))}
@@ -1499,25 +1499,25 @@ function TabPricing() {
               <SourceBadge source={result.source} />
             </div>
             <div style={{ fontSize: 22, fontWeight: 900, color: indigo, lineHeight: 1.4 }}>{result.recommended_price}</div>
-            {result.psychological_price && <div style={{ fontSize: 13, color: '#64748b', marginTop: 6 }}>🧠 {result.psychological_price}</div>}
+            {result.psychological_price && <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 6 }}>🧠 {result.psychological_price}</div>}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-3)', gap: 12 }}>
             {result.price_range && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>ช่วงราคา</div><div style={{ fontSize: 14, fontWeight: 800, color: '#1e293b' }}>{result.price_range.min} – {result.price_range.max}</div></div>}
             {result.margin_analysis && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>กำไรขั้นต้น</div><div style={{ fontSize: 14, fontWeight: 800, color: '#10b981' }}>{result.margin_analysis.gross_margin}</div></div>}
-            {result.strategy && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>กลยุทธ์</div><div style={{ fontSize: 12, color: '#475569' }}>{result.strategy}</div></div>}
+            {result.strategy && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>กลยุทธ์</div><div style={{ fontSize: 12, color: '#7c8797' }}>{result.strategy}</div></div>}
           </div>
 
-          {result.margin_analysis?.note && <div style={card({ background: 'rgba(99,102,241,0.04)', borderColor: 'rgba(99,102,241,0.2)' })}><div style={{ fontWeight: 700, fontSize: 12, color: indigo, marginBottom: 4 }}>📊 ข้อสังเกตกำไร</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.margin_analysis.note}</div></div>}
-          {result.competitor_positioning && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 6 }}>🥊 เทียบคู่แข่ง</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.competitor_positioning}</div></div>}
+          {result.margin_analysis?.note && <div style={card({ background: 'rgba(99,102,241,0.04)', borderColor: 'rgba(99,102,241,0.2)' })}><div style={{ fontWeight: 700, fontSize: 12, color: indigo, marginBottom: 4 }}>📊 ข้อสังเกตกำไร</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.margin_analysis.note}</div></div>}
+          {result.competitor_positioning && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 6 }}>🥊 เทียบคู่แข่ง</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.competitor_positioning}</div></div>}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.bundle_options?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 8 }}>📦 ไอเดียจัดเซ็ต</div>{result.bundle_options.map((b, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {b}</div>)}</div>}
-            {result.upsell_ideas?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 8 }}>⬆️ Upsell / Cross-sell</div>{result.upsell_ideas.map((b, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {b}</div>)}</div>}
+            {result.bundle_options?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 8 }}>📦 ไอเดียจัดเซ็ต</div>{result.bundle_options.map((b, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {b}</div>)}</div>}
+            {result.upsell_ideas?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 8 }}>⬆️ Upsell / Cross-sell</div>{result.upsell_ideas.map((b, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {b}</div>)}</div>}
           </div>
 
-          {result.discount_strategy && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 6 }}>🏷️ กลยุทธ์ส่วนลด</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.discount_strategy}</div></div>}
-          {result.price_anchoring_tip && <div style={card({ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 6 }}>⚓ เคล็ดลับ Price Anchoring</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.price_anchoring_tip}</div></div>}
+          {result.discount_strategy && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: indigo, marginBottom: 6 }}>🏷️ กลยุทธ์ส่วนลด</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.discount_strategy}</div></div>}
+          {result.price_anchoring_tip && <div style={card({ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 6 }}>⚓ เคล็ดลับ Price Anchoring</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.price_anchoring_tip}</div></div>}
         </div>
       )}
     </div>
@@ -1546,7 +1546,7 @@ function TabCustomerService() {
     setLoading(false);
   };
 
-  const sentColor = s => ({ positive: '#10b981', neutral: '#f59e0b', negative: '#ef4444' }[s] || '#64748b');
+  const sentColor = s => ({ positive: '#10b981', neutral: '#f59e0b', negative: '#ef4444' }[s] || '#94a3b8');
   const urgColor = u => (/สูง/.test(u) ? '#ef4444' : /ต่ำ/.test(u) ? '#10b981' : '#f59e0b');
 
   return (
@@ -1582,7 +1582,7 @@ function TabCustomerService() {
         <div style={{ display: 'grid', gap: 16 }}>
           <div style={{ ...card(), display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
             <SourceBadge source={result.source} />
-            {result.intent && <span style={{ fontSize: 12, fontWeight: 700, background: '#f1f5f9', color: '#475569', borderRadius: 20, padding: '3px 10px' }}>🎯 {result.intent}</span>}
+            {result.intent && <span style={{ fontSize: 12, fontWeight: 700, background: '#f1f5f9', color: '#7c8797', borderRadius: 20, padding: '3px 10px' }}>🎯 {result.intent}</span>}
             {result.sentiment && <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: sentColor(result.sentiment), borderRadius: 20, padding: '3px 10px' }}>{result.sentiment}</span>}
             {result.urgency && <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: urgColor(result.urgency), borderRadius: 20, padding: '3px 10px' }}>⏱️ {result.urgency}</span>}
             {result.escalate && <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: '#ef4444', borderRadius: 20, padding: '3px 10px' }}>🚨 ส่งต่อทีม</span>}
@@ -1605,7 +1605,7 @@ function TabCustomerService() {
                 {result.suggested_replies.map((r, i) => (
                   <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: '#f8fafc', borderRadius: 10, padding: '10px 12px' }}>
                     <span style={{ fontSize: 11, fontWeight: 800, color: green, flexShrink: 0 }}>{i + 1}</span>
-                    <span style={{ flex: 1, fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{r}</span>
+                    <span style={{ flex: 1, fontSize: 13, color: '#7c8797', lineHeight: 1.5 }}>{r}</span>
                     <CopyBtn text={r} />
                   </div>
                 ))}
@@ -1614,11 +1614,11 @@ function TabCustomerService() {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.do_dont?.do?.length > 0 && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#10b981', marginBottom: 8 }}>👍 ควรทำ</div>{result.do_dont.do.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {d}</div>)}</div>}
-            {result.do_dont?.dont?.length > 0 && <div style={card({ borderLeft: '4px solid #ef4444' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 8 }}>🚫 ไม่ควรทำ</div>{result.do_dont.dont.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {d}</div>)}</div>}
+            {result.do_dont?.do?.length > 0 && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#10b981', marginBottom: 8 }}>👍 ควรทำ</div>{result.do_dont.do.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {d}</div>)}</div>}
+            {result.do_dont?.dont?.length > 0 && <div style={card({ borderLeft: '4px solid #ef4444' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 8 }}>🚫 ไม่ควรทำ</div>{result.do_dont.dont.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {d}</div>)}</div>}
           </div>
 
-          {result.follow_up && <div style={card({ background: 'rgba(34,197,94,0.05)', borderColor: 'rgba(34,197,94,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#16a34a', marginBottom: 6 }}>🔄 ประโยคติดตามผล</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.follow_up}</div></div>}
+          {result.follow_up && <div style={card({ background: 'rgba(34,197,94,0.05)', borderColor: 'rgba(34,197,94,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#16a34a', marginBottom: 6 }}>🔄 ประโยคติดตามผล</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.follow_up}</div></div>}
         </div>
       )}
     </div>
@@ -1677,7 +1677,7 @@ function TabAdBudget() {
                 <span style={{ fontWeight: 800, fontSize: 13, color: rose }}>🎯 กลยุทธ์การใช้งบ</span>
                 <SourceBadge source={result.source} />
               </div>
-              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+              <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.summary}</div>
             </div>
           )}
 
@@ -1696,7 +1696,7 @@ function TabAdBudget() {
                         <div style={{ height: '100%', width: `${a.percent}%`, background: rose, borderRadius: 99 }} />
                       </div>
                     )}
-                    {a.format && <div style={{ fontSize: 12, color: '#64748b' }}>🎨 {a.format}</div>}
+                    {a.format && <div style={{ fontSize: 12, color: '#94a3b8' }}>🎨 {a.format}</div>}
                     {a.rationale && <div style={{ fontSize: 12, color: '#94a3b8' }}>{a.rationale}</div>}
                   </div>
                 ))}
@@ -1726,7 +1726,7 @@ function TabAdBudget() {
                   <span style={{ fontSize: 12, fontWeight: 800, color: '#fff', background: rose, borderRadius: 6, padding: '2px 8px', whiteSpace: 'nowrap' }}>{p.budget}</span>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{p.phase} <span style={{ fontWeight: 400, color: '#94a3b8' }}>· {p.days}</span></div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>{p.focus}</div>
+                    <div style={{ fontSize: 12, color: '#94a3b8' }}>{p.focus}</div>
                   </div>
                 </div>
               ))}
@@ -1734,11 +1734,11 @@ function TabAdBudget() {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.creative_tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: rose, marginBottom: 8 }}>🎨 เคล็ดลับครีเอทีฟ</div>{result.creative_tips.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
-            {result.scaling_rules?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: rose, marginBottom: 8 }}>⚖️ กฎการเพิ่มงบ</div>{result.scaling_rules.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.creative_tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: rose, marginBottom: 8 }}>🎨 เคล็ดลับครีเอทีฟ</div>{result.creative_tips.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.scaling_rules?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: rose, marginBottom: 8 }}>⚖️ กฎการเพิ่มงบ</div>{result.scaling_rules.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
           </div>
 
-          {result.bid_strategy && <div style={card({ background: 'rgba(244,63,94,0.04)', borderColor: 'rgba(244,63,94,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#e11d48', marginBottom: 6 }}>🎰 กลยุทธ์ Bid</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.bid_strategy}</div></div>}
+          {result.bid_strategy && <div style={card({ background: 'rgba(244,63,94,0.04)', borderColor: 'rgba(244,63,94,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#e11d48', marginBottom: 6 }}>🎰 กลยุทธ์ Bid</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.bid_strategy}</div></div>}
 
           {result.watch_metrics?.length > 0 && (
             <div style={card()}>
@@ -1808,7 +1808,7 @@ function TabBreakEven() {
                 <SourceBadge source={result.source} />
               </div>
               <div style={{ fontSize: 14, color: '#1e293b', lineHeight: 1.6, fontWeight: 600 }}>{result.health_verdict}</div>
-              {result.summary && <div style={{ fontSize: 13, color: '#64748b', marginTop: 6, lineHeight: 1.6 }}>{result.summary}</div>}
+              {result.summary && <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 6, lineHeight: 1.6 }}>{result.summary}</div>}
             </div>
           )}
 
@@ -1826,7 +1826,7 @@ function TabBreakEven() {
                   const neg = /-/.test(String(s.profit));
                   return (
                     <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>{s.name}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>{s.name}</div>
                       <div style={{ fontSize: 11, color: '#94a3b8', margin: '2px 0' }}>{s.units}</div>
                       <div style={{ fontSize: 15, fontWeight: 900, color: neg ? '#ef4444' : '#10b981' }}>{s.profit}</div>
                     </div>
@@ -1849,8 +1849,8 @@ function TabBreakEven() {
             </div>
           )}
 
-          {result.pricing_sensitivity && <div style={card({ background: 'rgba(13,148,136,0.04)', borderColor: 'rgba(13,148,136,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 6 }}>🎚️ ผลของการปรับราคา</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.pricing_sensitivity}</div></div>}
-          {result.cash_flow_tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 8 }}>💧 เคล็ดลับสภาพคล่อง</div>{result.cash_flow_tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+          {result.pricing_sensitivity && <div style={card({ background: 'rgba(13,148,136,0.04)', borderColor: 'rgba(13,148,136,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 6 }}>🎚️ ผลของการปรับราคา</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.pricing_sensitivity}</div></div>}
+          {result.cash_flow_tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 8 }}>💧 เคล็ดลับสภาพคล่อง</div>{result.cash_flow_tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
         </div>
       )}
     </div>
@@ -1912,7 +1912,7 @@ function TabCampaignCalendar() {
                 <span style={{ fontWeight: 800, fontSize: 13, color: fuchsia }}>🗺️ กลยุทธ์ปฏิทิน</span>
                 <SourceBadge source={result.source} />
               </div>
-              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+              <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.summary}</div>
             </div>
           )}
 
@@ -1928,8 +1928,8 @@ function TabCampaignCalendar() {
                     </div>
                     <div style={{ flex: 1, background: '#fdf4ff', borderRadius: 10, padding: '8px 12px' }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#a21caf' }}>{ev.occasion}</div>
-                      {ev.promo_angle && <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>🎯 {ev.promo_angle}</div>}
-                      {ev.content_idea && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>🎬 {ev.content_idea}</div>}
+                      {ev.promo_angle && <div style={{ fontSize: 12, color: '#7c8797', marginTop: 2 }}>🎯 {ev.promo_angle}</div>}
+                      {ev.content_idea && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>🎬 {ev.content_idea}</div>}
                     </div>
                   </div>
                 ))}
@@ -1938,12 +1938,12 @@ function TabCampaignCalendar() {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.key_dates?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: fuchsia, marginBottom: 8 }}>📌 วันห้ามพลาด</div>{result.key_dates.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {d}</div>)}</div>}
-            {result.always_on_ideas?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: fuchsia, marginBottom: 8 }}>♾️ คอนเทนต์ทำได้ตลอด</div>{result.always_on_ideas.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {d}</div>)}</div>}
+            {result.key_dates?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: fuchsia, marginBottom: 8 }}>📌 วันห้ามพลาด</div>{result.key_dates.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {d}</div>)}</div>}
+            {result.always_on_ideas?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: fuchsia, marginBottom: 8 }}>♾️ คอนเทนต์ทำได้ตลอด</div>{result.always_on_ideas.map((d, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {d}</div>)}</div>}
           </div>
 
-          {result.budget_focus && <div style={card({ background: 'rgba(217,70,239,0.04)', borderColor: 'rgba(217,70,239,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#c026d3', marginBottom: 6 }}>💸 ช่วงทุ่มงบ</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.budget_focus}</div></div>}
-          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: fuchsia, marginBottom: 8 }}>💡 เคล็ดลับ</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+          {result.budget_focus && <div style={card({ background: 'rgba(217,70,239,0.04)', borderColor: 'rgba(217,70,239,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#c026d3', marginBottom: 6 }}>💸 ช่วงทุ่มงบ</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.budget_focus}</div></div>}
+          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: fuchsia, marginBottom: 8 }}>💡 เคล็ดลับ</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
         </div>
       )}
     </div>
@@ -2012,7 +2012,7 @@ function TabLiveScript() {
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><SourceBadge source={result.source} /><CopyBtn text={result.opening_hook} /></div>
               </div>
               <div style={{ background: '#fff1f2', borderRadius: 10, padding: '12px 14px', fontSize: 14, color: '#9f1239', lineHeight: 1.6 }}>{result.opening_hook}</div>
-              {result.summary && <div style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>{result.summary}</div>}
+              {result.summary && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>{result.summary}</div>}
             </div>
           )}
 
@@ -2025,7 +2025,7 @@ function TabLiveScript() {
                     <span style={{ fontSize: 11, fontWeight: 800, color: '#fff', background: pink, borderRadius: 6, padding: '3px 8px', whiteSpace: 'nowrap', height: 'fit-content' }}>{r.time}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{r.segment}</div>
-                      <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>{r.talking_points}</div>
+                      <div style={{ fontSize: 12, color: '#7c8797', marginTop: 2 }}>{r.talking_points}</div>
                       {r.goal && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>🎯 {r.goal}</div>}
                     </div>
                   </div>
@@ -2035,8 +2035,8 @@ function TabLiveScript() {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.engagement_tactics?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 8 }}>🎮 ดึง Engagement</div>{result.engagement_tactics.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
-            {result.urgency_scripts?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 8 }}>⚡ เร่งความเร่งด่วน</div>{result.urgency_scripts.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>{t}</div>)}</div>}
+            {result.engagement_tactics?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 8 }}>🎮 ดึง Engagement</div>{result.engagement_tactics.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.urgency_scripts?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 8 }}>⚡ เร่งความเร่งด่วน</div>{result.urgency_scripts.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>{t}</div>)}</div>}
           </div>
 
           {result.objection_handling?.length > 0 && (
@@ -2058,11 +2058,11 @@ function TabLiveScript() {
                 <CopyBtn text={result.closing_scripts.join('\n')} />
               </div>
               {result.closing_scripts.map((s, i) => <div key={i} style={{ background: '#f0fdf4', borderRadius: 8, padding: '8px 12px', marginBottom: 6, fontSize: 13, color: '#166534' }}>{s}</div>)}
-              {result.cta_cadence && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>📢 {result.cta_cadence}</div>}
+              {result.cta_cadence && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>📢 {result.cta_cadence}</div>}
             </div>
           )}
 
-          {result.tips?.length > 0 && <div style={card({ background: 'rgba(251,113,133,0.05)', borderColor: 'rgba(251,113,133,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#e11d48', marginBottom: 8 }}>💡 เคล็ดลับไลฟ์ปัง</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+          {result.tips?.length > 0 && <div style={card({ background: 'rgba(251,113,133,0.05)', borderColor: 'rgba(251,113,133,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#e11d48', marginBottom: 8 }}>💡 เคล็ดลับไลฟ์ปัง</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
         </div>
       )}
     </div>
@@ -2123,11 +2123,11 @@ function TabOmniSolver() {
               <SourceBadge source={result.source} />
             </div>
             {result.problem_reframed && <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, lineHeight: 1.6 }}>{result.problem_reframed}</div>}
-            {result.summary && <div style={{ fontSize: 13, color: '#64748b', marginTop: 6, lineHeight: 1.6 }}>{result.summary}</div>}
+            {result.summary && <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 6, lineHeight: 1.6 }}>{result.summary}</div>}
             {result.root_causes?.length > 0 && (
               <div style={{ marginTop: 10 }}>
                 <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>รากของปัญหา</div>
-                {result.root_causes.map((r, i) => <div key={i} style={{ fontSize: 12, color: '#475569' }}>• {r}</div>)}
+                {result.root_causes.map((r, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797' }}>• {r}</div>)}
               </div>
             )}
           </div>
@@ -2141,7 +2141,7 @@ function TabOmniSolver() {
                 return (
                   <div key={key} style={card({ borderTop: `3px solid ${m.color}` })}>
                     <div style={{ fontWeight: 800, fontSize: 13, color: m.color, marginBottom: 6 }}>{m.icon} {m.label}</div>
-                    {l.insight && <div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6, marginBottom: 6 }}>{l.insight}</div>}
+                    {l.insight && <div style={{ fontSize: 12, color: '#7c8797', lineHeight: 1.6, marginBottom: 6 }}>{l.insight}</div>}
                     {(l.levers || l.leverage_points || l.adaptation || l.moves)?.map((x, i) => <div key={i} style={{ fontSize: 12, color: '#1e293b', padding: '1px 0' }}>→ {x}</div>)}
                     {(l.structure || l.positioning) && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>{l.structure || l.positioning}</div>}
                     {l.resources?.map((x, i) => <div key={i} style={{ fontSize: 11, color: '#94a3b8' }}>🔗 {x}</div>)}
@@ -2159,7 +2159,7 @@ function TabOmniSolver() {
                 {result.perspectives.map((p, i) => (
                   <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px' }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{p.stakeholder}</div>
-                    {p.view && <div style={{ fontSize: 12, color: '#64748b' }}>มอง: {p.view}</div>}
+                    {p.view && <div style={{ fontSize: 12, color: '#94a3b8' }}>มอง: {p.view}</div>}
                     {p.need && <div style={{ fontSize: 12, color: '#7c3aed' }}>ต้องการ: {p.need}</div>}
                   </div>
                 ))}
@@ -2221,7 +2221,7 @@ function TabOmniSolver() {
             {result.monitoring && (
               <div style={card({ borderLeft: '4px solid #10b981' })}>
                 <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: '#059669' }}>📡 ติดตามต่อเนื่อง 24/7</div>
-                {result.monitoring.signals?.map((s, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {s}</div>)}
+                {result.monitoring.signals?.map((s, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {s}</div>)}
                 {result.monitoring.review_cadence && <div style={{ fontSize: 12, color: '#059669', marginTop: 6 }}>🔄 {result.monitoring.review_cadence}</div>}
               </div>
             )}
@@ -2277,16 +2277,16 @@ function TabNegotiation() {
                 <span style={{ fontWeight: 800, fontSize: 13, color: cyan }}>🎯 กลยุทธ์</span>
                 <SourceBadge source={result.source} />
               </div>
-              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+              <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.summary}</div>
             </div>
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.batna && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>🛡️ BATNA ของเรา</div><div style={{ fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{result.batna}</div></div>}
-            {result.their_likely_batna && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>🧭 BATNA อีกฝ่าย</div><div style={{ fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{result.their_likely_batna}</div></div>}
+            {result.batna && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>🛡️ BATNA ของเรา</div><div style={{ fontSize: 12, color: '#7c8797', lineHeight: 1.5 }}>{result.batna}</div></div>}
+            {result.their_likely_batna && <div style={card()}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>🧭 BATNA อีกฝ่าย</div><div style={{ fontSize: 12, color: '#7c8797', lineHeight: 1.5 }}>{result.their_likely_batna}</div></div>}
           </div>
-          {result.zopa && <div style={card({ background: 'rgba(8,145,178,0.04)', borderColor: 'rgba(8,145,178,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 4 }}>📊 ZOPA (ช่วงที่ตกลงได้)</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.zopa}</div></div>}
-          {result.anchor && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 4 }}>⚓ Anchor (ข้อเสนอเปิด)</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.anchor}</div></div>}
+          {result.zopa && <div style={card({ background: 'rgba(8,145,178,0.04)', borderColor: 'rgba(8,145,178,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 4 }}>📊 ZOPA (ช่วงที่ตกลงได้)</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.zopa}</div></div>}
+          {result.anchor && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 4 }}>⚓ Anchor (ข้อเสนอเปิด)</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.anchor}</div></div>}
 
           {result.concession_plan?.length > 0 && (
             <div style={card()}>
@@ -2311,19 +2311,19 @@ function TabNegotiation() {
                     <span style={{ fontSize: 11, fontWeight: 700, color: cyan }}>{lbl}</span>
                     <CopyBtn text={result.scripts[k]} />
                   </div>
-                  <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{result.scripts[k]}</div>
+                  <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.5 }}>{result.scripts[k]}</div>
                 </div>
               ))}
             </div>
           )}
 
-          {result.fair_framing && <div style={card({ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 4 }}>⚖️ กรอบดีลที่เป็นธรรม</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.fair_framing}</div></div>}
+          {result.fair_framing && <div style={card({ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 4 }}>⚖️ กรอบดีลที่เป็นธรรม</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.fair_framing}</div></div>}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.tactics?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 8 }}>🎯 เทคนิค</div>{result.tactics.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
-            {result.red_flags?.length > 0 && <div style={card({ borderLeft: '4px solid #ef4444' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 8 }}>🚩 สัญญาณควรถอย</div>{result.red_flags.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.tactics?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 8 }}>🎯 เทคนิค</div>{result.tactics.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.red_flags?.length > 0 && <div style={card({ borderLeft: '4px solid #ef4444' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 8 }}>🚩 สัญญาณควรถอย</div>{result.red_flags.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
           </div>
-          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 8 }}>💡 เคล็ดลับ</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: cyan, marginBottom: 8 }}>💡 เคล็ดลับ</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
         </div>
       )}
     </div>
@@ -2375,8 +2375,8 @@ function TabMediation() {
                 <SourceBadge source={result.source} />
               </div>
               <div style={{ fontSize: 14, color: '#1e293b', fontWeight: 600, lineHeight: 1.6 }}>{result.reframe}</div>
-              {result.root_tension && <div style={{ fontSize: 12, color: '#64748b', marginTop: 6 }}>🎯 ต้นตอ: {result.root_tension}</div>}
-              {result.summary && <div style={{ fontSize: 13, color: '#64748b', marginTop: 6, lineHeight: 1.6 }}>{result.summary}</div>}
+              {result.root_tension && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 6 }}>🎯 ต้นตอ: {result.root_tension}</div>}
+              {result.summary && <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 6, lineHeight: 1.6 }}>{result.summary}</div>}
             </div>
           )}
 
@@ -2387,7 +2387,7 @@ function TabMediation() {
                 {result.parties_analysis.map((p, i) => (
                   <div key={i} style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 12px' }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>{p.party} {p.emotion && <span style={{ fontSize: 11, fontWeight: 400, color: '#94a3b8' }}>· {p.emotion}</span>}</div>
-                    {p.position && <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>จุดยืน: {p.position}</div>}
+                    {p.position && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>จุดยืน: {p.position}</div>}
                     {p.interest && <div style={{ fontSize: 12, color: teal, marginTop: 2 }}>ต้องการจริง: {p.interest}</div>}
                   </div>
                 ))}
@@ -2398,7 +2398,7 @@ function TabMediation() {
           {result.common_ground?.length > 0 && (
             <div style={card({ background: 'rgba(16,185,129,0.05)', borderColor: 'rgba(16,185,129,0.2)' })}>
               <div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 8 }}>🤝 จุดร่วม</div>
-              {result.common_ground.map((c, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>✓ {c}</div>)}
+              {result.common_ground.map((c, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>✓ {c}</div>)}
             </div>
           )}
 
@@ -2427,15 +2427,15 @@ function TabMediation() {
                     <span style={{ fontSize: 11, fontWeight: 700, color: teal }}>{lbl}</span>
                     <CopyBtn text={result.mediation_script[k]} />
                   </div>
-                  <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{result.mediation_script[k]}</div>
+                  <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.5 }}>{result.mediation_script[k]}</div>
                 </div>
               ))}
             </div>
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.ground_rules?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 8 }}>📋 กติกาการคุย</div>{result.ground_rules.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
-            {result.follow_up && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 6 }}>📡 ติดตามผล</div><div style={{ fontSize: 12, color: '#475569', lineHeight: 1.6 }}>{result.follow_up}</div></div>}
+            {result.ground_rules?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 8 }}>📋 กติกาการคุย</div>{result.ground_rules.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.follow_up && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 6 }}>📡 ติดตามผล</div><div style={{ fontSize: 12, color: '#7c8797', lineHeight: 1.6 }}>{result.follow_up}</div></div>}
           </div>
         </div>
       )}
@@ -2496,13 +2496,13 @@ function TabCrisis() {
         <div style={{ display: 'grid', gap: 16 }}>
           <div style={{ ...card({ borderLeft: `4px solid ${red}` }), display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <SourceBadge source={result.source} />
-            {result.severity_assessment && <div style={{ flex: 1, minWidth: 200, fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.severity_assessment}</div>}
+            {result.severity_assessment && <div style={{ flex: 1, minWidth: 200, fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.severity_assessment}</div>}
             {result.first_response_window && <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: red, borderRadius: 20, padding: '4px 12px', whiteSpace: 'nowrap' }}>⏱️ {result.first_response_window}</span>}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.do_now?.length > 0 && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 8 }}>✅ ทำทันที</div>{result.do_now.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
-            {result.dont?.length > 0 && <div style={card({ borderLeft: '4px solid #ef4444' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 8 }}>🚫 ห้ามทำ</div>{result.dont.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.do_now?.length > 0 && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 8 }}>✅ ทำทันที</div>{result.do_now.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.dont?.length > 0 && <div style={card({ borderLeft: '4px solid #ef4444' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ef4444', marginBottom: 8 }}>🚫 ห้ามทำ</div>{result.dont.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
           </div>
 
           {result.holding_statement && (
@@ -2521,7 +2521,7 @@ function TabCrisis() {
                 <div style={{ fontWeight: 700, fontSize: 13, color: red }}>📄 แถลงการณ์เต็ม</div>
                 <CopyBtn text={result.full_statement} />
               </div>
-              <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{result.full_statement}</div>
+              <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#7c8797', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{result.full_statement}</div>
             </div>
           )}
 
@@ -2535,7 +2535,7 @@ function TabCrisis() {
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{r.scenario}</span>
                       <CopyBtn text={r.reply} />
                     </div>
-                    <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.5 }}>{r.reply}</div>
+                    <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.5 }}>{r.reply}</div>
                   </div>
                 ))}
               </div>
@@ -2543,10 +2543,10 @@ function TabCrisis() {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.recovery_plan?.length > 0 && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 8 }}>🌱 แผนฟื้นฟูความเชื่อมั่น</div>{result.recovery_plan.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+            {result.recovery_plan?.length > 0 && <div style={card({ borderLeft: '4px solid #10b981' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#059669', marginBottom: 8 }}>🌱 แผนฟื้นฟูความเชื่อมั่น</div>{result.recovery_plan.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
             <div style={{ display: 'grid', gap: 12 }}>
               {result.stakeholders?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: red, marginBottom: 8 }}>👥 ต้องสื่อสารกับ</div><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{result.stakeholders.map((s, i) => <span key={i} style={{ fontSize: 12, background: '#fef2f2', color: red, borderRadius: 20, padding: '3px 10px' }}>{s}</span>)}</div></div>}
-              {result.prevention?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: red, marginBottom: 8 }}>🛡️ ป้องกันซ้ำ</div>{result.prevention.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+              {result.prevention?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: red, marginBottom: 8 }}>🛡️ ป้องกันซ้ำ</div>{result.prevention.map((t, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
             </div>
           </div>
         </div>
@@ -2610,7 +2610,7 @@ function TabPersona() {
                 <span style={{ fontWeight: 800, fontSize: 13, color: violet }}>📋 ภาพรวม</span>
                 <SourceBadge source={result.source} />
               </div>
-              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>
+              <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.summary}</div>
             </div>
           )}
 
@@ -2625,7 +2625,7 @@ function TabPersona() {
                 {p.pains?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>😣 ความเจ็บปวด</div>{chips(p.pains, '#ef4444')}</div>}
                 {p.desires?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', marginBottom: 4 }}>✨ ความต้องการ</div>{chips(p.desires, '#10b981')}</div>}
                 {p.buying_triggers?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>⚡ กระตุ้นซื้อ</div>{chips(p.buying_triggers, '#f59e0b')}</div>}
-                {p.objections?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 4 }}>🛑 ข้อกังวล</div>{chips(p.objections, '#64748b')}</div>}
+                {p.objections?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4 }}>🛑 ข้อกังวล</div>{chips(p.objections, '#94a3b8')}</div>}
                 {p.where_to_find?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: '#0ea5e9', marginBottom: 4 }}>📍 เจอได้ที่</div>{chips(p.where_to_find, '#0ea5e9')}</div>}
                 {p.messaging_hooks?.length > 0 && <div><div style={{ fontSize: 11, fontWeight: 700, color: violet, marginBottom: 4 }}>💬 มุมสื่อสาร</div>{chips(p.messaging_hooks, violet)}</div>}
               </div>
@@ -2635,8 +2635,8 @@ function TabPersona() {
 
           {(result.primary_persona || result.positioning) && (
             <div style={card({ background: 'rgba(139,92,246,0.05)', borderColor: 'rgba(139,92,246,0.2)' })}>
-              {result.primary_persona && <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: violet }}>🎯 โฟกัสหลัก:</strong> {result.primary_persona}</div>}
-              {result.positioning && <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}><strong style={{ color: violet }}>📐 Positioning:</strong> {result.positioning}</div>}
+              {result.primary_persona && <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6, marginBottom: 6 }}><strong style={{ color: violet }}>🎯 โฟกัสหลัก:</strong> {result.primary_persona}</div>}
+              {result.positioning && <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}><strong style={{ color: violet }}>📐 Positioning:</strong> {result.positioning}</div>}
             </div>
           )}
         </div>
@@ -2713,7 +2713,7 @@ function TabListing() {
           {result.bullets?.length > 0 && (
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, color: orange, marginBottom: 8 }}>✨ จุดเด่น (Bullet Points)</div>
-              {result.bullets.map((b, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>{b}</div>)}
+              {result.bullets.map((b, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>{b}</div>)}
             </div>
           )}
 
@@ -2723,7 +2723,7 @@ function TabListing() {
                 <div style={{ fontWeight: 700, fontSize: 13, color: orange }}>📄 คำอธิบายสินค้า</div>
                 <CopyBtn text={result.description} />
               </div>
-              <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#475569', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{result.description}</div>
+              <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#7c8797', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{result.description}</div>
             </div>
           )}
 
@@ -2751,9 +2751,9 @@ function TabListing() {
             )}
           </div>
 
-          {result.shipping_note && <div style={card({ background: 'rgba(249,115,22,0.04)', borderColor: 'rgba(249,115,22,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ea580c', marginBottom: 4 }}>🚚 ข้อความจัดส่ง</div><div style={{ fontSize: 13, color: '#475569' }}>{result.shipping_note}</div></div>}
-          {result.promo_idea && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: orange, marginBottom: 4 }}>🎁 ไอเดียโปรโมชั่น</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.promo_idea}</div></div>}
-          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: orange, marginBottom: 8 }}>💡 เคล็ดลับเพิ่มยอด</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+          {result.shipping_note && <div style={card({ background: 'rgba(249,115,22,0.04)', borderColor: 'rgba(249,115,22,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#ea580c', marginBottom: 4 }}>🚚 ข้อความจัดส่ง</div><div style={{ fontSize: 13, color: '#7c8797' }}>{result.shipping_note}</div></div>}
+          {result.promo_idea && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: orange, marginBottom: 4 }}>🎁 ไอเดียโปรโมชั่น</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.promo_idea}</div></div>}
+          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: orange, marginBottom: 8 }}>💡 เคล็ดลับเพิ่มยอด</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
         </div>
       )}
     </div>
@@ -2816,7 +2816,7 @@ function TabReviewReply() {
               <span style={{ fontWeight: 800, fontSize: 14, color: sentColor[result.sentiment] || teal }}>{sentLabel[result.sentiment] || result.sentiment}</span>
               <SourceBadge source={result.source} />
             </div>
-            {result.summary && <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.summary}</div>}
+            {result.summary && <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.summary}</div>}
             {result.issues?.length > 0 && <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>{result.issues.map((s, i) => <span key={i} style={{ fontSize: 12, background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 16, padding: '3px 9px' }}>⚠️ {s}</span>)}</div>}
           </div>
 
@@ -2835,7 +2835,7 @@ function TabReviewReply() {
               <div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 8 }}>🔁 คำตอบทางเลือก</div>
               {result.reply_variants.map((t, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, color: '#475569', flex: 1 }}>{t}</span>
+                  <span style={{ fontSize: 13, color: '#7c8797', flex: 1 }}>{t}</span>
                   <CopyBtn text={t} />
                 </div>
               ))}
@@ -2846,18 +2846,18 @@ function TabReviewReply() {
             {result.action_items?.length > 0 && (
               <div style={card()}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 8 }}>✅ สิ่งที่ร้านควรทำต่อ</div>
-                {result.action_items.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}
+                {result.action_items.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}
               </div>
             )}
             {result.tips?.length > 0 && (
               <div style={card()}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: teal, marginBottom: 8 }}>💡 เคล็ดลับ</div>
-                {result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}
+                {result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}
               </div>
             )}
           </div>
 
-          {result.upsell && <div style={card({ background: 'rgba(20,184,166,0.04)', borderColor: 'rgba(20,184,166,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#0d9488', marginBottom: 4 }}>🛍️ ชวนซื้อซ้ำ</div><div style={{ fontSize: 13, color: '#475569' }}>{result.upsell}</div></div>}
+          {result.upsell && <div style={card({ background: 'rgba(20,184,166,0.04)', borderColor: 'rgba(20,184,166,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#0d9488', marginBottom: 4 }}>🛍️ ชวนซื้อซ้ำ</div><div style={{ fontSize: 13, color: '#7c8797' }}>{result.upsell}</div></div>}
         </div>
       )}
     </div>
@@ -2918,8 +2918,8 @@ function TabBundle() {
                   <div key={i} style={{ background: '#fffbeb', borderRadius: 10, padding: '12px 14px', border: '1px solid rgba(245,158,11,0.2)' }}>
                     <div style={{ fontWeight: 800, fontSize: 14, color: '#d97706', marginBottom: 6 }}>{b.name}</div>
                     {b.items?.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>{b.items.map((it, j) => <span key={j} style={{ fontSize: 12, background: `${amber}18`, color: '#b45309', borderRadius: 14, padding: '2px 9px' }}>{it}</span>)}</div>}
-                    {b.price_idea && <div style={{ fontSize: 12.5, color: '#475569' }}>💰 {b.price_idea}</div>}
-                    {b.why && <div style={{ fontSize: 12.5, color: '#475569' }}>✨ {b.why}</div>}
+                    {b.price_idea && <div style={{ fontSize: 12.5, color: '#7c8797' }}>💰 {b.price_idea}</div>}
+                    {b.why && <div style={{ fontSize: 12.5, color: '#7c8797' }}>✨ {b.why}</div>}
                     {b.target && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>🎯 {b.target}</div>}
                   </div>
                 ))}
@@ -2943,18 +2943,18 @@ function TabBundle() {
             {result.cross_sells?.length > 0 && (
               <div style={card()}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: amber, marginBottom: 8 }}>🔗 เสนอคู่กัน (Cross-sell)</div>
-                {result.cross_sells.map((c, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {c}</div>)}
+                {result.cross_sells.map((c, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {c}</div>)}
               </div>
             )}
             {result.tips?.length > 0 && (
               <div style={card()}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: amber, marginBottom: 8 }}>💡 เคล็ดลับเพิ่มยอดต่อบิล</div>
-                {result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}
+                {result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}
               </div>
             )}
           </div>
 
-          {result.anchor_tip && <div style={card({ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#d97706', marginBottom: 4 }}>⚓ เคล็ดวางราคา (Anchoring)</div><div style={{ fontSize: 13, color: '#475569' }}>{result.anchor_tip}</div></div>}
+          {result.anchor_tip && <div style={card({ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#d97706', marginBottom: 4 }}>⚓ เคล็ดวางราคา (Anchoring)</div><div style={{ fontSize: 13, color: '#7c8797' }}>{result.anchor_tip}</div></div>}
           {result.promo_copy && (
             <div style={card()}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
@@ -3029,7 +3029,7 @@ function TabFAQ() {
                   <div key={i} style={{ background: '#f0f9ff', borderRadius: 10, padding: '11px 13px', border: '1px solid rgba(14,165,233,0.15)' }}>
                     <div style={{ fontWeight: 700, fontSize: 13, color: '#0284c7', marginBottom: 4 }}>Q: {f.q}</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: 13, color: '#475569', lineHeight: 1.6, flex: 1 }}>A: {f.a}</span>
+                      <span style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6, flex: 1 }}>A: {f.a}</span>
                       <CopyBtn text={f.a} />
                     </div>
                     {f.keywords?.length > 0 && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 6 }}>{f.keywords.map((k, j) => <span key={j} style={{ fontSize: 11, background: `${sky}15`, color: '#0369a1', borderRadius: 12, padding: '1px 7px' }}>#{k}</span>)}</div>}
@@ -3040,12 +3040,12 @@ function TabFAQ() {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.greeting && <div style={card()}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}><span style={{ fontWeight: 700, fontSize: 13, color: sky }}>👋 ข้อความทักทาย</span><CopyBtn text={result.greeting} /></div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.greeting}</div></div>}
-            {result.away_message && <div style={card()}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}><span style={{ fontWeight: 700, fontSize: 13, color: sky }}>🌙 นอกเวลาทำการ</span><CopyBtn text={result.away_message} /></div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.away_message}</div></div>}
+            {result.greeting && <div style={card()}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}><span style={{ fontWeight: 700, fontSize: 13, color: sky }}>👋 ข้อความทักทาย</span><CopyBtn text={result.greeting} /></div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.greeting}</div></div>}
+            {result.away_message && <div style={card()}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}><span style={{ fontWeight: 700, fontSize: 13, color: sky }}>🌙 นอกเวลาทำการ</span><CopyBtn text={result.away_message} /></div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.away_message}</div></div>}
           </div>
 
-          {result.closing && <div style={card({ background: 'rgba(14,165,233,0.04)', borderColor: 'rgba(14,165,233,0.2)' })}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}><span style={{ fontWeight: 700, fontSize: 13, color: '#0284c7' }}>✅ ปิดการขาย / ขอบคุณ</span><CopyBtn text={result.closing} /></div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.closing}</div></div>}
-          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: sky, marginBottom: 8 }}>💡 เคล็ดลับตั้งระบบตอบ</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+          {result.closing && <div style={card({ background: 'rgba(14,165,233,0.04)', borderColor: 'rgba(14,165,233,0.2)' })}><div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}><span style={{ fontWeight: 700, fontSize: 13, color: '#0284c7' }}>✅ ปิดการขาย / ขอบคุณ</span><CopyBtn text={result.closing} /></div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.closing}</div></div>}
+          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: sky, marginBottom: 8 }}>💡 เคล็ดลับตั้งระบบตอบ</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
         </div>
       )}
     </div>
@@ -3112,7 +3112,7 @@ function TabBroadcast() {
                   <div key={i} style={{ background: '#fdf2f8', borderRadius: 10, padding: '11px 13px', border: '1px solid rgba(236,72,153,0.15)' }}>
                     <div style={{ fontWeight: 800, fontSize: 13, color: '#db2777', marginBottom: 4 }}>{m.title}</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: 13, color: '#475569', lineHeight: 1.6, flex: 1 }}>{m.body}</span>
+                      <span style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6, flex: 1 }}>{m.body}</span>
                       <CopyBtn text={m.body} />
                     </div>
                     {m.cta && <div style={{ marginTop: 6, display: 'inline-block', fontSize: 12, fontWeight: 700, background: pink, color: '#fff', borderRadius: 14, padding: '3px 12px' }}>{m.cta}</div>}
@@ -3127,7 +3127,7 @@ function TabBroadcast() {
               <div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 8 }}>✉️ ประโยคเปิด/หัวข้อ</div>
               {result.subject_lines.map((s, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', background: '#f8fafc', borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, color: '#475569', flex: 1 }}>{s}</span>
+                  <span style={{ fontSize: 13, color: '#7c8797', flex: 1 }}>{s}</span>
                   <CopyBtn text={s} />
                 </div>
               ))}
@@ -3138,7 +3138,7 @@ function TabBroadcast() {
             <div style={card()}>
               <div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 8 }}>🎯 แบ่งกลุ่มลูกค้า</div>
               {result.segments.map((s, i) => (
-                <div key={i} style={{ fontSize: 13, color: '#475569', padding: '4px 0', borderBottom: i < result.segments.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
+                <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '4px 0', borderBottom: i < result.segments.length - 1 ? '1px solid rgba(0,0,0,0.05)' : 'none' }}>
                   <span style={{ fontWeight: 600, color: '#1e293b' }}>{s.name}</span> — {s.approach}
                 </div>
               ))}
@@ -3146,11 +3146,11 @@ function TabBroadcast() {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
-            {result.winback_offer && <div style={card({ background: 'rgba(236,72,153,0.04)', borderColor: 'rgba(236,72,153,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#db2777', marginBottom: 4 }}>🎁 ข้อเสนอดึงกลับ</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.winback_offer}</div></div>}
-            {result.timing && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 4 }}>⏰ จังหวะการส่ง</div><div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.timing}</div></div>}
+            {result.winback_offer && <div style={card({ background: 'rgba(236,72,153,0.04)', borderColor: 'rgba(236,72,153,0.2)' })}><div style={{ fontWeight: 700, fontSize: 13, color: '#db2777', marginBottom: 4 }}>🎁 ข้อเสนอดึงกลับ</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.winback_offer}</div></div>}
+            {result.timing && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 4 }}>⏰ จังหวะการส่ง</div><div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.timing}</div></div>}
           </div>
 
-          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 8 }}>💡 เคล็ดลับ Broadcast</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#475569', padding: '2px 0' }}>• {t}</div>)}</div>}
+          {result.tips?.length > 0 && <div style={card()}><div style={{ fontWeight: 700, fontSize: 13, color: pink, marginBottom: 8 }}>💡 เคล็ดลับ Broadcast</div>{result.tips.map((t, i) => <div key={i} style={{ fontSize: 13, color: '#7c8797', padding: '2px 0' }}>• {t}</div>)}</div>}
         </div>
       )}
     </div>
@@ -3161,7 +3161,7 @@ function TabBroadcast() {
 function JsonView({ data, depth = 0 }) {
   if (data == null) return null;
   if (typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
-    return <span style={{ color: '#475569', fontSize: 13, lineHeight: 1.6 }}>{String(data)}</span>;
+    return <span style={{ color: '#7c8797', fontSize: 13, lineHeight: 1.6 }}>{String(data)}</span>;
   }
   if (Array.isArray(data)) {
     return (
@@ -3315,7 +3315,7 @@ export default function AISkillsPage() {
 
       {/* Sticky Header */}
       <header style={{ background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '12px 5%', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100, flexWrap: 'wrap', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
+        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>🧠 AI Skills Hub</div>
           <div style={{ fontSize: 11, color: '#94a3b8' }}>S9–S29 · Content · Trend · SEO · Supply Chain · Pricing · Ad Budget · Omni-Solver · Negotiation · Crisis · ฯลฯ</div>
@@ -3333,7 +3333,7 @@ export default function AISkillsPage() {
           ) : null; })}
           {recent.filter(s => !favs.includes(s) && tabBySkill(s)).length > 0 && <span style={{ fontSize: 12, color: '#cbd5e1', flexShrink: 0, marginLeft: favs.length ? 6 : 0 }}>🕐</span>}
           {recent.filter(s => !favs.includes(s)).map(sid => { const t = tabBySkill(sid); return t ? (
-            <button key={'r' + sid} onClick={() => selectTab(t.id)} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, border: '1px solid rgba(0,0,0,0.08)', background: '#f8fafc', color: '#64748b', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>{t.icon} {t.label}</button>
+            <button key={'r' + sid} onClick={() => selectTab(t.id)} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 20, border: '1px solid rgba(0,0,0,0.08)', background: '#f8fafc', color: '#94a3b8', fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>{t.icon} {t.label}</button>
           ) : null; })}
         </div>
       )}

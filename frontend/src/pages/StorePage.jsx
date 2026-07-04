@@ -31,8 +31,8 @@ export default function StorePage() {
       </section>
 
       <section style={{ maxWidth: 1000, margin: '0 auto', padding: '0 5% 80px' }}>
-        {products === null && <div style={{ ...card, color: '#64748b', textAlign: 'center' }}>{t('mk.cat.loading')}</div>}
-        {products && products.length === 0 && <div style={{ ...card, textAlign: 'center', padding: 40, color: '#64748b' }}>🛍️ {t('mk.store.empty')}</div>}
+        {products === null && <div style={{ ...card, color: '#94a3b8', textAlign: 'center' }}>{t('mk.cat.loading')}</div>}
+        {products && products.length === 0 && <div style={{ ...card, textAlign: 'center', padding: 40, color: '#94a3b8' }}>🛍️ {t('mk.store.empty')}</div>}
         {products && products.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(230px,1fr))', gap: 18 }}>
             {products.map((p) => (
@@ -86,7 +86,7 @@ function BuyModal({ product, t, onClose }) {
   return (
     <div onClick={onClose} style={overlay}>
       <div onClick={(e) => e.stopPropagation()} style={{ ...card, width: '100%', maxWidth: 400, position: 'relative' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#475569', fontSize: 22, cursor: 'pointer' }}>×</button>
+        <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#7c8797', fontSize: 22, cursor: 'pointer' }}>×</button>
         {res ? (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
             <div style={{ fontSize: 44, marginBottom: 8 }}>{res.paid ? '🎉' : '⏳'}</div>
@@ -94,7 +94,7 @@ function BuyModal({ product, t, onClose }) {
             {res.qr_image_url && <img src={res.qr_image_url} alt="PromptPay QR" style={{ width: 200, height: 200, background: '#fff', borderRadius: 10, padding: 6, margin: '8px 0' }} />}
             {!res.paid && !res.qr_image_url && <p style={{ color: '#94a3b8', fontSize: 13 }}>{res.message || t('mk.store.qr')}</p>}
             <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: 12, margin: '12px 0', fontSize: 12 }}>
-              <div style={{ color: '#64748b' }}>{t('mk.track.id')}</div>
+              <div style={{ color: '#94a3b8' }}>{t('mk.track.id')}</div>
               <div style={{ fontFamily: 'monospace', color: '#a5b4fc', wordBreak: 'break-all' }}>{res.order_id}</div>
             </div>
             <a href={`/track?id=${encodeURIComponent(res.order_id)}&contact=${encodeURIComponent(form.contact)}`} style={{ ...primaryBtn, display: 'inline-block', textDecoration: 'none', padding: '10px 22px' }}>{t('mk.nav.track')}</a>
@@ -102,7 +102,7 @@ function BuyModal({ product, t, onClose }) {
         ) : (
           <form onSubmit={submit}>
             <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{t('mk.store.buy')}: {product.name}</div>
-            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 14 }}>฿{Number(product.price).toLocaleString('th-TH')} · {t('mk.cat.by')} Openthai</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>฿{Number(product.price).toLocaleString('th-TH')} · {t('mk.cat.by')} Openthai</div>
             <label style={lab}>{t('mk.ord.name')}</label><input style={inp} value={form.customer_name} onChange={set('customer_name')} placeholder={t('mk.ord.name.ph')} />
             <label style={lab}>{t('mk.ord.contact')}</label><input style={inp} value={form.contact} onChange={set('contact')} placeholder={t('mk.ord.contact.ph')} />
             <label style={lab}>{t('mk.ord.qty')}</label><input style={inp} type="number" min="1" value={form.qty} onChange={set('qty')} />

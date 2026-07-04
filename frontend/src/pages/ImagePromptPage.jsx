@@ -31,7 +31,7 @@ function CopyBlock({ label, text, color = '#6366f1' }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <span style={{ fontSize: 12, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
+        <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</span>
         <button onClick={() => { navigator.clipboard.writeText(text); setC(true); setTimeout(() => setC(false), 1500); }}
           style={{ background: c ? '#10b981' : 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 11, padding: '3px 10px' }}>
           {c ? '✓ Copied!' : '⧉ Copy'}
@@ -65,10 +65,10 @@ export default function ImagePromptPage() {
   const s = {
     page: { minHeight: '100vh', background: '#080812', color: '#fff', padding: '24px 20px', fontFamily: 'system-ui, sans-serif' },
     card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '20px 22px', marginBottom: 16 },
-    lbl: { fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 },
+    lbl: { fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 },
     inp: { width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 14, padding: '10px 14px', outline: 'none', boxSizing: 'border-box' },
     chipRow: { display: 'flex', flexWrap: 'wrap', gap: 8 },
-    chip: (sel, color = '#6366f1') => ({ padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: sel ? 700 : 400, background: sel ? `${color}25` : 'rgba(255,255,255,0.05)', color: sel ? '#fff' : '#64748b', border: sel ? `1px solid ${color}60` : '1px solid transparent' }),
+    chip: (sel, color = '#6366f1') => ({ padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: sel ? 700 : 400, background: sel ? `${color}25` : 'rgba(255,255,255,0.05)', color: sel ? '#fff' : '#94a3b8', border: sel ? `1px solid ${color}60` : '1px solid transparent' }),
   };
 
   return (
@@ -78,7 +78,7 @@ export default function ImagePromptPage() {
           <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, background: 'linear-gradient(135deg,#ec4899,#8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             🎨 Image Prompt Generator
           </h1>
-          <p style={{ color: '#64748b', margin: '6px 0 0', fontSize: 14 }}>สร้าง Prompt ภาพสำหรับ Midjourney · DALL-E · Stable Diffusion</p>
+          <p style={{ color: '#94a3b8', margin: '6px 0 0', fontSize: 14 }}>สร้าง Prompt ภาพสำหรับ Midjourney · DALL-E · Stable Diffusion</p>
         </div>
 
         <div style={s.card}>
@@ -186,7 +186,7 @@ export default function ImagePromptPage() {
                     {result.color_palette.map((c, i) => (
                       <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                         <div style={{ width: 36, height: 36, borderRadius: 8, background: c, border: '2px solid rgba(255,255,255,0.2)' }} />
-                        <div style={{ fontSize: 10, color: '#64748b' }}>{c}</div>
+                        <div style={{ fontSize: 10, color: '#94a3b8' }}>{c}</div>
                       </div>
                     ))}
                   </div>

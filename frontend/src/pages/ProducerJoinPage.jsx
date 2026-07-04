@@ -91,7 +91,7 @@ export default function ProducerJoinPage() {
             <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', marginTop: 14, opacity: busy ? 0.7 : 1 }}>
               {busy ? t('mk.join.submitting') : t('mk.join.submit')}
             </button>
-            <p style={{ color: '#475569', fontSize: 12, textAlign: 'center', marginTop: 12 }}>{t('mk.join.note')}</p>
+            <p style={{ color: '#7c8797', fontSize: 12, textAlign: 'center', marginTop: 12 }}>{t('mk.join.note')}</p>
           </form>
         )}
       </section>

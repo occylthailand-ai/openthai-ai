@@ -24,7 +24,7 @@ const cs = (extra = {}) => ({
   background: '#ffffff', border: '1px solid rgba(0,0,0,0.07)', borderRadius: 14,
   padding: '18px 20px', ...extra,
 });
-const lbl = { display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 };
+const lbl = { display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 };
 const inp = { width: '100%', background: '#f8fafc', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 10, padding: '10px 13px', color: '#1e293b', fontSize: 13, fontFamily: "'Inter','Sarabun',sans-serif", boxSizing: 'border-box', outline: 'none' };
 const tag = (color) => ({ fontSize: 10, padding: '3px 8px', borderRadius: 20, background: `${color}18`, color, fontWeight: 700, border: `1px solid ${color}40` });
 
@@ -70,7 +70,7 @@ function SectionHooks({ data }) {
   return (
     <div style={{ display: 'grid', gap: 18 }}>
       <div style={cs()}>
-        <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.7, padding: '10px 14px', background: `${color}08`, borderRadius: 10, marginBottom: 4 }}>
+        <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.7, padding: '10px 14px', background: `${color}08`, borderRadius: 10, marginBottom: 4 }}>
           🎯 <strong>หลักการ:</strong> ใน 3-5 วินาทีแรก ผู้ดูตัดสินใจว่าจะดูต่อหรือเลื่อนผ่าน — hook ที่ดีต้องหยุดนิ้วได้ทันที ใช้ hooks เหล่านี้ทดสอบและวัด CTR
         </div>
       </div>
@@ -176,7 +176,7 @@ function SectionPlatforms({ data }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {platforms.map(p => (
           <button key={p} onClick={() => setActivePlat(p)}
-            style={{ padding: '8px 16px', borderRadius: 20, border: `2px solid ${activePlat === p ? platInfo[p].bg : 'rgba(0,0,0,0.1)'}`, background: activePlat === p ? platInfo[p].bg : '#f8fafc', color: activePlat === p ? '#fff' : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 700, transition: 'all .15s' }}>
+            style={{ padding: '8px 16px', borderRadius: 20, border: `2px solid ${activePlat === p ? platInfo[p].bg : 'rgba(0,0,0,0.1)'}`, background: activePlat === p ? platInfo[p].bg : '#f8fafc', color: activePlat === p ? '#fff' : '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: 700, transition: 'all .15s' }}>
             {platInfo[p].icon} {platInfo[p].name}
           </button>
         ))}
@@ -193,7 +193,7 @@ function SectionPlatforms({ data }) {
                 {d.hook && <div style={cs()}><div style={{ ...lbl, marginBottom: 8 }}>🎯 TikTok Hook (3วิแรก)</div><QuoteBlock text={d.hook} color={platInfo[p].bg} /></div>}
                 {d.script && <div style={cs()}><div style={{ fontWeight: 700, fontSize: 13, color: '#374151', marginBottom: 10 }}>📜 Full Script</div><div style={{ fontSize: 12, color: '#374151', lineHeight: 1.9, whiteSpace: 'pre-wrap', background: '#f8fafc', borderRadius: 10, padding: '12px 14px' }}>{d.script}</div><div style={{ marginTop: 8 }}><CopyBtn text={d.script} /></div></div>}
                 {d.cta && <div style={cs()}><div style={{ ...lbl, marginBottom: 8 }}>📣 CTA</div><QuoteBlock text={d.cta} color={platInfo[p].bg} /></div>}
-                {d.sound_tip && <div style={{ ...cs(), background: 'rgba(1,1,1,0.03)' }}><div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, marginBottom: 4 }}>🎵 SOUND TIP</div><div style={{ fontSize: 12, color: '#374151' }}>{d.sound_tip}</div></div>}
+                {d.sound_tip && <div style={{ ...cs(), background: 'rgba(1,1,1,0.03)' }}><div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 700, marginBottom: 4 }}>🎵 SOUND TIP</div><div style={{ fontSize: 12, color: '#374151' }}>{d.sound_tip}</div></div>}
               </>
             )}
             {/* Facebook */}
@@ -326,7 +326,7 @@ function SectionVideo({ data }) {
               </div>
               <div style={{ padding: '12px 14px', display: 'grid', gap: 6 }}>
                 {sc.emotion && <span style={{ fontSize: 10, fontWeight: 700, color }}>{sc.emotion}</span>}
-                {sc.visual && <div style={{ fontSize: 12, color: '#64748b' }}><strong>Visual:</strong> {sc.visual}</div>}
+                {sc.visual && <div style={{ fontSize: 12, color: '#94a3b8' }}><strong>Visual:</strong> {sc.visual}</div>}
                 {sc.script && <div style={{ fontSize: 13, color: '#1e293b', fontWeight: 600, lineHeight: 1.5 }}>{sc.script}</div>}
                 {sc.direction && <div style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>📷 {sc.direction}</div>}
               </div>
@@ -352,7 +352,7 @@ function SectionVideo({ data }) {
           <div style={{ fontWeight: 700, fontSize: 13, color: '#8b5cf6', marginBottom: 10 }}>🎞 B-Roll Ideas</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(160px,1fr))', gap: 8 }}>
             {v.broll_ideas.map((b, i) => (
-              <div key={i} style={{ background: '#f8fafc', borderRadius: 9, padding: '8px 12px', fontSize: 12, color: '#475569' }}>📷 {b}</div>
+              <div key={i} style={{ background: '#f8fafc', borderRadius: 9, padding: '8px 12px', fontSize: 12, color: '#7c8797' }}>📷 {b}</div>
             ))}
           </div>
         </div>
@@ -425,7 +425,7 @@ function SectionObjections({ data }) {
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       <div style={{ ...cs(), background: `${color}06` }}>
-        <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.7 }}>
+        <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.7 }}>
           🛡️ <strong>Pre-emptive objection handling</strong> — ตอบข้อสงสัยก่อนที่ลูกค้าจะถาม ใส่ไว้ใน caption, script หรือ FAQ
         </div>
       </div>
@@ -519,14 +519,14 @@ export default function PromoEnginePage() {
 
       {/* Header */}
       <header style={{ background: '#ffffff', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '12px 5%', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100, flexWrap: 'wrap', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
+        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 16, fontWeight: 900, color: '#1e293b' }}>🚀 Sales Conversion Engine</div>
           <div style={{ fontSize: 11, color: '#94a3b8' }}>S18 · Hook · Psychology · Platform · Copy · Video · Price · Objection · Funnel</div>
         </div>
         <button onClick={() => navigate('/skills?skill=S20')} title="ตั้งราคาด้วย AI" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8, padding: '6px 14px', color: '#6366f1', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>💰 ตั้งราคา (S20)</button>
         {result && (
-          <button onClick={() => setResult(null)} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>🔄 สร้างใหม่</button>
+          <button onClick={() => setResult(null)} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>🔄 สร้างใหม่</button>
         )}
       </header>
 
@@ -589,7 +589,7 @@ export default function PromoEnginePage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {TARGETS.map(t => (
                       <button key={t} onClick={() => setForm(f => ({ ...f, target: t }))}
-                        style={{ padding: '6px 13px', borderRadius: 20, border: `1px solid ${form.target === t ? '#6366f1' : 'rgba(0,0,0,0.1)'}`, background: form.target === t ? 'rgba(99,102,241,0.1)' : '#f8fafc', color: form.target === t ? '#6366f1' : '#64748b', fontSize: 12, cursor: 'pointer', fontWeight: form.target === t ? 700 : 400 }}>
+                        style={{ padding: '6px 13px', borderRadius: 20, border: `1px solid ${form.target === t ? '#6366f1' : 'rgba(0,0,0,0.1)'}`, background: form.target === t ? 'rgba(99,102,241,0.1)' : '#f8fafc', color: form.target === t ? '#6366f1' : '#94a3b8', fontSize: 12, cursor: 'pointer', fontWeight: form.target === t ? 700 : 400 }}>
                         {t}
                       </button>
                     ))}
@@ -601,7 +601,7 @@ export default function PromoEnginePage() {
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {TONES.map(t => (
                       <button key={t} onClick={() => setForm(f => ({ ...f, tone: t }))}
-                        style={{ padding: '6px 13px', borderRadius: 20, border: `1px solid ${form.tone === t ? '#f97316' : 'rgba(0,0,0,0.1)'}`, background: form.tone === t ? 'rgba(249,115,22,0.1)' : '#f8fafc', color: form.tone === t ? '#f97316' : '#64748b', fontSize: 12, cursor: 'pointer', fontWeight: form.tone === t ? 700 : 400 }}>
+                        style={{ padding: '6px 13px', borderRadius: 20, border: `1px solid ${form.tone === t ? '#f97316' : 'rgba(0,0,0,0.1)'}`, background: form.tone === t ? 'rgba(249,115,22,0.1)' : '#f8fafc', color: form.tone === t ? '#f97316' : '#94a3b8', fontSize: 12, cursor: 'pointer', fontWeight: form.tone === t ? 700 : 400 }}>
                         {t}
                       </button>
                     ))}
@@ -678,7 +678,7 @@ export default function PromoEnginePage() {
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 20 }}>
               <button onClick={() => { const i = SECTIONS.findIndex(s => s.id === activeSection); if (i > 0) setActiveSection(SECTIONS[i - 1].id); }}
                 disabled={SECTIONS[0].id === activeSection}
-                style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 9, padding: '9px 20px', color: '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>← ก่อนหน้า</button>
+                style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 9, padding: '9px 20px', color: '#94a3b8', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>← ก่อนหน้า</button>
               <span style={{ display: 'flex', alignItems: 'center', fontSize: 12, color: '#94a3b8' }}>{SECTIONS.findIndex(s => s.id === activeSection) + 1} / {SECTIONS.length}</span>
               <button onClick={() => { const i = SECTIONS.findIndex(s => s.id === activeSection); if (i < SECTIONS.length - 1) setActiveSection(SECTIONS[i + 1].id); }}
                 disabled={SECTIONS[SECTIONS.length - 1].id === activeSection}

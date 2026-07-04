@@ -10,7 +10,7 @@ export default function NotFoundPage() {
         <div style={{ fontSize: 80, marginBottom: 16 }}>🤖</div>
         <div style={{ fontSize: 'clamp(60px,12vw,120px)', fontWeight: 900, background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1 }}>404</div>
         <h1 style={{ fontSize: 24, fontWeight: 800, margin: '16px 0 8px' }}>หน้านี้ไม่มีอยู่</h1>
-        <p style={{ color: '#64748b', fontSize: 15, marginBottom: 32 }}>
+        <p style={{ color: '#94a3b8', fontSize: 15, marginBottom: 32 }}>
           ขออภัย ไม่พบหน้าที่คุณต้องการ<br />
           อาจถูกย้ายหรือ URL ไม่ถูกต้อง
         </p>

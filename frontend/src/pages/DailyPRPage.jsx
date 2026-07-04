@@ -35,7 +35,7 @@ const DEC_PRESETS = {
 // ─── Shared styles ────────────────────────────────────────────────────────────
 const s = {
   card: (extra = {}) => ({ background: '#fff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, padding: 20, ...extra }),
-  label: { display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 },
+  label: { display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 },
   input: { width: '100%', background: '#f8fafc', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 10, padding: '10px 13px', color: '#1e293b', fontSize: 13, fontFamily: "'Inter','Sarabun',sans-serif", boxSizing: 'border-box', outline: 'none' },
   btn: (color = '#6366f1') => ({ background: `linear-gradient(135deg,${color},${color}cc)`, border: 'none', borderRadius: 10, padding: '11px 22px', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }),
   tag: (color) => ({ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${color}18`, color, fontWeight: 700, border: `1px solid ${color}30` }),
@@ -133,7 +133,7 @@ function TabGenerate({ plan, onPlanSave }) {
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 2 }}>
                 {EVENT_TYPES.map(ev => (
                   <button key={ev.id} onClick={() => setForm(f => ({ ...f, event_type: ev.id }))}
-                    style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer', fontWeight: 600, border: `1px solid ${form.event_type === ev.id ? ev.color : 'rgba(0,0,0,0.1)'}`, background: form.event_type === ev.id ? `${ev.color}15` : 'transparent', color: form.event_type === ev.id ? ev.color : '#64748b' }}>
+                    style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer', fontWeight: 600, border: `1px solid ${form.event_type === ev.id ? ev.color : 'rgba(0,0,0,0.1)'}`, background: form.event_type === ev.id ? `${ev.color}15` : 'transparent', color: form.event_type === ev.id ? ev.color : '#94a3b8' }}>
                     {ev.label}
                   </button>
                 ))}
@@ -162,7 +162,7 @@ function TabGenerate({ plan, onPlanSave }) {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {TONES.map(t => (
                 <button key={t} onClick={() => setForm(f => ({ ...f, tone: t }))}
-                  style={{ padding: '5px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: form.tone === t ? 700 : 400, border: `1px solid ${form.tone === t ? '#6366f1' : 'rgba(0,0,0,0.1)'}`, background: form.tone === t ? 'rgba(99,102,241,0.1)' : 'transparent', color: form.tone === t ? '#6366f1' : '#64748b' }}>
+                  style={{ padding: '5px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: form.tone === t ? 700 : 400, border: `1px solid ${form.tone === t ? '#6366f1' : 'rgba(0,0,0,0.1)'}`, background: form.tone === t ? 'rgba(99,102,241,0.1)' : 'transparent', color: form.tone === t ? '#6366f1' : '#94a3b8' }}>
                   {t}
                 </button>
               ))}
@@ -173,11 +173,11 @@ function TabGenerate({ plan, onPlanSave }) {
             <label style={s.label}>ช่องทางที่ต้องการ</label>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {CHANNELS.map(ch => {
-                const chColor = { Facebook: '#1877f2', TikTok: '#fe2c55', LINE: '#06c755', X: '#000', Email: '#6366f1', 'Press Release': '#06b6d4' }[ch] || '#64748b';
+                const chColor = { Facebook: '#1877f2', TikTok: '#fe2c55', LINE: '#06c755', X: '#000', Email: '#6366f1', 'Press Release': '#06b6d4' }[ch] || '#94a3b8';
                 const on = form.channels.includes(ch);
                 return (
                   <button key={ch} onClick={() => toggleChannel(ch)}
-                    style={{ padding: '5px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: on ? 700 : 400, border: `1px solid ${on ? chColor : 'rgba(0,0,0,0.1)'}`, background: on ? `${chColor}18` : 'transparent', color: on ? chColor : '#64748b' }}>
+                    style={{ padding: '5px 13px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontWeight: on ? 700 : 400, border: `1px solid ${on ? chColor : 'rgba(0,0,0,0.1)'}`, background: on ? `${chColor}18` : 'transparent', color: on ? chColor : '#94a3b8' }}>
                     {ch}
                   </button>
                 );
@@ -199,7 +199,7 @@ function TabGenerate({ plan, onPlanSave }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: 16, color: '#1e293b', marginBottom: 4 }}>{result.headline}</div>
-                <div style={{ fontSize: 13, color: '#475569', fontStyle: 'italic' }}>"{result.key_message}"</div>
+                <div style={{ fontSize: 13, color: '#7c8797', fontStyle: 'italic' }}>"{result.key_message}"</div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{ fontSize: 11, color: '#94a3b8' }}>⏰ {result.best_post_time}</div>
@@ -272,7 +272,7 @@ function TabGenerate({ plan, onPlanSave }) {
           {result.image_concept && (
             <div style={s.card({ background: 'rgba(245,158,11,0.04)', borderColor: 'rgba(245,158,11,0.2)' })}>
               <div style={{ fontWeight: 700, fontSize: 12, color: '#f59e0b', marginBottom: 6 }}>🎨 Creative Direction สำหรับทีม Design</div>
-              <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{result.image_concept}</div>
+              <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{result.image_concept}</div>
             </div>
           )}
         </div>
@@ -325,7 +325,7 @@ function TabCalendar({ plan, onPlanSave }) {
       {/* Month nav */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={() => month === 0 ? (setMonth(11), setYear(y => y - 1)) : setMonth(m => m - 1)}
-          style={{ ...s.btn('#475569'), padding: '8px 16px' }}>◀</button>
+          style={{ ...s.btn('#7c8797'), padding: '8px 16px' }}>◀</button>
         <div style={{ fontWeight: 900, fontSize: 18, color: '#1e293b' }}>
           {MONTHS_TH[month]} {year + 543}
           {month === 11 && year === 2026 && (
@@ -335,7 +335,7 @@ function TabCalendar({ plan, onPlanSave }) {
           )}
         </div>
         <button onClick={() => month === 11 ? (setMonth(0), setYear(y => y + 1)) : setMonth(m => m + 1)}
-          style={{ ...s.btn('#475569'), padding: '8px 16px' }}>▶</button>
+          style={{ ...s.btn('#7c8797'), padding: '8px 16px' }}>▶</button>
       </div>
 
       {/* Legend */}
@@ -406,11 +406,11 @@ function TabCalendar({ plan, onPlanSave }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
         <div style={s.card({ textAlign: 'center' })}>
           <div style={{ fontSize: 28, fontWeight: 900, color: '#6366f1' }}>{Object.keys(plan).filter(k => k.startsWith('2026-12')).length}</div>
-          <div style={{ fontSize: 12, color: '#64748b' }}>วันที่มีแผน PR</div>
+          <div style={{ fontSize: 12, color: '#94a3b8' }}>วันที่มีแผน PR</div>
         </div>
         <div style={s.card({ textAlign: 'center' })}>
           <div style={{ fontSize: 28, fontWeight: 900, color: '#dc2626' }}>20</div>
-          <div style={{ fontSize: 12, color: '#64748b' }}>Launch Day (20/12)</div>
+          <div style={{ fontSize: 12, color: '#94a3b8' }}>Launch Day (20/12)</div>
         </div>
       </div>
 
@@ -429,7 +429,7 @@ function TabCalendar({ plan, onPlanSave }) {
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                   {EVENT_TYPES.map(ev => (
                     <button key={ev.id} onClick={() => setEditForm(f => ({ ...f, event_type: ev.id }))}
-                      style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer', fontWeight: 600, border: `1px solid ${editForm.event_type === ev.id ? ev.color : 'rgba(0,0,0,0.1)'}`, background: editForm.event_type === ev.id ? `${ev.color}15` : 'transparent', color: editForm.event_type === ev.id ? ev.color : '#64748b' }}>
+                      style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, cursor: 'pointer', fontWeight: 600, border: `1px solid ${editForm.event_type === ev.id ? ev.color : 'rgba(0,0,0,0.1)'}`, background: editForm.event_type === ev.id ? `${ev.color}15` : 'transparent', color: editForm.event_type === ev.id ? ev.color : '#94a3b8' }}>
                       {ev.label}
                     </button>
                   ))}
@@ -498,13 +498,13 @@ function TabBulk({ plan, onPlanSave }) {
     <div style={{ display: 'grid', gap: 20 }}>
       <div style={s.card({ background: 'linear-gradient(135deg,rgba(220,38,38,0.04),rgba(99,102,241,0.04))', borderColor: 'rgba(220,38,38,0.15)' })}>
         <div style={{ fontWeight: 800, fontSize: 15, color: '#1e293b', marginBottom: 8 }}>📦 สร้าง PR Content ทั้งเดือนธันวาคม</div>
-        <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>
+        <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16 }}>
           สร้าง PR ครบทุกช่องทางสำหรับ <strong>{presetDays.length} วันสำคัญ</strong> รวม 🚀 Launch Day 20/12 · วันพ่อ 5/12 · วันรัฐธรรมนูญ 10/12 · คริสต์มาส 25/12 · ส่งท้ายปี 31/12
         </div>
 
         {generating && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#64748b', marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>
               <span>⏳ กำลังสร้าง...</span>
               <span>{progress.current}/{progress.total}</span>
             </div>
@@ -558,7 +558,7 @@ function TabBulk({ plan, onPlanSave }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <span style={{ fontWeight: 700, fontSize: 13, color: '#1e293b' }}>{date.slice(8)}/12</span>
-                  <span style={{ fontSize: 12, color: '#64748b', marginLeft: 8 }}>{r.headline || r.topic}</span>
+                  <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 8 }}>{r.headline || r.topic}</span>
                 </div>
                 {!r.error && r.facebook?.post && <CopyBtn text={r.facebook.post} small />}
               </div>
@@ -613,7 +613,7 @@ export default function DailyPRPage() {
 
       {/* Header */}
       <header style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '12px 5%', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', flexWrap: 'wrap' }}>
-        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
+        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <div style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>📣 Daily PR Creator</div>
@@ -622,7 +622,7 @@ export default function DailyPRPage() {
           <div style={{ fontSize: 11, color: '#94a3b8' }}>สร้างสื่อ PR ครบทุกช่องทาง · ปฏิทินธันวาคม · Bulk Generate</div>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <div style={{ fontSize: 12, color: '#64748b' }}>
+          <div style={{ fontSize: 12, color: '#94a3b8' }}>
             <span style={{ fontWeight: 700, color: '#6366f1' }}>{daysPlanned}</span>/{totalDays} วันวางแผนแล้ว
           </div>
           <button onClick={() => navigate('/skills')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>AI Skills</button>

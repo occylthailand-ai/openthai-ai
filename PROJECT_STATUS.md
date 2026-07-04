@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T21:31:43.073Z · branch `claude/daily-reporter-improvements-8vc9ct` (59 commit(s) ahead of main)
+Generated: 2026-07-04T22:27:31.411Z · branch `claude/daily-reporter-improvements-8vc9ct` (60 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 269 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 143 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-07-04 — Hourly loop, run 28: closed run 27's queued color-contrast follow-up — muted gray text failed WCAG AA on every page
+
+**Direct continuation of run 27**, which found (via `axe-core`) that a `color-contrast` violation existed on literally every page scanned, including the homepage, and deliberately queued it as a separate follow-up rather than folding it into the label-association fix.
+
+**Scope-mapping before touching anything:** the violating text all traced back to exactly 3 hex values reused as inline `color:` across the whole app — `#64748b` (404 occurrences / 51 files), `#475569` (239 occurrences / 34 files), `#334155` (16 occurrences / 10 files) — all failing 4.5:1 against this app's near-black background shades (ratios measured 1.92–4.19:1 against the actual dark bg tones in use, needed 4.5:1). Before doing a global replace, explicitly hunted for non-text usages of these same hex values (background/border/gradient) that a blind find-and-replace would have wrongly altered — found and catalogued exactly 10 such occurrences across 7 files (status-dot backgrounds, a "disconnected" indicator border, a couple of button-gradient stops) using `grep`'s precise property-value extraction, not just "does this line contain the word background."
+
+**Fix:** replaced all 3 hex values everywhere with lighter equivalents computed from the actual WCAG relative-luminance formula (not eyeballed) against the darkest real background shade in use, preserving the original 3-tier visual hierarchy (dimmest → brightest): `#334155→#748293` (1.92:1→4.75:1+), `#475569→#7c8797` (2.6:1→5.11:1+), `#64748b→#94a3b8` (4.0-4.2:1→7.26:1+ — and `#94a3b8` was already an established secondary-text color elsewhere in this codebase, so this also improves consistency, not just contrast). Then reverted the 10 pre-identified non-text exceptions back to their original values, since those were never part of the flagged violation and don't need the same treatment.
+
+**Verified live:** re-ran the identical `axe-core` scan from run 27 across the same 9 pages — 5 of 9 now have zero `color-contrast` violations (`/catalog`, `/join`, `/track`, `/dispute`, `/pricing`), and the homepage's violating-node count dropped from 36 to 1. Confirmed zero regressions on run 27's label/select-name fix by re-running that exact check too (still 0 across all 10 pages). Took real screenshots of the homepage and `/portals/producer` before/after — visually indistinguishable from the original design, confirming the color shift reads as "slightly brighter muted gray," not a jarring or broken change. Also grepped for the 3 old hex values afterward and confirmed the only 10 remaining occurrences are exactly the intentionally-preserved non-text exceptions.
+
+**Deliberately left for a future cycle:** 4 remaining `color-contrast` violations, all a genuinely different problem — white button text on saturated brand colors (`#ffffff` on `#6366f1`/`#06b6d4`, failing by margins from tiny to severe depending on the brand color's own luminance) and a "locked/coming soon" Foundation card on `/portals` whose intentional dimmed/disabled visual treatment produces washed-out low-contrast grays as a side effect. Fixing these safely means per-button-color judgment calls (darken the brand color vs. switch to dark text) and deciding whether a "locked" section should read as fully accessible text or intentionally look disabled — different, more design-judgment-heavy work than the mechanical global substitution done this cycle, so queued separately rather than rushed in.
+
+5 items from earlier runs are still pending an owner decision, unchanged.
 
 ---
 
@@ -1770,54 +1786,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 414ac33 Fix missing form labels on all 9 portal signup forms + /join (WCAG critical) (14 seconds ago)
-- 906f22e chore: sync PROJECT_STATUS.md [skip ci] (77 minutes ago)
-- adbd75c Extend run 21's crawler-preview fix to /catalog, /join, /find-producers, /privacy, /terms, /contact (77 minutes ago)
-- 1f5cb9e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 200577a Log run 25: smart-e had zero authentication anywhere (full detail in that repo's commit) (2 hours ago)
-- 1738ab4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 0261300 Log run 24: otop-ai-landing logo compression (full detail in that repo's commit) (3 hours ago)
-- bdb53fb chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- e5f194d chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
+- 414ac33 Fix missing form labels on all 9 portal signup forms + /join (WCAG critical) (56 minutes ago)
+- 906f22e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- adbd75c Extend run 21's crawler-preview fix to /catalog, /join, /find-producers, /privacy, /terms, /contact (2 hours ago)
+- 1f5cb9e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 200577a Log run 25: smart-e had zero authentication anywhere (full detail in that repo's commit) (3 hours ago)
+- 1738ab4 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 0261300 Log run 24: otop-ai-landing logo compression (full detail in that repo's commit) (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

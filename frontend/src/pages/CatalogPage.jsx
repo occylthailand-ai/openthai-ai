@@ -31,12 +31,12 @@ export default function CatalogPage() {
       </section>
 
       <section style={{ maxWidth: 1000, margin: '0 auto', padding: '0 5% 80px' }}>
-        {products === null && <div style={{ ...card, color: '#64748b', textAlign: 'center' }}>{t('mk.cat.loading')}</div>}
+        {products === null && <div style={{ ...card, color: '#94a3b8', textAlign: 'center' }}>{t('mk.cat.loading')}</div>}
         {products && products.length === 0 && (
           <div style={{ ...card, textAlign: 'center', padding: 40 }}>
             <div style={{ fontSize: 44, marginBottom: 10 }}>🏭</div>
             <div style={{ fontWeight: 700, marginBottom: 6 }}>{t('mk.cat.empty.title')}</div>
-            <p style={{ color: '#64748b', fontSize: 14, marginBottom: 18 }}>{t('mk.cat.empty.desc')}</p>
+            <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 18 }}>{t('mk.cat.empty.desc')}</p>
             <button onClick={() => navigate('/join')} style={primaryBtn}>{t('mk.cat.empty.cta')}</button>
           </div>
         )}
@@ -46,7 +46,7 @@ export default function CatalogPage() {
               <div key={p.email + i} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category || 'สินค้าไทย'}</div>
                 <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{p.product_name}</div>
-                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>{t('mk.cat.by')} {p.producer}</div>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>{t('mk.cat.by')} {p.producer}</div>
                 {p.description && <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, marginBottom: 12, flex: 1 }}>{p.description}</div>}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
                   <span style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : t('mk.cat.ask')}</span>
@@ -91,7 +91,7 @@ function OrderModal({ product, onClose, t }) {
   return (
     <div onClick={onClose} style={overlay}>
       <div onClick={(e) => e.stopPropagation()} style={{ ...card, width: '100%', maxWidth: 400, position: 'relative' }}>
-        <button onClick={onClose} aria-label="close" style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#475569', fontSize: 22, cursor: 'pointer' }}>×</button>
+        <button onClick={onClose} aria-label="close" style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#7c8797', fontSize: 22, cursor: 'pointer' }}>×</button>
         {done ? (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <div style={{ fontSize: 44, marginBottom: 8 }}>🎉</div>
@@ -99,7 +99,7 @@ function OrderModal({ product, onClose, t }) {
             <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.6 }}>{product.producer} {t('mk.ord.ok.desc')}</p>
             {orderId && (
               <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: 12, marginTop: 14, fontSize: 12 }}>
-                <div style={{ color: '#64748b' }}>{t('mk.track.id')}</div>
+                <div style={{ color: '#94a3b8' }}>{t('mk.track.id')}</div>
                 <div style={{ fontFamily: 'monospace', color: '#a5b4fc', wordBreak: 'break-all', marginBottom: 8 }}>{orderId}</div>
                 <a href={`/track?id=${encodeURIComponent(orderId)}&contact=${encodeURIComponent(form.contact)}`} style={{ ...primaryBtn, display: 'inline-block', textDecoration: 'none', padding: '8px 18px', fontSize: 13 }}>{t('mk.nav.track')}</a>
               </div>
@@ -109,7 +109,7 @@ function OrderModal({ product, onClose, t }) {
         ) : (
           <form onSubmit={submit}>
             <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{t('mk.ord.title')}: {product.product_name}</div>
-            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>{t('mk.ord.by')} {product.producer}{product.price ? ` · ฿${Number(product.price).toLocaleString('th-TH')}` : ''}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>{t('mk.ord.by')} {product.producer}{product.price ? ` · ฿${Number(product.price).toLocaleString('th-TH')}` : ''}</div>
             <label style={lab}>{t('mk.ord.name')}</label>
             <input style={inp} value={form.customer_name} onChange={set('customer_name')} placeholder={t('mk.ord.name.ph')} />
             <label style={lab}>{t('mk.ord.contact')}</label>

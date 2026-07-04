@@ -6,7 +6,7 @@ import { apiUrl } from '../apiBase';
 // ใส่สินค้าครั้งเดียว → มัดรวมหลายทักษะให้ชุดเริ่มต้นในหน้าเดียว (สำหรับ SME ที่ไม่รู้จะเริ่มไหน)
 const CATEGORIES = ['OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'ทั่วไป'];
 const card = (extra = {}) => ({ background: '#fff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, padding: 18, ...extra });
-const labelSt = { display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 };
+const labelSt = { display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 };
 const inputSt = { width: '100%', background: '#f8fafc', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 10, padding: '11px 14px', color: '#1e293b', fontSize: 14, boxSizing: 'border-box', outline: 'none' };
 
 export default function StarterKitPage() {
@@ -45,7 +45,7 @@ export default function StarterKitPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#1e293b', fontFamily: "'Inter','Sarabun',sans-serif", paddingBottom: 80 }}>
       <header style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '12px 5%', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100, flexWrap: 'wrap', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
+        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 900 }}>🚀 AI Business Starter Kit</div>
           <div style={{ fontSize: 11, color: '#94a3b8' }}>ใส่สินค้าครั้งเดียว — ได้ชุดเริ่มต้นจาก 30 ทักษะ AI</div>
@@ -79,7 +79,7 @@ export default function StarterKitPage() {
                     <div key={i} style={{ background: '#faf5ff', borderRadius: 10, padding: '10px 12px' }}>
                       <div style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>{p.name}</div>
                       <div style={{ fontSize: 11, color: '#8b5cf6', fontStyle: 'italic', marginBottom: 4 }}>{p.tagline}</div>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>{p.demographics}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8' }}>{p.demographics}</div>
                       {p.desires?.[0] && <div style={{ fontSize: 11, color: '#10b981', marginTop: 4 }}>✨ {p.desires[0]}</div>}
                     </div>
                   ))}
@@ -96,7 +96,7 @@ export default function StarterKitPage() {
                     {a.momentum && <span style={{ fontSize: 11, fontWeight: 700, color: '#f97316', whiteSpace: 'nowrap' }}>{a.momentum}</span>}
                   </div>
                 ))}
-                {data.trend.top_hooks?.[0] && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>🎣 Hook: "{data.trend.top_hooks[0]}"</div>}
+                {data.trend.top_hooks?.[0] && <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>🎣 Hook: "{data.trend.top_hooks[0]}"</div>}
               </Section>
             )}
 
@@ -122,7 +122,7 @@ export default function StarterKitPage() {
         {!data && !loading && (
           <div style={card({ textAlign: 'center', color: '#94a3b8', padding: '36px 20px' })}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>🚀</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#64748b' }}>เริ่มต้นธุรกิจด้วย AI ใน 1 คลิก</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#94a3b8' }}>เริ่มต้นธุรกิจด้วย AI ใน 1 คลิก</div>
             <div style={{ fontSize: 12, marginTop: 4 }}>ใส่ชื่อสินค้า แล้ว AI จะวิเคราะห์ลูกค้า · เทรนด์ · แฮชแท็ก ให้พร้อมลุย</div>
           </div>
         )}

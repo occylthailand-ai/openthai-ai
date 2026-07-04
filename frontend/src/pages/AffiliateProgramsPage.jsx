@@ -80,7 +80,7 @@ export default function AffiliateProgramsPage() {
 
         {filtered.length === 0 && <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>ไม่พบโปรแกรมที่ค้นหา</div>}
 
-        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '24px', lineHeight: 1.7, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+        <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '24px', lineHeight: 1.7, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
           ⚠️ ตรงไปตรงมา: นี่คือ <strong style={{ color: '#cbd5e1' }}>directory ให้สมัครง่าย</strong> — รายได้จริงเกิดเมื่อคุณสมัครแล้วเอาลิงก์ไปแชร์ให้คนซื้อ ระบบนี้ไม่ได้การันตี ฿1,000/วัน และโปรแกรมต่างชาติจ่ายผ่านธนาคาร/PayPal (เฉพาะลิงก์ /pay ของเราที่เข้าพร้อมเพย์)
         </div>
       </div>

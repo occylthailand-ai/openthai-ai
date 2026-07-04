@@ -144,7 +144,7 @@ function ContinentCard({ data, continent }) {
       <div style={{ color: '#94a3b8', fontSize: 12, lineHeight: 1.6 }}>{data.strategy}</div>
       {data.channels?.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          <span style={{ color: '#64748b', fontSize: 11, marginRight: 2 }}>📡</span>
+          <span style={{ color: '#94a3b8', fontSize: 11, marginRight: 2 }}>📡</span>
           {data.channels.map((c, i) => (
             <span key={i} style={{
               background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '1px 8px',
@@ -346,7 +346,7 @@ export default function GlobalPRPage() {
                   transition: 'width .3s ease',
                 }} />
               </div>
-              <div style={{ color: '#64748b', fontSize: 12, marginTop: 6, textAlign: 'center' }}>
+              <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 6, textAlign: 'center' }}>
                 AI กำลังสร้างสื่อ 3 ภาษา × 5 กลุ่มเป้าหมาย × 7 ทวีป... ({progress}%)
               </div>
             </div>
@@ -372,7 +372,7 @@ export default function GlobalPRPage() {
                 ✅ สร้างสำเร็จ — {result.source === 'mock' ? '🔵 Demo' : result.source === 'claude' ? '🟣 Claude AI' : '🟢 Gemini AI'}
               </div>
               <div style={{ flex: 1 }} />
-              <button onClick={copyAll} style={actionBtn('#475569')}>⧉ Copy All</button>
+              <button onClick={copyAll} style={actionBtn('#7c8797')}>⧉ Copy All</button>
               <button onClick={exportMd} style={actionBtn('#6366f1')}>⬇ Export .md</button>
             </div>
 
@@ -382,7 +382,7 @@ export default function GlobalPRPage() {
                 <button key={tab} onClick={() => setActiveTab(tab)} style={{
                   padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer',
                   background: activeTab === tab ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)',
-                  color: activeTab === tab ? '#a5b4fc' : '#64748b',
+                  color: activeTab === tab ? '#a5b4fc' : '#94a3b8',
                   fontWeight: activeTab === tab ? 700 : 400, fontSize: 14,
                 }}>
                   {tab === 'content' ? '📝 สื่อ 3 ภาษา × 5 กลุ่ม' : '🌍 Continental Strategy'}
@@ -418,7 +418,7 @@ export default function GlobalPRPage() {
                       background: activeAud === aud.id
                         ? 'rgba(249,115,22,0.22)'
                         : 'rgba(255,255,255,0.05)',
-                      color: activeAud === aud.id ? '#fdba74' : '#64748b',
+                      color: activeAud === aud.id ? '#fdba74' : '#94a3b8',
                       fontWeight: activeAud === aud.id ? 700 : 400, fontSize: 13,
                     }}>
                       {aud.icon} {audLabel(aud)}
@@ -434,7 +434,7 @@ export default function GlobalPRPage() {
 
                 {/* All audiences quick-view */}
                 <div style={{ marginTop: 24 }}>
-                  <div style={{ color: '#64748b', fontSize: 13, marginBottom: 12 }}>
+                  <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 12 }}>
                     ← ดูทั้งหมด 5 กลุ่มใน {LANGUAGES.find(l=>l.id===activeLang)?.label}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -458,7 +458,7 @@ export default function GlobalPRPage() {
                           </div>
                           <div style={{ display: 'flex', gap: 8 }}>
                             <CopyBtn text={`${d.headline}\n\n${d.body}\n\n${d.cta}\n\n${(d.hashtags||[]).join(' ')}`} small />
-                            <span style={{ color: '#475569', fontSize: 12 }}>▶</span>
+                            <span style={{ color: '#7c8797', fontSize: 12 }}>▶</span>
                           </div>
                         </div>
                       );
@@ -501,12 +501,12 @@ export default function GlobalPRPage() {
 
         {/* Empty state */}
         {!result && !loading && (
-          <div style={{ textAlign: 'center', padding: '48px 20px', color: '#475569' }}>
+          <div style={{ textAlign: 'center', padding: '48px 20px', color: '#7c8797' }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>🌐</div>
-            <div style={{ fontSize: 16, color: '#64748b' }}>
+            <div style={{ fontSize: 16, color: '#94a3b8' }}>
               กรอกชื่อสินค้าและกด <strong style={{ color: '#f97316' }}>สร้างสื่อ PR ทั้งหมด</strong>
             </div>
-            <div style={{ fontSize: 13, marginTop: 8, color: '#475569' }}>
+            <div style={{ fontSize: 13, marginTop: 8, color: '#7c8797' }}>
               AI จะสร้างสื่อ 15 ชิ้น (3 ภาษา × 5 กลุ่ม) + กลยุทธ์ 7 ทวีป
             </div>
           </div>

@@ -59,23 +59,23 @@ export default function DisputeTrackPage() {
           <div style={card}>
             <div style={{ ...pill, ...statusStyle(dispute.status) }}>{t('mk.dispute.st.' + dispute.status)}</div>
 
-            <div style={detail}><span style={{ color: '#64748b' }}>{t('mk.dispute.order')}</span><strong style={{ fontFamily: 'monospace', fontSize: 12 }}>{dispute.order_id}</strong></div>
-            <div style={detail}><span style={{ color: '#64748b' }}>{t('mk.dispute.openedby')}</span><strong>{t('mk.dispute.openedby.' + dispute.opened_by)}</strong></div>
+            <div style={detail}><span style={{ color: '#94a3b8' }}>{t('mk.dispute.order')}</span><strong style={{ fontFamily: 'monospace', fontSize: 12 }}>{dispute.order_id}</strong></div>
+            <div style={detail}><span style={{ color: '#94a3b8' }}>{t('mk.dispute.openedby')}</span><strong>{t('mk.dispute.openedby.' + dispute.opened_by)}</strong></div>
             <div style={{ padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-              <div style={{ color: '#64748b', fontSize: 13, marginBottom: 4 }}>{t('mk.dispute.reason')}</div>
+              <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 4 }}>{t('mk.dispute.reason')}</div>
               <div style={{ fontSize: 14 }}>{dispute.reason}</div>
             </div>
 
             {dispute.counter_response?.note && (
               <div style={{ padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                <div style={{ color: '#64748b', fontSize: 13, marginBottom: 4 }}>{t('mk.dispute.counter')}</div>
+                <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 4 }}>{t('mk.dispute.counter')}</div>
                 <div style={{ fontSize: 14 }}>{dispute.counter_response.note}</div>
               </div>
             )}
 
             {dispute.resolution?.decision && (
               <div style={{ padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-                <div style={{ color: '#64748b', fontSize: 13, marginBottom: 4 }}>{t('mk.dispute.resolution')}</div>
+                <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 4 }}>{t('mk.dispute.resolution')}</div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#10b981' }}>{t('mk.dispute.dec.' + dispute.resolution.decision)}</div>
               </div>
             )}

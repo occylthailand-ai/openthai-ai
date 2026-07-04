@@ -60,14 +60,14 @@ export default function ProducerDirectoryPage() {
       </section>
 
       <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 5% 80px' }}>
-        <div style={{ fontSize: 12, color: '#64748b', margin: '8px 2px 14px' }}>
+        <div style={{ fontSize: 12, color: '#94a3b8', margin: '8px 2px 14px' }}>
           {loading ? t('mk.find.searching') : items ? t('mk.find.found').replace('{n}', items.length) : ''}
         </div>
         {items && items.length === 0 && !loading && (
           <div style={{ ...card, textAlign: 'center', padding: 36 }}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>🔎</div>
             <div style={{ fontWeight: 700, marginBottom: 6 }}>{t('mk.find.empty.title')}</div>
-            <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>{t('mk.find.empty.desc')}</p>
+            <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 16 }}>{t('mk.find.empty.desc')}</p>
             <button onClick={() => navigate('/join')} style={primaryBtn}>{t('mk.find.empty.cta')}</button>
           </div>
         )}
@@ -83,7 +83,7 @@ export default function ProducerDirectoryPage() {
                   <span style={{ fontWeight: 900, color: '#10b981' }}>{p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : t('mk.cat.ask')}</span>
                   <button onClick={() => navigate('/catalog')} style={{ ...primaryBtn, padding: '8px 16px', fontSize: 13 }}>{t('mk.find.order')}</button>
                 </div>
-                {p.website && <a href={p.website.startsWith('http') ? p.website : `https://${p.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#64748b', marginTop: 8, textDecoration: 'none' }}>🔗 {p.website}</a>}
+                {p.website && <a href={p.website.startsWith('http') ? p.website : `https://${p.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#94a3b8', marginTop: 8, textDecoration: 'none' }}>🔗 {p.website}</a>}
               </div>
             ))}
           </div>

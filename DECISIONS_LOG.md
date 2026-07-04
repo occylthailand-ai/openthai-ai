@@ -11,6 +11,22 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 28: closed run 27's queued color-contrast follow-up — muted gray text failed WCAG AA on every page
+
+**Direct continuation of run 27**, which found (via `axe-core`) that a `color-contrast` violation existed on literally every page scanned, including the homepage, and deliberately queued it as a separate follow-up rather than folding it into the label-association fix.
+
+**Scope-mapping before touching anything:** the violating text all traced back to exactly 3 hex values reused as inline `color:` across the whole app — `#64748b` (404 occurrences / 51 files), `#475569` (239 occurrences / 34 files), `#334155` (16 occurrences / 10 files) — all failing 4.5:1 against this app's near-black background shades (ratios measured 1.92–4.19:1 against the actual dark bg tones in use, needed 4.5:1). Before doing a global replace, explicitly hunted for non-text usages of these same hex values (background/border/gradient) that a blind find-and-replace would have wrongly altered — found and catalogued exactly 10 such occurrences across 7 files (status-dot backgrounds, a "disconnected" indicator border, a couple of button-gradient stops) using `grep`'s precise property-value extraction, not just "does this line contain the word background."
+
+**Fix:** replaced all 3 hex values everywhere with lighter equivalents computed from the actual WCAG relative-luminance formula (not eyeballed) against the darkest real background shade in use, preserving the original 3-tier visual hierarchy (dimmest → brightest): `#334155→#748293` (1.92:1→4.75:1+), `#475569→#7c8797` (2.6:1→5.11:1+), `#64748b→#94a3b8` (4.0-4.2:1→7.26:1+ — and `#94a3b8` was already an established secondary-text color elsewhere in this codebase, so this also improves consistency, not just contrast). Then reverted the 10 pre-identified non-text exceptions back to their original values, since those were never part of the flagged violation and don't need the same treatment.
+
+**Verified live:** re-ran the identical `axe-core` scan from run 27 across the same 9 pages — 5 of 9 now have zero `color-contrast` violations (`/catalog`, `/join`, `/track`, `/dispute`, `/pricing`), and the homepage's violating-node count dropped from 36 to 1. Confirmed zero regressions on run 27's label/select-name fix by re-running that exact check too (still 0 across all 10 pages). Took real screenshots of the homepage and `/portals/producer` before/after — visually indistinguishable from the original design, confirming the color shift reads as "slightly brighter muted gray," not a jarring or broken change. Also grepped for the 3 old hex values afterward and confirmed the only 10 remaining occurrences are exactly the intentionally-preserved non-text exceptions.
+
+**Deliberately left for a future cycle:** 4 remaining `color-contrast` violations, all a genuinely different problem — white button text on saturated brand colors (`#ffffff` on `#6366f1`/`#06b6d4`, failing by margins from tiny to severe depending on the brand color's own luminance) and a "locked/coming soon" Foundation card on `/portals` whose intentional dimmed/disabled visual treatment produces washed-out low-contrast grays as a side effect. Fixing these safely means per-button-color judgment calls (darken the brand color vs. switch to dark text) and deciding whether a "locked" section should read as fully accessible text or intentionally look disabled — different, more design-judgment-heavy work than the mechanical global substitution done this cycle, so queued separately rather than rushed in.
+
+5 items from earlier runs are still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-04 — Hourly loop, run 27: screen-reader users could not use any of the 9 `/portals/*` signup forms or `/join` — form fields had no programmatic labels
 
 **New verification technique this run**: installed `axe-core` (industry-standard automated accessibility checker) in a scratch dir and ran it via Playwright against 9 real pages, rather than another manual code-read. This is a genuinely different angle from every previous run's approach (manual grep + reasoning) and immediately surfaced something no amount of visual/functional testing would have caught, since the pages look completely normal to a sighted mouse user.

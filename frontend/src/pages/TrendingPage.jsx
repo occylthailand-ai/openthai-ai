@@ -39,7 +39,7 @@ export default function TrendingPage() {
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← กลับ</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 800 }}>🔥 Trending Now</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>
             {data ? `อัพเดต: ${new Date(data.ts).toLocaleTimeString('th-TH')} · แหล่ง: ${data.source === 'gemini' ? 'AI Generated' : 'Curated'}` : 'กำลังโหลด...'}
           </div>
         </div>
@@ -56,25 +56,25 @@ export default function TrendingPage() {
           <h1 style={{ fontSize: 'clamp(22px,4vw,32px)', fontWeight: 900, background: 'linear-gradient(90deg,#fe2c55,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '0 0 8px' }}>
             Trending TikTok Thailand
           </h1>
-          <p style={{ color: '#64748b', fontSize: 13 }}>คลิก hashtag เพื่อคัดลอก ใส่ในคอนเทนต์ได้เลย</p>
+          <p style={{ color: '#94a3b8', fontSize: 13 }}>คลิก hashtag เพื่อคัดลอก ใส่ในคอนเทนต์ได้เลย</p>
         </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, justifyContent: 'center', flexWrap: 'wrap' }}>
           {[['hashtags','#️⃣ Hashtags'],['topics','📈 Topics'],['sounds','🎵 Sounds']].map(([id,label]) => (
-            <button key={id} onClick={() => setActiveTab(id)} style={{ borderRadius: 50, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${activeTab === id ? 'rgba(99,102,241,0.6)' : 'rgba(255,255,255,0.1)'}`, background: activeTab === id ? 'rgba(99,102,241,0.18)' : 'transparent', color: activeTab === id ? '#a5b4fc' : '#64748b' }}>
+            <button key={id} onClick={() => setActiveTab(id)} style={{ borderRadius: 50, padding: '9px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${activeTab === id ? 'rgba(99,102,241,0.6)' : 'rgba(255,255,255,0.1)'}`, background: activeTab === id ? 'rgba(99,102,241,0.18)' : 'transparent', color: activeTab === id ? '#a5b4fc' : '#94a3b8' }}>
               {label}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>⏳</div>
             กำลังโหลด Trending...
           </div>
         ) : !data ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: '#64748b' }}>
+          <div style={{ textAlign: 'center', padding: '60px 0', color: '#94a3b8' }}>
             <div style={{ fontSize: 36 }}>❌</div>
             <p>โหลดข้อมูลไม่สำเร็จ กรุณาลองใหม่</p>
           </div>
@@ -97,11 +97,11 @@ export default function TrendingPage() {
                       style={{ ...cardSt, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'all .2s', border: `1px solid ${copied === h.tag ? 'rgba(16,185,129,0.5)' : h.hot ? 'rgba(254,44,85,0.3)' : 'rgba(255,255,255,0.08)'}`, background: copied === h.tag ? 'rgba(16,185,129,0.1)' : h.hot ? 'rgba(254,44,85,0.05)' : 'rgba(255,255,255,0.03)' }}>
                       <div>
                         <div style={{ fontWeight: 800, fontSize: 14, color: copied === h.tag ? '#6ee7b7' : '#f8fafc' }}>{h.tag}</div>
-                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{h.views} views</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{h.views} views</div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                         {h.hot && <span style={{ background: 'rgba(254,44,85,0.2)', color: '#fe2c55', borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700 }}>🔥 HOT</span>}
-                        <span style={{ fontSize: 12, color: '#475569' }}>{copied === h.tag ? '✅' : '📋'}</span>
+                        <span style={{ fontSize: 12, color: '#7c8797' }}>{copied === h.tag ? '✅' : '📋'}</span>
                       </div>
                     </div>
                   ))}
@@ -140,7 +140,7 @@ export default function TrendingPage() {
                     <div style={{ width: 44, height: 44, background: 'linear-gradient(135deg,#8b5cf6,#06b6d4)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>🎵</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{s.name}</div>
-                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>ใช้แล้ว {s.uses} ครั้ง</div>
+                      <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>ใช้แล้ว {s.uses} ครั้ง</div>
                     </div>
                     <div style={{ padding: '5px 12px', background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 20, fontSize: 12, color: '#6ee7b7', fontWeight: 600 }}>
                       🎯 Popular

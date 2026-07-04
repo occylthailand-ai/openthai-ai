@@ -244,7 +244,7 @@ export default function ContentStudioPage() {
           </div>
         )}
 
-        <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.7 }}>
+        <div style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.7 }}>
           ⚠️ ตรงไปตรงมา: เครื่องมือนี้ช่วย <strong style={{ color: '#cbd5e1' }}>เขียนแคปชั่น</strong> ให้คุณก๊อปไปโพสต์เอง — ไม่โพสต์อัตโนมัติแทน เพราะ TikTok/Meta/LINE ห้ามบอทโพสต์ (โพสต์อัตโนมัติ = เสี่ยงโดนแบนถาวร) ยอดขายจริงเกิดเมื่อคุณโพสต์สม่ำเสมอ + ตอบลูกค้าเอง
         </div>
       </div>

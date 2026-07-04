@@ -116,7 +116,7 @@ export default function AffiliateDashboard() {
           >
             {loading ? '⏳ กำลังโหลด...' : '🔍 ดู Dashboard'}
           </button>
-          <p style={{ marginTop: 16, fontSize: 13, color: '#475569' }}>
+          <p style={{ marginTop: 16, fontSize: 13, color: '#7c8797' }}>
             ยังไม่มี Ref Code?{' '}
             <span onClick={() => navigate('/affiliate')} style={{ color: '#6366f1', cursor: 'pointer', fontWeight: 600 }}>
               สมัคร Affiliate ฟรี →
@@ -138,7 +138,7 @@ export default function AffiliateDashboard() {
         <span style={{ background: `${tierColor}22`, border: `1px solid ${tierColor}55`, borderRadius: 20, padding: '4px 14px', fontSize: 12, fontWeight: 700, color: tierColor, textTransform: 'capitalize' }}>
           {data.tier} {data.tier === 'pro' ? '⚡' : data.tier === 'elite' ? '👑' : '🌱'}
         </span>
-        <span style={{ fontSize: 13, color: '#64748b' }}>REF: <strong style={{ color: '#f8fafc' }}>{data.ref_code}</strong></span>
+        <span style={{ fontSize: 13, color: '#94a3b8' }}>REF: <strong style={{ color: '#f8fafc' }}>{data.ref_code}</strong></span>
       </nav>
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 24px' }}>
@@ -155,7 +155,7 @@ export default function AffiliateDashboard() {
             <div key={s.label} style={{ ...glass, textAlign: 'center' }}>
               <div style={{ fontSize: 28, marginBottom: 4 }}>{s.icon}</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: s.color }}>{s.value}</div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -164,7 +164,7 @@ export default function AffiliateDashboard() {
         <div style={{ ...glass, border: `1.5px solid ${tierColor}44`, marginBottom: 28, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 20 }}>🔗</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>Affiliate Link ของคุณ</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 2 }}>Affiliate Link ของคุณ</div>
             <div style={{ fontSize: 14, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{refLink}</div>
           </div>
           <button onClick={() => copy(refLink, 'link')} style={{ ...smallBtn, background: copied === 'link' ? 'rgba(16,185,129,0.2)' : undefined, color: copied === 'link' ? '#6ee7b7' : undefined }}>
@@ -216,7 +216,7 @@ export default function AffiliateDashboard() {
         {/* TABS */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
           {[['overview', '📊 ภาพรวม'], ['sales', '📦 ยอดขาย'], ['payout', '💸 รับเงิน'], ['kit', '📦 Marketing Kit']].map(([id, label]) => (
-            <button key={id} onClick={() => setActiveTab(id)} style={{ ...tabBtn, background: activeTab === id ? 'rgba(99,102,241,0.2)' : 'transparent', border: `1px solid ${activeTab === id ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.08)'}`, color: activeTab === id ? '#a5b4fc' : '#64748b' }}>
+            <button key={id} onClick={() => setActiveTab(id)} style={{ ...tabBtn, background: activeTab === id ? 'rgba(99,102,241,0.2)' : 'transparent', border: `1px solid ${activeTab === id ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.08)'}`, color: activeTab === id ? '#a5b4fc' : '#94a3b8' }}>
               {label}
             </button>
           ))}
@@ -234,12 +234,12 @@ export default function AffiliateDashboard() {
                     <div key={m.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                       <div style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>฿{m.earned}</div>
                       <div style={{ width: '100%', background: 'linear-gradient(180deg,#6366f1,#fe2c55)', borderRadius: '4px 4px 0 0', height: `${(m.earned / maxBar) * 100}px`, minHeight: 4, transition: 'height .4s' }} />
-                      <div style={{ fontSize: 11, color: '#64748b' }}>{m.month}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8' }}>{m.month}</div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 14 }}>
+                <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c8797', fontSize: 14 }}>
                   ยังไม่มีข้อมูลรายได้รายเดือน
                 </div>
               )}
@@ -249,14 +249,14 @@ export default function AffiliateDashboard() {
             <div style={glass}>
               <div style={{ fontWeight: 700, marginBottom: 16 }}>🔗 คลิกตามช่องทาง</div>
               {(() => {
-                const SRC = { tiktok: ['🎵 TikTok', '#fe2c55'], facebook: ['📘 Facebook', '#1877f2'], instagram: ['📸 Instagram', '#e1306c'], line: ['💚 LINE', '#06c755'], youtube: ['▶️ YouTube', '#ff0000'], shopee: ['🛍️ Shopee', '#ee4d2d'], lazada: ['🛒 Lazada', '#0f146d'], x: ['✖️ X', '#94a3b8'], direct: ['🔗 ตรง', '#6366f1'], other: ['🌐 อื่นๆ', '#64748b'] };
+                const SRC = { tiktok: ['🎵 TikTok', '#fe2c55'], facebook: ['📘 Facebook', '#1877f2'], instagram: ['📸 Instagram', '#e1306c'], line: ['💚 LINE', '#06c755'], youtube: ['▶️ YouTube', '#ff0000'], shopee: ['🛍️ Shopee', '#ee4d2d'], lazada: ['🛒 Lazada', '#0f146d'], x: ['✖️ X', '#94a3b8'], direct: ['🔗 ตรง', '#6366f1'], other: ['🌐 อื่นๆ', '#94a3b8'] };
                 const entries = Object.entries(data.clicks_by_source || {}).sort((a, b) => b[1] - a[1]);
                 const max = Math.max(1, ...entries.map(([, v]) => v));
-                if (entries.length === 0) return <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 14, textAlign: 'center' }}>ยังไม่มีข้อมูลคลิก — แชร์ลิงก์ติดตามต่อแพลตฟอร์มเพื่อดูว่าช่องไหนเวิร์ค</div>;
+                if (entries.length === 0) return <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c8797', fontSize: 14, textAlign: 'center' }}>ยังไม่มีข้อมูลคลิก — แชร์ลิงก์ติดตามต่อแพลตฟอร์มเพื่อดูว่าช่องไหนเวิร์ค</div>;
                 return (
                   <div style={{ display: 'grid', gap: 10 }}>
                     {entries.map(([src, n]) => {
-                      const meta = SRC[src] || [src, '#64748b'];
+                      const meta = SRC[src] || [src, '#94a3b8'];
                       return (
                         <div key={src}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
@@ -277,21 +277,21 @@ export default function AffiliateDashboard() {
             <div style={glass}>
               <div style={{ fontWeight: 700, marginBottom: 16 }}>💰 ยอดขายตามช่องทาง</div>
               {(() => {
-                const SRC = { tiktok: ['🎵 TikTok', '#fe2c55'], facebook: ['📘 Facebook', '#1877f2'], instagram: ['📸 Instagram', '#e1306c'], line: ['💚 LINE', '#06c755'], youtube: ['▶️ YouTube', '#ff0000'], shopee: ['🛍️ Shopee', '#ee4d2d'], lazada: ['🛒 Lazada', '#0f146d'], x: ['✖️ X', '#94a3b8'], direct: ['🔗 ตรง', '#6366f1'], other: ['🌐 อื่นๆ', '#64748b'] };
+                const SRC = { tiktok: ['🎵 TikTok', '#fe2c55'], facebook: ['📘 Facebook', '#1877f2'], instagram: ['📸 Instagram', '#e1306c'], line: ['💚 LINE', '#06c755'], youtube: ['▶️ YouTube', '#ff0000'], shopee: ['🛍️ Shopee', '#ee4d2d'], lazada: ['🛒 Lazada', '#0f146d'], x: ['✖️ X', '#94a3b8'], direct: ['🔗 ตรง', '#6366f1'], other: ['🌐 อื่นๆ', '#94a3b8'] };
                 const sales = data.sales_by_source || {};
                 const earned = data.earned_by_source || {};
                 const entries = Object.entries(sales).sort((a, b) => (earned[b[0]] || 0) - (earned[a[0]] || 0));
                 const maxE = Math.max(1, ...entries.map(([k]) => earned[k] || 0));
-                if (entries.length === 0) return <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', fontSize: 14, textAlign: 'center', padding: '0 12px' }}>ยังไม่มียอดขาย — เมื่อมีคนซื้อผ่านลิงก์ติดตาม จะรู้ว่าเงินมาจากช่องไหน</div>;
+                if (entries.length === 0) return <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7c8797', fontSize: 14, textAlign: 'center', padding: '0 12px' }}>ยังไม่มียอดขาย — เมื่อมีคนซื้อผ่านลิงก์ติดตาม จะรู้ว่าเงินมาจากช่องไหน</div>;
                 return (
                   <div style={{ display: 'grid', gap: 10 }}>
                     {entries.map(([src, n]) => {
-                      const meta = SRC[src] || [src, '#64748b'];
+                      const meta = SRC[src] || [src, '#94a3b8'];
                       const e = earned[src] || 0;
                       return (
                         <div key={src}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
-                            <span>{meta[0]} <span style={{ color: '#64748b' }}>· {n} ดีล</span></span>
+                            <span>{meta[0]} <span style={{ color: '#94a3b8' }}>· {n} ดีล</span></span>
                             <span style={{ color: '#10b981', fontWeight: 700 }}>฿{Number(e).toLocaleString()}</span>
                           </div>
                           <div style={{ height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
@@ -330,7 +330,7 @@ export default function AffiliateDashboard() {
                   </div>
                 </div>
               ))}
-              <div style={{ marginTop: 16, fontSize: 13, color: '#64748b' }}>
+              <div style={{ marginTop: 16, fontSize: 13, color: '#94a3b8' }}>
                 🗓 จ่ายเงินครั้งถัดไป: <strong style={{ color: '#f8fafc' }}>{data.next_payout_date}</strong>
               </div>
             </div>
@@ -345,7 +345,7 @@ export default function AffiliateDashboard() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>
-                    <tr style={{ color: '#64748b', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    <tr style={{ color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                       {['Order ID', 'แพ็กเกจ', 'คอมมิชชั่น', 'วันที่', 'สถานะ'].map((h) => (
                         <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12 }}>{h}</th>
                       ))}
@@ -359,7 +359,7 @@ export default function AffiliateDashboard() {
                           <td style={{ padding: '10px 12px', color: '#94a3b8' }}>{s.id}</td>
                           <td style={{ padding: '10px 12px' }}>{s.plan}</td>
                           <td style={{ padding: '10px 12px', color: '#10b981', fontWeight: 700 }}>+฿{s.commission}</td>
-                          <td style={{ padding: '10px 12px', color: '#64748b', fontSize: 12 }}>{s.date}</td>
+                          <td style={{ padding: '10px 12px', color: '#94a3b8', fontSize: 12 }}>{s.date}</td>
                           <td style={{ padding: '10px 12px' }}>
                             <span style={{ background: st.bg, color: st.color, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>{st.label}</span>
                           </td>
@@ -370,10 +370,10 @@ export default function AffiliateDashboard() {
                 </table>
               </div>
             ) : (
-              <div style={{ padding: '40px 0', textAlign: 'center', color: '#475569' }}>
+              <div style={{ padding: '40px 0', textAlign: 'center', color: '#7c8797' }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
                 <div style={{ fontSize: 14 }}>ยังไม่มีการขายผ่านลิงก์ของคุณ</div>
-                <div style={{ fontSize: 12, color: '#334155', marginTop: 6 }}>เริ่มแชร์ลิงก์เพื่อรับคอมมิชชั่น</div>
+                <div style={{ fontSize: 12, color: '#748293', marginTop: 6 }}>เริ่มแชร์ลิงก์เพื่อรับคอมมิชชั่น</div>
               </div>
             )}
           </div>
@@ -386,11 +386,11 @@ export default function AffiliateDashboard() {
               <div style={{ fontWeight: 700, marginBottom: 16 }}>💸 การรับเงิน</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                 <div style={{ background: 'rgba(16,185,129,0.1)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>รอรับเงินรอบนี้</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>รอรับเงินรอบนี้</div>
                   <div style={{ fontSize: 36, fontWeight: 900, color: '#10b981' }}>฿{data.pending_payout.toLocaleString()}</div>
                 </div>
                 <div style={{ background: 'rgba(99,102,241,0.1)', borderRadius: 12, padding: 16, textAlign: 'center' }}>
-                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>รายได้รวมทั้งหมด</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>รายได้รวมทั้งหมด</div>
                   <div style={{ fontSize: 36, fontWeight: 900, color: '#6366f1' }}>฿{data.total_earned.toLocaleString()}</div>
                 </div>
               </div>
@@ -406,7 +406,7 @@ export default function AffiliateDashboard() {
                     {wdBusy ? '⏳' : `ถอน ฿${(wd?.pending_balance ?? data.pending_payout).toLocaleString()}`}
                   </button>
                 </div>
-                <div style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>ถอนได้: <strong style={{ color: '#6ee7b7' }}>฿{(wd?.pending_balance ?? data.pending_payout).toLocaleString()}</strong> · จ่ายแล้วสะสม ฿{(wd?.paid_out ?? 0).toLocaleString()}</div>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>ถอนได้: <strong style={{ color: '#6ee7b7' }}>฿{(wd?.pending_balance ?? data.pending_payout).toLocaleString()}</strong> · จ่ายแล้วสะสม ฿{(wd?.paid_out ?? 0).toLocaleString()}</div>
               </div>
 
               {/* ประวัติคำขอถอน */}
@@ -425,7 +425,7 @@ export default function AffiliateDashboard() {
                 </div>
               )}
 
-              <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.8, marginTop: 14 }}>
+              <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.8, marginTop: 14 }}>
                 💳 ขั้นต่ำ ฿100 · ⏱ ยอดขาย confirm ภายใน 3 วัน · แอดมินอนุมัติแล้วโอนเข้าพร้อมเพย์
               </div>
             </div>

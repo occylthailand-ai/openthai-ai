@@ -86,5 +86,5 @@ export default function WelcomeSpinWheel() {
 
 const overlay = { position: 'fixed', inset: 0, zIndex: 9600, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 };
 const modal = { position: 'relative', width: '100%', maxWidth: 340, background: 'linear-gradient(160deg,#13131f,#0c0c16)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 20, padding: '26px 22px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' };
-const closeBtn = { position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#475569', fontSize: 22, cursor: 'pointer', lineHeight: 1 };
+const closeBtn = { position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#7c8797', fontSize: 22, cursor: 'pointer', lineHeight: 1 };
 const cta = { width: '100%', padding: '14px', borderRadius: 50, border: 'none', background: 'linear-gradient(135deg,#fe2c55,#6366f1)', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', boxShadow: '0 8px 24px rgba(254,44,85,0.35)' };

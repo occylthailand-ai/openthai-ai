@@ -73,7 +73,7 @@ export default function ContentCalendarPage() {
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← กลับ</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 800 }}>📅 Content Calendar</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>วางแผนโพสต์ · {totalPosts} แผน · {donePosts} เสร็จแล้ว</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>วางแผนโพสต์ · {totalPosts} แผน · {donePosts} เสร็จแล้ว</div>
         </div>
         <button onClick={() => navigate('/ai-generator')} style={{ background: 'linear-gradient(135deg,#fe2c55,#6366f1)', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
           + สร้างคอนเทนต์
@@ -86,7 +86,7 @@ export default function ContentCalendarPage() {
           <button onClick={prevMonth} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', cursor: 'pointer', fontSize: 18 }}>‹</button>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 22, fontWeight: 900 }}>{MONTHS_TH[month]}</div>
-            <div style={{ fontSize: 13, color: '#64748b' }}>{year + 543}</div>
+            <div style={{ fontSize: 13, color: '#94a3b8' }}>{year + 543}</div>
           </div>
           <button onClick={nextMonth} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '8px 16px', color: '#94a3b8', cursor: 'pointer', fontSize: 18 }}>›</button>
         </div>
@@ -110,7 +110,7 @@ export default function ContentCalendarPage() {
           {/* Day Headers */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
             {DAYS_TH.map(d => (
-              <div key={d} style={{ textAlign: 'center', padding: '10px 0', fontSize: 12, fontWeight: 700, color: d === 'อา' || d === 'ส' ? '#fe2c55' : '#64748b' }}>{d}</div>
+              <div key={d} style={{ textAlign: 'center', padding: '10px 0', fontSize: 12, fontWeight: 700, color: d === 'อา' || d === 'ส' ? '#fe2c55' : '#94a3b8' }}>{d}</div>
             ))}
           </div>
           {/* Days */}
@@ -131,11 +131,11 @@ export default function ContentCalendarPage() {
                   <div style={{ fontSize: 13, fontWeight: isToday ? 900 : 500, color: isToday ? '#a5b4fc' : col === 0 || col === 6 ? '#fe2c55' : '#94a3b8', marginBottom: 4, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isToday ? '#6366f1' : 'transparent', borderRadius: '50%' }}>{d}</div>
                   {dayPosts.slice(0, 3).map(p => (
                     <div key={p.id} onClick={e => { e.stopPropagation(); toggleDone(p.id); }}
-                      style={{ background: `${PLATFORM_COLOR[p.platform]}22`, borderLeft: `3px solid ${PLATFORM_COLOR[p.platform]}`, borderRadius: '0 4px 4px 0', padding: '2px 5px', marginBottom: 2, fontSize: 10, color: p.done ? '#475569' : '#f8fafc', textDecoration: p.done ? 'line-through' : 'none', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer' }}>
+                      style={{ background: `${PLATFORM_COLOR[p.platform]}22`, borderLeft: `3px solid ${PLATFORM_COLOR[p.platform]}`, borderRadius: '0 4px 4px 0', padding: '2px 5px', marginBottom: 2, fontSize: 10, color: p.done ? '#7c8797' : '#f8fafc', textDecoration: p.done ? 'line-through' : 'none', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', cursor: 'pointer' }}>
                       {p.done ? '✅' : '📌'} {p.product}
                     </div>
                   ))}
-                  {dayPosts.length > 3 && <div style={{ fontSize: 9, color: '#64748b' }}>+{dayPosts.length - 3} อื่นๆ</div>}
+                  {dayPosts.length > 3 && <div style={{ fontSize: 9, color: '#94a3b8' }}>+{dayPosts.length - 3} อื่นๆ</div>}
                 </div>
               );
             })}
@@ -152,7 +152,7 @@ export default function ContentCalendarPage() {
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: PLATFORM_COLOR[p.platform], flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{p.product}</div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>{p.platform} · {p.date} {p.note && `· ${p.note}`}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{p.platform} · {p.date} {p.note && `· ${p.note}`}</div>
                   </div>
                   <button onClick={() => toggleDone(p.id)} style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 6, padding: '4px 10px', color: '#34d399', fontSize: 12, cursor: 'pointer' }}>✅ เสร็จ</button>
                   <button onClick={() => deletePost(p.id)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '4px 10px', color: '#f87171', fontSize: 12, cursor: 'pointer' }}>🗑</button>
@@ -179,7 +179,7 @@ export default function ContentCalendarPage() {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {PLATFORMS.map(p => (
                     <button key={p} onClick={() => setForm(f => ({ ...f, platform: p }))}
-                      style={{ borderRadius: 20, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${form.platform === p ? PLATFORM_COLOR[p] : 'rgba(255,255,255,0.1)'}`, background: form.platform === p ? `${PLATFORM_COLOR[p]}22` : 'transparent', color: form.platform === p ? '#f8fafc' : '#64748b' }}>
+                      style={{ borderRadius: 20, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: `1.5px solid ${form.platform === p ? PLATFORM_COLOR[p] : 'rgba(255,255,255,0.1)'}`, background: form.platform === p ? `${PLATFORM_COLOR[p]}22` : 'transparent', color: form.platform === p ? '#f8fafc' : '#94a3b8' }}>
                       {p}
                     </button>
                   ))}

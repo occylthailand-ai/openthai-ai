@@ -22,7 +22,7 @@ export default function PrivacyPage() {
         </button>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>นโยบายความเป็นส่วนตัว</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>Privacy Policy — Openthai.ai</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>Privacy Policy — Openthai.ai</div>
         </div>
       </header>
 
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
           <h1 style={{ fontSize: 'clamp(24px,5vw,36px)', fontWeight: 900, background: 'linear-gradient(90deg,#6366f1,#a5b4fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '0 0 12px' }}>
             นโยบายความเป็นส่วนตัว
           </h1>
-          <p style={{ color: '#64748b', fontSize: 13 }}>
+          <p style={{ color: '#94a3b8', fontSize: 13 }}>
             มีผลบังคับใช้ตั้งแต่ <strong style={{ color: '#94a3b8' }}>1 มกราคม 2568</strong> · ปรับปรุงล่าสุด <strong style={{ color: '#94a3b8' }}>3 พฤษภาคม 2569</strong>
           </p>
         </div>
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
               <div key={r.right} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '12px 14px' }}>
                 <div style={{ fontSize: 20, marginBottom: 4 }}>{r.icon}</div>
                 <div style={{ fontWeight: 700, fontSize: 12, color: '#f8fafc', marginBottom: 2 }}>{r.right}</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>{r.desc}</div>
+                <div style={{ fontSize: 11, color: '#94a3b8' }}>{r.desc}</div>
               </div>
             ))}
           </div>

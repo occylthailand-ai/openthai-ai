@@ -37,8 +37,8 @@ const wrap = {
   borderRadius: 50,
   padding: '6px 12px',
 };
-const labelSt = { fontSize: 12, color: '#64748b', fontWeight: 600 };
-const sep = { color: '#334155', fontSize: 12 };
+const labelSt = { fontSize: 12, color: '#94a3b8', fontWeight: 600 };
+const sep = { color: '#748293', fontSize: 12 };
 const itemSt = {
   background: 'transparent',
   border: 'none',

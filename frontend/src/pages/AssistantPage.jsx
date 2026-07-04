@@ -71,7 +71,7 @@ export default function AssistantPage() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc', color: '#1e293b', fontFamily: "'Inter','Sarabun',sans-serif" }}>
       <header style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '12px 5%', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
+        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 900 }}>🤖 AI ที่ปรึกษาธุรกิจ</div>
           <div style={{ fontSize: 11, color: '#94a3b8' }}>ถามอะไรก็ได้ · ตอบสด · จำบทสนทนาข้ามอุปกรณ์</div>
@@ -84,7 +84,7 @@ export default function AssistantPage() {
           {messages.length === 0 && (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
               <div style={{ fontSize: 44, marginBottom: 10 }}>🤖</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#475569', marginBottom: 4 }}>สวัสดีค่ะ! ถามเรื่องธุรกิจได้เลย</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#7c8797', marginBottom: 4 }}>สวัสดีค่ะ! ถามเรื่องธุรกิจได้เลย</div>
               <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 20 }}>การตลาด · ขายของออนไลน์ · ตั้งราคา · คอนเทนต์ · บริหารร้าน</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
                 {SUGGEST.map((s, i) => (

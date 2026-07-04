@@ -65,13 +65,13 @@ export default function PDPABanner() {
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{c.icon}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3 }}>{c.name}</div>
-                  <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>{c.desc}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>{c.desc}</div>
                   {c.required && <div style={{ fontSize: 11, color: '#6366f1', marginTop: 4 }}>เปิดอยู่เสมอ</div>}
                 </div>
               </div>
             ))}
           </div>
-          <p style={{ fontSize: 12, color: '#475569', margin: 0 }}>
+          <p style={{ fontSize: 12, color: '#7c8797', margin: 0 }}>
             ข้อมูลของคุณจะถูกเก็บตาม PDPA พ.ศ. 2562 อ่าน{' '}
             <a href="/privacy" style={{ color: '#6366f1' }}>นโยบายความเป็นส่วนตัว</a>
           </p>

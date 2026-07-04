@@ -67,7 +67,7 @@ export default function ContactPage() {
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← กลับ</button>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>ติดต่อเรา</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>Contact — Openthai.ai</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>Contact — Openthai.ai</div>
         </div>
       </header>
 
@@ -79,7 +79,7 @@ export default function ContactPage() {
           <h1 style={{ fontSize: 'clamp(24px,5vw,38px)', fontWeight: 900, margin: '0 0 12px', background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             ติดต่อทีมงาน Openthai.ai
           </h1>
-          <p style={{ color: '#64748b', fontSize: 14 }}>ตอบกลับภายใน <strong style={{ color: '#10b981' }}>1–2 วันทำการ</strong> · เปิดให้บริการทุกวัน</p>
+          <p style={{ color: '#94a3b8', fontSize: 14 }}>ตอบกลับภายใน <strong style={{ color: '#10b981' }}>1–2 วันทำการ</strong> · เปิดให้บริการทุกวัน</p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 32 }}>
@@ -97,7 +97,7 @@ export default function ContactPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 16px', textDecoration: 'none', transition: 'border-color 0.2s' }}>
                 <span style={{ fontSize: 22, flexShrink: 0 }}>{c.icon}</span>
                 <div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 2 }}>{c.label}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>{c.label}</div>
                   <div style={{ fontSize: 13, color: '#a5b4fc', fontWeight: 600 }}>{c.value}</div>
                 </div>
               </a>
@@ -106,7 +106,7 @@ export default function ContactPage() {
             {/* Response time */}
             <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, padding: '16px 18px', marginTop: 8 }}>
               <div style={{ fontWeight: 700, color: '#34d399', marginBottom: 8, fontSize: 13 }}>⏰ เวลาตอบกลับ</div>
-              <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.8 }}>
+              <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.8 }}>
                 📧 Email: ภายใน 24 ชม.<br />
                 💼 Business: ภายิน 4 ชม.<br />
                 🆘 ปัญหาด่วน: ภายใน 1 ชม.
@@ -120,7 +120,7 @@ export default function ContactPage() {
               <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 16, padding: '40px 32px', textAlign: 'center' }}>
                 <div style={{ fontSize: 56, marginBottom: 16 }}>✅</div>
                 <h3 style={{ color: '#34d399', fontWeight: 800, marginBottom: 8 }}>ส่งข้อความสำเร็จ!</h3>
-                <p style={{ color: '#64748b', fontSize: 13, marginBottom: 24 }}>ทีมงานจะตอบกลับที่อีเมล <strong style={{ color: '#a5b4fc' }}>{form.email}</strong> ภายใน 1–2 วันทำการ</p>
+                <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 24 }}>ทีมงานจะตอบกลับที่อีเมล <strong style={{ color: '#a5b4fc' }}>{form.email}</strong> ภายใน 1–2 วันทำการ</p>
                 <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                   <button onClick={() => { setSent(false); setForm({ name: '', email: '', subject: SUBJECTS[0], message: '' }); }}
                     style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 50, padding: '10px 20px', color: '#94a3b8', fontSize: 13, cursor: 'pointer' }}>
@@ -157,7 +157,7 @@ export default function ContactPage() {
                   <textarea style={{ ...inputStyle, minHeight: 140, resize: 'vertical', lineHeight: 1.6 }}
                     placeholder="อธิบายปัญหาหรือข้อสอบถามของคุณ..."
                     value={form.message} onChange={set('message')} required />
-                  <div style={{ textAlign: 'right', fontSize: 11, color: '#475569', marginTop: 4 }}>
+                  <div style={{ textAlign: 'right', fontSize: 11, color: '#7c8797', marginTop: 4 }}>
                     {form.message.length}/500
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export default function ContactPage() {
                   {loading ? '⏳ กำลังส่ง...' : '📨 ส่งข้อความ'}
                 </button>
 
-                <p style={{ fontSize: 11, color: '#334155', textAlign: 'center', margin: 0 }}>
+                <p style={{ fontSize: 11, color: '#748293', textAlign: 'center', margin: 0 }}>
                   โดยการส่งข้อความ คุณยอมรับ{' '}
                   <button type="button" onClick={() => navigate('/privacy')} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontSize: 11, padding: 0, textDecoration: 'underline' }}>
                     นโยบายความเป็นส่วนตัว

@@ -153,7 +153,7 @@ export default function LandingPage() {
           {stats.map((s) => (
             <div key={s.l} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 28, fontWeight: 900, color: '#fe2c55' }}>{s.v}</div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{s.l}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{s.l}</div>
             </div>
           ))}
         </div>
@@ -167,7 +167,7 @@ export default function LandingPage() {
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#fe2c55' }} />
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#f59e0b' }} />
             <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#10b981' }} />
-            <span style={{ fontSize: 12, color: '#475569', marginLeft: 8 }}>{t('demo.title')}</span>
+            <span style={{ fontSize: 12, color: '#7c8797', marginLeft: 8 }}>{t('demo.title')}</span>
           </div>
           <div style={{ padding: 24 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -177,7 +177,7 @@ export default function LandingPage() {
               </div>
               <div style={demoBox}>
                 <div style={demoLabel}>{t('demo.score.label')}</div>
-                <div style={{ fontSize: 36, fontWeight: 900, color: '#10b981', textAlign: 'center', padding: '8px 0' }}>9.2 <span style={{ fontSize: 14, color: '#64748b' }}>/10</span></div>
+                <div style={{ fontSize: 36, fontWeight: 900, color: '#10b981', textAlign: 'center', padding: '8px 0' }}>9.2 <span style={{ fontSize: 14, color: '#94a3b8' }}>/10</span></div>
               </div>
             </div>
             <div style={demoBox}>
@@ -205,7 +205,7 @@ export default function LandingPage() {
             <div key={s.n} style={{ ...glassCard, textAlign: 'center' }}>
               <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'linear-gradient(135deg,#fe2c55,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontWeight: 900, fontSize: 18 }}>{s.n}</div>
               <div style={{ fontWeight: 700, marginBottom: 6 }}>{s.title}</div>
-              <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{s.desc}</div>
+              <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{s.desc}</div>
             </div>
           ))}
         </div>
@@ -223,7 +223,7 @@ export default function LandingPage() {
               <span style={{ fontSize: 28, flexShrink: 0 }}>{f.icon}</span>
               <div>
                 <div style={{ fontWeight: 700, marginBottom: 4 }}>{f.title}</div>
-                <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{f.desc}</div>
+                <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{f.desc}</div>
               </div>
             </div>
           ))}
@@ -236,9 +236,9 @@ export default function LandingPage() {
           <SectionBadge>🧠 AI SKILLS</SectionBadge>
           <SectionTitle>ทักษะ AI ครบจบในที่เดียว</SectionTitle>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap', margin: '28px 0 8px' }}>
-            <div><div style={{ fontSize: 44, fontWeight: 900, background: 'linear-gradient(135deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{skills.total}</div><div style={{ fontSize: 13, color: '#64748b' }}>ทักษะ AI</div></div>
-            <div><div style={{ fontSize: 44, fontWeight: 900, color: '#10b981' }}>{skills.active}</div><div style={{ fontSize: 13, color: '#64748b' }}>พร้อมใช้งาน</div></div>
-            <div><div style={{ fontSize: 44, fontWeight: 900, color: '#f59e0b' }}>{skills.categories?.length || 0}</div><div style={{ fontSize: 13, color: '#64748b' }}>หมวดหมู่</div></div>
+            <div><div style={{ fontSize: 44, fontWeight: 900, background: 'linear-gradient(135deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{skills.total}</div><div style={{ fontSize: 13, color: '#94a3b8' }}>ทักษะ AI</div></div>
+            <div><div style={{ fontSize: 44, fontWeight: 900, color: '#10b981' }}>{skills.active}</div><div style={{ fontSize: 13, color: '#94a3b8' }}>พร้อมใช้งาน</div></div>
+            <div><div style={{ fontSize: 44, fontWeight: 900, color: '#f59e0b' }}>{skills.categories?.length || 0}</div><div style={{ fontSize: 13, color: '#94a3b8' }}>หมวดหมู่</div></div>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 760, margin: '24px auto 0' }}>
             {skills.skills?.map((s) => (
@@ -263,7 +263,7 @@ export default function LandingPage() {
               <div style={{ color: '#f59e0b', marginBottom: 10, fontSize: 18 }}>{'★'.repeat(r.stars)}</div>
               <p style={{ fontSize: 14, color: '#cbd5e1', lineHeight: 1.7, margin: '0 0 16px' }}>"{r.text}"</p>
               <div style={{ fontWeight: 700, fontSize: 14 }}>{r.name}</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>{r.role}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>{r.role}</div>
             </div>
           ))}
         </div>
@@ -280,10 +280,10 @@ export default function LandingPage() {
             <div key={m.id} style={{ ...glassCard, border: `1.5px solid ${m.recommended ? m.color + '55' : 'rgba(255,255,255,0.08)'}`, background: m.recommended ? `${m.color}0d` : undefined, position: 'relative', textAlign: 'left' }}>
               {m.recommended && <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: `linear-gradient(90deg,${m.color},#fe2c55)`, borderRadius: 20, padding: '4px 16px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{t('pricing.recommended')}</div>}
               <div style={{ fontWeight: 900, fontSize: 18, marginBottom: 4, color: m.color }}>{p.name}</div>
-              <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>{p.desc}</div>
+              <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>{p.desc}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 20 }}>
                 <span style={{ fontSize: 40, fontWeight: 900 }}>฿{m.price}</span>
-                <span style={{ fontSize: 13, color: '#64748b' }}>{p.unit}</span>
+                <span style={{ fontSize: 13, color: '#94a3b8' }}>{p.unit}</span>
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {p.features.map((f) => <li key={f} style={{ fontSize: 13, color: '#cbd5e1', display: 'flex', gap: 8 }}><span style={{ color: m.color }}>✓</span>{f}</li>)}
@@ -304,7 +304,7 @@ export default function LandingPage() {
         <div style={{ ...glassCard, background: 'linear-gradient(135deg,rgba(254,44,85,0.08),rgba(99,102,241,0.08))', border: '1.5px solid rgba(99,102,241,0.2)' }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>📬</div>
           <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>{t('email.title')}</h3>
-          <p style={{ color: '#64748b', fontSize: 14, marginBottom: 20 }}>{t('email.desc')}</p>
+          <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 20 }}>{t('email.desc')}</p>
           {joined ? (
             <div style={{ color: '#10b981', fontWeight: 700, fontSize: 15 }}>{t('email.joined')}</div>
           ) : (
@@ -327,20 +327,20 @@ export default function LandingPage() {
               <LogoEmblem size={28} />
               <span style={{ fontWeight: 900, fontSize: 16, color: '#f8fafc' }}>Openthai.ai</span>
             </div>
-            <p style={{ color: '#475569', fontSize: 12, margin: 0, maxWidth: 220, lineHeight: 1.6 }}>
+            <p style={{ color: '#7c8797', fontSize: 12, margin: 0, maxWidth: 220, lineHeight: 1.6 }}>
               {lines('footer.tagline').map((ln, i) => <React.Fragment key={i}>{i > 0 && <br />}{ln}</React.Fragment>)}
             </p>
           </div>
           {/* Links */}
           <div style={{ display: 'flex', gap: 48, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.services')}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.services')}</div>
               {[[t('footer.link.generator'), '/ai-generator'], [t('footer.link.pricing'), '/pricing'], [t('mk.nav.store'), '/store'], [t('footer.link.catalog'), '/catalog'], [t('footer.link.find'), '/find-producers'], [t('footer.link.affiliate'), '/affiliate'], [t('footer.link.producer'), '/join']].map(([l, r]) => (
                 <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
               ))}
             </div>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.info')}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.info')}</div>
               {[[t('footer.link.privacy'), '/privacy'], [t('footer.link.terms'), '/terms'], [t('footer.link.contact'), 'mailto:support@openthai.ai']].map(([l, r]) => (
                 r.startsWith('mailto')
                   ? <a key={r} href={r} style={{ display: 'block', color: '#94a3b8', fontSize: 13, textDecoration: 'none', marginBottom: 6 }}>{l}</a>
@@ -350,8 +350,8 @@ export default function LandingPage() {
           </div>
         </div>
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 20, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-          <span style={{ fontSize: 12, color: '#334155' }}>{t('footer.copyright')}</span>
-          <span style={{ fontSize: 12, color: '#334155' }}>{t('footer.made')}</span>
+          <span style={{ fontSize: 12, color: '#748293' }}>{t('footer.copyright')}</span>
+          <span style={{ fontSize: 12, color: '#748293' }}>{t('footer.made')}</span>
         </div>
       </footer>
     </div>
@@ -371,5 +371,5 @@ const glassCard = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgb
 const ctaPrimary = { background: 'linear-gradient(135deg,#fe2c55,#6366f1)', color: '#fff', border: 'none', borderRadius: 50, padding: '12px 24px', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 8px 24px rgba(254,44,85,0.3)' };
 const ghostBtn = { background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 50, padding: '9px 18px', color: '#94a3b8', fontSize: 13, cursor: 'pointer' };
 const demoBox = { background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: 14 };
-const demoLabel = { fontSize: 11, color: '#475569', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 };
+const demoLabel = { fontSize: 11, color: '#7c8797', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 };
 const demoText = { fontSize: 13, color: '#cbd5e1', lineHeight: 1.7 };

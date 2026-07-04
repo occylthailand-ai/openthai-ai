@@ -28,12 +28,12 @@ export default class ErrorBoundary extends React.Component {
           <h1 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8, color: '#f87171' }}>
             เกิดข้อผิดพลาดที่ไม่คาดคิด
           </h1>
-          <p style={{ color: '#64748b', fontSize: 14, marginBottom: 8, lineHeight: 1.7 }}>
+          <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 8, lineHeight: 1.7 }}>
             แอปพลิเคชันพบปัญหาบางอย่าง<br />กรุณาโหลดหน้าใหม่หรือกลับหน้าหลัก
           </p>
           {this.state.error && (
             <details style={{ marginBottom: 24, textAlign: 'left' }}>
-              <summary style={{ cursor: 'pointer', color: '#475569', fontSize: 12, marginBottom: 8 }}>
+              <summary style={{ cursor: 'pointer', color: '#7c8797', fontSize: 12, marginBottom: 8 }}>
                 รายละเอียดข้อผิดพลาด (สำหรับนักพัฒนา)
               </summary>
               <pre style={{

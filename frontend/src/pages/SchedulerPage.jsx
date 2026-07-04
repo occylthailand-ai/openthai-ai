@@ -96,10 +96,10 @@ export default function SchedulerPage() {
   const s = {
     page: { minHeight: '100vh', background: '#080812', color: '#fff', padding: '24px 20px', fontFamily: 'system-ui, sans-serif' },
     card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '20px 22px', marginBottom: 16 },
-    lbl: { fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 },
+    lbl: { fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 },
     inp: { width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 14, padding: '10px 14px', outline: 'none', boxSizing: 'border-box' },
     btn: (c) => ({ background: c, border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: 14, padding: '11px 22px' }),
-    tab: (a) => ({ background: tab === a ? 'rgba(99,102,241,0.2)' : 'transparent', border: tab === a ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: tab === a ? '#a5b4fc' : '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '8px 18px' }),
+    tab: (a) => ({ background: tab === a ? 'rgba(99,102,241,0.2)' : 'transparent', border: tab === a ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: tab === a ? '#a5b4fc' : '#94a3b8', cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '8px 18px' }),
   };
 
   return (
@@ -110,7 +110,7 @@ export default function SchedulerPage() {
           <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, background: 'linear-gradient(135deg,#6366f1,#10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             📅 Auto-Post Scheduler
           </h1>
-          <p style={{ color: '#64748b', margin: '6px 0 0', fontSize: 14 }}>วางตารางโพสต์สื่อลง Platform อัตโนมัติ · {posts.length} โพสต์ในคิว</p>
+          <p style={{ color: '#94a3b8', margin: '6px 0 0', fontSize: 14 }}>วางตารางโพสต์สื่อลง Platform อัตโนมัติ · {posts.length} โพสต์ในคิว</p>
         </div>
 
         {/* ถึงเวลาโพสต์ */}
@@ -145,7 +145,7 @@ export default function SchedulerPage() {
                   <button key={p.id} onClick={() => setF('platform', p.id)} style={{
                     padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: form.platform === p.id ? 700 : 400,
                     background: form.platform === p.id ? `${p.color}25` : 'rgba(255,255,255,0.05)',
-                    color: form.platform === p.id ? '#fff' : '#64748b',
+                    color: form.platform === p.id ? '#fff' : '#94a3b8',
                     border: form.platform === p.id ? `1px solid ${p.color}60` : '1px solid transparent',
                   }}>{p.icon} {p.label}</button>
                 ))}
@@ -177,7 +177,7 @@ export default function SchedulerPage() {
               <textarea value={form.content} onChange={e => setF('content', e.target.value)}
                 rows={6} placeholder={`วางเนื้อหาที่ต้องการโพสต์บน ${pl.label}...`}
                 style={{ ...s.inp, resize: 'vertical', lineHeight: 1.6 }} />
-              <div style={{ textAlign: 'right', fontSize: 12, color: '#475569', marginTop: 4 }}>{form.content.length} ตัวอักษร</div>
+              <div style={{ textAlign: 'right', fontSize: 12, color: '#7c8797', marginTop: 4 }}>{form.content.length} ตัวอักษร</div>
             </div>
 
             {/* Schedule Time */}
@@ -201,13 +201,13 @@ export default function SchedulerPage() {
                   ...s.tab(k === filter ? 'queue' : '_'),
                   background: filter === k ? 'rgba(99,102,241,0.2)' : 'transparent',
                   border: filter === k ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)',
-                  color: filter === k ? '#a5b4fc' : '#64748b',
+                  color: filter === k ? '#a5b4fc' : '#94a3b8',
                 }}>{l} ({k === 'all' ? posts.length : posts.filter(p => p.status === k).length})</button>
               ))}
             </div>
 
             {filtered.length === 0 ? (
-              <div style={{ ...s.card, textAlign: 'center', padding: 40, color: '#475569' }}>
+              <div style={{ ...s.card, textAlign: 'center', padding: 40, color: '#7c8797' }}>
                 <div style={{ fontSize: 36, marginBottom: 12 }}>📭</div>
                 <div>ยังไม่มีโพสต์ในคิว — ไปสร้างโพสต์แรกได้เลย!</div>
                 <button onClick={() => setTab('create')} style={{ ...s.btn('#6366f1'), marginTop: 16, fontSize: 13 }}>✏️ สร้างโพสต์</button>
@@ -221,7 +221,7 @@ export default function SchedulerPage() {
                       <span style={{ fontSize: 20 }}>{p.icon}</span>
                       <div>
                         <div style={{ fontWeight: 700, fontSize: 14, color: p.color }}>{p.label}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{post.audience} · {post.language}</div>
+                        <div style={{ fontSize: 12, color: '#94a3b8' }}>{post.audience} · {post.language}</div>
                       </div>
                       <span style={{ background: `${STATUS_COLOR[post.status]}20`, color: STATUS_COLOR[post.status], border: `1px solid ${STATUS_COLOR[post.status]}40`, borderRadius: 6, fontSize: 11, fontWeight: 700, padding: '2px 8px' }}>
                         {STATUS_LABEL[post.status] || post.status}
@@ -235,7 +235,7 @@ export default function SchedulerPage() {
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: 12, color: '#475569' }}>
+                    <div style={{ fontSize: 12, color: '#7c8797' }}>
                       📅 {new Date(post.scheduled_at).toLocaleString('th-TH')}
                       {post.reach_mock && <span style={{ marginLeft: 12, color: '#10b981' }}>👁 {post.reach_mock.toLocaleString()} reach</span>}
                     </div>

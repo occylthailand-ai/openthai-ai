@@ -99,11 +99,11 @@ export default function PortalHubPage() {
                   🔒 ยังไม่เปิดใช้งาน
                 </div>
               )}
-              <div style={{ position: 'absolute', top: 16, right: 16, background: `${p.color}22`, color: locked ? '#64748b' : p.color, fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600 }}>{p.sub}</div>
+              <div style={{ position: 'absolute', top: 16, right: 16, background: `${p.color}22`, color: locked ? '#94a3b8' : p.color, fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600 }}>{p.sub}</div>
               <div style={{ fontSize: 40, marginBottom: 12, marginTop: locked ? 20 : 0 }}>{p.icon}</div>
-              <h3 style={{ margin: '0 0 8px', fontSize: 20, color: locked ? '#64748b' : '#fff' }}>{p.title}</h3>
+              <h3 style={{ margin: '0 0 8px', fontSize: 20, color: locked ? '#94a3b8' : '#fff' }}>{p.title}</h3>
               <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>{p.desc}</p>
-              <div style={{ color: locked ? '#475569' : p.color, fontWeight: 700, fontSize: 14 }}>{locked ? '🔒 เปิดเมื่อกำไรสะสม > 10M ฿' : t.join}</div>
+              <div style={{ color: locked ? '#7c8797' : p.color, fontWeight: 700, fontSize: 14 }}>{locked ? '🔒 เปิดเมื่อกำไรสะสม > 10M ฿' : t.join}</div>
             </div>
           );
         })}

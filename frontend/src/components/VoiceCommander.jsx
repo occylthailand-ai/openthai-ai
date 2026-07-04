@@ -267,13 +267,13 @@ export default function VoiceCommander({ mode = 'widget' }) {
             {/* History — last 3 */}
             <div style={{ padding: '8px 12px', maxHeight: 280, overflowY: 'auto' }}>
               {history.length === 0 && !listening && !processing && (
-                <p style={{ color: '#475569', fontSize: 13, textAlign: 'center', margin: '16px 0' }}>
+                <p style={{ color: '#7c8797', fontSize: 13, textAlign: 'center', margin: '16px 0' }}>
                   กดปุ่มไมค์แล้วพูดคำสั่ง
                 </p>
               )}
               {history.slice(-3).map((h, i) => (
                 <div key={i} style={{ marginBottom: 12 }}>
-                  <p style={{ color: '#64748b', fontSize: 12, margin: '0 0 4px' }}>🗣 {h.transcript}</p>
+                  <p style={{ color: '#94a3b8', fontSize: 12, margin: '0 0 4px' }}>🗣 {h.transcript}</p>
                   <ResultCard data={h.response} />
                 </div>
               ))}
@@ -291,7 +291,7 @@ export default function VoiceCommander({ mode = 'widget' }) {
             {/* Lang toggle */}
             <div style={{ display: 'flex', gap: 6, padding: '6px 12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
               {[['th-TH','🇹🇭 ไทย'],['zh-CN','🇨🇳 中文'],['en-US','🇺🇸 EN']].map(([l, label]) => (
-                <button key={l} onClick={() => setLang(l)} style={{ ...styles.langBtn, background: lang === l ? 'rgba(99,102,241,0.3)' : 'transparent', color: lang === l ? '#a5b4fc' : '#475569' }}>
+                <button key={l} onClick={() => setLang(l)} style={{ ...styles.langBtn, background: lang === l ? 'rgba(99,102,241,0.3)' : 'transparent', color: lang === l ? '#a5b4fc' : '#7c8797' }}>
                   {label}
                 </button>
               ))}
@@ -341,7 +341,7 @@ export default function VoiceCommander({ mode = 'widget' }) {
         {/* Lang selector */}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12 }}>
           {[['th-TH','🇹🇭 ภาษาไทย'],['zh-CN','🇨🇳 中文'],['en-US','🇺🇸 English']].map(([l, label]) => (
-            <button key={l} onClick={() => setLang(l)} style={{ ...styles.langBtn, padding: '6px 16px', background: lang === l ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)', color: lang === l ? '#a5b4fc' : '#64748b', border: `1px solid ${lang === l ? '#6366f1' : 'rgba(255,255,255,0.1)'}` }}>
+            <button key={l} onClick={() => setLang(l)} style={{ ...styles.langBtn, padding: '6px 16px', background: lang === l ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)', color: lang === l ? '#a5b4fc' : '#94a3b8', border: `1px solid ${lang === l ? '#6366f1' : 'rgba(255,255,255,0.1)'}` }}>
               {label}
             </button>
           ))}
@@ -368,7 +368,7 @@ export default function VoiceCommander({ mode = 'widget' }) {
 
         <div style={{ marginTop: 20, minHeight: 60, textAlign: 'center' }}>
           {listening && <Waveform active />}
-          <p style={{ color: listening ? '#fe2c55' : '#475569', fontSize: 16, fontWeight: 600, marginTop: 8 }}>
+          <p style={{ color: listening ? '#fe2c55' : '#7c8797', fontSize: 16, fontWeight: 600, marginTop: 8 }}>
             {listening ? (interim || 'กำลังฟัง...') : processing ? 'กำลังประมวลผล...' : supported ? 'กด Space หรือคลิกเพื่อเริ่มพูด' : 'Browser ไม่รองรับ Voice Input'}
           </p>
           {transcript && !listening && (
@@ -401,7 +401,7 @@ export default function VoiceCommander({ mode = 'widget' }) {
       {/* Conversation history */}
       <div style={styles.historyArea}>
         {history.length === 0 && (
-          <div style={{ textAlign: 'center', color: '#334155', padding: '40px 0' }}>
+          <div style={{ textAlign: 'center', color: '#748293', padding: '40px 0' }}>
             <p style={{ fontSize: 32 }}>🎙️</p>
             <p>ยังไม่มีประวัติการสั่งงาน</p>
           </div>
@@ -421,7 +421,7 @@ export default function VoiceCommander({ mode = 'widget' }) {
                 <ResultCard data={h.response} />
               </div>
             </div>
-            <p style={{ textAlign: 'right', fontSize: 11, color: '#334155', margin: '4px 0 0' }}>
+            <p style={{ textAlign: 'right', fontSize: 11, color: '#748293', margin: '4px 0 0' }}>
               {new Date(h.ts).toLocaleTimeString('th-TH')}
             </p>
           </div>
@@ -452,7 +452,7 @@ const styles = {
   widgetWrap:  { position: 'fixed', bottom: 24, right: 24, zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 12 },
   widgetPanel: { width: 320, background: '#0f0f1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.6)', overflow: 'hidden' },
   panelHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(99,102,241,0.08)' },
-  closeBtn:    { background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 16 },
+  closeBtn:    { background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: 16 },
   micBtn:      { border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 14, padding: '10px', cursor: 'pointer', transition: 'opacity 0.2s' },
   fab:         { width: 56, height: 56, borderRadius: '50%', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   langBtn:     { border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: '4px 10px' },
@@ -460,7 +460,7 @@ const styles = {
   page:        { minHeight: '100vh', background: '#0f0f1a', color: '#f1f5f9', padding: '24px 16px 100px', maxWidth: 720, margin: '0 auto' },
   pageHeader:  { textAlign: 'center', marginBottom: 32 },
   pageTitle:   { fontSize: 28, fontWeight: 800, margin: '0 0 8px', background: 'linear-gradient(135deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-  pageSubtitle:{ color: '#475569', fontSize: 14, margin: 0 },
+  pageSubtitle:{ color: '#7c8797', fontSize: 14, margin: 0 },
   micArea:     { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 28 },
   pageMicBtn:  { width: 120, height: 120, borderRadius: '50%', border: 'none', cursor: 'pointer', transition: 'all 0.3s', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   quickCmds:   { display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 24 },

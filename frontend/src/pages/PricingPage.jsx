@@ -35,7 +35,7 @@ export default function PricingPage() {
       <section style={{ textAlign: 'center', padding: '56px 5% 40px' }}>
         <div style={badge}>{t('pp.hero.badge')}</div>
         <h1 style={{ fontSize: 'clamp(28px,5vw,52px)', fontWeight: 900, margin: '12px 0 10px' }}>{t('pp.hero.title')}</h1>
-        <p style={{ color: '#64748b', fontSize: 15 }}>{t('pp.hero.sub')}</p>
+        <p style={{ color: '#94a3b8', fontSize: 15 }}>{t('pp.hero.sub')}</p>
       </section>
 
       {/* PLANS */}
@@ -49,16 +49,16 @@ export default function PricingPage() {
               style={{ ...card, cursor: 'pointer', border: `1.5px solid ${selected === m.id ? m.color + '66' : 'rgba(255,255,255,0.08)'}`, background: selected === m.id ? m.color + '0e' : 'rgba(255,255,255,0.03)', transition: 'all .2s', position: 'relative' }}>
               {m.hot && <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: `linear-gradient(90deg,${m.color},#fe2c55)`, borderRadius: 20, padding: '4px 16px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>{t('pricing.recommended')}</div>}
               <div style={{ fontWeight: 900, fontSize: 20, color: m.color, marginBottom: 4 }}>{p.name}</div>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 14 }}>{p.desc}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>{p.desc}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 20 }}>
                 <span style={{ fontSize: 44, fontWeight: 900, color: selected === m.id ? m.color : '#f8fafc' }}>฿{m.thb}</span>
-                <span style={{ fontSize: 13, color: '#64748b' }}>{p.unit}</span>
-                {m.usd > 0 && <span style={{ fontSize: 11, color: '#475569', marginLeft: 4 }}>≈ ${m.usd} USD</span>}
+                <span style={{ fontSize: 13, color: '#94a3b8' }}>{p.unit}</span>
+                {m.usd > 0 && <span style={{ fontSize: 11, color: '#7c8797', marginLeft: 4 }}>≈ ${m.usd} USD</span>}
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', display: 'flex', flexDirection: 'column', gap: 7 }}>
                 {p.features.map((f) => (
-                  <li key={f.t} style={{ fontSize: 13, color: f.ok ? '#cbd5e1' : '#334155', display: 'flex', gap: 8 }}>
-                    <span style={{ color: f.ok ? m.color : '#334155' }}>{f.ok ? '✓' : '✗'}</span>{f.t}
+                  <li key={f.t} style={{ fontSize: 13, color: f.ok ? '#cbd5e1' : '#748293', display: 'flex', gap: 8 }}>
+                    <span style={{ color: f.ok ? m.color : '#748293' }}>{f.ok ? '✓' : '✗'}</span>{f.t}
                   </li>
                 ))}
               </ul>
@@ -92,18 +92,18 @@ export default function PricingPage() {
         <div style={{ ...card, background: 'linear-gradient(135deg,rgba(254,44,85,0.08),rgba(99,102,241,0.08))', border: '1.5px solid rgba(99,102,241,0.2)' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>💰</div>
           <h3 style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>{t('pp.aff.title')}</h3>
-          <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>{t('pp.aff.desc')}</p>
+          <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 16 }}>{t('pp.aff.desc')}</p>
           <button onClick={() => navigate('/affiliate')} style={{ ...primaryBtn }}>{t('pp.aff.cta')}</button>
         </div>
       </section>
 
       {/* FOOTER LEGAL */}
       <footer style={{ textAlign: 'center', padding: '0 5% 40px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 24 }}>
-        <p style={{ color: '#334155', fontSize: 12, margin: '0 0 8px' }}>{t('footer.copyright')}</p>
+        <p style={{ color: '#748293', fontSize: 12, margin: '0 0 8px' }}>{t('footer.copyright')}</p>
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button onClick={() => navigate('/privacy')} style={{ background: 'none', border: 'none', color: '#475569', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>{t('footer.link.privacy')}</button>
-          <button onClick={() => navigate('/terms')} style={{ background: 'none', border: 'none', color: '#475569', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>{t('footer.link.terms')}</button>
-          <button onClick={() => navigate('/affiliate')} style={{ background: 'none', border: 'none', color: '#475569', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>{t('footer.link.affiliate')}</button>
+          <button onClick={() => navigate('/privacy')} style={{ background: 'none', border: 'none', color: '#7c8797', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>{t('footer.link.privacy')}</button>
+          <button onClick={() => navigate('/terms')} style={{ background: 'none', border: 'none', color: '#7c8797', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>{t('footer.link.terms')}</button>
+          <button onClick={() => navigate('/affiliate')} style={{ background: 'none', border: 'none', color: '#7c8797', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>{t('footer.link.affiliate')}</button>
         </div>
       </footer>
     </div>
