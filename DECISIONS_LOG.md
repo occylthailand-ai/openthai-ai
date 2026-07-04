@@ -11,6 +11,52 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 19: 4 of 9 `/portals/*` types (gov-thai, gov-intl, intl-org, foundation) sent zero confirmation email to the submitter
+
+**Found by finishing a fix that was already started but left incomplete.**
+`backend/server.js` has a comment (right above `PORTAL_WELCOME_COPY`, added in
+an earlier run) explaining that `/portals/consumer` and `/portals/middleman`
+used to promise a confirmation email on the frontend that the backend never
+actually sent — that run fixed it for `consumer`, `middleman`, and `creator`
+by adding entries to `PORTAL_WELCOME_COPY`. But `sendPortalWelcomeEmail()`
+looks up `PORTAL_WELCOME_COPY[lead.type]` and returns immediately if there's
+no matching key (`if (!copySet || ...) return;`) — and the object only ever
+had 3 keys, never all 9 portal types. `gov-thai`, `gov-intl`, `intl-org`, and
+`foundation` were left with the exact same gap the earlier fix was written
+to close: the frontend pages promise "ทีม Government/International
+Relations/Partnerships จะติดต่อกลับภายใน 48/72 ชม." (or, for foundation,
+"จะได้รับการแจ้งเตือนเมื่อกองทุนเปิดใช้งาน"), but the submitter never
+received so much as a receipt confirming their submission was recorded —
+only an internal admin-facing alert (`sendPortalLeadNotification`) fired.
+These are arguably the highest-stakes leads on the whole site (formal
+G2G/international-organization/NGO partnership requests), yet they got the
+least confirmation of any portal type.
+
+**Fix:** added the missing 4 entries to `PORTAL_WELCOME_COPY` (th/en/zh each,
+matching the existing pattern exactly — no new mechanism), with copy that
+mirrors what each portal page already promises: 48h for gov-thai/gov-intl,
+72h for intl-org, and a "notified when the fund activates" framing for
+foundation (since that one isn't a callback-window promise like the others).
+
+**Verified live:** booted the real backend locally (fake unreachable SMTP
+host to avoid needing real credentials). First reproduced the bug on the
+pre-fix code (`git stash`) — submitting a `gov-thai` lead via the real
+`POST /api/leads/submit` produced only a `Portal lead email error` (the
+admin-alert attempt) in the server console, with no attempt at a submitter
+email at all. Restored the fix (`git stash pop`), re-ran the exact same
+request plus `gov-intl`, `intl-org`, `foundation`, and `consumer` (as a
+control, already known to work) — all 5 now produced **both** a
+`Portal lead email error` and a `Portal welcome email error` in the console,
+proving `sendPortalWelcomeEmail` now enters the send path for all of them
+(the "error" is expected — SMTP was intentionally unreachable in this test;
+what matters is the code no longer silently skips the send). Also rendered
+all 12 new subject/body combinations (4 types × 3 languages) standalone in
+Node to confirm no template-literal or escaping bugs before wiring them in.
+
+5 items from earlier runs are still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-04 — Hourly loop, run 18: portals cluster was invisible to search engines — no per-page titles, missing from sitemap/robots
 
 **Switched category this run** from backend security (runs 11-15, 17) to

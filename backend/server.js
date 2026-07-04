@@ -981,6 +981,33 @@ const PORTAL_WELCOME_COPY = {
     en: { subject: '🎬 Creator Program application received — OpenThaiAi', title: 'Application received!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for your interest in the OpenThaiAi Creator Program. We've received your info and our team will follow up with access details.` },
     zh: { subject: '🎬 已收到创作者计划申请 — OpenThaiAi', title: '已收到申请！', body: (name) => `您好${name ? escapeHtml(name) : ''}，感谢您申请加入 OpenThaiAi 创作者计划。我们已收到您的信息，团队将与您联系并提供访问详情。` },
   },
+  // gov-thai/gov-intl/intl-org/foundation เดิมไม่มีอยู่ใน copySet นี้เลย — sendPortalWelcomeEmail()
+  // คืนค่าเปล่าทันทีที่ lead.type ไม่ตรง key ใดๆ ในนี้ (ดู `if (!copySet ...) return;` ด้านล่าง)
+  // แปลว่าหน่วยงานรัฐ/องค์กรระหว่างประเทศ/มูลนิธิที่ส่งฟอร์มมา ไม่เคยได้รับอีเมลยืนยันอะไรเลย
+  // ทั้งที่หน้า portal ของทั้ง 4 ประเภทนี้สัญญาไว้ชัดเจนว่า "ทีมงานจะติดต่อกลับภายใน 48/72 ชม."
+  // (หรือ "จะแจ้งเตือนเมื่อกองทุนเปิดใช้งาน" สำหรับ foundation) — คำขอความร่วมมือระดับ G2G/องค์กร
+  // ระหว่างประเทศยิ่งควรมีอีเมลยืนยันการรับคำขอ เพราะเป็นการติดต่อทางการที่มีความคาดหวังสูงกว่า
+  // การสมัครทั่วไป ใช้ pattern เดียวกับ consumer/middleman/creator ด้านบนทุกประการ
+  'gov-thai': {
+    th: { subject: '🇹🇭 ได้รับคำขอความร่วมมือแล้ว — OpenThaiAi', title: 'ได้รับคำขอแล้ว!', body: (name) => `เรียนคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่ติดต่อ OpenThaiAi เพื่อความร่วมมือด้าน AI กับหน่วยงานภาครัฐไทย ทีม Government Relations ได้รับคำขอของท่านแล้ว และจะติดต่อกลับภายใน 48 ชั่วโมง` },
+    en: { subject: '🇹🇭 Cooperation request received — OpenThaiAi', title: 'Request received!', body: (name) => `Dear ${name ? escapeHtml(name) : ''}, thank you for contacting OpenThaiAi regarding AI cooperation with your Thai government agency. Our Government Relations team has received your request and will follow up within 48 hours.` },
+    zh: { subject: '🇹🇭 已收到合作请求 — OpenThaiAi', title: '已收到请求！', body: (name) => `尊敬的${name ? escapeHtml(name) : ''}，感谢您联系 OpenThaiAi 洽谈与泰国政府机构的AI合作。我们的政府关系团队已收到您的请求，将在48小时内与您联系。` },
+  },
+  'gov-intl': {
+    th: { subject: '🌐 ได้รับคำขอความร่วมมือ G2G แล้ว — OpenThaiAi', title: 'ได้รับคำขอแล้ว!', body: (name) => `เรียนคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่ติดต่อ OpenThaiAi เพื่อความร่วมมือ AI ระดับรัฐบาลต่อรัฐบาล (G2G) ทีม International Relations ได้รับคำขอของท่านแล้ว และจะติดต่อกลับภายใน 48 ชั่วโมง` },
+    en: { subject: '🌐 G2G cooperation request received — OpenThaiAi', title: 'Request received!', body: (name) => `Dear ${name ? escapeHtml(name) : ''}, thank you for contacting OpenThaiAi regarding Government-to-Government AI cooperation. Our International Relations team has received your request and will follow up within 48 hours.` },
+    zh: { subject: '🌐 已收到G2G合作请求 — OpenThaiAi', title: '已收到请求！', body: (name) => `尊敬的${name ? escapeHtml(name) : ''}，感谢您联系 OpenThaiAi 洽谈政府间（G2G）AI合作。我们的国际关系团队已收到您的请求，将在48小时内与您联系。` },
+  },
+  'intl-org': {
+    th: { subject: '🏛️ ได้รับคำขอความร่วมมือแล้ว — OpenThaiAi', title: 'ได้รับคำขอแล้ว!', body: (name) => `เรียนคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่ติดต่อ OpenThaiAi เพื่อความร่วมมือกับองค์กรระหว่างประเทศ ทีม Partnerships ได้รับคำขอของท่านแล้ว และจะตอบกลับภายใน 72 ชั่วโมง` },
+    en: { subject: '🏛️ Partnership request received — OpenThaiAi', title: 'Request received!', body: (name) => `Dear ${name ? escapeHtml(name) : ''}, thank you for contacting OpenThaiAi about a partnership. Our Partnerships team has received your request and will respond within 72 hours.` },
+    zh: { subject: '🏛️ 已收到合作请求 — OpenThaiAi', title: '已收到请求！', body: (name) => `尊敬的${name ? escapeHtml(name) : ''}，感谢您联系 OpenThaiAi 洽谈合作。我们的合作团队已收到您的请求，将在72小时内回复。` },
+  },
+  foundation: {
+    th: { subject: '💚 ลงทะเบียนมูลนิธิเรียบร้อย — OpenThaiAi', title: 'ลงทะเบียนเรียบร้อย!', body: (name) => `เรียนคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่ลงทะเบียนมูลนิธิ/องค์กรของท่านกับ OpenThaiAi ทีมงานได้รับข้อมูลของท่านแล้ว และจะแจ้งเตือนทางอีเมลนี้ทันทีที่กองทุนเปิดใช้งาน (เมื่อกำไรรวมของ OpenThaiAi เกิน 10 ล้านบาท)` },
+    en: { subject: '💚 Foundation registered — OpenThaiAi', title: 'Registered!', body: (name) => `Dear ${name ? escapeHtml(name) : ''}, thank you for registering your foundation/organization with OpenThaiAi. We've received your information and will notify you at this email as soon as the fund activates (once OpenThaiAi's cumulative profit exceeds 10M THB).` },
+    zh: { subject: '💚 基金会注册成功 — OpenThaiAi', title: '注册成功！', body: (name) => `尊敬的${name ? escapeHtml(name) : ''}，感谢您向 OpenThaiAi 注册您的基金会/组织。我们已收到您的信息，一旦基金激活（OpenThaiAi累计利润超过1000万泰铢时），将通过此邮箱通知您。` },
+  },
 };
 async function sendPortalWelcomeEmail(lead) {
   const copySet = PORTAL_WELCOME_COPY[lead.type];
