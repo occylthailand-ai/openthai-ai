@@ -11,6 +11,62 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Centralized admin auth + rate limits, added audit logging for previously-unaudited admin actions (Phase 1 of a larger proposal, scoped down)
+Context: a plan attributed to "Grok" was pasted into chat, proposing a 5-phase
+"Modular Monolith + Governance Layer" rewrite, and claiming implementation
+files already existed at `/home/workdir/artifacts/openthai-pattern-implementation/`.
+That path does not exist anywhere on this filesystem, nothing matching it was
+ever committed to this repo, and there is no technical channel between Claude
+and Grok to verify what, if anything, was actually built elsewhere — treated
+per `lesson_01_verify_before_build` as an unverified proposal, not completed
+work. Separately, a route-by-route audit of `backend/server.js` (done in this
+session, not from the pasted plan) had already found two real, independent
+problems: the same `x-admin-key` check duplicated inline across 35 routes,
+and 22 `rateLimit(...)` configs scattered throughout the file with no single
+place to see or adjust policy. The proposal's Phase 1 (centralize auth +
+rate limits + add audit logging) matched those findings, so that scoped
+slice — and only that slice — was actually implemented here, for real:
+
+- `backend/core/middleware/auth.middleware.js` — single `checkAdminKey`/
+  `requireAdmin` implementation, replacing the inline check duplicated in
+  `server.js`. `requireAdmin` re-exported as Express middleware; routes now
+  read `app.get(path, requireAdmin, handler)` instead of repeating the same
+  two-line check.
+- `backend/core/middleware/rateLimit.middleware.js` — all 22 limiter configs
+  (`adminLimiter`, `generateLimiter`, ... `corpLimiter`) moved here verbatim
+  (values unchanged), imported back into `server.js`.
+- `backend/core/middleware/audit.middleware.js` — `auditAction()` wraps the
+  existing `addLog()`. Wired into 8 routes that had **zero** record of
+  who/when/what before this: order ship/deliver/status, dispute resolve,
+  inventory adjust/remove/upsert, and both memory-delete routes. (Withdraw
+  approve/reject/paid already logged manually — left as-is, not
+  double-logged.) Verified by curling these routes locally and confirming
+  the `[Source] message` line actually appears in `sysLogs`.
+- `scripts/auth-coverage-scan.mjs` — heuristic scanner flagging any
+  `admin`-path or DELETE/PATCH/PUT route missing a recognized guard. Running
+  it found `PATCH`/`DELETE /api/agent/:id` as the only gap — which is not
+  actually a gap: those routes use device-id ownership scoping (see the
+  2026-07-02 entry below), a different, intentional auth model the scanner
+  can't recognize. Documented as a known heuristic limitation rather than
+  "fixed" to make it disappear.
+
+Verified behavior-preserving, not just "should work": started the server
+locally before and after, curled the same admin routes with no key (401),
+wrong key (401), and the real key (200) — identical on both versions. Ran
+`npm run test:smoke`, `test:affiliate`, `test:revenue` against both the
+original and refactored `server.js`; the 8 affiliate/revenue test failures
+are present identically on the unmodified original, confirming they're
+pre-existing (unrelated to this change, not investigated further here) and
+not something this refactor introduced.
+
+**Explicitly not done** (out of scope for this pass, part of the larger
+pasted proposal): extracting `orders`/`disputes`/`inventory`/etc. into
+`backend/modules/*` bounded-context folders, a frontend `features/` reorg,
+n8n sub-workflow contracts, and `ARCHITECTURE_DECISIONS.md`/ADRs. `server.js`
+is still one file (net ~110 lines shorter from de-duplication, still ~7,850
+lines) — this pass removed duplicated auth/rate-limit logic and added a real
+audit trail, nothing more.
+
 ### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
 Found by accident while investigating a "there are uncommitted changes"
 prompt — the working-tree diff showed the *currently committed* (on `main`,

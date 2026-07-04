@@ -34,31 +34,27 @@ import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { createIntegrations } from './integrations.js';
+import { requireAdmin, checkAdminKey, adminDenyMessage } from './core/middleware/auth.middleware.js';
+import { auditAction } from './core/middleware/audit.middleware.js';
+import {
+  adminLimiter, generateLimiter, affiliateLimiter, authLimiter, shopLimiter,
+  broadcastLimiter, affClickLimiter, withdrawLimiter, contactLimiter, waitlistLimiter,
+  lineLimiter, competitorLimiter, diagnoseLimiter, mcpLimiter, voiceLimiter,
+  memoryLimiter, webhookLimiter, tenantLimiter, videoLimiter, paymentLimiter,
+  quickpayLimiter, corpLimiter,
+} from './core/middleware/rateLimit.middleware.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── Vercel serverless detection ──────────────────────────────────────────────
 const IS_VERCEL = !!process.env.VERCEL;
-// Admin key — ใน production (serverless) ห้าม fallback ค่า default สาธารณะ
-// ต้องตั้ง ADMIN_KEY เท่านั้น; โหมด local ยังใช้ default เพื่อความสะดวกตอน dev
-function resolveAdminKey() {
-  if (process.env.ADMIN_KEY) return process.env.ADMIN_KEY;
-  return IS_VERCEL ? null : 'openthai-admin-2026';
-}
-function checkAdminKey(provided) {
-  const key = resolveAdminKey();
-  return !!key && provided === key;
-}
-function adminDenyMessage() {
-  return 'Unauthorized';
-}
+// Admin key check + requireAdmin middleware now live in
+// backend/core/middleware/auth.middleware.js (single source of truth —
+// previously duplicated inline across ~35 routes here).
 
 // Domain URL — ใช้แทน hardcoded domain ในอีเมล/ลิงก์ทุกที่
 const DOMAIN_URL = (process.env.DOMAIN_URL || process.env.FRONTEND_URL || 'https://www.openthai-ai.com').replace(/\/$/, '');
 const STORE_EMAIL = process.env.STORE_PRODUCER_EMAIL || 'store@openthai-ai.com';
-
-// adminLimiter — กันการ brute-force admin key (แยกจาก paymentLimiter)
-const adminLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { success: false, message: 'Too many requests' } });
 
 // บน Vercel: ไฟล์ static อ่านได้จาก repo, ไฟล์ writable ต้องใช้ /tmp
 // Local: ทุกอย่างอยู่ใน backend/data/
@@ -135,28 +131,7 @@ app.use(portalLeads.router);
 // Inventory / first-party shop routes — /api/shop/products
 app.use(inventory.router);
 
-// ─── Rate Limiters ────────────────────────────────────────────────────────────
-// DISABLE_RATE_LIMIT=1 ปิด generate limiter เฉพาะตอนรัน smoke test (ไม่มีผลกับ production)
-const _generateLimiter = rateLimit({
-  windowMs: 60 * 1000,        // 1 นาที
-  max: 10,                    // สูงสุด 10 req/min ต่อ IP
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'ส่งคำขอบ่อยเกินไป กรุณารอ 1 นาทีแล้วลองใหม่' },
-});
-const generateLimiter = process.env.DISABLE_RATE_LIMIT === '1' ? (req, res, next) => next() : _generateLimiter;
-
-const affiliateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 นาที
-  max: 5,                     // สมัคร affiliate 5 ครั้ง/15 นาที ต่อ IP
-  message: { error: 'ส่งคำขอสมัครบ่อยเกินไป กรุณารอแล้วลองใหม่' },
-});
-
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 นาที
-  max: 20,                    // login 20 ครั้ง/15 นาที ต่อ IP
-  message: { error: 'พยายาม login บ่อยเกินไป กรุณารอ 15 นาที' },
-});
+// ─── Rate Limiters — centralized in backend/core/middleware/rateLimit.middleware.js ──
 
 // ─── AI Clients — Hybrid: Claude (primary) → Gemini (fallback) → Mock ────────
 // Priority: 1) Anthropic direct  2) OpenRouter (Claude via OpenRouter)  3) Gemini
@@ -360,70 +335,52 @@ app.get('/api/usage', async (req, res) => {
 });
 
 // GET /api/credits/admin/summary — สรุปเศรษฐกิจเครดิต (Admin Key)
-app.get('/api/credits/admin/summary', adminLimiter, async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/credits/admin/summary', adminLimiter, requireAdmin, async (req, res) => {
   try { res.json({ success: true, ...(await credits.adminSummary()) }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // GET /api/producers/admin/summary — สรุปผู้ผลิตที่สมัคร (Admin Key)
-app.get('/api/producers/admin/summary', adminLimiter, async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/producers/admin/summary', adminLimiter, requireAdmin, async (req, res) => {
   try { res.json({ success: true, ...(await producers.summary()) }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // GET /api/producers/admin/list — รายชื่อผู้ผลิตทั้งหมด (Admin Key)
-app.get('/api/producers/admin/list', adminLimiter, async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/producers/admin/list', adminLimiter, requireAdmin, async (req, res) => {
   try { res.json({ success: true, producers: await producers.all() }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 // POST /api/producers/admin/status — อนุมัติ/เปลี่ยนสถานะผู้ผลิต (Admin Key)
-app.post('/api/producers/admin/status', adminLimiter, async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.post('/api/producers/admin/status', adminLimiter, requireAdmin, auditAction(addLog, 'Producers', (req) => `set status → "${req.body?.status}" for ${req.body?.email}`), async (req, res) => {
   const r = await producers.setStatus(req.body?.email, req.body?.status);
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
 });
 
 // GET /api/orders/admin/summary + /list, POST /api/orders/admin/status (Admin Key)
-app.get('/api/orders/admin/summary', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/orders/admin/summary', requireAdmin, async (req, res) => {
   try { res.json({ success: true, ...(await orders.summary()) }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.get('/api/orders/admin/list', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/orders/admin/list', requireAdmin, async (req, res) => {
   try { res.json({ success: true, orders: await orders.all() }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.post('/api/orders/admin/status', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.post('/api/orders/admin/status', requireAdmin, auditAction(addLog, 'Orders', (req) => `set status → "${req.body?.status}" for order ${req.body?.id}`), async (req, res) => {
   const r = await orders.setStatus(req.body?.id, req.body?.status, req.body?.note);
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
 });
 // POST /api/orders/admin/ship — บันทึกเลขพัสดุ + ขนส่ง (Admin Key)
-app.post('/api/orders/admin/ship', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.post('/api/orders/admin/ship', requireAdmin, auditAction(addLog, 'Orders', (req) => `ship order ${req.body?.id}`), async (req, res) => {
   const r = await orders.ship(req.body?.id, req.body || {});
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
 });
 // POST /api/orders/admin/deliver — ยืนยันถึงปลายทาง + หลักฐาน (เซ็นรับ/จุดฝาก) (Admin Key)
-app.post('/api/orders/admin/deliver', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.post('/api/orders/admin/deliver', requireAdmin, auditAction(addLog, 'Orders', (req) => `deliver order ${req.body?.id}`), async (req, res) => {
   const r = await orders.deliver(req.body?.id, req.body || {});
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
@@ -431,30 +388,22 @@ app.post('/api/orders/admin/deliver', async (req, res) => {
 
 // ─── Disputes / Escrow admin — list, AI-assist suggestion, resolve (Admin Key) ─
 // GET /api/disputes/admin/summary — สรุปข้อพิพาท + escrow (ใช้เป็น monitoring endpoint ด้วย)
-app.get('/api/disputes/admin/summary', adminLimiter, async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/disputes/admin/summary', adminLimiter, requireAdmin, async (req, res) => {
   try { res.json({ success: true, ...(await disputes.summary()) }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.get('/api/disputes/admin/list', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/disputes/admin/list', requireAdmin, async (req, res) => {
   try { res.json({ success: true, disputes: await disputes.all() }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 // POST /api/disputes/admin/ai-suggest — ขอความเห็น AI ประกอบการตัดสินใจ (ไม่ auto-resolve)
-app.post('/api/disputes/admin/ai-suggest', adminLimiter, async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.post('/api/disputes/admin/ai-suggest', adminLimiter, requireAdmin, async (req, res) => {
   const r = await disputes.aiSuggest(req.body?.id);
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
 });
 // POST /api/disputes/admin/resolve — คำตัดสินสุดท้ายของ admin (favor_supplier/favor_buyer/refund/split)
-app.post('/api/disputes/admin/resolve', adminLimiter, async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.post('/api/disputes/admin/resolve', adminLimiter, requireAdmin, auditAction(addLog, 'Disputes', (req) => `resolve dispute ${req.body?.id} → ${req.body?.decision}`), async (req, res) => {
   const r = await disputes.resolve(req.body?.id, { decision: req.body?.decision, note: req.body?.note, resolved_by: req.body?.resolved_by || 'admin' });
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
@@ -494,9 +443,7 @@ app.post('/api/progress/daily-report', async (req, res) => {
 });
 
 // PATCH /api/progress/kpi — อัปเดต KPI มือ
-app.patch('/api/progress/kpi', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.patch('/api/progress/kpi', requireAdmin, async (req, res) => {
   const { guild_id, kpi_key, value } = req.body || {};
   if (!guild_id || !kpi_key || value === undefined) return res.status(400).json({ success: false, error: 'ต้องการ guild_id, kpi_key, value' });
   const r = await progress.updateManualKpi(guild_id, kpi_key, value);
@@ -504,18 +451,16 @@ app.patch('/api/progress/kpi', async (req, res) => {
 });
 
 // ─── Inventory admin (Admin Key) ──────────────────────────────────────────────
-const invAuth = (req, res) => { const key = req.headers['x-admin-key'] || req.query.key; if (!checkAdminKey(key)) { res.status(401).json({ success: false, message: adminDenyMessage() }); return false; } return true; };
-app.get('/api/inventory/admin/list', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, products: await inventory.list() }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
-app.get('/api/inventory/admin/summary', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.summary()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
-app.get('/api/inventory/admin/movements', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, movements: await inventory.movements(req.query.product_id) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
-app.post('/api/inventory/admin/upsert', async (req, res) => { if (!invAuth(req, res)) return; const r = await inventory.upsert(req.body || {}); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
-app.post('/api/inventory/admin/adjust', async (req, res) => { if (!invAuth(req, res)) return; const { id, delta, type, reason } = req.body || {}; const r = await inventory.adjust(id, delta, type, reason); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
-app.post('/api/inventory/admin/remove', async (req, res) => { if (!invAuth(req, res)) return; res.json({ success: true, ...(await inventory.remove(req.body?.id)) }); });
-app.get('/api/inventory/admin/sales', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.productSales(req.query.product_id)) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
-app.get('/api/inventory/admin/sales-report', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.salesReport()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.get('/api/inventory/admin/list', requireAdmin, async (req, res) => { try { res.json({ success: true, products: await inventory.list() }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.get('/api/inventory/admin/summary', requireAdmin, async (req, res) => { try { res.json({ success: true, ...(await inventory.summary()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.get('/api/inventory/admin/movements', requireAdmin, async (req, res) => { try { res.json({ success: true, movements: await inventory.movements(req.query.product_id) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.post('/api/inventory/admin/upsert', requireAdmin, auditAction(addLog, 'Inventory', (req) => `upsert product ${req.body?.id || req.body?.name || '(new)'}`), async (req, res) => { const r = await inventory.upsert(req.body || {}); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.post('/api/inventory/admin/adjust', requireAdmin, auditAction(addLog, 'Inventory', (req) => `adjust ${req.body?.id} by ${req.body?.delta} (${req.body?.type}: ${req.body?.reason || ''})`), async (req, res) => { const { id, delta, type, reason } = req.body || {}; const r = await inventory.adjust(id, delta, type, reason); if (!r.ok) return res.status(400).json({ success: false, error: r.error }); res.json({ success: true, ...r }); });
+app.post('/api/inventory/admin/remove', requireAdmin, auditAction(addLog, 'Inventory', (req) => `remove product ${req.body?.id}`), async (req, res) => { res.json({ success: true, ...(await inventory.remove(req.body?.id)) }); });
+app.get('/api/inventory/admin/sales', requireAdmin, async (req, res) => { try { res.json({ success: true, ...(await inventory.productSales(req.query.product_id)) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
+app.get('/api/inventory/admin/sales-report', requireAdmin, async (req, res) => { try { res.json({ success: true, ...(await inventory.salesReport()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
 
 // POST /api/shop/checkout — ซื้อสินค้าร้านเรา + รับชำระเงิน (Omise) + ตัดสต๊อก + สร้างออเดอร์ติดตามได้
-const shopLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 12, message: { success: false, error: 'สั่งซื้อบ่อยเกินไป' } });
 app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
   try {
     const { product_id, qty: rawQty, customer_name, contact, address, method = 'card', token, ref, platform } = req.body || {};
@@ -558,9 +503,7 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
 });
 
 // GET /api/leads/admin/search — รวมลูกค้า/ลีดทุกแหล่ง (waitlist + affiliate + order) + ค้นหา/กรอง
-app.get('/api/leads/admin/search', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/leads/admin/search', requireAdmin, async (req, res) => {
   try {
     const q = (req.query.q || '').toString().trim().toLowerCase();
     const type = (req.query.type || '').toString().trim();
@@ -594,10 +537,7 @@ app.get('/api/leads/admin/search', async (req, res) => {
 });
 
 // POST /api/leads/admin/broadcast — ส่งอีเมล newsletter หาลีดทั้งหมด (Admin Key)
-const broadcastLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 6, message: { success: false, error: 'ส่ง broadcast บ่อยเกินไป' } });
-app.post('/api/leads/admin/broadcast', broadcastLimiter, async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.post('/api/leads/admin/broadcast', broadcastLimiter, requireAdmin, async (req, res) => {
   const { subject, message, audience = 'all' } = req.body || {};
   if (!subject?.trim() || !message?.trim()) return res.status(400).json({ success: false, error: 'ต้องการหัวข้อและข้อความ' });
 
@@ -1099,7 +1039,6 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
 });
 
 // ─── POST /api/affiliate/click — นับคลิกลิงก์ ref (สำหรับ conversion rate) ────
-const affClickLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { success: false } });
 // ช่องทางที่รองรับสำหรับ attribution
 const TRACK_SOURCES = ['tiktok', 'facebook', 'instagram', 'line', 'youtube', 'x', 'shopee', 'lazada', 'direct'];
 const cleanSource = (s) => { const v = String(s || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 20); return TRACK_SOURCES.includes(v) ? v : (v ? 'other' : 'direct'); };
@@ -1169,7 +1108,6 @@ app.get('/api/affiliate/leaderboard', (req, res) => {
 });
 
 // ─── POST /api/affiliate/withdraw — พันธมิตรขอถอนค่าคอมเข้าพร้อมเพย์ ───────────
-const withdrawLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { success: false, error: 'ขอถอนบ่อยเกินไป กรุณารอ' } });
 app.post('/api/affiliate/withdraw', withdrawLimiter, (req, res) => {
   const ref = (req.body?.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   const promptpay = (req.body?.promptpay || '').toString().replace(/[^0-9]/g, '').slice(0, 13);
@@ -1204,16 +1142,12 @@ app.get('/api/affiliate/withdrawals', (req, res) => {
 });
 
 // ─── Admin: รายการ + อนุมัติ/ปฏิเสธ/จ่ายแล้ว (x-admin-key) ────────────────────
-app.get('/api/affiliate/withdrawals/admin', (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/affiliate/withdrawals/admin', requireAdmin, (req, res) => {
   const status = (req.query.status || '').toString();
   const list = status ? withdrawals.filter(w => w.status === status) : withdrawals;
   res.json({ success: true, count: list.length, withdrawals: list });
 });
-app.post('/api/affiliate/withdrawals/admin/:id', (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.post('/api/affiliate/withdrawals/admin/:id', requireAdmin, (req, res) => {
   const wd = withdrawals.find(w => w.id === req.params.id);
   if (!wd) return res.status(404).json({ success: false, error: 'ไม่พบคำขอถอนนี้' });
   const action = (req.body?.action || '').toString();
@@ -1235,11 +1169,7 @@ app.post('/api/affiliate/withdrawals/admin/:id', (req, res) => {
 });
 
 // ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
-app.get('/api/affiliate/list', (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) {
-    return res.status(401).json({ success: false, message: adminDenyMessage() });
-  }
+app.get('/api/affiliate/list', requireAdmin, (req, res) => {
   // ซ่อน sensitive fields ก่อนส่ง
   const safeData = affiliates.map(({ email, phone, ...rest }) => ({
     ...rest,
@@ -1250,11 +1180,6 @@ app.get('/api/affiliate/list', (req, res) => {
 });
 
 // ─── POST /api/contact — ติดต่อทีมงาน ───────────────────────────────────────
-const contactLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, max: 5,
-  message: { success: false, message: 'ส่งข้อความบ่อยเกินไป กรุณารอ 1 ชั่วโมง' },
-});
-
 app.post('/api/contact', contactLimiter, (req, res) => {
   try {
     const { name, email, subject, message } = req.body || {};
@@ -1309,12 +1234,6 @@ function saveWaitlist(data) {
 }
 
 const waitlist = loadWaitlist();
-
-const waitlistLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 ชั่วโมง
-  max: 3,                    // กรอกอีเมล 3 ครั้ง/ชั่วโมง ต่อ IP
-  message: { success: false, message: 'ส่งคำขอบ่อยเกินไป กรุณารอแล้วลองใหม่' },
-});
 
 app.post('/api/waitlist', waitlistLimiter, (req, res) => {
   try {
@@ -5193,7 +5112,6 @@ app.get('/api/news-rag', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  LINE OA SEND
 // ═══════════════════════════════════════════════════════════════════════════════
-const lineLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'ส่ง LINE บ่อยเกินไป' } });
 
 app.post('/api/line/send', lineLimiter, async (req, res) => {
   const { to, message } = req.body || {};
@@ -5245,7 +5163,6 @@ app.post('/api/tts', express.json({ limit: '10kb' }), async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  COMPETITOR ANALYSIS
 // ═══════════════════════════════════════════════════════════════════════════════
-const competitorLimiter = rateLimit({ windowMs: 60000, max: 5, message: { error: 'วิเคราะห์บ่อยเกินไป' } });
 
 app.post('/api/competitor-analyze', competitorLimiter, async (req, res) => {
   const { niche, competitor, platform } = req.body || {};
@@ -5572,7 +5489,6 @@ app.get('/api/system/watchdog', (req, res) => {
 });
 
 // ── 6. POST /api/system/diagnose — AI-powered self-diagnosis ─────────────────
-const diagnoseLimiter = rateLimit({ windowMs: 60000, max: 5, message: { error: 'วิเคราะห์บ่อยเกินไป' } });
 
 app.post('/api/system/diagnose', diagnoseLimiter, async (req, res) => {
   const recentErrors = sysLogs.filter(l => l.level === 'error').slice(0, 8);
@@ -5837,14 +5753,12 @@ app.get('/api-docs', (req, res) => {
 // Implements JSON-RPC 2.0 + MCP spec (2024-11-05).
 //   node sdk:  new Client({ name:'x', version:'1' })  →  transport POST /mcp
 //   methods:   initialize | tools/list | tools/call
-const mcpLimiter = rateLimit({ windowMs: 60000, max: 60, message: { error: 'MCP rate limit exceeded' } });
 
 app.post('/mcp', mcpLimiter, handleMcp);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  VOICE COMMANDER — รับ transcript → AI แปล intent → รัน command → speak_text
 // ═══════════════════════════════════════════════════════════════════════════════
-const voiceLimiter = rateLimit({ windowMs: 60000, max: 20, message: { error: 'Voice API rate limit exceeded' } });
 
 app.post('/api/voice/command', voiceLimiter, async (req, res) => {
   const { transcript, lang, tenantId } = req.body || {};
@@ -5898,7 +5812,6 @@ app.get('/mcp', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  VECTOR MEMORY — Long-term semantic memory for AI agents
 // ═══════════════════════════════════════════════════════════════════════════════
-const memoryLimiter = rateLimit({ windowMs: 60000, max: 30, message: { error: 'Memory API rate limit exceeded' } });
 
 // POST /api/memory/store — บันทึก memory พร้อม embedding
 app.post('/api/memory/store', memoryLimiter, async (req, res) => {
@@ -5931,18 +5844,14 @@ app.get('/api/memory', (req, res) => {
 });
 
 // DELETE /api/memory/:id — ลบ memory รายชิ้น (Admin Key — เป็นการลบถาวร ไม่ควรเปิดสาธารณะ)
-app.delete('/api/memory/:id', memoryLimiter, (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.delete('/api/memory/:id', memoryLimiter, requireAdmin, auditAction(addLog, 'Memory', (req) => `delete memory item ${req.params.id}`), (req, res) => {
   const tid = req.tenant?.id || req.query.tenantId || 'global';
   const result = memory.delete({ tenantId: tid, id: req.params.id });
   res.json({ success: true, ...result });
 });
 
 // DELETE /api/memory — clear ทั้งหมด (with optional ?type=) (Admin Key — ลบทั้ง tenant ได้ ยิ่งต้องป้องกัน)
-app.delete('/api/memory', memoryLimiter, (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.delete('/api/memory', memoryLimiter, requireAdmin, auditAction(addLog, 'Memory', (req) => `clear memory (tenant=${req.query.tenantId || 'global'}, type=${req.query.type || 'all'})`), (req, res) => {
   const tid = req.tenant?.id || req.query.tenantId || 'global';
   const result = memory.clear({ tenantId: tid, type: req.query.type });
   res.json({ success: true, ...result });
@@ -5952,9 +5861,7 @@ app.delete('/api/memory', memoryLimiter, (req, res) => {
 // stored back into the same vector memory as type:'feedback', linked by metadata.reviewed_item_id.
 // This is the real version of "HITL validation": no separate system, reuses what's already deployed.
 // GET /api/memory/admin/review-queue — list content items + whether they've been reviewed (Admin Key)
-app.get('/api/memory/admin/review-queue', (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/memory/admin/review-queue', requireAdmin, (req, res) => {
   const tenantId = req.query.tenantId || 'global';
   const limit = Math.min(200, parseInt(req.query.limit, 10) || 50);
   try {
@@ -5972,9 +5879,7 @@ app.get('/api/memory/admin/review-queue', (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 // POST /api/memory/admin/review — submit a human rating/correction on a content item (Admin Key)
-app.post('/api/memory/admin/review', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.post('/api/memory/admin/review', requireAdmin, async (req, res) => {
   const { tenantId = 'global', item_id, human_rating, note, corrected_text, reviewed_by } = req.body || {};
   const rating = Number(human_rating);
   if (!item_id || !rating || rating < 1 || rating > 5) return res.status(400).json({ success: false, error: 'item_id และ human_rating (1-5) จำเป็นต้องกรอก' });
@@ -5999,7 +5904,6 @@ app.post('/api/memory/admin/review', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  WEBHOOK SYSTEM — Push events to subscribers
 // ═══════════════════════════════════════════════════════════════════════════════
-const webhookLimiter = rateLimit({ windowMs: 60000, max: 20, message: { error: 'Webhook API rate limit' } });
 
 // POST /api/webhooks — ลงทะเบียน webhook
 app.post('/api/webhooks', webhookLimiter, (req, res) => {
@@ -6019,9 +5923,7 @@ app.get('/api/webhooks', (req, res) => {
 });
 
 // DELETE /api/webhooks/:id — unregister (Admin Key — ไม่มีหน้า UI เรียกอยู่ในปัจจุบัน จึงล็อกได้โดยไม่กระทบของเดิม)
-app.delete('/api/webhooks/:id', (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.delete('/api/webhooks/:id', requireAdmin, auditAction(addLog, 'Webhooks', (req) => `unregister webhook ${req.params.id}`), (req, res) => {
   const result = webhooks.remove(req.params.id);
   res.json({ success: true, ...result });
 });
@@ -6042,7 +5944,6 @@ app.get('/api/webhooks/logs', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  MULTI-TENANT — แต่ละร้านค้ามี agent space ของตัวเอง
 // ═══════════════════════════════════════════════════════════════════════════════
-const tenantLimiter = rateLimit({ windowMs: 15 * 60000, max: 10, message: { error: 'Tenant API rate limit' } });
 
 // POST /api/tenants/register — สร้าง tenant ใหม่
 app.post('/api/tenants/register', tenantLimiter, (req, res) => {
@@ -6558,7 +6459,6 @@ function saveVideoJobs(data) {
 }
 const videoJobs = loadVideoJobs();
 
-const videoLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'Video API rate limit — 10/min' } });
 
 // POST /api/video/generate — สร้าง Script + ส่งไป Video API
 app.post('/api/video/generate', videoLimiter, async (req, res) => {
@@ -6820,7 +6720,6 @@ async function consumeQuota(req) {
   return { ...q, used: q.used + 1, remaining: Math.max(0, FREE_DAILY_LIMIT - (q.used + 1)) };
 }
 
-const paymentLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'Payment rate limit' } });
 
 // POST /api/payment/create — สร้าง charge แบบ PromptPay / บัตรเครดิต / subscription
 app.post('/api/payment/create', paymentLimiter, async (req, res) => {
@@ -6932,7 +6831,6 @@ app.get('/api/payment/config', (req, res) => {
 // POST /api/quickpay/create — สร้าง PromptPay QR สำหรับขายแพ็กเกจ/สินค้าชิ้นเดียว
 // ยอดกำหนดเองได้ (default ฿1,000). ใช้สำหรับปิดการขายไว ๆ — สแกนจ่าย → เงินเข้า Omise/พร้อมเพย์
 // เช็คสถานะด้วย GET /api/payment/status/:chargeId (generic — ใช้ร่วมกับ flow plan ได้)
-const quickpayLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 20, message: { success: false, error: 'สร้าง QR บ่อยเกินไป กรุณารอสักครู่' } });
 app.post('/api/quickpay/create', quickpayLimiter, async (req, res) => {
   const amount = Math.max(1, Math.min(100000, Math.round(Number(req.body?.amount_thb) || 1000)));
   const label = (req.body?.label || 'แพ็กเกจ Openthai.ai').toString().trim().slice(0, 80) || 'แพ็กเกจ Openthai.ai';
@@ -7044,9 +6942,7 @@ app.get('/api/payment/history', requireAuth, (req, res) => {
 });
 
 // GET /api/admin/stats — overview stats จริงสำหรับ Admin Panel
-app.get('/api/admin/stats', (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/admin/stats', requireAdmin, (req, res) => {
 
   const isPaid = (p) => p.paid || p.status === 'successful' || p.paid_at;
   const paid = payments.filter(isPaid);
@@ -7069,9 +6965,7 @@ app.get('/api/admin/stats', (req, res) => {
 });
 
 // GET /api/payment/admin/summary — สรุปยอดขาย (ใช้ Admin Key header เหมือน affiliate)
-app.get('/api/payment/admin/summary', (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/payment/admin/summary', requireAdmin, (req, res) => {
 
   const isPaid = (p) => p.paid || p.status === 'successful' || p.paid_at;
   const paid = payments.filter(isPaid);
@@ -7111,9 +7005,7 @@ app.get('/api/payment/admin/summary', (req, res) => {
 // ที่มีอยู่แล้วในระบบ (ตอบคำสั่งถาวรข้อ 23-25) — ไม่มีตัวเลขสมมติ ทุกค่าคำนวณสดจาก state จริง
 // ต้นทุน hosting/DB/SMS (Vercel/Supabase/Omise fee) อยู่นอกขอบเขต endpoint นี้ — อยู่ใน dashboard
 // ของแต่ละเจ้าเอง ดึงจากในนี้ไม่ได้จริง
-app.get('/api/admin/ops-summary', adminLimiter, async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.get('/api/admin/ops-summary', adminLimiter, requireAdmin, async (req, res) => {
   try {
     routerRollover();
     const isPaid = (p) => p.paid || p.status === 'successful' || p.paid_at;
@@ -7254,7 +7146,6 @@ app.get('/api/n8n/status', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  CORPORATE SYSTEM — Public Company / บริษัทมหาชน
 // ═══════════════════════════════════════════════════════════════════════════════
-const corpLimiter = rateLimit({ windowMs: 60000, max: 30, message: { error: 'Corporate API rate limit' } });
 
 // GET /api/corporate/overview
 app.get('/api/corporate/overview', (req, res) => {
@@ -7672,9 +7563,7 @@ app.post('/api/scheduler/execute/:id', (req, res) => {
 });
 
 // ลบโพสต์ในคิว Scheduler (Admin Key) — ต่างจาก /api/scheduler/process ที่ต้องเปิดไว้ให้ Vercel Cron ยิงได้
-app.delete('/api/scheduler/:id', (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key;
-  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+app.delete('/api/scheduler/:id', requireAdmin, auditAction(addLog, 'Scheduler', (req) => `delete queued post ${req.params.id}`), (req, res) => {
   const idx = schedulerStore.posts.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'not found' });
   schedulerStore.posts.splice(idx, 1);

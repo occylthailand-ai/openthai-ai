@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T09:20:00.146Z · branch `claude/ai-coalition-protocol-hp3rga` (1 commit(s) ahead of main)
+Generated: 2026-07-04T00:55:26.828Z · branch `claude/openthaiai-pattern-review-l8h76x` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -25,6 +25,62 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-04 — Centralized admin auth + rate limits, added audit logging for previously-unaudited admin actions (Phase 1 of a larger proposal, scoped down)
+Context: a plan attributed to "Grok" was pasted into chat, proposing a 5-phase
+"Modular Monolith + Governance Layer" rewrite, and claiming implementation
+files already existed at `/home/workdir/artifacts/openthai-pattern-implementation/`.
+That path does not exist anywhere on this filesystem, nothing matching it was
+ever committed to this repo, and there is no technical channel between Claude
+and Grok to verify what, if anything, was actually built elsewhere — treated
+per `lesson_01_verify_before_build` as an unverified proposal, not completed
+work. Separately, a route-by-route audit of `backend/server.js` (done in this
+session, not from the pasted plan) had already found two real, independent
+problems: the same `x-admin-key` check duplicated inline across 35 routes,
+and 22 `rateLimit(...)` configs scattered throughout the file with no single
+place to see or adjust policy. The proposal's Phase 1 (centralize auth +
+rate limits + add audit logging) matched those findings, so that scoped
+slice — and only that slice — was actually implemented here, for real:
+
+- `backend/core/middleware/auth.middleware.js` — single `checkAdminKey`/
+  `requireAdmin` implementation, replacing the inline check duplicated in
+  `server.js`. `requireAdmin` re-exported as Express middleware; routes now
+  read `app.get(path, requireAdmin, handler)` instead of repeating the same
+  two-line check.
+- `backend/core/middleware/rateLimit.middleware.js` — all 22 limiter configs
+  (`adminLimiter`, `generateLimiter`, ... `corpLimiter`) moved here verbatim
+  (values unchanged), imported back into `server.js`.
+- `backend/core/middleware/audit.middleware.js` — `auditAction()` wraps the
+  existing `addLog()`. Wired into 8 routes that had **zero** record of
+  who/when/what before this: order ship/deliver/status, dispute resolve,
+  inventory adjust/remove/upsert, and both memory-delete routes. (Withdraw
+  approve/reject/paid already logged manually — left as-is, not
+  double-logged.) Verified by curling these routes locally and confirming
+  the `[Source] message` line actually appears in `sysLogs`.
+- `scripts/auth-coverage-scan.mjs` — heuristic scanner flagging any
+  `admin`-path or DELETE/PATCH/PUT route missing a recognized guard. Running
+  it found `PATCH`/`DELETE /api/agent/:id` as the only gap — which is not
+  actually a gap: those routes use device-id ownership scoping (see the
+  2026-07-02 entry below), a different, intentional auth model the scanner
+  can't recognize. Documented as a known heuristic limitation rather than
+  "fixed" to make it disappear.
+
+Verified behavior-preserving, not just "should work": started the server
+locally before and after, curled the same admin routes with no key (401),
+wrong key (401), and the real key (200) — identical on both versions. Ran
+`npm run test:smoke`, `test:affiliate`, `test:revenue` against both the
+original and refactored `server.js`; the 8 affiliate/revenue test failures
+are present identically on the unmodified original, confirming they're
+pre-existing (unrelated to this change, not investigated further here) and
+not something this refactor introduced.
+
+**Explicitly not done** (out of scope for this pass, part of the larger
+pasted proposal): extracting `orders`/`disputes`/`inventory`/etc. into
+`backend/modules/*` bounded-context folders, a frontend `features/` reorg,
+n8n sub-workflow contracts, and `ARCHITECTURE_DECISIONS.md`/ADRs. `server.js`
+is still one file (net ~110 lines shorter from de-duplication, still ~7,850
+lines) — this pass removed duplicated auth/rate-limit logic and added a real
+audit trail, nothing more.
 
 ### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
 Found by accident while investigating a "there are uncommitted changes"
@@ -643,54 +699,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c281a9f Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (85 seconds ago)
-- f3a860d Open the Council Bridge to external platforms/systems (#76) (82 minutes ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (3 hours ago)
-- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (3 hours ago)
-- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (5 hours ago)
-- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (20 hours ago)
-- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (24 hours ago)
-- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (26 hours ago)
+- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (16 hours ago)
+- f3a860d Open the Council Bridge to external platforms/systems (#76) (17 hours ago)
+- d73b560 Add Shared Bridge Notes to /council (#75) (18 hours ago)
+- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (19 hours ago)
+- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (21 hours ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (35 hours ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (2 days ago)
+- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (2 days ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -836,7 +854,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 160 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7961 | Vercel serverless detection |
+| `server.js` | 7850 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
@@ -869,7 +887,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
 
-## Environment variables (57 referenced in backend code, 58 documented in .env.example)
+## Environment variables (56 referenced in backend code, 58 documented in .env.example)
 ✅ every env var referenced in backend code is documented in `.env.example`
 
 ## Migration files present (backend/migrations/)
