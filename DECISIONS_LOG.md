@@ -11,6 +11,54 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 20: `smart-e` repo — `server.py` couldn't find its own frontend
+
+**Rotated back to the other 4 repos this run** (per the standing order's
+scope of all 5 in parallel) after 3 straight runs focused only on
+`openthai-ai`. Full detail lives in the `smart-e` repo's own commit message
+(commit `57c79cc` on `claude/daily-reporter-improvements-8vc9ct`) since that
+repo has no `DECISIONS_LOG.md` of its own — summary here per the standing
+order's rule 6.
+
+`smart-e/server.py` is a self-contained Python-stdlib backend (its own
+docstring: "Run: python3 server.py — no external packages required") that
+serves a 62KB single-file dashboard (`index.html`, full sidebar: products,
+orders, CRM, payments, LINE/TikTok integration, analytics, settings) sitting
+right next to it at the repo root. But `FRONTEND_PATH` was hardcoded to
+`../frontend/index.html` — a sibling directory that doesn't exist anywhere
+in this repo. Every `GET /` therefore returned a hardcoded placeholder
+string ("Frontend not found. Place index.html in frontend/") instead of the
+real app — confirmed live by actually running `python3 server.py` and
+curling `/` before touching anything, which reproduced the placeholder byte-
+for-byte.
+
+**Fix:** changed `FRONTEND_PATH` to `os.path.dirname(__file__)` (same
+directory as `server.py`, where the real `index.html` actually lives), and
+updated the fallback message text to match. **Verified live:** re-ran the
+server, `curl /` now returns exactly 62194 bytes matching the real file
+size; loaded it with a real headless-browser check (Playwright) and
+confirmed the actual sidebar renders (Dashboard, สินค้า, คำสั่งซื้อ,
+ลูกค้า/CRM, ชำระเงิน, LINE Integration, TikTok, Analytics, ตั้งค่า); spot-
+checked `/api/dashboard/stats` and `/api/products` still return valid JSON,
+confirming only the static-file path was broken, not the API layer.
+
+Also noticed while scanning this repo: `package.json` declares a full React/
+Vite/Tailwind/Recharts frontend stack, but nothing in the actual app (the
+static `index.html`, which uses Chart.js from a CDN directly) imports or
+references any of it — zero hits for react/recharts/lucide/axios anywhere
+in the real code. Left this alone rather than unilaterally stripping it:
+same category of question as the `all-platform-files`/`OpenThai-AI-v9.0`
+items already flagged for the owner — can't tell from the code alone whether
+this is dead scaffolding safe to delete, or a planned migration to a real
+React frontend that just hasn't happened yet.
+
+5 items from earlier runs are still pending an owner decision, unchanged;
+this is a 6th item now (the `smart-e` `package.json` question above), noted
+for the owner but not blocking — it's a low-risk observation, not something
+that needed to stop work this cycle.
+
+---
+
 ### 2026-07-04 — Hourly loop, run 19: 4 of 9 `/portals/*` types (gov-thai, gov-intl, intl-org, foundation) sent zero confirmation email to the submitter
 
 **Found by finishing a fix that was already started but left incomplete.**

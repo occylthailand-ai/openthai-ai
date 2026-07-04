@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T13:14:15.742Z · branch `claude/daily-reporter-improvements-8vc9ct` (43 commit(s) ahead of main)
+Generated: 2026-07-04T14:13:27.461Z · branch `claude/daily-reporter-improvements-8vc9ct` (44 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 253 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 127 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,54 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-07-04 — Hourly loop, run 20: `smart-e` repo — `server.py` couldn't find its own frontend
+
+**Rotated back to the other 4 repos this run** (per the standing order's
+scope of all 5 in parallel) after 3 straight runs focused only on
+`openthai-ai`. Full detail lives in the `smart-e` repo's own commit message
+(commit `57c79cc` on `claude/daily-reporter-improvements-8vc9ct`) since that
+repo has no `DECISIONS_LOG.md` of its own — summary here per the standing
+order's rule 6.
+
+`smart-e/server.py` is a self-contained Python-stdlib backend (its own
+docstring: "Run: python3 server.py — no external packages required") that
+serves a 62KB single-file dashboard (`index.html`, full sidebar: products,
+orders, CRM, payments, LINE/TikTok integration, analytics, settings) sitting
+right next to it at the repo root. But `FRONTEND_PATH` was hardcoded to
+`../frontend/index.html` — a sibling directory that doesn't exist anywhere
+in this repo. Every `GET /` therefore returned a hardcoded placeholder
+string ("Frontend not found. Place index.html in frontend/") instead of the
+real app — confirmed live by actually running `python3 server.py` and
+curling `/` before touching anything, which reproduced the placeholder byte-
+for-byte.
+
+**Fix:** changed `FRONTEND_PATH` to `os.path.dirname(__file__)` (same
+directory as `server.py`, where the real `index.html` actually lives), and
+updated the fallback message text to match. **Verified live:** re-ran the
+server, `curl /` now returns exactly 62194 bytes matching the real file
+size; loaded it with a real headless-browser check (Playwright) and
+confirmed the actual sidebar renders (Dashboard, สินค้า, คำสั่งซื้อ,
+ลูกค้า/CRM, ชำระเงิน, LINE Integration, TikTok, Analytics, ตั้งค่า); spot-
+checked `/api/dashboard/stats` and `/api/products` still return valid JSON,
+confirming only the static-file path was broken, not the API layer.
+
+Also noticed while scanning this repo: `package.json` declares a full React/
+Vite/Tailwind/Recharts frontend stack, but nothing in the actual app (the
+static `index.html`, which uses Chart.js from a CDN directly) imports or
+references any of it — zero hits for react/recharts/lucide/axios anywhere
+in the real code. Left this alone rather than unilaterally stripping it:
+same category of question as the `all-platform-files`/`OpenThai-AI-v9.0`
+items already flagged for the owner — can't tell from the code alone whether
+this is dead scaffolding safe to delete, or a planned migration to a real
+React frontend that just hasn't happened yet.
+
+5 items from earlier runs are still pending an owner decision, unchanged;
+this is a 6th item now (the `smart-e` `package.json` question above), noted
+for the owner but not blocking — it's a low-risk observation, not something
+that needed to stop work this cycle.
 
 ---
 
@@ -1575,54 +1623,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- a2bab7b Send confirmation emails to gov/intl-org/foundation portal leads, not just admin alerts (25 seconds ago)
-- 7ae33a1 chore: sync PROJECT_STATUS.md [skip ci] (48 minutes ago)
-- 62e4157 SEO: give the /portals cluster distinct page titles and add it to sitemap/robots (48 minutes ago)
-- e0269f0 chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
-- c271e11 Fix affiliate withdrawal hijack: require email confirmation before creating the withdrawal (55 minutes ago)
-- 79aff67 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 20e8b77 Log run 16: real-browser E2E verification of the actual funnel UI, clean pass (5 hours ago)
-- f4a73e6 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- f604058 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- a2bab7b Send confirmation emails to gov/intl-org/foundation portal leads, not just admin alerts (60 minutes ago)
+- 7ae33a1 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 62e4157 SEO: give the /portals cluster distinct page titles and add it to sitemap/robots (2 hours ago)
+- e0269f0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- c271e11 Fix affiliate withdrawal hijack: require email confirmation before creating the withdrawal (2 hours ago)
+- 79aff67 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 20e8b77 Log run 16: real-browser E2E verification of the actual funnel UI, clean pass (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
