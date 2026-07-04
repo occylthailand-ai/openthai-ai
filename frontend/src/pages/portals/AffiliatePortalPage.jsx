@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../../apiBase';
 
@@ -21,6 +21,7 @@ export default function AffiliatePortalPage() {
   const [consent, setConsent] = useState(false);
   const navigate = useNavigate();
   const t = T[lang];
+  useEffect(() => { document.title = t.title + ' — Openthai.ai'; }, [t.title]);
 
   const submit = async e => {
     e.preventDefault();

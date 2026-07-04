@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const LANG = {
@@ -56,6 +56,7 @@ export default function PortalHubPage() {
   const [lang, setLang] = useState('th');
   const navigate = useNavigate();
   const t = LANG[lang];
+  useEffect(() => { document.title = t.title + ' — Openthai.ai'; }, [t.title]);
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', color: '#fff', fontFamily: 'system-ui, sans-serif' }}>

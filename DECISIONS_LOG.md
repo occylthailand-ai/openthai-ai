@@ -11,6 +11,54 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 18: portals cluster was invisible to search engines — no per-page titles, missing from sitemap/robots
+
+**Switched category this run** from backend security (runs 11-15, 17) to
+marketing/SEO, per the standing order's task list — after 6 straight security
+audits it was worth checking whether the newest, most-worked-on growth
+surface this whole session (`/portals` + its 9 sub-portals: producer,
+affiliate, creator, consumer, middleman, gov-thai, gov-intl, intl-org,
+foundation) was actually reachable and indexable by search engines, not just
+functionally correct.
+
+**Found two real gaps, both verified by reading the actual files, not assumed:**
+1. `frontend/public/sitemap.xml` listed only 4 URLs (`/`, `/pricing`,
+   `/affiliate`, `/affiliate/dashboard`) — all 10 portal pages were entirely
+   absent, despite being the primary consent-based signup funnel this session
+   spent the most effort building and fixing (welcome emails, unsubscribe,
+   PDPA erasure, real-browser E2E in run 16). A page missing from the
+   sitemap is discovered by crawlers slower and less reliably.
+2. All 10 portal pages (`PortalHubPage.jsx` + all 9 files under
+   `frontend/src/pages/portals/`) never set `document.title` — confirmed via
+   `grep -L document.title`, every other real page in the app (`PricingPage`,
+   `ContactPage`, `CatalogPage`, etc.) already follows this exact pattern.
+   Every visitor on any of these 10 URLs saw the same generic homepage title
+   in their browser tab regardless of which portal they were actually on —
+   bad for SEO differentiation across the 10 distinct URLs and for usability
+   when a user has multiple portal tabs open.
+
+**Fix:** Added a `useEffect(() => { document.title = t.title + ' — Openthai.ai'; }, [t.title])`
+to each of the 10 files, reusing the `title` string each page's own `T`/`LANG`
+i18n object already defines per language (no new copy invented — every page
+already had the right title text sitting unused). Added all 10 portal URLs
+to `sitemap.xml` with reasonable priority/changefreq, and added matching
+explicit `Allow:` lines to `robots.txt` for each portal path, following the
+file's existing style of calling out real pages explicitly (even though
+`Allow: /` already covers them implicitly).
+
+**Verified live:** `npx vite build` succeeded with zero errors; booted
+`vite preview` and used Playwright to visit all 10 portal URLs directly,
+confirming each shows a distinct, correct, language-appropriate
+`document.title` (e.g. `/portals/producer` → "ทางเข้าผู้ผลิต — Openthai.ai",
+`/portals/gov-intl` → "Foreign Government Agency Portal — Openthai.ai",
+matching that page's actual `lang` default and content — not a placeholder).
+Also validated `sitemap.xml` is well-formed XML (`<url>`/`</url>` tag counts
+match, 14 total `<loc>` entries as expected).
+
+5 items are still pending an owner decision from earlier runs, unchanged.
+
+---
+
 ### 2026-07-04 — Hourly loop, run 17: affiliate withdrawal hijack — `promptpay` accepted with zero ownership check, fixed with email confirmation
 
 **Found while re-reading `POST /api/affiliate/withdraw` after the webhook

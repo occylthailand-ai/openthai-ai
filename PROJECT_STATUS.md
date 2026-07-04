@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T12:19:15.233Z · branch `claude/daily-reporter-improvements-8vc9ct` (39 commit(s) ahead of main)
+Generated: 2026-07-04T12:26:04.396Z · branch `claude/daily-reporter-improvements-8vc9ct` (40 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 249 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 123 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,54 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-07-04 — Hourly loop, run 18: portals cluster was invisible to search engines — no per-page titles, missing from sitemap/robots
+
+**Switched category this run** from backend security (runs 11-15, 17) to
+marketing/SEO, per the standing order's task list — after 6 straight security
+audits it was worth checking whether the newest, most-worked-on growth
+surface this whole session (`/portals` + its 9 sub-portals: producer,
+affiliate, creator, consumer, middleman, gov-thai, gov-intl, intl-org,
+foundation) was actually reachable and indexable by search engines, not just
+functionally correct.
+
+**Found two real gaps, both verified by reading the actual files, not assumed:**
+1. `frontend/public/sitemap.xml` listed only 4 URLs (`/`, `/pricing`,
+   `/affiliate`, `/affiliate/dashboard`) — all 10 portal pages were entirely
+   absent, despite being the primary consent-based signup funnel this session
+   spent the most effort building and fixing (welcome emails, unsubscribe,
+   PDPA erasure, real-browser E2E in run 16). A page missing from the
+   sitemap is discovered by crawlers slower and less reliably.
+2. All 10 portal pages (`PortalHubPage.jsx` + all 9 files under
+   `frontend/src/pages/portals/`) never set `document.title` — confirmed via
+   `grep -L document.title`, every other real page in the app (`PricingPage`,
+   `ContactPage`, `CatalogPage`, etc.) already follows this exact pattern.
+   Every visitor on any of these 10 URLs saw the same generic homepage title
+   in their browser tab regardless of which portal they were actually on —
+   bad for SEO differentiation across the 10 distinct URLs and for usability
+   when a user has multiple portal tabs open.
+
+**Fix:** Added a `useEffect(() => { document.title = t.title + ' — Openthai.ai'; }, [t.title])`
+to each of the 10 files, reusing the `title` string each page's own `T`/`LANG`
+i18n object already defines per language (no new copy invented — every page
+already had the right title text sitting unused). Added all 10 portal URLs
+to `sitemap.xml` with reasonable priority/changefreq, and added matching
+explicit `Allow:` lines to `robots.txt` for each portal path, following the
+file's existing style of calling out real pages explicitly (even though
+`Allow: /` already covers them implicitly).
+
+**Verified live:** `npx vite build` succeeded with zero errors; booted
+`vite preview` and used Playwright to visit all 10 portal URLs directly,
+confirming each shows a distinct, correct, language-appropriate
+`document.title` (e.g. `/portals/producer` → "ทางเข้าผู้ผลิต — Openthai.ai",
+`/portals/gov-intl` → "Foreign Government Agency Portal — Openthai.ai",
+matching that page's actual `lang` default and content — not a placeholder).
+Also validated `sitemap.xml` is well-formed XML (`<url>`/`</url>` tag counts
+match, 14 total `<loc>` entries as expected).
+
+5 items are still pending an owner decision from earlier runs, unchanged.
 
 ---
 
@@ -1481,54 +1529,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c271e11 Fix affiliate withdrawal hijack: require email confirmation before creating the withdrawal (20 seconds ago)
+- e0269f0 chore: sync PROJECT_STATUS.md [skip ci] (7 minutes ago)
+- c271e11 Fix affiliate withdrawal hijack: require email confirmation before creating the withdrawal (7 minutes ago)
 - 79aff67 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 20e8b77 Log run 16: real-browser E2E verification of the actual funnel UI, clean pass (4 hours ago)
 - f4a73e6 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 14d4906 Close the bypass door around last run's webhook fix: /api/n8n/register-webhooks (5 hours ago)
 - aae495c chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 - 362db7c Fix silent data exfiltration via /api/webhooks -- gate all 4 routes with admin key (6 hours ago)
-- 9c2b904 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

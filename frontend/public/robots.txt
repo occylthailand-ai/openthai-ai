@@ -3,6 +3,16 @@ Allow: /
 Allow: /pricing
 Allow: /affiliate
 Allow: /affiliate/dashboard
+Allow: /portals
+Allow: /portals/producer
+Allow: /portals/affiliate
+Allow: /portals/creator
+Allow: /portals/consumer
+Allow: /portals/middleman
+Allow: /portals/gov-thai
+Allow: /portals/gov-intl
+Allow: /portals/intl-org
+Allow: /portals/foundation
 Disallow: /dashboard
 Disallow: /ai-generator
 Disallow: /ai-tools
