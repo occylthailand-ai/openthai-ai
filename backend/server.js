@@ -5927,25 +5927,52 @@ app.post('/api/privacy/consent', (req, res) => {
 });
 
 // GAP-002: สิทธิ์ขอลบข้อมูล (Right to Erasure — PDPA มาตรา 33)
-app.post('/api/privacy/erasure', rateLimit({ windowMs: 3600000, max: 5 }), (req, res) => {
+// เดิมลบข้อมูลทันทีจาก email ที่ส่งมาโดยไม่ตรวจสอบความเป็นเจ้าของเลย — ใครก็ตามที่รู้/เดา
+// อีเมลคนอื่นสามารถสั่งลบ waitlist/consent record ของคนนั้นได้โดยเจ้าตัวไม่รู้ตัวและไม่ยินยอม
+// (ตรงข้ามกับเจตนาของ PDPA ที่ต้องการปกป้อง ไม่ใช่เปิดช่องให้ทำลายข้อมูลคนอื่น) เปลี่ยนเป็น
+// ต้องยืนยันผ่านลิงก์ในอีเมลก่อน (pattern เดียวกับ unsubscribe ที่ verify แล้วสองรอบก่อนหน้านี้)
+app.post('/api/privacy/erasure', rateLimit({ windowMs: 3600000, max: 5 }), async (req, res) => {
   const { email } = req.body || {};
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ success: false, message: 'อีเมลไม่ถูกต้อง' });
   }
   const sanitized = email.toLowerCase().trim();
-  let removed = 0;
+  const confirmUrl = `${DOMAIN_URL}/api/privacy/erasure/confirm?email=${encodeURIComponent(sanitized)}&token=${unsubToken(sanitized, 'erasure')}`;
 
-  // ลบออกจาก waitlist
-  const wBefore = waitlist.length;
+  if (mailer) {
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        to: sanitized,
+        subject: '🗑️ ยืนยันการขอลบข้อมูลของคุณ — Openthai.ai',
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:520px;margin:0 auto;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#ef4444,#f59e0b);padding:24px;text-align:center;"><h1 style="margin:0;font-size:19px;">ยืนยันการขอลบข้อมูล</h1></div>
+          <div style="padding:24px;font-size:14px;line-height:1.7;">
+            <p>เราได้รับคำขอลบข้อมูลสำหรับอีเมลนี้ตามสิทธิ์ PDPA มาตรา 33 หากคุณเป็นผู้ส่งคำขอนี้จริง กดยืนยันด้านล่างเพื่อดำเนินการลบ</p>
+            <p style="text-align:center;margin:20px 0;"><a href="${confirmUrl}" style="background:#ef4444;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700;">ยืนยันการลบข้อมูล</a></p>
+            <p style="color:#94a3b8;font-size:12px;">หากคุณไม่ได้ส่งคำขอนี้ ไม่ต้องดำเนินการใดๆ ลิงก์นี้จะไม่มีผลหากไม่ถูกกด</p>
+          </div></div>`,
+      });
+    } catch (e) { console.error('[privacy/erasure] send error:', e.message); }
+  }
+  addLog('info', 'PDPA', `📧 Erasure confirmation ส่งให้ ${sanitized} (รอการยืนยันผ่านอีเมล)`);
+  res.json({ success: true, message: 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันการลบข้อมูลภายใน 30 วันตาม PDPA' });
+});
+
+app.get('/api/privacy/erasure/confirm', unsubLimiter, (req, res) => {
+  const { email, token } = req.query;
+  if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const sanitized = String(email).toLowerCase().trim();
+  if (token !== unsubToken(sanitized, 'erasure')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+
+  let removed = 0;
   const wIdx = waitlist.findIndex(w => w.email === sanitized);
   if (wIdx >= 0) { waitlist.splice(wIdx, 1); saveWaitlist(waitlist); removed++; }
-
-  // ลบ consent record
   const cIdx = consents.findIndex(c => c.email === sanitized);
   if (cIdx >= 0) { consents.splice(cIdx, 1); saveConsents(consents); removed++; }
 
-  addLog('info', 'PDPA', `🗑️ Erasure request: ${sanitized} — ลบแล้ว ${removed} รายการ`);
-  res.json({ success: true, message: `ดำเนินการลบข้อมูลแล้ว (${removed} รายการ) ภายใน 30 วันตาม PDPA`, removed });
+  addLog('info', 'PDPA', `🗑️ Erasure ยืนยันแล้ว: ${sanitized} — ลบแล้ว ${removed} รายการ`);
+  res.send(`<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยืนยันและลบข้อมูลเรียบร้อยแล้ว (${removed} รายการ)</div>`);
 });
 
 // GET /api/privacy/policy — ข้อมูล Privacy Policy สำหรับ frontend

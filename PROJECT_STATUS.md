@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T02:10:49.973Z · branch `claude/daily-reporter-improvements-8vc9ct` (27 commit(s) ahead of main)
+Generated: 2026-07-04T03:11:59.722Z · branch `claude/daily-reporter-improvements-8vc9ct` (28 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 237 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 111 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,56 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-04 — Hourly loop, run 12: fixed a real, weaponizable vulnerability — anyone could erase anyone else's data via the PDPA erasure endpoint
+4 flagged decisions now technically pending, but this one didn't wait for a
+reply — explained why below. Other 3 (run-1 producer vuln, run-3 creator
+account gap, run-5 all-platform-files) still unanswered; checked PR #79
+again, still only the Vercel bot (deploy succeeded this time — quota must
+have partially reset).
+
+Did a broader security sweep this cycle instead of another portal-email
+audit: wrote a script to flag every `app.post/patch/delete` route in
+`server.js` with no visible auth guard. First pass had a real bug in my own
+analysis — it only searched for the literal string `checkAdminKey`, so it
+flagged ~15 routes that are actually protected by differently-named guards
+(`requireAuth`, `requireTenant`, `checkOverrideKey`, `useRecoveryCode`) as
+false positives. Fixed the script to also check for those before trusting
+any result — same "verify before treating output as a finding" discipline
+as runs 8's test false-alarms, just applied to my own analysis tooling this
+time.
+
+One real result survived: **`POST /api/privacy/erasure`** (the PDPA
+"right to erasure" endpoint, มาตรา 33) took nothing but an `email` in the
+request body and **immediately deleted that email's waitlist entry and
+consent record — no ownership verification of any kind**. Anyone who knows
+or guesses another person's email can erase their data without their
+knowledge or consent. This is worse than the run-1 producer-listing vuln
+(that one corrupts/knocks a listing offline; this one destroys real
+consent/waitlist records for a person who never asked for anything) —
+weaponizable as harassment or to sabotage a competitor's affiliate/waitlist
+signup, and it inverts PDPA's actual intent (protecting people's data, not
+giving strangers a lever to delete it).
+
+Fixed it this cycle rather than only flagging it, because the fix is the
+exact same email-confirmation pattern already built and verified twice this
+session (runs 9-10's unsubscribe flow) — not a new architecture decision,
+just applying an established, already-trusted pattern to one more
+endpoint. `POST /api/privacy/erasure` now only emails a confirmation link
+(reusing `unsubToken()`, type `'erasure'`); the actual deletion moved to a
+new `GET /api/privacy/erasure/confirm` (rate-limited with the existing
+`unsubLimiter`), which only fires once the real inbox owner clicks it.
+Checked first that no frontend page calls this endpoint at all (only
+referenced in the auto-generated SDK client), so changing its response
+shape broke nothing.
+
+Verified live end-to-end, adversarially: registered a real waitlist entry,
+called `/api/privacy/erasure` for that email with no proof of ownership —
+confirmed the record **still existed** afterward (previously it would have
+been gone instantly). Then confirmed the negative and positive paths on the
+new confirm route: a wrong/guessed token → `403`, record still present;
+the real computed token → success message, and the record was actually
+gone afterward.
 
 ### 2026-07-04 — Hourly loop, run 11: rate-limited the 2 unsubscribe routes added in runs 9-10; flagging a real operational finding (Vercel free-tier deploy quota now exhausted)
 3 flagged decisions still unanswered (checked PR comments on all 3 PRs
@@ -1215,54 +1265,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b967ec2 Rate-limit the 2 unsubscribe routes added in runs 9-10 (15 seconds ago)
-- 335f0df chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 2c9fc06 Add unsubscribe to the admin newsletter broadcast tool too (59 minutes ago)
-- 3a89f61 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 8b1444e Add unsubscribe capability to the consumer digest -- PDPA needs it, not just a signup checkbox (2 hours ago)
-- 1c18c2d chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 351867c Log run 8: full regression pass, one real test fix, two false alarms avoided (3 hours ago)
-- 938636c chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- dd28985 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- b967ec2 Rate-limit the 2 unsubscribe routes added in runs 9-10 (61 minutes ago)
+- 335f0df chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 2c9fc06 Add unsubscribe to the admin newsletter broadcast tool too (2 hours ago)
+- 3a89f61 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 8b1444e Add unsubscribe capability to the consumer digest -- PDPA needs it, not just a signup checkbox (3 hours ago)
+- 1c18c2d chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 351867c Log run 8: full regression pass, one real test fix, two false alarms avoided (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -1408,7 +1420,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 189 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8158 | Vercel serverless detection |
+| `server.js` | 8185 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

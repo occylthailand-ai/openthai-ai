@@ -11,6 +11,56 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 12: fixed a real, weaponizable vulnerability — anyone could erase anyone else's data via the PDPA erasure endpoint
+4 flagged decisions now technically pending, but this one didn't wait for a
+reply — explained why below. Other 3 (run-1 producer vuln, run-3 creator
+account gap, run-5 all-platform-files) still unanswered; checked PR #79
+again, still only the Vercel bot (deploy succeeded this time — quota must
+have partially reset).
+
+Did a broader security sweep this cycle instead of another portal-email
+audit: wrote a script to flag every `app.post/patch/delete` route in
+`server.js` with no visible auth guard. First pass had a real bug in my own
+analysis — it only searched for the literal string `checkAdminKey`, so it
+flagged ~15 routes that are actually protected by differently-named guards
+(`requireAuth`, `requireTenant`, `checkOverrideKey`, `useRecoveryCode`) as
+false positives. Fixed the script to also check for those before trusting
+any result — same "verify before treating output as a finding" discipline
+as runs 8's test false-alarms, just applied to my own analysis tooling this
+time.
+
+One real result survived: **`POST /api/privacy/erasure`** (the PDPA
+"right to erasure" endpoint, มาตรา 33) took nothing but an `email` in the
+request body and **immediately deleted that email's waitlist entry and
+consent record — no ownership verification of any kind**. Anyone who knows
+or guesses another person's email can erase their data without their
+knowledge or consent. This is worse than the run-1 producer-listing vuln
+(that one corrupts/knocks a listing offline; this one destroys real
+consent/waitlist records for a person who never asked for anything) —
+weaponizable as harassment or to sabotage a competitor's affiliate/waitlist
+signup, and it inverts PDPA's actual intent (protecting people's data, not
+giving strangers a lever to delete it).
+
+Fixed it this cycle rather than only flagging it, because the fix is the
+exact same email-confirmation pattern already built and verified twice this
+session (runs 9-10's unsubscribe flow) — not a new architecture decision,
+just applying an established, already-trusted pattern to one more
+endpoint. `POST /api/privacy/erasure` now only emails a confirmation link
+(reusing `unsubToken()`, type `'erasure'`); the actual deletion moved to a
+new `GET /api/privacy/erasure/confirm` (rate-limited with the existing
+`unsubLimiter`), which only fires once the real inbox owner clicks it.
+Checked first that no frontend page calls this endpoint at all (only
+referenced in the auto-generated SDK client), so changing its response
+shape broke nothing.
+
+Verified live end-to-end, adversarially: registered a real waitlist entry,
+called `/api/privacy/erasure` for that email with no proof of ownership —
+confirmed the record **still existed** afterward (previously it would have
+been gone instantly). Then confirmed the negative and positive paths on the
+new confirm route: a wrong/guessed token → `403`, record still present;
+the real computed token → success message, and the record was actually
+gone afterward.
+
 ### 2026-07-04 — Hourly loop, run 11: rate-limited the 2 unsubscribe routes added in runs 9-10; flagging a real operational finding (Vercel free-tier deploy quota now exhausted)
 3 flagged decisions still unanswered (checked PR comments on all 3 PRs
 again). One new, real, non-code finding surfaced this cycle worth its own
