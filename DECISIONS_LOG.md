@@ -11,6 +11,61 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 21: `/portals/*` links shared on LINE/Facebook showed the homepage's TikTok pitch, not the portal's own content
+
+**Follow-on to run 18's SEO fix**, which added `document.title` per portal
+page — but that only helps crawlers that execute JS (Google does; Facebook's
+and LINE's link-preview scrapers generally do not, they read the raw HTML at
+the requested path). This app is a client-side-routed SPA (`BrowserRouter`,
+confirmed in `frontend/src/App.jsx`), served via Vercel's catch-all rewrite
+(`frontend/vercel.json`: `"/(.*)" → "/index.html"`) — so **every** route,
+including all 10 `/portals/*` URLs, served the exact same built
+`dist/index.html`, whose `<title>`/OG tags are the homepage's TikTok-caption
+pitch. Sharing a `/portals/producer` link on LINE — the dominant Thai
+sharing channel, and this app's main funnel channel — showed a preview card
+about generating TikTok captions, not producer signup, for every single
+portal URL.
+
+**Fix:** added `frontend/scripts/prerender-portal-meta.mjs`, wired as an npm
+`postbuild` hook (auto-runs after `vite build` since `frontend/package.json`
+has both `build` and `postbuild` scripts — verified this actually fires via
+`npm run build`, not just `vite build` directly). It copies the real built
+`dist/index.html` to `dist/<portal-path>/index.html` for all 10 portal
+routes, with only `<title>`, description, canonical, OG, and Twitter-card
+tags swapped to that page's real title/description (copied verbatim from
+each page's own `T`/`LANG` i18n object — same source run 18 used for
+`document.title` — matching whichever language each page actually defaults
+to: Thai for most, English for `gov-intl`/`intl-org` which default `lang:
+'en'`). Vercel's `rewrites` config resolves existing files in the filesystem
+before applying rewrite rules, so these static per-route files are served
+directly instead of falling through to the generic `index.html` — no
+`vercel.json` change needed. The bundled JS reference is byte-identical to
+the real `index.html` (confirmed via diff), so React Router still boots
+normally from `window.location.pathname` and renders the actual page —
+this is only ever the first HTML byte a crawler or browser receives, not a
+different app.
+
+**Verified live:** `npm run build` (not just `vite build`) actually
+triggers the `postbuild` step and writes all 10 files with correct content
+(spot-checked `dist/portals/producer/index.html` — correct title/og:title/
+og:description/canonical, `diff`'d against the base file to confirm nothing
+else changed). Served the real `dist/` via `vite preview` and: (1) `curl`'d
+`/portals/producer/` raw (no JS execution, simulating a real crawler) — got
+the correct title/og:title; (2) same for `/portals/` (hub) and
+`/portals/gov-intl` (English-default page) — both correct; (3) loaded
+`/portals/producer` in a real headless browser (Playwright) — confirmed the
+actual interactive form renders (6 input fields, correct heading, zero page
+errors), proving the client app still works normally; (4) confirmed an
+unrelated existing route (`/pricing`) and a nonexistent path both still
+fall through to the normal SPA catch-all exactly as before — nothing else
+was affected.
+
+5 items from earlier runs are still pending an owner decision, unchanged
+(the `smart-e` `package.json` dead-dependency observation from run 20 is a
+low-priority 6th note, not a blocking item).
+
+---
+
 ### 2026-07-04 — Hourly loop, run 20: `smart-e` repo — `server.py` couldn't find its own frontend
 
 **Rotated back to the other 4 repos this run** (per the standing order's
