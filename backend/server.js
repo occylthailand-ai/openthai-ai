@@ -646,6 +646,36 @@ app.get('/api/leads/admin/search', async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// รายชื่ออีเมลที่ยกเลิกรับ newsletter broadcast — เดิม /api/leads/admin/broadcast ส่งหา
+// waitlist+affiliate+order contacts ทุกครั้งโดยไม่มีทางยกเลิกเลย ทั้งที่ footer เขียนไว้ว่า
+// "ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ" — เก็บแยกจาก portalLeads.unsubscribe() เพราะรายชื่อ
+// ผู้รับมาจากคนละแหล่ง (waitlist/affiliate/order ไม่ใช่ portal lead)
+const BROADCAST_UNSUB_FILE = join(WRITE_DATA_DIR, 'broadcast_unsubscribed.json');
+function loadBroadcastUnsub() {
+  try { if (existsSync(BROADCAST_UNSUB_FILE)) return new Set(JSON.parse(readFileSync(BROADCAST_UNSUB_FILE, 'utf8'))); } catch (_) {}
+  return new Set();
+}
+function saveBroadcastUnsub(set) {
+  try {
+    const dir = BROADCAST_UNSUB_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(BROADCAST_UNSUB_FILE, JSON.stringify([...set], null, 2), 'utf8');
+  } catch (e) { console.error('Save broadcast-unsubscribed error:', e.message); }
+}
+const broadcastUnsubscribed = loadBroadcastUnsub();
+
+// GET /api/broadcast/unsubscribe — เหมือนกับ /api/leads/unsubscribe แต่สำหรับรายชื่อ broadcast
+// ทั่วไปกลุ่มนี้โดยเฉพาะ (reuse unsubToken() ตัวเดียวกัน แค่ต่าง type string)
+app.get('/api/broadcast/unsubscribe', (req, res) => {
+  const { email, token } = req.query;
+  if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const e = String(email).toLowerCase();
+  if (token !== unsubToken(e, 'broadcast')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  broadcastUnsubscribed.add(e);
+  saveBroadcastUnsub(broadcastUnsubscribed);
+  res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยกเลิกรับอีเมลข่าวสารเรียบร้อยแล้ว</div>');
+});
+
 // POST /api/leads/admin/broadcast — ส่งอีเมล newsletter หาลีดทั้งหมด (Admin Key)
 const broadcastLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 6, message: { success: false, error: 'ส่ง broadcast บ่อยเกินไป' } });
 app.post('/api/leads/admin/broadcast', broadcastLimiter, async (req, res) => {
@@ -659,26 +689,27 @@ app.post('/api/leads/admin/broadcast', broadcastLimiter, async (req, res) => {
   if (audience === 'all' || audience === 'waitlist') for (const w of waitlist) if (isEmail(w.email)) set.add(w.email.toLowerCase());
   if (audience === 'all' || audience === 'affiliate') for (const a of affiliates) if (isEmail(a.email)) set.add(a.email.toLowerCase());
   if (audience === 'all' || audience === 'order') { const ords = await orders.all(); for (const o of ords) if (isEmail(o.contact)) set.add(o.contact.toLowerCase()); }
-  const recipients = [...set];
+  const recipients = [...set].filter((email) => !broadcastUnsubscribed.has(email));
 
   if (!mailer) return res.json({ success: false, sent: 0, recipients: recipients.length, error: 'ยังไม่ได้ตั้ง SMTP — ตั้ง SMTP_USER/SMTP_PASS ใน env เพื่อส่งจริง (พบผู้รับ ' + recipients.length + ' คน)' });
   if (!recipients.length) return res.json({ success: true, sent: 0, recipients: 0, message: 'ไม่มีอีเมลผู้รับในกลุ่มนี้' });
 
   const safe = String(message).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-  const html = `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+  // ส่งทีละคน (ไม่ใช้ bcc batch เหมือนเดิม) เพราะลิงก์ยกเลิกรับข่าวสารต้องเป็นของแต่ละคนจริง
+  // ยืนยันตัวด้วย token — ส่งแบบ bcc รวมกันทำแบบนี้ไม่ได้เพราะทุกคนจะได้ลิงก์เดียวกันหมด
+  let sent = 0;
+  for (const email of recipients) {
+    const unsubUrl = `${DOMAIN_URL}/api/broadcast/unsubscribe?email=${encodeURIComponent(email)}&token=${unsubToken(email, 'broadcast')}`;
+    const html = `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
     <div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">Openthai.ai</h1></div>
     <div style="padding:26px;font-size:15px;line-height:1.7;color:#e2e8f0;">${safe}</div>
     <div style="padding:16px;text-align:center;font-size:12px;color:#64748b;border-top:1px solid rgba(255,255,255,0.08);">
-      <a href="${DOMAIN_URL}" style="color:#6366f1;">openthai-ai.com</a> · ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ Openthai.ai
+      <a href="${DOMAIN_URL}" style="color:#6366f1;">openthai-ai.com</a> · ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ Openthai.ai · <a href="${unsubUrl}" style="color:#64748b;">ยกเลิกรับอีเมลนี้</a>
     </div></div>`;
-
-  let sent = 0;
-  for (let i = 0; i < recipients.length; i += 50) {
-    const batch = recipients.slice(i, i + 50);
     try {
-      await mailer.sendMail({ from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to: process.env.SMTP_USER, bcc: batch, subject: subject.slice(0, 200), html });
-      sent += batch.length;
-    } catch (e) { console.error('[broadcast] batch error:', e.message); }
+      await mailer.sendMail({ from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to: email, subject: subject.slice(0, 200), html });
+      sent++;
+    } catch (e) { console.error(`[broadcast] send error (${email}):`, e.message); }
   }
   addLog('info', 'Broadcast', `ส่ง newsletter "${subject.slice(0, 40)}" → ${sent}/${recipients.length} คน`);
   res.json({ success: true, sent, recipients: recipients.length });

@@ -11,6 +11,43 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-03 — Hourly loop, run 10: found a bigger, adjacent unsubscribe gap — the admin newsletter broadcast tool had none either
+3 flagged decisions still unanswered; re-checked all 3 PR threads, still
+only the Vercel bot.
+
+Followed up on last run's unsubscribe fix by checking for the same pattern
+elsewhere, since fixing one instance and stopping is how gaps like this
+survive elsewhere in a codebase. Found `POST /api/leads/admin/broadcast`
+(the general newsletter tool, sends to combined waitlist+affiliate+order
+contacts) — its own footer text says "ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ
+Openthai.ai," but had zero opt-out, same gap as the consumer digest, just
+with a broader recipient pool and no relation to `portal_leads` at all (this
+tool's recipients come from `waitlist`/`affiliates`/`orders`, none of which
+are portal leads) — so last run's fix didn't cover it.
+
+Added a separate suppression list (`broadcast_unsubscribed.json`, same
+load/save-to-`WRITE_DATA_DIR` pattern as `waitlist.json` already uses) and
+`GET /api/broadcast/unsubscribe`, reusing the exact same `unsubToken()`
+HMAC helper from last run — just a different `type` string ('broadcast'
+instead of 'consumer'), no new crypto needed. Kept this list separate from
+the consumer-digest one on purpose: unsubscribing from category-matched
+consumer deals and unsubscribing from the general newsletter are different
+consents, and conflating them would be a product-policy guess I'm not
+positioned to make unilaterally.
+
+This required a real structural fix, not just an added link: the broadcast
+route previously sent one email via `bcc` to up to 50 recipients per batch,
+sharing identical HTML — which cannot include a per-recipient unsubscribe
+link at all (everyone in a bcc batch gets the same body). Switched to
+sending one email per recipient with their own personalized unsubscribe
+link. Slower per-send, but this is an admin-triggered, rate-limited (6/hour)
+action, not a hot path, and correctness here matters more than batching.
+
+Verified live: signed up 2 real waitlist emails, triggered the broadcast
+(`recipients: 2`), unsubscribed one via the real computed token, triggered
+again — `recipients: 1`. Confirmed a wrong/guessed token still returns 403
+and does not unsubscribe anyone.
+
 ### 2026-07-03 — Hourly loop, run 9: the consumer digest I shipped last run had no unsubscribe link — added one, PDPA needs it
 3 flagged decisions still unanswered; re-checked all 3 PR threads again,
 still only the Vercel bot.
