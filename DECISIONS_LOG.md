@@ -11,6 +11,36 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 15: last run's webhook fix had a bypass door — found and closed it too
+5 items still pending an owner decision, unchanged. PR #79's latest deploy
+succeeded; still only the Vercel bot on comments.
+
+Checked whether last run's `/api/webhooks` fix was actually complete before
+moving to something new — it wasn't. `webhooks.register()` (the same
+underlying function `POST /api/webhooks` calls) is also called directly by
+`POST /api/n8n/register-webhooks`, a completely separate route with **zero
+auth of any kind**. It takes `n8n_base_url` straight from the request body
+and registers 3 real webhooks pointing at `${that_url}/webhook/...` with
+`tenantId: 'system'`, dispatching `content.generated`/`agent.completed`/
+`payment.completed` events to them — the identical data-exfiltration
+vulnerability fixed last run, reachable through a door that fix didn't
+touch because it's a different route calling `register()` directly rather
+than going through `POST /api/webhooks`. Confirmed zero frontend usage
+before touching it (same check as every route fixed the last 3 runs), then
+gated it with the same `webhooksAuth()` helper built last run — one line of
+reuse, no new auth mechanism needed.
+
+Verified live, adversarially: sent `n8n_base_url: "https://attacker.example.com"`
+with no admin key — now correctly `401` (previously would have silently
+registered 3 real webhooks pointing at the attacker's server). Then
+confirmed the legitimate path: admin key + a real n8n base URL → all 3
+webhooks actually registered (verified via `GET /api/webhooks`, count: 3),
+so real n8n integration setup still works exactly as before.
+
+Worth noting for whoever reviews this PR: `webhooks.register()` is called
+from at least these 2 places now; if a 3rd call site is ever added, it needs
+the same admin gate at its own route, not just at the ones fixed so far.
+
 ### 2026-07-04 — Hourly loop, run 14: fixed silent, unlimited data-exfiltration via /api/webhooks — anyone could register a global listener for every real business event
 5 items still pending an owner decision (unchanged from run 13; PR #79's
 latest deploy succeeded, still only the Vercel bot on comments — GitHub

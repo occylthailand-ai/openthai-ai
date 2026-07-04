@@ -7753,7 +7753,13 @@ app.get('/api/line/users', requireAuth, async (req, res) => {
 });
 
 // POST /api/n8n/register-webhooks — auto-register n8n webhook URLs
-app.post('/api/n8n/register-webhooks', async (req, res) => {
+// Admin Key — เดิมไม่มีการตรวจสอบเลย รับ n8n_base_url จาก request body ตรงๆ แล้วเรียก
+// webhooks.register() ให้ทันที (tenantId: 'system') เท่ากับใครก็ตามส่ง URL ของตัวเองมาก็จะ
+// ได้รับ webhook จริงที่ dispatch เหตุการณ์ content.generated/agent.completed/payment.completed
+// ไปหา — ช่องโหว่แบบเดียวกับ /api/webhooks ที่เพิ่งแก้ไป แค่มาจากคนละทาง (bypass ผ่านฟังก์ชัน
+// register() ตรงๆ ไม่ผ่าน route ที่ล็อกไปแล้ว) ไม่มีหน้า UI เรียกอยู่เลย จึงล็อกได้โดยไม่กระทบ
+app.post('/api/n8n/register-webhooks', (req, res) => {
+  if (!webhooksAuth(req, res)) return;
   const { n8n_base_url } = req.body || {};
   const base = n8n_base_url || process.env.N8N_URL;
   if (!base) return res.status(400).json({ error: 'n8n_base_url required' });
