@@ -71,6 +71,18 @@ jobs:
           kill $SERVER_PID 2>/dev/null || true
           exit 1
 
+  # ── Auth coverage: DELETE/admin routes ต้องมี auth check เสมอ ──────────────
+  auth-coverage:
+    name: 🔐 Auth Coverage Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Scan backend/server.js for unauthenticated DELETE/admin routes
+        run: node scripts/auth-coverage-scanner.mjs
+
   # ── Quality: ตรวจ hardcoded secrets ────────────────────────────────────────
   quality:
     name: 🔒 Secret Scan

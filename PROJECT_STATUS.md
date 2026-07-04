@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-03T09:20:00.146Z · branch `claude/ai-coalition-protocol-hp3rga` (1 commit(s) ahead of main)
+Generated: 2026-07-04T01:49:52.178Z · branch `claude/openthai-middleware-update-9gzgge` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -25,6 +25,46 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-04 — Rejected: "production-ready" auth/audit/rate-limit middleware package pasted from Gemini; built the real, grounded version of the legitimate part instead
+Pasted content (same pattern as the earlier Neo4j / Stripe-escrow / tokenizer /
+"Creator Discovery Agent" pastes) described a polished middleware package —
+`auth.middleware.js` (JWT + x-admin-key fallback), `audit.middleware.js`
+(correlation IDs, sanitized logging), `rateLimit.middleware.js` (per-risk-tier
+policies), an `inventory/index.js` module, and an `auth-coverage-scanner.js` —
+living under `governance/`, `backend/core/`, and `prompts-for-cursor/`, plus a
+local path (`/home/workdir/artifacts/openthai-pattern-implementation/`) to copy
+it in from. Asked to adopt it wholesale and wire CI around it.
+
+Verified against the real repo before writing anything: none of those
+directories exist anywhere in this org, `backend/` is flat ES-module files
+(`auth.js`, `orders.js`, `inventory.js`, ...) not a `middleware/` tree, real
+auth (`backend/auth.js`) already does JWT + bcrypt + admin-override-key +
+one-time recovery codes with a different design than what was pasted, and
+`auth-coverage-scanner.js` doesn't exist anywhere in `occylthailand-ai`. None
+of it is real — declined for the same reason as the earlier pastes.
+
+The one genuinely legitimate idea in it — an automated auth-coverage
+scanner — is also something this session had already been doing *by hand*
+repeatedly (see the 2026-07-02 "autonomous hourly scan" entry: "checked every
+`app.delete(...)` route in `server.js` for ... no auth, no rate limit").
+Built the real version instead of the fabricated one: `scripts/
+auth-coverage-scanner.mjs` parses `backend/server.js` for every `DELETE` and
+`/admin/`-path route, extracts each route's real handler block, and flags any
+with no detectable auth signal (`checkAdminKey`, `requireAuth`, tenant/owner
+scoping, or a call to a same-file auth-wrapper helper like `invAuth`) unless
+explicitly allowlisted via a `// scanner-allow: <reason>` comment. Wired into
+`.github/workflows/test.yml` as a new `auth-coverage` job so it runs on every
+push/PR instead of relying on someone remembering to re-run the manual grep.
+
+Verified against the real, current `server.js`: correctly scans 215 routes,
+identifies all 34 real DELETE/admin routes, correctly recognizes the one real
+auth-wrapper helper (`invAuth`), and passes clean (all 34 already have a real
+check — no regressions to fix right now). Verified it actually catches a
+regression, not just a clean pass: temporarily stripped the `checkAdminKey`
+check from `DELETE /api/webhooks/:id` in a scratch copy and reran — the
+scanner correctly flagged it and exited non-zero; restored the original
+before touching the real repo.
 
 ### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
 Found by accident while investigating a "there are uncommitted changes"
@@ -643,54 +683,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c281a9f Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (85 seconds ago)
-- f3a860d Open the Council Bridge to external platforms/systems (#76) (82 minutes ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (3 hours ago)
-- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (3 hours ago)
-- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (5 hours ago)
-- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (20 hours ago)
-- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (24 hours ago)
-- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (26 hours ago)
+- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (16 hours ago)
+- f3a860d Open the Council Bridge to external platforms/systems (#76) (18 hours ago)
+- d73b560 Add Shared Bridge Notes to /council (#75) (19 hours ago)
+- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (20 hours ago)
+- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (22 hours ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (2 days ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (2 days ago)
+- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (2 days ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

@@ -11,6 +11,46 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Rejected: "production-ready" auth/audit/rate-limit middleware package pasted from Gemini; built the real, grounded version of the legitimate part instead
+Pasted content (same pattern as the earlier Neo4j / Stripe-escrow / tokenizer /
+"Creator Discovery Agent" pastes) described a polished middleware package —
+`auth.middleware.js` (JWT + x-admin-key fallback), `audit.middleware.js`
+(correlation IDs, sanitized logging), `rateLimit.middleware.js` (per-risk-tier
+policies), an `inventory/index.js` module, and an `auth-coverage-scanner.js` —
+living under `governance/`, `backend/core/`, and `prompts-for-cursor/`, plus a
+local path (`/home/workdir/artifacts/openthai-pattern-implementation/`) to copy
+it in from. Asked to adopt it wholesale and wire CI around it.
+
+Verified against the real repo before writing anything: none of those
+directories exist anywhere in this org, `backend/` is flat ES-module files
+(`auth.js`, `orders.js`, `inventory.js`, ...) not a `middleware/` tree, real
+auth (`backend/auth.js`) already does JWT + bcrypt + admin-override-key +
+one-time recovery codes with a different design than what was pasted, and
+`auth-coverage-scanner.js` doesn't exist anywhere in `occylthailand-ai`. None
+of it is real — declined for the same reason as the earlier pastes.
+
+The one genuinely legitimate idea in it — an automated auth-coverage
+scanner — is also something this session had already been doing *by hand*
+repeatedly (see the 2026-07-02 "autonomous hourly scan" entry: "checked every
+`app.delete(...)` route in `server.js` for ... no auth, no rate limit").
+Built the real version instead of the fabricated one: `scripts/
+auth-coverage-scanner.mjs` parses `backend/server.js` for every `DELETE` and
+`/admin/`-path route, extracts each route's real handler block, and flags any
+with no detectable auth signal (`checkAdminKey`, `requireAuth`, tenant/owner
+scoping, or a call to a same-file auth-wrapper helper like `invAuth`) unless
+explicitly allowlisted via a `// scanner-allow: <reason>` comment. Wired into
+`.github/workflows/test.yml` as a new `auth-coverage` job so it runs on every
+push/PR instead of relying on someone remembering to re-run the manual grep.
+
+Verified against the real, current `server.js`: correctly scans 215 routes,
+identifies all 34 real DELETE/admin routes, correctly recognizes the one real
+auth-wrapper helper (`invAuth`), and passes clean (all 34 already have a real
+check — no regressions to fix right now). Verified it actually catches a
+regression, not just a clean pass: temporarily stripped the `checkAdminKey`
+check from `DELETE /api/webhooks/:id` in a scratch copy and reran — the
+scanner correctly flagged it and exited non-zero; restored the original
+before touching the real repo.
+
 ### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
 Found by accident while investigating a "there are uncommitted changes"
 prompt — the working-tree diff showed the *currently committed* (on `main`,
