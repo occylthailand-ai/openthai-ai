@@ -17,16 +17,41 @@ export default function TrackOrderPage() {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeEvidence, setDisputeEvidence] = useState('');
+  const [disputeBusy, setDisputeBusy] = useState(false);
+  const [disputeErr, setDisputeErr] = useState('');
+  const [disputeResult, setDisputeResult] = useState(null); // { id } once opened (new or pre-existing)
+
   const track = async (e) => {
     e?.preventDefault?.();
     if (!id.trim() || !contact.trim() || busy) return;
     setBusy(true); setErr(''); setOrder(null);
+    setShowDisputeForm(false); setDisputeResult(null); setDisputeErr(''); setDisputeReason(''); setDisputeEvidence('');
     try {
       const res = await fetch(apiUrl(`/api/orders/track?id=${encodeURIComponent(id.trim())}&contact=${encodeURIComponent(contact.trim())}`));
       const d = await res.json();
       if (d.success) setOrder(d.order); else setErr(d.error || t('mk.track.notfound'));
     } catch { setErr(t('mk.track.notfound')); }
     finally { setBusy(false); }
+  };
+
+  const openDispute = async (e) => {
+    e?.preventDefault?.();
+    if (!order || !disputeReason.trim() || disputeBusy) return;
+    setDisputeBusy(true); setDisputeErr('');
+    try {
+      const res = await fetch(apiUrl('/api/disputes'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, opened_by: 'buyer', contact: contact.trim(), reason: disputeReason.trim(), evidence: disputeEvidence.trim() }),
+      });
+      const d = await res.json();
+      if (d.success) { setDisputeResult({ id: d.id }); }
+      else if (d.id) { setDisputeResult({ id: d.id, existing: true }); }
+      else { setDisputeErr(d.error || t('mk.dispute.notfound')); }
+    } catch { setDisputeErr(t('mk.dispute.notfound')); }
+    finally { setDisputeBusy(false); }
   };
 
   useEffect(() => { document.title = 'Track — Openthai.ai'; if (sp.get('id') && sp.get('contact')) track(); }, []); // eslint-disable-line
@@ -102,6 +127,31 @@ export default function TrackOrderPage() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* open a dispute */}
+            <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
+              {disputeResult ? (
+                <div style={{ fontSize: 13 }}>
+                  {disputeResult.existing ? <span style={{ color: '#94a3b8' }}>{t('mk.dispute.open.existing')} </span> : <span style={{ color: '#6ee7b7' }}>✅ {t('mk.dispute.open.success')} </span>}
+                  <a href={`/dispute?id=${encodeURIComponent(disputeResult.id)}`} style={{ color: '#a5b4fc' }}>{t('mk.dispute.open.viewstatus')}</a>
+                </div>
+              ) : showDisputeForm ? (
+                <form onSubmit={openDispute}>
+                  <label style={lab}>{t('mk.dispute.open.reason')}</label>
+                  <textarea style={{ ...inp, minHeight: 70, resize: 'vertical' }} value={disputeReason} onChange={(e) => setDisputeReason(e.target.value)} placeholder={t('mk.dispute.open.reason.ph')} />
+                  <label style={lab}>{t('mk.dispute.open.evidence')}</label>
+                  <textarea style={{ ...inp, minHeight: 50, resize: 'vertical' }} value={disputeEvidence} onChange={(e) => setDisputeEvidence(e.target.value)} placeholder={t('mk.dispute.open.evidence.ph')} />
+                  {disputeErr && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 8 }}>⚠️ {disputeErr}</div>}
+                  <button type="submit" disabled={disputeBusy || !disputeReason.trim()} style={{ ...primaryBtn, width: '100%', marginTop: 12, opacity: disputeBusy || !disputeReason.trim() ? 0.6 : 1 }}>
+                    {disputeBusy ? t('mk.dispute.open.submitting') : t('mk.dispute.open.submit')}
+                  </button>
+                </form>
+              ) : (
+                <button onClick={() => setShowDisputeForm(true)} style={{ ...navBtn, width: '100%', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.3)' }}>
+                  {t('mk.dispute.open.cta')}
+                </button>
+              )}
             </div>
           </div>
         </section>

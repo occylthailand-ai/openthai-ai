@@ -11,6 +11,22 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 23: closed the follow-up queued in run 22 — buyers can now actually open a dispute from `/track`, not just check one
+
+**Direct continuation of run 22**, which built `/dispute` (status tracking) but deliberately left "there's still no UI to open a dispute" as a queued follow-up rather than folding it into that cycle. This run builds that piece.
+
+Confirmed there's no producer-facing order-management page anywhere in the frontend (`grep -rl producer_email frontend/src/pages` only matches `AdminPage.jsx` and `CatalogPage.jsx`) — this matches the already-known, already-flagged architectural gap (no real producer login/account system). So this cycle scoped the fix to the **buyer** side only, via the one self-service page that actually exists for a customer: `TrackOrderPage.jsx` (`/track`).
+
+**Fix:** added an "⚠️ มีปัญหากับคำสั่งซื้อนี้? เปิดข้อพิพาท" button to the order card on `/track`, shown once an order is successfully looked up. Clicking it reveals a small form (reason, required; evidence, optional) that posts to the same `POST /api/disputes` the backend already exposed but no UI ever called — reusing the buyer's already-verified `contact` value from the track form itself (`opened_by: 'buyer'`, matching this page's own identity-verification model, since it only ever proves the buyer's contact, never the producer's). On success it shows the confirmation message and a link straight to run 22's `/dispute?id=...` tracking page. If the order already has an open dispute, the backend's existing duplicate-guard (`disputes.js`'s `existingOpen` check) still fires — the UI now surfaces that gracefully with a link to the *existing* dispute instead of just failing silently or showing a raw error.
+
+**Verified live, full real cycle** on a locally running backend + a `vite preview` build wired to it via `VITE_API_URL`, driven entirely through Playwright as a real user would use it (not direct API calls): created a product, checked out a real order, loaded `/track?id=...&contact=...`, clicked the new button, filled in the reason/evidence textareas, submitted — confirmed the success message and the correct `/dispute?id=` link appeared. Followed that link and confirmed `/dispute` (from run 22) shows the *exact* reason text typed into the form and the correct "รอพิจารณา" (awaiting review) status — proving the two pages built across these two runs are correctly wired end to end, not just independently functional. Then repeated the open-dispute flow a second time against the **same order** and confirmed the UI correctly shows "มีข้อพิพาทที่ยังไม่ปิดอยู่แล้ว" (already has an open dispute) with a link back to the *original* dispute ID, not a duplicate. `npm run build` (both with and without `VITE_API_URL` override) compiled cleanly.
+
+The producer-side "open/respond to a dispute" UI is still missing, but that's the same pre-existing, already-flagged "no real producer account system" gap — not a new decision, and not something this narrower buyer-side fix could unilaterally resolve.
+
+5 items from earlier runs are still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-04 — Hourly loop, run 22: the order-dispute system had zero frontend page — the "check status" link in its own notification emails pointed at a raw JSON API endpoint
 
 **Found by reading `backend/disputes.js` end to end** (a real module: open/respond/track/aiSuggest/resolve, escrow-aware, already correctly notifies both buyer and producer per an earlier fix). Grepped the frontend for any consumer of it — `grep -rl dispute frontend/src/pages` matched only `AdminPage.jsx`. There is no public page anywhere for a buyer or producer to open a dispute, respond to one, or check its status — the entire feature is backend-only, reachable only via raw `fetch()`/`curl` calls a real user would never make.
