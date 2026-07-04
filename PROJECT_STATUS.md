@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T17:13:49.281Z · branch `claude/daily-reporter-improvements-8vc9ct` (51 commit(s) ahead of main)
+Generated: 2026-07-04T18:14:32.689Z · branch `claude/daily-reporter-improvements-8vc9ct` (52 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 261 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 135 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-07-04 — Hourly loop, run 24: `otop-ai-landing` repo — logo was a 1.6MB PNG displayed at 34-84px, compressed to a 14.6KB WebP with no visible quality change
+
+**Rotated back to `otop-ai-landing`** this run (per the standing order's all-5-repos scope) after several runs focused on `openthai-ai`. Full detail lives in that repo's own commit message (`074a57b` on `claude/daily-reporter-improvements-8vc9ct`, lands in the existing PR #1) since it has no `DECISIONS_LOG.md` of its own — summary here per rule 6.
+
+`logo.png` was a 1408×768 PNG, 1.6MB, used unmodified as: the header logo (displayed at 34px height), the hero logo (84px height), the browser favicon, and the `og:image` for social-share previews. Every visitor to the landing page — the whole point of which is to load fast and convert — downloaded the full 1.6MB file just to render a 34px logo, roughly 40× oversampled for that use.
+
+**Fix:** used `sharp` (installed fresh in a scratch dir, not a project dependency) to generate `logo.webp` (513×280 — comfortably retina-sharp at the actual 34/84px display sizes — 14.6KB, a 99% reduction) for the header/hero `<img>` tags and the favicon, and a separate `og-image.png` (1200px wide, 540KB, a 66% reduction) specifically for the `og:image` meta tag, kept as PNG rather than WebP since external social-crawler format support isn't something this sandbox can actually verify against a real deployment, unlike a real browser load which it can. Deleted the original 1.6MB `logo.png` once nothing referenced it anymore (confirmed via grep first). Also removed `google_apps_script.js` (0 bytes, unreferenced anywhere — same dead-scaffolding pattern already cleaned up in `smart-e` in run 20).
+
+**Verified live:** screenshotted the real page (desktop 1280px and mobile 390px) before and after the change — pixel-identical appearance, confirming zero visible quality loss. Loaded the after-version in a real headless browser and confirmed both `<img>` tags report correct natural dimensions (513×280, not 0×0/broken) and zero failed network requests; separately curled both new asset files directly to confirm they're served with `200` and correct content-type.
+
+5 items from earlier runs are still pending an owner decision, unchanged; the `smart-e` `package.json` dead-dependency note from run 20 remains a low-priority observation, not a blocker.
 
 ---
 
@@ -1710,54 +1724,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 171ea40 Let buyers actually open a dispute from /track, closing run 22's queued follow-up (23 seconds ago)
-- 805e3fb chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- b0d913c Add a real /dispute status page — the notification email's link went to raw JSON before (57 minutes ago)
-- b439317 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 4b4d2da Give /portals/* pages real OG/title tags for link previews, not the homepage's (2 hours ago)
-- 311cc97 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 7982dd4 Log run 20: smart-e server.py frontend path fix (full detail in that repo's commit) (3 hours ago)
-- f604058 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- bdb53fb chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 171ea40 Let buyers actually open a dispute from /track, closing run 22's queued follow-up (61 minutes ago)
+- 805e3fb chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- b0d913c Add a real /dispute status page — the notification email's link went to raw JSON before (2 hours ago)
+- b439317 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 4b4d2da Give /portals/* pages real OG/title tags for link previews, not the homepage's (3 hours ago)
+- 311cc97 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 7982dd4 Log run 20: smart-e server.py frontend path fix (full detail in that repo's commit) (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

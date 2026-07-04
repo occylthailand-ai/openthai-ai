@@ -11,6 +11,20 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 24: `otop-ai-landing` repo — logo was a 1.6MB PNG displayed at 34-84px, compressed to a 14.6KB WebP with no visible quality change
+
+**Rotated back to `otop-ai-landing`** this run (per the standing order's all-5-repos scope) after several runs focused on `openthai-ai`. Full detail lives in that repo's own commit message (`074a57b` on `claude/daily-reporter-improvements-8vc9ct`, lands in the existing PR #1) since it has no `DECISIONS_LOG.md` of its own — summary here per rule 6.
+
+`logo.png` was a 1408×768 PNG, 1.6MB, used unmodified as: the header logo (displayed at 34px height), the hero logo (84px height), the browser favicon, and the `og:image` for social-share previews. Every visitor to the landing page — the whole point of which is to load fast and convert — downloaded the full 1.6MB file just to render a 34px logo, roughly 40× oversampled for that use.
+
+**Fix:** used `sharp` (installed fresh in a scratch dir, not a project dependency) to generate `logo.webp` (513×280 — comfortably retina-sharp at the actual 34/84px display sizes — 14.6KB, a 99% reduction) for the header/hero `<img>` tags and the favicon, and a separate `og-image.png` (1200px wide, 540KB, a 66% reduction) specifically for the `og:image` meta tag, kept as PNG rather than WebP since external social-crawler format support isn't something this sandbox can actually verify against a real deployment, unlike a real browser load which it can. Deleted the original 1.6MB `logo.png` once nothing referenced it anymore (confirmed via grep first). Also removed `google_apps_script.js` (0 bytes, unreferenced anywhere — same dead-scaffolding pattern already cleaned up in `smart-e` in run 20).
+
+**Verified live:** screenshotted the real page (desktop 1280px and mobile 390px) before and after the change — pixel-identical appearance, confirming zero visible quality loss. Loaded the after-version in a real headless browser and confirmed both `<img>` tags report correct natural dimensions (513×280, not 0×0/broken) and zero failed network requests; separately curled both new asset files directly to confirm they're served with `200` and correct content-type.
+
+5 items from earlier runs are still pending an owner decision, unchanged; the `smart-e` `package.json` dead-dependency note from run 20 remains a low-priority observation, not a blocker.
+
+---
+
 ### 2026-07-04 — Hourly loop, run 23: closed the follow-up queued in run 22 — buyers can now actually open a dispute from `/track`, not just check one
 
 **Direct continuation of run 22**, which built `/dispute` (status tracking) but deliberately left "there's still no UI to open a dispute" as a queued follow-up rather than folding it into that cycle. This run builds that piece.
