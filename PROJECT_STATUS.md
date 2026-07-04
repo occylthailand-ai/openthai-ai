@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T00:55:26.828Z · branch `claude/openthaiai-pattern-review-l8h76x` (0 commit(s) ahead of main)
+Generated: 2026-07-04T01:25:28.652Z · branch `claude/openthaiai-pattern-review-l8h76x` (1 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 210 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 211 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,45 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-04 — Phase 2: extracted `orders` as a fully self-contained module (first bounded-context extraction)
+Following on from the same session's Phase 1 (centralized auth/rate-limit/
+audit middleware, below): moved the 5 `/api/orders/admin/*` route
+registrations out of `server.js` and into `backend/orders.js`'s own
+`router`, alongside the public `/api/orders` and `/api/orders/track` routes
+it already owned. `orders.js` is now the template for what "extract a
+module" means in this codebase — router owns every route for its domain
+(public and admin), not just the public ones with admin routes bolted onto
+`server.js` separately.
+
+- `createOrders(dataDir, opts)` now accepts `opts.addLog` (defaults to a
+  `console.log` fallback so the module still works standalone/in tests)
+  so `orders.js` can use the same `auditAction()` middleware without
+  importing `server.js`'s private logging state.
+- `server.js` now just does `createOrders(WRITE_DATA_DIR, { addLog, ... })`
+  and `app.use(orders.router)` — no more direct route registrations for
+  this domain.
+- `scripts/auth-coverage-scan.mjs` was extended to scan every `backend/*.js`
+  file (matching both `app.` and `router.` registrations), not just
+  `server.js` — otherwise every future module extraction would silently
+  shrink the scanner's coverage instead of following the routes to their
+  new home. Confirmed: before this change the scanner only saw 210 routes
+  (having lost visibility into the 5 just-moved orders routes); after, it
+  sees 236 routes across 24 files, correctly recognizing the guards on the
+  routes now living in `orders.js`.
+
+Verified: booted the server, ran the full order lifecycle for real (place →
+admin/status → admin/ship → admin/deliver → public track), confirmed the
+tracking history recorded all 4 transitions correctly, confirmed the 3
+audit-logged mutations each produced a `[Orders] ...` log line, confirmed
+admin routes still 401 without `x-admin-key` and 200 with it, and re-ran
+`test:smoke` (35/35 pass).
+
+**Not done yet**: `disputes`, `inventory`, `producers`, `credits`,
+`portal-leads` already have their own router files but (unlike the new
+`orders.js`) their admin routes still live in `server.js`, not inside their
+own module — same pattern gap `orders.js` had before this entry. Each is a
+similar, separate follow-up.
 
 ### 2026-07-04 — Centralized admin auth + rate limits, added audit logging for previously-unaudited admin actions (Phase 1 of a larger proposal, scoped down)
 Context: a plan attributed to "Grok" was pasted into chat, proposing a 5-phase
@@ -699,14 +738,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
+- 8da4f53 Centralize admin auth + rate limits, add audit logging for unaudited admin actions (30 minutes ago)
 - b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (16 hours ago)
 - f3a860d Open the Council Bridge to external platforms/systems (#76) (17 hours ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (18 hours ago)
+- d73b560 Add Shared Bridge Notes to /council (#75) (19 hours ago)
 - f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (19 hours ago)
 - 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (21 hours ago)
-- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (35 hours ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (2 days ago)
 - 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (2 days ago)
-- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (2 days ago)
 
 ## Production health (⚠️ HTTP 403)
 
@@ -847,14 +886,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
-| `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `orders.js` | 214 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 98 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
 | `producers.js` | 160 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7850 | Vercel serverless detection |
+| `server.js` | 7827 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

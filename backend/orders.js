@@ -4,12 +4,15 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { requireAdmin } from './core/middleware/auth.middleware.js';
+import { auditAction } from './core/middleware/audit.middleware.js';
 
 // new → confirmed → packed → shipped → out_for_delivery → delivered (/ cancelled)
 const ORDER_STATUS = ['new', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
 const clip = (s, n = 300) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 
 export function createOrders(dataDir, opts = {}) {
+  const addLog = opts.addLog || ((level, source, message) => console.log(`[${source}] ${message}`));
   const SB_URL = process.env.SUPABASE_URL;
   const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
   const useSB = !!(SB_URL && SB_KEY);
@@ -178,6 +181,33 @@ export function createOrders(dataDir, opts = {}) {
     if (!r.ok) return res.status(404).json({ success: false, error: r.error });
     res.json({ success: true, ...r });
   }));
+
+  // GET /api/orders/admin/summary + /list, POST /api/orders/admin/status|ship|deliver (Admin Key)
+  router.get('/api/orders/admin/summary', requireAdmin, async (req, res) => {
+    try { res.json({ success: true, ...(await summary()) }); }
+    catch (e) { res.status(500).json({ success: false, error: e.message }); }
+  });
+  router.get('/api/orders/admin/list', requireAdmin, async (req, res) => {
+    try { res.json({ success: true, orders: await all() }); }
+    catch (e) { res.status(500).json({ success: false, error: e.message }); }
+  });
+  router.post('/api/orders/admin/status', requireAdmin, auditAction(addLog, 'Orders', (req) => `set status → "${req.body?.status}" for order ${req.body?.id}`), async (req, res) => {
+    const r = await setStatus(req.body?.id, req.body?.status, req.body?.note);
+    if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    res.json({ success: true, ...r });
+  });
+  // POST /api/orders/admin/ship — บันทึกเลขพัสดุ + ขนส่ง (Admin Key)
+  router.post('/api/orders/admin/ship', requireAdmin, auditAction(addLog, 'Orders', (req) => `ship order ${req.body?.id}`), async (req, res) => {
+    const r = await ship(req.body?.id, req.body || {});
+    if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    res.json({ success: true, ...r });
+  });
+  // POST /api/orders/admin/deliver — ยืนยันถึงปลายทาง + หลักฐาน (เซ็นรับ/จุดฝาก) (Admin Key)
+  router.post('/api/orders/admin/deliver', requireAdmin, auditAction(addLog, 'Orders', (req) => `deliver order ${req.body?.id}`), async (req, res) => {
+    const r = await deliver(req.body?.id, req.body || {});
+    if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    res.json({ success: true, ...r });
+  });
 
   return { router, place, all, getOne, setStatus, setEscrowStatus, ship, deliver, track, summary, ORDER_STATUS, ESCROW_STATUS };
 }

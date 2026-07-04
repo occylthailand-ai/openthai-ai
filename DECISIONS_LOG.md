@@ -11,6 +11,45 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Phase 2: extracted `orders` as a fully self-contained module (first bounded-context extraction)
+Following on from the same session's Phase 1 (centralized auth/rate-limit/
+audit middleware, below): moved the 5 `/api/orders/admin/*` route
+registrations out of `server.js` and into `backend/orders.js`'s own
+`router`, alongside the public `/api/orders` and `/api/orders/track` routes
+it already owned. `orders.js` is now the template for what "extract a
+module" means in this codebase — router owns every route for its domain
+(public and admin), not just the public ones with admin routes bolted onto
+`server.js` separately.
+
+- `createOrders(dataDir, opts)` now accepts `opts.addLog` (defaults to a
+  `console.log` fallback so the module still works standalone/in tests)
+  so `orders.js` can use the same `auditAction()` middleware without
+  importing `server.js`'s private logging state.
+- `server.js` now just does `createOrders(WRITE_DATA_DIR, { addLog, ... })`
+  and `app.use(orders.router)` — no more direct route registrations for
+  this domain.
+- `scripts/auth-coverage-scan.mjs` was extended to scan every `backend/*.js`
+  file (matching both `app.` and `router.` registrations), not just
+  `server.js` — otherwise every future module extraction would silently
+  shrink the scanner's coverage instead of following the routes to their
+  new home. Confirmed: before this change the scanner only saw 210 routes
+  (having lost visibility into the 5 just-moved orders routes); after, it
+  sees 236 routes across 24 files, correctly recognizing the guards on the
+  routes now living in `orders.js`.
+
+Verified: booted the server, ran the full order lifecycle for real (place →
+admin/status → admin/ship → admin/deliver → public track), confirmed the
+tracking history recorded all 4 transitions correctly, confirmed the 3
+audit-logged mutations each produced a `[Orders] ...` log line, confirmed
+admin routes still 401 without `x-admin-key` and 200 with it, and re-ran
+`test:smoke` (35/35 pass).
+
+**Not done yet**: `disputes`, `inventory`, `producers`, `credits`,
+`portal-leads` already have their own router files but (unlike the new
+`orders.js`) their admin routes still live in `server.js`, not inside their
+own module — same pattern gap `orders.js` had before this entry. Each is a
+similar, separate follow-up.
+
 ### 2026-07-04 — Centralized admin auth + rate limits, added audit logging for previously-unaudited admin actions (Phase 1 of a larger proposal, scoped down)
 Context: a plan attributed to "Grok" was pasted into chat, proposing a 5-phase
 "Modular Monolith + Governance Layer" rewrite, and claiming implementation

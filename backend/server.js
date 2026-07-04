@@ -85,7 +85,7 @@ const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
-const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
+const orders    = createOrders(WRITE_DATA_DIR, { addLog, onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
 const disputes  = createDisputes(WRITE_DATA_DIR, {
   orders, callAI, parseAIJson,
   notify: {
@@ -359,32 +359,9 @@ app.post('/api/producers/admin/status', adminLimiter, requireAdmin, auditAction(
   res.json({ success: true, ...r });
 });
 
-// GET /api/orders/admin/summary + /list, POST /api/orders/admin/status (Admin Key)
-app.get('/api/orders/admin/summary', requireAdmin, async (req, res) => {
-  try { res.json({ success: true, ...(await orders.summary()) }); }
-  catch (e) { res.status(500).json({ success: false, error: e.message }); }
-});
-app.get('/api/orders/admin/list', requireAdmin, async (req, res) => {
-  try { res.json({ success: true, orders: await orders.all() }); }
-  catch (e) { res.status(500).json({ success: false, error: e.message }); }
-});
-app.post('/api/orders/admin/status', requireAdmin, auditAction(addLog, 'Orders', (req) => `set status → "${req.body?.status}" for order ${req.body?.id}`), async (req, res) => {
-  const r = await orders.setStatus(req.body?.id, req.body?.status, req.body?.note);
-  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
-  res.json({ success: true, ...r });
-});
-// POST /api/orders/admin/ship — บันทึกเลขพัสดุ + ขนส่ง (Admin Key)
-app.post('/api/orders/admin/ship', requireAdmin, auditAction(addLog, 'Orders', (req) => `ship order ${req.body?.id}`), async (req, res) => {
-  const r = await orders.ship(req.body?.id, req.body || {});
-  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
-  res.json({ success: true, ...r });
-});
-// POST /api/orders/admin/deliver — ยืนยันถึงปลายทาง + หลักฐาน (เซ็นรับ/จุดฝาก) (Admin Key)
-app.post('/api/orders/admin/deliver', requireAdmin, auditAction(addLog, 'Orders', (req) => `deliver order ${req.body?.id}`), async (req, res) => {
-  const r = await orders.deliver(req.body?.id, req.body || {});
-  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
-  res.json({ success: true, ...r });
-});
+// Orders admin routes (summary/list/status/ship/deliver) now live in
+// backend/orders.js's own router — orders is a self-contained module
+// (mounted via app.use(orders.router) above), not routes bolted on here.
 
 // ─── Disputes / Escrow admin — list, AI-assist suggestion, resolve (Admin Key) ─
 // GET /api/disputes/admin/summary — สรุปข้อพิพาท + escrow (ใช้เป็น monitoring endpoint ด้วย)
