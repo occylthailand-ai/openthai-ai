@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T19:14:21.785Z · branch `claude/daily-reporter-improvements-8vc9ct` (54 commit(s) ahead of main)
+Generated: 2026-07-04T19:14:46.931Z · branch `claude/daily-reporter-improvements-8vc9ct` (55 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 137 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 265 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -1740,16 +1740,54 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 1738ab4 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 200577a Log run 25: smart-e had zero authentication anywhere (full detail in that repo's commit) (17 seconds ago)
+- 1738ab4 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
 - 0261300 Log run 24: otop-ai-landing logo compression (full detail in that repo's commit) (60 minutes ago)
 - bdb53fb chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 171ea40 Let buyers actually open a dispute from /track, closing run 22's queued follow-up (2 hours ago)
 - 805e3fb chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - b0d913c Add a real /dispute status page — the notification email's link went to raw JSON before (3 hours ago)
 - b439317 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 4b4d2da Give /portals/* pages real OG/title tags for link previews, not the homepage's (4 hours ago)
 
-## Production health (⚠️ HTTP 403)
+## Production health (✅ reachable)
+```json
+{
+  "status": "ok",
+  "version": "2.1.0",
+  "charter_version": 2,
+  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "ai_primary": "✅ Claude Haiku",
+  "ai_fallback": "✅ Gemini Flash Latest",
+  "ai_active": "claude-haiku-4-5-20251001",
+  "google_oauth": true,
+  "affiliates": 0,
+  "waitlist": 0,
+  "agents": 0,
+  "active_agents": 0,
+  "line_oa": true,
+  "elevenlabs": false,
+  "watchdog": "idle",
+  "last_watchdog": null,
+  "system_logs": 2,
+  "uptime_sec": 0,
+  "memory_mb": "19.1",
+  "services": {
+    "news_rag": "✅ Active",
+    "news_rag_refresh": "✅ Auto cache clear every 4h",
+    "competitor_analysis": "✅ Active",
+    "tts": "⚠️ No API Key",
+    "line_oa": "✅ Active",
+    "auto_heal": "✅ Active (every 30 min)",
+    "agent_cron": "✅ Active (every hour)",
+    "watchdog": "✅ Active",
+    "diagnostics": "✅ Active",
+    "persistence": "✅ system_log + agents.json + agent_checkpoint",
+    "vector_memory": "✅ Active (semantic long-term memory)",
+    "webhook_system": "✅ Active (0 registered)",
+    "multi_tenant": "✅ Active (0 tenants)"
+  }
+}
+```
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
