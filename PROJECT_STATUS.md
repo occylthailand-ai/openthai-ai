@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T18:14:56.831Z · branch `claude/daily-reporter-improvements-8vc9ct` (53 commit(s) ahead of main)
+Generated: 2026-07-04T19:14:21.785Z · branch `claude/daily-reporter-improvements-8vc9ct` (54 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 263 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 137 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-07-04 — Hourly loop, run 25: `smart-e` repo — the entire API had zero authentication; found while re-auditing that repo after run 20's path fix
+
+**Continued auditing `smart-e`** this run (having fixed its `server.py` frontend-path bug in run 20) — full detail lives in that repo's own commit message (`cfd9caf` on `claude/daily-reporter-improvements-8vc9ct`) since it has no `DECISIONS_LOG.md`; summary here per rule 6.
+
+While scanning `server.py` for SQL-injection risk (its dynamic `UPDATE ... SET` queries build column lists via f-strings) I first confirmed those were actually safe — the column names come from a fixed whitelist array, never from request-body keys, so that specific pattern isn't exploitable. But while checking *how* those routes were reached at all, found something much more severe: **there is no authentication anywhere in this file.** Every route — `/api/products`, `/api/orders`, `/api/customers`, `/api/payments`, `/api/tiktok/*`, `/api/analytics`, `/api/settings`, `/api/line/messages`, `/api/line/broadcast` — full CRUD, GET/POST/PUT/DELETE — was reachable by anyone who could hit the port, with zero credential check of any kind. That means, as shipped: anyone could read every customer's name/email/phone/LINE user ID, delete real products, POST a fake "payment confirmed" to `/api/payments/confirm`, and use `/api/line/broadcast` to send an actual message to every real customer's LINE account.
+
+On top of that, `/api/webhook/line` (the inbound receiver for LINE's platform) never verified the `X-Line-Signature` header at all, despite `do_OPTIONS` already advertising that header in its CORS allow-list — a strong signal the author intended to check it and never did. Anyone could POST a fake "follow" or "message" event and get a fabricated customer record inserted straight into the real database.
+
+**Fix:** added an `ADMIN_KEY`-gated check (`X-Admin-Key` header, `hmac.compare_digest`) in front of every route in `do_GET`/`do_POST`/`do_PUT`/`do_DELETE` except the LINE webhook and the static `/`/`index.html` page. The LINE webhook instead now verifies the real LINE Messaging API signature scheme (HMAC-SHA256 over the raw request body, base64-encoded, compared against `X-Line-Signature`) — required reworking `read_body()` to retain the raw bytes, since the existing code parsed straight to JSON and discarded them. Both checks fail closed by default (503 if `ADMIN_KEY` isn't set at all, 401 for a wrong LINE signature) rather than silently staying wide open — same fail-closed principle already used for `OMISE_WEBHOOK_SECRET` in `openthai-ai`.
+
+**Verified live**, full matrix, against a real running instance: with no `ADMIN_KEY` set, every API route returned 503; with a key set, no-key and wrong-key requests got 401 while the correct key allowed a full real create → update → delete product cycle to succeed. For the webhook: no signature and a wrong signature both got 401; a correctly-HMAC-computed signature was accepted (200) and — checked directly afterward via the now-authenticated `/api/customers` route — had actually inserted the real customer record described in the webhook payload, confirming the signature check gates real behavior, not just a response code.
+
+5 items from earlier runs are still pending an owner decision, unchanged; the `smart-e` `package.json` dead-dependency note from run 20 remains a low-priority observation.
 
 ---
 
@@ -1724,54 +1740,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 0261300 Log run 24: otop-ai-landing logo compression (full detail in that repo's commit) (12 seconds ago)
-- bdb53fb chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 171ea40 Let buyers actually open a dispute from /track, closing run 22's queued follow-up (62 minutes ago)
-- 805e3fb chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- b0d913c Add a real /dispute status page — the notification email's link went to raw JSON before (2 hours ago)
-- b439317 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 4b4d2da Give /portals/* pages real OG/title tags for link previews, not the homepage's (3 hours ago)
-- 311cc97 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 1738ab4 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 0261300 Log run 24: otop-ai-landing logo compression (full detail in that repo's commit) (60 minutes ago)
+- bdb53fb chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 171ea40 Let buyers actually open a dispute from /track, closing run 22's queued follow-up (2 hours ago)
+- 805e3fb chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- b0d913c Add a real /dispute status page — the notification email's link went to raw JSON before (3 hours ago)
+- b439317 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 4b4d2da Give /portals/* pages real OG/title tags for link previews, not the homepage's (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
