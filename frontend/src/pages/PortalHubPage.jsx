@@ -67,7 +67,7 @@ export default function PortalHubPage() {
         </button>
         <div style={{ display: 'flex', gap: 8 }}>
           {['th','en','zh'].map(l => (
-            <button key={l} onClick={() => setLang(l)} style={{ background: lang===l ? '#6366f1' : 'none', border: '1px solid #333', color: '#fff', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
+            <button key={l} onClick={() => setLang(l)} style={{ background: lang===l ? '#5e61f1' : 'none', border: '1px solid #333', color: '#fff', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
               {l==='th'?'ไทย':l==='en'?'English':'中文'}
             </button>
           ))}

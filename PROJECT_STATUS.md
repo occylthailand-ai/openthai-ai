@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T22:28:10.439Z · branch `claude/daily-reporter-improvements-8vc9ct` (61 commit(s) ahead of main)
+Generated: 2026-07-04T23:20:35.890Z · branch `claude/daily-reporter-improvements-8vc9ct` (62 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 271 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 145 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 29: closed part of run 28's queued color-contrast follow-up — every portal's active-language button failed contrast, not just the 4 nodes axe happened to catch
+
+**Continuation of run 28's remaining findings.** Run 28 reported "4 remaining color-contrast violations" as a future follow-up, based on what `axe-core` flagged on a single page load. Investigating those 4 nodes turned up something bigger: one of them was `#ffffff` text on the *active* state of a portal page's language-switcher button (`lang===l ? '<brand color>' : 'none'`), and each of the 9 `/portals/*` pages (plus the `/portals` hub) uses a **different** brand accent color for this — axe can only see whichever language is active by default, so it only caught the 1-2 combinations that happened to be pre-selected in that scan, not the other 7-8 that were sitting there identical and unflagged simply because nobody had clicked that button yet during the test.
+
+**Verified the real scope before fixing:** computed the actual WCAG contrast ratio of white text against all 9 accent colors (`#6366f1`, `#f59e0b`, `#06b6d4`, `#ec4899`, `#059669`, `#3b82f6`, `#10b981`, `#8b5cf6`, `#f97316`) — every single one failed 4.5:1, ranging from a near-miss (indigo, 4.47:1) to badly failing (amber, 2.15:1; cyan, 2.43:1). This is a systemic pattern bug across the entire portal cluster, not 4 isolated spots.
+
+**Fix:** computed a darkened variant of each of the 9 brand colors (HSL lightness reduced iteratively until the real WCAG luminance formula confirms ≥4.5:1 against white — not eyeballed), preserving hue so each portal's brand identity stays recognizable (e.g. amber stays amber, just a deeper shade — the same convention real design systems use for solid-fill buttons, where a "600/700" shade replaces "500" specifically because lighter shades don't support white text). Only the active-language-button background was touched; each color's other uses elsewhere on the same page (icons, badges, primary CTAs) were left alone since those weren't part of the flagged violation.
+
+**Verified live:** for all 10 pages (9 portals + hub), used a real headless browser to actually click through *every* language option (not just the default), re-running `axe-core` after each click — 0 contrast failures on the language-switcher button across all pages × all language combinations (previously this would have failed on literally every single one once clicked, verified via the same luminance math beforehand). Screenshotted the affiliate portal's now-active amber button — reads clearly as the same amber/gold brand color, just deep enough to keep white text crisp, no visual regression.
+
+**Still queued for a future cycle** (the rest of run 28's original 4-node list, now better understood): the `/portals` hub's translucent category-badge overlays (saturated text on ~13%-opacity tinted backgrounds), the "🔒 locked" Foundation card's intentionally-dimmed styling, and the homepage footer copyright text. These are each a distinct design question (badge-overlay opacity math, how a "coming soon" section should read, footer text weight) rather than one shared mechanical pattern like this run's fix, so kept separate rather than rushed together.
+
+5 items from earlier runs are still pending an owner decision, unchanged.
 
 ---
 
@@ -1786,54 +1800,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- ffcca47 Fix WCAG color-contrast: muted gray text failed AA on every page (run 27 follow-up) (17 seconds ago)
-- e5f194d chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
-- 414ac33 Fix missing form labels on all 9 portal signup forms + /join (WCAG critical) (57 minutes ago)
-- 906f22e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- adbd75c Extend run 21's crawler-preview fix to /catalog, /join, /find-producers, /privacy, /terms, /contact (2 hours ago)
-- 1f5cb9e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 200577a Log run 25: smart-e had zero authentication anywhere (full detail in that repo's commit) (3 hours ago)
-- 1738ab4 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- a1db51e chore: sync PROJECT_STATUS.md [skip ci] (52 minutes ago)
+- ffcca47 Fix WCAG color-contrast: muted gray text failed AA on every page (run 27 follow-up) (53 minutes ago)
+- e5f194d chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 414ac33 Fix missing form labels on all 9 portal signup forms + /join (WCAG critical) (2 hours ago)
+- 906f22e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- adbd75c Extend run 21's crawler-preview fix to /catalog, /join, /find-producers, /privacy, /terms, /contact (3 hours ago)
+- 1f5cb9e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 200577a Log run 25: smart-e had zero authentication anywhere (full detail in that repo's commit) (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.7",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
