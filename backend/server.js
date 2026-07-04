@@ -915,7 +915,7 @@ async function sendDisputeNotification(dispute, order, phase) {
           </table>
         </div>
         <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
-          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">จัดการข้อพิพาทใน Admin</a> · เช็คสถานะที่ <code>/api/disputes/${dispute.id}/track</code>
+          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">จัดการข้อพิพาทใน Admin</a> · <a href="${DOMAIN_URL}/dispute?id=${dispute.id}" style="color:#6366f1;">เช็คสถานะข้อพิพาทที่นี่</a>
         </div>
       </div>`,
     });

@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T15:14:22.402Z · branch `claude/daily-reporter-improvements-8vc9ct` (47 commit(s) ahead of main)
+Generated: 2026-07-04T16:16:31.014Z · branch `claude/daily-reporter-improvements-8vc9ct` (48 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 257 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 131 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-07-04 — Hourly loop, run 22: the order-dispute system had zero frontend page — the "check status" link in its own notification emails pointed at a raw JSON API endpoint
+
+**Found by reading `backend/disputes.js` end to end** (a real module: open/respond/track/aiSuggest/resolve, escrow-aware, already correctly notifies both buyer and producer per an earlier fix). Grepped the frontend for any consumer of it — `grep -rl dispute frontend/src/pages` matched only `AdminPage.jsx`. There is no public page anywhere for a buyer or producer to open a dispute, respond to one, or check its status — the entire feature is backend-only, reachable only via raw `fetch()`/`curl` calls a real user would never make.
+
+Worse: `sendDisputeNotification()` — the email actually sent to real buyers and producers today on every open/respond/resolve — told them to "เช็คสถานะที่ `/api/disputes/${id}/track`", a raw backend API path with no UI at all. A real user clicking that in an email would see unstyled JSON (and it wouldn't even load without a matching `?contact=` query param they'd have to guess to add themselves).
+
+**Fix (scoped to the status-checking half of the gap, not the full "open a dispute" UI — see note below):** added `frontend/src/pages/DisputeTrackPage.jsx` (mounted at `/dispute`), modeled directly on the existing `TrackOrderPage.jsx`/`/track` pattern (same layout, same `useLang()` i18n system, same manual-entry-of-both-fields security model — deliberately does **not** auto-fill the visitor's contact from a link, since the notification email goes to both parties in one shared `to:` header and pre-filling either party's contact into a link both would receive would leak it to the other). Added matching `mk.dispute.*` i18n keys in all 3 languages (th/en/zh), and changed the notification email's link from the raw API path to `${DOMAIN_URL}/dispute?id=${dispute.id}` (id only, contact stays manual).
+
+**Verified live, full real cycle** against a locally running backend: created a real product via `/api/inventory/admin/upsert`, placed a real order via `/api/shop/checkout`, opened a real dispute via `POST /api/disputes` as the buyer, then loaded `/dispute?id=...&contact=...` in a real headless browser (Playwright) against a `vite preview` build wired to that backend (`VITE_API_URL`) — confirmed the real reason text and "รอพิจารณา" (awaiting review) status rendered correctly. Tested the wrong-contact case separately: shows the not-found error and does **not** leak the dispute's reason text, matching `disputes.js`'s own contact-verification model. Then resolved the dispute for real via `POST /api/disputes/admin/resolve` (decision: refund) and reloaded the same tracking page — confirmed it now shows "ปิดแล้ว — คืนเงินแล้ว" (closed — refunded) with the correct decision label. `npm run build` confirmed the new page compiles and bundles cleanly alongside the existing `postbuild` OG-prerender step from run 21.
+
+**Deliberately left out of scope this cycle:** there is still no frontend path to *open* a dispute in the first place (`POST /api/disputes` itself has no UI form anywhere) — that's a separate, larger task (deciding where a "report a problem" entry point belongs, most likely `TrackOrderPage.jsx`) queued for a future cycle rather than folded into this one, to keep this cycle's change small enough to fully verify.
+
+5 items from earlier runs are still pending an owner decision, unchanged; this cycle adds the "build the open-a-dispute UI" item as a queued (not blocking) follow-up, similar to how the consumer-digest feature was queued and then built in an earlier run.
 
 ---
 
@@ -1672,60 +1688,22 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 81 route components resolved
+- ✅ **Route components exist on disk** — all 82 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 4b4d2da Give /portals/* pages real OG/title tags for link previews, not the homepage's (14 seconds ago)
-- 311cc97 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 7982dd4 Log run 20: smart-e server.py frontend path fix (full detail in that repo's commit) (61 minutes ago)
-- f604058 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- a2bab7b Send confirmation emails to gov/intl-org/foundation portal leads, not just admin alerts (2 hours ago)
-- 7ae33a1 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 62e4157 SEO: give the /portals cluster distinct page titles and add it to sitemap/robots (3 hours ago)
-- e0269f0 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- b439317 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 4b4d2da Give /portals/* pages real OG/title tags for link previews, not the homepage's (62 minutes ago)
+- 311cc97 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 7982dd4 Log run 20: smart-e server.py frontend path fix (full detail in that repo's commit) (2 hours ago)
+- f604058 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- a2bab7b Send confirmation emails to gov/intl-org/foundation portal leads, not just admin alerts (3 hours ago)
+- 7ae33a1 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 62e4157 SEO: give the /portals cluster distinct page titles and add it to sitemap/robots (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.7",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -1766,7 +1744,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (81 routes)
+## Route map (82 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -1803,6 +1781,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /find-producers | ProducerDirectoryPage | public |
 | /find | ProducerDirectoryPage | public |
 | /track | TrackOrderPage | public |
+| /dispute | DisputeTrackPage | public |
 | /store | StorePage | public |
 | /admin | AdminPage | public |
 | /affiliate | AffiliatePage | public |

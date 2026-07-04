@@ -11,6 +11,22 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 22: the order-dispute system had zero frontend page — the "check status" link in its own notification emails pointed at a raw JSON API endpoint
+
+**Found by reading `backend/disputes.js` end to end** (a real module: open/respond/track/aiSuggest/resolve, escrow-aware, already correctly notifies both buyer and producer per an earlier fix). Grepped the frontend for any consumer of it — `grep -rl dispute frontend/src/pages` matched only `AdminPage.jsx`. There is no public page anywhere for a buyer or producer to open a dispute, respond to one, or check its status — the entire feature is backend-only, reachable only via raw `fetch()`/`curl` calls a real user would never make.
+
+Worse: `sendDisputeNotification()` — the email actually sent to real buyers and producers today on every open/respond/resolve — told them to "เช็คสถานะที่ `/api/disputes/${id}/track`", a raw backend API path with no UI at all. A real user clicking that in an email would see unstyled JSON (and it wouldn't even load without a matching `?contact=` query param they'd have to guess to add themselves).
+
+**Fix (scoped to the status-checking half of the gap, not the full "open a dispute" UI — see note below):** added `frontend/src/pages/DisputeTrackPage.jsx` (mounted at `/dispute`), modeled directly on the existing `TrackOrderPage.jsx`/`/track` pattern (same layout, same `useLang()` i18n system, same manual-entry-of-both-fields security model — deliberately does **not** auto-fill the visitor's contact from a link, since the notification email goes to both parties in one shared `to:` header and pre-filling either party's contact into a link both would receive would leak it to the other). Added matching `mk.dispute.*` i18n keys in all 3 languages (th/en/zh), and changed the notification email's link from the raw API path to `${DOMAIN_URL}/dispute?id=${dispute.id}` (id only, contact stays manual).
+
+**Verified live, full real cycle** against a locally running backend: created a real product via `/api/inventory/admin/upsert`, placed a real order via `/api/shop/checkout`, opened a real dispute via `POST /api/disputes` as the buyer, then loaded `/dispute?id=...&contact=...` in a real headless browser (Playwright) against a `vite preview` build wired to that backend (`VITE_API_URL`) — confirmed the real reason text and "รอพิจารณา" (awaiting review) status rendered correctly. Tested the wrong-contact case separately: shows the not-found error and does **not** leak the dispute's reason text, matching `disputes.js`'s own contact-verification model. Then resolved the dispute for real via `POST /api/disputes/admin/resolve` (decision: refund) and reloaded the same tracking page — confirmed it now shows "ปิดแล้ว — คืนเงินแล้ว" (closed — refunded) with the correct decision label. `npm run build` confirmed the new page compiles and bundles cleanly alongside the existing `postbuild` OG-prerender step from run 21.
+
+**Deliberately left out of scope this cycle:** there is still no frontend path to *open* a dispute in the first place (`POST /api/disputes` itself has no UI form anywhere) — that's a separate, larger task (deciding where a "report a problem" entry point belongs, most likely `TrackOrderPage.jsx`) queued for a future cycle rather than folded into this one, to keep this cycle's change small enough to fully verify.
+
+5 items from earlier runs are still pending an owner decision, unchanged; this cycle adds the "build the open-a-dispute UI" item as a queued (not blocking) follow-up, similar to how the consumer-digest feature was queued and then built in an earlier run.
+
+---
+
 ### 2026-07-04 — Hourly loop, run 21: `/portals/*` links shared on LINE/Facebook showed the homepage's TikTok pitch, not the portal's own content
 
 **Follow-on to run 18's SEO fix**, which added `document.title` per portal
