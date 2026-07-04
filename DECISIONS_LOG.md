@@ -11,6 +11,54 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Hourly loop, run 13: found the most severe issue yet (unauthenticated real subscription cancellation) — mitigated, but the real fix needs the owner's call
+5 items now genuinely pending an owner decision (adding this one). GitHub
+MCP tool hit a real auth expiration this cycle (not just a transient
+disconnect) — couldn't re-check PR comments, noted rather than blocked on.
+
+Continued last run's security sweep into `/api/payment/cancel`: found it's
+**worse than the PDPA-erasure bug fixed last run**. It takes only an `email`
+in the POST body, no verification of any kind, and immediately cancels that
+email's **real, paid Omise subscription**. Anyone who knows a paying
+customer's email can cancel their active subscription. Also
+`GET /api/payment/entitlement` discloses anyone's plan/status the same way
+(lower severity — read, not destructive — but same root cause).
+
+Unlike the erasure fix, **did not apply the same email-confirmation-link
+pattern here**, and this was a deliberate call, not an oversight: checked
+`PaymentPage.jsx` first and confirmed this endpoint is actively used by real
+customers today (`handleCancelSubscription`, instant-cancel UX behind a
+`window.confirm()`), and this whole flow has zero session/login backing it —
+identity is just `email` from `localStorage.getItem('user_email')`, the
+exact same shape of gap as `/api/agent/*`'s original zero-auth bug (fixed in
+an earlier session with lightweight `x-device-id` scoping via
+`authHeaders()` in `apiBase.js`). Checked whether that same fix applies here
+too: it doesn't cleanly — `owner_device_id` scoping worked for agents
+because old agents could safely become invisible (low-stakes JSON file,
+explicitly documented as acceptable blast radius); entitlements have no
+device-id captured at purchase time at all, so the same scoping would make
+**every existing real paying customer permanently unable to cancel their own
+subscription** — a worse outcome than the current vulnerability. An
+email-confirmation-link (erasure's fix) would also silently change live
+UX for real customers using this today, which the erasure fix never had to
+worry about (nothing used it). Both real fixes need a decision only the
+owner should make: is a confirmation-email round-trip acceptable friction
+for cancellation, or should this wait for a real login system, and if so —
+retroactively backfill device-id/session onto existing entitlements, or
+accept some other transition cost? Flagging rather than guessing.
+
+Shipped a small, safe, no-regression mitigation instead of leaving it
+completely open while waiting: added rate limiting (`paymentAccountLimiter`,
+15 min / max 30) to both routes — matching the same "every comparable
+endpoint already has one" gap class as runs 9-11's unsubscribe routes. This
+doesn't fix the identity problem, only slows down mass email-scanning/abuse
+attempts; said so explicitly rather than implying it's a full fix.
+
+Verified live: normal entitlement lookup and a normal (404, no real
+subscription) cancel attempt both still work exactly as before; fired 31
+rapid requests at the entitlement endpoint — first 28 succeeded normally,
+29th-31st correctly `429`.
+
 ### 2026-07-04 — Hourly loop, run 12: fixed a real, weaponizable vulnerability — anyone could erase anyone else's data via the PDPA erasure endpoint
 4 flagged decisions now technically pending, but this one didn't wait for a
 reply — explained why below. Other 3 (run-1 producer vuln, run-3 creator

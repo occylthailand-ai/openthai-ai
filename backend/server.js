@@ -7193,7 +7193,12 @@ app.post('/api/quickpay/create', quickpayLimiter, async (req, res) => {
 });
 
 // GET /api/payment/entitlement?email= — เช็คแผนที่ user มีสิทธิ์ใช้ตอนนี้
-app.get('/api/payment/entitlement', (req, res) => {
+// ทั้ง entitlement (read) และ cancel (write) ใช้แค่ email เป็นตัวระบุตัวตน ไม่มี rate limiter
+// เลยทั้งคู่ ต่างจาก endpoint อื่นที่แตะข้อมูลผู้ใช้จริงในไฟล์นี้ — เพิ่มไว้เป็นด่านแรกกัน
+// การเดา/สแกน email จำนวนมาก (ยังไม่ใช่การแก้ปัญหาการยืนยันตัวตนที่แท้จริง ดู DECISIONS_LOG)
+const paymentAccountLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'ลองบ่อยเกินไป กรุณารอสักครู่' } });
+
+app.get('/api/payment/entitlement', paymentAccountLimiter, (req, res) => {
   const email = (req.query.email || '').trim();
   if (!email) return res.status(400).json({ error: 'ต้องการ email' });
   const ent = getEntitlement(email);
@@ -7201,7 +7206,7 @@ app.get('/api/payment/entitlement', (req, res) => {
 });
 
 // POST /api/payment/cancel — ยกเลิก subscription (ใช้สิทธิ์ได้จนถึงวันหมดอายุ)
-app.post('/api/payment/cancel', async (req, res) => {
+app.post('/api/payment/cancel', paymentAccountLimiter, async (req, res) => {
   const email = (req.body?.email || '').trim();
   if (!email) return res.status(400).json({ error: 'ต้องการ email' });
   const ent = entitlements[email.toLowerCase()];

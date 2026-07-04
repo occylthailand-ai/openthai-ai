@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T03:12:27.044Z · branch `claude/daily-reporter-improvements-8vc9ct` (29 commit(s) ahead of main)
+Generated: 2026-07-04T06:06:14.165Z · branch `claude/daily-reporter-improvements-8vc9ct` (30 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 239 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 113 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,54 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-04 — Hourly loop, run 13: found the most severe issue yet (unauthenticated real subscription cancellation) — mitigated, but the real fix needs the owner's call
+5 items now genuinely pending an owner decision (adding this one). GitHub
+MCP tool hit a real auth expiration this cycle (not just a transient
+disconnect) — couldn't re-check PR comments, noted rather than blocked on.
+
+Continued last run's security sweep into `/api/payment/cancel`: found it's
+**worse than the PDPA-erasure bug fixed last run**. It takes only an `email`
+in the POST body, no verification of any kind, and immediately cancels that
+email's **real, paid Omise subscription**. Anyone who knows a paying
+customer's email can cancel their active subscription. Also
+`GET /api/payment/entitlement` discloses anyone's plan/status the same way
+(lower severity — read, not destructive — but same root cause).
+
+Unlike the erasure fix, **did not apply the same email-confirmation-link
+pattern here**, and this was a deliberate call, not an oversight: checked
+`PaymentPage.jsx` first and confirmed this endpoint is actively used by real
+customers today (`handleCancelSubscription`, instant-cancel UX behind a
+`window.confirm()`), and this whole flow has zero session/login backing it —
+identity is just `email` from `localStorage.getItem('user_email')`, the
+exact same shape of gap as `/api/agent/*`'s original zero-auth bug (fixed in
+an earlier session with lightweight `x-device-id` scoping via
+`authHeaders()` in `apiBase.js`). Checked whether that same fix applies here
+too: it doesn't cleanly — `owner_device_id` scoping worked for agents
+because old agents could safely become invisible (low-stakes JSON file,
+explicitly documented as acceptable blast radius); entitlements have no
+device-id captured at purchase time at all, so the same scoping would make
+**every existing real paying customer permanently unable to cancel their own
+subscription** — a worse outcome than the current vulnerability. An
+email-confirmation-link (erasure's fix) would also silently change live
+UX for real customers using this today, which the erasure fix never had to
+worry about (nothing used it). Both real fixes need a decision only the
+owner should make: is a confirmation-email round-trip acceptable friction
+for cancellation, or should this wait for a real login system, and if so —
+retroactively backfill device-id/session onto existing entitlements, or
+accept some other transition cost? Flagging rather than guessing.
+
+Shipped a small, safe, no-regression mitigation instead of leaving it
+completely open while waiting: added rate limiting (`paymentAccountLimiter`,
+15 min / max 30) to both routes — matching the same "every comparable
+endpoint already has one" gap class as runs 9-11's unsubscribe routes. This
+doesn't fix the identity problem, only slows down mass email-scanning/abuse
+attempts; said so explicitly rather than implying it's a full fix.
+
+Verified live: normal entitlement lookup and a normal (404, no real
+subscription) cancel attempt both still work exactly as before; fired 31
+rapid requests at the entitlement endpoint — first 28 succeeded normally,
+29th-31st correctly `429`.
 
 ### 2026-07-04 — Hourly loop, run 12: fixed a real, weaponizable vulnerability — anyone could erase anyone else's data via the PDPA erasure endpoint
 4 flagged decisions now technically pending, but this one didn't wait for a
@@ -1265,54 +1313,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 7f8bb16 Fix a real vuln: PDPA erasure endpoint let anyone delete anyone else's data (16 seconds ago)
-- dd28985 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- b967ec2 Rate-limit the 2 unsubscribe routes added in runs 9-10 (62 minutes ago)
-- 335f0df chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 2c9fc06 Add unsubscribe to the admin newsletter broadcast tool too (2 hours ago)
-- 3a89f61 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 8b1444e Add unsubscribe capability to the consumer digest -- PDPA needs it, not just a signup checkbox (3 hours ago)
-- 1c18c2d chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 23a48e3 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 7f8bb16 Fix a real vuln: PDPA erasure endpoint let anyone delete anyone else's data (3 hours ago)
+- dd28985 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- b967ec2 Rate-limit the 2 unsubscribe routes added in runs 9-10 (4 hours ago)
+- 335f0df chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 2c9fc06 Add unsubscribe to the admin newsletter broadcast tool too (5 hours ago)
+- 3a89f61 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 8b1444e Add unsubscribe capability to the consumer digest -- PDPA needs it, not just a signup checkbox (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -1458,7 +1468,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 189 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8185 | Vercel serverless detection |
+| `server.js` | 8190 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
