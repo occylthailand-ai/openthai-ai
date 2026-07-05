@@ -22,6 +22,7 @@ Allow: /terms
 Disallow: /dashboard
 Disallow: /track
 Disallow: /dispute
+Disallow: /producers/manage
 Disallow: /ai-generator
 Disallow: /ai-tools
 Disallow: /tiktok
