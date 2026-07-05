@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T04:17:22.181Z · branch `claude/daily-reporter-improvements-8vc9ct` (73 commit(s) ahead of main)
+Generated: 2026-07-05T05:19:07.613Z · branch `claude/daily-reporter-improvements-8vc9ct` (74 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 283 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 157 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 34: approving a producer never told them — closes the loop with run 31's self-serve listing page
+
+**Found by re-auditing run 31's own feature area.** `POST /api/producers/admin/status` (the admin action that flips a producer from `pending` to `approved`) only ever updated the database row — no notification of any kind. A producer who applied had exactly one way to discover they'd been approved: proactively visit `/producers/manage` and check, despite nothing in the initial "รับใบสมัครแล้ว" confirmation ever mentioning that page exists. This is the same "promised/implied follow-up that never actually happens" pattern already fixed for consumer/middleman leads (run 2) and 4 portal types (run 19) — just found in a part of the funnel none of those runs touched.
+
+**Fix:** added `sendProducerApproval(to, company, product_name)` (same visual template convention as `sendAffiliateWelcome`/`sendPortalWelcomeEmail` — dark card, gradient header, single CTA button), wired into `/api/producers/admin/status` so it fires exactly once, only on the real `pending/rejected/suspended → approved` transition (not on an admin re-clicking approve on an already-approved producer). The email's CTA links straight to `/producers/manage?email=...`, so the producer lands directly on the self-serve editing page from run 31 instead of having to know it exists.
+
+**A real bug caught only because of live verification (not something a code read would have caught):** the first implementation compared `prev.status` (the producer's status *before* the update) against `'approved'` *after* calling `producers.setStatus()`. `producers.setStatus()`'s file-mode path (`backend/producers.js`) mutates the same object in place (`store[e].status = status`), and `producers.all()` returns `Object.values(store)` — **live references into that same store, not copies**. So `prev` was pointing at the exact object `setStatus` had just mutated, meaning `prev.status` had already silently become `'approved'` by the time it was checked, and the condition was always false — the email would never have fired for anyone, in production, despite the code looking correct on read-through. Caught by wiring a real local SMTP catcher (a throwaway `smtp-server` instance) and observing zero emails arrive on a real pending→approved transition; root-caused with targeted `console.log`s comparing the object dump immediately before vs. the boolean check immediately after the mutating call. Fixed by capturing `prevStatus`/`prevCompany`/`prevProductName` as primitives *before* calling `setStatus`, so the later mutation can't retroactively change what was already read.
+
+**Verified live, full real cycle:** ran the backend against a real (if throwaway) SMTP server and drove the actual HTTP flow — applied a producer (`pending`) → approved via the admin route → confirmed a real captured email with the correct subject, the producer's real company/product name interpolated, and a working `/producers/manage?email=...` link. Re-approved the same already-approved producer → confirmed zero additional email (no duplicate-notification spam). Suspended then re-approved the same producer → confirmed the email fires again correctly, proving the guard checks the *transition*, not just "is the target status approved."
+
+No new items queued — this closes the gap cleanly. 5 items from earlier runs are still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-05 — Rejected another fabricated spec: `src/types/entity.ts`, `DiscoveryEngine.findPotentialMatches`, `international_service_provider` entity type — none of it exists in this repo
 
@@ -1866,54 +1880,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- e12f5b8 docs: reject fabricated entity/DiscoveryEngine spec, not grounded in this repo (17 seconds ago)
-- ca1b9c4 chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
-- a46ac82 fix: og-image.png didn't exist -- every social link preview has been broken since day one (5 minutes ago)
-- 7240ed3 chore: sync PROJECT_STATUS.md [skip ci] (66 minutes ago)
-- df3945a fix: exclude /producers/manage from search-engine crawling (67 minutes ago)
-- 5fc4aac chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- f9ada02 feat: self-serve product listing for approved producers (2 hours ago)
-- 49419ee chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 9deb7d9 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- e12f5b8 docs: reject fabricated entity/DiscoveryEngine spec, not grounded in this repo (62 minutes ago)
+- ca1b9c4 chore: sync PROJECT_STATUS.md [skip ci] (67 minutes ago)
+- a46ac82 fix: og-image.png didn't exist -- every social link preview has been broken since day one (67 minutes ago)
+- 7240ed3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- df3945a fix: exclude /producers/manage from search-engine crawling (2 hours ago)
+- 5fc4aac chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- f9ada02 feat: self-serve product listing for approved producers (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "20.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -2061,7 +2037,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 226 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8302 | Vercel serverless detection |
+| `server.js` | 8346 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

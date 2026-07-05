@@ -403,8 +403,19 @@ app.get('/api/producers/admin/list', adminLimiter, async (req, res) => {
 app.post('/api/producers/admin/status', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const emailIn = (req.body?.email || '').toString().trim().toLowerCase();
+  const prev = (await producers.all()).find((p) => (p.email || '').toLowerCase() === emailIn);
+  // capture primitives *before* setStatus — producers.all()'s file-mode path returns live
+  // references into its internal store, and setStatus() mutates that same object in place,
+  // so reading prev.status *after* the call below would always see the just-written new value
+  const prevStatus = prev?.status;
+  const prevCompany = prev?.company;
+  const prevProductName = prev?.product_name;
   const r = await producers.setStatus(req.body?.email, req.body?.status);
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  if (req.body?.status === 'approved' && prevStatus !== 'approved') {
+    sendProducerApproval(emailIn, prevCompany, prevProductName);
+  }
   res.json({ success: true, ...r });
 });
 
@@ -1028,6 +1039,39 @@ async function sendPortalWelcomeEmail(lead) {
     console.log(`📧 Portal welcome email (${lead.type}) ส่งให้ ${lead.email} เรียบร้อย`);
   } catch (err) {
     console.error('Portal welcome email error:', err.message);
+  }
+}
+
+// อนุมัติผู้ผลิตแล้ว (POST /api/producers/admin/status) เดิมแค่เปลี่ยน status ในฐานข้อมูล
+// ไม่เคยแจ้งผู้ผลิตเลยว่าอนุมัติแล้ว — ผู้ผลิตรู้ได้ทางเดียวคือเข้า /producers/manage มาเช็คเอง
+// ทั้งที่ไม่รู้ด้วยซ้ำว่าหน้านี้มีอยู่ ส่งอีเมลจริงพร้อมลิงก์ตรงไปหน้าจัดการสินค้าของตัวเอง
+async function sendProducerApproval(to, company, product_name) {
+  if (!mailer || !to) return;
+  const manageUrl = `${DOMAIN_URL}/producers/manage?email=${encodeURIComponent(to)}`;
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to,
+      subject: '🎉 ร้านของคุณได้รับการอนุมัติแล้ว — Openthai.ai',
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#10b981,#06b6d4);padding:28px;text-align:center;">
+          <h1 style="margin:0;font-size:22px;">🎉 ยินดีด้วย${company ? ' ' + company : ''}!</h1>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);">ใบสมัครผู้ผลิตของคุณได้รับการอนุมัติแล้ว</p>
+        </div>
+        <div style="padding:24px;font-size:15px;line-height:1.7;">
+          <p>${product_name ? `สินค้า "<strong>${product_name}</strong>"` : 'สินค้าของคุณ'} พร้อมแสดงในตลาด Openthai.ai แล้วตอนนี้</p>
+          <div style="text-align:center;margin:20px 0;">
+            <a href="${manageUrl}" style="display:inline-block;background:linear-gradient(135deg,#10b981,#06b6d4);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">📦 จัดการสินค้าของฉัน</a>
+          </div>
+          <p style="color:#94a3b8;font-size:13px;">เติมสต๊อก แก้ราคา หรือแก้รายละเอียดสินค้าได้เองทุกเมื่อจากหน้านี้ ไม่ต้องรอทีมงาน</p>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${DOMAIN_URL}" style="color:#6366f1;">${DOMAIN_URL.replace(/^https?:\/\//, '')}</a></div>
+      </div>`,
+    });
+    console.log(`📧 Producer approval email ส่งให้ ${to} เรียบร้อย`);
+  } catch (err) {
+    console.error('Producer approval email error:', err.message);
   }
 }
 
