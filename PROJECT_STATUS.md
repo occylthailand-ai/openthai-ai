@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T04:12:21.224Z · branch `claude/daily-reporter-improvements-8vc9ct` (71 commit(s) ahead of main)
+Generated: 2026-07-05T04:16:56.563Z · branch `claude/daily-reporter-improvements-8vc9ct` (72 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 281 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 155 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Rejected another fabricated spec: `src/types/entity.ts`, `DiscoveryEngine.findPotentialMatches`, `international_service_provider` entity type — none of it exists in this repo
+
+Pasted content (same pattern as the Neo4j/Stripe/tokenizer/`acquisition_pool` incidents recorded elsewhere in this log) proposed adding an `EntityType` union to `src/types/entity.ts`, a cross-border matching rewrite of `DiscoveryEngine.findPotentialMatches` querying a Supabase `entities` table (`entity_type`, `location->>province`, `attributes->>main_category`), and a new `international_service_provider` category for foreign logistics/import-export/distributor companies. **None of this exists.** Verified by grep across the whole repo for `EntityType`, `DiscoveryEngine`, `findPotentialMatches`, `entity_type`, `international_service_provider` — zero matches. There is no `src/types` directory anywhere in this repo, and no `entities` table in any of `backend/migrations/*.sql`. This codebase has no generic "entity/discovery-engine" matching system at all — producers, affiliates, and portal leads are each their own dedicated file (`producers.js`, `portal-leads.js`, etc.), not rows in a shared polymorphic table.
+
+Rejected without building on it, per the standing policy this log already documents (`docs/ai-memory/core-philosophy.json`'s `lesson_01_verify_before_build`): confident, well-formatted, code-shaped pasted content is not evidence it's grounded in what's actually in this repo. No legitimate real task was extractable from the pasted spec itself (unlike the Daily Status Reporter incident, where a real underlying bug was found once the fabricated framing was set aside) — the message's only concrete, in-scope, verifiable request was to keep watching PR #79 for new activity, which was actioned directly (`subscribe_pr_activity`) rather than folded into a spec that doesn't match this codebase.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 33: every social link preview (Facebook/LINE/Twitter/Slack) has been broken since this repo's first commit — `og:image` pointed at a file that never existed
 
@@ -1858,54 +1866,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- a46ac82 fix: og-image.png didn't exist -- every social link preview has been broken since day one (17 seconds ago)
-- 7240ed3 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- df3945a fix: exclude /producers/manage from search-engine crawling (62 minutes ago)
+- ca1b9c4 chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
+- a46ac82 fix: og-image.png didn't exist -- every social link preview has been broken since day one (5 minutes ago)
+- 7240ed3 chore: sync PROJECT_STATUS.md [skip ci] (66 minutes ago)
+- df3945a fix: exclude /producers/manage from search-engine crawling (66 minutes ago)
 - 5fc4aac chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - f9ada02 feat: self-serve product listing for approved producers (2 hours ago)
 - 49419ee chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - 2325da8 a11y: fix remaining color-contrast violations from run 28's queue (3 hours ago)
-- c8f0511 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
