@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T09:26:15.598Z · branch `claude/daily-reporter-improvements-8vc9ct` (87 commit(s) ahead of main)
+Generated: 2026-07-05T10:14:56.867Z · branch `claude/daily-reporter-improvements-8vc9ct` (88 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 297 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 171 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 39: audited `otop-ai-landing` end-to-end (found it honest, not broken) — shipped SEO hygiene there; `openthai-ai` itself had nothing new to fix
+
+PR #79: Vercel free-tier quota hit the rate limit again (`Resource is limited — try again in 24 hours`, all 3 projects) — same recurring operational pattern as before, not a code issue, nothing to act on.
+
+**Verification pass on `otop-ai-landing` (the landing page built in an earlier run) before deciding whether to touch it:** re-checked its own marketing claims against the real `openthai-ai` repo rather than assuming they were still accurate. The page claims signup pages support Thai/English/Chinese — initially grepped for `useLang`/`LanguageSwitcher` in `frontend/src/pages/portals/*.jsx` and found zero matches, which looked like a false claim at first. Read the actual files before concluding anything: the portal pages implement their own **self-contained** `th`/`en`/`zh` translation objects with their own inline language-switcher buttons, a different (but equally real) pattern from the shared `useLang` hook used elsewhere in the app. 8 of 9 portals have all three languages; `GovThaiPortalPage` intentionally only offers `th`/`en` (its own switcher only renders those two, no dangling `zh` button pointing at missing text) — a sensible scope choice for a Thai-government-specific portal, not a bug. Also re-ran the axe-core WCAG scan from the original build (still 0 violations) and confirmed all 13 CTA links still resolve to real routes. The page holds up — no fix needed there.
+
+**What was real and worth shipping:** the page's `<head>` had no Twitter Card tags at all (sharing a link on Twitter/X would fall back to a bare text card) and no `og:image:width`/`height` despite the actual image being a valid 1200×655 PNG. Added both. Also added a `robots.txt` (previously 404'd — not a crawl blocker by default, since absence just means "allow everything," but an explicit `Allow: /` is standard and now matches `openthai-ai`'s own convention).
+
+**Deliberately left unfixed and flagged, not guessed:** `og:image`/`twitter:image` are still relative paths (`og-image.png`), which the OG/Twitter Card specs technically want as absolute URLs — some link-unfurlers don't reliably resolve relative image paths. Fixing that needs this repo's real production domain, which isn't declared anywhere in the repo, its PR, or the GitHub repo metadata (unlike `openthai-ai`, where `https://www.openthai-ai.com` is used consistently everywhere and was safe to rely on for its own sitemap/robots work in run 36). Not fabricating a domain guess — flagging it as a small, contained, easy-to-finish-later item once the owner confirms the real domain.
+
+Also checked `openthai-ai` itself this cycle for a broken-navigation class of bug (grepped every `navigate('/...')` call against `App.jsx`'s route table, similar in spirit to the `document.title` sweep in run 37) — first pass showed 4 "missing" routes (`/login`, `/dashboard`, `/tiktok`, `/facebook`), but that was a false positive from a grep pattern that didn't handle multi-line `<Route path=... element=...>` formatting; all 4 routes are real. No actual gap found, confirmed properly before logging it as one.
+
+4 items still pending an owner decision, unchanged (3 from `openthai-ai`'s security backlog area + `OpenThai-AI-v9.0`'s fabricated-content question from run 38); the new otop-ai-landing domain question above is a separate, low-priority, easy item once answered — not blocking anything.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 38: this cycle's real fix landed in `smart-e`, not `openthai-ai` — plus a new fabricated-content finding in `OpenThai-AI-v9.0` flagged for the owner, not built on
 
@@ -1971,54 +1987,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- e979aab docs: log run 38 -- smart-e admin-key regression fixed, OpenThai-AI-v9.0 fabricated-content finding flagged (17 seconds ago)
-- 210caaa chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
-- 095baa6 fix: set document.title on 8 public pages that never set it (9 minutes ago)
-- 1e8fcc0 chore: sync PROJECT_STATUS.md [skip ci] (69 minutes ago)
-- c636614 feat: reprice Pro/Premier, add Enterprise tier (owner request) (70 minutes ago)
-- ef9f6ff chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 7b1ed81 security: block re-apply hijack of already-approved producers (3 hours ago)
-- de226ad chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 615a806 chore: sync PROJECT_STATUS.md [skip ci] (49 minutes ago)
+- e979aab docs: log run 38 -- smart-e admin-key regression fixed, OpenThai-AI-v9.0 fabricated-content finding flagged (49 minutes ago)
+- 210caaa chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- 095baa6 fix: set document.title on 8 public pages that never set it (57 minutes ago)
+- 1e8fcc0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- c636614 feat: reprice Pro/Premier, add Enterprise tier (owner request) (2 hours ago)
+- ef9f6ff chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 7b1ed81 security: block re-apply hijack of already-approved producers (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

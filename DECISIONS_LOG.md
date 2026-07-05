@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Hourly loop, run 39: audited `otop-ai-landing` end-to-end (found it honest, not broken) — shipped SEO hygiene there; `openthai-ai` itself had nothing new to fix
+
+PR #79: Vercel free-tier quota hit the rate limit again (`Resource is limited — try again in 24 hours`, all 3 projects) — same recurring operational pattern as before, not a code issue, nothing to act on.
+
+**Verification pass on `otop-ai-landing` (the landing page built in an earlier run) before deciding whether to touch it:** re-checked its own marketing claims against the real `openthai-ai` repo rather than assuming they were still accurate. The page claims signup pages support Thai/English/Chinese — initially grepped for `useLang`/`LanguageSwitcher` in `frontend/src/pages/portals/*.jsx` and found zero matches, which looked like a false claim at first. Read the actual files before concluding anything: the portal pages implement their own **self-contained** `th`/`en`/`zh` translation objects with their own inline language-switcher buttons, a different (but equally real) pattern from the shared `useLang` hook used elsewhere in the app. 8 of 9 portals have all three languages; `GovThaiPortalPage` intentionally only offers `th`/`en` (its own switcher only renders those two, no dangling `zh` button pointing at missing text) — a sensible scope choice for a Thai-government-specific portal, not a bug. Also re-ran the axe-core WCAG scan from the original build (still 0 violations) and confirmed all 13 CTA links still resolve to real routes. The page holds up — no fix needed there.
+
+**What was real and worth shipping:** the page's `<head>` had no Twitter Card tags at all (sharing a link on Twitter/X would fall back to a bare text card) and no `og:image:width`/`height` despite the actual image being a valid 1200×655 PNG. Added both. Also added a `robots.txt` (previously 404'd — not a crawl blocker by default, since absence just means "allow everything," but an explicit `Allow: /` is standard and now matches `openthai-ai`'s own convention).
+
+**Deliberately left unfixed and flagged, not guessed:** `og:image`/`twitter:image` are still relative paths (`og-image.png`), which the OG/Twitter Card specs technically want as absolute URLs — some link-unfurlers don't reliably resolve relative image paths. Fixing that needs this repo's real production domain, which isn't declared anywhere in the repo, its PR, or the GitHub repo metadata (unlike `openthai-ai`, where `https://www.openthai-ai.com` is used consistently everywhere and was safe to rely on for its own sitemap/robots work in run 36). Not fabricating a domain guess — flagging it as a small, contained, easy-to-finish-later item once the owner confirms the real domain.
+
+Also checked `openthai-ai` itself this cycle for a broken-navigation class of bug (grepped every `navigate('/...')` call against `App.jsx`'s route table, similar in spirit to the `document.title` sweep in run 37) — first pass showed 4 "missing" routes (`/login`, `/dashboard`, `/tiktok`, `/facebook`), but that was a false positive from a grep pattern that didn't handle multi-line `<Route path=... element=...>` formatting; all 4 routes are real. No actual gap found, confirmed properly before logging it as one.
+
+4 items still pending an owner decision, unchanged (3 from `openthai-ai`'s security backlog area + `OpenThai-AI-v9.0`'s fabricated-content question from run 38); the new otop-ai-landing domain question above is a separate, low-priority, easy item once answered — not blocking anything.
+
+---
+
 ### 2026-07-05 — Hourly loop, run 38: this cycle's real fix landed in `smart-e`, not `openthai-ai` — plus a new fabricated-content finding in `OpenThai-AI-v9.0` flagged for the owner, not built on
 
 PR #79 status checked first per usual: all 3 Vercel deploys green on the latest push, no new comments. Nothing needed in `openthai-ai` itself this cycle, so — per the standing order's "5 repos" scope — looked across the other 4 for real, verifiable work instead of manufacturing something in this repo just to have a diff here.
