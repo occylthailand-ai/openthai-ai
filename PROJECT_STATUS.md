@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T16:16:22.276Z · branch `claude/daily-reporter-improvements-8vc9ct` (101 commit(s) ahead of main)
+Generated: 2026-07-05T16:22:18.740Z · branch `claude/daily-reporter-improvements-8vc9ct` (102 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 311 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 185 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,28 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 46: closed out the crash-class sweep flagged at the end of run 45 — 3 more unguarded body-shape bugs found and fixed in `smart-e`, plus the JSON parser itself
+
+PR #79: same recurring rate-limit pattern confirmed again via the real status API (`get_status` on commit `7b2d038`: all 3 Vercel checks `failure` / "Deployment rate limited — retry in 24 hours"), while the bot's PR comment simultaneously showed all 3 as "Ready" — the same lag noted repeatedly this session. No action needed; this is a Vercel free-tier quota issue, not a code problem.
+
+**Followed up on run 45's own "worth a similar pass, not fixing speculatively" note** instead of picking a new category: audited every other `POST`/`PUT` handler in `smart-e/server.py` for the same unguarded-`.get()`-on-request-body pattern that caused the `_create_order` crash fixed last run. Read the full file rather than trusting the earlier grep-level guess about which routes were affected.
+
+**Reproduced each candidate before touching code**, same discipline as run 45: booted the server fresh (`ADMIN_KEY` set, clean DB) and sent deliberately malformed payloads. Confirmed via the server's own traceback log, not assumption:
+1. `POST /api/products` with `price:"abc"` → unhandled `ValueError` in `float(body.get('price',0))`, empty response.
+2. `POST /api/payments/qr` with `amount:"abc"` → same `ValueError` class, empty response.
+3. `POST /api/settings` with a JSON array body instead of an object → `AttributeError: 'list' object has no attribute 'items'`.
+4. Any `POST`/`PUT` with a body that isn't valid JSON at all (e.g. plain text) → `read_body()` itself had no try/except around `json.loads`, so this crashed *every* write route, not just one — the widest-reaching of the four.
+
+**Fix:** wrapped the numeric conversions in `_create_product`/`_create_qr` with a `try/except (TypeError, ValueError)` returning a clean `400` with a Thai message; added an `isinstance(body, dict)` check to `_save_settings`; made `read_body()` catch `JSONDecodeError`/`UnicodeDecodeError` and return `None`, with `do_POST`/`do_PUT` now checking for that `None` immediately after reading the body and returning `400` before any route dispatch (including before the LINE-webhook signature branch, since a body-shape problem should fail the same way regardless of which route it's headed to).
+
+**Verified live:** re-ran all 4 malformed payloads against the fixed server — all now return a clean `400` with an explanatory message, zero exceptions in the server log. Re-ran a full set of valid requests afterward (create product, create QR, save settings, create a valid order) to confirm no regression — all still return the correct 200/201 with correct data. Confirmed the dashboard/products `GET` routes still return clean data after the write operations.
+
+Pushed to `smart-e`'s existing PR #1 branch (commit `df8fced`) — full writeup in that repo's commit message, no `DECISIONS_LOG.md` there. This closes out the crash-class sweep across `smart-e`'s write routes; no further unguarded-body-shape gaps found in the remaining handlers (`_create_customer`, `_update_product`, `_update_customer`, `_confirm_payment`, `_line_broadcast` all only do `.get()` with string/None defaults, no type coercion that could raise).
+
+5 items still pending an owner decision, unchanged (see run 44/45 entries); `otop-ai-landing`'s domain question also unchanged.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 45: `openthai-ai`'s own self-serve producer edit endpoint checked clean; real crash bug found and fixed in `smart-e`'s order creation
 
@@ -2089,54 +2111,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 67cd33a docs: log run 45 -- verified producers.js self-serve edit is properly gated, fixed a real crash in smart-e's order creation (24 seconds ago)
-- dac7837 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- b62f68c fix: affiliate signup showed a ref code that could diverge from the one actually stored (59 minutes ago)
+- 7b2d038 chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
+- 67cd33a docs: log run 45 -- verified producers.js self-serve edit is properly gated, fixed a real crash in smart-e's order creation (6 minutes ago)
+- dac7837 chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
+- b62f68c fix: affiliate signup showed a ref code that could diverge from the one actually stored (65 minutes ago)
 - cf3baff chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - d2ddb72 fix: primary /affiliate signup also had no PDPA consent UI; same bridge fix as producers (2 hours ago)
 - e3c8347 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - a81f83a fix: /join producer signup had no PDPA consent UI at all; fix an internal auto-register bridge that would've silently broken (3 hours ago)
-- dab67fe chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
