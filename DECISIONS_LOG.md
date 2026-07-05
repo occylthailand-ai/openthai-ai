@@ -9,6 +9,24 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Hourly loop, run 44: closed the consent-flow audit (no more instances found), then found and fixed a real Thai-name display bug in the affiliate ref code — the code shown to the user could silently diverge from the one actually stored
+
+PR #79: rate-limited again on the API-confirmed real status (2 of 3), same recurring pattern.
+
+**Finished the sweep queued at the end of run 43:** checked whether consumer/middleman/creator have a primary signup page outside `/portals/*` the way producer (`/join`) and affiliate (`/affiliate`) did. They don't — no `ConsumerPage.jsx`/`MiddlemanPage.jsx`/`CreatorPage.jsx`-shaped files exist anywhere outside the `portals/` folder. Also checked the other pages with email inputs (`ContactPage.jsx`, `PaymentPage.jsx`, `ProducerManagePage.jsx`, the homepage waitlist) — none are new-business-relationship signups needing PDPA consent the way the portal/join/affiliate forms are (a direct support inquiry, a payment receipt, self-service by an already-approved producer, and an already-reviewed marketing opt-in respectively). The 3-run consent audit (runs 40/42/44) is now genuinely closed, not just paused.
+
+**Found something different while closing that out — re-examined a "cosmetic, out of scope" note from run 43's own writeup rather than letting it sit:** `AffiliatePage.jsx`'s `genRefCode(name)` doesn't strip non-Latin characters, so a Thai name (the overwhelmingly common case on a Thai-first platform) produces a ref code containing Thai characters. The page never read `POST /api/affiliate/apply`'s response body at all — it always displayed its own locally-generated `code`/`link` on the success screen, regardless of what the server actually did with it.
+
+**Verified precisely what "actually did with it" means, rather than assuming the worst or dismissing it as harmless:** `registerAffiliateCore()` (`server.js`) strips exactly the same non-`[A-Za-z0-9_-]` characters from any submitted `ref_code` before storing it — so for a Thai name, the *real* stored `ref_code` is just whatever ASCII survives (e.g. `"N88"`), while the frontend was showing the user something like `"สมชายใN88"`. Traced whether this actually breaks commission attribution: every consumer of `ref` (click tracking, checkout, `/earn`, `/affiliate-programs`, `/pay`) applies the identical stripping regex, so a shared link with the Thai-charactered code *does* still reduce to the same surviving ASCII and technically still attributes correctly today — this is a display/trust bug, not (currently) a broken-commission bug, and worth being precise about the difference rather than overclaiming severity.
+
+**Fix:** `handleSubmit` now reads the real `POST /api/affiliate/apply` response and uses its `data.ref_code`/`data.ref_link` for the success screen, falling back to the locally-generated one only if the request fails outright (matching the existing "offline — still show success" resilience choice already in this code, not removing it).
+
+**Verified live:** registered through the real `/api/affiliate/apply` endpoint with the exact Thai name `"สมชาย ใจดี"` and the exact ref_code the real frontend would generate for it — confirmed the server actually stores `"N88"`, not the Thai-charactered version. Then drove a real headless browser through the actual `/affiliate` form with that same Thai name and confirmed the success screen now shows `"N88"` — matching the stored record exactly, extracted and cross-checked byte-for-byte via `affiliates.json`. Re-ran the same flow with a plain ASCII name (`"JohnSmith"`) to confirm the ordinary case still displays and stores identically (no regression). Accidentally `rm`'d the tracked `affiliates.json` placeholder again during cleanup (same slip as run 43) — caught it in `git status` and restored via `git checkout` before committing, same as last time.
+
+4 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question also unchanged.
+
+---
+
 ### 2026-07-05 — Hourly loop, run 43: same gap, third place — `/affiliate` (the *primary* affiliate signup, not `/portals/affiliate`) also had zero PDPA consent UI, plus the same internal-bridge trap as run 42
 
 GitHub MCP tools were unavailable this cycle (needed re-auth) — couldn't check PR #79's live status via the API the way previous cycles did; proceeded with local git operations only, which don't depend on it.

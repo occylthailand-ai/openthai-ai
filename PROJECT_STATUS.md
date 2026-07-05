@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T14:16:45.309Z · branch `claude/daily-reporter-improvements-8vc9ct` (97 commit(s) ahead of main)
+Generated: 2026-07-05T15:16:57.321Z · branch `claude/daily-reporter-improvements-8vc9ct` (98 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 307 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 181 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,24 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 44: closed the consent-flow audit (no more instances found), then found and fixed a real Thai-name display bug in the affiliate ref code — the code shown to the user could silently diverge from the one actually stored
+
+PR #79: rate-limited again on the API-confirmed real status (2 of 3), same recurring pattern.
+
+**Finished the sweep queued at the end of run 43:** checked whether consumer/middleman/creator have a primary signup page outside `/portals/*` the way producer (`/join`) and affiliate (`/affiliate`) did. They don't — no `ConsumerPage.jsx`/`MiddlemanPage.jsx`/`CreatorPage.jsx`-shaped files exist anywhere outside the `portals/` folder. Also checked the other pages with email inputs (`ContactPage.jsx`, `PaymentPage.jsx`, `ProducerManagePage.jsx`, the homepage waitlist) — none are new-business-relationship signups needing PDPA consent the way the portal/join/affiliate forms are (a direct support inquiry, a payment receipt, self-service by an already-approved producer, and an already-reviewed marketing opt-in respectively). The 3-run consent audit (runs 40/42/44) is now genuinely closed, not just paused.
+
+**Found something different while closing that out — re-examined a "cosmetic, out of scope" note from run 43's own writeup rather than letting it sit:** `AffiliatePage.jsx`'s `genRefCode(name)` doesn't strip non-Latin characters, so a Thai name (the overwhelmingly common case on a Thai-first platform) produces a ref code containing Thai characters. The page never read `POST /api/affiliate/apply`'s response body at all — it always displayed its own locally-generated `code`/`link` on the success screen, regardless of what the server actually did with it.
+
+**Verified precisely what "actually did with it" means, rather than assuming the worst or dismissing it as harmless:** `registerAffiliateCore()` (`server.js`) strips exactly the same non-`[A-Za-z0-9_-]` characters from any submitted `ref_code` before storing it — so for a Thai name, the *real* stored `ref_code` is just whatever ASCII survives (e.g. `"N88"`), while the frontend was showing the user something like `"สมชายใN88"`. Traced whether this actually breaks commission attribution: every consumer of `ref` (click tracking, checkout, `/earn`, `/affiliate-programs`, `/pay`) applies the identical stripping regex, so a shared link with the Thai-charactered code *does* still reduce to the same surviving ASCII and technically still attributes correctly today — this is a display/trust bug, not (currently) a broken-commission bug, and worth being precise about the difference rather than overclaiming severity.
+
+**Fix:** `handleSubmit` now reads the real `POST /api/affiliate/apply` response and uses its `data.ref_code`/`data.ref_link` for the success screen, falling back to the locally-generated one only if the request fails outright (matching the existing "offline — still show success" resilience choice already in this code, not removing it).
+
+**Verified live:** registered through the real `/api/affiliate/apply` endpoint with the exact Thai name `"สมชาย ใจดี"` and the exact ref_code the real frontend would generate for it — confirmed the server actually stores `"N88"`, not the Thai-charactered version. Then drove a real headless browser through the actual `/affiliate` form with that same Thai name and confirmed the success screen now shows `"N88"` — matching the stored record exactly, extracted and cross-checked byte-for-byte via `affiliates.json`. Re-ran the same flow with a plain ASCII name (`"JohnSmith"`) to confirm the ordinary case still displays and stores identically (no regression). Accidentally `rm`'d the tracked `affiliates.json` placeholder again during cleanup (same slip as run 43) — caught it in `git status` and restored via `git checkout` before committing, same as last time.
+
+4 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question also unchanged.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 43: same gap, third place — `/affiliate` (the *primary* affiliate signup, not `/portals/affiliate`) also had zero PDPA consent UI, plus the same internal-bridge trap as run 42
 
@@ -2053,54 +2071,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- d2ddb72 fix: primary /affiliate signup also had no PDPA consent UI; same bridge fix as producers (22 seconds ago)
-- e3c8347 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- a81f83a fix: /join producer signup had no PDPA consent UI at all; fix an internal auto-register bridge that would've silently broken (62 minutes ago)
-- dab67fe chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- a1ad1b0 docs: log run 41 -- regression sweep after run 40's consent fix, clean (2 hours ago)
-- 38f9622 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 192a13a fix: PDPA consent checkbox on all 9 portal pages was never sent to or recorded by the backend (3 hours ago)
-- 2c32e04 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- cf3baff chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- d2ddb72 fix: primary /affiliate signup also had no PDPA consent UI; same bridge fix as producers (61 minutes ago)
+- e3c8347 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- a81f83a fix: /join producer signup had no PDPA consent UI at all; fix an internal auto-register bridge that would've silently broken (2 hours ago)
+- dab67fe chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- a1ad1b0 docs: log run 41 -- regression sweep after run 40's consent fix, clean (3 hours ago)
+- 38f9622 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 192a13a fix: PDPA consent checkbox on all 9 portal pages was never sent to or recorded by the backend (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

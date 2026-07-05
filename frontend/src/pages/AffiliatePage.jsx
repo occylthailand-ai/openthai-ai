@@ -63,17 +63,28 @@ export default function AffiliatePage() {
     if (!form.name || !form.email) { setError(T.errRequired); toast.error(T.toast.required); return; }
     setLoading(true); setError('');
     try {
+      // ชื่อไทย → genRefCode() ได้โค้ดที่มีอักษรไทยปน แต่ backend's registerAffiliateCore()
+      // (server.js) กรองเหลือแค่ [A-Za-z0-9_-] ก่อนบันทึกจริงเสมอ (กัน ref code ที่ใช้เป็น
+      // query param ไม่ได้) — เดิมหน้านี้ไม่เคยอ่าน response กลับมาเลย ใช้ code/link ที่สร้างเอง
+      // ฝั่ง client แสดงผลตรงๆ ทำให้โค้ด/ลิงก์ที่ผู้ใช้เห็นและก็อปไปแชร์ "ไม่ตรง" กับโค้ดจริงที่
+      // ระบบบันทึกไว้ (แม้การนับคลิกจะยังทำงานถูกเพราะทุกจุดกรองด้วย regex เดียวกัน แต่การ
+      // แสดงผลที่ไม่ตรงกับความจริงในระบบเป็นบั๊กที่ควรแก้) ตอนนี้ใช้ค่าจริงจาก response แทน
       const code = genRefCode(form.name);
       const link = `https://www.openthai-ai.com/?ref=${code}`;
+      let finalCode = code, finalLink = link;
       try {
         const res = await fetch(apiUrl('/api/affiliate/apply'), {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ...form, ref_code: code, ref_link: link, consent }),
         });
         if (!res.ok && res.status === 409) toast.warn(T.toast.dup);
-      } catch (_) { /* offline – still show success */ }
-      setRefCode(code); setRefLink(link); setStep('success');
-      toast.success(T.toast.success.replace('{code}', code));
+        else if (res.ok) {
+          const data = await res.json();
+          if (data?.data?.ref_code) { finalCode = data.data.ref_code; finalLink = data.data.ref_link; }
+        }
+      } catch (_) { /* offline – still show success with the locally-generated code */ }
+      setRefCode(finalCode); setRefLink(finalLink); setStep('success');
+      toast.success(T.toast.success.replace('{code}', finalCode));
     } catch (err) {
       setError(T.toast.error); toast.error(T.toast.error);
     } finally { setLoading(false); }
