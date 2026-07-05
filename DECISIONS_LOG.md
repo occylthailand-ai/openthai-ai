@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Owner decision received (part 2 of 2): fixed the run-1 producer-apply hijack, flagged on the very first hourly cycle
+
+**Second of the two owner-approved fixes this session** (payment-cancel above was part 1). Re-verified the exact vulnerability described in run 1 was still real: `POST /api/producers/apply` (`producers.js`'s `register()`) upserts by email with zero identity check — if the email already belongs to an existing record, it silently overwrites `company`/`product_name`/`price`/`description` and unconditionally resets `status` back to `'pending'`, pulling an already-approved producer off the public catalog. `/api/producers/search`'s public response includes each producer's `email`, so an attacker doesn't even need to guess it. Confirmed both halves still true by reading the current file before writing anything.
+
+**Fix, deliberately not another email-confirmation-link:** unlike payment-cancel, this one didn't need a new async mechanism, because run 31 already built the correct legitimate path for this exact need — `/producers/manage` lets an *approved* producer edit their own listing without touching `status` (`POST /api/producers/update-listing`, gated on `status === 'approved'`). So the real fix is narrower: `register()` now checks whether the submitted email already belongs to a producer with `status` `approved` or `suspended`, and if so, **refuses the overwrite outright** (returns a 400 with a message pointing at `/producers/manage`) instead of processing it. `pending`/`rejected` emails can still resubmit exactly as before — there's no live public listing at stake yet for those, so the original convenience (fixing a typo before approval) is preserved.
+
+**Verified live, adversarially — the exact attack run 1 described:** applied and approved a real producer (`ร้านของจริง`, real listing live on `/api/catalog`), then replayed the attack — re-submitted `/api/producers/apply` with the *same email* and hostile replacement data (`ร้านปลอมของแฮกเกอร์`). Got a `400` rejection; confirmed the public catalog and the producer's own status afterward were **byte-for-byte unchanged** — no overwrite, no reset to pending. Then confirmed the two cases that must keep working: a still-`pending` applicant resubmitting to fix their own details succeeds and reflects the update (unchanged behavior), and a brand-new email applies normally.
+
+**Not fixed this cycle, noted for later:** `/api/producers/search`'s public disclosure of producer email addresses (the reconnaissance step of this attack) is a separate, lower-severity privacy question — worth a future look, but the hijack it enabled is now closed regardless of whether the email itself stays discoverable.
+
+Both of the two payment/producer security items approved this session are now shipped and verified. 3 items from earlier runs are still pending an owner decision (down from 5 at the start of today): run-3's creator-portal account-provisioning gap, run-5's all-platform-files fabricated-content question, and the newly-noted producer-email-disclosure-via-search observation above (low priority, not blocking).
+
+---
+
 ### 2026-07-05 — Owner decision received: fixed the run-13 subscription-cancellation hijack, flagged 22 cycles ago and left open pending exactly this call
 
 **Owner reviewed both remaining flagged decisions this session and approved fixing them, in order: payment-cancel first, then the run-1 producer-apply hijack.** This entry covers payment-cancel.

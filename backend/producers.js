@@ -36,6 +36,15 @@ export function createProducers(dataDir) {
   }
 
   // สมัครเป็นผู้ผลิต (dedupe ตามอีเมล, status เริ่ม 'pending')
+  // เดิม: ถ้าอีเมลมีอยู่แล้วไม่ว่าสถานะใด จะเขียนทับข้อมูลเดิมทันทีและดันสถานะกลับเป็น 'pending'
+  // เสมอ — ไม่มีการยืนยันตัวตนเลย ใครก็ตามที่รู้อีเมลผู้ผลิตที่อนุมัติแล้ว (หาได้จาก
+  // /api/producers/search ที่เปิดเผย email ต่อสาธารณะ) สามารถสมัครซ้ำด้วยอีเมลนั้นเพื่อ
+  // เขียนทับร้าน/สินค้า/ราคาจริง และดันร้านนั้นหลุดจาก catalog สาธารณะทันที (flagged run 1,
+  // แก้ตามการตัดสินใจของเจ้าของโปรเจกต์แล้ว) ตอนนี้: ถ้าอีเมลนั้นเป็นผู้ผลิตที่ approved/suspended
+  // อยู่แล้ว ปฏิเสธการสมัครซ้ำแบบเขียนทับ — ผู้ผลิตที่อนุมัติแล้วมีทาง self-serve แก้ไขสินค้า
+  // ของตัวเองอยู่แล้วที่ /producers/manage (POST /api/producers/update-listing, ยืนยันด้วย
+  // สถานะ approved ที่มีอยู่จริง) ไม่จำเป็นต้องใช้ /apply เขียนทับอีก — pending/rejected ยังคง
+  // ให้สมัครซ้ำได้ตามเดิม เพราะยังไม่มี catalog listing จริงให้ hijack
   async function register(input) {
     const rec = {
       email: clip(input.email, 120).toLowerCase(),
@@ -53,6 +62,10 @@ export function createProducers(dataDir) {
     };
     if (!rec.company || !rec.contact_name || !isEmail(rec.email)) {
       return { ok: false, error: 'กรอกชื่อบริษัท ชื่อผู้ติดต่อ และอีเมลให้ถูกต้อง' };
+    }
+    const existingRecord = (await all()).find((p) => (p.email || '').toLowerCase() === rec.email);
+    if (existingRecord && ['approved', 'suspended'].includes(existingRecord.status)) {
+      return { ok: false, error: 'อีเมลนี้เป็นผู้ผลิตในระบบอยู่แล้ว หากต้องการแก้ไขสินค้าของคุณ ใช้หน้า "จัดการสินค้าของฉัน" (/producers/manage) แทน', already_registered: true };
     }
     if (useSB) {
       try {

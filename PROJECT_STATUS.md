@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T06:23:02.840Z · branch `claude/daily-reporter-improvements-8vc9ct` (79 commit(s) ahead of main)
+Generated: 2026-07-05T06:25:27.164Z · branch `claude/daily-reporter-improvements-8vc9ct` (80 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 289 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 163 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Owner decision received (part 2 of 2): fixed the run-1 producer-apply hijack, flagged on the very first hourly cycle
+
+**Second of the two owner-approved fixes this session** (payment-cancel above was part 1). Re-verified the exact vulnerability described in run 1 was still real: `POST /api/producers/apply` (`producers.js`'s `register()`) upserts by email with zero identity check — if the email already belongs to an existing record, it silently overwrites `company`/`product_name`/`price`/`description` and unconditionally resets `status` back to `'pending'`, pulling an already-approved producer off the public catalog. `/api/producers/search`'s public response includes each producer's `email`, so an attacker doesn't even need to guess it. Confirmed both halves still true by reading the current file before writing anything.
+
+**Fix, deliberately not another email-confirmation-link:** unlike payment-cancel, this one didn't need a new async mechanism, because run 31 already built the correct legitimate path for this exact need — `/producers/manage` lets an *approved* producer edit their own listing without touching `status` (`POST /api/producers/update-listing`, gated on `status === 'approved'`). So the real fix is narrower: `register()` now checks whether the submitted email already belongs to a producer with `status` `approved` or `suspended`, and if so, **refuses the overwrite outright** (returns a 400 with a message pointing at `/producers/manage`) instead of processing it. `pending`/`rejected` emails can still resubmit exactly as before — there's no live public listing at stake yet for those, so the original convenience (fixing a typo before approval) is preserved.
+
+**Verified live, adversarially — the exact attack run 1 described:** applied and approved a real producer (`ร้านของจริง`, real listing live on `/api/catalog`), then replayed the attack — re-submitted `/api/producers/apply` with the *same email* and hostile replacement data (`ร้านปลอมของแฮกเกอร์`). Got a `400` rejection; confirmed the public catalog and the producer's own status afterward were **byte-for-byte unchanged** — no overwrite, no reset to pending. Then confirmed the two cases that must keep working: a still-`pending` applicant resubmitting to fix their own details succeeds and reflects the update (unchanged behavior), and a brand-new email applies normally.
+
+**Not fixed this cycle, noted for later:** `/api/producers/search`'s public disclosure of producer email addresses (the reconnaissance step of this attack) is a separate, lower-severity privacy question — worth a future look, but the hijack it enabled is now closed regardless of whether the email itself stays discoverable.
+
+Both of the two payment/producer security items approved this session are now shipped and verified. 3 items from earlier runs are still pending an owner decision (down from 5 at the start of today): run-3's creator-portal account-provisioning gap, run-5's all-platform-files fabricated-content question, and the newly-noted producer-email-disclosure-via-search observation above (low priority, not blocking).
+
+---
 
 ### 2026-07-05 — Owner decision received: fixed the run-13 subscription-cancellation hijack, flagged 22 cycles ago and left open pending exactly this call
 
@@ -1908,54 +1922,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 13b7438 security: require email confirmation before cancelling a subscription (21 seconds ago)
-- 8873c5f chore: sync PROJECT_STATUS.md [skip ci] (25 minutes ago)
-- 2f95494 feat: add /about page with skill-tag badges (owner request) (25 minutes ago)
-- a19f382 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 7895b96 feat: notify producers by email when their application is approved (64 minutes ago)
+- de226ad chore: sync PROJECT_STATUS.md [skip ci] (2 minutes ago)
+- 13b7438 security: require email confirmation before cancelling a subscription (3 minutes ago)
+- 8873c5f chore: sync PROJECT_STATUS.md [skip ci] (27 minutes ago)
+- 2f95494 feat: add /about page with skill-tag badges (owner request) (28 minutes ago)
+- a19f382 chore: sync PROJECT_STATUS.md [skip ci] (66 minutes ago)
+- 7895b96 feat: notify producers by email when their application is approved (66 minutes ago)
 - 9deb7d9 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - e12f5b8 docs: reject fabricated entity/DiscoveryEngine spec, not grounded in this repo (2 hours ago)
-- ca1b9c4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -2101,7 +2077,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `portal-leads.js` | 118 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 226 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 239 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `server.js` | 8384 | Vercel serverless detection |
