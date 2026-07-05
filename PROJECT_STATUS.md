@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T01:09:57.111Z · branch `claude/daily-reporter-improvements-8vc9ct` (64 commit(s) ahead of main)
+Generated: 2026-07-05T01:11:28.898Z · branch `claude/daily-reporter-improvements-8vc9ct` (65 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 147 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 275 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,24 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 30: closed the last 3 items run 28 explicitly queued — portal-card badges/links, the locked Foundation card's washed-out text, and the homepage footer
+
+**Direct continuation of run 28's queue** ("the `/portals` hub's translucent category-badge overlays ... the locked Foundation card's intentionally-dimmed styling, and the homepage footer copyright text"). All three were distinct problems, not one mechanical pattern, so each got its own fix:
+
+**1. Portal-card badge/link text on dark backgrounds (producer, gov-intl, intl-org):** these 3 accent colors (`#6366f1`, `#3b82f6`, `#8b5cf6`) were failing 4.5:1 as text on `PortalHubPage.jsx`'s dark card background (`#111`) and the translucent corner badge (~13%-opacity tint over the same dark background). Important direction check: run 29 fixed the *same* accent colors as *white-button-background* fill (needed *darker* shades so white text stays legible on top). This is the opposite context — the accent color itself is the *text*, sitting on a dark background, so it needed to go *lighter*, not darker. Confirmed this by first mistakenly trying to darken them (converged toward near-black, ~1.05:1, obviously wrong) before recognizing the direction was inverted for text-on-dark vs fill-behind-white-text. Computed real HSL-lightness increases via the WCAG luminance formula until both the solid-card context and the translucent-badge context simultaneously cleared 4.5:1: `producer #6366f1→#7a7df3` (5.44 / 4.67), `gov-intl #3b82f6→#4085f6` (5.31 / 4.60), `intl-org #8b5cf6→#996ff7` (5.37 / 4.59). The other 6 portal colors already passed both contexts and were left untouched. Also fixed the homepage's identically-sourced `PLAN_META` "Pro" plan color (`LandingPage.jsx`, same `#6366f1`→`#7a7df3`, verified 4.30:1→5.54:1 against that section's actual background), since it's the same brand hex failing the same way.
+
+**2. Locked Foundation card's dimmed text:** this card applies `opacity: locked ? 0.55 : 1` to the whole container. Checked the math first: the card's own text colors (`#94a3b8`, `#7c8797`, `#888`) all already clear 4.5:1 against the card's own background at full opacity (5.34–7.58:1 measured) — the *only* reason axe was flagging them (2.37–2.99:1) was the 0.55 opacity multiplying every child color toward the background. "Locked" is still fully communicated without that opacity trick: the card already has a different (darker) background, a plain gray border instead of a colored one, `cursor: not-allowed`, an explicit "🔒 ยังไม่เปิดใช้งาน" badge, and a "🔒 เปิดเมื่อกำไรสะสม > 10M ฿" line replacing the normal join CTA. Removed the opacity line entirely rather than re-tuning colors that were already correct.
+
+**3. Homepage footer copyright text:** `color: '#555'` against `#0a0a0f` measured 2.64:1. Replaced with `#7c8797` (5.43:1) — reused rather than invented, since it's the same "tier 2" muted gray already established site-wide by run 28's global contrast fix, keeping the footer visually consistent with the rest of the muted-text hierarchy instead of introducing a 4th gray.
+
+**Verified live:** rebuilt the frontend, served it via `vite preview`, and re-ran the same `axe-core` scan technique from runs 27-30 against `/` and `/portals` — 0 total violations on both pages (down from the `color-contrast` violations flagged since run 28). Took full-page screenshots of both routes after the fix: the Foundation card still reads unambiguously as locked (lock badge, distinct border/background, disabled-style CTA text) even without the opacity dimming, and the lightened portal-card badges/links and homepage "Pro" label are legible without looking visually different in any jarring way from the surrounding cards.
+
+This closes out the entire run 27→30 accessibility chain that started from run 27's original `axe-core` scan (missing form labels → global gray-text contrast → language-button contrast → this run's remaining 3 items). No new accessibility follow-ups are queued from this chain; a fresh scan would be needed to find the next batch, if any.
+
+5 items from earlier runs are still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 29: closed part of run 28's queued color-contrast follow-up — every portal's active-language button failed contrast, not just the 4 nodes axe happened to catch
 
@@ -1800,6 +1818,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
+- 2325da8 a11y: fix remaining color-contrast violations from run 28's queue (22 seconds ago)
 - c8f0511 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - df54dbc Fix contrast on every portal's active-language button (run 28 follow-up) (2 hours ago)
 - a1db51e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
@@ -1807,9 +1826,46 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - e5f194d chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 414ac33 Fix missing form labels on all 9 portal signup forms + /join (WCAG critical) (4 hours ago)
 - 906f22e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- adbd75c Extend run 21's crawler-preview fix to /catalog, /join, /find-producers, /privacy, /terms, /contact (5 hours ago)
 
-## Production health (⚠️ HTTP 403)
+## Production health (✅ reachable)
+```json
+{
+  "status": "ok",
+  "version": "2.1.0",
+  "charter_version": 2,
+  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "ai_primary": "✅ Claude Haiku",
+  "ai_fallback": "✅ Gemini Flash Latest",
+  "ai_active": "claude-haiku-4-5-20251001",
+  "google_oauth": true,
+  "affiliates": 0,
+  "waitlist": 0,
+  "agents": 0,
+  "active_agents": 0,
+  "line_oa": true,
+  "elevenlabs": false,
+  "watchdog": "idle",
+  "last_watchdog": null,
+  "system_logs": 2,
+  "uptime_sec": 0,
+  "memory_mb": "19.6",
+  "services": {
+    "news_rag": "✅ Active",
+    "news_rag_refresh": "✅ Auto cache clear every 4h",
+    "competitor_analysis": "✅ Active",
+    "tts": "⚠️ No API Key",
+    "line_oa": "✅ Active",
+    "auto_heal": "✅ Active (every 30 min)",
+    "agent_cron": "✅ Active (every hour)",
+    "watchdog": "✅ Active",
+    "diagnostics": "✅ Active",
+    "persistence": "✅ system_log + agents.json + agent_checkpoint",
+    "vector_memory": "✅ Active (semantic long-term memory)",
+    "webhook_system": "✅ Active (0 registered)",
+    "multi_tenant": "✅ Active (0 tenants)"
+  }
+}
+```
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
