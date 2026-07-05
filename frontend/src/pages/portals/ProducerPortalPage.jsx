@@ -26,7 +26,7 @@ export default function ProducerPortalPage() {
   const submit = async e => {
     e.preventDefault();
     try {
-      await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ...form, type:'producer', lang }) });
+      await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ...form, type:'producer', lang, consent }) });
     } catch {}
     setSent(true);
   };

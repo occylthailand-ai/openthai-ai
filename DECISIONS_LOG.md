@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Hourly loop, run 40: all 9 `/portals/*` signup forms required a PDPA consent tick client-side, but the backend never actually recorded it — real compliance gap, now closed
+
+PR #79: Vercel quota rate-limited again (same recurring 24h operational cycle, not a code issue).
+
+**Found while double-checking last run's own finding** (run 39 confirmed `GovThaiPortalPage` intentionally has only `th`/`en`, not a bug) — while re-reading these files, noticed every one of the 9 `/portals/*` pages disables its submit button via `disabled={!consent}` where `consent` is its own `useState`, but the actual fetch call only ever sends `{...form, type, lang}` — `consent` was never part of the payload at all. Confirmed this was universal, not a one-off, by grepping the exact submit call in all 9 files: identical shape everywhere, no exceptions.
+
+**Why this matters, not just a missing field:** the UI enforces "you must tick this box to submit," which *looks* like real PDPA consent gating, but `backend/portal-leads.js`'s `submit()` never received or checked it — and even if a portal page *had* sent `consent: true` in the body, the record-building loop only kept `typeof v === 'string'` values, silently dropping a boolean. Net effect: **zero server-side evidence that anyone ever consented**, for every lead ever submitted through any of the 9 portals since they were built. If ever asked to demonstrate a specific person's consent (the actual point of PDPA/GDPR-style consent requirements), there was nothing to show — only "the button was disabled until they ticked it," which isn't verifiable after the fact.
+
+**Fix:** `portal-leads.js`'s `submit()` now requires `input.consent === true` and rejects with 400 (`ต้องยินยอมตามนโยบายความเป็นส่วนตัว (PDPA) ก่อนส่งข้อมูล`) otherwise — this also closes a request-forgery gap where someone could've POSTed directly to `/api/leads/submit` bypassing the UI's checkbox entirely. Accepted leads now store `consent: true` on the record itself (alongside the existing `created_at` timestamp, which doubles as the consent timestamp — no need for a separate field). Updated all 9 portal pages to actually include `consent` in their submitted JSON body (one-line addition each, same `{...form, type, lang, consent}` shape everywhere).
+
+**Verified live, not just via curl:** booted the backend fresh and hit `/api/leads/submit` directly for all three cases — no `consent` field (400, rejected), `consent:true` (200, accepted), `consent:false` (400, rejected — confirms it's not just checking truthiness of presence). Then rebuilt the frontend with `VITE_API_URL` pointed at that local backend and drove a **real headless browser** through `/portals/producer`: confirmed the submit button is genuinely disabled until the checkbox is ticked, captured the actual outgoing request body after ticking it and submitting, confirmed it contains `consent:true`, and confirmed the persisted record in `portal_leads.json` shows `"consent": true` next to a real `created_at` — an actual auditable trail now exists where none did before.
+
+4 items still pending an owner decision, unchanged (3 `openthai-ai` security-adjacent items + `OpenThai-AI-v9.0`'s fabricated-content question); `otop-ai-landing`'s domain question from run 39 remains a separate low-priority item.
+
+---
+
 ### 2026-07-05 — Hourly loop, run 39: audited `otop-ai-landing` end-to-end (found it honest, not broken) — shipped SEO hygiene there; `openthai-ai` itself had nothing new to fix
 
 PR #79: Vercel free-tier quota hit the rate limit again (`Resource is limited — try again in 24 hours`, all 3 projects) — same recurring operational pattern as before, not a code issue, nothing to act on.

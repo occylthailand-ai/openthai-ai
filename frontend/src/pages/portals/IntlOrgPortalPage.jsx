@@ -27,7 +27,7 @@ export default function IntlOrgPortalPage() {
 
   const submit = async e => {
     e.preventDefault();
-    try { await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...form, type:'intl-org', lang}) }); } catch {}
+    try { await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...form, type:'intl-org', lang, consent}) }); } catch {}
     setSent(true);
   };
 

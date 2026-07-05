@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T10:15:24.957Z · branch `claude/daily-reporter-improvements-8vc9ct` (89 commit(s) ahead of main)
+Generated: 2026-07-05T11:16:56.416Z · branch `claude/daily-reporter-improvements-8vc9ct` (90 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 299 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 173 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 40: all 9 `/portals/*` signup forms required a PDPA consent tick client-side, but the backend never actually recorded it — real compliance gap, now closed
+
+PR #79: Vercel quota rate-limited again (same recurring 24h operational cycle, not a code issue).
+
+**Found while double-checking last run's own finding** (run 39 confirmed `GovThaiPortalPage` intentionally has only `th`/`en`, not a bug) — while re-reading these files, noticed every one of the 9 `/portals/*` pages disables its submit button via `disabled={!consent}` where `consent` is its own `useState`, but the actual fetch call only ever sends `{...form, type, lang}` — `consent` was never part of the payload at all. Confirmed this was universal, not a one-off, by grepping the exact submit call in all 9 files: identical shape everywhere, no exceptions.
+
+**Why this matters, not just a missing field:** the UI enforces "you must tick this box to submit," which *looks* like real PDPA consent gating, but `backend/portal-leads.js`'s `submit()` never received or checked it — and even if a portal page *had* sent `consent: true` in the body, the record-building loop only kept `typeof v === 'string'` values, silently dropping a boolean. Net effect: **zero server-side evidence that anyone ever consented**, for every lead ever submitted through any of the 9 portals since they were built. If ever asked to demonstrate a specific person's consent (the actual point of PDPA/GDPR-style consent requirements), there was nothing to show — only "the button was disabled until they ticked it," which isn't verifiable after the fact.
+
+**Fix:** `portal-leads.js`'s `submit()` now requires `input.consent === true` and rejects with 400 (`ต้องยินยอมตามนโยบายความเป็นส่วนตัว (PDPA) ก่อนส่งข้อมูล`) otherwise — this also closes a request-forgery gap where someone could've POSTed directly to `/api/leads/submit` bypassing the UI's checkbox entirely. Accepted leads now store `consent: true` on the record itself (alongside the existing `created_at` timestamp, which doubles as the consent timestamp — no need for a separate field). Updated all 9 portal pages to actually include `consent` in their submitted JSON body (one-line addition each, same `{...form, type, lang, consent}` shape everywhere).
+
+**Verified live, not just via curl:** booted the backend fresh and hit `/api/leads/submit` directly for all three cases — no `consent` field (400, rejected), `consent:true` (200, accepted), `consent:false` (400, rejected — confirms it's not just checking truthiness of presence). Then rebuilt the frontend with `VITE_API_URL` pointed at that local backend and drove a **real headless browser** through `/portals/producer`: confirmed the submit button is genuinely disabled until the checkbox is ticked, captured the actual outgoing request body after ticking it and submitting, confirmed it contains `consent:true`, and confirmed the persisted record in `portal_leads.json` shows `"consent": true` next to a real `created_at` — an actual auditable trail now exists where none did before.
+
+4 items still pending an owner decision, unchanged (3 `openthai-ai` security-adjacent items + `OpenThai-AI-v9.0`'s fabricated-content question); `otop-ai-landing`'s domain question from run 39 remains a separate low-priority item.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 39: audited `otop-ai-landing` end-to-end (found it honest, not broken) — shipped SEO hygiene there; `openthai-ai` itself had nothing new to fix
 
@@ -1987,54 +2003,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 30a33dd docs: log run 39 -- audited otop-ai-landing, shipped SEO hygiene there (18 seconds ago)
-- 615a806 chore: sync PROJECT_STATUS.md [skip ci] (49 minutes ago)
-- e979aab docs: log run 38 -- smart-e admin-key regression fixed, OpenThai-AI-v9.0 fabricated-content finding flagged (49 minutes ago)
-- 210caaa chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- 095baa6 fix: set document.title on 8 public pages that never set it (58 minutes ago)
-- 1e8fcc0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- c636614 feat: reprice Pro/Premier, add Enterprise tier (owner request) (2 hours ago)
-- ef9f6ff chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 2c32e04 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 30a33dd docs: log run 39 -- audited otop-ai-landing, shipped SEO hygiene there (62 minutes ago)
+- 615a806 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- e979aab docs: log run 38 -- smart-e admin-key regression fixed, OpenThai-AI-v9.0 fabricated-content finding flagged (2 hours ago)
+- 210caaa chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 095baa6 fix: set document.title on 8 public pages that never set it (2 hours ago)
+- 1e8fcc0 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- c636614 feat: reprice Pro/Premier, add Enterprise tier (owner request) (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -2177,7 +2155,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `omise-payment.js` | 171 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
-| `portal-leads.js` | 118 | Portal Leads — captures submissions from the /portals/* landing pages |
+| `portal-leads.js` | 127 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
 | `producers.js` | 239 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |

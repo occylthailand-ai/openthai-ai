@@ -57,12 +57,20 @@ export function createPortalLeads(dataDir, opts = {}) {
 
   // รับฟอร์มดิบทั้งก้อนจาก portal ใดก็ได้ — ไม่ตรึง schema ตายตัวเพราะแต่ละ portal มีฟิลด์ต่างกัน
   // (agency/org/foundation name ฯลฯ) ดึง name/email แบบ best-effort ไว้แสดงผล ที่เหลือเก็บใน form_data
+  //
+  // เดิมทุกหน้า /portals/* มี checkbox ยินยอม PDPA ที่ disabled ปุ่ม submit จนกว่าจะติ๊ก — แต่
+  // ค่า consent เป็น state แยกที่ไม่เคยถูกส่งมาใน body เลย (มีแต่ {...form, type, lang}) ต่อให้ส่งมา
+  // ก็จะหายไปเงียบๆ เพราะ loop ด้านล่างเก็บเฉพาะ string เท่านั้น (consent เป็น boolean) ผลคือ
+  // มีการ "บังคับติ๊กยินยอม" ที่ฝั่ง UI แต่ backend ไม่มีหลักฐานว่าใครยินยอมจริงเลยสักคน — ถ้าถูก
+  // ถามว่าพิสูจน์ได้ไหมว่าลูกค้าคนนี้ยินยอมจริง คำตอบคือพิสูจน์ไม่ได้ ตอนนี้: ต้องส่ง consent:true
+  // มาจริงถึงจะรับคำขอ (กันคำขอที่ยิงตรงมาโดยไม่ผ่านหน้าเว็บด้วย) และบันทึกไว้ในเรคคอร์ดจริง
   async function submit(input) {
     const type = clip(input.type, 40) || 'unknown';
     const lang = clip(input.lang, 8) || 'th';
     if (!KNOWN_TYPES.includes(type)) console.warn(`[portal-leads] unknown portal type "${type}" — accepted anyway, check portal page list`);
+    if (input?.consent !== true) return { ok: false, error: 'ต้องยินยอมตามนโยบายความเป็นส่วนตัว (PDPA) ก่อนส่งข้อมูล' };
 
-    const { type: _t, lang: _l, ...rest } = input || {};
+    const { type: _t, lang: _l, consent: _c, ...rest } = input || {};
     const form_data = {};
     for (const [k, v] of Object.entries(rest)) {
       if (typeof v === 'string') form_data[k] = clip(v, 800);
@@ -75,6 +83,7 @@ export function createPortalLeads(dataDir, opts = {}) {
     const rec = {
       id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       type, lang, name, email, form_data,
+      consent: true,
       created_at: new Date().toISOString(),
     };
     await persist(rec);
