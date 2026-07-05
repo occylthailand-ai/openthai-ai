@@ -9,6 +9,28 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Hourly loop, run 46: closed out the crash-class sweep flagged at the end of run 45 — 3 more unguarded body-shape bugs found and fixed in `smart-e`, plus the JSON parser itself
+
+PR #79: same recurring rate-limit pattern confirmed again via the real status API (`get_status` on commit `7b2d038`: all 3 Vercel checks `failure` / "Deployment rate limited — retry in 24 hours"), while the bot's PR comment simultaneously showed all 3 as "Ready" — the same lag noted repeatedly this session. No action needed; this is a Vercel free-tier quota issue, not a code problem.
+
+**Followed up on run 45's own "worth a similar pass, not fixing speculatively" note** instead of picking a new category: audited every other `POST`/`PUT` handler in `smart-e/server.py` for the same unguarded-`.get()`-on-request-body pattern that caused the `_create_order` crash fixed last run. Read the full file rather than trusting the earlier grep-level guess about which routes were affected.
+
+**Reproduced each candidate before touching code**, same discipline as run 45: booted the server fresh (`ADMIN_KEY` set, clean DB) and sent deliberately malformed payloads. Confirmed via the server's own traceback log, not assumption:
+1. `POST /api/products` with `price:"abc"` → unhandled `ValueError` in `float(body.get('price',0))`, empty response.
+2. `POST /api/payments/qr` with `amount:"abc"` → same `ValueError` class, empty response.
+3. `POST /api/settings` with a JSON array body instead of an object → `AttributeError: 'list' object has no attribute 'items'`.
+4. Any `POST`/`PUT` with a body that isn't valid JSON at all (e.g. plain text) → `read_body()` itself had no try/except around `json.loads`, so this crashed *every* write route, not just one — the widest-reaching of the four.
+
+**Fix:** wrapped the numeric conversions in `_create_product`/`_create_qr` with a `try/except (TypeError, ValueError)` returning a clean `400` with a Thai message; added an `isinstance(body, dict)` check to `_save_settings`; made `read_body()` catch `JSONDecodeError`/`UnicodeDecodeError` and return `None`, with `do_POST`/`do_PUT` now checking for that `None` immediately after reading the body and returning `400` before any route dispatch (including before the LINE-webhook signature branch, since a body-shape problem should fail the same way regardless of which route it's headed to).
+
+**Verified live:** re-ran all 4 malformed payloads against the fixed server — all now return a clean `400` with an explanatory message, zero exceptions in the server log. Re-ran a full set of valid requests afterward (create product, create QR, save settings, create a valid order) to confirm no regression — all still return the correct 200/201 with correct data. Confirmed the dashboard/products `GET` routes still return clean data after the write operations.
+
+Pushed to `smart-e`'s existing PR #1 branch (commit `df8fced`) — full writeup in that repo's commit message, no `DECISIONS_LOG.md` there. This closes out the crash-class sweep across `smart-e`'s write routes; no further unguarded-body-shape gaps found in the remaining handlers (`_create_customer`, `_update_product`, `_update_customer`, `_confirm_payment`, `_line_broadcast` all only do `.get()` with string/None defaults, no type coercion that could raise).
+
+5 items still pending an owner decision, unchanged (see run 44/45 entries); `otop-ai-landing`'s domain question also unchanged.
+
+---
+
 ### 2026-07-05 — Hourly loop, run 45: `openthai-ai`'s own self-serve producer edit endpoint checked clean; real crash bug found and fixed in `smart-e`'s order creation
 
 PR #79: same recurring rate-limit pattern, confirmed via the real status API again (the bot's PR comment table showed "all Ready" mid-cycle for a commit that the API simultaneously showed 2-of-3 failing for — noting this recurring lag once more since it happened several times this session; always trusted the API over the comment).
