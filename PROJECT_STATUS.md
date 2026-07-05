@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T09:17:57.771Z · branch `claude/daily-reporter-improvements-8vc9ct` (85 commit(s) ahead of main)
+Generated: 2026-07-05T09:25:42.192Z · branch `claude/daily-reporter-improvements-8vc9ct` (86 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 295 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 169 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 38: this cycle's real fix landed in `smart-e`, not `openthai-ai` — plus a new fabricated-content finding in `OpenThai-AI-v9.0` flagged for the owner, not built on
+
+PR #79 status checked first per usual: all 3 Vercel deploys green on the latest push, no new comments. Nothing needed in `openthai-ai` itself this cycle, so — per the standing order's "5 repos" scope — looked across the other 4 for real, verifiable work instead of manufacturing something in this repo just to have a diff here.
+
+**`OpenThai-AI-v9.0` — found, but deliberately did not act on:** its `README.md`/`CHANGELOG.md`/`ARCHITECTURE.md`/`DEPLOYMENT.md`/`ROADMAP.md` etc. describe a full "Advanced Self-Healing AI System" with badges claiming TypeScript 5.0+/Node 18+/Active Development and detailed npm install instructions. The actual repo contains **two** source files total (`app/api/monitor/health/route.ts`, `app/affiliate-hub/page.tsx`) and **no `package.json`, no `next.config`, no `tsconfig.json`** — it cannot be installed or run as-is. The one real interactive page (`affiliate-hub`) posts to `/api/affiliate/apply`, which does not exist anywhere in the repo, so any real visitor who filled out that form today would always get "❌ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง." This is the same category of problem `all-platform-files` was already flagged for (run 5, still unanswered) — docs describing something that isn't there — just discovered in a different repo. **Not building a Next.js scaffold or backend for this** — deciding whether this repo should become a real minimal app, get its aspirational docs trimmed back to match reality, or be deprioritized is a product decision matching item 8, not something to guess at. Flagging alongside the existing `all-platform-files` question rather than silently fixing or silently ignoring it.
+
+**What was actually shipped this cycle — `smart-e`:** while deciding where to look instead, checked whether the previous cycle's real security fix (`cfd9caf`, gating every `server.py` API route behind `X-Admin-Key` to close a genuine unauthenticated-full-CRUD vulnerability) had a live consumer that needed updating to match — this is the same "verify your own recent work" discipline as run 8's regression pass in this repo. It did, and hadn't been updated: `index.html`'s `api()` fetch wrapper never sent the new header, so **every dashboard API call started 401ing the moment the security fix shipped** — a real, complete regression of the admin UI, not just a rough edge. Fixed by having `api()` prompt once for the key (`window.prompt`, persisted in `localStorage`), attach it as `X-Admin-Key` on every call, and clear+reprompt on a 401 instead of failing silently forever.
+
+While verifying that fix live, hit a *second*, unrelated pre-existing bug that was blocking the dashboard from ever rendering on initial load in the first place: `navigate()`'s `event?.currentTarget?.classList.add('active')` throws when called without a real click event — which is exactly how it's invoked from the `DOMContentLoaded` listener on page load (`window.event` at that point resolves to the DOMContentLoaded event itself, whose `currentTarget` has no `.classList`). Fixed with one more `?.` before `.add` so it safely no-ops outside a real click context, without changing behavior for actual nav-item clicks.
+
+**Verified live for both**: booted `server.py` with a real `ADMIN_KEY`, reproduced the exact 401 regression first (`/api/products` → 401 with no key, 200 with the right one). Then drove a real headless browser through the full flow — initial load now renders the dashboard with real data instead of crashing before the first API call fires; a wrong key gets rejected and cleared from `localStorage`; reloading with the correct key persists and loads correctly; and a real click on a nav item still correctly applies the `active` class, confirming the extra `?.` didn't regress the working case. Pushed to `smart-e`'s existing PR #1 branch — no `DECISIONS_LOG.md` in that repo, so the full writeup is in the commit message there.
+
+4 items now pending an owner decision (3 from `openthai-ai` + this new `OpenThai-AI-v9.0` finding, which mirrors the existing unanswered `all-platform-files` one); the producer-email-disclosure-via-search observation remains a separate, lower-priority note.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 37: 8 public pages never set `document.title` — browser tab still showed whatever page you came from
 
@@ -1955,54 +1971,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 095baa6 fix: set document.title on 8 public pages that never set it (20 seconds ago)
-- 1e8fcc0 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- c636614 feat: reprice Pro/Premier, add Enterprise tier (owner request) (61 minutes ago)
+- 210caaa chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
+- 095baa6 fix: set document.title on 8 public pages that never set it (8 minutes ago)
+- 1e8fcc0 chore: sync PROJECT_STATUS.md [skip ci] (69 minutes ago)
+- c636614 feat: reprice Pro/Premier, add Enterprise tier (owner request) (69 minutes ago)
 - ef9f6ff chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - 7b1ed81 security: block re-apply hijack of already-approved producers (3 hours ago)
 - de226ad chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - 13b7438 security: require email confirmation before cancelling a subscription (3 hours ago)
-- 8873c5f chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
