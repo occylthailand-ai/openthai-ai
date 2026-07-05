@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Hourly loop, run 41: full regression sweep after run 40's 12-file consent change — clean, no new code shipped this cycle
+
+PR #79: Vercel status still mixed per the real commit-status API (`openthai-ai` project succeeded, `-backend`/`-npxn` rate-limited) — the bot's PR comment table showed "all Ready" at one point during this cycle, which didn't match the API; trusted the API, not the comment, consistent with this log's running note that the comment table can lag/misreport. Recurring quota issue, not actionable.
+
+**Checked two adjacent things before picking a new task, found nothing worth changing:**
+- `PDPABanner.jsx` (cookie-consent banner) stores its accept/reject choice only in `localStorage`, no server record — looked like it might be the same class of bug as run 40's portal-consent gap, but it isn't: cookie/analytics consent is a browser-session preference, not a specific person's submitted-data consent, and storing it client-side + gating `gtag('consent', 'update', ...)` off of it is the standard, correct pattern for this kind of banner everywhere. Not a bug.
+- The homepage's waitlist email-capture (`handleJoin` → `POST /api/waitlist`) has no explicit consent checkbox, unlike the 9 portals. Considered whether this is the same gap, but it's a genuinely different, more debatable case (single-purpose "get free tips" opt-in via affirmative submission, with working unsubscribe links already confirmed in earlier runs) rather than the portals' multi-field business-signup consent — didn't manufacture a fix here without being sure it's actually broken.
+
+**Given run 40 touched 12 files across 9 portal pages plus shared backend logic, ran a full regression sweep before considering it done-done:** rebuilt the frontend against a local backend, then drove a real headless browser across 21 routes (homepage, pricing, about, catalog, all 9 portals, privacy/terms/contact, affiliate, payment, etc.). Initial pass showed every single route "timing out" on navigation — dug into this rather than either dismissing it or panicking: root cause was `fonts.googleapis.com`'s stylesheet request hanging indefinitely under this sandbox's outbound proxy (confirmed directly by inspecting Playwright's still-pending-requests list), which blocks the browser's `load` event even though the page underneath renders completely fine. Confirmed real content still rendered correctly on every route (route-specific body sizes, no `pageerror` JS crashes anywhere) — an environment artifact, not a regression, and it affected literally every route uniformly including ones untouched by any recent commit, which rules out a code-level cause.
+
+No code change shipped this cycle — a clean verification pass is also a legitimate outcome, not a failure to find work; forcing a low-confidence fix (like the waitlist consent question above) just to have a diff would have been worse than shipping nothing.
+
+4 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question also unchanged.
+
+---
+
 ### 2026-07-05 — Hourly loop, run 40: all 9 `/portals/*` signup forms required a PDPA consent tick client-side, but the backend never actually recorded it — real compliance gap, now closed
 
 PR #79: Vercel quota rate-limited again (same recurring 24h operational cycle, not a code issue).

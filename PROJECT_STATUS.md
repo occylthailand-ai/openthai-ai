@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T11:17:40.142Z · branch `claude/daily-reporter-improvements-8vc9ct` (91 commit(s) ahead of main)
+Generated: 2026-07-05T12:20:43.341Z · branch `claude/daily-reporter-improvements-8vc9ct` (92 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 301 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 175 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 41: full regression sweep after run 40's 12-file consent change — clean, no new code shipped this cycle
+
+PR #79: Vercel status still mixed per the real commit-status API (`openthai-ai` project succeeded, `-backend`/`-npxn` rate-limited) — the bot's PR comment table showed "all Ready" at one point during this cycle, which didn't match the API; trusted the API, not the comment, consistent with this log's running note that the comment table can lag/misreport. Recurring quota issue, not actionable.
+
+**Checked two adjacent things before picking a new task, found nothing worth changing:**
+- `PDPABanner.jsx` (cookie-consent banner) stores its accept/reject choice only in `localStorage`, no server record — looked like it might be the same class of bug as run 40's portal-consent gap, but it isn't: cookie/analytics consent is a browser-session preference, not a specific person's submitted-data consent, and storing it client-side + gating `gtag('consent', 'update', ...)` off of it is the standard, correct pattern for this kind of banner everywhere. Not a bug.
+- The homepage's waitlist email-capture (`handleJoin` → `POST /api/waitlist`) has no explicit consent checkbox, unlike the 9 portals. Considered whether this is the same gap, but it's a genuinely different, more debatable case (single-purpose "get free tips" opt-in via affirmative submission, with working unsubscribe links already confirmed in earlier runs) rather than the portals' multi-field business-signup consent — didn't manufacture a fix here without being sure it's actually broken.
+
+**Given run 40 touched 12 files across 9 portal pages plus shared backend logic, ran a full regression sweep before considering it done-done:** rebuilt the frontend against a local backend, then drove a real headless browser across 21 routes (homepage, pricing, about, catalog, all 9 portals, privacy/terms/contact, affiliate, payment, etc.). Initial pass showed every single route "timing out" on navigation — dug into this rather than either dismissing it or panicking: root cause was `fonts.googleapis.com`'s stylesheet request hanging indefinitely under this sandbox's outbound proxy (confirmed directly by inspecting Playwright's still-pending-requests list), which blocks the browser's `load` event even though the page underneath renders completely fine. Confirmed real content still rendered correctly on every route (route-specific body sizes, no `pageerror` JS crashes anywhere) — an environment artifact, not a regression, and it affected literally every route uniformly including ones untouched by any recent commit, which rules out a code-level cause.
+
+No code change shipped this cycle — a clean verification pass is also a legitimate outcome, not a failure to find work; forcing a low-confidence fix (like the waitlist consent question above) just to have a diff would have been worse than shipping nothing.
+
+4 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question also unchanged.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 40: all 9 `/portals/*` signup forms required a PDPA consent tick client-side, but the backend never actually recorded it — real compliance gap, now closed
 
@@ -2003,54 +2019,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 192a13a fix: PDPA consent checkbox on all 9 portal pages was never sent to or recorded by the backend (25 seconds ago)
-- 2c32e04 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- 30a33dd docs: log run 39 -- audited otop-ai-landing, shipped SEO hygiene there (63 minutes ago)
-- 615a806 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- e979aab docs: log run 38 -- smart-e admin-key regression fixed, OpenThai-AI-v9.0 fabricated-content finding flagged (2 hours ago)
-- 210caaa chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 095baa6 fix: set document.title on 8 public pages that never set it (2 hours ago)
-- 1e8fcc0 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 38f9622 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- 192a13a fix: PDPA consent checkbox on all 9 portal pages was never sent to or recorded by the backend (63 minutes ago)
+- 2c32e04 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 30a33dd docs: log run 39 -- audited otop-ai-landing, shipped SEO hygiene there (2 hours ago)
+- 615a806 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- e979aab docs: log run 38 -- smart-e admin-key regression fixed, OpenThai-AI-v9.0 fabricated-content finding flagged (3 hours ago)
+- 210caaa chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 095baa6 fix: set document.title on 8 public pages that never set it (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
