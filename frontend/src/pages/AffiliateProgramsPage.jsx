@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CATEGORIES, PROGRAMS } from '../data/affiliatePrograms';
 
@@ -10,6 +10,7 @@ const TIKTOK_URL = 'https://vt.tiktok.com/ZSCB66nhQ/';
 
 export default function AffiliateProgramsPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'ศูนย์รวมโปรแกรม Affiliate — Openthai.ai'; }, []);
   const [searchParams] = useSearchParams();
   const ref = (searchParams.get('ref') || '').replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   const [q, setQ] = useState('');

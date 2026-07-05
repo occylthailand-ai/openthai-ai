@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 import { apiUrl } from '../apiBase';
@@ -33,6 +33,7 @@ function useCopy() {
 export default function AffiliatePage() {
   const toast = useToast();
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'โปรแกรม Affiliate — Openthai.ai'; }, []);
   const { lang } = useLang();
   const T = AF[lang] || AF.th;
   const { copied, copy } = useCopy();

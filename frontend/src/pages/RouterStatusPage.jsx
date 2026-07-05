@@ -5,6 +5,7 @@ import { apiUrl } from '../apiBase';
 // ── Smart Model Router — แดชบอร์ดต้นทุนโทเคน + สถานะ provider ────────────────────
 export default function RouterStatusPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'Smart Model Router — Openthai.ai'; }, []);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 

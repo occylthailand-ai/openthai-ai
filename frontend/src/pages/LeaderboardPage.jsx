@@ -12,6 +12,7 @@ const MEDAL = ['🥇', '🥈', '🥉'];
 
 export default function LeaderboardPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'อันดับพันธมิตร Affiliate — Openthai.ai'; }, []);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

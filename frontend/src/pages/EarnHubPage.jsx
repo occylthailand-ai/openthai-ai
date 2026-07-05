@@ -13,6 +13,7 @@ const PACKAGE_PRICE = 1000;  // แพ็กเกจ ฿1,000 = 1 ดีลถ�
 
 export default function EarnHubPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'ศูนย์สร้างรายได้ — Openthai.ai'; }, []);
   const [searchParams] = useSearchParams();
   const ref = (searchParams.get('ref') || '').replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   const [copied, setCopied] = useState('');

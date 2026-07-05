@@ -25,6 +25,7 @@ const AUTHORS = [
 
 export default function CouncilPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'OpenThaiAi Council — Openthai.ai'; }, []);
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

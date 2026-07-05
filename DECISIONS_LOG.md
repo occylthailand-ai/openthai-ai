@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Hourly loop, run 37: 8 public pages never set `document.title` — browser tab still showed whatever page you came from
+
+PR #79's Vercel deploy quota reset overnight (confirmed via the real GitHub status API, not just the bot's comment table which has shown stale/premature "Ready" states before) — all 3 projects green, `mergeable_state: clean`, no new PR comments. Nothing to build there.
+
+**Task selection**: considered adding more pages to `sitemap.xml`/`robots.txt` (mirroring the `/about` pattern from earlier today) but audited each candidate first rather than assuming "public route = marketing page": `/earn` and `/affiliate-programs` are referral-link landing pages meant to be shared with a `?ref=CODE`, not organic search destinations; `/council` is the owner's personal Claude/Gemini/Grok bridge-notes tool (unauthenticated, but clearly not general-audience content — indexing it would be actively wrong); `/leaderboard` and `/router` are affiliate/ops utility dashboards. None of these belong in a public sitemap, so didn't add them — a real judgment call, not scope creep avoidance for its own sake.
+
+**What was a real, unambiguous bug**: while checking `document.title` usage as part of that audit, found 8 public, unauthenticated pages that never set it at all — `AffiliatePage.jsx` (the actual `/affiliate` program page, not a minor one), `EarnHubPage.jsx`, `AffiliateProgramsPage.jsx`, `ContentStudioPage.jsx`, `CouncilPage.jsx`, `LeaderboardPage.jsx`, `RouterStatusPage.jsx`, `VoiceCommandPage.jsx`. Since this is a single-page app, visiting any of these client-side (not a fresh URL load) left the browser tab showing whichever page's title happened to render first that session — wrong tab title, wrong bookmark name, wrong browser-history entry, and a missing accessibility signal for screen-reader users on tab switch.
+
+**Fix**: added `useEffect(() => { document.title = '...'; }, [])` to all 8, matching the exact convention already used by every other page in this codebase (`PrivacyPage.jsx`, `AboutPage.jsx`, etc.) — titles pulled from each page's own visible `<h1>`/hero text, not invented.
+
+**Verified live**: rebuilt, served via `vite preview`, drove a real headless browser to each of the 8 routes directly and confirmed `document.title` is now correct for every one. Then specifically re-tested the actual reported failure mode — client-side navigation without a full page reload (`pushState` + `popstate`, the same mechanism React Router uses) from the homepage to `/leaderboard` — and confirmed the tab title updates correctly instead of staying on the homepage's title, which is the exact bug this fix closes.
+
+4 items from earlier runs (3 owner-decision items + the producer-email-disclosure observation) unchanged.
+
+---
+
 ### 2026-07-05 — Direct owner request: repriced Pro/Premier and added a new Enterprise tier
 
 Owner instruction: "Free / Pro ฿299 / Premier ฿599 / บริษัทข้ามชาติ ฿1,299" — a real pricing change plus a brand-new 4th tier for multinational companies. Found and updated **every** place pricing exists in this codebase, not just the visible pages, since the actual source of truth for what a customer gets charged is `backend/omise-payment.js`'s `SUBSCRIPTION_PLANS` map — the frontend pages just display numbers that have to match it.

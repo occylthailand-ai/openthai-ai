@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T08:16:50.998Z · branch `claude/daily-reporter-improvements-8vc9ct` (83 commit(s) ahead of main)
+Generated: 2026-07-05T09:17:22.124Z · branch `claude/daily-reporter-improvements-8vc9ct` (84 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 293 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 167 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 37: 8 public pages never set `document.title` — browser tab still showed whatever page you came from
+
+PR #79's Vercel deploy quota reset overnight (confirmed via the real GitHub status API, not just the bot's comment table which has shown stale/premature "Ready" states before) — all 3 projects green, `mergeable_state: clean`, no new PR comments. Nothing to build there.
+
+**Task selection**: considered adding more pages to `sitemap.xml`/`robots.txt` (mirroring the `/about` pattern from earlier today) but audited each candidate first rather than assuming "public route = marketing page": `/earn` and `/affiliate-programs` are referral-link landing pages meant to be shared with a `?ref=CODE`, not organic search destinations; `/council` is the owner's personal Claude/Gemini/Grok bridge-notes tool (unauthenticated, but clearly not general-audience content — indexing it would be actively wrong); `/leaderboard` and `/router` are affiliate/ops utility dashboards. None of these belong in a public sitemap, so didn't add them — a real judgment call, not scope creep avoidance for its own sake.
+
+**What was a real, unambiguous bug**: while checking `document.title` usage as part of that audit, found 8 public, unauthenticated pages that never set it at all — `AffiliatePage.jsx` (the actual `/affiliate` program page, not a minor one), `EarnHubPage.jsx`, `AffiliateProgramsPage.jsx`, `ContentStudioPage.jsx`, `CouncilPage.jsx`, `LeaderboardPage.jsx`, `RouterStatusPage.jsx`, `VoiceCommandPage.jsx`. Since this is a single-page app, visiting any of these client-side (not a fresh URL load) left the browser tab showing whichever page's title happened to render first that session — wrong tab title, wrong bookmark name, wrong browser-history entry, and a missing accessibility signal for screen-reader users on tab switch.
+
+**Fix**: added `useEffect(() => { document.title = '...'; }, [])` to all 8, matching the exact convention already used by every other page in this codebase (`PrivacyPage.jsx`, `AboutPage.jsx`, etc.) — titles pulled from each page's own visible `<h1>`/hero text, not invented.
+
+**Verified live**: rebuilt, served via `vite preview`, drove a real headless browser to each of the 8 routes directly and confirmed `document.title` is now correct for every one. Then specifically re-tested the actual reported failure mode — client-side navigation without a full page reload (`pushState` + `popstate`, the same mechanism React Router uses) from the homepage to `/leaderboard` — and confirmed the tab title updates correctly instead of staying on the homepage's title, which is the exact bug this fix closes.
+
+4 items from earlier runs (3 owner-decision items + the producer-email-disclosure observation) unchanged.
+
+---
 
 ### 2026-07-05 — Direct owner request: repriced Pro/Premier and added a new Enterprise tier
 
@@ -1939,54 +1955,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c636614 feat: reprice Pro/Premier, add Enterprise tier (owner request) (19 seconds ago)
-- ef9f6ff chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 7b1ed81 security: block re-apply hijack of already-approved producers (2 hours ago)
-- de226ad chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 13b7438 security: require email confirmation before cancelling a subscription (2 hours ago)
-- 8873c5f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 2f95494 feat: add /about page with skill-tag badges (owner request) (2 hours ago)
-- a19f382 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 1e8fcc0 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- c636614 feat: reprice Pro/Premier, add Enterprise tier (owner request) (61 minutes ago)
+- ef9f6ff chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 7b1ed81 security: block re-apply hijack of already-approved producers (3 hours ago)
+- de226ad chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 13b7438 security: require email confirmation before cancelling a subscription (3 hours ago)
+- 8873c5f chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 2f95494 feat: add /about page with skill-tag badges (owner request) (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

@@ -15,6 +15,7 @@ const STORAGE_KEY = 'content_studio_products';
 
 export default function ContentStudioPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'Content Studio — Openthai.ai'; }, []);
   const [products, setProducts] = useState(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
   });
