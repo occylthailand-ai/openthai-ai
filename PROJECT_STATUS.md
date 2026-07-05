@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T05:58:14.243Z · branch `claude/daily-reporter-improvements-8vc9ct` (77 commit(s) ahead of main)
+Generated: 2026-07-05T06:22:23.350Z · branch `claude/daily-reporter-improvements-8vc9ct` (78 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 287 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 161 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Owner decision received: fixed the run-13 subscription-cancellation hijack, flagged 22 cycles ago and left open pending exactly this call
+
+**Owner reviewed both remaining flagged decisions this session and approved fixing them, in order: payment-cancel first, then the run-1 producer-apply hijack.** This entry covers payment-cancel.
+
+Re-verified the bug was still real before touching anything: `POST /api/payment/cancel` and `GET /api/payment/entitlement` still took only a bare `email` with zero session/login binding — anyone who knew (or guessed) a paying customer's email could cancel their real Omise subscription outright. Run 13 (2026-07-04) explicitly declined to auto-fix this because the two candidate fixes both changed live UX for real paying customers (email-confirmation friction, or waiting for a full login system with a backfill migration) — a product call, not a same-shape bug fix, per item 8. That decision has now been made.
+
+**Fix — same email-confirmation-link pattern already proven for PDPA erasure (run 12) and affiliate withdrawal (run 17), not a new mechanism:** split `POST /api/payment/cancel` into two steps. The POST now only sends a confirmation email (`unsubToken(email, 'payment-cancel')`) and no longer touches the entitlement; a new `GET /api/payment/cancel/confirm?email=&token=` verifies the token and only then calls `cancelSubscription()` and flips `status` to `cancelled`. Tightened the initiation route to its own limiter (`paymentCancelLimiter`, 5/hour) matching erasure's budget for account-destructive actions, separate from the more lenient read-only `paymentAccountLimiter` already on `GET /api/payment/entitlement`. Updated `PaymentPage.jsx`'s `handleCancelSubscription` (previously assumed instant synchronous cancellation) to show "ส่งอีเมลยืนยันแล้ว — เช็คอีเมลเพื่อกดยืนยันยกเลิก" instead of an immediate cancelled state.
+
+**Verified live, adversarially — the exact attack run 13 described:** seeded a real active entitlement locally, called `POST /api/payment/cancel` with only the email (no other credential) and confirmed the subscription **stayed active** — the old one-shot hijack no longer works. Caught the real confirmation email via a local SMTP catcher, followed the real link, and confirmed the subscription only then flipped to `cancelled`. Confirmed a wrong/tampered token is rejected (403), confirmed re-visiting the same valid link after cancellation returns "ยกเลิกไปแล้วก่อนหน้านี้" instead of double-processing, and confirmed re-initiating cancellation on an already-cancelled account is rejected (400) rather than re-sending. `npm run build` compiled cleanly.
+
+**Next up (owner-approved, not yet built):** the run-1 producer-apply hijack (`POST /api/producers/apply` accepting an unauthenticated upsert keyed only by email, able to silently overwrite an approved producer's listing and knock them back to `pending`) — queued as this session's immediate next task.
+
+4 items from earlier runs are still pending an owner decision (down from 5 — payment-cancel is resolved); the producer-apply item above is approved-but-not-yet-built, not a new open question.
+
+---
 
 ### 2026-07-05 — Direct owner request: new `/about` page, currently just a skill-tag list (placeholder, deliberately not a full bio)
 
@@ -1892,54 +1908,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 2f95494 feat: add /about page with skill-tag badges (owner request) (16 seconds ago)
-- a19f382 chore: sync PROJECT_STATUS.md [skip ci] (38 minutes ago)
-- 7895b96 feat: notify producers by email when their application is approved (39 minutes ago)
+- 8873c5f chore: sync PROJECT_STATUS.md [skip ci] (24 minutes ago)
+- 2f95494 feat: add /about page with skill-tag badges (owner request) (24 minutes ago)
+- a19f382 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- 7895b96 feat: notify producers by email when their application is approved (63 minutes ago)
 - 9deb7d9 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - e12f5b8 docs: reject fabricated entity/DiscoveryEngine spec, not grounded in this repo (2 hours ago)
 - ca1b9c4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - a46ac82 fix: og-image.png didn't exist -- every social link preview has been broken since day one (2 hours ago)
-- 7240ed3 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -2088,7 +2066,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 226 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8346 | Vercel serverless detection |
+| `server.js` | 8384 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

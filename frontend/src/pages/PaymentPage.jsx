@@ -86,6 +86,7 @@ const PaymentPage = () => {
   const [autoRenew, setAutoRenew] = useState(true);  // ต่ออายุอัตโนมัติทุกเดือน (บัตร)
   const [entitlement, setEntitlement] = useState(null);  // แผนที่ใช้อยู่ตอนนี้
   const [cancelling, setCancelling] = useState(false);
+  const [cancelRequested, setCancelRequested] = useState(false);  // ส่งอีเมลยืนยันยกเลิกแล้ว รอกดลิงก์ในอีเมล
 
   const plan = PLANS.find(p => p.key === selectedPlan);
 
@@ -175,7 +176,7 @@ const PaymentPage = () => {
   }, [step]);  // eslint-disable-line
 
   const handleCancelSubscription = async () => {
-    if (!window.confirm('ยืนยันยกเลิกการต่ออายุอัตโนมัติ? คุณยังใช้งานได้จนถึงวันหมดอายุ')) return;
+    if (!window.confirm('ยืนยันยกเลิกการต่ออายุอัตโนมัติ? เราจะส่งอีเมลยืนยันไปให้ กดลิงก์ในอีเมลเพื่อยกเลิกจริง')) return;
     setCancelling(true); setError('');
     try {
       const res = await fetch(apiUrl('/api/payment/cancel'), {
@@ -183,9 +184,9 @@ const PaymentPage = () => {
         body: JSON.stringify({ email }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'ยกเลิกไม่สำเร็จ');
-      setEntitlement(data);
-      window.alert(data.message || 'ยกเลิกเรียบร้อย');
+      if (!res.ok) throw new Error(data.error || 'ส่งคำขอไม่สำเร็จ');
+      setCancelRequested(true);
+      window.alert(data.message || 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันการยกเลิก');
     } catch (e) {
       setError(e.message);
     } finally {
@@ -279,10 +280,14 @@ const PaymentPage = () => {
                   {entitlement.expires_at && <div style={{ fontSize: '12px', color: '#6b7280' }}>{entitlement.status === 'cancelled' ? 'ใช้ได้ถึง' : 'ต่ออายุ'} {formatThaiDateTime(entitlement.expires_at)}</div>}
                 </div>
                 {entitlement.subscription_id && entitlement.status === 'active' && (
-                  <button onClick={handleCancelSubscription} disabled={cancelling}
-                    style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', cursor: cancelling ? 'not-allowed' : 'pointer' }}>
-                    {cancelling ? 'กำลังยกเลิก…' : 'ยกเลิกการต่ออายุ'}
-                  </button>
+                  cancelRequested ? (
+                    <span style={{ color: '#fbbf24', fontSize: '13px' }}>📧 ส่งอีเมลยืนยันแล้ว — เช็คอีเมลเพื่อกดยืนยันยกเลิก</span>
+                  ) : (
+                    <button onClick={handleCancelSubscription} disabled={cancelling}
+                      style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', cursor: cancelling ? 'not-allowed' : 'pointer' }}>
+                      {cancelling ? 'กำลังส่งคำขอ…' : 'ยกเลิกการต่ออายุ'}
+                    </button>
+                  )
                 )}
               </div>
             )}

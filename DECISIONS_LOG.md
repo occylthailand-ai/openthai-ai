@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Owner decision received: fixed the run-13 subscription-cancellation hijack, flagged 22 cycles ago and left open pending exactly this call
+
+**Owner reviewed both remaining flagged decisions this session and approved fixing them, in order: payment-cancel first, then the run-1 producer-apply hijack.** This entry covers payment-cancel.
+
+Re-verified the bug was still real before touching anything: `POST /api/payment/cancel` and `GET /api/payment/entitlement` still took only a bare `email` with zero session/login binding — anyone who knew (or guessed) a paying customer's email could cancel their real Omise subscription outright. Run 13 (2026-07-04) explicitly declined to auto-fix this because the two candidate fixes both changed live UX for real paying customers (email-confirmation friction, or waiting for a full login system with a backfill migration) — a product call, not a same-shape bug fix, per item 8. That decision has now been made.
+
+**Fix — same email-confirmation-link pattern already proven for PDPA erasure (run 12) and affiliate withdrawal (run 17), not a new mechanism:** split `POST /api/payment/cancel` into two steps. The POST now only sends a confirmation email (`unsubToken(email, 'payment-cancel')`) and no longer touches the entitlement; a new `GET /api/payment/cancel/confirm?email=&token=` verifies the token and only then calls `cancelSubscription()` and flips `status` to `cancelled`. Tightened the initiation route to its own limiter (`paymentCancelLimiter`, 5/hour) matching erasure's budget for account-destructive actions, separate from the more lenient read-only `paymentAccountLimiter` already on `GET /api/payment/entitlement`. Updated `PaymentPage.jsx`'s `handleCancelSubscription` (previously assumed instant synchronous cancellation) to show "ส่งอีเมลยืนยันแล้ว — เช็คอีเมลเพื่อกดยืนยันยกเลิก" instead of an immediate cancelled state.
+
+**Verified live, adversarially — the exact attack run 13 described:** seeded a real active entitlement locally, called `POST /api/payment/cancel` with only the email (no other credential) and confirmed the subscription **stayed active** — the old one-shot hijack no longer works. Caught the real confirmation email via a local SMTP catcher, followed the real link, and confirmed the subscription only then flipped to `cancelled`. Confirmed a wrong/tampered token is rejected (403), confirmed re-visiting the same valid link after cancellation returns "ยกเลิกไปแล้วก่อนหน้านี้" instead of double-processing, and confirmed re-initiating cancellation on an already-cancelled account is rejected (400) rather than re-sending. `npm run build` compiled cleanly.
+
+**Next up (owner-approved, not yet built):** the run-1 producer-apply hijack (`POST /api/producers/apply` accepting an unauthenticated upsert keyed only by email, able to silently overwrite an approved producer's listing and knock them back to `pending`) — queued as this session's immediate next task.
+
+4 items from earlier runs are still pending an owner decision (down from 5 — payment-cancel is resolved); the producer-apply item above is approved-but-not-yet-built, not a new open question.
+
+---
+
 ### 2026-07-05 — Direct owner request: new `/about` page, currently just a skill-tag list (placeholder, deliberately not a full bio)
 
 Owner asked to add 10 topics ("Artificial Intelligence", "Machine Learning", "Prompt Engineering", "Claude/ChatGPT/Grok", "Data Analytics", "AWS Certified", "Data Science", "Big Data", "Python", "Ethical Hacking") as "skill tags" on the site. These read like personal/professional skill tags, not anything tied to OpenThaiAi's actual product surface, so — following the same verify-before-build discipline as everything else in this log — checked before placing them anywhere: no `About`/`Team`/`Profile` page or route existed in this repo at all. Asked the owner where these should go and whether a full profile (name/photo/bio) should ship alongside them; confirmed: build a new `/about` page, skill tags only for now, no bio content yet (that's expected to come later).

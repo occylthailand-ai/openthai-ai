@@ -7342,11 +7342,12 @@ app.post('/api/quickpay/create', quickpayLimiter, async (req, res) => {
   }
 });
 
-// GET /api/payment/entitlement?email= — เช็คแผนที่ user มีสิทธิ์ใช้ตอนนี้
-// ทั้ง entitlement (read) และ cancel (write) ใช้แค่ email เป็นตัวระบุตัวตน ไม่มี rate limiter
-// เลยทั้งคู่ ต่างจาก endpoint อื่นที่แตะข้อมูลผู้ใช้จริงในไฟล์นี้ — เพิ่มไว้เป็นด่านแรกกัน
-// การเดา/สแกน email จำนวนมาก (ยังไม่ใช่การแก้ปัญหาการยืนยันตัวตนที่แท้จริง ดู DECISIONS_LOG)
+// GET /api/payment/entitlement?email= — เช็คแผนที่ user มีสิทธิ์ใช้ตอนนี้ (read-only, ยัง
+// ระบุตัวตนแค่ด้วย email อยู่ — เก็บ rate limit เดิมไว้กันสแกนเดา email จำนวนมาก)
 const paymentAccountLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'ลองบ่อยเกินไป กรุณารอสักครู่' } });
+// จำกัดการเริ่มขอยกเลิกให้แคบกว่า entitlement (read) เพราะนี่คือจุดที่แตะเงินจริง —
+// budget เดียวกับ erasure (5 ครั้ง/ชม.) ซึ่งเป็น action ทำลาย/เปลี่ยนสถานะบัญชีจริงเหมือนกัน
+const paymentCancelLimiter = rateLimit({ windowMs: 3600000, max: 5, message: { error: 'ลองบ่อยเกินไป กรุณารอสักครู่' } });
 
 app.get('/api/payment/entitlement', paymentAccountLimiter, (req, res) => {
   const email = (req.query.email || '').trim();
@@ -7355,12 +7356,49 @@ app.get('/api/payment/entitlement', paymentAccountLimiter, (req, res) => {
   res.json({ success: true, ...ent });
 });
 
-// POST /api/payment/cancel — ยกเลิก subscription (ใช้สิทธิ์ได้จนถึงวันหมดอายุ)
-app.post('/api/payment/cancel', paymentAccountLimiter, async (req, res) => {
+// POST /api/payment/cancel — เดิมยกเลิก subscription จริงทันทีแค่รู้ email เดียว ไม่มีการยืนยัน
+// ตัวตนเลย ใครก็ตามที่รู้อีเมลลูกค้าที่จ่ายเงินจริงสามารถยกเลิกแทนเขาได้ (flagged ตั้งแต่ run 13,
+// รอการตัดสินใจของเจ้าของโปรเจกต์เพราะกระทบ UX ลูกค้าที่ใช้อยู่จริงทุกวันนี้ — ตอนนี้ตัดสินใจแล้ว
+// ว่ายอมรับการเพิ่ม email-confirmation-link แบบเดียวกับ erasure ได้) เปลี่ยนเป็น 2 ขั้นตอน:
+// ขั้นแรกแค่ส่งอีเมลยืนยัน ยังไม่ยกเลิกจริง ต้องกดลิงก์ในอีเมลก่อนถึงจะยกเลิกจริง (ด้านล่าง)
+app.post('/api/payment/cancel', paymentCancelLimiter, async (req, res) => {
   const email = (req.body?.email || '').trim();
   if (!email) return res.status(400).json({ error: 'ต้องการ email' });
-  const ent = entitlements[email.toLowerCase()];
+  const sanitized = email.toLowerCase();
+  const ent = entitlements[sanitized];
   if (!ent) return res.status(404).json({ error: 'ไม่พบสิทธิ์การใช้งานสำหรับอีเมลนี้' });
+  if (ent.status === 'cancelled') return res.status(400).json({ error: 'ยกเลิกไปแล้ว' });
+
+  const confirmUrl = `${DOMAIN_URL}/api/payment/cancel/confirm?email=${encodeURIComponent(sanitized)}&token=${unsubToken(sanitized, 'payment-cancel')}`;
+  if (mailer) {
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        to: sanitized,
+        subject: '⚠️ ยืนยันการยกเลิก subscription — Openthai.ai',
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:520px;margin:0 auto;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#ef4444,#f59e0b);padding:24px;text-align:center;"><h1 style="margin:0;font-size:19px;">ยืนยันการยกเลิก subscription</h1></div>
+          <div style="padding:24px;font-size:14px;line-height:1.7;">
+            <p>เราได้รับคำขอยกเลิก subscription แผน <strong>${ent.plan}</strong> สำหรับอีเมลนี้ หากคุณเป็นผู้ส่งคำขอนี้จริง กดยืนยันด้านล่างเพื่อดำเนินการยกเลิก (ยังใช้งานได้จนถึงวันหมดอายุตามปกติ)</p>
+            <p style="text-align:center;margin:20px 0;"><a href="${confirmUrl}" style="background:#ef4444;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700;">ยืนยันการยกเลิก</a></p>
+            <p style="color:#94a3b8;font-size:12px;">หากคุณไม่ได้ส่งคำขอนี้ ไม่ต้องดำเนินการใดๆ subscription จะยังทำงานตามปกติหากไม่กดยืนยัน</p>
+          </div></div>`,
+      });
+    } catch (e) { console.error('[payment/cancel] send error:', e.message); }
+  }
+  addLog('info', 'Entitlement', `📧 Cancel confirmation ส่งให้ ${sanitized} (รอการยืนยันผ่านอีเมล)`);
+  res.json({ success: true, message: 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันการยกเลิก' });
+});
+
+// GET /api/payment/cancel/confirm — ยืนยันผ่านลิงก์ในอีเมล แล้วค่อยยกเลิกจริง (pattern เดียวกับ erasure)
+app.get('/api/payment/cancel/confirm', unsubLimiter, async (req, res) => {
+  const { email, token } = req.query;
+  if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const sanitized = String(email).toLowerCase().trim();
+  if (token !== unsubToken(sanitized, 'payment-cancel')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  const ent = entitlements[sanitized];
+  if (!ent) return res.status(404).send('ไม่พบสิทธิ์การใช้งานสำหรับอีเมลนี้');
+  if (ent.status === 'cancelled') return res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">ยกเลิกไปแล้วก่อนหน้านี้</div>');
 
   try {
     if (ent.subscription_id && process.env.OMISE_SECRET_KEY) {
@@ -7369,11 +7407,11 @@ app.post('/api/payment/cancel', paymentAccountLimiter, async (req, res) => {
     ent.status = 'cancelled';
     ent.updated_at = new Date().toISOString();
     saveEntitlements(entitlements);
-    addLog('info', 'Entitlement', `ยกเลิก subscription ของ ${email}`);
-    res.json({ success: true, message: `ยกเลิกแล้ว — ใช้งานแผน ${ent.plan} ได้จนถึง ${new Date(ent.expires_at).toLocaleDateString('th-TH')}`, ...ent });
+    addLog('info', 'Entitlement', `✅ ยกเลิก subscription ยืนยันแล้ว: ${sanitized}`);
+    res.send(`<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยืนยันและยกเลิกเรียบร้อยแล้ว — ใช้งานแผน ${ent.plan} ได้จนถึง ${new Date(ent.expires_at).toLocaleDateString('th-TH')}</div>`);
   } catch (e) {
-    addLog('error', 'Payment', `Cancel failed: ${e.message}`);
-    res.status(500).json({ error: e.message });
+    addLog('error', 'Payment', `Cancel confirm failed: ${e.message}`);
+    res.status(500).send('เกิดข้อผิดพลาด กรุณาลองใหม่');
   }
 });
 
