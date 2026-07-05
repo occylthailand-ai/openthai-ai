@@ -7146,7 +7146,7 @@ function getEntitlement(email) {
 
 // ─── Usage quota — บังคับโควต้ารายวันตามแผน ───────────────────────────────────
 const FREE_DAILY_LIMIT = 3;          // Free = 3 ชิ้น/วัน (ตรงกับหน้า Pricing)
-const PAID_PLANS = new Set(['pro', 'premier']);
+const PAID_PLANS = new Set(['pro', 'premier', 'enterprise']);
 const _usage = new Map();            // key: "YYYY-MM-DD:identity" → count
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -7213,7 +7213,7 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
 
   if (!process.env.OMISE_SECRET_KEY) {
     // Mock mode — Omise ยังไม่ได้ตั้ง (dev/staging only). ห้ามใช้ใน production จริง
-    console.warn('[payment] ⚠️  OMISE_SECRET_KEY not set — running in MOCK mode. No real charge will be made. Set OMISE_SECRET_KEY + OMISE_PUBLIC_KEY + OMISE_PLAN_PRO + OMISE_PLAN_PREMIER + OMISE_WEBHOOK_SECRET in production.');
+    console.warn('[payment] ⚠️  OMISE_SECRET_KEY not set — running in MOCK mode. No real charge will be made. Set OMISE_SECRET_KEY + OMISE_PUBLIC_KEY + OMISE_PLAN_PRO + OMISE_PLAN_PREMIER + OMISE_PLAN_ENTERPRISE + OMISE_WEBHOOK_SECRET in production.');
     const isCard = method === 'card';
     const mock = {
       charge_id:     `mock_charge_${Date.now()}`,

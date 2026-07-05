@@ -30,9 +30,10 @@ async function omise(method, path, body = null, usePublicKey = false) {
 
 // ── Plans ─────────────────────────────────────────────────────────────────────
 export const SUBSCRIPTION_PLANS = {
-  free:    { name: 'Free',    price_thb: 0,   interval: null,    omise_plan_id: null },
-  pro:     { name: 'Pro',     price_thb: 20,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PRO     || null },
-  premier: { name: 'Premier', price_thb: 30,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PREMIER || null },
+  free:       { name: 'Free',       price_thb: 0,    interval: null,    omise_plan_id: null },
+  pro:        { name: 'Pro',        price_thb: 299,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PRO        || null },
+  premier:    { name: 'Premier',    price_thb: 599,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PREMIER    || null },
+  enterprise: { name: 'Enterprise', price_thb: 1299, interval: 'month', omise_plan_id: process.env.OMISE_PLAN_ENTERPRISE || null },
 };
 
 // ── PromptPay QR Charge ───────────────────────────────────────────────────────

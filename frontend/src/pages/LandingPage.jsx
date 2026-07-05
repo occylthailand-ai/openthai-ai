@@ -10,8 +10,9 @@ import GrowthHooks from '../growth/GrowthHooks';
 // ข้อมูลโครงสร้างที่ไม่ขึ้นกับภาษา (ราคา/สี/ลำดับ) — ข้อความแปลดึงจาก i18n ผ่าน t('plans')
 const PLAN_META = [
   { id: 'free', price: '0', color: '#10b981' },
-  { id: 'pro', price: '20', color: '#7a7df3', recommended: true },
-  { id: 'premier', price: '30', color: '#f59e0b' },
+  { id: 'pro', price: '299', color: '#7a7df3', recommended: true },
+  { id: 'premier', price: '599', color: '#f59e0b' },
+  { id: 'enterprise', price: '1,299', color: '#0ea5e9' },
 ];
 
 // ── Typing animation hook ────────────────────────────────────────────────────

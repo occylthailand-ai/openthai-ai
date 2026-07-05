@@ -9,6 +9,23 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Direct owner request: repriced Pro/Premier and added a new Enterprise tier
+
+Owner instruction: "Free / Pro ฿299 / Premier ฿599 / บริษัทข้ามชาติ ฿1,299" — a real pricing change plus a brand-new 4th tier for multinational companies. Found and updated **every** place pricing exists in this codebase, not just the visible pages, since the actual source of truth for what a customer gets charged is `backend/omise-payment.js`'s `SUBSCRIPTION_PLANS` map — the frontend pages just display numbers that have to match it.
+
+**Backend (the numbers that actually get charged):**
+- `omise-payment.js`: `pro` ฿20→฿299, `premier` ฿30→฿599, added `enterprise: { price_thb: 1299, omise_plan_id: process.env.OMISE_PLAN_ENTERPRISE }`.
+- `server.js`: `PAID_PLANS` (grants unlimited daily generation quota) now includes `enterprise`; updated the mock-mode startup warning to mention the new `OMISE_PLAN_ENTERPRISE` env var.
+- `.env.example`: added `OMISE_PLAN_ENTERPRISE=` alongside the existing Pro/Premier plan-ID placeholders.
+
+**Frontend (every place a human sees a price):** `LandingPage.jsx`'s homepage pricing preview, `PricingPage.jsx`'s full plans grid (added Enterprise as a 4th card, ≈$8/$16/$35 USD estimates alongside the THB prices), and all three `i18n` languages (`th`/`en`/`zh`) for both the `plans` key (Landing) and `pp.plans` key (Pricing) — including the `cta` button text that embeds the price directly (e.g. "เริ่ม Pro ฿299/เดือน"). Also fixed `AIGeneratorPage.jsx`'s plan-name badge, which only distinguished `premier` vs. defaulting everything else to "Pro" — an Enterprise subscriber would have been mislabeled "Pro" without this fix.
+
+**Verified live:** rebuilt the frontend, confirmed via a real headless browser that both the homepage and `/pricing` render all 4 tiers with the correct numbers and zero remaining trace of the old ฿20/฿30 anywhere on either page. Hit the real `POST /api/payment/create` endpoint for all three paid plans and confirmed the actual computed `amount_thb` matches exactly (299/599/1299); confirmed the free plan still short-circuits with no charge, and confirmed an invalid/unknown plan key is still rejected with `400`.
+
+5 items from earlier runs (4 owner-decision items + the new low-priority producer-email-disclosure observation) are unchanged by this entry — this was a direct content/pricing request, not part of the security backlog.
+
+---
+
 ### 2026-07-05 — Owner decision received (part 2 of 2): fixed the run-1 producer-apply hijack, flagged on the very first hourly cycle
 
 **Second of the two owner-approved fixes this session** (payment-cancel above was part 1). Re-verified the exact vulnerability described in run 1 was still real: `POST /api/producers/apply` (`producers.js`'s `register()`) upserts by email with zero identity check — if the email already belongs to an existing record, it silently overwrites `company`/`product_name`/`price`/`description` and unconditionally resets `status` back to `'pending'`, pulling an already-approved producer off the public catalog. `/api/producers/search`'s public response includes each producer's `email`, so an attacker doesn't even need to guess it. Confirmed both halves still true by reading the current file before writing anything.

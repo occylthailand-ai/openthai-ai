@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T06:26:02.443Z · branch `claude/daily-reporter-improvements-8vc9ct` (81 commit(s) ahead of main)
+Generated: 2026-07-05T08:16:14.975Z · branch `claude/daily-reporter-improvements-8vc9ct` (82 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 291 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 165 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,23 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Direct owner request: repriced Pro/Premier and added a new Enterprise tier
+
+Owner instruction: "Free / Pro ฿299 / Premier ฿599 / บริษัทข้ามชาติ ฿1,299" — a real pricing change plus a brand-new 4th tier for multinational companies. Found and updated **every** place pricing exists in this codebase, not just the visible pages, since the actual source of truth for what a customer gets charged is `backend/omise-payment.js`'s `SUBSCRIPTION_PLANS` map — the frontend pages just display numbers that have to match it.
+
+**Backend (the numbers that actually get charged):**
+- `omise-payment.js`: `pro` ฿20→฿299, `premier` ฿30→฿599, added `enterprise: { price_thb: 1299, omise_plan_id: process.env.OMISE_PLAN_ENTERPRISE }`.
+- `server.js`: `PAID_PLANS` (grants unlimited daily generation quota) now includes `enterprise`; updated the mock-mode startup warning to mention the new `OMISE_PLAN_ENTERPRISE` env var.
+- `.env.example`: added `OMISE_PLAN_ENTERPRISE=` alongside the existing Pro/Premier plan-ID placeholders.
+
+**Frontend (every place a human sees a price):** `LandingPage.jsx`'s homepage pricing preview, `PricingPage.jsx`'s full plans grid (added Enterprise as a 4th card, ≈$8/$16/$35 USD estimates alongside the THB prices), and all three `i18n` languages (`th`/`en`/`zh`) for both the `plans` key (Landing) and `pp.plans` key (Pricing) — including the `cta` button text that embeds the price directly (e.g. "เริ่ม Pro ฿299/เดือน"). Also fixed `AIGeneratorPage.jsx`'s plan-name badge, which only distinguished `premier` vs. defaulting everything else to "Pro" — an Enterprise subscriber would have been mislabeled "Pro" without this fix.
+
+**Verified live:** rebuilt the frontend, confirmed via a real headless browser that both the homepage and `/pricing` render all 4 tiers with the correct numbers and zero remaining trace of the old ฿20/฿30 anywhere on either page. Hit the real `POST /api/payment/create` endpoint for all three paid plans and confirmed the actual computed `amount_thb` matches exactly (299/599/1299); confirmed the free plan still short-circuits with no charge, and confirmed an invalid/unknown plan key is still rejected with `400`.
+
+5 items from earlier runs (4 owner-decision items + the new low-priority producer-email-disclosure observation) are unchanged by this entry — this was a direct content/pricing request, not part of the security backlog.
+
+---
 
 ### 2026-07-05 — Owner decision received (part 2 of 2): fixed the run-1 producer-apply hijack, flagged on the very first hourly cycle
 
@@ -1922,54 +1939,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 7b1ed81 security: block re-apply hijack of already-approved producers (20 seconds ago)
-- de226ad chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
-- 13b7438 security: require email confirmation before cancelling a subscription (3 minutes ago)
-- 8873c5f chore: sync PROJECT_STATUS.md [skip ci] (28 minutes ago)
-- 2f95494 feat: add /about page with skill-tag badges (owner request) (28 minutes ago)
-- a19f382 chore: sync PROJECT_STATUS.md [skip ci] (66 minutes ago)
-- 7895b96 feat: notify producers by email when their application is approved (67 minutes ago)
-- 9deb7d9 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- ef9f6ff chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 7b1ed81 security: block re-apply hijack of already-approved producers (2 hours ago)
+- de226ad chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 13b7438 security: require email confirmation before cancelling a subscription (2 hours ago)
+- 8873c5f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 2f95494 feat: add /about page with skill-tag badges (owner request) (2 hours ago)
+- a19f382 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 7895b96 feat: notify producers by email when their application is approved (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -2109,7 +2088,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
-| `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
+| `omise-payment.js` | 171 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 118 | Portal Leads — captures submissions from the /portals/* landing pages |
@@ -2152,7 +2131,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `0 9 * * *` → /api/scheduler/process
 - `0 2 * * 1` → /api/portals/consumer-digest
 
-## Environment variables (57 referenced in backend code, 58 documented in .env.example)
+## Environment variables (58 referenced in backend code, 59 documented in .env.example)
 ✅ every env var referenced in backend code is documented in `.env.example`
 
 ## Migration files present (backend/migrations/)

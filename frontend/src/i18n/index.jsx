@@ -29,8 +29,9 @@ const translations = {
     'pp.aff.cta': '🤝 สมัคร Affiliate ฟรี →',
     'pp.plans': {
       free: { name: 'Free', unit: '/วัน', desc: 'ทดลองใช้ ไม่ต้องสมัคร', cta: 'ใช้ฟรีเลย', features: [{ ok: true, t: '3 คอนเทนต์ต่อวัน' }, { ok: true, t: 'TikTok + Facebook' }, { ok: true, t: 'AI Critic พื้นฐาน' }, { ok: true, t: 'แฮชแท็ก 5 อัน' }, { ok: false, t: 'ไม่จำกัดจำนวน' }, { ok: false, t: 'ทุกแพลตฟอร์ม 241+' }, { ok: false, t: 'ประวัติคอนเทนต์' }] },
-      pro: { name: 'Pro', unit: '/เดือน', desc: 'สำหรับ Creator จริงจัง', cta: 'เริ่ม Pro ฿20/เดือน', features: [{ ok: true, t: 'ไม่จำกัดจำนวน' }, { ok: true, t: 'ทุกแพลตฟอร์ม 241+' }, { ok: true, t: 'AI Critic เต็มรูปแบบ' }, { ok: true, t: 'แฮชแท็ก 20+ อัน' }, { ok: true, t: 'ประวัติ 30 วัน' }, { ok: true, t: 'Priority Support' }, { ok: false, t: 'API Access' }] },
-      premier: { name: 'Premier', unit: '/เดือน', desc: 'สำหรับทีมและธุรกิจ', cta: 'เริ่ม Premier ฿30/เดือน', features: [{ ok: true, t: 'ทุกอย่างใน Pro' }, { ok: true, t: 'ทีม 5 คน' }, { ok: true, t: 'API Access' }, { ok: true, t: 'White-label' }, { ok: true, t: 'Dedicated Manager' }, { ok: true, t: 'SLA 99.9%' }, { ok: true, t: 'Custom integration' }] },
+      pro: { name: 'Pro', unit: '/เดือน', desc: 'สำหรับ Creator จริงจัง', cta: 'เริ่ม Pro ฿299/เดือน', features: [{ ok: true, t: 'ไม่จำกัดจำนวน' }, { ok: true, t: 'ทุกแพลตฟอร์ม 241+' }, { ok: true, t: 'AI Critic เต็มรูปแบบ' }, { ok: true, t: 'แฮชแท็ก 20+ อัน' }, { ok: true, t: 'ประวัติ 30 วัน' }, { ok: true, t: 'Priority Support' }, { ok: false, t: 'API Access' }] },
+      premier: { name: 'Premier', unit: '/เดือน', desc: 'สำหรับทีมและธุรกิจ', cta: 'เริ่ม Premier ฿599/เดือน', features: [{ ok: true, t: 'ทุกอย่างใน Pro' }, { ok: true, t: 'ทีม 5 คน' }, { ok: true, t: 'API Access' }, { ok: true, t: 'White-label' }, { ok: true, t: 'Dedicated Manager' }, { ok: true, t: 'SLA 99.9%' }, { ok: true, t: 'Custom integration' }] },
+      enterprise: { name: 'Enterprise', unit: '/เดือน', desc: 'สำหรับบริษัทข้ามชาติ', cta: 'เริ่ม Enterprise ฿1,299/เดือน', features: [{ ok: true, t: 'ทุกอย่างใน Premier' }, { ok: true, t: 'ทีมไม่จำกัดจำนวน' }, { ok: true, t: 'รองรับหลายประเทศ/หลายสาขา' }, { ok: true, t: 'Onboarding เฉพาะทีมคุณ' }, { ok: true, t: 'ใบแจ้งหนี้ระดับองค์กร' }, { ok: true, t: 'Priority Support 24/7' }, { ok: true, t: 'Custom integration' }] },
     },
     'pp.faq': [
       ['ทดลองฟรีได้กี่ครั้ง?', '3 ครั้งต่อวัน ไม่ต้องสมัคร ไม่ต้องใส่บัตรเครดิต'],
@@ -99,6 +100,7 @@ const translations = {
       free: { name: 'Free', unit: '/วัน', desc: 'ทดลองใช้ฟรี ไม่ต้องสมัคร', cta: 'เริ่มใช้ฟรี', features: ['สร้างคอนเทนต์ 3 ครั้ง/วัน', 'TikTok + Facebook', 'AI Critic พื้นฐาน', 'แฮชแท็ก 5 อัน'] },
       pro: { name: 'Pro', unit: '/เดือน', desc: 'สำหรับ Creator จริงจัง', cta: 'เริ่ม Pro ฟรี 7 วัน', features: ['ไม่จำกัดจำนวนครั้ง', 'ทุกแพลตฟอร์ม 241+', 'AI Critic เต็มรูปแบบ', 'แฮชแท็ก 20+ อัน', 'ประวัติคอนเทนต์ 30 วัน', 'Priority Support'] },
       premier: { name: 'Premier', unit: '/เดือน', desc: 'สำหรับทีมและธุรกิจ', cta: 'เริ่ม Premier', features: ['ทุกอย่างใน Pro', 'ทีม 5 คน', 'API Access', 'White-label', 'Dedicated Manager', 'SLA 99.9%'] },
+      enterprise: { name: 'Enterprise', unit: '/เดือน', desc: 'สำหรับบริษัทข้ามชาติ', cta: 'ติดต่อทีมงาน', features: ['ทุกอย่างใน Premier', 'ทีมไม่จำกัดจำนวน', 'รองรับหลายประเทศ/หลายสาขา', 'Onboarding เฉพาะทีมคุณ', 'ใบแจ้งหนี้ระดับองค์กร'] },
     },
     // email capture
     'email.title': 'รับ Tips สร้างคอนเทนต์ฟรี',
@@ -329,8 +331,9 @@ const translations = {
     'pp.aff.cta': '🤝 Join Affiliate free →',
     'pp.plans': {
       free: { name: 'Free', unit: '/day', desc: 'Free trial, no signup', cta: 'Use it free', features: [{ ok: true, t: '3 generations/day' }, { ok: true, t: 'TikTok + Facebook' }, { ok: true, t: 'Basic AI Critic' }, { ok: true, t: '5 hashtags' }, { ok: false, t: 'Unlimited generations' }, { ok: false, t: 'All 241+ platforms' }, { ok: false, t: 'Content history' }] },
-      pro: { name: 'Pro', unit: '/mo', desc: 'For serious creators', cta: 'Start Pro ฿20/mo', features: [{ ok: true, t: 'Unlimited generations' }, { ok: true, t: 'All 241+ platforms' }, { ok: true, t: 'Full AI Critic' }, { ok: true, t: '20+ hashtags' }, { ok: true, t: '30-day history' }, { ok: true, t: 'Priority Support' }, { ok: false, t: 'API Access' }] },
-      premier: { name: 'Premier', unit: '/mo', desc: 'For teams & businesses', cta: 'Start Premier ฿30/mo', features: [{ ok: true, t: 'Everything in Pro' }, { ok: true, t: '5 team seats' }, { ok: true, t: 'API Access' }, { ok: true, t: 'White-label' }, { ok: true, t: 'Dedicated Manager' }, { ok: true, t: 'SLA 99.9%' }, { ok: true, t: 'Custom integration' }] },
+      pro: { name: 'Pro', unit: '/mo', desc: 'For serious creators', cta: 'Start Pro ฿299/mo', features: [{ ok: true, t: 'Unlimited generations' }, { ok: true, t: 'All 241+ platforms' }, { ok: true, t: 'Full AI Critic' }, { ok: true, t: '20+ hashtags' }, { ok: true, t: '30-day history' }, { ok: true, t: 'Priority Support' }, { ok: false, t: 'API Access' }] },
+      premier: { name: 'Premier', unit: '/mo', desc: 'For teams & businesses', cta: 'Start Premier ฿599/mo', features: [{ ok: true, t: 'Everything in Pro' }, { ok: true, t: '5 team seats' }, { ok: true, t: 'API Access' }, { ok: true, t: 'White-label' }, { ok: true, t: 'Dedicated Manager' }, { ok: true, t: 'SLA 99.9%' }, { ok: true, t: 'Custom integration' }] },
+      enterprise: { name: 'Enterprise', unit: '/mo', desc: 'For multinational companies', cta: 'Start Enterprise ฿1,299/mo', features: [{ ok: true, t: 'Everything in Premier' }, { ok: true, t: 'Unlimited team seats' }, { ok: true, t: 'Multi-country / multi-branch support' }, { ok: true, t: 'Dedicated onboarding' }, { ok: true, t: 'Enterprise invoicing' }, { ok: true, t: 'Priority Support 24/7' }, { ok: true, t: 'Custom integration' }] },
     },
     'pp.faq': [
       ['How many free trials?', '3 per day — no signup, no credit card needed'],
@@ -393,6 +396,7 @@ const translations = {
       free: { name: 'Free', unit: '/day', desc: 'Free trial, no signup', cta: 'Start free', features: ['3 generations/day', 'TikTok + Facebook', 'Basic AI Critic', '5 hashtags'] },
       pro: { name: 'Pro', unit: '/mo', desc: 'For serious creators', cta: 'Start Pro — 7 days free', features: ['Unlimited generations', 'All 241+ platforms', 'Full AI Critic', '20+ hashtags', '30-day content history', 'Priority Support'] },
       premier: { name: 'Premier', unit: '/mo', desc: 'For teams & businesses', cta: 'Start Premier', features: ['Everything in Pro', '5 team seats', 'API Access', 'White-label', 'Dedicated Manager', 'SLA 99.9%'] },
+      enterprise: { name: 'Enterprise', unit: '/mo', desc: 'For multinational companies', cta: 'Contact sales', features: ['Everything in Premier', 'Unlimited team seats', 'Multi-country / multi-branch support', 'Dedicated onboarding', 'Enterprise invoicing'] },
     },
     'email.title': 'Get free content tips',
     'email.desc': 'TikTok tips + Thai trend insights, every week',
@@ -621,8 +625,9 @@ const translations = {
     'pp.aff.cta': '🤝 免费加入联盟 →',
     'pp.plans': {
       free: { name: 'Free', unit: '/天', desc: '免费试用，无需注册', cta: '免费使用', features: [{ ok: true, t: '每天 3 条内容' }, { ok: true, t: 'TikTok + Facebook' }, { ok: true, t: '基础 AI 评论家' }, { ok: true, t: '5 个标签' }, { ok: false, t: '无限次生成' }, { ok: false, t: '全部 241+ 平台' }, { ok: false, t: '内容记录' }] },
-      pro: { name: 'Pro', unit: '/月', desc: '为认真的创作者', cta: '开通 Pro ฿20/月', features: [{ ok: true, t: '无限次生成' }, { ok: true, t: '全部 241+ 平台' }, { ok: true, t: '完整 AI 评论家' }, { ok: true, t: '20+ 个标签' }, { ok: true, t: '30 天记录' }, { ok: true, t: '优先支持' }, { ok: false, t: 'API 接入' }] },
-      premier: { name: 'Premier', unit: '/月', desc: '为团队与企业', cta: '开通 Premier ฿30/月', features: [{ ok: true, t: 'Pro 全部功能' }, { ok: true, t: '5 个团队席位' }, { ok: true, t: 'API 接入' }, { ok: true, t: '白标' }, { ok: true, t: '专属客户经理' }, { ok: true, t: 'SLA 99.9%' }, { ok: true, t: '定制集成' }] },
+      pro: { name: 'Pro', unit: '/月', desc: '为认真的创作者', cta: '开通 Pro ฿299/月', features: [{ ok: true, t: '无限次生成' }, { ok: true, t: '全部 241+ 平台' }, { ok: true, t: '完整 AI 评论家' }, { ok: true, t: '20+ 个标签' }, { ok: true, t: '30 天记录' }, { ok: true, t: '优先支持' }, { ok: false, t: 'API 接入' }] },
+      premier: { name: 'Premier', unit: '/月', desc: '为团队与企业', cta: '开通 Premier ฿599/月', features: [{ ok: true, t: 'Pro 全部功能' }, { ok: true, t: '5 个团队席位' }, { ok: true, t: 'API 接入' }, { ok: true, t: '白标' }, { ok: true, t: '专属客户经理' }, { ok: true, t: 'SLA 99.9%' }, { ok: true, t: '定制集成' }] },
+      enterprise: { name: 'Enterprise', unit: '/月', desc: '为跨国企业', cta: '开通 Enterprise ฿1,299/月', features: [{ ok: true, t: 'Premier 全部功能' }, { ok: true, t: '不限团队席位' }, { ok: true, t: '支持多国家/多分支机构' }, { ok: true, t: '专属入驻支持' }, { ok: true, t: '企业发票' }, { ok: true, t: '24/7 优先支持' }, { ok: true, t: '定制集成' }] },
     },
     'pp.faq': [
       ['可以免费试用几次？', '每天 3 次 — 无需注册，无需信用卡'],
@@ -685,6 +690,7 @@ const translations = {
       free: { name: 'Free', unit: '/天', desc: '免费试用，无需注册', cta: '免费开始', features: ['每天生成 3 次', 'TikTok + Facebook', '基础 AI 评论家', '5 个标签'] },
       pro: { name: 'Pro', unit: '/月', desc: '为认真的创作者', cta: 'Pro 免费试用 7 天', features: ['无限次生成', '全部 241+ 平台', '完整 AI 评论家', '20+ 个标签', '30 天内容记录', '优先支持'] },
       premier: { name: 'Premier', unit: '/月', desc: '为团队与企业', cta: '开通 Premier', features: ['Pro 全部功能', '5 个团队席位', 'API 接入', '白标', '专属客户经理', 'SLA 99.9%'] },
+      enterprise: { name: 'Enterprise', unit: '/月', desc: '为跨国企业', cta: '联系销售', features: ['Premier 全部功能', '不限团队席位', '支持多国家/多分支机构', '专属入驻支持', '企业发票'] },
     },
     'email.title': '免费获取内容技巧',
     'email.desc': 'TikTok 技巧 + 泰国潮流洞察，每周发送',

@@ -782,7 +782,7 @@ const AIGeneratorPage = () => {
           {/* โควต้ารายวัน */}
           {usage && (usage.unlimited ? (
             <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: '#10b981', fontWeight: 600 }}>
-              ✨ {usage.plan === 'premier' ? 'Premier' : 'Pro'} — {t('gen.quota.unlimited')}
+              ✨ {usage.plan === 'enterprise' ? 'Enterprise' : usage.plan === 'premier' ? 'Premier' : 'Pro'} — {t('gen.quota.unlimited')}
             </div>
           ) : (
             <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: usage.remaining > 0 ? '#94a3b8' : '#fca5a5' }}>
