@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Hourly loop, run 42: `/join` — the *other* producer signup flow — had no PDPA consent UI at all, not even a checkbox; also found and fixed an internal bridge that would have silently broken
+
+PR #79: same recurring Vercel quota pattern, real status API checked directly (not the bot comment, which has repeatedly lagged behind the actual per-commit state this session) — not actionable.
+
+**Followed up on run 40's fix rather than starting fresh:** that run closed the consent gap on all 9 `/portals/*` pages, but this app has a *second*, completely separate producer-signup code path — `/join` (`ProducerJoinPage.jsx`) → `POST /api/producers/apply` → `producers.js`. Checked it specifically because it collects the exact same fields (company, contact name, phone, email) for the same purpose. It had **zero** consent UI — not a checkbox that failed to wire through like the portals had, just nothing at all. Confirmed this page is genuinely live, not a dead leftover: linked from the homepage footer (`footer.link.producer`) and listed in `sitemap.xml`.
+
+**Fix:** added the same `CONSENT_TEXT`-plus-checkbox pattern used in all 9 portal pages to `ProducerJoinPage.jsx` (this file uses the shared `useLang()` i18n system rather than each portal's local per-file translation object, so reused that where it already existed and added a local `CONSENT_TEXT` just for the consent line itself, matching the portals' own approach for that one piece of text). `backend/producers.js`'s `register()` now requires `consent === true`, same shape as `portal-leads.js`'s `submit()` from run 40.
+
+**Caught a real cross-cutting break before it shipped, not after:** `server.js`'s `handleNewPortalLead()` auto-registers any `/portals/producer` lead into the *real* `producers.js` system too (a bridge built specifically so portal leads don't just sit in an admin-only queue) — via an internal call to `producers.register()` that never passed `consent`. Adding the new requirement to `register()` would have silently broken that bridge the moment it shipped, with no user-facing symptom (the portal lead still saves fine; only the invisible auto-registration into the real producer system would start failing on every single submission). Since a lead only reaches this internal call *after* `portal-leads.js` already required and verified `consent: true` for that exact submission, fixed it by passing `consent: true` through explicitly at that call site — not a bypass, an accurate reflection that consent was already given and checked upstream for this data.
+
+**Verified live:** rebuilt, booted the backend fresh. Hit `/api/producers/apply` directly — no consent rejected (400), `consent:true` accepted (200). Submitted through `/api/leads/submit` (the portal path) with `consent:true` and confirmed via the backend log that the internal producer auto-registration still fired successfully (`✅ Portal lead (producer) auto-registered...`) — the exact bridge that would have silently broken. Checked the persisted `producers.json` and confirmed **both** the direct `/join` submission and the portal-bridged one show `consent: true`. Then drove a real headless browser through the actual `/join` page: submit button genuinely disabled until ticked, captured the real outgoing request body with `consent:true`, and confirmed the success message renders.
+
+4 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question also unchanged.
+
+---
+
 ### 2026-07-05 — Hourly loop, run 41: full regression sweep after run 40's 12-file consent change — clean, no new code shipped this cycle
 
 PR #79: Vercel status still mixed per the real commit-status API (`openthai-ai` project succeeded, `-backend`/`-npxn` rate-limited) — the bot's PR comment table showed "all Ready" at one point during this cycle, which didn't match the API; trusted the API, not the comment, consistent with this log's running note that the comment table can lag/misreport. Recurring quota issue, not actionable.

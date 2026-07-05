@@ -1146,9 +1146,12 @@ async function handleNewPortalLead(lead) {
   const fd = lead.form_data || {};
   try {
     if (lead.type === 'producer') {
+      // lead มาถึงตรงนี้ได้แปลว่าผ่าน portal-leads.js's submit() มาแล้วเท่านั้น ซึ่งบังคับ
+      // consent:true ไปแล้วตั้งแต่ต้นทาง (run 40) — ส่งต่อความยินยอมที่ยืนยันแล้วนี้เข้า
+      // producers.register() (บังคับ consent เหมือนกันตั้งแต่ run 42) ไม่ใช่การเลี่ยงเช็ค
       const r = await producers.register({
         company: fd.name, contact_name: fd.name, email: lead.email,
-        phone: fd.phone, product_name: fd.product,
+        phone: fd.phone, product_name: fd.product, consent: true,
       });
       if (r.ok) console.log(`✅ Portal lead (producer) auto-registered เป็นใบสมัครผู้ผลิตจริง: ${lead.email}`);
       else console.warn(`[portal-leads] producer auto-register ไม่ผ่าน: ${r.error}`);

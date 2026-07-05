@@ -45,7 +45,12 @@ export function createProducers(dataDir) {
   // ของตัวเองอยู่แล้วที่ /producers/manage (POST /api/producers/update-listing, ยืนยันด้วย
   // สถานะ approved ที่มีอยู่จริง) ไม่จำเป็นต้องใช้ /apply เขียนทับอีก — pending/rejected ยังคง
   // ให้สมัครซ้ำได้ตามเดิม เพราะยังไม่มี catalog listing จริงให้ hijack
+  // /join (ProducerJoinPage.jsx) เป็น flow สมัครผู้ผลิตอีกเส้นที่แยกจาก /portals/producer โดยสิ้นเชิง
+  // (คนละหน้า คนละ backend endpoint) — เดิมไม่มี UI ยินยอม PDPA เลยแม้แต่ checkbox เดียว ทั้งที่เก็บ
+  // ข้อมูลชุดเดียวกับ /portals/producer (ชื่อบริษัท ผู้ติดต่อ เบอร์ อีเมล) เหมือน run 40 ที่แก้ให้
+  // /portals/* ทั้ง 9 หน้าไปแล้ว ตอนนี้บังคับ consent:true เช่นเดียวกันเพื่อให้ทั้งสอง flow สอดคล้องกัน
   async function register(input) {
+    if (input?.consent !== true) return { ok: false, error: 'ต้องยินยอมตามนโยบายความเป็นส่วนตัว (PDPA) ก่อนส่งข้อมูล' };
     const rec = {
       email: clip(input.email, 120).toLowerCase(),
       company: clip(input.company, 120),
@@ -58,6 +63,7 @@ export function createProducers(dataDir) {
       price: Number(input.price) > 0 ? Number(input.price) : null,
       stock: (input.stock === '' || input.stock == null) ? null : Math.max(0, parseInt(input.stock, 10) || 0),
       status: 'pending',
+      consent: true,
       created_at: new Date().toISOString(),
     };
     if (!rec.company || !rec.contact_name || !isEmail(rec.email)) {

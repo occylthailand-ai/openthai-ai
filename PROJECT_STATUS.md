@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T12:21:15.819Z · branch `claude/daily-reporter-improvements-8vc9ct` (93 commit(s) ahead of main)
+Generated: 2026-07-05T13:14:50.864Z · branch `claude/daily-reporter-improvements-8vc9ct` (94 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 303 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 177 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 42: `/join` — the *other* producer signup flow — had no PDPA consent UI at all, not even a checkbox; also found and fixed an internal bridge that would have silently broken
+
+PR #79: same recurring Vercel quota pattern, real status API checked directly (not the bot comment, which has repeatedly lagged behind the actual per-commit state this session) — not actionable.
+
+**Followed up on run 40's fix rather than starting fresh:** that run closed the consent gap on all 9 `/portals/*` pages, but this app has a *second*, completely separate producer-signup code path — `/join` (`ProducerJoinPage.jsx`) → `POST /api/producers/apply` → `producers.js`. Checked it specifically because it collects the exact same fields (company, contact name, phone, email) for the same purpose. It had **zero** consent UI — not a checkbox that failed to wire through like the portals had, just nothing at all. Confirmed this page is genuinely live, not a dead leftover: linked from the homepage footer (`footer.link.producer`) and listed in `sitemap.xml`.
+
+**Fix:** added the same `CONSENT_TEXT`-plus-checkbox pattern used in all 9 portal pages to `ProducerJoinPage.jsx` (this file uses the shared `useLang()` i18n system rather than each portal's local per-file translation object, so reused that where it already existed and added a local `CONSENT_TEXT` just for the consent line itself, matching the portals' own approach for that one piece of text). `backend/producers.js`'s `register()` now requires `consent === true`, same shape as `portal-leads.js`'s `submit()` from run 40.
+
+**Caught a real cross-cutting break before it shipped, not after:** `server.js`'s `handleNewPortalLead()` auto-registers any `/portals/producer` lead into the *real* `producers.js` system too (a bridge built specifically so portal leads don't just sit in an admin-only queue) — via an internal call to `producers.register()` that never passed `consent`. Adding the new requirement to `register()` would have silently broken that bridge the moment it shipped, with no user-facing symptom (the portal lead still saves fine; only the invisible auto-registration into the real producer system would start failing on every single submission). Since a lead only reaches this internal call *after* `portal-leads.js` already required and verified `consent: true` for that exact submission, fixed it by passing `consent: true` through explicitly at that call site — not a bypass, an accurate reflection that consent was already given and checked upstream for this data.
+
+**Verified live:** rebuilt, booted the backend fresh. Hit `/api/producers/apply` directly — no consent rejected (400), `consent:true` accepted (200). Submitted through `/api/leads/submit` (the portal path) with `consent:true` and confirmed via the backend log that the internal producer auto-registration still fired successfully (`✅ Portal lead (producer) auto-registered...`) — the exact bridge that would have silently broken. Checked the persisted `producers.json` and confirmed **both** the direct `/join` submission and the portal-bridged one show `consent: true`. Then drove a real headless browser through the actual `/join` page: submit button genuinely disabled until ticked, captured the real outgoing request body with `consent:true`, and confirmed the success message renders.
+
+4 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question also unchanged.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 41: full regression sweep after run 40's 12-file consent change — clean, no new code shipped this cycle
 
@@ -2019,54 +2035,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- a1ad1b0 docs: log run 41 -- regression sweep after run 40's consent fix, clean (22 seconds ago)
-- 38f9622 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
-- 192a13a fix: PDPA consent checkbox on all 9 portal pages was never sent to or recorded by the backend (64 minutes ago)
-- 2c32e04 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 30a33dd docs: log run 39 -- audited otop-ai-landing, shipped SEO hygiene there (2 hours ago)
-- 615a806 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- e979aab docs: log run 38 -- smart-e admin-key regression fixed, OpenThai-AI-v9.0 fabricated-content finding flagged (3 hours ago)
-- 210caaa chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- dab67fe chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
+- a1ad1b0 docs: log run 41 -- regression sweep after run 40's consent fix, clean (54 minutes ago)
+- 38f9622 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 192a13a fix: PDPA consent checkbox on all 9 portal pages was never sent to or recorded by the backend (2 hours ago)
+- 2c32e04 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 30a33dd docs: log run 39 -- audited otop-ai-landing, shipped SEO hygiene there (3 hours ago)
+- 615a806 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- e979aab docs: log run 38 -- smart-e admin-key regression fixed, OpenThai-AI-v9.0 fabricated-content finding flagged (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -2212,10 +2190,10 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `portal-leads.js` | 127 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 239 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 245 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8384 | Vercel serverless detection |
+| `server.js` | 8387 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
