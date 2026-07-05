@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T03:11:08.503Z · branch `claude/daily-reporter-improvements-8vc9ct` (69 commit(s) ahead of main)
+Generated: 2026-07-05T04:11:50.824Z · branch `claude/daily-reporter-improvements-8vc9ct` (70 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 279 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 153 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 33: every social link preview (Facebook/LINE/Twitter/Slack) has been broken since this repo's first commit — `og:image` pointed at a file that never existed
+
+**Found via a marketing/SEO scan, verified against real files before touching anything.** `frontend/index.html`'s `og:image`/`twitter:image` meta tags (plus `manifest.json`'s screenshot entry) point at `https://www.openthai-ai.com/og-image.png`. `frontend/public/` has never contained an `og-image.png` — only `og-image.svg`. Checked with `git log -S`/`git log -p` on both files: they were introduced in the *same* commit (`6cac3df`, June 22, this repo's earliest history), so this mismatch has existed since day one, unnoticed across 33 hourly cycles because it only manifests when an external crawler (not a normal browser visit) fetches that exact URL and gets a 404 — every link shared on LINE/Facebook/Twitter/Slack has been showing no preview image at all, silently undermining the "เข้าตลาดให้เร็วและกว้างที่สุด" (fast, wide market entry) goal this whole session is driving toward.
+
+**Why not just point the tag at the `.svg` instead:** Facebook, Twitter/X, and LINE's link-preview crawlers do not reliably render SVG for `og:image` (most require a raster format) — renaming the reference would trade a guaranteed-broken 404 for a probably-still-broken unsupported-format image, not a real fix.
+
+**Fix:** rasterized the *existing* `og-image.svg` (a real, already-designed 1200×630 asset from the same original commit — no new copy/stats invented) to a real `og-image.png` at the exact dimensions already declared in the meta tags (`og:image:width=1200`, `og:image:height=630`). Used a real headless browser (Playwright/Chromium) to render it, since this sandbox has no Thai-script font installed by default (`fc-list` showed only the emoji font) — installing one first (`fonts-thai-tlwg`) and visually inspecting the rendered output was necessary to confirm the Thai headline/subtext render as real glyphs, not tofu boxes, before shipping it as the canonical social-preview image.
+
+**Verified live:** rebuilt the frontend, confirmed `dist/og-image.png` exists at 1200×630, served it via `vite preview`, and fetched `http://localhost:4176/og-image.png` directly — `200 OK`, `Content-Type: image/png` (previously would have 404'd). Also confirmed the homepage's rendered `og:image` meta tag still points at this exact path, and that `og-image.svg` continues to serve independently (kept as the editable source, no longer referenced by any meta tag). Visually inspected the rendered PNG: headline, subtext, stat pills, and CTA all legible; a small cosmetic overlap between the mockup card's internal tab label and its content box is inherent to the original SVG's layout (present in the source since its original commit, unrelated to this fix) — not something to redesign as part of a "make the missing file exist" bug fix.
+
+No new items queued — the file now exists and matches what every page has already been declaring since day one. 5 items from earlier runs are still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 32: closed a real privacy gap in run 31's own work — the new self-serve producer page wasn't excluded from search-engine crawling
 
@@ -1844,54 +1858,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- df3945a fix: exclude /producers/manage from search-engine crawling (19 seconds ago)
-- 5fc4aac chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
-- f9ada02 feat: self-serve product listing for approved producers (55 minutes ago)
-- 49419ee chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 2325da8 a11y: fix remaining color-contrast violations from run 28's queue (2 hours ago)
-- c8f0511 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- df54dbc Fix contrast on every portal's active-language button (run 28 follow-up) (4 hours ago)
-- a1db51e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 7240ed3 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- df3945a fix: exclude /producers/manage from search-engine crawling (61 minutes ago)
+- 5fc4aac chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- f9ada02 feat: self-serve product listing for approved producers (2 hours ago)
+- 49419ee chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 2325da8 a11y: fix remaining color-contrast violations from run 28's queue (3 hours ago)
+- c8f0511 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- df54dbc Fix contrast on every portal's active-language button (run 28 follow-up) (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
