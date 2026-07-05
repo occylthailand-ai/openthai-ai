@@ -14,6 +14,14 @@ const TIER_META = [
 ];
 const PLATFORMS = ['TikTok', 'Instagram', 'Facebook', 'YouTube', 'Twitter/X', 'LINE', 'Discord', 'Other'];
 
+// เดิมหน้านี้ (สมัคร Affiliate หลัก) ไม่มี UI ยินยอม PDPA เลย เหมือนที่พบใน ProducerJoinPage.jsx
+// (run 42) — ใช้ CONSENT_TEXT รูปแบบเดียวกับที่ /portals/*.jsx และ ProducerJoinPage.jsx ใช้กัน
+const CONSENT_TEXT = {
+  th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
+  en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>Privacy Policy (PDPA)</a></>,
+  zh: <>同意根据<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>隐私政策（PDPA）</a>收集和使用我的数据</>,
+};
+
 function genRefCode(name) {
   const clean = (name || 'affiliate').replace(/\s+/g, '').toUpperCase().slice(0, 6);
   const rnd = Math.random().toString(36).slice(2, 5).toUpperCase();
@@ -39,6 +47,7 @@ export default function AffiliatePage() {
   const { copied, copy } = useCopy();
 
   const [form, setForm] = useState({ name: '', email: '', phone: '', platform: 'TikTok', followers: T.followers[1], channel_url: '', note: '' });
+  const [consent, setConsent] = useState(false);
   const [step, setStep] = useState('form');
   const [loading, setLoading] = useState(false);
   const [refCode, setRefCode] = useState('');
@@ -59,7 +68,7 @@ export default function AffiliatePage() {
       try {
         const res = await fetch(apiUrl('/api/affiliate/apply'), {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, ref_code: code, ref_link: link }),
+          body: JSON.stringify({ ...form, ref_code: code, ref_link: link, consent }),
         });
         if (!res.ok && res.status === 409) toast.warn(T.toast.dup);
       } catch (_) { /* offline – still show success */ }
@@ -200,8 +209,12 @@ export default function AffiliatePage() {
               <label style={labelStyle}>{T.f.followers}<select style={inputStyle} value={form.followers} onChange={set('followers')}>{T.followers.map((f) => <option key={f}>{f}</option>)}</select></label>
               <label style={labelStyle}>{T.f.channel}<input style={inputStyle} placeholder={T.f.channel_ph} value={form.channel_url} onChange={set('channel_url')} /></label>
               <label style={labelStyle}>{T.f.note}<textarea style={{ ...inputStyle, height: 72, resize: 'vertical' }} placeholder={T.f.note_ph} value={form.note} onChange={set('note')} /></label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: '#94a3b8', lineHeight: 1.5, cursor: 'pointer' }}>
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 2 }} />
+                <span>{CONSENT_TEXT[lang] || CONSENT_TEXT.th}</span>
+              </label>
               {error && <div style={{ color: '#ef4444', fontSize: 13, textAlign: 'center' }}>{error}</div>}
-              <button type="submit" disabled={loading} style={submitBtn}>{loading ? T.submitting : T.submit}</button>
+              <button type="submit" disabled={loading || !consent} style={{ ...submitBtn, opacity: (loading || !consent) ? 0.5 : 1, cursor: (loading || !consent) ? 'not-allowed' : 'pointer' }}>{loading ? T.submitting : T.submit}</button>
               <p style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', margin: 0 }}>{T.formnote}</p>
             </form>
           </div>

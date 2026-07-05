@@ -1156,7 +1156,9 @@ async function handleNewPortalLead(lead) {
       if (r.ok) console.log(`✅ Portal lead (producer) auto-registered เป็นใบสมัครผู้ผลิตจริง: ${lead.email}`);
       else console.warn(`[portal-leads] producer auto-register ไม่ผ่าน: ${r.error}`);
     } else if (lead.type === 'affiliate') {
-      const r = await registerAffiliateCore({ name: fd.name, email: lead.email, platform: fd.platform });
+      // lead มาถึงตรงนี้ได้แปลว่า portal-leads.js's submit() บังคับ consent:true ไปแล้ว —
+      // ส่งต่อความยินยอมที่ยืนยันแล้วนี้ ไม่ใช่การเลี่ยงเช็คใน registerAffiliateCore() ด้านบน
+      const r = await registerAffiliateCore({ name: fd.name, email: lead.email, platform: fd.platform, consent: true });
       if (r.ok) console.log(`✅ Portal lead (affiliate) auto-registered เป็น affiliate จริง: ${lead.email} — Ref: ${r.record.ref_code}`);
       else console.warn(`[portal-leads] affiliate auto-register ไม่ผ่าน: ${r.message}`);
     }
@@ -1245,8 +1247,12 @@ async function saveAffiliate(record) {
 
 // สมัคร Affiliate จริง — ใช้ทั้งจาก POST /api/affiliate/apply โดยตรง และจาก portal lead
 // (type:'affiliate') ที่ auto-register ต่อให้อัตโนมัติ ดู handleNewPortalLead ด้านล่าง
+// เดิมไม่มีการบังคับยินยอม PDPA เลย เหมือนกับที่พบใน producers.js's register() (run 42) — ตอนนี้
+// บังคับ consent:true เช่นเดียวกัน ฝั่ง handleNewPortalLead ส่งต่อ consent:true ที่ verify แล้ว
+// จาก portal-leads.js ตั้งแต่ต้นทาง ไม่ใช่การเลี่ยงเช็ค
 async function registerAffiliateCore(input) {
-  const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link } = input || {};
+  const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link, consent } = input || {};
+  if (consent !== true) return { ok: false, status: 400, message: 'ต้องยินยอมตามนโยบายความเป็นส่วนตัว (PDPA) ก่อนส่งข้อมูล' };
   if (!name || !email) return { ok: false, status: 400, message: 'ต้องการชื่อและอีเมล' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { ok: false, status: 400, message: 'รูปแบบอีเมลไม่ถูกต้อง' };
@@ -1269,6 +1275,7 @@ async function registerAffiliateCore(input) {
     note: String(note || '').slice(0, 500),
     ref_code: finalCode,
     ref_link: ref_link || `${DOMAIN_URL}/?ref=${encodeURIComponent(finalCode)}`,
+    consent: true,
     tier: 'starter',
     commission_rate: 0.20,
     total_sales: 0,

@@ -9,6 +9,24 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Hourly loop, run 43: same gap, third place — `/affiliate` (the *primary* affiliate signup, not `/portals/affiliate`) also had zero PDPA consent UI, plus the same internal-bridge trap as run 42
+
+GitHub MCP tools were unavailable this cycle (needed re-auth) — couldn't check PR #79's live status via the API the way previous cycles did; proceeded with local git operations only, which don't depend on it.
+
+**Followed the same pattern as run 42, one level further:** after finding `/join` lacked consent UI last cycle, checked whether the *other* half of the producer/affiliate pairing had the same issue — `AffiliatePage.jsx` (`/affiliate`, the site's main, most-promoted affiliate signup — homepage nav button, footer link, `/pricing`'s affiliate banner — not the less-prominent `/portals/affiliate`). It had **zero** consent UI, same as `/join` before its fix.
+
+**Fix, exact same shape as run 42's producers.js fix:** `registerAffiliateCore()` (used by both `POST /api/affiliate/apply` directly and the `handleNewPortalLead()` auto-registration bridge for `/portals/affiliate` leads) now requires `consent === true` and stores it on the record. Added the same `CONSENT_TEXT`-plus-checkbox pattern to `AffiliatePage.jsx`, disabling submit until ticked and including `consent` in the submitted body.
+
+**Caught the identical cross-cutting break as run 42, in the parallel code path:** `handleNewPortalLead()`'s affiliate branch calls `registerAffiliateCore({ name, email, platform })` without `consent` — same silent-breakage shape as the producer bridge (the portal lead still saves; only the invisible auto-registration into the real affiliate system, with its ref code and welcome email, would start failing on every submission). Fixed identically: passed `consent: true` explicitly at that call site, since `portal-leads.js` already required and verified it for that submission before this internal call is ever reached.
+
+**Verified live:** rebuilt, booted a fresh backend. Hit `/api/affiliate/apply` directly — no consent rejected (400), `consent:true` accepted (200, real ref code generated). Submitted through `/api/leads/submit` (type `affiliate`) and confirmed via the backend log that the internal auto-registration still fires (`✅ Portal lead (affiliate) auto-registered...`). Checked `affiliates.json` and confirmed both the direct and portal-bridged records show `consent: true`. Drove a real headless browser through the actual `/affiliate` page: submit button disabled until ticked, captured the real outgoing request body with `consent:true`, confirmed the ref-code success screen renders. (Also accidentally `rm`'d the tracked, empty `backend/data/affiliates.json` placeholder during test cleanup and caught it in `git status` before committing — restored via `git checkout` rather than letting an unrelated deletion slip into this diff.)
+
+**Not chased, out of scope for this fix:** noticed `genRefCode()` uppercases the raw name without stripping non-Latin characters, so a Thai name produces a ref code with Thai characters embedded in a URL (`?ref=คนทดสอ4QG`) — cosmetically odd but pre-existing and unrelated to consent; noting it rather than scope-creeping into fixing it now.
+
+4 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question also unchanged. Worth checking next cycle: whether `/portals/creator`, `/portals/consumer`, `/portals/middleman` etc. have similar *primary, non-portal* signup pages elsewhere in the app with the same gap, following this same pattern.
+
+---
+
 ### 2026-07-05 — Hourly loop, run 42: `/join` — the *other* producer signup flow — had no PDPA consent UI at all, not even a checkbox; also found and fixed an internal bridge that would have silently broken
 
 PR #79: same recurring Vercel quota pattern, real status API checked directly (not the bot comment, which has repeatedly lagged behind the actual per-commit state this session) — not actionable.
