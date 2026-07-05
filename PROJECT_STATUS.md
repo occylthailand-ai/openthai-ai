@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T05:19:47.756Z · branch `claude/daily-reporter-improvements-8vc9ct` (75 commit(s) ahead of main)
+Generated: 2026-07-05T05:57:43.248Z · branch `claude/daily-reporter-improvements-8vc9ct` (76 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 285 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 159 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Direct owner request: new `/about` page, currently just a skill-tag list (placeholder, deliberately not a full bio)
+
+Owner asked to add 10 topics ("Artificial Intelligence", "Machine Learning", "Prompt Engineering", "Claude/ChatGPT/Grok", "Data Analytics", "AWS Certified", "Data Science", "Big Data", "Python", "Ethical Hacking") as "skill tags" on the site. These read like personal/professional skill tags, not anything tied to OpenThaiAi's actual product surface, so — following the same verify-before-build discipline as everything else in this log — checked before placing them anywhere: no `About`/`Team`/`Profile` page or route existed in this repo at all. Asked the owner where these should go and whether a full profile (name/photo/bio) should ship alongside them; confirmed: build a new `/about` page, skill tags only for now, no bio content yet (that's expected to come later).
+
+**Built:** `frontend/src/pages/AboutPage.jsx`, a new page in the same style convention as `PrivacyPage.jsx`/`TermsPage.jsx` (sticky header with back button, gradient hero, dark theme) showing the 10 tags as pill badges under a generic "ทีมงานเบื้องหลัง Openthai.ai" heading — no invented name, title, photo, or biographical claims about the owner, since none were provided and this log's whole point is not fabricating content about real people/entities. Wired the route into `App.jsx`, added a footer link on `LandingPage.jsx` (next to Privacy/Terms/Contact) so it's actually discoverable, and treated it as a normal public page for SEO purposes: added to `sitemap.xml`, `robots.txt`'s `Allow` list, and `prerender-meta.mjs`'s per-route title/description list, matching exactly how `/privacy`/`/terms`/`/contact` are already handled.
+
+**Verified live:** built the frontend, confirmed `/about/index.html` prerendered with the correct title, served via `vite preview`, and drove a real headless browser: clicked the new footer link from the homepage and confirmed it actually lands on `/about` (not just that the route exists in isolation), confirmed all 10 tags render as text on the page, and ran the same `axe-core` WCAG scan used throughout this session's accessibility work — 0 violations on the new page.
+
+Not queued as a follow-up, but noted for whenever the owner is ready: this page currently has no name, photo, or bio — just tags floating under a generic heading — so it reads as a placeholder rather than a real About/Team page until that content exists.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 34: approving a producer never told them — closes the loop with run 31's self-serve listing page
 
@@ -1874,60 +1886,22 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 83 route components resolved
+- ✅ **Route components exist on disk** — all 84 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 7895b96 feat: notify producers by email when their application is approved (19 seconds ago)
-- 9deb7d9 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- e12f5b8 docs: reject fabricated entity/DiscoveryEngine spec, not grounded in this repo (63 minutes ago)
-- ca1b9c4 chore: sync PROJECT_STATUS.md [skip ci] (67 minutes ago)
-- a46ac82 fix: og-image.png didn't exist -- every social link preview has been broken since day one (68 minutes ago)
-- 7240ed3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- df3945a fix: exclude /producers/manage from search-engine crawling (2 hours ago)
-- 5fc4aac chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- a19f382 chore: sync PROJECT_STATUS.md [skip ci] (38 minutes ago)
+- 7895b96 feat: notify producers by email when their application is approved (38 minutes ago)
+- 9deb7d9 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- e12f5b8 docs: reject fabricated entity/DiscoveryEngine spec, not grounded in this repo (2 hours ago)
+- ca1b9c4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- a46ac82 fix: og-image.png didn't exist -- every social link preview has been broken since day one (2 hours ago)
+- 7240ed3 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- df3945a fix: exclude /producers/manage from search-engine crawling (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -1968,7 +1942,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (83 routes)
+## Route map (84 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -2012,6 +1986,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /affiliate | AffiliatePage | public |
 | /affiliate/dashboard | AffiliateDashboard | public |
 | /privacy | PrivacyPage | public |
+| /about | AboutPage | public |
 | /terms | TermsPage | public |
 | /contact | ContactPage | public |
 | /trending | TrendingPage | public |

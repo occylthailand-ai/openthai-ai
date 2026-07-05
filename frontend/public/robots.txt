@@ -17,6 +17,7 @@ Allow: /catalog
 Allow: /join
 Allow: /find-producers
 Allow: /contact
+Allow: /about
 Allow: /privacy
 Allow: /terms
 Disallow: /dashboard

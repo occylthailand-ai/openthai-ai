@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Direct owner request: new `/about` page, currently just a skill-tag list (placeholder, deliberately not a full bio)
+
+Owner asked to add 10 topics ("Artificial Intelligence", "Machine Learning", "Prompt Engineering", "Claude/ChatGPT/Grok", "Data Analytics", "AWS Certified", "Data Science", "Big Data", "Python", "Ethical Hacking") as "skill tags" on the site. These read like personal/professional skill tags, not anything tied to OpenThaiAi's actual product surface, so — following the same verify-before-build discipline as everything else in this log — checked before placing them anywhere: no `About`/`Team`/`Profile` page or route existed in this repo at all. Asked the owner where these should go and whether a full profile (name/photo/bio) should ship alongside them; confirmed: build a new `/about` page, skill tags only for now, no bio content yet (that's expected to come later).
+
+**Built:** `frontend/src/pages/AboutPage.jsx`, a new page in the same style convention as `PrivacyPage.jsx`/`TermsPage.jsx` (sticky header with back button, gradient hero, dark theme) showing the 10 tags as pill badges under a generic "ทีมงานเบื้องหลัง Openthai.ai" heading — no invented name, title, photo, or biographical claims about the owner, since none were provided and this log's whole point is not fabricating content about real people/entities. Wired the route into `App.jsx`, added a footer link on `LandingPage.jsx` (next to Privacy/Terms/Contact) so it's actually discoverable, and treated it as a normal public page for SEO purposes: added to `sitemap.xml`, `robots.txt`'s `Allow` list, and `prerender-meta.mjs`'s per-route title/description list, matching exactly how `/privacy`/`/terms`/`/contact` are already handled.
+
+**Verified live:** built the frontend, confirmed `/about/index.html` prerendered with the correct title, served via `vite preview`, and drove a real headless browser: clicked the new footer link from the homepage and confirmed it actually lands on `/about` (not just that the route exists in isolation), confirmed all 10 tags render as text on the page, and ran the same `axe-core` WCAG scan used throughout this session's accessibility work — 0 violations on the new page.
+
+Not queued as a follow-up, but noted for whenever the owner is ready: this page currently has no name, photo, or bio — just tags floating under a generic heading — so it reads as a placeholder rather than a real About/Team page until that content exists.
+
+---
+
 ### 2026-07-05 — Hourly loop, run 34: approving a producer never told them — closes the loop with run 31's self-serve listing page
 
 **Found by re-auditing run 31's own feature area.** `POST /api/producers/admin/status` (the admin action that flips a producer from `pending` to `approved`) only ever updated the database row — no notification of any kind. A producer who applied had exactly one way to discover they'd been approved: proactively visit `/producers/manage` and check, despite nothing in the initial "รับใบสมัครแล้ว" confirmation ever mentioning that page exists. This is the same "promised/implied follow-up that never actually happens" pattern already fixed for consumer/middleman leads (run 2) and 4 portal types (run 19) — just found in a part of the funnel none of those runs touched.
