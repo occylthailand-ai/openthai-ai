@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T16:22:18.740Z · branch `claude/daily-reporter-improvements-8vc9ct` (102 commit(s) ahead of main)
+Generated: 2026-07-05T17:12:21.347Z · branch `claude/daily-reporter-improvements-8vc9ct` (104 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 185 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 187 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,23 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 47: re-investigated the "low priority" producer-email-exposure note — it's more load-bearing than assumed; escalating to the owner instead of guessing an architecture fix
+
+PR #79: same recurring rate-limit pattern confirmed again via the real status API (commit `d3b8ea8`: all 3 Vercel checks still `failure` / rate-limited), bot comment lag noted once more, no action needed.
+
+**Re-opened a previously "low priority, not blocking" item** (public `/api/producers/search` and `/api/catalog` responses include producer `email`) instead of treating it as settled, since several other privacy items this session turned out to be more serious on closer inspection. Read `producers.js`, `orders.js`, `disputes.js`, and the actual frontend consumers (`CatalogPage.jsx`, `ProducerDirectoryPage.jsx`) before concluding anything.
+
+**Confirmed this is not a simple "strip the field" fix, and stopping here rather than guessing an architecture change:** `email` is the actual primary key for the entire producer/order/dispute system, not incidental exposure —
+- `producers.js` keys its file-store by email and upserts Supabase rows `on_conflict: 'email'` — there is no separate `producer_id` anywhere in the data model.
+- `CatalogPage.jsx`'s checkout flow (`POST /api/orders`) literally sends back `producer_email: product.email` — the exact value read from the public, unauthenticated `/api/catalog` response — to tell the backend which producer to attribute the order to.
+- `orders.js`/`disputes.js`/the DB schema (`orders.producer_email`, an indexed column in `migrations/*.sql`) all use `producer_email` as the real join key for stock decrement, order notification emails, and dispute-party verification.
+
+So removing `email` from the public catalog/search responses, as the obvious fix would suggest, would immediately break checkout for every product — there is currently no non-PII identifier the frontend could send instead. A correct fix means introducing a stable public producer identifier (e.g. a generated id/slug per producer) that the frontend uses for catalog display and order placement, with the backend resolving it to the real email server-side wherever `producer_email` is used today — a schema change (new column + migration) touching `producers.js`, `orders.js`, `disputes.js`, 2 frontend pages, and the Supabase migrations, not a small self-contained bug fix.
+
+**Not touching this without the owner's input**, per the standing instruction to stop at legal/high-risk/scope-creep decision points rather than guess: this is a real architecture decision (new identifier scheme across a live production schema with real data), not a code-scanning bug fix. Asked the owner directly which direction to take (see message sent alongside this log entry). No code changes this cycle as a result — the investigation itself is the deliverable, logged here so the next cycle (or the owner's answer) has full context instead of re-discovering the same thing from scratch.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 46: closed out the crash-class sweep flagged at the end of run 45 — 3 more unguarded body-shape bugs found and fixed in `smart-e`, plus the JSON parser itself
 
@@ -2111,14 +2128,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 7b2d038 chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
-- 67cd33a docs: log run 45 -- verified producers.js self-serve edit is properly gated, fixed a real crash in smart-e's order creation (6 minutes ago)
-- dac7837 chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
-- b62f68c fix: affiliate signup showed a ref code that could diverge from the one actually stored (65 minutes ago)
-- cf3baff chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- d2ddb72 fix: primary /affiliate signup also had no PDPA consent UI; same bridge fix as producers (2 hours ago)
-- e3c8347 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- a81f83a fix: /join producer signup had no PDPA consent UI at all; fix an internal auto-register bridge that would've silently broken (3 hours ago)
+- d3b8ea8 chore: sync PROJECT_STATUS.md [skip ci] (50 minutes ago)
+- 9470fd9 docs: log run 46 -- closed out smart-e crash-class sweep (3 more unguarded body-shape bugs + the JSON parser itself) (50 minutes ago)
+- 7b2d038 chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
+- 67cd33a docs: log run 45 -- verified producers.js self-serve edit is properly gated, fixed a real crash in smart-e's order creation (56 minutes ago)
+- dac7837 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- b62f68c fix: affiliate signup showed a ref code that could diverge from the one actually stored (2 hours ago)
+- cf3baff chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- d2ddb72 fix: primary /affiliate signup also had no PDPA consent UI; same bridge fix as producers (3 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 

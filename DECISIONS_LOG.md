@@ -9,6 +9,23 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Hourly loop, run 47: re-investigated the "low priority" producer-email-exposure note — it's more load-bearing than assumed; escalating to the owner instead of guessing an architecture fix
+
+PR #79: same recurring rate-limit pattern confirmed again via the real status API (commit `d3b8ea8`: all 3 Vercel checks still `failure` / rate-limited), bot comment lag noted once more, no action needed.
+
+**Re-opened a previously "low priority, not blocking" item** (public `/api/producers/search` and `/api/catalog` responses include producer `email`) instead of treating it as settled, since several other privacy items this session turned out to be more serious on closer inspection. Read `producers.js`, `orders.js`, `disputes.js`, and the actual frontend consumers (`CatalogPage.jsx`, `ProducerDirectoryPage.jsx`) before concluding anything.
+
+**Confirmed this is not a simple "strip the field" fix, and stopping here rather than guessing an architecture change:** `email` is the actual primary key for the entire producer/order/dispute system, not incidental exposure —
+- `producers.js` keys its file-store by email and upserts Supabase rows `on_conflict: 'email'` — there is no separate `producer_id` anywhere in the data model.
+- `CatalogPage.jsx`'s checkout flow (`POST /api/orders`) literally sends back `producer_email: product.email` — the exact value read from the public, unauthenticated `/api/catalog` response — to tell the backend which producer to attribute the order to.
+- `orders.js`/`disputes.js`/the DB schema (`orders.producer_email`, an indexed column in `migrations/*.sql`) all use `producer_email` as the real join key for stock decrement, order notification emails, and dispute-party verification.
+
+So removing `email` from the public catalog/search responses, as the obvious fix would suggest, would immediately break checkout for every product — there is currently no non-PII identifier the frontend could send instead. A correct fix means introducing a stable public producer identifier (e.g. a generated id/slug per producer) that the frontend uses for catalog display and order placement, with the backend resolving it to the real email server-side wherever `producer_email` is used today — a schema change (new column + migration) touching `producers.js`, `orders.js`, `disputes.js`, 2 frontend pages, and the Supabase migrations, not a small self-contained bug fix.
+
+**Not touching this without the owner's input**, per the standing instruction to stop at legal/high-risk/scope-creep decision points rather than guess: this is a real architecture decision (new identifier scheme across a live production schema with real data), not a code-scanning bug fix. Asked the owner directly which direction to take (see message sent alongside this log entry). No code changes this cycle as a result — the investigation itself is the deliverable, logged here so the next cycle (or the owner's answer) has full context instead of re-discovering the same thing from scratch.
+
+---
+
 ### 2026-07-05 — Hourly loop, run 46: closed out the crash-class sweep flagged at the end of run 45 — 3 more unguarded body-shape bugs found and fixed in `smart-e`, plus the JSON parser itself
 
 PR #79: same recurring rate-limit pattern confirmed again via the real status API (`get_status` on commit `7b2d038`: all 3 Vercel checks `failure` / "Deployment rate limited — retry in 24 hours"), while the bot's PR comment simultaneously showed all 3 as "Ready" — the same lag noted repeatedly this session. No action needed; this is a Vercel free-tier quota issue, not a code problem.
