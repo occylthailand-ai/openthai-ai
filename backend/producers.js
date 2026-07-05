@@ -119,6 +119,27 @@ export function createProducers(dataDir) {
     return { ok: true, email: e, ...patch };
   }
 
+  // เช็คสถานะใบสมัคร + ข้อมูลสินค้าของตัวเอง (ไม่ต้องใช้ admin key — ยืนยันตัวตนด้วยอีเมลที่สมัครไว้
+  // เหมือนแพทเทิร์น contact-match ของ disputes.js/orders.js — ไม่ใช่ token/session เพราะระบบนี้ไม่มี login)
+  async function myStatus(email) {
+    const e = (email || '').toString().trim().toLowerCase();
+    if (!isEmail(e)) return { ok: false, error: 'not found' };
+    const rec = (await all()).find((p) => (p.email || '').toLowerCase() === e);
+    if (!rec) return { ok: false, error: 'not found' };
+    return { ok: true, status: rec.status, company: rec.company, category: rec.category, product_name: rec.product_name, price: rec.price, stock: rec.stock, description: rec.description };
+  }
+
+  // ผู้ผลิตที่อนุมัติแล้วแก้ไขสินค้าของตัวเองได้เอง (เติมสต๊อก/แก้ราคา/รายละเอียด) โดยไม่ต้องรอแอดมิน —
+  // เดิมมีแค่ /api/producers/admin/update (ต้องใช้ admin key) ทำให้ผู้ผลิตที่อนุมัติแล้วไม่มีทาง
+  // เติมสต๊อกเองเลยเวลาของหมด ต้องรอแอดมินทำให้ทุกครั้ง — จุดคอขวดที่ค้างมาตั้งแต่การสำรวจครั้งแรก
+  async function selfUpdate(email, fields) {
+    const e = (email || '').toString().trim().toLowerCase();
+    if (!isEmail(e)) return { ok: false, error: 'not found' };
+    const rec = (await all()).find((p) => (p.email || '').toLowerCase() === e);
+    if (!rec || rec.status !== 'approved') return { ok: false, error: 'not found' };
+    return updateListing(e, fields);
+  }
+
   // catalog สาธารณะ — เฉพาะผู้ผลิตที่อนุมัติแล้ว + มีสินค้า
   async function catalog() {
     const list = await all();
@@ -139,6 +160,7 @@ export function createProducers(dataDir) {
 
   // ── Routes ──────────────────────────────────────────────────────────────────
   const applyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, message: { success: false, error: 'สมัครบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
+  const selfServeLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { success: false, error: 'ทำรายการบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
   const router = express.Router();
   const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error('[producers route]', e.message); res.status(500).json({ success: false, error: 'producer error' }); });
 
@@ -166,6 +188,21 @@ export function createProducers(dataDir) {
     const r = await register(req.body || {});
     if (!r.ok) return res.status(400).json({ success: false, error: r.error });
     res.json({ success: true, status: r.status, message: 'รับใบสมัครแล้ว ทีมงานจะติดต่อกลับเพื่อยืนยันการเข้าร่วม' });
+  }));
+
+  // เช็คสถานะใบสมัคร + ข้อมูลสินค้าของตัวเอง (public — ยืนยันด้วยอีเมลที่สมัครไว้)
+  router.get('/api/producers/my-status', selfServeLimiter, wrap(async (req, res) => {
+    const r = await myStatus(req.query.email);
+    if (!r.ok) return res.status(404).json({ success: false, error: 'ไม่พบใบสมัครด้วยอีเมลนี้' });
+    res.json({ success: true, ...r });
+  }));
+
+  // ผู้ผลิตที่อนุมัติแล้วแก้ไขสินค้าของตัวเอง (public — ยืนยันด้วยอีเมลที่สมัครไว้, ไม่ใช้ admin key)
+  router.post('/api/producers/update-listing', selfServeLimiter, wrap(async (req, res) => {
+    const { email, product_name, price, stock, description, category } = req.body || {};
+    const r = await selfUpdate(email, { product_name, price, stock, description, category });
+    if (!r.ok) return res.status(404).json({ success: false, error: 'ไม่พบผู้ผลิตที่อนุมัติแล้วด้วยอีเมลนี้' });
+    res.json({ success: true, ...r });
   }));
 
   // ลดสต๊อกเมื่อมีออเดอร์ (เฉพาะผู้ผลิตที่ตั้งสต๊อกไว้ — stock != null)

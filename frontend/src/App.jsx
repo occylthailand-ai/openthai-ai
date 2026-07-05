@@ -21,6 +21,7 @@ const AffiliatePage = lazy(() => import('./pages/AffiliatePage'));
 const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
 const ProducerJoinPage = lazy(() => import('./pages/ProducerJoinPage'));
+const ProducerManagePage = lazy(() => import('./pages/ProducerManagePage'));
 const CatalogPage = lazy(() => import('./pages/CatalogPage'));
 const ProducerDirectoryPage = lazy(() => import('./pages/ProducerDirectoryPage'));
 const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'));
@@ -175,6 +176,7 @@ function App() {
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/join" element={<ProducerJoinPage />} />
             <Route path="/producers" element={<ProducerJoinPage />} />
+            <Route path="/producers/manage" element={<ProducerManagePage />} />
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/shop" element={<CatalogPage />} />
             <Route path="/find-producers" element={<ProducerDirectoryPage />} />

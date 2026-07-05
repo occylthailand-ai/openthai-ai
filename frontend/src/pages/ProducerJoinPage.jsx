@@ -41,6 +41,7 @@ export default function ProducerJoinPage() {
       <nav style={{ padding: '14px 5%', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <button onClick={() => navigate('/')} style={navBtn}>{t('mk.nav.home')}</button>
         <span style={{ flex: 1 }} />
+        <button onClick={() => navigate('/producers/manage')} style={navBtn}>{t('mk.pmanage.title')}</button>
         <button onClick={() => navigate('/affiliate')} style={navBtn}>{t('mk.nav.aff')}</button>
       </nav>
 
@@ -61,7 +62,8 @@ export default function ProducerJoinPage() {
             <div style={{ fontSize: 48, marginBottom: 10 }}>🎉</div>
             <h2 style={{ fontWeight: 900, marginBottom: 8 }}>{t('mk.join.ok.title')}</h2>
             <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7 }}>{t('mk.join.ok.desc')}</p>
-            <button onClick={() => navigate('/')} style={{ ...primaryBtn, marginTop: 20 }}>{t('mk.join.ok.back')}</button>
+            <button onClick={() => navigate(`/producers/manage?email=${encodeURIComponent(form.email.trim())}`)} style={{ ...primaryBtn, marginTop: 20 }}>{t('mk.pmanage.title')}</button>
+            <button onClick={() => navigate('/')} style={{ ...navBtn, marginTop: 12, display: 'block', width: '100%' }}>{t('mk.join.ok.back')}</button>
           </div>
         ) : (
           <form onSubmit={submit} style={card}>

@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T01:11:28.898Z · branch `claude/daily-reporter-improvements-8vc9ct` (65 commit(s) ahead of main)
+Generated: 2026-07-05T02:16:20.896Z · branch `claude/daily-reporter-improvements-8vc9ct` (66 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 275 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 149 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 31: built the self-serve producer product listing queued all the way back on 2026-07-03 — never actually built until now
+
+**Re-verified before building.** The very first hourly-loop cycle audited `backend/inventory.js` and queued "no self-serve path for a producer to list their own product" as the next real task. That queued description turned out to describe a since-replaced architecture (`inventory.js` is now a first-party admin catalog with only one public route, `GET /api/shop/products`) — the *actual* producer-facing catalog lives in `backend/producers.js` (`register()` → `pending`, admin `setStatus()` → `approved`, public `catalog()`). Re-checked that file fresh rather than trusting the 28-cycles-old description: `producers.js` already had an `updateListing()` function (added in an earlier run specifically so an approved producer's stock/price could be topped up without resetting them to `pending` via re-applying), but it was **only reachable through `POST /api/producers/admin/update`, gated by `x-admin-key`**. So the same real gap the first cycle found is still real today, just in the current file: an approved producer has no way to restock, reprice, or edit their own listing without asking an admin to do it for them via the admin panel — a genuine bottleneck against "เข้าตลาดให้เร็วที่สุด" (fast market entry), and squarely inside the "consent-based producer/portal improvements" category, not new scope.
+
+**Fix — identity pattern reused, not invented** (same email-match convention `disputes.js` established, since this codebase has no producer login/session): added `myStatus(email)` (returns the producer's own application status + current listing — including `pending`, so an applicant can see they're still waiting) and `selfUpdate(email, fields)` (only permits the edit if the matching record's `status === 'approved'`; otherwise returns the same generic "not found" used for a nonexistent email, so the endpoint never discloses whether an email exists or what stage its application is at). Wired 2 new public, rate-limited (20/15min) routes in `producers.js`: `GET /api/producers/my-status` and `POST /api/producers/update-listing`. Built a new frontend page, `ProducerManagePage.jsx` (`/producers/manage`) — email in, status badge out, and (only when approved) an editable form for product name/category/price/stock/description that posts straight to the new endpoint. Linked it from `ProducerJoinPage.jsx`'s nav bar and from the post-application success screen (pre-filled with the email just submitted), so a producer can actually find it.
+
+**Verified live, full real cycle, no shortcuts:** ran the real backend locally against a scratch data dir. Applied a real producer via `POST /api/producers/apply` (status: `pending`) → confirmed `GET /api/producers/my-status` correctly reports `pending` → confirmed `POST /api/producers/update-listing` correctly **rejects** the edit with a generic 404 while still pending (no bypass) → approved the producer for real via the existing admin route → confirmed the exact same self-update call now succeeds and the public `GET /api/catalog` immediately reflects the new price/stock/description → confirmed a nonexistent email gets the identical generic 404 as the pending-but-real case (no identity leak either direction). Then rebuilt the frontend wired to that same live backend (`VITE_API_URL`) and drove the actual UI with a real headless browser (Playwright): typed the producer's email into `/producers/manage`, saw the real "✅ อนุมัติแล้ว" badge and the pre-filled form, edited the product name/price/stock through the real inputs, clicked save, saw the real "บันทึกสำเร็จ" success message — then re-queried `/api/catalog` directly and confirmed the values matched exactly what was typed into the browser, proving the UI is really wired to the backend end-to-end, not just independently functional. Screenshotted the final state for a visual record.
+
+This closes the oldest unaddressed item in the entire standing-order backlog — queued in the very first cycle, still valid 31 cycles later because nothing since had re-verified whether it was already done.
+
+5 items from earlier runs are still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 30: closed the last 3 items run 28 explicitly queued — portal-card badges/links, the locked Foundation card's washed-out text, and the homepage footer
 
@@ -1812,60 +1826,22 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 82 route components resolved
+- ✅ **Route components exist on disk** — all 83 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 2325da8 a11y: fix remaining color-contrast violations from run 28's queue (22 seconds ago)
-- c8f0511 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- df54dbc Fix contrast on every portal's active-language button (run 28 follow-up) (2 hours ago)
-- a1db51e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- ffcca47 Fix WCAG color-contrast: muted gray text failed AA on every page (run 27 follow-up) (3 hours ago)
-- e5f194d chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 414ac33 Fix missing form labels on all 9 portal signup forms + /join (WCAG critical) (4 hours ago)
-- 906f22e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 49419ee chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
+- 2325da8 a11y: fix remaining color-contrast violations from run 28's queue (65 minutes ago)
+- c8f0511 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- df54dbc Fix contrast on every portal's active-language button (run 28 follow-up) (3 hours ago)
+- a1db51e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- ffcca47 Fix WCAG color-contrast: muted gray text failed AA on every page (run 27 follow-up) (4 hours ago)
+- e5f194d chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 414ac33 Fix missing form labels on all 9 portal signup forms + /join (WCAG critical) (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -1906,7 +1882,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (82 routes)
+## Route map (83 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -1938,6 +1914,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /pricing | PricingPage | public |
 | /join | ProducerJoinPage | public |
 | /producers | ProducerJoinPage | public |
+| /producers/manage | ProducerManagePage | public |
 | /catalog | CatalogPage | public |
 | /shop | CatalogPage | public |
 | /find-producers | ProducerDirectoryPage | public |
@@ -2009,7 +1986,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `portal-leads.js` | 118 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 189 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 226 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `server.js` | 8302 | Vercel serverless detection |
