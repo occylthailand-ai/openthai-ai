@@ -9,6 +9,24 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-05 — Hourly loop, run 45: `openthai-ai`'s own self-serve producer edit endpoint checked clean; real crash bug found and fixed in `smart-e`'s order creation
+
+PR #79: same recurring rate-limit pattern, confirmed via the real status API again (the bot's PR comment table showed "all Ready" mid-cycle for a commit that the API simultaneously showed 2-of-3 failing for — noting this recurring lag once more since it happened several times this session; always trusted the API over the comment).
+
+**Checked `openthai-ai` first, found nothing to fix:** re-examined `ProducerManagePage.jsx` (self-serve edit for approved producers, built run 31) since it hadn't had a close look since its own creation and interacts with run 39/42's hijack-prevention work. Confirmed `backend/producers.js`'s `selfUpdate()` — the function actually backing `POST /api/producers/update-listing` — does check `rec.status !== 'approved'` server-side before allowing any edit, not just relying on the frontend's conditional rendering. Properly secured, no gap.
+
+**Moved to `smart-e` for a broader regression sweep** (the auth-gate fix in run 38 had only been verified against `/api/products`; the rest of the API surface — orders, customers, payments, tiktok, analytics, settings, LINE messages — was untested since). Hit all 10 `GET` routes with and without the admin key (all correctly 200/401), then exercised the write routes with real data. `POST /api/products`, `/api/customers`, and `/api/settings` all worked cleanly. `POST /api/orders` returned a bare empty response (`curl` exit 52, "empty reply from server") for a plausible-looking test payload.
+
+**Found the real cause rather than assuming the test input was simply wrong:** `_create_order()` does `item.get('price',0) * item.get('qty',1) for item in body.get('items', [])` with zero shape-checking on `items` — a request where `items` isn't an array of objects throws an unhandled `AttributeError` deep in Python's stdlib `http.server` stack. Confirmed via the server's own log, not just inferred. Checked `index.html`'s dashboard: there's no order-*creation* UI at all (only read + status-update) and `POST /api/orders` requires the admin key (unlike `/api/webhook/line`, which verifies LINE's signature instead) — so this isn't reachable by an anonymous visitor, but a legitimate admin-key holder using a future POS form or a slightly-wrong integration script would hit a silent dead end instead of an actionable error. Also confirmed the crash doesn't take the whole server down — `http.server`'s base request handler catches the exception at the framework level and keeps serving other requests — so this was a per-request robustness gap, not a full outage risk.
+
+**Fix:** validate `items` is a list of dicts before processing; return a clean `400` with an explanation instead of crashing.
+
+**Verified live:** reproduced the exact original crash first (confirmed via the server log's traceback) before touching anything. After the fix: the identical malformed payload now returns a proper `400` instead of an empty response; the server stays healthy for the next request; a correctly-shaped order (real `product_id`/`qty`/`price` objects) still creates successfully with the right computed total; an order with `items` omitted entirely still defaults cleanly to an empty order; a list containing a non-dict element is also correctly rejected. Pushed to `smart-e`'s existing PR #1 branch — full writeup in that repo's commit message, no `DECISIONS_LOG.md` there.
+
+4 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question also unchanged. Noted but not chased this cycle: `_create_product`/`_create_customer`/the payment routes in `smart-e` likely have similar unguarded `.get()` chains on request-body shape — worth a similar pass next time that repo comes up, not fixing speculatively without reproducing each one first.
+
+---
+
 ### 2026-07-05 — Hourly loop, run 44: closed the consent-flow audit (no more instances found), then found and fixed a real Thai-name display bug in the affiliate ref code — the code shown to the user could silently diverge from the one actually stored
 
 PR #79: rate-limited again on the API-confirmed real status (2 of 3), same recurring pattern.

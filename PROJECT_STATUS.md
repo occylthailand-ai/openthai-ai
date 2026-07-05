@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T15:17:37.126Z · branch `claude/daily-reporter-improvements-8vc9ct` (99 commit(s) ahead of main)
+Generated: 2026-07-05T16:15:46.046Z · branch `claude/daily-reporter-improvements-8vc9ct` (100 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 309 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 183 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,24 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-05 — Hourly loop, run 45: `openthai-ai`'s own self-serve producer edit endpoint checked clean; real crash bug found and fixed in `smart-e`'s order creation
+
+PR #79: same recurring rate-limit pattern, confirmed via the real status API again (the bot's PR comment table showed "all Ready" mid-cycle for a commit that the API simultaneously showed 2-of-3 failing for — noting this recurring lag once more since it happened several times this session; always trusted the API over the comment).
+
+**Checked `openthai-ai` first, found nothing to fix:** re-examined `ProducerManagePage.jsx` (self-serve edit for approved producers, built run 31) since it hadn't had a close look since its own creation and interacts with run 39/42's hijack-prevention work. Confirmed `backend/producers.js`'s `selfUpdate()` — the function actually backing `POST /api/producers/update-listing` — does check `rec.status !== 'approved'` server-side before allowing any edit, not just relying on the frontend's conditional rendering. Properly secured, no gap.
+
+**Moved to `smart-e` for a broader regression sweep** (the auth-gate fix in run 38 had only been verified against `/api/products`; the rest of the API surface — orders, customers, payments, tiktok, analytics, settings, LINE messages — was untested since). Hit all 10 `GET` routes with and without the admin key (all correctly 200/401), then exercised the write routes with real data. `POST /api/products`, `/api/customers`, and `/api/settings` all worked cleanly. `POST /api/orders` returned a bare empty response (`curl` exit 52, "empty reply from server") for a plausible-looking test payload.
+
+**Found the real cause rather than assuming the test input was simply wrong:** `_create_order()` does `item.get('price',0) * item.get('qty',1) for item in body.get('items', [])` with zero shape-checking on `items` — a request where `items` isn't an array of objects throws an unhandled `AttributeError` deep in Python's stdlib `http.server` stack. Confirmed via the server's own log, not just inferred. Checked `index.html`'s dashboard: there's no order-*creation* UI at all (only read + status-update) and `POST /api/orders` requires the admin key (unlike `/api/webhook/line`, which verifies LINE's signature instead) — so this isn't reachable by an anonymous visitor, but a legitimate admin-key holder using a future POS form or a slightly-wrong integration script would hit a silent dead end instead of an actionable error. Also confirmed the crash doesn't take the whole server down — `http.server`'s base request handler catches the exception at the framework level and keeps serving other requests — so this was a per-request robustness gap, not a full outage risk.
+
+**Fix:** validate `items` is a list of dicts before processing; return a clean `400` with an explanation instead of crashing.
+
+**Verified live:** reproduced the exact original crash first (confirmed via the server log's traceback) before touching anything. After the fix: the identical malformed payload now returns a proper `400` instead of an empty response; the server stays healthy for the next request; a correctly-shaped order (real `product_id`/`qty`/`price` objects) still creates successfully with the right computed total; an order with `items` omitted entirely still defaults cleanly to an empty order; a list containing a non-dict element is also correctly rejected. Pushed to `smart-e`'s existing PR #1 branch — full writeup in that repo's commit message, no `DECISIONS_LOG.md` there.
+
+4 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question also unchanged. Noted but not chased this cycle: `_create_product`/`_create_customer`/the payment routes in `smart-e` likely have similar unguarded `.get()` chains on request-body shape — worth a similar pass next time that repo comes up, not fixing speculatively without reproducing each one first.
+
+---
 
 ### 2026-07-05 — Hourly loop, run 44: closed the consent-flow audit (no more instances found), then found and fixed a real Thai-name display bug in the affiliate ref code — the code shown to the user could silently diverge from the one actually stored
 
@@ -2071,54 +2089,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b62f68c fix: affiliate signup showed a ref code that could diverge from the one actually stored (21 seconds ago)
-- cf3baff chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- d2ddb72 fix: primary /affiliate signup also had no PDPA consent UI; same bridge fix as producers (61 minutes ago)
-- e3c8347 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- a81f83a fix: /join producer signup had no PDPA consent UI at all; fix an internal auto-register bridge that would've silently broken (2 hours ago)
-- dab67fe chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- a1ad1b0 docs: log run 41 -- regression sweep after run 40's consent fix, clean (3 hours ago)
-- 38f9622 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- dac7837 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- b62f68c fix: affiliate signup showed a ref code that could diverge from the one actually stored (59 minutes ago)
+- cf3baff chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- d2ddb72 fix: primary /affiliate signup also had no PDPA consent UI; same bridge fix as producers (2 hours ago)
+- e3c8347 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- a81f83a fix: /join producer signup had no PDPA consent UI at all; fix an internal auto-register bridge that would've silently broken (3 hours ago)
+- dab67fe chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- a1ad1b0 docs: log run 41 -- regression sweep after run 40's consent fix, clean (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
