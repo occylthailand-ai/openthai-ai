@@ -13,6 +13,9 @@ import { join } from 'path';
 // ประเภท portal ที่รู้จัก — ยังรับ type อื่นได้ (กันเคส portal ใหม่ในอนาคตที่ลืมเพิ่มที่นี่)
 // แต่ log แจ้งเตือนถ้าเจอ type ที่ไม่รู้จัก
 const KNOWN_TYPES = ['gov-thai', 'gov-intl', 'intl-org', 'foundation', 'creator', 'affiliate', 'producer', 'consumer', 'middleman', 'service-package'];
+// สถานะการติดตาม lead (pipeline ขาย) — ต้องตรงกับ dropdown ใน AdminPage และ
+// ค่า default ของคอลัมน์ status ใน migrations/008-portal-lead-status.sql
+const LEAD_STATUSES = ['new', 'contacted', 'talking', 'proposal', 'won', 'lost'];
 const clip = (s, n = 500) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 const isEmailLike = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
 
@@ -82,6 +85,27 @@ export function createPortalLeads(dataDir, opts = {}) {
     return { ok: true, id: rec.id };
   }
 
+  // อัปเดตสถานะการติดตาม lead — ใช้จาก PATCH /api/leads/admin/status (Admin Key)
+  // โหมด Supabase: ถ้ายังไม่รัน migrations/008-portal-lead-status.sql จะ error กลับไป
+  // พร้อมข้อความบอกให้รัน migration (ไม่เงียบหาย) — โหมดไฟล์ใช้ได้ทันที
+  async function updateStatus(id, { status, note }) {
+    if (!LEAD_STATUSES.includes(status)) return { ok: false, error: `status ต้องเป็นหนึ่งใน: ${LEAD_STATUSES.join(', ')}` };
+    const fields = { status, status_note: clip(note, 300) || null, status_updated_at: new Date().toISOString() };
+    if (useSB) {
+      try {
+        const rows = await sbReq('PATCH', '/portal_leads', { body: fields, params: { id: `eq.${id}` }, prefer: 'return=representation' });
+        if (Array.isArray(rows) && rows.length > 0) return { ok: true, lead: rows[0] };
+        // ไม่เจอใน Supabase — lead อาจถูกเขียนลงไฟล์ตอน SB write ล้มเหลว ลองไฟล์ต่อ
+      } catch (e) {
+        return { ok: false, error: `Supabase update ไม่ผ่าน: ${e.message} (ถ้าขึ้น column ไม่มีอยู่ ให้รัน migrations/008-portal-lead-status.sql ก่อน)` };
+      }
+    }
+    if (!store[id]) return { ok: false, error: 'ไม่พบ lead นี้' };
+    store[id] = { ...store[id], ...fields };
+    saveFile();
+    return { ok: true, lead: store[id] };
+  }
+
   const submitLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { success: false, error: 'ส่งฟอร์มบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
   const router = express.Router();
   const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error('[portal-leads route]', e.message); res.status(500).json({ success: false, error: 'submit error' }); });
@@ -93,5 +117,5 @@ export function createPortalLeads(dataDir, opts = {}) {
     res.json({ success: true, id: r.id });
   }));
 
-  return { router, submit, all, KNOWN_TYPES };
+  return { router, submit, all, updateStatus, KNOWN_TYPES, LEAD_STATUSES };
 }

@@ -68,6 +68,11 @@ export default function AdminPage() {
   const loadProducers = () => fetch(apiUrl('/api/producers/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setProds(d.producers); else console.warn('[admin] producers:', d.message); }).catch(apiErr('producers'));
   const loadOrders = () => fetch(apiUrl('/api/orders/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setOrds(d.orders); else console.warn('[admin] orders:', d.message); }).catch(apiErr('orders'));
   const loadLeads = () => fetch(apiUrl('/api/leads/admin/search'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setLeads(d); else console.warn('[admin] leads:', d.message); }).catch(apiErr('leads'));
+  const setLeadStatus = async (id, status, note) => {
+    const r = await fetch(apiUrl('/api/leads/admin/status'), { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify({ id, status, note: note || '' }) }).then(x => x.json()).catch(() => null);
+    if (!r?.success) alert(r?.error || 'อัปเดตสถานะไม่สำเร็จ');
+    loadLeads();
+  };
   const loadAffiliates = () => fetch(apiUrl('/api/affiliate/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setAffList(d.data); else console.warn('[admin] affiliates:', d.message); }).catch(apiErr('affiliates'));
   const loadInventory = () => {
     fetch(apiUrl('/api/inventory/admin/list'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setInv(d.products); else console.warn('[admin] inv:', d.message); }).catch(apiErr('inventory'));
@@ -748,8 +753,10 @@ export default function AdminPage() {
           const list = all.filter((l) => (leadType === 'all' || l.type === leadType) && (!q || [l.name, l.contact, l.detail].some((f) => (f || '').toLowerCase().includes(q))));
           const TYPE_C = { waitlist: '#06b6d4', affiliate: '#f59e0b', order: '#10b981', 'portal:gov-thai': '#3b82f6', 'portal:gov-intl': '#3b82f6', 'portal:intl-org': '#8b5cf6', 'portal:foundation': '#059669', 'portal:creator': '#ec4899', 'portal:affiliate': '#f59e0b', 'portal:producer': '#f97316', 'portal:consumer': '#0ea5e9', 'portal:middleman': '#84cc16', 'portal:service-package': '#6366f1' };
           const PORTAL_LABEL = { 'portal:gov-thai': 'Portal: หน่วยงานรัฐไทย', 'portal:gov-intl': 'Portal: หน่วยงานรัฐต่างประเทศ', 'portal:intl-org': 'Portal: องค์กรระหว่างประเทศ', 'portal:foundation': 'Portal: มูลนิธิ/NGO', 'portal:creator': 'Portal: ครีเอเตอร์', 'portal:affiliate': 'Portal: สนใจเป็น Affiliate', 'portal:producer': 'Portal: สนใจเป็นผู้ผลิต', 'portal:consumer': 'Portal: ผู้บริโภค', 'portal:middleman': 'Portal: คนกลาง/ตัวแทนจำหน่าย', 'portal:service-package': 'บริการจับคู่ (฿15k-25k)' };
+          // pipeline การติดตาม lead — ค่าต้องตรงกับ LEAD_STATUSES ใน backend/portal-leads.js
+          const LEAD_STATUS = { new: ['🆕 ใหม่', '#94a3b8'], contacted: ['📤 ทักแล้ว', '#06b6d4'], talking: ['💬 กำลังคุย', '#f59e0b'], proposal: ['📄 ส่งข้อเสนอ', '#8b5cf6'], won: ['✅ ปิดได้', '#10b981'], lost: ['❌ ไม่สำเร็จ', '#64748b'] };
           const exportCsv = () => {
-            const rows = [['type', 'name', 'contact', 'detail', 'date'], ...list.map((l) => [l.type, l.name, l.contact, l.detail, l.date])];
+            const rows = [['type', 'name', 'contact', 'detail', 'date', 'status', 'status_note'], ...list.map((l) => [l.type, l.name, l.contact, l.detail, l.date, l.status || '', l.status_note || ''])];
             const csv = rows.map((r) => r.map((c) => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
             const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
             const a = document.createElement('a'); a.href = url; a.download = `openthai-leads-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
@@ -780,7 +787,7 @@ export default function AdminPage() {
             {list.length > 0 && (
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead><tr style={{ color: '#475569' }}>{['ประเภท', 'ชื่อ', 'ติดต่อ', 'รายละเอียด', 'วันที่'].map((h) => <th key={h} style={{ textAlign: 'left', padding: '8px', fontWeight: 600, fontSize: 11, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>{h}</th>)}</tr></thead>
+                  <thead><tr style={{ color: '#475569' }}>{['ประเภท', 'ชื่อ', 'ติดต่อ', 'รายละเอียด', 'วันที่', 'สถานะติดตาม'].map((h) => <th key={h} style={{ textAlign: 'left', padding: '8px', fontWeight: 600, fontSize: 11, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>{h}</th>)}</tr></thead>
                   <tbody>
                     {list.slice(0, 500).map((l, i) => (
                       <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
@@ -793,6 +800,18 @@ export default function AdminPage() {
                         <td style={{ padding: '8px', color: '#a5b4fc' }}>{l.contact}</td>
                         <td style={{ padding: '8px', color: '#94a3b8' }}>{l.detail}</td>
                         <td style={{ padding: '8px', color: '#64748b', fontSize: 11, whiteSpace: 'nowrap' }}>{l.date ? new Date(l.date).toLocaleDateString() : '-'}</td>
+                        <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
+                          {l.id ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <select value={l.status || 'new'} onChange={(e) => setLeadStatus(l.id, e.target.value, l.status_note)}
+                                style={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.12)', color: LEAD_STATUS[l.status || 'new']?.[1] || '#94a3b8', padding: '4px 6px', borderRadius: 6, fontSize: 11, fontWeight: 600 }}>
+                                {Object.entries(LEAD_STATUS).map(([v, [label]]) => <option key={v} value={v}>{label}</option>)}
+                              </select>
+                              <button title={l.status_note ? `โน้ต: ${l.status_note}` : 'เพิ่มโน้ตการติดตาม'} onClick={() => { const n = window.prompt('โน้ตการติดตาม (เช่น "โทรแล้ว นัดคุยวันศุกร์")', l.status_note || ''); if (n !== null) setLeadStatus(l.id, l.status || 'new', n); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, opacity: l.status_note ? 1 : 0.4 }}>📝</button>
+                            </span>
+                          ) : <span style={{ fontSize: 11, color: '#334155' }}>—</span>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

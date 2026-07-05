@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-04T08:41:04.416Z · branch `claude/openthaiai-strategy-pivot-zdc1vs` (0 commit(s) ahead of main)
+Generated: 2026-07-05T09:09:05.140Z · branch `claude/openthaiai-strategy-pivot-zdc1vs` (1 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 210 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 211 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,43 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-07-04 — Completed the sales pipeline: proposal template with real payment links + lead status tracking in Admin
+Continuation of the same day's Option 1 pivot ("ต่อเนื่องเลยครับ"). Checked the
+remaining gaps in the close-a-deal flow before building anything:
+
+**1. Payment for ฿15k-25k already existed — did not rebuild it.** Verified
+QuickPay (`POST /api/quickpay/create`, page `/pay?amount=&label=`) accepts
+one-time PromptPay charges up to ฿100,000 with custom label; tested a real
+฿25,000 charge locally (mock mode without OMISE_SECRET_KEY, as designed).
+So the missing piece was only the document connecting a closed conversation
+to that payment page: added `docs/outreach/service-proposal-template.md` —
+scope-of-work form (deliverables copied verbatim from `/services`, explicit
+"สิ่งที่ไม่ครอบคลุม" section, no sales guarantees), ready-made `/pay` links
+per package including a 2-installment variant, and a MOCK MODE warning to
+test links before sending. `warm-contact-scripts.md`'s closing section now
+points at it.
+
+**2. Lead follow-up tracking (new, small, real).** Admin's leads tab was
+read-only — unworkable for chasing dozens of warm leads over 27 days (the
+scripts mandate a single follow-up after 3-4 days, which requires knowing
+who was contacted when). Added a minimal pipeline: statuses
+new/contacted/talking/proposal/won/lost + free-text note on **portal leads
+only** (waitlist/affiliate/order rows come from other stores and keep no
+tracking state). Backend: `updateStatus()` in `portal-leads.js` (dual-mode:
+file works immediately; Supabase needs new migration
+`008-portal-lead-status.sql` — status/status_note/status_updated_at columns
+— and returns a loud "run the migration" error until it's run, not a silent
+failure), `PATCH /api/leads/admin/status` gated by Admin Key, admin search
+now returns `id`/`status`/`status_note` for portal leads. Frontend: status
+dropdown + note button per portal-lead row, CSV export includes both.
+
+Verified live, not assumed: API — update persists, invalid status rejected
+with the enum list, unknown id rejected, no key → 401; UI (Playwright, real
+browser) — dropdown renders with current status, changing it persists
+server-side, the note survives a status change, non-portal rows get no
+dropdown. Existing tests still 30/30. Reminder for production: run
+`008-portal-lead-status.sql` in Supabase before using status tracking there.
 
 ### 2026-07-04 — Strategy pivot (Option 1): sell a human-delivered matching service at ฿15k-25k, built the real /services page + warm-contact scripts
 Project owner pasted an external AI's strategy analysis (100k THB cash goal by
@@ -690,14 +727,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (23 hours ago)
-- f3a860d Open the Council Bridge to external platforms/systems (#76) (25 hours ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (26 hours ago)
-- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (27 hours ago)
-- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (29 hours ago)
-- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (2 days ago)
-- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (2 days ago)
-- d2b2e82 Autonomous scan: fix 2 unauthenticated destructive endpoints, flag a 3rd for review (#70) (2 days ago)
+- 2eb6c9f Strategy pivot Option 1: /services package page + warm-contact outreach scripts (24 hours ago)
+- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (2 days ago)
+- f3a860d Open the Council Bridge to external platforms/systems (#76) (2 days ago)
+- d73b560 Add Shared Bridge Notes to /council (#75) (2 days ago)
+- f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (2 days ago)
+- 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (2 days ago)
+- b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (3 days ago)
+- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (3 days ago)
 
 ## Production health (⚠️ HTTP 403)
 
@@ -840,13 +877,13 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
-| `portal-leads.js` | 98 | Portal Leads — captures submissions from the /portals/* landing pages |
+| `portal-leads.js` | 122 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
 | `producers.js` | 160 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7961 | Vercel serverless detection |
+| `server.js` | 7977 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
@@ -896,6 +933,7 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 005_user_sync.sql
 - 006_order_disputes.sql
 - 007_portal_leads.sql
+- 008-portal-lead-status.sql
 - FULL-MIGRATION.sql
 - credits-schema.sql
 - orders-schema.sql

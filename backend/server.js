@@ -580,7 +580,7 @@ app.get('/api/leads/admin/search', async (req, res) => {
       let registered = null; // null = ไม่มีระบบจริงให้เชื่อม (เช่น consumer/gov/foundation — lead คือระบบทั้งหมดอยู่แล้ว)
       if (l.type === 'producer') registered = producerEmails.has(l.email);
       else if (l.type === 'affiliate') registered = affiliateEmails.has(l.email);
-      leads.push({ type: `portal:${l.type}`, name: l.name || '', contact: l.email || '', detail: Object.entries(l.form_data || {}).filter(([k]) => k !== 'name' && k !== 'email').map(([k, v]) => `${k}: ${v}`).join(' · ').slice(0, 200), date: l.created_at || '', registered });
+      leads.push({ id: l.id, type: `portal:${l.type}`, name: l.name || '', contact: l.email || '', detail: Object.entries(l.form_data || {}).filter(([k]) => k !== 'name' && k !== 'email').map(([k, v]) => `${k}: ${v}`).join(' · ').slice(0, 200), date: l.created_at || '', registered, status: l.status || 'new', status_note: l.status_note || '' });
     }
 
     let out = leads;
@@ -590,6 +590,22 @@ app.get('/api/leads/admin/search', async (req, res) => {
     const counts = { all: leads.length, waitlist: leads.filter((l) => l.type === 'waitlist').length, affiliate: leads.filter((l) => l.type === 'affiliate').length, order: leads.filter((l) => l.type === 'order').length };
     for (const t of portalLeads.KNOWN_TYPES) counts[`portal:${t}`] = leads.filter((l) => l.type === `portal:${t}`).length;
     res.json({ success: true, counts, total: out.length, leads: out.slice(0, 2000) });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PATCH /api/leads/admin/status — อัปเดตสถานะการติดตาม portal lead (pipeline ขาย)
+// ใช้ไล่ warm lead: ใครทักแล้ว/กำลังคุย/ส่งข้อเสนอ/ปิดได้/ไม่สำเร็จ — เฉพาะ portal leads
+// (waitlist/affiliate/order มาจากคนละ store ไม่มีสถานะติดตาม)
+app.patch('/api/leads/admin/status', async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try {
+    const { id, status, note } = req.body || {};
+    if (!id || !status) return res.status(400).json({ success: false, error: 'ต้องมี id และ status' });
+    const r = await portalLeads.updateStatus(String(id), { status: String(status), note: note ? String(note) : '' });
+    if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    addLog('info', 'Leads', `อัปเดตสถานะ lead ${id} → ${status}${note ? ` (${String(note).slice(0, 60)})` : ''}`);
+    res.json({ success: true, lead: r.lead });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 

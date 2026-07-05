@@ -11,6 +11,43 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-04 — Completed the sales pipeline: proposal template with real payment links + lead status tracking in Admin
+Continuation of the same day's Option 1 pivot ("ต่อเนื่องเลยครับ"). Checked the
+remaining gaps in the close-a-deal flow before building anything:
+
+**1. Payment for ฿15k-25k already existed — did not rebuild it.** Verified
+QuickPay (`POST /api/quickpay/create`, page `/pay?amount=&label=`) accepts
+one-time PromptPay charges up to ฿100,000 with custom label; tested a real
+฿25,000 charge locally (mock mode without OMISE_SECRET_KEY, as designed).
+So the missing piece was only the document connecting a closed conversation
+to that payment page: added `docs/outreach/service-proposal-template.md` —
+scope-of-work form (deliverables copied verbatim from `/services`, explicit
+"สิ่งที่ไม่ครอบคลุม" section, no sales guarantees), ready-made `/pay` links
+per package including a 2-installment variant, and a MOCK MODE warning to
+test links before sending. `warm-contact-scripts.md`'s closing section now
+points at it.
+
+**2. Lead follow-up tracking (new, small, real).** Admin's leads tab was
+read-only — unworkable for chasing dozens of warm leads over 27 days (the
+scripts mandate a single follow-up after 3-4 days, which requires knowing
+who was contacted when). Added a minimal pipeline: statuses
+new/contacted/talking/proposal/won/lost + free-text note on **portal leads
+only** (waitlist/affiliate/order rows come from other stores and keep no
+tracking state). Backend: `updateStatus()` in `portal-leads.js` (dual-mode:
+file works immediately; Supabase needs new migration
+`008-portal-lead-status.sql` — status/status_note/status_updated_at columns
+— and returns a loud "run the migration" error until it's run, not a silent
+failure), `PATCH /api/leads/admin/status` gated by Admin Key, admin search
+now returns `id`/`status`/`status_note` for portal leads. Frontend: status
+dropdown + note button per portal-lead row, CSV export includes both.
+
+Verified live, not assumed: API — update persists, invalid status rejected
+with the enum list, unknown id rejected, no key → 401; UI (Playwright, real
+browser) — dropdown renders with current status, changing it persists
+server-side, the note survives a status change, non-portal rows get no
+dropdown. Existing tests still 30/30. Reminder for production: run
+`008-portal-lead-status.sql` in Supabase before using status tracking there.
+
 ### 2026-07-04 — Strategy pivot (Option 1): sell a human-delivered matching service at ฿15k-25k, built the real /services page + warm-contact scripts
 Project owner pasted an external AI's strategy analysis (100k THB cash goal by
 2026-07-31, 27 days out) and asked for an assessment, then picked its "Option
