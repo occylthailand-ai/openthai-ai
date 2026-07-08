@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-08 — Hourly loop, run 52: `smart-e`'s dashboard showed "สำเร็จ" even when the server said no — every write handler ignored the response
+
+PR #79: run 51's deploys completed normally (all 3 Ready on `d8f7cda`, confirmed in the final webhook state).
+
+**Direct follow-through on runs 46/48's own backend hardening:** those runs made the backend return clean 400s for malformed data — but nobody checked whether the frontend *shows* them. It didn't: `api()` returned parsed JSON without ever reading `r.ok` (and swallowed network errors into a silent `null`), and all 7 write handlers (save/delete product, create order, update order status, save customer, confirm payment, save settings) fired their success toast and closed the modal unconditionally. An admin whose save was rejected — or whose connection dropped — saw "เพิ่มสินค้าแล้ว" while nothing was saved.
+
+**Honest scoping note:** the product form's price field is `type="number"`, so the specific "typed abc into price" path is already blocked by HTML validation (discovered this during testing when Playwright refused to type letters into it — adjusted the test rather than pretending the case was reachable). The fix matters for the failure classes HTML validation can't catch: real server-side 400s via API, 500s, 503 (ADMIN_KEY unset), and network failures — all of which previously produced fake success.
+
+**Fix:** `api()` now checks `r.ok`, toasts the server's own Thai `error` message (or a generic connection-failure message), and returns `null`; every write handler bails before its success toast on `null`, leaving the form open so the admin can correct and retry.
+
+**Verified live in a real browser (Playwright against the running server), 3 cases:** (1) a real 400 from the real backend through the app's own `api()` → server's Thai error toast shown, `null` returned; (2) a valid product save → success toast, modal closes, product appears; (3) request failing mid-save → error toast, **no** success toast, modal stays open. Pushed to `smart-e`'s PR #1 branch as `a27ccef` — full writeup in that repo's commit message.
+
+6 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-08 — Hourly loop, run 51: order paths scanned clean; ai-memory grounding pack updated to v1.1.0 with the 3 durable lessons this session actually produced
 
 PR #79: run 50's deploys completed normally (webhook noise was the usual build-supersede progression; final state all Ready).

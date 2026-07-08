@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-08T11:19:37.175Z · branch `claude/daily-reporter-improvements-8vc9ct` (119 commit(s) ahead of main)
+Generated: 2026-07-08T16:12:34.099Z · branch `claude/daily-reporter-improvements-8vc9ct` (120 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 329 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 203 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-08 — Hourly loop, run 52: `smart-e`'s dashboard showed "สำเร็จ" even when the server said no — every write handler ignored the response
+
+PR #79: run 51's deploys completed normally (all 3 Ready on `d8f7cda`, confirmed in the final webhook state).
+
+**Direct follow-through on runs 46/48's own backend hardening:** those runs made the backend return clean 400s for malformed data — but nobody checked whether the frontend *shows* them. It didn't: `api()` returned parsed JSON without ever reading `r.ok` (and swallowed network errors into a silent `null`), and all 7 write handlers (save/delete product, create order, update order status, save customer, confirm payment, save settings) fired their success toast and closed the modal unconditionally. An admin whose save was rejected — or whose connection dropped — saw "เพิ่มสินค้าแล้ว" while nothing was saved.
+
+**Honest scoping note:** the product form's price field is `type="number"`, so the specific "typed abc into price" path is already blocked by HTML validation (discovered this during testing when Playwright refused to type letters into it — adjusted the test rather than pretending the case was reachable). The fix matters for the failure classes HTML validation can't catch: real server-side 400s via API, 500s, 503 (ADMIN_KEY unset), and network failures — all of which previously produced fake success.
+
+**Fix:** `api()` now checks `r.ok`, toasts the server's own Thai `error` message (or a generic connection-failure message), and returns `null`; every write handler bails before its success toast on `null`, leaving the form open so the admin can correct and retry.
+
+**Verified live in a real browser (Playwright against the running server), 3 cases:** (1) a real 400 from the real backend through the app's own `api()` → server's Thai error toast shown, `null` returned; (2) a valid product save → success toast, modal closes, product appears; (3) request failing mid-save → error toast, **no** success toast, modal stays open. Pushed to `smart-e`'s PR #1 branch as `a27ccef` — full writeup in that repo's commit message.
+
+6 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-08 — Hourly loop, run 51: order paths scanned clean; ai-memory grounding pack updated to v1.1.0 with the 3 durable lessons this session actually produced
 
@@ -2199,54 +2215,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- d8f7cda docs: log run 51 -- order paths scanned clean; ai-memory pack updated to v1.1.0 with this session's 3 durable lessons (14 seconds ago)
-- b25bf4d chore: sync PROJECT_STATUS.md [skip ci] (71 seconds ago)
-- 229ea5b docs: ai-memory pack v1.1.0 -- 3 new lessons from the hourly-loop session, all citing real DECISIONS_LOG events (86 seconds ago)
-- 690fab4 chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
-- 680394a docs: log run 50 -- producer directory category filter was out of sync with backend, 2 categories unfindable; now fetched from the API (6 minutes ago)
-- e7eead4 chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
-- 479f7b1 fix: producer directory's category filter was out of sync with the backend -- 2 categories unfindable (6 minutes ago)
-- 37f0d4b chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 83a90fa chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- d8f7cda docs: log run 51 -- order paths scanned clean; ai-memory pack updated to v1.1.0 with this session's 3 durable lessons (5 hours ago)
+- b25bf4d chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 229ea5b docs: ai-memory pack v1.1.0 -- 3 new lessons from the hourly-loop session, all citing real DECISIONS_LOG events (5 hours ago)
+- 690fab4 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 680394a docs: log run 50 -- producer directory category filter was out of sync with backend, 2 categories unfindable; now fetched from the API (5 hours ago)
+- e7eead4 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 479f7b1 fix: producer directory's category filter was out of sync with the backend -- 2 categories unfindable (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 349,
-  "memory_mb": "20.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
