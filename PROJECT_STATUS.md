@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-05T17:12:36.461Z · branch `claude/daily-reporter-improvements-8vc9ct` (105 commit(s) ahead of main)
+Generated: 2026-07-08T06:11:49.788Z · branch `claude/daily-reporter-improvements-8vc9ct` (106 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 315 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 189 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,26 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-08 — Hourly loop, run 48: `smart-e`'s PUT /api/products accepted the exact garbage its POST now rejects — real stock data destroyed downstream, reproduced then fixed
+
+PR #79 status: could not cross-check via the GitHub status API this cycle — the GitHub MCP connector needs re-authorization (non-interactive session, can't run the OAuth flow here; เจ้าของต้อง authorize GitHub connector ใหม่ใน claude.ai connector settings ถ้าอยากให้รอบถัดไปเช็ค PR ผ่าน API ได้). The interleaving Vercel bot comment updates that arrived since run 47 all show routine building→ready progressions for the run-46/47 docs commits — same noise pattern as every prior cycle, no action taken on them. Note the bot comment has repeatedly contradicted the real API before, so "Ready" in the comment is not treated as confirmation of anything.
+
+Run 47's owner question (producer_id vs email as the public catalog identifier) remains open — the interactive question tool failed twice with a transport error, but the full decision context is durably recorded in the run 47 entry below, so nothing is lost. Not proceeding on that architecture change without an answer.
+
+**This cycle's task — direct follow-up on run 46's own fix, same repo, same bug class from the other direction:** run 46 made `POST /api/products` reject non-numeric `price`/`stock`, and its writeup claimed `_update_product` was safe because it has "no type coercion that could raise". That was true for the *crash* class but missed the *data-integrity* class: `PUT /api/products/1` with `{"price":"abc","stock":"xyz"}` returned 200 and SQLite stored the literal strings (dynamic typing, no column type enforcement).
+
+**Verified the damage is real, not theoretical, before fixing:** placed a real order against the polluted product on a live server — the order's stock decrement (`MAX(0, stock-?)`) coerced `'xyz'` to 0 and silently overwrote the real stock count with 0, and the `"abc"` price string stayed in the catalog for the dashboard/frontend to render. So an admin typo in a future edit form wouldn't just store garbage, it would destroy real inventory data on the next sale.
+
+**Fix:** `_update_product` now validates/coerces `price` (float) and `stock` (int) exactly like `_create_product` does, returning the same clean Thai 400 on bad input.
+
+**Verified live after the fix:** bad price → 400, bad stock → 400, valid numeric update → 200 with correct values, an update touching only non-numeric fields still works untouched, and a numeric string (`"99.25"`) is properly coerced rather than rejected. Zero exceptions in the server log across the whole run. Pushed to `smart-e`'s existing PR #1 branch (commit `4191fc9`).
+
+Lesson recorded for the loop itself: "no crash" ≠ "no bug" — run 46's sweep checked which handlers could *throw*, not which could silently persist garbage. `_update_customer` was re-checked under this lens too: its editable fields (`name`,`email`,`phone`,`tag`) are all genuinely free-text columns with no numeric coupling, so it does not have the same problem.
+
+5 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question unchanged; run 47's producer_id question now added to that list (6 total).
+
+---
 
 ### 2026-07-05 — Hourly loop, run 47: re-investigated the "low priority" producer-email-exposure note — it's more load-bearing than assumed; escalating to the owner instead of guessing an architecture fix
 
@@ -2128,54 +2148,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- fd0a28a docs: log run 47 -- producer-email exposure is load-bearing (used as the real order/dispute join key), escalating architecture decision to owner instead of guessing (13 seconds ago)
-- d3b8ea8 chore: sync PROJECT_STATUS.md [skip ci] (50 minutes ago)
-- 9470fd9 docs: log run 46 -- closed out smart-e crash-class sweep (3 more unguarded body-shape bugs + the JSON parser itself) (50 minutes ago)
-- 7b2d038 chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
-- 67cd33a docs: log run 45 -- verified producers.js self-serve edit is properly gated, fixed a real crash in smart-e's order creation (57 minutes ago)
-- dac7837 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- b62f68c fix: affiliate signup showed a ref code that could diverge from the one actually stored (2 hours ago)
-- cf3baff chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 7ffdb2c chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
+- fd0a28a docs: log run 47 -- producer-email exposure is load-bearing (used as the real order/dispute join key), escalating architecture decision to owner instead of guessing (3 days ago)
+- d3b8ea8 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
+- 9470fd9 docs: log run 46 -- closed out smart-e crash-class sweep (3 more unguarded body-shape bugs + the JSON parser itself) (3 days ago)
+- 7b2d038 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
+- 67cd33a docs: log run 45 -- verified producers.js self-serve edit is properly gated, fixed a real crash in smart-e's order creation (3 days ago)
+- dac7837 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
+- b62f68c fix: affiliate signup showed a ref code that could diverge from the one actually stored (3 days ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.9",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

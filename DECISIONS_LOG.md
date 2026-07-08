@@ -9,6 +9,26 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-08 — Hourly loop, run 48: `smart-e`'s PUT /api/products accepted the exact garbage its POST now rejects — real stock data destroyed downstream, reproduced then fixed
+
+PR #79 status: could not cross-check via the GitHub status API this cycle — the GitHub MCP connector needs re-authorization (non-interactive session, can't run the OAuth flow here; เจ้าของต้อง authorize GitHub connector ใหม่ใน claude.ai connector settings ถ้าอยากให้รอบถัดไปเช็ค PR ผ่าน API ได้). The interleaving Vercel bot comment updates that arrived since run 47 all show routine building→ready progressions for the run-46/47 docs commits — same noise pattern as every prior cycle, no action taken on them. Note the bot comment has repeatedly contradicted the real API before, so "Ready" in the comment is not treated as confirmation of anything.
+
+Run 47's owner question (producer_id vs email as the public catalog identifier) remains open — the interactive question tool failed twice with a transport error, but the full decision context is durably recorded in the run 47 entry below, so nothing is lost. Not proceeding on that architecture change without an answer.
+
+**This cycle's task — direct follow-up on run 46's own fix, same repo, same bug class from the other direction:** run 46 made `POST /api/products` reject non-numeric `price`/`stock`, and its writeup claimed `_update_product` was safe because it has "no type coercion that could raise". That was true for the *crash* class but missed the *data-integrity* class: `PUT /api/products/1` with `{"price":"abc","stock":"xyz"}` returned 200 and SQLite stored the literal strings (dynamic typing, no column type enforcement).
+
+**Verified the damage is real, not theoretical, before fixing:** placed a real order against the polluted product on a live server — the order's stock decrement (`MAX(0, stock-?)`) coerced `'xyz'` to 0 and silently overwrote the real stock count with 0, and the `"abc"` price string stayed in the catalog for the dashboard/frontend to render. So an admin typo in a future edit form wouldn't just store garbage, it would destroy real inventory data on the next sale.
+
+**Fix:** `_update_product` now validates/coerces `price` (float) and `stock` (int) exactly like `_create_product` does, returning the same clean Thai 400 on bad input.
+
+**Verified live after the fix:** bad price → 400, bad stock → 400, valid numeric update → 200 with correct values, an update touching only non-numeric fields still works untouched, and a numeric string (`"99.25"`) is properly coerced rather than rejected. Zero exceptions in the server log across the whole run. Pushed to `smart-e`'s existing PR #1 branch (commit `4191fc9`).
+
+Lesson recorded for the loop itself: "no crash" ≠ "no bug" — run 46's sweep checked which handlers could *throw*, not which could silently persist garbage. `_update_customer` was re-checked under this lens too: its editable fields (`name`,`email`,`phone`,`tag`) are all genuinely free-text columns with no numeric coupling, so it does not have the same problem.
+
+5 items still pending an owner decision, unchanged; `otop-ai-landing`'s domain question unchanged; run 47's producer_id question now added to that list (6 total).
+
+---
+
 ### 2026-07-05 — Hourly loop, run 47: re-investigated the "low priority" producer-email-exposure note — it's more load-bearing than assumed; escalating to the owner instead of guessing an architecture fix
 
 PR #79: same recurring rate-limit pattern confirmed again via the real status API (commit `d3b8ea8`: all 3 Vercel checks still `failure` / rate-limited), bot comment lag noted once more, no action needed.
