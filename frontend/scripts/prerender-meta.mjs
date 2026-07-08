@@ -39,6 +39,12 @@ const ROUTES = [
   { path: '/portals/gov-intl', title: 'Foreign Government Agency Portal', desc: 'AI collaboration for governments worldwide — no country restrictions. G2G programs, AI policy consultation, secure data exchange.' },
   { path: '/portals/intl-org', title: 'International Organization Portal', desc: 'Partnering with global institutions to advance AI for humanity — UN agencies, ASEAN bodies, development banks, SDG-aligned programs.' },
   { path: '/portals/foundation', title: 'ทางเข้ามูลนิธิเพื่อสังคม', desc: 'OpenThai.ai แบ่งปันกำไรให้มูลนิธิช่วยเหลือผู้ยากไร้เมื่อกำไรรวมเกิน 10 ล้านบาท — โปร่งใส ตรวจสอบได้' },
+  // /pricing และ /affiliate อยู่ใน sitemap.xml + robots.txt Allow มาตั้งแต่ต้น แต่ไม่เคยอยู่ใน
+  // รายการนี้ — แชร์สองหน้านี้บน LINE/Facebook จึงยังเห็น meta ของหน้าแรกอยู่ ทั้งที่เป็นหน้า
+  // funnel หลัก (ราคา + สมัคร affiliate) /affiliate/dashboard อยู่ใน sitemap เช่นกันแต่จงใจ
+  // ไม่ใส่ที่นี่: เป็นหน้า dashboard ส่วนตัว ไม่ใช่หน้า marketing ที่คนแชร์กัน
+  { path: '/pricing', title: 'เลือกแพ็กเกจที่ใช่สำหรับคุณ', desc: 'ทดลองฟรี ไม่ต้องผูกบัตร • ยกเลิกได้ทุกเมื่อ' },
+  { path: '/affiliate', title: 'โปรแกรม Affiliate', desc: 'แนะนำ Openthai.ai ให้เพื่อน Creator ไทย — เมื่อลูกค้าชำระเสร็จและแพลตฟอร์มโอนเงินส่วนต่างมาให้เรา เราโอนค่าคอมมิชชั่นให้คุณทุกวันจันทร์ โปร่งใส ไม่มีเงื่อนไขซ่อน' },
   { path: '/catalog', title: 'สินค้าไทยจากผู้ผลิตโดยตรง', desc: 'เลือกสินค้า → สั่งซื้อ → ผู้ผลิตติดต่อกลับเพื่อยืนยันและจัดส่ง' },
   { path: '/join', title: 'เอาสินค้าคุณมาขายกับครีเอเตอร์ทั่วไทย', desc: 'สังกัด Openthai.ai ฟรี — ให้ครีเอเตอร์กว่า 1,200 คนช่วยสร้างคอนเทนต์ + ดันยอดขายสินค้าคุณ จ่ายค่าคอมเฉพาะเมื่อขายได้' },
   { path: '/find-producers', title: 'หาผู้ผลิตสินค้าไทยที่ใช่', desc: 'ครีเอเตอร์หาสินค้ามาโปรโมต · ลูกค้าหาของจากผู้ผลิตโดยตรง' },
