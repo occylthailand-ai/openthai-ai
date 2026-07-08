@@ -16,7 +16,10 @@ export default function PricingPage() {
   const { t } = useLang();
   const [selected, setSelected] = useState('pro');
   const [openFaq, setOpenFaq] = useState(null);
-  useEffect(() => { document.title = 'Openthai.ai — Pricing'; }, []);
+  // ให้ตรงกับ title ภาษาไทยที่ prerender-meta.mjs ให้ crawler เห็น (pp.hero.title) — เดิมเป็น
+  // 'Openthai.ai — Pricing' ภาษาอังกฤษ ทำให้แท็บกระพริบจากไทยเป็นอังกฤษหลัง SPA boot
+  // และผิด convention หน้าอื่นทั้งเว็บที่ใช้ '<ชื่อหน้าไทย> — Openthai.ai'
+  useEffect(() => { document.title = 'เลือกแพ็กเกจที่ใช่สำหรับคุณ — Openthai.ai'; }, []);
 
   const plans = t('pp.plans');
   const faq = t('pp.faq');
