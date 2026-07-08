@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-08 — Hourly loop, run 55: rate-limited two public ref_code-keyed affiliate read endpoints leaking name + earnings (enumeration mitigation, same precedent as run 11)
+
+PR #79: run 54's deploys completed normally (all 3 Ready; the interleaved Canceled entries were the usual build-supersede).
+
+**Found by applying run 47's "is this identifier actually a secret?" lens to the affiliate side:** `GET /api/affiliate/stats/:ref_code` and `GET /api/affiliate/withdrawals?ref_code=` are both public, unauthenticated, and keyed only by `ref_code`. But `ref_code` is not a secret — it's embedded in every share link the affiliate posts (`?ref=CODE`), and `genRefCode()` gives it low entropy (up-to-6-char name prefix + 3 random base36 chars ≈ 46k suffixes). Between them the two endpoints return the affiliate's real name, tier, total earnings, pending payout, and withdrawal history. With no rate limiter on either, those could be enumerated to harvest name+earnings across affiliates.
+
+**Scoping decision (why a limiter, not an auth rewrite):** the login-less "enter your ref code to see your stats" dashboard is the product's intentional design, not an accident — so I did not change the auth model. Whether that dashboard *should* gain real auth is a genuine architecture decision, added to the owner-decision list. What's shippable now without touching that design is enumeration mitigation, exactly the move run 11 made for the unsubscribe routes: a rate limiter.
+
+**Fix:** added `affReadLimiter` (60 requests / 15 min, shared by both read endpoints).
+
+**Verified live against a booted server:** registered a real affiliate, confirmed a normal stats read returns 200, hammered the endpoint 65× → first 60 return 200, the rest 429; confirmed the withdrawals endpoint shares the same budget (429 once spent); zero exceptions in the server log. Cleaned the test affiliate out of the gitignored-placeholder `affiliates.json` (caught it in `git status` before committing, same as prior runs). Pushed as `1693cd1`.
+
+7 items now pending an owner decision (added: should the affiliate dashboard have real auth rather than ref_code-as-credential?).
+
+---
+
 ### 2026-07-08 — Hourly loop, run 54: openthai-ai's customer-facing money/order flows all scanned clean under the fake-success lens; smart-e's PR #1 description rewritten to match what the branch actually became
 
 PR #79: run 53's CI hiccup investigated and closed last cycle (transient race between the CI sync-push and a same-minute manual push; the next run passed and pushed its sync commit). Deploys all Ready.
