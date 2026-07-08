@@ -9,6 +9,23 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-08 — Hourly loop, run 54: openthai-ai's customer-facing money/order flows all scanned clean under the fake-success lens; smart-e's PR #1 description rewritten to match what the branch actually became
+
+PR #79: run 53's CI hiccup investigated and closed last cycle (transient race between the CI sync-push and a same-minute manual push; the next run passed and pushed its sync commit). Deploys all Ready.
+
+**Applied run 52's fake-success lens (frontend ignoring `res.ok`) to every customer-facing money/order flow in openthai-ai — all clean:**
+- `CatalogPage`'s order modal checks `d.success`, shows the server error, and only flips to the success screen on a real success.
+- `QuickPayPage.createQR` checks `!res.ok || !data.success` and surfaces the error.
+- `PaymentPage`'s create-payment path checks `res.ok`, throws on missing `charge_id`, and handles the 3-D Secure redirect; its cancel-subscription UI already matches the two-step backend from run 14 (confirm dialog + "กดลิงก์ในอีเมล" messaging — no false "ยกเลิกแล้ว").
+- Also re-checked `smart-e`'s "+ ออเดอร์ใหม่" modal: `createOrder` already rejects an empty item list client-side.
+Negative results logged so this lens doesn't get re-applied to the same surfaces.
+
+**Real deliverable:** `smart-e`'s PR #1 still carried the title/body from its first commit ("Remove stale committed local artifacts") while the branch had grown into an 8-commit hardening pass (real authentication on a previously wide-open API, four reproduce-first crash/validation fixes, a data-integrity fix, and honest error feedback in the dashboard). A human reviewing that PR would have had no idea what they were approving. Rewrote the title/body to summarize all 8 commits grouped by theme, with the per-commit live-verification notes in the test plan. Updated via the GitHub API (`update_pull_request` returned success; PR title/body now reflect the real diff).
+
+6 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-08 — Hourly loop, run 53: openthai-ai's commerce stack scanned clean under the data-integrity lens; fixed /pricing's tab title flipping from Thai to English after SPA boot
 
 PR #79: run 52's deploys completed normally (all 3 Ready in the final webhook state).

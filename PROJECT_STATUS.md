@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-08T16:16:35.514Z · branch `claude/daily-reporter-improvements-8vc9ct` (124 commit(s) ahead of main)
+Generated: 2026-07-08T21:10:58.677Z · branch `claude/daily-reporter-improvements-8vc9ct` (125 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 334 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 208 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,23 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-08 — Hourly loop, run 54: openthai-ai's customer-facing money/order flows all scanned clean under the fake-success lens; smart-e's PR #1 description rewritten to match what the branch actually became
+
+PR #79: run 53's CI hiccup investigated and closed last cycle (transient race between the CI sync-push and a same-minute manual push; the next run passed and pushed its sync commit). Deploys all Ready.
+
+**Applied run 52's fake-success lens (frontend ignoring `res.ok`) to every customer-facing money/order flow in openthai-ai — all clean:**
+- `CatalogPage`'s order modal checks `d.success`, shows the server error, and only flips to the success screen on a real success.
+- `QuickPayPage.createQR` checks `!res.ok || !data.success` and surfaces the error.
+- `PaymentPage`'s create-payment path checks `res.ok`, throws on missing `charge_id`, and handles the 3-D Secure redirect; its cancel-subscription UI already matches the two-step backend from run 14 (confirm dialog + "กดลิงก์ในอีเมล" messaging — no false "ยกเลิกแล้ว").
+- Also re-checked `smart-e`'s "+ ออเดอร์ใหม่" modal: `createOrder` already rejects an empty item list client-side.
+Negative results logged so this lens doesn't get re-applied to the same surfaces.
+
+**Real deliverable:** `smart-e`'s PR #1 still carried the title/body from its first commit ("Remove stale committed local artifacts") while the branch had grown into an 8-commit hardening pass (real authentication on a previously wide-open API, four reproduce-first crash/validation fixes, a data-integrity fix, and honest error feedback in the dashboard). A human reviewing that PR would have had no idea what they were approving. Rewrote the title/body to summarize all 8 commits grouped by theme, with the per-commit live-verification notes in the test plan. Updated via the GitHub API (`update_pull_request` returned success; PR title/body now reflect the real diff).
+
+6 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-08 — Hourly loop, run 53: openthai-ai's commerce stack scanned clean under the data-integrity lens; fixed /pricing's tab title flipping from Thai to English after SPA boot
 
@@ -2229,54 +2246,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 13d9872 docs: log run 53 -- commerce stack clean under data-integrity lens; /pricing title no longer flips Thai->English after boot (17 seconds ago)
-- cb6e554 fix: /pricing tab title flipped from Thai to English after the SPA booted (36 seconds ago)
-- 74ffcf4 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- 986b8e9 docs: log run 52 -- smart-e dashboard fired success toasts even on rejected/failed saves; api() now surfaces real errors (4 minutes ago)
-- 83a90fa chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- d8f7cda docs: log run 51 -- order paths scanned clean; ai-memory pack updated to v1.1.0 with this session's 3 durable lessons (5 hours ago)
-- b25bf4d chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 229ea5b docs: ai-memory pack v1.1.0 -- 3 new lessons from the hourly-loop session, all citing real DECISIONS_LOG events (5 hours ago)
+- 96abee2 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 13d9872 docs: log run 53 -- commerce stack clean under data-integrity lens; /pricing title no longer flips Thai->English after boot (5 hours ago)
+- cb6e554 fix: /pricing tab title flipped from Thai to English after the SPA booted (5 hours ago)
+- 74ffcf4 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 986b8e9 docs: log run 52 -- smart-e dashboard fired success toasts even on rejected/failed saves; api() now surfaces real errors (5 hours ago)
+- 83a90fa chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
+- d8f7cda docs: log run 51 -- order paths scanned clean; ai-memory pack updated to v1.1.0 with this session's 3 durable lessons (10 hours ago)
+- b25bf4d chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 222,
-  "memory_mb": "19.9",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
