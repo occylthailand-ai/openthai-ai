@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-08 — Hourly loop, run 49: `/pricing` and `/affiliate` were in the sitemap but served the homepage's meta to social crawlers — same defect runs 21/26 fixed elsewhere, now closed for the last two pages
+
+PR #79: GitHub MCP reconnected this cycle — verified via the real status API for the first time in several cycles: all 3 Vercel checks are `success` on head commit `7d7384e` ("Deployment has completed"). The free-tier deploy quota has genuinely reset; the run-48 pushes deployed cleanly (one intermediate build was Canceled because two commits were pushed back-to-back and Vercel superseded the older one — normal behavior, not a failure).
+
+**Found via a three-way consistency check, not a guess:** compared `sitemap.xml` (21 URLs) against `App.jsx`'s route table (all 21 resolve — no broken sitemap entries), then against `prerender-meta.mjs`'s route list. Two pages are in the sitemap *and* `robots.txt` Allow but missing from the prerender list: `/pricing` and `/affiliate`. Since this is a client-side-routed SPA, both were still serving the homepage's `<title>`/OG tags to non-JS social crawlers (LINE/Facebook link previews) — the exact defect runs 21/26 fixed for the other 17 public pages, just never applied to these two. Both are core funnel pages (pricing + the primary affiliate signup), so this was the highest-value SEO gap available.
+
+Also checked while in the area: all 4 public signup endpoints (`/api/leads/submit`, `/api/producers/apply`, `/api/affiliate/apply`, `/api/waitlist`) have real rate limiters — no gap there.
+
+**Fix:** added both routes to `prerender-meta.mjs`, title/description copied verbatim from each page's own i18n source (`pp.hero.*` for pricing, `AF.th.hero` for affiliate), per the file's established convention. `/affiliate/dashboard` (also in the sitemap) deliberately left out with a comment explaining why: it's a personal dashboard, not a shareable marketing page.
+
+**Verified with the real build, not by reading the script:** ran `npm run build` — `dist/pricing/index.html` and `dist/affiliate/index.html` now carry the correct title/canonical/`og:*`/`twitter:*` tags, the homepage `dist/index.html` is untouched, and the `<script>` tags in the new files are byte-identical to the homepage's, so the SPA boots identically for real visitors. Pushed as `c4d8951`.
+
+6 items still pending an owner decision, unchanged (see runs 44–48).
+
+---
+
 ### 2026-07-08 — Hourly loop, run 48: `smart-e`'s PUT /api/products accepted the exact garbage its POST now rejects — real stock data destroyed downstream, reproduced then fixed
 
 PR #79 status: could not cross-check via the GitHub status API this cycle — the GitHub MCP connector needs re-authorization (non-interactive session, can't run the OAuth flow here; เจ้าของต้อง authorize GitHub connector ใหม่ใน claude.ai connector settings ถ้าอยากให้รอบถัดไปเช็ค PR ผ่าน API ได้). The interleaving Vercel bot comment updates that arrived since run 47 all show routine building→ready progressions for the run-46/47 docs commits — same noise pattern as every prior cycle, no action taken on them. Note the bot comment has repeatedly contradicted the real API before, so "Ready" in the comment is not treated as confirmation of anything.
