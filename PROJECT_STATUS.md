@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-08T11:18:25.393Z · branch `claude/daily-reporter-improvements-8vc9ct` (117 commit(s) ahead of main)
+Generated: 2026-07-08T11:19:23.708Z · branch `HEAD` (118 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 327 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 201 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,25 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-08 — Hourly loop, run 51: order paths scanned clean; ai-memory grounding pack updated to v1.1.0 with the 3 durable lessons this session actually produced
+
+PR #79: run 50's deploys completed normally (webhook noise was the usual build-supersede progression; final state all Ready).
+
+**Scanned first, found the order system clean:** checked both real purchase paths with the run-48 data-integrity lens — `/api/shop/checkout` clamps `qty` (`Math.max(1, Math.min(999, parseInt||1))`) and validates product/stock/customer fields; `orders.place()` clamps `qty` and validates `price` as number-or-null; `orders.track()` requires an exact contact match and returns only a whitelisted field subset (no address/PII echo). No gap found — logging the negative result so future cycles don't re-scan the same ground.
+
+**Then picked the real gap the scan pointed at:** `docs/ai-memory/core-philosophy.json` — the file `CLAUDE.md` designates as the grounding pack for Gemini/Grok — was still v1.0.0 dated 2026-07-02, written before the standing order existed and before all ~50 hourly-loop runs. The pack's whole purpose is carrying this project's evidence-cited lessons to other AI collaborators; it was missing everything this session learned.
+
+**Added 3 lessons, every one citing the real DECISIONS_LOG entry it came from (per the file's own no-invention rule):**
+- `lesson_04_consent_is_platform_policy` — the 2026-07-03 standing order (after 3 prior rejections) + runs 40/42/43's server-side consent enforcement including the internal auto-registration bridges.
+- `lesson_05_no_crash_is_not_no_bug` — run 48's silent data-corruption find (PUT stored `price:"abc"`, next order wiped real stock) that runs 45-46's crash-only sweep had correctly-but-incompletely cleared.
+- `lesson_06_trust_the_api_not_the_dashboard_comment` — runs 44-49's recurring Vercel-bot-comment vs commit-status-API contradictions.
+
+**Verified:** JSON parses (`node require`: 6 lessons, v1.1.0); regenerated `core-philosophy.yaml` from the JSON using the file's own documented command, verified it parses (`yaml.safe_load`: 6 lessons, v1.1.0); synced INTEGRATION_GUIDE.md's memory count (3→6). Pushed as `229ea5b`.
+
+6 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-08 — Hourly loop, run 50: the public producer directory's category filter was out of sync with the backend — producers in the 2 newest categories were unfindable by category
 
@@ -2180,54 +2199,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 229ea5b docs: ai-memory pack v1.1.0 -- 3 new lessons from the hourly-loop session, all citing real DECISIONS_LOG events (14 seconds ago)
-- 690fab4 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- 680394a docs: log run 50 -- producer directory category filter was out of sync with backend, 2 categories unfindable; now fetched from the API (4 minutes ago)
-- e7eead4 chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
-- 479f7b1 fix: producer directory's category filter was out of sync with the backend -- 2 categories unfindable (5 minutes ago)
+- b25bf4d chore: sync PROJECT_STATUS.md [skip ci] (58 seconds ago)
+- 229ea5b docs: ai-memory pack v1.1.0 -- 3 new lessons from the hourly-loop session, all citing real DECISIONS_LOG events (73 seconds ago)
+- 690fab4 chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
+- 680394a docs: log run 50 -- producer directory category filter was out of sync with backend, 2 categories unfindable; now fetched from the API (5 minutes ago)
+- e7eead4 chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
+- 479f7b1 fix: producer directory's category filter was out of sync with the backend -- 2 categories unfindable (6 minutes ago)
 - 37f0d4b chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 0e0ac60 docs: log run 49 -- /pricing and /affiliate added to prerender-meta (were in sitemap but served homepage meta to social crawlers) (4 hours ago)
-- bc9dc55 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 277,
-  "memory_mb": "20.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

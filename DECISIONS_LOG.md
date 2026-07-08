@@ -9,6 +9,25 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-08 — Hourly loop, run 51: order paths scanned clean; ai-memory grounding pack updated to v1.1.0 with the 3 durable lessons this session actually produced
+
+PR #79: run 50's deploys completed normally (webhook noise was the usual build-supersede progression; final state all Ready).
+
+**Scanned first, found the order system clean:** checked both real purchase paths with the run-48 data-integrity lens — `/api/shop/checkout` clamps `qty` (`Math.max(1, Math.min(999, parseInt||1))`) and validates product/stock/customer fields; `orders.place()` clamps `qty` and validates `price` as number-or-null; `orders.track()` requires an exact contact match and returns only a whitelisted field subset (no address/PII echo). No gap found — logging the negative result so future cycles don't re-scan the same ground.
+
+**Then picked the real gap the scan pointed at:** `docs/ai-memory/core-philosophy.json` — the file `CLAUDE.md` designates as the grounding pack for Gemini/Grok — was still v1.0.0 dated 2026-07-02, written before the standing order existed and before all ~50 hourly-loop runs. The pack's whole purpose is carrying this project's evidence-cited lessons to other AI collaborators; it was missing everything this session learned.
+
+**Added 3 lessons, every one citing the real DECISIONS_LOG entry it came from (per the file's own no-invention rule):**
+- `lesson_04_consent_is_platform_policy` — the 2026-07-03 standing order (after 3 prior rejections) + runs 40/42/43's server-side consent enforcement including the internal auto-registration bridges.
+- `lesson_05_no_crash_is_not_no_bug` — run 48's silent data-corruption find (PUT stored `price:"abc"`, next order wiped real stock) that runs 45-46's crash-only sweep had correctly-but-incompletely cleared.
+- `lesson_06_trust_the_api_not_the_dashboard_comment` — runs 44-49's recurring Vercel-bot-comment vs commit-status-API contradictions.
+
+**Verified:** JSON parses (`node require`: 6 lessons, v1.1.0); regenerated `core-philosophy.yaml` from the JSON using the file's own documented command, verified it parses (`yaml.safe_load`: 6 lessons, v1.1.0); synced INTEGRATION_GUIDE.md's memory count (3→6). Pushed as `229ea5b`.
+
+6 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-08 — Hourly loop, run 50: the public producer directory's category filter was out of sync with the backend — producers in the 2 newest categories were unfindable by category
 
 PR #79: confirmed green via the real status API at the end of run 49 (all 3 `success` on head). This cycle's webhook noise was routine build progressions of run 49's own pushes.
