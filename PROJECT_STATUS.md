@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-08T16:12:53.654Z · branch `claude/daily-reporter-improvements-8vc9ct` (121 commit(s) ahead of main)
+Generated: 2026-07-08T16:16:17.927Z · branch `claude/daily-reporter-improvements-8vc9ct` (123 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 331 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 206 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-08 — Hourly loop, run 53: openthai-ai's commerce stack scanned clean under the data-integrity lens; fixed /pricing's tab title flipping from Thai to English after SPA boot
+
+PR #79: run 52's deploys completed normally (all 3 Ready in the final webhook state).
+
+**Closed the data-integrity sweep for openthai-ai's commerce stack — all clean:** `inventory.js` guards every numeric field with `num()` (`Number.isFinite` check with fallback) in `upsert()`, and `adjust()` coerces `delta` via `Math.trunc(Number(delta) || 0)` with a zero-reject — so the NaN-stock corruption class that bit smart-e (run 48) cannot happen here. Combined with run 51's clean scan of `orders.place()`/`track()`/`/api/shop/checkout`, every write path in the openthai-ai commerce stack has now been checked under this lens. Negative results logged so future cycles don't re-scan.
+
+**The real (small) gap found while in the area:** `PricingPage`'s `document.title` was `'Openthai.ai — Pricing'` (English) while the prerendered title that crawlers/link-previews see (added run 49) is the Thai `'เลือกแพ็กเกจที่ใช่สำหรับคุณ — Openthai.ai'`, and every other page on this Thai-first site uses the `'<ชื่อหน้าไทย> — Openthai.ai'` convention. Net effect: the tab showed the Thai title on first paint, then flipped to English once React booted — inconsistent with both the convention and what search results display.
+
+**Fix + verified with the real build:** title now matches the prerender exactly; `dist/pricing/index.html` carries the Thai title and a real browser (Playwright) shows the same Thai title after the SPA boots — no flip. Pushed as `cb6e554`.
+
+6 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-08 — Hourly loop, run 52: `smart-e`'s dashboard showed "สำเร็จ" even when the server said no — every write handler ignored the response
 
@@ -2215,54 +2229,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 986b8e9 docs: log run 52 -- smart-e dashboard fired success toasts even on rejected/failed saves; api() now surfaces real errors (17 seconds ago)
+- cb6e554 fix: /pricing tab title flipped from Thai to English after the SPA booted (19 seconds ago)
+- 74ffcf4 chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
+- 986b8e9 docs: log run 52 -- smart-e dashboard fired success toasts even on rejected/failed saves; api() now surfaces real errors (4 minutes ago)
 - 83a90fa chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - d8f7cda docs: log run 51 -- order paths scanned clean; ai-memory pack updated to v1.1.0 with this session's 3 durable lessons (5 hours ago)
 - b25bf4d chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 229ea5b docs: ai-memory pack v1.1.0 -- 3 new lessons from the hourly-loop session, all citing real DECISIONS_LOG events (5 hours ago)
 - 690fab4 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 680394a docs: log run 50 -- producer directory category filter was out of sync with backend, 2 categories unfindable; now fetched from the API (5 hours ago)
-- e7eead4 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

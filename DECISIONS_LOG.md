@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-08 — Hourly loop, run 53: openthai-ai's commerce stack scanned clean under the data-integrity lens; fixed /pricing's tab title flipping from Thai to English after SPA boot
+
+PR #79: run 52's deploys completed normally (all 3 Ready in the final webhook state).
+
+**Closed the data-integrity sweep for openthai-ai's commerce stack — all clean:** `inventory.js` guards every numeric field with `num()` (`Number.isFinite` check with fallback) in `upsert()`, and `adjust()` coerces `delta` via `Math.trunc(Number(delta) || 0)` with a zero-reject — so the NaN-stock corruption class that bit smart-e (run 48) cannot happen here. Combined with run 51's clean scan of `orders.place()`/`track()`/`/api/shop/checkout`, every write path in the openthai-ai commerce stack has now been checked under this lens. Negative results logged so future cycles don't re-scan.
+
+**The real (small) gap found while in the area:** `PricingPage`'s `document.title` was `'Openthai.ai — Pricing'` (English) while the prerendered title that crawlers/link-previews see (added run 49) is the Thai `'เลือกแพ็กเกจที่ใช่สำหรับคุณ — Openthai.ai'`, and every other page on this Thai-first site uses the `'<ชื่อหน้าไทย> — Openthai.ai'` convention. Net effect: the tab showed the Thai title on first paint, then flipped to English once React booted — inconsistent with both the convention and what search results display.
+
+**Fix + verified with the real build:** title now matches the prerender exactly; `dist/pricing/index.html` carries the Thai title and a real browser (Playwright) shows the same Thai title after the SPA boots — no flip. Pushed as `cb6e554`.
+
+6 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-08 — Hourly loop, run 52: `smart-e`'s dashboard showed "สำเร็จ" even when the server said no — every write handler ignored the response
 
 PR #79: run 51's deploys completed normally (all 3 Ready on `d8f7cda`, confirmed in the final webhook state).
