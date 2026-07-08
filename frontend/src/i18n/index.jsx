@@ -919,8 +919,15 @@ export function LanguageProvider({ children }) {
   const setLang = useCallback((l) => {
     setLangState(l);
     try { syncSet('otai_lang', l); } catch { try { localStorage.setItem('otai_lang', l); } catch { /* ignore */ } } // ซิงค์ข้ามอุปกรณ์
-    try { document.documentElement.lang = l; } catch { /* ignore */ }
   }, []);
+
+  // ให้ <html lang> ตรงกับภาษาที่แสดงจริงเสมอ — ขับด้วย state ตัวเดียว จึงครอบคลุมทั้ง
+  // ตอน mount (ผู้ใช้เก่าที่เคยเลือก en/zh ไว้ใน localStorage, index.html เป็น lang="th" คงที่)
+  // การกดสลับภาษาเอง และการซิงค์ข้ามอุปกรณ์ (onSync ด้านล่างเรียก setLangState ตรงๆ) — เดิม
+  // อัปเดตเฉพาะใน setLang ทำให้ screen reader อ่านเนื้อหา en/zh ด้วยหน่วยเสียงไทย (WCAG 3.1.1)
+  useEffect(() => {
+    try { document.documentElement.lang = lang; } catch { /* ignore */ }
+  }, [lang]);
 
   // รับการเปลี่ยนภาษาจากอุปกรณ์อื่น (cloud sync hydrate)
   useEffect(() => {

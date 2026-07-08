@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-08T21:15:57.337Z · branch `claude/daily-reporter-improvements-8vc9ct` (130 commit(s) ahead of main)
+Generated: 2026-07-08T21:21:45.424Z · branch `claude/daily-reporter-improvements-8vc9ct` (131 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 340 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 214 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,24 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-08 — Hourly loop, run 56: `<html lang>` never re-synced to the actually-displayed language — screen readers read en/zh content with Thai phonemes (WCAG 3.1.1)
+
+PR #79: run 55's deploys completed normally — verified green via the real commit-status API (all 3 Vercel checks `success` on head `a0c673e`, "Deployment has completed"). The interleaved Building/Canceled webhook entries were the usual build-supersede noise.
+
+**First closed the enumeration lens (run 55) on the rest of the affiliate/admin read surface — all clean, so no new limiter needed:** `/api/affiliate/leaderboard` already masks names (`maskName`) and exposes only aggregate stats; `/api/affiliate/list`, `/api/affiliate/withdrawals/admin`, and every `/api/orders/admin/*` and `/api/disputes/admin/*` endpoint gate on `checkAdminKey` (the orders/disputes ones lack a rate limiter but are auth-gated, so not an enumeration risk); `/api/affiliate/withdraw` requires email confirmation. Logged negative so this isn't re-swept.
+
+**Then picked the real gap the "accessible platform" standing priority points at — a genuine, reproducible bug, not a guess:** the site ships 3 languages (th/en/zh, `i18n/index.jsx` `LANGS`). `index.html` is statically `<html lang="th">`. The language state hydrates from `localStorage('otai_lang')` on mount, but `document.documentElement.lang` was only ever updated *inside* `setLang` — the explicit toggle path. Two paths never touched it:
+- **Initial load:** a returning visitor who previously chose en or zh boots with the content in en/zh while `<html lang>` stays `th`. A screen reader then pronounces the English/Chinese text using Thai phonemes until the user manually re-toggles — exactly the failure WCAG 3.1.1 (Language of Page) exists to prevent, hitting the blind/low-vision users accessibility is *for*.
+- **Cross-device cloud sync:** the `otai:sync` handler calls `setLangState` directly (not `setLang`), so a language change synced from another device also left `<html lang>` stale.
+
+**Fix:** replaced the imperative set inside `setLang` with a single `useEffect([lang])` that drives `document.documentElement.lang` from the one piece of state — so all three paths (mount, explicit toggle, cloud sync) stay correct from one source of truth.
+
+**Verified live in a real browser (Playwright against the built `dist`), 4 cases:** fresh visitor → `th`; returning `otai_lang=en` → `<html lang>` becomes `en` after boot (was staying `th`); returning `zh` → `zh`; dispatched an `otai:sync` th→en event → `<html lang>` follows to `en` (was staying `th`). Only `frontend/src/i18n/index.jsx` changed; `git status` clean. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+7 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-08 — Hourly loop, run 55: rate-limited two public ref_code-keyed affiliate read endpoints leaking name + earnings (enumeration mitigation, same precedent as run 11)
 
@@ -2262,54 +2280,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 26089fd docs: log run 55 -- rate-limited public ref_code-keyed affiliate read endpoints (name+earnings enumeration); affiliate-auth question escalated to owner (16 seconds ago)
-- 808095a chore: sync PROJECT_STATUS.md [skip ci] (16 seconds ago)
-- 1693cd1 fix: rate-limit the two public ref_code-keyed affiliate read endpoints (name + earnings enumeration) (35 seconds ago)
-- 348e05a chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
-- 059960a docs: log run 54 -- money/order flows clean under the fake-success lens; smart-e PR #1 description rewritten to match the real 8-commit diff (5 minutes ago)
+- a0c673e chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
+- 26089fd docs: log run 55 -- rate-limited public ref_code-keyed affiliate read endpoints (name+earnings enumeration); affiliate-auth question escalated to owner (6 minutes ago)
+- 808095a chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
+- 1693cd1 fix: rate-limit the two public ref_code-keyed affiliate read endpoints (name + earnings enumeration) (6 minutes ago)
+- 348e05a chore: sync PROJECT_STATUS.md [skip ci] (10 minutes ago)
+- 059960a docs: log run 54 -- money/order flows clean under the fake-success lens; smart-e PR #1 description rewritten to match the real 8-commit diff (11 minutes ago)
 - 96abee2 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 13d9872 docs: log run 53 -- commerce stack clean under data-integrity lens; /pricing title no longer flips Thai->English after boot (5 hours ago)
-- cb6e554 fix: /pricing tab title flipped from Thai to English after the SPA booted (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 18,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

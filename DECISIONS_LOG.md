@@ -9,6 +9,24 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-08 — Hourly loop, run 56: `<html lang>` never re-synced to the actually-displayed language — screen readers read en/zh content with Thai phonemes (WCAG 3.1.1)
+
+PR #79: run 55's deploys completed normally — verified green via the real commit-status API (all 3 Vercel checks `success` on head `a0c673e`, "Deployment has completed"). The interleaved Building/Canceled webhook entries were the usual build-supersede noise.
+
+**First closed the enumeration lens (run 55) on the rest of the affiliate/admin read surface — all clean, so no new limiter needed:** `/api/affiliate/leaderboard` already masks names (`maskName`) and exposes only aggregate stats; `/api/affiliate/list`, `/api/affiliate/withdrawals/admin`, and every `/api/orders/admin/*` and `/api/disputes/admin/*` endpoint gate on `checkAdminKey` (the orders/disputes ones lack a rate limiter but are auth-gated, so not an enumeration risk); `/api/affiliate/withdraw` requires email confirmation. Logged negative so this isn't re-swept.
+
+**Then picked the real gap the "accessible platform" standing priority points at — a genuine, reproducible bug, not a guess:** the site ships 3 languages (th/en/zh, `i18n/index.jsx` `LANGS`). `index.html` is statically `<html lang="th">`. The language state hydrates from `localStorage('otai_lang')` on mount, but `document.documentElement.lang` was only ever updated *inside* `setLang` — the explicit toggle path. Two paths never touched it:
+- **Initial load:** a returning visitor who previously chose en or zh boots with the content in en/zh while `<html lang>` stays `th`. A screen reader then pronounces the English/Chinese text using Thai phonemes until the user manually re-toggles — exactly the failure WCAG 3.1.1 (Language of Page) exists to prevent, hitting the blind/low-vision users accessibility is *for*.
+- **Cross-device cloud sync:** the `otai:sync` handler calls `setLangState` directly (not `setLang`), so a language change synced from another device also left `<html lang>` stale.
+
+**Fix:** replaced the imperative set inside `setLang` with a single `useEffect([lang])` that drives `document.documentElement.lang` from the one piece of state — so all three paths (mount, explicit toggle, cloud sync) stay correct from one source of truth.
+
+**Verified live in a real browser (Playwright against the built `dist`), 4 cases:** fresh visitor → `th`; returning `otai_lang=en` → `<html lang>` becomes `en` after boot (was staying `th`); returning `zh` → `zh`; dispatched an `otai:sync` th→en event → `<html lang>` follows to `en` (was staying `th`). Only `frontend/src/i18n/index.jsx` changed; `git status` clean. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+7 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-08 — Hourly loop, run 55: rate-limited two public ref_code-keyed affiliate read endpoints leaking name + earnings (enumeration mitigation, same precedent as run 11)
 
 PR #79: run 54's deploys completed normally (all 3 Ready; the interleaved Canceled entries were the usual build-supersede).
