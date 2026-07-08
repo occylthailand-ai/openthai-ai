@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-08T21:11:18.469Z · branch `claude/daily-reporter-improvements-8vc9ct` (126 commit(s) ahead of main)
+Generated: 2026-07-08T21:15:39.757Z · branch `claude/daily-reporter-improvements-8vc9ct` (128 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 336 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 338 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -2246,14 +2246,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 059960a docs: log run 54 -- money/order flows clean under the fake-success lens; smart-e PR #1 description rewritten to match the real 8-commit diff (18 seconds ago)
+- 1693cd1 fix: rate-limit the two public ref_code-keyed affiliate read endpoints (name + earnings enumeration) (17 seconds ago)
+- 348e05a chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- 059960a docs: log run 54 -- money/order flows clean under the fake-success lens; smart-e PR #1 description rewritten to match the real 8-commit diff (5 minutes ago)
 - 96abee2 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 13d9872 docs: log run 53 -- commerce stack clean under data-integrity lens; /pricing title no longer flips Thai->English after boot (5 hours ago)
 - cb6e554 fix: /pricing tab title flipped from Thai to English after the SPA booted (5 hours ago)
 - 74ffcf4 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 986b8e9 docs: log run 52 -- smart-e dashboard fired success toasts even on rejected/failed saves; api() now surfaces real errors (5 hours ago)
-- 83a90fa chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
-- d8f7cda docs: log run 51 -- order paths scanned clean; ai-memory pack updated to v1.1.0 with this session's 3 durable lessons (10 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2276,7 +2276,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "memory_mb": "18.9",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -2442,7 +2442,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 245 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8394 | Vercel serverless detection |
+| `server.js` | 8402 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
