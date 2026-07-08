@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-08T11:14:32.609Z · branch `claude/daily-reporter-improvements-8vc9ct` (115 commit(s) ahead of main)
+Generated: 2026-07-08T11:18:25.393Z · branch `claude/daily-reporter-improvements-8vc9ct` (117 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 325 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 327 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -2180,14 +2180,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 680394a docs: log run 50 -- producer directory category filter was out of sync with backend, 2 categories unfindable; now fetched from the API (26 seconds ago)
-- e7eead4 chore: sync PROJECT_STATUS.md [skip ci] (42 seconds ago)
-- 479f7b1 fix: producer directory's category filter was out of sync with the backend -- 2 categories unfindable (61 seconds ago)
+- 229ea5b docs: ai-memory pack v1.1.0 -- 3 new lessons from the hourly-loop session, all citing real DECISIONS_LOG events (14 seconds ago)
+- 690fab4 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- 680394a docs: log run 50 -- producer directory category filter was out of sync with backend, 2 categories unfindable; now fetched from the API (4 minutes ago)
+- e7eead4 chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
+- 479f7b1 fix: producer directory's category filter was out of sync with the backend -- 2 categories unfindable (5 minutes ago)
 - 37f0d4b chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 0e0ac60 docs: log run 49 -- /pricing and /affiliate added to prerender-meta (were in sitemap but served homepage meta to social crawlers) (4 hours ago)
 - bc9dc55 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- c4d8951 seo: /pricing and /affiliate were in the sitemap but served homepage meta to social crawlers (4 hours ago)
-- 7d7384e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2209,8 +2209,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 44,
-  "memory_mb": "19.5",
+  "uptime_sec": 277,
+  "memory_mb": "20.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
