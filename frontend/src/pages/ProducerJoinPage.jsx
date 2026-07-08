@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
 
-const FALLBACK_CATS = ['OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อื่นๆ'];
+// sync กับ CATEGORIES ใน backend/producers.js — fallback นี้ใช้เฉพาะตอนเรียก
+// /api/producers/categories ไม่สำเร็จ แต่ก็ควรตรงกับของจริง ไม่ใช่ชุดเก่าที่ขาด 2 หมวด
+const FALLBACK_CATS = ['OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อาหารสัตว์เลี้ยง', 'สินค้าดิจิทัล', 'อื่นๆ'];
 
 // เดิมหน้านี้ไม่มี UI ยินยอม PDPA เลย ทั้งที่ /portals/producer (เก็บข้อมูลชุดเดียวกัน) มี
 // checkbox บังคับติ๊กมาตั้งแต่ต้น — ใช้ CONSENT_TEXT รูปแบบเดียวกับที่ /portals/*.jsx ใช้กัน

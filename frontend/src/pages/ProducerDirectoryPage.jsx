@@ -3,13 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
 
-const CATS = ['ทั้งหมด', 'OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อื่นๆ'];
+// รายการนี้เคย hardcode แล้วหลุด sync กับ backend (producers.js เพิ่ม 'อาหารสัตว์เลี้ยง'/
+// 'สินค้าดิจิทัล' แล้ว แต่ตัวกรองหน้านี้ไม่มีให้เลือก — ผู้ผลิตสองหมวดนั้นค้นด้วยหมวดไม่เจอเลย)
+// ตอนนี้ดึงจาก /api/producers/categories แบบเดียวกับ ProducerJoinPage และคงชุดเต็มไว้เป็น
+// fallback เฉพาะกรณีเรียก API ไม่สำเร็จ
+const FALLBACK_CATS = ['OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อาหารสัตว์เลี้ยง', 'สินค้าดิจิทัล', 'อื่นๆ'];
 
 export default function ProducerDirectoryPage() {
   const navigate = useNavigate();
   const { t } = useLang();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('ทั้งหมด');
+  const [cats, setCats] = useState(FALLBACK_CATS);
   const [items, setItems] = useState(null);
   const [loading, setLoading] = useState(false);
   const timer = useRef(null);
@@ -27,7 +32,11 @@ export default function ProducerDirectoryPage() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { document.title = 'ค้นหาผู้ผลิต — Openthai.ai'; search('', 'ทั้งหมด'); }, [search]);
+  useEffect(() => {
+    document.title = 'ค้นหาผู้ผลิต — Openthai.ai';
+    search('', 'ทั้งหมด');
+    fetch(apiUrl('/api/producers/categories')).then(r => r.json()).then(d => { if (d.success && Array.isArray(d.categories)) setCats(d.categories); }).catch(() => {});
+  }, [search]);
 
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -54,7 +63,7 @@ export default function ProducerDirectoryPage() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('mk.find.search.ph')} style={{ ...inp, flex: 1, minWidth: 220 }} />
           <select value={cat} onChange={(e) => setCat(e.target.value)} style={{ ...inp, maxWidth: 180 }}>
-            {CATS.map((c) => <option key={c} value={c}>{c === 'ทั้งหมด' ? t('mk.find.all') : c}</option>)}
+            {['ทั้งหมด', ...cats].map((c) => <option key={c} value={c}>{c === 'ทั้งหมด' ? t('mk.find.all') : c}</option>)}
           </select>
         </div>
       </section>
