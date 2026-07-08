@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-08T11:13:49.030Z · branch `claude/daily-reporter-improvements-8vc9ct` (113 commit(s) ahead of main)
+Generated: 2026-07-08T11:14:16.725Z · branch `HEAD` (114 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 323 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 197 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-08 — Hourly loop, run 50: the public producer directory's category filter was out of sync with the backend — producers in the 2 newest categories were unfindable by category
+
+PR #79: confirmed green via the real status API at the end of run 49 (all 3 `success` on head). This cycle's webhook noise was routine build progressions of run 49's own pushes.
+
+**Found by checking a known-risky pattern against the current code, not by guess:** `backend/producers.js` itself carries a comment (from run 42) about category-list drift between frontend and backend. Grepped every hardcoded category list in the frontend against the backend's canonical `CATEGORIES` (12 items). Most per-tool pages (AI generator, promo engine, etc.) have deliberately different lists for their own domains — not bugs. But two files sit on the *real producer funnel* and were stale:
+- `ProducerDirectoryPage.jsx` (`/find-producers`, in the sitemap, linked from the landing page): hardcoded the old 10-item filter list — a producer registered under 'อาหารสัตว์เลี้ยง' or 'สินค้าดิจิทัล' (both added run 42) could never be found via the category filter. They'd only appear under "ทั้งหมด", which defeats the directory's purpose for those two categories.
+- `ProducerJoinPage.jsx`'s `FALLBACK_CATS` — lower severity since `/join` fetches the real list from `/api/producers/categories` at load, but the offline fallback was the stale 10-item set.
+
+**Fix:** `ProducerDirectoryPage` now fetches `/api/producers/categories` (the exact pattern `/join` already uses) with the full 12-item list as offline fallback — so this drift class can't recur for the directory. `FALLBACK_CATS` in `/join` synced to the full list.
+
+**Verified live end-to-end, all three layers:** (1) booted the real backend — `/api/producers/categories` returns all 12; (2) built the frontend against it and loaded `/find-producers` in a real browser via Playwright — the filter renders all 13 options (ทั้งหมด + 12), confirmed programmatically from the rendered `<option>` elements; (3) registered a real test producer under อาหารสัตว์เลี้ยง through `/api/producers/apply` (with consent), approved it via the admin status endpoint, and confirmed `/api/producers/search?category=อาหารสัตว์เลี้ยง` returns it (`count: 1`). Cleaned up the test data (gitignored file, removed anyway) and confirmed `git status` shows only the two intended source files. Pushed as `479f7b1`.
+
+6 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-08 — Hourly loop, run 49: `/pricing` and `/affiliate` were in the sitemap but served the homepage's meta to social crawlers — same defect runs 21/26 fixed elsewhere, now closed for the last two pages
 
@@ -2164,54 +2180,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 479f7b1 fix: producer directory's category filter was out of sync with the backend -- 2 categories unfindable (17 seconds ago)
+- e7eead4 chore: sync PROJECT_STATUS.md [skip ci] (27 seconds ago)
+- 479f7b1 fix: producer directory's category filter was out of sync with the backend -- 2 categories unfindable (46 seconds ago)
 - 37f0d4b chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 0e0ac60 docs: log run 49 -- /pricing and /affiliate added to prerender-meta (were in sitemap but served homepage meta to social crawlers) (4 hours ago)
 - bc9dc55 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - c4d8951 seo: /pricing and /affiliate were in the sitemap but served homepage meta to social crawlers (4 hours ago)
 - 7d7384e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 2778748 docs: log run 48 -- smart-e PUT /api/products stored non-numeric price/stock (real stock destroyed on next order), reproduced and fixed (5 hours ago)
-- 7ffdb2c chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

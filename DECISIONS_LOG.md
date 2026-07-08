@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-08 — Hourly loop, run 50: the public producer directory's category filter was out of sync with the backend — producers in the 2 newest categories were unfindable by category
+
+PR #79: confirmed green via the real status API at the end of run 49 (all 3 `success` on head). This cycle's webhook noise was routine build progressions of run 49's own pushes.
+
+**Found by checking a known-risky pattern against the current code, not by guess:** `backend/producers.js` itself carries a comment (from run 42) about category-list drift between frontend and backend. Grepped every hardcoded category list in the frontend against the backend's canonical `CATEGORIES` (12 items). Most per-tool pages (AI generator, promo engine, etc.) have deliberately different lists for their own domains — not bugs. But two files sit on the *real producer funnel* and were stale:
+- `ProducerDirectoryPage.jsx` (`/find-producers`, in the sitemap, linked from the landing page): hardcoded the old 10-item filter list — a producer registered under 'อาหารสัตว์เลี้ยง' or 'สินค้าดิจิทัล' (both added run 42) could never be found via the category filter. They'd only appear under "ทั้งหมด", which defeats the directory's purpose for those two categories.
+- `ProducerJoinPage.jsx`'s `FALLBACK_CATS` — lower severity since `/join` fetches the real list from `/api/producers/categories` at load, but the offline fallback was the stale 10-item set.
+
+**Fix:** `ProducerDirectoryPage` now fetches `/api/producers/categories` (the exact pattern `/join` already uses) with the full 12-item list as offline fallback — so this drift class can't recur for the directory. `FALLBACK_CATS` in `/join` synced to the full list.
+
+**Verified live end-to-end, all three layers:** (1) booted the real backend — `/api/producers/categories` returns all 12; (2) built the frontend against it and loaded `/find-producers` in a real browser via Playwright — the filter renders all 13 options (ทั้งหมด + 12), confirmed programmatically from the rendered `<option>` elements; (3) registered a real test producer under อาหารสัตว์เลี้ยง through `/api/producers/apply` (with consent), approved it via the admin status endpoint, and confirmed `/api/producers/search?category=อาหารสัตว์เลี้ยง` returns it (`count: 1`). Cleaned up the test data (gitignored file, removed anyway) and confirmed `git status` shows only the two intended source files. Pushed as `479f7b1`.
+
+6 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-08 — Hourly loop, run 49: `/pricing` and `/affiliate` were in the sitemap but served the homepage's meta to social crawlers — same defect runs 21/26 fixed elsewhere, now closed for the last two pages
 
 PR #79: GitHub MCP reconnected this cycle — verified via the real status API for the first time in several cycles: all 3 Vercel checks are `success` on head commit `7d7384e` ("Deployment has completed"). The free-tier deploy quota has genuinely reset; the run-48 pushes deployed cleanly (one intermediate build was Canceled because two commits were pushed back-to-back and Vercel superseded the older one — normal behavior, not a failure).
