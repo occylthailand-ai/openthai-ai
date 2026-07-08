@@ -1332,8 +1332,16 @@ app.post('/api/affiliate/apply', affiliateLimiter, async (req, res) => {
   }
 });
 
+// ref_code เป็นทั้ง "ตัวระบุสาธารณะ" (ฝังในลิงก์แชร์ ?ref=CODE) และ "กุญแจ" เข้าดูสถิติ+
+// คำขอถอนของ affiliate นั้น โดยไม่มี login — และ genRefCode() ให้ entropy ต่ำ (ชื่อ + สุ่ม
+// base36 3 ตัว ≈ 46k แบบ) endpoint อ่านทั้งสองตัวนี้จึงถูก enumerate เพื่อกวาดชื่อจริง +
+// ยอดรายได้/ยอดค้างจ่ายของพันธมิตรได้ไม่จำกัด rate limiter นี้เป็นการลดความเสียหาย
+// (กัน enumeration แบบเดียวกับที่ run 11 ทำกับ unsubscribe) โดยไม่แตะดีไซน์ login-less เดิม
+// ส่วนคำถามว่าควรใส่ auth จริงให้ affiliate dashboard หรือไม่ เป็น decision ที่ต้องถามเจ้าของ
+const affReadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: { success: false, message: 'เรียกดูข้อมูลบ่อยเกินไป กรุณารอสักครู่' } });
+
 // ─── GET /api/affiliate/stats/:ref_code — ดูสถิติ ────────────────────────────
-app.get('/api/affiliate/stats/:ref_code', (req, res) => {
+app.get('/api/affiliate/stats/:ref_code', affReadLimiter, (req, res) => {
   const aff = affiliates.find((a) => a.ref_code === req.params.ref_code);
   if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบ Affiliate นี้' });
 
@@ -1539,7 +1547,7 @@ app.get('/api/affiliate/withdraw/confirm', unsubLimiter, (req, res) => {
 });
 
 // ─── GET /api/affiliate/withdrawals?ref_code= — รายการคำขอของพันธมิตร ─────────
-app.get('/api/affiliate/withdrawals', (req, res) => {
+app.get('/api/affiliate/withdrawals', affReadLimiter, (req, res) => {
   const ref = (req.query.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   if (!ref) return res.status(400).json({ success: false, error: 'ต้องการ ref_code' });
   const aff = affiliates.find(a => a.ref_code === ref);
