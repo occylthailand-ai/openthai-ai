@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T08:13:45.176Z · branch `claude/daily-reporter-improvements-8vc9ct` (151 commit(s) ahead of main)
+Generated: 2026-07-09T09:10:57.549Z · branch `claude/daily-reporter-improvements-8vc9ct` (153 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 361 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 236 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 65: the free-quota "upgrade to Pro" prompt still quoted the stale ฿20 price (real Pro is ฿299) — right in front of the most conversion-ready users
+
+PR #79: run 64's privacy-UI change deployed all-3-Ready. Moved off the PDPA thread to the flagship AI-generator path.
+
+**Found while reading `/api/generate`.** When a free user hits the daily limit, the 429 response said `อัพเกรดเป็น Pro (฿20/เดือน)`. But ฿20 is the same stale price run 57 already corrected in the homepage JSON-LD — the real Pro price is **฿299/month** (`PricingPage.jsx` `PP_META`, `PaymentPage`, the fixed structured data). So the upgrade prompt shown to exactly the users most likely to convert (the ones who just ran out of free quota) quoted a price **15× too low**; clicking through lands on ฿299. Same fabricated-price class as run 57, still living in the quota path — and in a spot with direct revenue/trust impact.
+
+**Grepped for every occurrence, fixed all four:** the backend 429 message (`server.js:355`) and the `gen.quota.upgrade` string in all three languages (`i18n/index.jsx` th/en/zh). Confirmed no other ฿20 Pro-price reference remains anywhere in backend or frontend (the ฿30 hits are ad-budget CPM KPIs from marketing-skill output, unrelated).
+
+**Verified live:** booted the backend, made 3 free generations (all 200), and the 4th and 5th returned **429 with `อัพเกรดเป็น Pro (฿299/เดือน)`**; `npm run build` passes (i18n compiles). Only `server.js` + `i18n/index.jsx` changed; data dir snapshotted + restored, `git status` clean. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+8 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 64: the PDPA access/erasure endpoints (runs 62-63) had no UI — the privacy page now lets users actually exercise those rights
 
@@ -2407,54 +2421,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 62aa2dc docs: log run 64 -- privacy page now has working self-service PDPA access/erasure UI (verified live in browser) (15 seconds ago)
-- b32a271 feat(pdpa): let users exercise access/erasure from the privacy page, not just read about it (41 seconds ago)
-- 064f817 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 4691e7d docs: log run 63 -- PDPA right-of-access/data-export endpoint added (verified live) (62 minutes ago)
-- 824ff18 feat(pdpa): add right-of-access / data-export endpoint the policy already promised (62 minutes ago)
-- 98f438f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- b7edaa5 docs: log run 62 -- PDPA erasure now purges producer/affiliate/portal-lead PII (verified live); financial-record retention escalated to owner (2 hours ago)
-- 923581d fix(pdpa): erasure now deletes producer/affiliate/portal-lead data, not just waitlist+consents (2 hours ago)
+- 47f0dc2 fix: quota-exceeded upgrade prompt advertised Pro at ฿20/mo — real price is ฿299 (30 seconds ago)
+- 5a7c797 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- 62aa2dc docs: log run 64 -- privacy page now has working self-service PDPA access/erasure UI (verified live in browser) (57 minutes ago)
+- b32a271 feat(pdpa): let users exercise access/erasure from the privacy page, not just read about it (58 minutes ago)
+- 064f817 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 4691e7d docs: log run 63 -- PDPA right-of-access/data-export endpoint added (verified live) (2 hours ago)
+- 824ff18 feat(pdpa): add right-of-access / data-export endpoint the policy already promised (2 hours ago)
+- 98f438f chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

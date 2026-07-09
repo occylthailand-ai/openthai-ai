@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 65: the free-quota "upgrade to Pro" prompt still quoted the stale ฿20 price (real Pro is ฿299) — right in front of the most conversion-ready users
+
+PR #79: run 64's privacy-UI change deployed all-3-Ready. Moved off the PDPA thread to the flagship AI-generator path.
+
+**Found while reading `/api/generate`.** When a free user hits the daily limit, the 429 response said `อัพเกรดเป็น Pro (฿20/เดือน)`. But ฿20 is the same stale price run 57 already corrected in the homepage JSON-LD — the real Pro price is **฿299/month** (`PricingPage.jsx` `PP_META`, `PaymentPage`, the fixed structured data). So the upgrade prompt shown to exactly the users most likely to convert (the ones who just ran out of free quota) quoted a price **15× too low**; clicking through lands on ฿299. Same fabricated-price class as run 57, still living in the quota path — and in a spot with direct revenue/trust impact.
+
+**Grepped for every occurrence, fixed all four:** the backend 429 message (`server.js:355`) and the `gen.quota.upgrade` string in all three languages (`i18n/index.jsx` th/en/zh). Confirmed no other ฿20 Pro-price reference remains anywhere in backend or frontend (the ฿30 hits are ad-budget CPM KPIs from marketing-skill output, unrelated).
+
+**Verified live:** booted the backend, made 3 free generations (all 200), and the 4th and 5th returned **429 with `อัพเกรดเป็น Pro (฿299/เดือน)`**; `npm run build` passes (i18n compiles). Only `server.js` + `i18n/index.jsx` changed; data dir snapshotted + restored, `git status` clean. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+8 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 64: the PDPA access/erasure endpoints (runs 62-63) had no UI — the privacy page now lets users actually exercise those rights
 
 PR #79: run 63's access endpoint deployed and settled all-3-Ready. This closes the loop opened by runs 62-63: the backend rights exist, but a real visitor still had no way to invoke them.
