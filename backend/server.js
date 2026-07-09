@@ -88,7 +88,12 @@ const tenants   = createTenantManager(WRITE_DATA_DIR);
 const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
-const producers = createProducers(WRITE_DATA_DIR);
+// onApply → ส่งอีเมล "ได้รับใบสมัครแล้ว" ให้ผู้ผลิตที่สมัครผ่าน /join (สาย /portals/producer ได้
+// welcome ผ่าน handleNewPortalLead อยู่แล้ว) — sendPortalWelcomeEmail เป็น function declaration ที่
+// hoist ขึ้นมา ใช้ใน closure ที่ถูกเรียกตอน request ได้ปกติ
+const producers = createProducers(WRITE_DATA_DIR, {
+  onApply: (rec) => sendPortalWelcomeEmail({ type: 'producer', email: rec.email, name: rec.company || rec.contact_name, lang: rec.lang || 'th' }),
+});
 const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
 const disputes  = createDisputes(WRITE_DATA_DIR, {
   orders, callAI, parseAIJson,
@@ -973,6 +978,14 @@ async function sendPortalLeadNotification(lead) {
 // คำสัญญาที่ให้ไว้บนหน้าเว็บจึงไม่เป็นจริง ฟังก์ชันนี้ส่งอีเมลต้อนรับจริงกลับไปหาผู้สมัคร
 // (best-effort — ถ้าไม่มี SMTP หรือส่งไม่สำเร็จ lead ก็ยังถูกบันทึกตามปกติ ไม่ throw)
 const PORTAL_WELCOME_COPY = {
+  // ผู้ผลิตเป็น funnel หลักของแพลตฟอร์ม แต่เดิมเป็นประเภทเดียวที่ไม่เคยได้อีเมลตอบรับตอนสมัครเลย
+  // (ทั้งเส้น /join → /api/producers/apply และ /portals/producer) ทั้งที่ทุกประเภทอื่นมีครบ ข้อความ
+  // นี้สะท้อน flow จริง: pending → แอดมินตรวจอนุมัติ → sendProducerApproval ส่งลิงก์จัดการสินค้า
+  producer: {
+    th: { subject: '📦 ได้รับใบสมัครผู้ผลิตแล้ว — Openthai.ai', title: 'ได้รับใบสมัครแล้ว!', body: (name) => `สวัสดีคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่สมัครเป็นผู้ผลิตกับ Openthai.ai ทีมงานได้รับใบสมัครและข้อมูลสินค้าของคุณแล้ว และจะตรวจสอบเพื่ออนุมัติ เมื่ออนุมัติแล้วสินค้าของคุณจะแสดงในตลาดทันที และคุณจะได้รับอีเมลพร้อมลิงก์สำหรับจัดการสินค้าของตัวเอง` },
+    en: { subject: '📦 Producer application received — Openthai.ai', title: 'Application received!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for applying to sell on Openthai.ai. We've received your application and product details and will review them for approval. Once approved, your products go live in the marketplace and you'll get an email with a link to manage your own listings.` },
+    zh: { subject: '📦 已收到生产商申请 — Openthai.ai', title: '已收到申请！', body: (name) => `您好${name ? escapeHtml(name) : ''}，感谢您申请成为 Openthai.ai 的生产商。我们已收到您的申请和产品信息，将进行审核。审核通过后，您的产品将立即在市场上展示，您也会收到一封含有自助管理商品链接的邮件。` },
+  },
   consumer: {
     th: { subject: '🎉 ยินดีต้อนรับสู่ OpenThaiAi', title: 'ยินดีต้อนรับ!', body: (name) => `สวัสดีคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่สมัครเป็นผู้บริโภคกับ OpenThaiAi ทีมงานได้รับข้อมูลของคุณแล้ว และจะเริ่มส่งสินค้า/โปรโมชั่นในหมวดที่คุณสนใจให้ทางอีเมลนี้` },
     en: { subject: '🎉 Welcome to OpenThaiAi', title: 'Welcome!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for joining OpenThaiAi as a consumer. We've received your info and will start sending deals/products in your selected category to this email.` },

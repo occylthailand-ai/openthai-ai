@@ -12,7 +12,7 @@ const CATEGORIES = ['OTOP', 'อาหาร', 'ความงาม', 'สิ�
 const clip = (s, n = 300) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
 
-export function createProducers(dataDir) {
+export function createProducers(dataDir, opts = {}) {
   const SB_URL = process.env.SUPABASE_URL;
   const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
   const useSB = !!(SB_URL && SB_KEY);
@@ -223,6 +223,20 @@ export function createProducers(dataDir) {
   router.post('/api/producers/apply', applyLimiter, wrap(async (req, res) => {
     const r = await register(req.body || {});
     if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    // ส่งอีเมล "ได้รับใบสมัครแล้ว" ให้ผู้ผลิต (เฉพาะผู้สมัครใหม่ ไม่ใช่ re-submit) — เดิมผู้ผลิตเป็น
+    // funnel เดียวที่ไม่เคยได้อีเมลตอบรับตอนสมัครเลย ต่างจาก consumer/middleman/creator/affiliate
+    // ที่มีครบ hook นี้ผูกกับ route /join เท่านั้น ไม่ใช่ register() เอง จึงไม่ชนกับเส้น
+    // /portals/producer (handleNewPortalLead ส่ง welcome ให้ผู้ผลิตผ่าน sendPortalWelcomeEmail อยู่แล้ว)
+    if (!r.duplicate) {
+      try {
+        await opts.onApply?.({
+          email: (req.body?.email || '').toString().toLowerCase().trim(),
+          company: (req.body?.company || '').toString(),
+          contact_name: (req.body?.contact_name || '').toString(),
+          lang: req.body?.lang,
+        });
+      } catch (e) { console.warn('[producers] onApply hook failed:', e.message); }
+    }
     res.json({ success: true, status: r.status, message: 'รับใบสมัครแล้ว ทีมงานจะติดต่อกลับเพื่อยืนยันการเข้าร่วม' });
   }));
 
