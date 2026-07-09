@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T23:13:50.759Z · branch `claude/daily-reporter-improvements-8vc9ct` (184 commit(s) ahead of main)
+Generated: 2026-07-09T23:15:41.881Z · branch `claude/daily-reporter-improvements-8vc9ct` (186 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 394 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 396 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -2590,14 +2590,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- e5f5bc0 docs: log run 76 — build-time sitemap generation (fresh lastmod); credits.js audited clean (15 seconds ago)
-- 9786bba seo: generate sitemap.xml at build time with fresh lastmod instead of a stale hand-maintained file (42 seconds ago)
-- 78327b2 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- 0e46af8 docs: log run 75 — smart-e blanket dispatcher guard (root-cause fix for the crash class) (4 minutes ago)
+- 59e473e fix: actually include the sitemap generator (prior commit deleted the static file but not the generator) (65 seconds ago)
+- 83f287a chore: sync PROJECT_STATUS.md [skip ci] (2 minutes ago)
+- e5f5bc0 docs: log run 76 — build-time sitemap generation (fresh lastmod); credits.js audited clean (2 minutes ago)
+- 9786bba seo: generate sitemap.xml at build time with fresh lastmod instead of a stale hand-maintained file (3 minutes ago)
+- 78327b2 chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
+- 0e46af8 docs: log run 75 — smart-e blanket dispatcher guard (root-cause fix for the crash class) (6 minutes ago)
 - 47a8601 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - bde6e9e docs: log run 74 — smart-e crash fix on non-numeric ?limit/?days admin GET params (3 hours ago)
-- c09cdc8 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 8b9c030 docs: log run 73 — PromptPay referral-channel attribution fix + flag affiliate-commission-on-shop for owner (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2619,8 +2619,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 246,
-  "memory_mb": "19.7",
+  "uptime_sec": 357,
+  "memory_mb": "20.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
