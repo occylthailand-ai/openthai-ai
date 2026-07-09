@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 68: closed a real stored-XSS in the smart-e admin dashboard reachable by any external LINE user
+
+PR #79 (openthai-ai): run 67's producer-welcome fix deployed all-3-Ready; the only new webhook events were Vercel deploy-status updates (all Ready), nothing actionable.
+
+**This cycle's task was in the `smart-e` repo** (its own repo, own branch — no DECISIONS_LOG there, so the full record is here + in the commit message). Code-scanned `index.html`, the admin dashboard: it builds every table/list/form via `innerHTML` template literals with **no output encoding** (22 `innerHTML` sites, 0 `escapeHtml`). User- and externally-controlled strings were interpolated raw.
+
+**The genuine vulnerability — stored XSS via LINE, reachable by unauthenticated external users:** `server.py`'s `_line_webhook` stores the raw `event.message.text` from any LINE user into `line_messages.message` with no sanitization, and `renderLine()` printed `${m.message}` straight into a `<td>` via `innerHTML`. So a LINE user messaging the Official Account could send `<img src=x onerror=...>` / `<script>` that executes **in the admin's browser with their session** the moment they open the LINE tab. The webhook is HMAC-signature-verified (good — that authenticates it's really from LINE's platform), but the *message body* a real customer types is still attacker-controlled untrusted input. Sender display-name (from the LINE profile) is the same class of input.
+
+**Fix (1 file, `index.html`):** added an `escapeHtml()` helper (escapes `& < > " '`) next to the other formatters and applied it to every user/external-controlled field rendered via `innerHTML` — LINE message text + sender name; `customer_name` across orders/payments/dashboard-recent/TikTok orders; product name/description/category; customer name/email/phone/line_display_name; items_summary/items_json; the category & channel `<option>` lists. Also escaped values interpolated into `value="…"` / `data-*="…"` attributes and `<textarea>` bodies in the product/customer/settings edit forms, so a stored quote can't break out of the attribute (attribute-injection variant of the same bug).
+
+**Verified live with a real browser (not "should work"):** booted the server with a test `LINE_CHANNEL_SECRET` + `ADMIN_KEY`, sent `<img src=x onerror="alert(1)">HELLO_XSS` through the **HMAC-signed** `/api/webhook/line`, confirmed via `/api/line/messages` it is stored **raw** (input path is vulnerable), then rendered the dashboard in real Chromium via Playwright with the admin key seeded in localStorage. Post-fix: the cell `innerHTML` is `&lt;img …&gt;HELLO_XSS`, **zero** `<img>` elements are injected, and **no** alert / `onerror` fires (`window.__XSS_FIRED` stays 0). A bad webhook signature is still rejected 401. Committed + pushed on `claude/daily-reporter-improvements-8vc9ct` (smart-e).
+
+8 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 67: producers were the only signup funnel with no confirmation email — now they get one on both signup paths (the #1 growth priority)
 
 PR #79: run 66's email-domain fix deployed all-3-Ready.
