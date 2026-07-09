@@ -2027,7 +2027,23 @@ function routerRollover() {
     routerState.byProvider = {}; routerState.health = { gemini: true, grok: true, claude: true }; routerState.failCount = {};
   }
 }
-const estTokens = (s) => Math.ceil((s || '').length / 4);
+// ประมาณจำนวน token — เดิมใช้ len/4 เท่ากันทุกภาษา แต่ภาษาไทย/CJK ถูก tokenize
+// หนาแน่นกว่าอักษรละตินมาก (ไทย ~1 token ต่อ 1-2 อักษร ไม่ใช่ 4) prompt ไทยจึงถูก
+// นับต่ำกว่าจริง ~2-3 เท่า ผลคือ routerState.spentUsd โตช้า → Eco Mode (คุมงบ/วัน)
+// เด้งช้าเกินไป แพลตฟอร์มที่เป็นภาษาไทยเป็นหลักจึงใช้จ่ายเกินงบจริงก่อนถูกจำกัด
+// แยกนับตามช่วงอักขระให้ใกล้ tokenizer จริงขึ้น (ยังเป็นค่าประมาณ)
+const estTokens = (s) => {
+  if (!s) return 0;
+  let thai = 0, cjk = 0, other = 0;
+  for (const ch of String(s)) {
+    const c = ch.codePointAt(0);
+    if (c >= 0x0e00 && c <= 0x0e7f) thai++;                                        // Thai
+    else if ((c >= 0x3000 && c <= 0x9fff) || (c >= 0xf900 && c <= 0xfaff)) cjk++;  // CJK
+    else other++;
+  }
+  // ไทย ~1 token/1.5 อักษร · CJK ~1 token/1.3 อักษร · อื่นๆ (ละติน/เลข/ช่องว่าง) ~1 token/4 อักษร
+  return Math.ceil(thai / 1.5 + cjk / 1.3 + other / 4);
+};
 const routerEco = () => routerState.spentUsd >= AI_DAILY_BUDGET_USD;
 
 async function routeAI(taskType, prompt, { maxTokens = 700 } = {}) {
