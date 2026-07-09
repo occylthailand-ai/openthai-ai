@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T09:11:16.759Z · branch `claude/daily-reporter-improvements-8vc9ct` (154 commit(s) ahead of main)
+Generated: 2026-07-09T10:12:54.833Z · branch `claude/daily-reporter-improvements-8vc9ct` (156 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 364 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 239 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 66: price-consistency + money-path sweep came back clean; fixed the one real defect found — broken hr@/ir@ email domain on the corporate pages
+
+PR #79: run 65's price fix deployed all-3-Ready.
+
+**Swept the whole price/money surface first (continuing run 65) — all consistent, logged so it isn't re-swept:** no stale ฿20/฿30 Pro/Premier price remains anywhere (the ฿30 hits are ad-budget CPM KPIs); the authoritative `SUBSCRIPTION_PLANS` (omise-payment.js) is Free 0 / Pro 299 / Premier 599 / Enterprise 1299 and the charge uses `plan.price_thb`; the entitlement system is correct — `grantEntitlement` sets `expires_at = +1 month` and `getEntitlement` downgrades expired ones to free; `checkQuota` gates free users at the daily limit with a bonus-credit fallback; the SPA has a real `*`→`NotFoundPage` catch-all with a helpful, funnel-linked 404. Nothing to fix in any of these.
+
+**The one real defect found:** the careers (`HRPage`) and investor-relations (`InvestorRelationsPage`) pages listed contact emails at `Openthai.ai.com` — a domain this org does not use (every other email on the site is `@openthai.ai`; 15 usages). `hr@Openthai.ai.com` / `ir@Openthai.ai.com` would bounce, so a candidate or investor copying the on-page address couldn't reach anyone. Corrected both to `@openthai.ai` and made the IR one a clickable `mailto:` like the HR page. These pages are auth-gated (`/corporate/hr`, `/corporate/ir`), so it's staff-facing, not a public-SEO change.
+
+**Verified:** grep confirms no `.ai.com` remains and the exact corrected addresses; `npm run build` passes (the IR edit adds a JSX `<a>`, so compilation is the meaningful check for a static contact-link fix). Only the two corporate page files changed.
+
+**Also flagged for the owner (not changed):** `index.html`'s `twitter:site` is `@Openthai.ai`, which is not a valid X/Twitter handle (handles can't contain a dot) — needs the real handle or removal; left for the owner since the correct handle is unknown (guessing one would attribute cards to a wrong/nonexistent account). This is a small note, not a formal escalation; the 8 prior owner-decision items are unchanged.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 65: the free-quota "upgrade to Pro" prompt still quoted the stale ฿20 price (real Pro is ฿299) — right in front of the most conversion-ready users
 
@@ -2421,54 +2435,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 577692b docs: log run 65 -- free-quota upgrade prompt corrected from stale ฿20 to real ฿299 Pro price (verified live) (17 seconds ago)
-- 47f0dc2 fix: quota-exceeded upgrade prompt advertised Pro at ฿20/mo — real price is ฿299 (48 seconds ago)
-- 5a7c797 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- 62aa2dc docs: log run 64 -- privacy page now has working self-service PDPA access/erasure UI (verified live in browser) (58 minutes ago)
-- b32a271 feat(pdpa): let users exercise access/erasure from the privacy page, not just read about it (58 minutes ago)
-- 064f817 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 4691e7d docs: log run 63 -- PDPA right-of-access/data-export endpoint added (verified live) (2 hours ago)
-- 824ff18 feat(pdpa): add right-of-access / data-export endpoint the policy already promised (2 hours ago)
+- fe2823d fix: correct broken hr@/ir@ email domain (.ai.com -> openthai.ai) on corporate pages (30 seconds ago)
+- ce2a2c4 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 577692b docs: log run 65 -- free-quota upgrade prompt corrected from stale ฿20 to real ฿299 Pro price (verified live) (62 minutes ago)
+- 47f0dc2 fix: quota-exceeded upgrade prompt advertised Pro at ฿20/mo — real price is ฿299 (62 minutes ago)
+- 5a7c797 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 62aa2dc docs: log run 64 -- privacy page now has working self-service PDPA access/erasure UI (verified live in browser) (2 hours ago)
+- b32a271 feat(pdpa): let users exercise access/erasure from the privacy page, not just read about it (2 hours ago)
+- 064f817 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

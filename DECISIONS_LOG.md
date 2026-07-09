@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 66: price-consistency + money-path sweep came back clean; fixed the one real defect found — broken hr@/ir@ email domain on the corporate pages
+
+PR #79: run 65's price fix deployed all-3-Ready.
+
+**Swept the whole price/money surface first (continuing run 65) — all consistent, logged so it isn't re-swept:** no stale ฿20/฿30 Pro/Premier price remains anywhere (the ฿30 hits are ad-budget CPM KPIs); the authoritative `SUBSCRIPTION_PLANS` (omise-payment.js) is Free 0 / Pro 299 / Premier 599 / Enterprise 1299 and the charge uses `plan.price_thb`; the entitlement system is correct — `grantEntitlement` sets `expires_at = +1 month` and `getEntitlement` downgrades expired ones to free; `checkQuota` gates free users at the daily limit with a bonus-credit fallback; the SPA has a real `*`→`NotFoundPage` catch-all with a helpful, funnel-linked 404. Nothing to fix in any of these.
+
+**The one real defect found:** the careers (`HRPage`) and investor-relations (`InvestorRelationsPage`) pages listed contact emails at `Openthai.ai.com` — a domain this org does not use (every other email on the site is `@openthai.ai`; 15 usages). `hr@Openthai.ai.com` / `ir@Openthai.ai.com` would bounce, so a candidate or investor copying the on-page address couldn't reach anyone. Corrected both to `@openthai.ai` and made the IR one a clickable `mailto:` like the HR page. These pages are auth-gated (`/corporate/hr`, `/corporate/ir`), so it's staff-facing, not a public-SEO change.
+
+**Verified:** grep confirms no `.ai.com` remains and the exact corrected addresses; `npm run build` passes (the IR edit adds a JSX `<a>`, so compilation is the meaningful check for a static contact-link fix). Only the two corporate page files changed.
+
+**Also flagged for the owner (not changed):** `index.html`'s `twitter:site` is `@Openthai.ai`, which is not a valid X/Twitter handle (handles can't contain a dot) — needs the real handle or removal; left for the owner since the correct handle is unknown (guessing one would attribute cards to a wrong/nonexistent account). This is a small note, not a formal escalation; the 8 prior owner-decision items are unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 65: the free-quota "upgrade to Pro" prompt still quoted the stale ฿20 price (real Pro is ฿299) — right in front of the most conversion-ready users
 
 PR #79: run 64's privacy-UI change deployed all-3-Ready. Moved off the PDPA thread to the flagship AI-generator path.
