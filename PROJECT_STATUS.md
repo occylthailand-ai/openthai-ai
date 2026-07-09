@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T07:12:07.549Z · branch `claude/daily-reporter-improvements-8vc9ct` (147 commit(s) ahead of main)
+Generated: 2026-07-09T07:12:28.549Z · branch `claude/daily-reporter-improvements-8vc9ct` (148 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 230 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 358 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -2393,16 +2393,54 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 824ff18 feat(pdpa): add right-of-access / data-export endpoint the policy already promised (31 seconds ago)
+- 4691e7d docs: log run 63 -- PDPA right-of-access/data-export endpoint added (verified live) (19 seconds ago)
+- 824ff18 feat(pdpa): add right-of-access / data-export endpoint the policy already promised (51 seconds ago)
 - 98f438f chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
 - b7edaa5 docs: log run 62 -- PDPA erasure now purges producer/affiliate/portal-lead PII (verified live); financial-record retention escalated to owner (55 minutes ago)
 - 923581d fix(pdpa): erasure now deletes producer/affiliate/portal-lead data, not just waitlist+consents (56 minutes ago)
 - eb4926b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 1c5eec3 docs: log run 61 -- smart-e _confirm_payment 404 on missing/nonexistent id (verified live); payment->order-status linking noted for owner (2 hours ago)
 - 5372e8a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- f07b91a docs: log run 60 -- smart-e cancel-restores-stock + order-status validation (verified live) (3 hours ago)
 
-## Production health (⚠️ HTTP 403)
+## Production health (✅ reachable)
+```json
+{
+  "status": "ok",
+  "version": "2.1.0",
+  "charter_version": 2,
+  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "ai_primary": "✅ Claude Haiku",
+  "ai_fallback": "✅ Gemini Flash Latest",
+  "ai_active": "claude-haiku-4-5-20251001",
+  "google_oauth": true,
+  "affiliates": 0,
+  "waitlist": 0,
+  "agents": 0,
+  "active_agents": 0,
+  "line_oa": true,
+  "elevenlabs": false,
+  "watchdog": "idle",
+  "last_watchdog": null,
+  "system_logs": 2,
+  "uptime_sec": 0,
+  "memory_mb": "19.2",
+  "services": {
+    "news_rag": "✅ Active",
+    "news_rag_refresh": "✅ Auto cache clear every 4h",
+    "competitor_analysis": "✅ Active",
+    "tts": "⚠️ No API Key",
+    "line_oa": "✅ Active",
+    "auto_heal": "✅ Active (every 30 min)",
+    "agent_cron": "✅ Active (every hour)",
+    "watchdog": "✅ Active",
+    "diagnostics": "✅ Active",
+    "persistence": "✅ system_log + agents.json + agent_checkpoint",
+    "vector_memory": "✅ Active (semantic long-term memory)",
+    "webhook_system": "✅ Active (0 registered)",
+    "multi_tenant": "✅ Active (0 tenants)"
+  }
+}
+```
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
