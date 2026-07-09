@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T07:12:28.549Z · branch `claude/daily-reporter-improvements-8vc9ct` (148 commit(s) ahead of main)
+Generated: 2026-07-09T08:13:28.825Z · branch `claude/daily-reporter-improvements-8vc9ct` (150 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 358 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 233 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 64: the PDPA access/erasure endpoints (runs 62-63) had no UI — the privacy page now lets users actually exercise those rights
+
+PR #79: run 63's access endpoint deployed and settled all-3-Ready. This closes the loop opened by runs 62-63: the backend rights exist, but a real visitor still had no way to invoke them.
+
+**Found by asking "can a real user actually reach the endpoints I just built?"** `PrivacyPage.jsx` listed the PDPA rights (สิทธิเข้าถึง / ลบ / พกพา) as static cards and told people to email `privacy@openthai.ai` — the only frontend caller of `api/privacy/*` was the SDK file, not the UI. So `/api/privacy/access` (run 63) and `/api/privacy/erasure` (run 62) were unreachable through the site; "accessible platform" means a person can *use* a right, not just read that they have it.
+
+**Fix (frontend only, `PrivacyPage.jsx`):** added a "ใช้สิทธิของคุณด้วยตนเอง" section — an email field + `📋 ขอดูข้อมูลของฉัน` and `🗑 ขอลบข้อมูลของฉัน` buttons that POST to the real endpoints via `apiUrl`. Both backends email a tokenised confirm link before doing anything, so the UI can't leak or delete another person's data. The handler checks `res.ok` before showing success and otherwise surfaces the server's own Thai message (run-52 fake-success lesson); client-side email validation gives immediate feedback. Sections renumbered (security 7→8, DPO 8→9).
+
+**Verified live in a real browser (Playwright against the built `dist`, proxied to a running backend so the buttons hit the real API):** the new section renders; an invalid email shows the inline `กรุณากรอกอีเมลให้ถูกต้อง`; a valid email on *both* `ขอดูข้อมูล` and `ขอลบข้อมูล` calls the real endpoint and shows the server's `ส่งอีเมลยืนยันแล้ว` success (all 5 assertions passed). Only `PrivacyPage.jsx` changed; backend data dir snapshotted + restored, `git status` clean. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+The PDPA self-service thread (consent record → erasure → access → **UI to use them**) is now complete end-to-end. 8 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 63: the privacy policy promised a right-of-access ("ขอดูข้อมูล") with no endpoint behind it — added the data-export endpoint (PDPA §30/§31)
 
@@ -2393,54 +2407,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 4691e7d docs: log run 63 -- PDPA right-of-access/data-export endpoint added (verified live) (19 seconds ago)
-- 824ff18 feat(pdpa): add right-of-access / data-export endpoint the policy already promised (51 seconds ago)
-- 98f438f chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
-- b7edaa5 docs: log run 62 -- PDPA erasure now purges producer/affiliate/portal-lead PII (verified live); financial-record retention escalated to owner (55 minutes ago)
-- 923581d fix(pdpa): erasure now deletes producer/affiliate/portal-lead data, not just waitlist+consents (56 minutes ago)
-- eb4926b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 1c5eec3 docs: log run 61 -- smart-e _confirm_payment 404 on missing/nonexistent id (verified live); payment->order-status linking noted for owner (2 hours ago)
-- 5372e8a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- b32a271 feat(pdpa): let users exercise access/erasure from the privacy page, not just read about it (26 seconds ago)
+- 064f817 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 4691e7d docs: log run 63 -- PDPA right-of-access/data-export endpoint added (verified live) (61 minutes ago)
+- 824ff18 feat(pdpa): add right-of-access / data-export endpoint the policy already promised (62 minutes ago)
+- 98f438f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- b7edaa5 docs: log run 62 -- PDPA erasure now purges producer/affiliate/portal-lead PII (verified live); financial-record retention escalated to owner (2 hours ago)
+- 923581d fix(pdpa): erasure now deletes producer/affiliate/portal-lead data, not just waitlist+consents (2 hours ago)
+- eb4926b chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

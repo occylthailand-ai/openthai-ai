@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 64: the PDPA access/erasure endpoints (runs 62-63) had no UI — the privacy page now lets users actually exercise those rights
+
+PR #79: run 63's access endpoint deployed and settled all-3-Ready. This closes the loop opened by runs 62-63: the backend rights exist, but a real visitor still had no way to invoke them.
+
+**Found by asking "can a real user actually reach the endpoints I just built?"** `PrivacyPage.jsx` listed the PDPA rights (สิทธิเข้าถึง / ลบ / พกพา) as static cards and told people to email `privacy@openthai.ai` — the only frontend caller of `api/privacy/*` was the SDK file, not the UI. So `/api/privacy/access` (run 63) and `/api/privacy/erasure` (run 62) were unreachable through the site; "accessible platform" means a person can *use* a right, not just read that they have it.
+
+**Fix (frontend only, `PrivacyPage.jsx`):** added a "ใช้สิทธิของคุณด้วยตนเอง" section — an email field + `📋 ขอดูข้อมูลของฉัน` and `🗑 ขอลบข้อมูลของฉัน` buttons that POST to the real endpoints via `apiUrl`. Both backends email a tokenised confirm link before doing anything, so the UI can't leak or delete another person's data. The handler checks `res.ok` before showing success and otherwise surfaces the server's own Thai message (run-52 fake-success lesson); client-side email validation gives immediate feedback. Sections renumbered (security 7→8, DPO 8→9).
+
+**Verified live in a real browser (Playwright against the built `dist`, proxied to a running backend so the buttons hit the real API):** the new section renders; an invalid email shows the inline `กรุณากรอกอีเมลให้ถูกต้อง`; a valid email on *both* `ขอดูข้อมูล` and `ขอลบข้อมูล` calls the real endpoint and shows the server's `ส่งอีเมลยืนยันแล้ว` success (all 5 assertions passed). Only `PrivacyPage.jsx` changed; backend data dir snapshotted + restored, `git status` clean. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+The PDPA self-service thread (consent record → erasure → access → **UI to use them**) is now complete end-to-end. 8 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 63: the privacy policy promised a right-of-access ("ขอดูข้อมูล") with no endpoint behind it — added the data-export endpoint (PDPA §30/§31)
 
 PR #79: run 62's PDPA-erasure fix deployed and settled all-3-Ready (frontend `6dNcTs9e`, backend `5mwuSmJx`, npxn `BenCFGLw`; interleaved Canceled = build-supersede). This cycle continues the PDPA-completeness thread on the same #1 priority.
