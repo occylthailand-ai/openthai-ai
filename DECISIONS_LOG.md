@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 74: smart-e — two admin GET endpoints crashed the request on a non-numeric ?limit / ?days
+
+**This cycle's change is in the `smart-e` repo** (own branch, no DECISIONS_LOG there — full detail is in the commit message). openthai-ai backend is now heavily hardened, so I diversified. Confirmed openthai-ai synced (HEAD c09cdc8, run-73 deployed all-3-Ready) and did a fresh crash-class + SQL-injection sweep of smart-e's `server.py`.
+
+**Logged clean (so not re-scanned):** the two dynamic `UPDATE ... SET {','.join(fields)}` queries (products, customers) build column names from a **hardcoded whitelist** with `?`-parameterised values — no SQL injection. Search/filter WHERE clauses all use `?` placeholders. Path-id `int(m.group(1))` casts are guarded by `\d+` regexes.
+
+**The real bug — crash-class on admin GET query params:** `do_GET` has **no try/except** around handler dispatch, so any handler exception propagates out of `BaseHTTPRequestHandler` and the connection closes with **no HTTP response** (client sees an empty reply / `000`). Two handlers cast a raw query param straight to `int`: `GET /api/orders?limit=abc` (`int('abc')`) and `GET /api/analytics?days=abc` — both `ValueError` → dead request. Same class as the POST-body validation already hardened on this branch (runs 59–61).
+
+**Fix:** `/api/orders` parses `limit` in a try/except and only applies `LIMIT` for a positive int (else returns all); `/api/analytics` defaults `days` to 30 on non-numeric input and clamps to [1, 365].
+
+**Verified live before/after on the real server (not "should work"):** before the fix `?limit=abc` and `?days=abc` returned **000** (empty reply); after, both return **200** and valid values (`?limit=1`, `?days=7`) still return 200. `py_compile` passes. Pushed on smart-e's branch.
+
+Owner-decision list unchanged (9 items, incl. run-73's affiliate-commission-on-shop question).
+
+---
+
 ### 2026-07-09 — Hourly loop, run 73: fixed PromptPay sales losing referral-channel attribution (run-72 follow-up); flagged an affiliate-commission gap for the owner to decide
 
 PR #79: run 72 deployed all-3-Ready. No actionable webhook events (Vercel status only).
