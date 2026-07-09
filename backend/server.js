@@ -6153,6 +6153,63 @@ app.get('/api/privacy/erasure/confirm', unsubLimiter, async (req, res) => {
   res.send(`<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยืนยันและลบข้อมูลเรียบร้อยแล้ว (${removed} รายการ)</div>`);
 });
 
+// POST /api/privacy/access — สิทธิ์ขอเข้าถึง/ขอสำเนาข้อมูลส่วนบุคคล (PDPA มาตรา 30)
+// นโยบายความเป็นส่วนตัว (/api/privacy/policy) ประกาศสิทธิ์ "ขอดูข้อมูล" ไว้ตั้งแต่ต้น แต่ไม่เคยมี
+// endpoint ให้ใช้จริง — มีแต่ erasure ยืนยันตัวตนด้วยอีเมล (โทเคน HMAC) แบบเดียวกับ erasure เพื่อ
+// ไม่ให้กลายเป็นช่องรั่วข้อมูล (ใครพิมพ์อีเมลก็ดึง PII ของคนอื่นได้)
+app.post('/api/privacy/access', rateLimit({ windowMs: 3600000, max: 5 }), async (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'อีเมลไม่ถูกต้อง' });
+  }
+  const sanitized = email.toLowerCase().trim();
+  const confirmUrl = `${DOMAIN_URL}/api/privacy/access/confirm?email=${encodeURIComponent(sanitized)}&token=${unsubToken(sanitized, 'access')}`;
+  if (mailer) {
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        to: sanitized,
+        subject: '📋 ยืนยันคำขอดูข้อมูลของคุณ — Openthai.ai',
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:520px;margin:0 auto;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#6366f1,#0ea5e9);padding:24px;text-align:center;"><h1 style="margin:0;font-size:19px;">ยืนยันคำขอดูข้อมูล</h1></div>
+          <div style="padding:24px;font-size:14px;line-height:1.7;">
+            <p>เราได้รับคำขอดูข้อมูลส่วนบุคคลของอีเมลนี้ตามสิทธิ์ PDPA มาตรา 30 หากคุณเป็นผู้ส่งคำขอนี้จริง กดยืนยันด้านล่างเพื่อดูสำเนาข้อมูลของคุณ</p>
+            <p style="text-align:center;margin:20px 0;"><a href="${confirmUrl}" style="background:#6366f1;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700;">ดูข้อมูลของฉัน</a></p>
+            <p style="color:#94a3b8;font-size:12px;">หากคุณไม่ได้ส่งคำขอนี้ ไม่ต้องดำเนินการใดๆ ลิงก์นี้จะไม่มีผลหากไม่ถูกกด</p>
+          </div></div>`,
+      });
+    } catch (e) { console.error('[privacy/access] send error:', e.message); }
+  }
+  addLog('info', 'PDPA', `📧 Access request ส่งให้ ${sanitized} (รอการยืนยันผ่านอีเมล)`);
+  res.json({ success: true, message: 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อดูสำเนาข้อมูลของคุณ' });
+});
+
+// GET /api/privacy/access/confirm — รวบรวมข้อมูลทั้งหมดที่ระบบเก็บของอีเมลนี้แล้วส่งกลับเป็น JSON
+// (สำเนาข้อมูล + รองรับสิทธิ์โอนย้ายข้อมูล มาตรา 31 ในตัว) ต่างจาก erasure ตรงที่ "รวม" บันทึก
+// การเงิน (ถอนเงิน/ออเดอร์) ด้วย เพราะเจ้าของข้อมูลมีสิทธิ์เห็นข้อมูลของตัวเองทั้งหมด
+app.get('/api/privacy/access/confirm', unsubLimiter, async (req, res) => {
+  const { email, token } = req.query;
+  if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const sanitized = String(email).toLowerCase().trim();
+  if (token !== unsubToken(sanitized, 'access')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+
+  const records = {};
+  records.waitlist = waitlist.filter(w => (w.email || '').toLowerCase() === sanitized);
+  records.consents = consents.filter(c => (c.email || '').toLowerCase() === sanitized);
+  try { records.producers = (await producers.all()).filter(p => (p.email || '').toLowerCase() === sanitized); } catch (e) { console.error('[access] producers:', e.message); records.producers = []; }
+  try { records.portal_leads = (await portalLeads.all()).filter(l => (l.email || '').toLowerCase() === sanitized); } catch (e) { console.error('[access] portalLeads:', e.message); records.portal_leads = []; }
+  const myAff = affiliates.filter(a => (a.email || '').toLowerCase() === sanitized);
+  records.affiliates = myAff;
+  const myRefs = new Set(myAff.map(a => a.ref_code));
+  records.withdrawals = withdrawals.filter(w => myRefs.has(w.ref_code));
+  try { records.orders = (await orders.all()).filter(o => (o.contact || '').toLowerCase() === sanitized); } catch (e) { console.error('[access] orders:', e.message); records.orders = []; }
+
+  const total = Object.values(records).reduce((n, arr) => n + (Array.isArray(arr) ? arr.length : 0), 0);
+  addLog('info', 'PDPA', `📋 Access ยืนยันแล้ว: ${sanitized} — ส่งข้อมูล ${total} รายการ`);
+  res.setHeader('Content-Disposition', `attachment; filename="openthai-my-data-${sanitized}.json"`);
+  res.json({ success: true, email: sanitized, generated_at: new Date().toISOString(), total_records: total, records });
+});
+
 // GET /api/privacy/policy — ข้อมูล Privacy Policy สำหรับ frontend
 app.get('/api/privacy/policy', (req, res) => {
   res.json({
@@ -6169,7 +6226,8 @@ app.get('/api/privacy/policy', (req, res) => {
     retention:   'ลบข้อมูลภายใน 3 ปีหลังยุติการใช้บริการ หรือเมื่อร้องขอ',
     rights:      ['ขอดูข้อมูล','แก้ไข','ลบ','โอนย้าย','คัดค้าน'],
     erasure_url: '/api/privacy/erasure',
-    pdpa_gaps_fixed: ['GAP-001: บันทึก consent record ✅','GAP-002: Right to erasure endpoint ✅'],
+    access_url: '/api/privacy/access',
+    pdpa_gaps_fixed: ['GAP-001: บันทึก consent record ✅','GAP-002: Right to erasure endpoint ✅','GAP-003: Right of access / data export endpoint ✅'],
     ts: new Date().toISOString(),
   });
 });
