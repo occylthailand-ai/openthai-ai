@@ -9,6 +9,26 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 70: the homepage hero waitlist (highest-traffic consent funnel) faked success on network error and gave zero feedback on rejection — fixed
+
+PR #79: run 69 (portal fake-success fix) deployed all-3-Ready. No actionable webhook events (Vercel redeploy status only).
+
+**Continued the run-69 consent-funnel audit into the non-portal lead paths.** Checked `/join` (ProducerJoinPage — already correct, checks `d.success`), ContactPage (already correct — success/else/catch all handled), and the homepage hero email capture on `LandingPage`. The last one was broken:
+```js
+const data = await res.json();
+if (data.success) setJoined(true);   // no else
+} catch (_) { setJoined(true); }      // "show success anyway"
+```
+`/api/waitlist` really rejects with **400** (invalid email), **429** (`waitlistLimiter` — only **3/hour per IP**), or **500**, each with a helpful Thai message. Two failure modes, both bad: on any rejection `data.success` is false and there's **no else**, so the visitor gets **zero feedback** — the email isn't saved, nothing tells them, and they may retry straight into the 3/hr limit; and on a network error the catch set `joined=true`, showing the ✅ "you're on the list" screen while **nothing was sent** (the comment literally said "show success anyway"). This is the single highest-traffic consent point on the platform.
+
+**Fix (1 file, `LandingPage.jsx`):** show the joined screen only on a real save (`res.ok && data.success`); otherwise surface the backend's own message (or a localized th/en/zh fallback) in an inline `role="alert"`, keep the form on screen, and clear the error when the visitor edits the email. Guarded the JSON parse against non-JSON bodies.
+
+**Verified live end-to-end (real backend + vite dev proxy + real Chromium via Playwright):** a valid email replaces the hero form with the joined screen and shows no error (lead saved); after exhausting the real 3/hr limiter (statuses 200,200,429) the next submit **keeps the form** and shows `⚠️ ส่งคำขอบ่อยเกินไป กรุณารอแล้วลองใหม่` (the backend's real 429 message) instead of a fake ✅. `npm run build` passes; backend data dir snapshotted + restored, `git status` clean.
+
+**Consent-funnel fake-success sweep is now complete:** all 9 `/portals/*` (run 69) + `/join` + Contact (already correct) + homepage waitlist (this run) either check the real response or were already doing so. 8 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 69: every /portals/* signup showed a fake ✅ success even when the backend rejected the consented lead — fixed all 9
 
 PR #79: run 68 was a smart-e change; openthai-ai's last deploy was the run-68 log commit (all-3-Ready). No actionable webhook events (Vercel redeploy status only).
