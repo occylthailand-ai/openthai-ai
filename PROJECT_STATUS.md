@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T23:09:45.195Z · branch `claude/daily-reporter-improvements-8vc9ct` (181 commit(s) ahead of main)
+Generated: 2026-07-09T23:13:50.759Z · branch `claude/daily-reporter-improvements-8vc9ct` (184 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 391 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 394 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 76: sitemap.xml is now generated at build time (fresh lastmod) instead of a stale hand-maintained file — SEO / go-to-market
+
+openthai-ai synced (HEAD 78327b2, run-75 deployed all-3-Ready). Vercel webhooks were deploy-status only (a Canceled = normal build-supersede), nothing actionable.
+
+**Scanned `credits.js` (the free-tier credit economy — affects every user) first; came back clean, logged so it isn't re-scanned:** `/api/credits/claim` requires `source ∈ ALLOWED_CLAIMS` (whitelist `{welcome:3}`) so no arbitrary-source credit farming; claims are idempotent per source; `addCredits` floors + clamps the amount to `[0, MAX_CLAIM]` and the balance to `[0, MAX_BALANCE]`; `consumeCredit` only decrements when `balance > 0` (no negative balance); spin/checkin are idempotent (per-day / `spun` flag). No money/quota bug.
+
+**Shipped (SEO, go-to-market category):** `public/sitemap.xml` was a static file with `<lastmod>` hard-coded to **2026-05-03 on all 20 URLs** despite 2+ months of active development — search engines use `lastmod` to prioritise recrawls, so genuinely-changed pages were being deprioritised. It was also a **third hand-maintained copy of the route list** (with `prerender-meta.mjs` ROUTES and robots.txt) that would inevitably drift — exactly the "hand-maintained summaries that silently drift" problem CLAUDE.md warns about. The `postbuild` step (`scripts/prerender-meta.mjs`) already owns the canonical ROUTES list and runs after Vite copies `public/`→`dist/`, so I extended it to **emit `dist/sitemap.xml` from that same list**, with `lastmod = build date` (self-updating every deploy) and per-path priority/changefreq (1.0 homepage, 0.5 legal/info, 0.8 funnels). Deleted the static `public/sitemap.xml` → single source of truth.
+
+**Verified:** `npm run build` emits `dist/sitemap.xml` with **20 URLs all dated the build day**, it parses as valid XML, and its URL set **exactly matches robots.txt's Allow list** (no drift, both-way diff empty). robots.txt still points at `/sitemap.xml`, served from `dist` as before.
+
+Owner-decision list unchanged (9 items).
+
+---
 
 ### 2026-07-09 — Hourly loop, run 75: smart-e — fixed the *root cause* of the crash class, not just the two symptoms (blanket dispatcher guard → 500 instead of empty reply)
 
@@ -2576,14 +2590,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 0e46af8 docs: log run 75 — smart-e blanket dispatcher guard (root-cause fix for the crash class) (19 seconds ago)
+- e5f5bc0 docs: log run 76 — build-time sitemap generation (fresh lastmod); credits.js audited clean (15 seconds ago)
+- 9786bba seo: generate sitemap.xml at build time with fresh lastmod instead of a stale hand-maintained file (42 seconds ago)
+- 78327b2 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- 0e46af8 docs: log run 75 — smart-e blanket dispatcher guard (root-cause fix for the crash class) (4 minutes ago)
 - 47a8601 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - bde6e9e docs: log run 74 — smart-e crash fix on non-numeric ?limit/?days admin GET params (3 hours ago)
 - c09cdc8 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 8b9c030 docs: log run 73 — PromptPay referral-channel attribution fix + flag affiliate-commission-on-shop for owner (4 hours ago)
-- e7ac871 fix: PromptPay shop sales lost referral-channel attribution (card path kept it) (4 hours ago)
-- 03819f5 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- eb8cf6b docs: log run 72 — fixed PromptPay shop orders never finalizing (stock/confirm) (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2605,7 +2619,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
+  "uptime_sec": 246,
   "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
