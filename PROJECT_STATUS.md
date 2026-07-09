@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T19:13:12.339Z · branch `claude/daily-reporter-improvements-8vc9ct` (177 commit(s) ahead of main)
+Generated: 2026-07-09T20:11:53.386Z · branch `claude/daily-reporter-improvements-8vc9ct` (179 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 387 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 389 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 74: smart-e — two admin GET endpoints crashed the request on a non-numeric ?limit / ?days
+
+**This cycle's change is in the `smart-e` repo** (own branch, no DECISIONS_LOG there — full detail is in the commit message). openthai-ai backend is now heavily hardened, so I diversified. Confirmed openthai-ai synced (HEAD c09cdc8, run-73 deployed all-3-Ready) and did a fresh crash-class + SQL-injection sweep of smart-e's `server.py`.
+
+**Logged clean (so not re-scanned):** the two dynamic `UPDATE ... SET {','.join(fields)}` queries (products, customers) build column names from a **hardcoded whitelist** with `?`-parameterised values — no SQL injection. Search/filter WHERE clauses all use `?` placeholders. Path-id `int(m.group(1))` casts are guarded by `\d+` regexes.
+
+**The real bug — crash-class on admin GET query params:** `do_GET` has **no try/except** around handler dispatch, so any handler exception propagates out of `BaseHTTPRequestHandler` and the connection closes with **no HTTP response** (client sees an empty reply / `000`). Two handlers cast a raw query param straight to `int`: `GET /api/orders?limit=abc` (`int('abc')`) and `GET /api/analytics?days=abc` — both `ValueError` → dead request. Same class as the POST-body validation already hardened on this branch (runs 59–61).
+
+**Fix:** `/api/orders` parses `limit` in a try/except and only applies `LIMIT` for a positive int (else returns all); `/api/analytics` defaults `days` to 30 on non-numeric input and clamps to [1, 365].
+
+**Verified live before/after on the real server (not "should work"):** before the fix `?limit=abc` and `?days=abc` returned **000** (empty reply); after, both return **200** and valid values (`?limit=1`, `?days=7`) still return 200. `py_compile` passes. Pushed on smart-e's branch.
+
+Owner-decision list unchanged (9 items, incl. run-73's affiliate-commission-on-shop question).
+
+---
 
 ### 2026-07-09 — Hourly loop, run 73: fixed PromptPay sales losing referral-channel attribution (run-72 follow-up); flagged an affiliate-commission gap for the owner to decide
 
@@ -2546,14 +2562,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 8b9c030 docs: log run 73 — PromptPay referral-channel attribution fix + flag affiliate-commission-on-shop for owner (17 seconds ago)
-- e7ac871 fix: PromptPay shop sales lost referral-channel attribution (card path kept it) (45 seconds ago)
-- 03819f5 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- eb8cf6b docs: log run 72 — fixed PromptPay shop orders never finalizing (stock/confirm) (58 minutes ago)
-- ab22a66 fix: PromptPay shop orders were never finalized — stock uncut, order stuck 'new' after real payment (58 minutes ago)
-- ca9088f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- d1d7e06 docs: log run 71 — answered owner token question; fixed Thai-undercount in AI budget governor (2 hours ago)
-- 6a33223 fix: token estimate undercounted Thai/CJK, making the AI daily-budget cap fire ~40% too late (2 hours ago)
+- bde6e9e docs: log run 74 — smart-e crash fix on non-numeric ?limit/?days admin GET params (16 seconds ago)
+- c09cdc8 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 8b9c030 docs: log run 73 — PromptPay referral-channel attribution fix + flag affiliate-commission-on-shop for owner (59 minutes ago)
+- e7ac871 fix: PromptPay shop sales lost referral-channel attribution (card path kept it) (59 minutes ago)
+- 03819f5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- eb8cf6b docs: log run 72 — fixed PromptPay shop orders never finalizing (stock/confirm) (2 hours ago)
+- ab22a66 fix: PromptPay shop orders were never finalized — stock uncut, order stuck 'new' after real payment (2 hours ago)
+- ca9088f chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2576,7 +2592,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.6",
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
