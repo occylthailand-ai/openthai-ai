@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 58: the personal, ref-gated affiliate dashboard was in the sitemap (told Google to index an empty ref-code shell) — made it consistent with every other personal surface
+
+PR #79: run 57's deploys completed normally — all 3 projects reached Ready in the final webhook state (frontend `9kuvgjYw`/`CuKXTbCt`, backend `7mSP3NNs`, npxn `Gri1y8Lu`; Canceled = build-supersede). GitHub MCP is still disconnected/needs re-auth, so still no commit-status-API confirmation this cycle — relied on settled Vercel webhooks + local git, as noted in run 57.
+
+**Scanned clean first (logged so they aren't re-swept):** `manifest.json` is valid and all referenced icons (`icon-192.png`, `icon-512.png`, `og-image.png`) exist. `sitemap.xml` uses a single consistent host (`https://www.openthai-ai.com`, matching the canonical) across all URLs and declares itself correctly; `robots.txt` disallows the private surfaces.
+
+**Then found the real inconsistency by cross-checking sitemap.xml ↔ robots.txt ↔ prerender-meta.mjs ↔ the actual page:** `/affiliate/dashboard` was the lone personal surface being advertised for indexing — it was in `sitemap.xml` (priority 0.6) *and* `robots.txt` `Allow`, while every other personal surface (`/dashboard`, `/track`, `/dispute`, `/producers/manage`) is `Disallow`ed and absent from the sitemap. It was also already, deliberately, excluded from `prerender-meta.mjs` back in run 49 ("personal dashboard, not a shareable marketing page") and confirmed in run 55 as a `?ref=`-gated surface showing an affiliate's name / total earnings / withdrawal history. I verified the page itself: with no `?ref=` param `AffiliateDashboard.jsx` renders only a "กรอก Ref Code เพื่อดูสถิติของคุณ" (enter your ref code) shell. So Googlebot, crawling it without a ref, would index that empty shell — wasted crawl budget on a page that can never show public content, and inconsistent with three prior decisions.
+
+**Fix (make it match how the other 4 personal surfaces are already handled):** removed the `/affiliate/dashboard` `<url>` block from `sitemap.xml` and moved `/affiliate/dashboard` from `Allow` to `Disallow` in `robots.txt`. The public affiliate *signup* funnel `/affiliate` stays in both the sitemap and the `Allow` list (it's the real marketing page) — robots' most-specific-match rule means `Disallow: /affiliate/dashboard` (longer) blocks only the dashboard while `Allow: /affiliate` keeps the funnel indexable.
+
+**Verified with the real build:** parsed `public/sitemap.xml` (valid XML, now 20 URLs, `/affiliate/dashboard` absent); `robots.txt` keeps `Allow: /affiliate` and adds `Disallow: /affiliate/dashboard`; ran `npm run build` and confirmed `dist/sitemap.xml` has 0 occurrences of `affiliate/dashboard` and `dist/robots.txt` has exactly the one Disallow. Only the two static files changed. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+7 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-08 — Hourly loop, run 57: homepage JSON-LD advertised wrong prices (฿20/฿30 vs real ฿299/฿599) and a fabricated 4.9★/1200-review rating to Google
 
 PR #79: run 56's deploys completed normally — all 3 projects reached Ready in the final webhook state (backend `5bVXvAtE`, frontend `FCTAukiA`, npxn `8omrdMem`; the Canceled entries were the usual build-supersede). NOTE: the GitHub MCP server disconnected and now requires re-auth, so I could not confirm via the commit-status API this cycle — relied on the settled Vercel webhooks + local git. Flagging so a later cycle re-verifies via the API once GitHub is reconnected.

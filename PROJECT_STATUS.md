@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T02:12:19.592Z · branch `claude/daily-reporter-improvements-8vc9ct` (134 commit(s) ahead of main)
+Generated: 2026-07-09T02:16:06.413Z · branch `claude/daily-reporter-improvements-8vc9ct` (135 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 344 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 218 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 58: the personal, ref-gated affiliate dashboard was in the sitemap (told Google to index an empty ref-code shell) — made it consistent with every other personal surface
+
+PR #79: run 57's deploys completed normally — all 3 projects reached Ready in the final webhook state (frontend `9kuvgjYw`/`CuKXTbCt`, backend `7mSP3NNs`, npxn `Gri1y8Lu`; Canceled = build-supersede). GitHub MCP is still disconnected/needs re-auth, so still no commit-status-API confirmation this cycle — relied on settled Vercel webhooks + local git, as noted in run 57.
+
+**Scanned clean first (logged so they aren't re-swept):** `manifest.json` is valid and all referenced icons (`icon-192.png`, `icon-512.png`, `og-image.png`) exist. `sitemap.xml` uses a single consistent host (`https://www.openthai-ai.com`, matching the canonical) across all URLs and declares itself correctly; `robots.txt` disallows the private surfaces.
+
+**Then found the real inconsistency by cross-checking sitemap.xml ↔ robots.txt ↔ prerender-meta.mjs ↔ the actual page:** `/affiliate/dashboard` was the lone personal surface being advertised for indexing — it was in `sitemap.xml` (priority 0.6) *and* `robots.txt` `Allow`, while every other personal surface (`/dashboard`, `/track`, `/dispute`, `/producers/manage`) is `Disallow`ed and absent from the sitemap. It was also already, deliberately, excluded from `prerender-meta.mjs` back in run 49 ("personal dashboard, not a shareable marketing page") and confirmed in run 55 as a `?ref=`-gated surface showing an affiliate's name / total earnings / withdrawal history. I verified the page itself: with no `?ref=` param `AffiliateDashboard.jsx` renders only a "กรอก Ref Code เพื่อดูสถิติของคุณ" (enter your ref code) shell. So Googlebot, crawling it without a ref, would index that empty shell — wasted crawl budget on a page that can never show public content, and inconsistent with three prior decisions.
+
+**Fix (make it match how the other 4 personal surfaces are already handled):** removed the `/affiliate/dashboard` `<url>` block from `sitemap.xml` and moved `/affiliate/dashboard` from `Allow` to `Disallow` in `robots.txt`. The public affiliate *signup* funnel `/affiliate` stays in both the sitemap and the `Allow` list (it's the real marketing page) — robots' most-specific-match rule means `Disallow: /affiliate/dashboard` (longer) blocks only the dashboard while `Allow: /affiliate` keeps the funnel indexable.
+
+**Verified with the real build:** parsed `public/sitemap.xml` (valid XML, now 20 URLs, `/affiliate/dashboard` absent); `robots.txt` keeps `Allow: /affiliate` and adds `Disallow: /affiliate/dashboard`; ran `npm run build` and confirmed `dist/sitemap.xml` has 0 occurrences of `affiliate/dashboard` and `dist/robots.txt` has exactly the one Disallow. Only the two static files changed. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+7 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-08 — Hourly loop, run 57: homepage JSON-LD advertised wrong prices (฿20/฿30 vs real ฿299/฿599) and a fabricated 4.9★/1200-review rating to Google
 
@@ -2298,54 +2314,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 6246daf fix(seo): correct homepage JSON-LD — real prices + drop fabricated rating (19 seconds ago)
+- abef010 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- 6246daf fix(seo): correct homepage JSON-LD — real prices + drop fabricated rating (4 minutes ago)
 - 42b4ae1 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 329ad82 fix(a11y): keep <html lang> in sync with the displayed language on every path (5 hours ago)
 - a0c673e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 26089fd docs: log run 55 -- rate-limited public ref_code-keyed affiliate read endpoints (name+earnings enumeration); affiliate-auth question escalated to owner (5 hours ago)
 - 808095a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 1693cd1 fix: rate-limit the two public ref_code-keyed affiliate read endpoints (name + earnings enumeration) (5 hours ago)
-- 348e05a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

@@ -2,7 +2,6 @@ User-agent: *
 Allow: /
 Allow: /pricing
 Allow: /affiliate
-Allow: /affiliate/dashboard
 Allow: /portals
 Allow: /portals/producer
 Allow: /portals/affiliate
@@ -21,6 +20,7 @@ Allow: /about
 Allow: /privacy
 Allow: /terms
 Disallow: /dashboard
+Disallow: /affiliate/dashboard
 Disallow: /track
 Disallow: /dispute
 Disallow: /producers/manage
