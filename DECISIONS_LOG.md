@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 76: sitemap.xml is now generated at build time (fresh lastmod) instead of a stale hand-maintained file — SEO / go-to-market
+
+openthai-ai synced (HEAD 78327b2, run-75 deployed all-3-Ready). Vercel webhooks were deploy-status only (a Canceled = normal build-supersede), nothing actionable.
+
+**Scanned `credits.js` (the free-tier credit economy — affects every user) first; came back clean, logged so it isn't re-scanned:** `/api/credits/claim` requires `source ∈ ALLOWED_CLAIMS` (whitelist `{welcome:3}`) so no arbitrary-source credit farming; claims are idempotent per source; `addCredits` floors + clamps the amount to `[0, MAX_CLAIM]` and the balance to `[0, MAX_BALANCE]`; `consumeCredit` only decrements when `balance > 0` (no negative balance); spin/checkin are idempotent (per-day / `spun` flag). No money/quota bug.
+
+**Shipped (SEO, go-to-market category):** `public/sitemap.xml` was a static file with `<lastmod>` hard-coded to **2026-05-03 on all 20 URLs** despite 2+ months of active development — search engines use `lastmod` to prioritise recrawls, so genuinely-changed pages were being deprioritised. It was also a **third hand-maintained copy of the route list** (with `prerender-meta.mjs` ROUTES and robots.txt) that would inevitably drift — exactly the "hand-maintained summaries that silently drift" problem CLAUDE.md warns about. The `postbuild` step (`scripts/prerender-meta.mjs`) already owns the canonical ROUTES list and runs after Vite copies `public/`→`dist/`, so I extended it to **emit `dist/sitemap.xml` from that same list**, with `lastmod = build date` (self-updating every deploy) and per-path priority/changefreq (1.0 homepage, 0.5 legal/info, 0.8 funnels). Deleted the static `public/sitemap.xml` → single source of truth.
+
+**Verified:** `npm run build` emits `dist/sitemap.xml` with **20 URLs all dated the build day**, it parses as valid XML, and its URL set **exactly matches robots.txt's Allow list** (no drift, both-way diff empty). robots.txt still points at `/sitemap.xml`, served from `dist` as before.
+
+Owner-decision list unchanged (9 items).
+
+---
+
 ### 2026-07-09 — Hourly loop, run 75: smart-e — fixed the *root cause* of the crash class, not just the two symptoms (blanket dispatcher guard → 500 instead of empty reply)
 
 **Change is in the `smart-e` repo** (own branch, no DECISIONS_LOG there — full detail in the commit message). openthai-ai synced (HEAD 47a8601, run-74 deployed all-3-Ready).
