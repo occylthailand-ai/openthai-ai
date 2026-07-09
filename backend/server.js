@@ -7725,6 +7725,27 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
         // เครดิต affiliate ถ้าชำระผ่าน ref link (รองรับทั้ง plan + quickpay) — firstTime แล้วจาก !rec.paid_at
         creditAffiliateSale(rec.ref_code || data.metadata?.ref_code, amountThb, { charge_id: data.id, source: rec.source || data.metadata?.source });
       }
+      // ร้านค้า (/api/shop/checkout): จ่ายด้วยบัตรจะ finalize ทันทีตอน checkout แต่ PromptPay
+      // จะจ่ายทีหลังผ่าน QR แล้วยืนยันมาที่ webhook นี้ เดิม handler เช็คเฉพาะ payments[]
+      // (subscription) เท่านั้น — ออเดอร์ร้านค้าไม่มี payments record จึงไม่เคยถูก finalize:
+      // ลูกค้าจ่าย PromptPay จริงแต่สต๊อกไม่ถูกตัดและออเดอร์ค้างสถานะ 'new' ตลอด ที่นี่จึง
+      // finalize ให้ (ตัดสต๊อก + ยืนยันออเดอร์) แบบ idempotent — ทำเฉพาะออเดอร์ที่ยังเป็น 'new'
+      // (ออเดอร์บัตรถูกตั้ง 'confirmed' ไปแล้ว จึงไม่ตัดสต๊อกซ้ำ)
+      const shopOrderId = data.metadata?.order_id;
+      const shopProductId = data.metadata?.product_id;
+      if (shopOrderId && shopProductId) {
+        (async () => {
+          try {
+            const ord = await orders.getOne(shopOrderId);
+            if (ord && ord.status === 'new') {
+              const q = Math.max(1, parseInt(data.metadata?.qty, 10) || 1);
+              await inventory.adjust(shopProductId, -q, 'sale', `ชำระผ่าน PromptPay (ออเดอร์ ${shopOrderId})`, shopOrderId, 'store');
+              await orders.setStatus(shopOrderId, 'confirmed', 'ชำระเงินผ่าน PromptPay สำเร็จ');
+              addLog('info', 'OmiseWebhook', `Shop order finalized: ${shopOrderId} (stock -${q})`);
+            }
+          } catch (e) { addLog('warn', 'OmiseWebhook', `shop finalize ${shopOrderId}: ${e.message}`); }
+        })();
+      }
       webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
     }
     res.json({ received: true });
