@@ -9,6 +9,24 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 62: PDPA erasure falsely claimed "ลบข้อมูลแล้ว" while keeping every producer/affiliate/portal-lead record — now erases them for real
+
+PR #79: verified green via the real commit-status API — all 3 Vercel checks `success` on head `eb4926b` (runs 60+61). This cycle's change is a backend fix on openthai-ai itself, so it deploys on #79.
+
+**Returned to the flagship after three smart-e commerce fixes, into the #1 priority (consent-based personal-data handling) — and found a real PDPA compliance breach, not a micro-bug.** `POST /api/privacy/erasure/confirm` (the email-confirmed right-to-erasure endpoint, PDPA §33) responded `✅ ยืนยันและลบข้อมูลเรียบร้อยแล้ว` but only removed the person from **two** stores: `waitlist` and `consents`. Everyone who had actually signed up through the consent funnels — a producer (`producers.json` / Supabase: company, contact name, phone, email), an affiliate (`affiliates.json`: name, email, phone, **and their PromptPay number**), or any `/portals/*` lead (`portal_leads`: name, email, whole form) — was told their data was erased while the record stayed in full. Both a false success message and an actual retention breach.
+
+**Fix (3 files):**
+- `producers.js` + `portal-leads.js`: added `eraseByEmail(email)` — deletes the person's records in **both** Supabase and file mode, returns a removed count. Exported from each module.
+- `server.js`: the confirm handler is now `async` and additionally erases producers, portal_leads, and affiliate records (array splice + `_affFileSave` + Supabase `DELETE`), all keyed on the confirmed email; the count shown to the user now reflects everything actually deleted.
+
+**Deliberately NOT deleted — flagged for owner decision (standing-order point 8, legal implication):** financial/transaction records that also contain contact data — affiliate **withdrawals** (PromptPay + amounts) and **orders** (customer name/contact) — were left in place, because PDPA §33 exempts data a business must retain under other law (accounting/tax). Whether and how to purge or anonymise those is a real legal-scope call I did not make unilaterally; raising it rather than guessing.
+
+**Verified live (booted the real backend in file mode, isolated data dir snapshotted + restored so nothing leaked):** registered a producer + an affiliate + a portal lead under one email → producers=1, affiliates_total=1, aggregated leads-view=2 (that view spans waitlist/affiliates/orders/portal_leads, so the affiliate shows there too — the 3 real records are 1 producer + 1 affiliate + 1 portal lead); a single erasure-confirm call returned `ลบข้อมูลเรียบร้อยแล้ว (3 รายการ)` and all three stores dropped to 0; a bad token → 403. `node --check` passes on all three files; `git status` clean afterwards. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+8 items now pending an owner decision (added: should PDPA erasure also purge/anonymise financial records — affiliate withdrawals, orders — or retain them under the accounting/tax exemption, and for how long?). The run-61 payment↔order workflow note also still stands.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 61: smart-e `_confirm_payment` returned success:true even when the payment id didn't exist; also surfaced a payment↔order-status workflow question for the owner
 
 PR #79: run 60's openthai-ai deploy (the DECISIONS_LOG/PROJECT_STATUS commit) went all-3-Ready; a follow-on CI `sync PROJECT_STATUS.md` commit triggered a second all-3-Ready deploy. (GitHub MCP was flapping again around this cycle; verification leaned on the settled Vercel webhooks + local git.)
