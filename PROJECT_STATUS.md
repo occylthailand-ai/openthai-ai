@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T04:16:38.994Z · branch `claude/daily-reporter-improvements-8vc9ct` (140 commit(s) ahead of main)
+Generated: 2026-07-09T05:11:04.543Z · branch `claude/daily-reporter-improvements-8vc9ct` (141 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 350 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 224 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 61: smart-e `_confirm_payment` returned success:true even when the payment id didn't exist; also surfaced a payment↔order-status workflow question for the owner
+
+PR #79: run 60's openthai-ai deploy (the DECISIONS_LOG/PROJECT_STATUS commit) went all-3-Ready; a follow-on CI `sync PROJECT_STATUS.md` commit triggered a second all-3-Ready deploy. (GitHub MCP was flapping again around this cycle; verification leaned on the settled Vercel webhooks + local git.)
+
+**Continued the smart-e commerce-path audit into the money path.** `_confirm_payment` (POST /api/payments/confirm, admin-gated) ran `UPDATE payments SET status='paid' WHERE id=?` with `body.get('id')` unchecked — including `None` when the key was absent — and unconditionally returned `{success:true}` even when zero rows matched. So an admin confirming a mistyped or nonexistent payment id saw "success" while nothing was actually marked paid. Fixed by looking the payment up first and returning **404** when it doesn't exist (same shape as run 60's order 404), only then flipping status and echoing `id/status` back.
+
+**Verified live (booted smart-e with an admin key, isolated DB):** created a real promptpay payment; confirm valid id → 200 and the row reads `paid`; confirm id 99999 → 404; confirm with no id → 404. `server.py` parses; only that file changed. Pushed to smart-e's `claude/daily-reporter-improvements-8vc9ct` as `9496df1` (PR #1).
+
+**Observation raised for the owner (NOT changed — it's a workflow design choice, per standing-order point 8):** confirming a payment does not touch the linked `order_id`'s status, so an order stays `pending` after its payment is marked `paid`. Whether payment-confirm should auto-advance the order status is a real product decision — flagging it rather than guessing. This is a *note*, not a blocking escalation; the 7 prior owner-decision items are unchanged.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 60: smart-e cancelled orders never returned their stock (inventory drifted down permanently), and order-status was writable to any garbage value
 
@@ -2346,54 +2358,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- f07b91a docs: log run 60 -- smart-e cancel-restores-stock + order-status validation (verified live) (5 minutes ago)
-- 90d6e6d chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- 63338ef docs: log run 59 -- smart-e POST /api/orders per-item price/qty validation (crash + negative-qty stock inflation fixed, verified live) (63 minutes ago)
-- c193a09 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 4693f87 fix(seo): stop advertising the personal affiliate dashboard for indexing (2 hours ago)
-- abef010 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 6246daf fix(seo): correct homepage JSON-LD — real prices + drop fabricated rating (2 hours ago)
-- 42b4ae1 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 5372e8a chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
+- f07b91a docs: log run 60 -- smart-e cancel-restores-stock + order-status validation (verified live) (60 minutes ago)
+- 90d6e6d chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 63338ef docs: log run 59 -- smart-e POST /api/orders per-item price/qty validation (crash + negative-qty stock inflation fixed, verified live) (2 hours ago)
+- c193a09 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 4693f87 fix(seo): stop advertising the personal affiliate dashboard for indexing (3 hours ago)
+- abef010 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 6246daf fix(seo): correct homepage JSON-LD — real prices + drop fabricated rating (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

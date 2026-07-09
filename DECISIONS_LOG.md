@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 61: smart-e `_confirm_payment` returned success:true even when the payment id didn't exist; also surfaced a payment↔order-status workflow question for the owner
+
+PR #79: run 60's openthai-ai deploy (the DECISIONS_LOG/PROJECT_STATUS commit) went all-3-Ready; a follow-on CI `sync PROJECT_STATUS.md` commit triggered a second all-3-Ready deploy. (GitHub MCP was flapping again around this cycle; verification leaned on the settled Vercel webhooks + local git.)
+
+**Continued the smart-e commerce-path audit into the money path.** `_confirm_payment` (POST /api/payments/confirm, admin-gated) ran `UPDATE payments SET status='paid' WHERE id=?` with `body.get('id')` unchecked — including `None` when the key was absent — and unconditionally returned `{success:true}` even when zero rows matched. So an admin confirming a mistyped or nonexistent payment id saw "success" while nothing was actually marked paid. Fixed by looking the payment up first and returning **404** when it doesn't exist (same shape as run 60's order 404), only then flipping status and echoing `id/status` back.
+
+**Verified live (booted smart-e with an admin key, isolated DB):** created a real promptpay payment; confirm valid id → 200 and the row reads `paid`; confirm id 99999 → 404; confirm with no id → 404. `server.py` parses; only that file changed. Pushed to smart-e's `claude/daily-reporter-improvements-8vc9ct` as `9496df1` (PR #1).
+
+**Observation raised for the owner (NOT changed — it's a workflow design choice, per standing-order point 8):** confirming a payment does not touch the linked `order_id`'s status, so an order stays `pending` after its payment is marked `paid`. Whether payment-confirm should auto-advance the order status is a real product decision — flagging it rather than guessing. This is a *note*, not a blocking escalation; the 7 prior owner-decision items are unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 60: smart-e cancelled orders never returned their stock (inventory drifted down permanently), and order-status was writable to any garbage value
 
 PR #79: GitHub MCP dropped again at the start of this cycle (reconnected mid-run). Run 59's openthai-ai deploy (the DECISIONS_LOG/PROJECT_STATUS commit `63338ef`) settled all-3-Ready in the final webhook state; the smart-e fix itself is on smart-e's PR #1, not #79.
