@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 75: smart-e — fixed the *root cause* of the crash class, not just the two symptoms (blanket dispatcher guard → 500 instead of empty reply)
+
+**Change is in the `smart-e` repo** (own branch, no DECISIONS_LOG there — full detail in the commit message). openthai-ai synced (HEAD 47a8601, run-74 deployed all-3-Ready).
+
+**Root-cause follow-up to run 74.** Run 74 patched the two known `int()`-on-query-param crashes individually, but the underlying problem is that Python's `BaseHTTPRequestHandler` does **not** convert an exception raised inside `do_GET/do_POST/do_PUT/do_DELETE` into an HTTP response — it logs a traceback and closes the socket, so the client sees an **empty reply (000)**. Any *other* uncaught handler exception (a DB error, an unexpected type, a malformed `Content-Length` in `read_body`, …) fails the same silent way.
+
+**Fix:** extracted each dispatcher body into a `_dispatch_*` method and made `do_GET/POST/PUT/DELETE` thin wrappers that run it through a shared `_guard()`. `_guard` swallows `BrokenPipe/ConnectionReset` quietly, and for any other `Exception` prints the traceback and sends a clean `{'error': …}` **500** (itself guarded, in case headers were already sent). One place now converts the entire crash class to readable 500s — for current *and* future handlers.
+
+**Verified live (not "should work"):** normal requests (`GET /api/products`, `/api/orders`, `/api/analytics?days=7`, and run-74's `?limit=abc`) all still return **200** (no regression); a **raw socket POST with `Content-Length: abc`** — which hits an unguarded `int()` inside `read_body`, a genuinely reachable crash the per-endpoint fixes didn't cover — now returns **HTTP 500** instead of an empty reply. `py_compile` passes. Pushed on smart-e's branch.
+
+Owner-decision list unchanged (9 items).
+
+---
+
 ### 2026-07-09 — Hourly loop, run 74: smart-e — two admin GET endpoints crashed the request on a non-numeric ?limit / ?days
 
 **This cycle's change is in the `smart-e` repo** (own branch, no DECISIONS_LOG there — full detail is in the commit message). openthai-ai backend is now heavily hardened, so I diversified. Confirmed openthai-ai synced (HEAD c09cdc8, run-73 deployed all-3-Ready) and did a fresh crash-class + SQL-injection sweep of smart-e's `server.py`.
