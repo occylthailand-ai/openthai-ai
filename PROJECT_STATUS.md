@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T20:11:53.386Z · branch `claude/daily-reporter-improvements-8vc9ct` (179 commit(s) ahead of main)
+Generated: 2026-07-09T23:09:45.195Z · branch `claude/daily-reporter-improvements-8vc9ct` (181 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 389 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 391 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 75: smart-e — fixed the *root cause* of the crash class, not just the two symptoms (blanket dispatcher guard → 500 instead of empty reply)
+
+**Change is in the `smart-e` repo** (own branch, no DECISIONS_LOG there — full detail in the commit message). openthai-ai synced (HEAD 47a8601, run-74 deployed all-3-Ready).
+
+**Root-cause follow-up to run 74.** Run 74 patched the two known `int()`-on-query-param crashes individually, but the underlying problem is that Python's `BaseHTTPRequestHandler` does **not** convert an exception raised inside `do_GET/do_POST/do_PUT/do_DELETE` into an HTTP response — it logs a traceback and closes the socket, so the client sees an **empty reply (000)**. Any *other* uncaught handler exception (a DB error, an unexpected type, a malformed `Content-Length` in `read_body`, …) fails the same silent way.
+
+**Fix:** extracted each dispatcher body into a `_dispatch_*` method and made `do_GET/POST/PUT/DELETE` thin wrappers that run it through a shared `_guard()`. `_guard` swallows `BrokenPipe/ConnectionReset` quietly, and for any other `Exception` prints the traceback and sends a clean `{'error': …}` **500** (itself guarded, in case headers were already sent). One place now converts the entire crash class to readable 500s — for current *and* future handlers.
+
+**Verified live (not "should work"):** normal requests (`GET /api/products`, `/api/orders`, `/api/analytics?days=7`, and run-74's `?limit=abc`) all still return **200** (no regression); a **raw socket POST with `Content-Length: abc`** — which hits an unguarded `int()` inside `read_body`, a genuinely reachable crash the per-endpoint fixes didn't cover — now returns **HTTP 500** instead of an empty reply. `py_compile` passes. Pushed on smart-e's branch.
+
+Owner-decision list unchanged (9 items).
+
+---
 
 ### 2026-07-09 — Hourly loop, run 74: smart-e — two admin GET endpoints crashed the request on a non-numeric ?limit / ?days
 
@@ -2562,14 +2576,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- bde6e9e docs: log run 74 — smart-e crash fix on non-numeric ?limit/?days admin GET params (16 seconds ago)
-- c09cdc8 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 8b9c030 docs: log run 73 — PromptPay referral-channel attribution fix + flag affiliate-commission-on-shop for owner (59 minutes ago)
-- e7ac871 fix: PromptPay shop sales lost referral-channel attribution (card path kept it) (59 minutes ago)
-- 03819f5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- eb8cf6b docs: log run 72 — fixed PromptPay shop orders never finalizing (stock/confirm) (2 hours ago)
-- ab22a66 fix: PromptPay shop orders were never finalized — stock uncut, order stuck 'new' after real payment (2 hours ago)
-- ca9088f chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 0e46af8 docs: log run 75 — smart-e blanket dispatcher guard (root-cause fix for the crash class) (19 seconds ago)
+- 47a8601 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- bde6e9e docs: log run 74 — smart-e crash fix on non-numeric ?limit/?days admin GET params (3 hours ago)
+- c09cdc8 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 8b9c030 docs: log run 73 — PromptPay referral-channel attribution fix + flag affiliate-commission-on-shop for owner (4 hours ago)
+- e7ac871 fix: PromptPay shop sales lost referral-channel attribution (card path kept it) (4 hours ago)
+- 03819f5 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- eb8cf6b docs: log run 72 — fixed PromptPay shop orders never finalizing (stock/confirm) (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2592,7 +2606,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.5",
+  "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
