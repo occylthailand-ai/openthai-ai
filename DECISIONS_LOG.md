@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 69: every /portals/* signup showed a fake ✅ success even when the backend rejected the consented lead — fixed all 9
+
+PR #79: run 68 was a smart-e change; openthai-ai's last deploy was the run-68 log commit (all-3-Ready). No actionable webhook events (Vercel redeploy status only).
+
+**Found by scanning the consent funnels (the platform's #1 priority) for the fake-success bug class** (run-52 lesson: frontend ignoring `res.ok`). All 9 `/portals/*` pages submitted with `try { await fetch('/api/leads/submit', ...) } catch {}` then `setSent(true)` — showing the ✅ "we received your application / we'll email you" screen **unconditionally**. But `fetch()` doesn't throw on HTTP 4xx/5xx, so the empty catch never fired, and the backend genuinely rejects submissions: **400** (missing PDPA consent / invalid email), **429** (`submitLimiter` 10/15min per IP), **500** (server/DB). In every one of those, a *consenting* applicant was told they signed up while **no lead was saved** — the platform silently loses the signup and the person waits for emails that never come. This is the exact promise-vs-reality gap `server.js`'s own `PORTAL_WELCOME_COPY` comment already flagged (run 67 added the welcome email, but it only fires when the lead is actually saved — this fixes the case where it isn't).
+
+**Fix (10 files, frontend):**
+- New shared helper `frontend/src/pages/portals/submitLead.js` — single source of truth: POSTs the lead and returns `{ ok:true, id }` only on a real save (`res.ok` **and** `body.success === true`), else `{ ok:false, error, status }` surfacing the backend's own Thai message; `leadError()` gives a localized (th/en/zh) fallback for network/parse failures.
+- All 9 portals (producer, consumer, middleman, creator, affiliate, gov-thai, gov-intl, intl-org, foundation) now await it, keep the form on screen with an inline `role="alert"` error on failure, and only show the success screen on a genuine save. Added a `busy` state so the button disables during the request (no double-submit). Removed the now-unused `apiUrl` import from each page.
+
+**Verified live end-to-end (real backend + vite dev proxy + real Chromium via Playwright), not "should work":** a valid submit shows the success screen and saves the lead (200); then, after exhausting the real rate limiter (9×200 then 429), the next submit **keeps the form** and shows `⚠️ ส่งฟอร์มบ่อยเกินไป กรุณารอแล้วลองใหม่` (the backend's real 429 message) instead of a fake ✅. `npm run build` passes; backend data dir snapshotted + restored, `git status` clean.
+
+8 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 68: closed a real stored-XSS in the smart-e admin dashboard reachable by any external LINE user
 
 PR #79 (openthai-ai): run 67's producer-welcome fix deployed all-3-Ready; the only new webhook events were Vercel deploy-status updates (all Ready), nothing actionable.
