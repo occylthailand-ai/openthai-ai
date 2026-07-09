@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiUrl } from '../../apiBase';
+import { submitLead, leadError } from './submitLead';
 
 const T = {
   th: { title:'ทางเข้าผู้ร่วมสร้างคอนเทนต์', sub:'ร่วมสร้างคอนเทนต์ AI จากทุกแพลตฟอร์ม ไม่จำกัดประเทศ', platforms:['TikTok','Instagram','YouTube','Facebook','X (Twitter)','LinkedIn','Twitch','Other'], benefits:['AI ช่วยสร้างคอนเทนต์ฟรี','Trending analysis แบบ real-time','ระบบ scheduling อัตโนมัติ','รายได้จาก creator program'], form:{ name:'ชื่อ / Channel Name', country:'ประเทศ', platform:'แพลตฟอร์มหลัก', followers:'จำนวน Followers (โดยประมาณ)', email:'อีเมล', submit:'เข้าร่วม Creator Program', ok:'ยินดีต้อนรับ! ตรวจสอบอีเมลของท่านเพื่อรับ access ครับ' } },
@@ -19,13 +19,18 @@ export default function CreatorPortalPage() {
   const [form, setForm] = useState({ name:'', country:'', platform:'TikTok', followers:'', email:'' });
   const [sent, setSent] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
   const t = T[lang];
   useEffect(() => { document.title = t.title + ' — Openthai.ai'; }, [t.title]);
 
   const submit = async e => {
     e.preventDefault();
-    try { await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...form, type:'creator', lang, consent}) }); } catch {}
+    setErr(''); setBusy(true);
+    const r = await submitLead({ ...form, type:'creator', lang, consent });
+    setBusy(false);
+    if (!r.ok) { setErr(leadError(r, lang)); return; }
     setSent(true);
   };
 
@@ -71,7 +76,8 @@ export default function CreatorPortalPage() {
                 <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
                 <span>{CONSENT_TEXT[lang]}</span>
               </label>
-              <button type="submit" disabled={!consent} style={{ width:'100%', background:'#ec4899', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: consent ? 'pointer' : 'not-allowed', opacity: consent ? 1 : 0.5, marginTop:8 }}>{t.form.submit}</button>
+              {err && <div role="alert" style={{ background:'#3a1618', border:'1px solid #ef4444', color:'#fca5a5', padding:'10px 14px', borderRadius:8, fontSize:13, marginBottom:12 }}>⚠️ {err}</div>}
+              <button type="submit" disabled={!consent || busy} style={{ width:'100%', background:'#ec4899', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: (consent && !busy) ? 'pointer' : 'not-allowed', opacity: (consent && !busy) ? 1 : 0.5, marginTop:8 }}>{busy ? '...' : t.form.submit}</button>
             </form>}
           </div>
         </div>

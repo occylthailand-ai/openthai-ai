@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiUrl } from '../../apiBase';
+import { submitLead, leadError } from './submitLead';
 
 const T = {
   th: { title:'ทางเข้าหน่วยงานรัฐไทย', sub:'บูรณาการ AI เข้าสู่ระบบงานภาครัฐไทย เพื่อประชาชน', services:['ระบบ AI สำหรับบริการประชาชน','วิเคราะห์ข้อมูลขนาดใหญ่','แชทบอท ตอบคำถามอัตโนมัติ','รายงานและ Dashboard ราชการ','ระบบแปลภาษาข้ามพรมแดน'], form:{ agency:'ชื่อหน่วยงาน', ministry:'กระทรวง/กรม', name:'ชื่อผู้ติดต่อ', position:'ตำแหน่ง', email:'อีเมลราชการ', phone:'โทรศัพท์', need:'ความต้องการหลัก', submit:'ส่งคำขอความร่วมมือ', ok:'ขอบคุณ! ทีม Government Relations จะติดต่อกลับภายใน 48 ชม.' } },
@@ -17,13 +17,18 @@ export default function GovThaiPortalPage() {
   const [form, setForm] = useState({ agency:'', ministry:'', name:'', position:'', email:'', phone:'', need:'' });
   const [sent, setSent] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
   const t = T[lang] || T.th;
   useEffect(() => { document.title = t.title + ' — Openthai.ai'; }, [t.title]);
 
   const submit = async e => {
     e.preventDefault();
-    try { await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...form, type:'gov-thai', lang, consent}) }); } catch {}
+    setErr(''); setBusy(true);
+    const r = await submitLead({ ...form, type:'gov-thai', lang, consent });
+    setBusy(false);
+    if (!r.ok) { setErr(leadError(r, lang)); return; }
     setSent(true);
   };
 
@@ -67,7 +72,8 @@ export default function GovThaiPortalPage() {
                 <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
                 <span>{CONSENT_TEXT[lang] || CONSENT_TEXT.th}</span>
               </label>
-              <button type="submit" disabled={!consent} style={{ width:'100%', background:'#10b981', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: consent ? 'pointer' : 'not-allowed', opacity: consent ? 1 : 0.5 }}>{t.form.submit}</button>
+              {err && <div role="alert" style={{ background:'#3a1618', border:'1px solid #ef4444', color:'#fca5a5', padding:'10px 14px', borderRadius:8, fontSize:13, marginBottom:12 }}>⚠️ {err}</div>}
+              <button type="submit" disabled={!consent || busy} style={{ width:'100%', background:'#10b981', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: (consent && !busy) ? 'pointer' : 'not-allowed', opacity: (consent && !busy) ? 1 : 0.5 }}>{busy ? '...' : t.form.submit}</button>
             </form>}
           </div>
         </div>

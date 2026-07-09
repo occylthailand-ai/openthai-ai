@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiUrl } from '../../apiBase';
+import { submitLead, leadError } from './submitLead';
 
 const T = {
   en: { title:'Foreign Government Agency Portal', sub:'AI collaboration for governments worldwide — no country restrictions', services:['Bilateral AI cooperation agreements','Government-to-Government (G2G) programs','AI policy consultation','Secure data exchange systems','Multilingual AI services'], form:{ agency:'Agency / Ministry Name', country:'Country', name:'Contact Person', position:'Title / Position', email:'Official Email', phone:'Phone / WhatsApp', need:'Cooperation Area of Interest', submit:'Submit G2G Request', ok:'Thank you! Our International Relations team will contact you within 48 hours.' } },
@@ -19,13 +19,18 @@ export default function GovIntlPortalPage() {
   const [form, setForm] = useState({ agency:'', country:'', name:'', position:'', email:'', phone:'', need:'' });
   const [sent, setSent] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
   const t = T[lang];
   useEffect(() => { document.title = t.title + ' — Openthai.ai'; }, [t.title]);
 
   const submit = async e => {
     e.preventDefault();
-    try { await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...form, type:'gov-intl', lang, consent}) }); } catch {}
+    setErr(''); setBusy(true);
+    const r = await submitLead({ ...form, type:'gov-intl', lang, consent });
+    setBusy(false);
+    if (!r.ok) { setErr(leadError(r, lang)); return; }
     setSent(true);
   };
 
@@ -69,7 +74,8 @@ export default function GovIntlPortalPage() {
                 <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
                 <span>{CONSENT_TEXT[lang]}</span>
               </label>
-              <button type="submit" disabled={!consent} style={{ width:'100%', background:'#3b82f6', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: consent ? 'pointer' : 'not-allowed', opacity: consent ? 1 : 0.5 }}>{t.form.submit}</button>
+              {err && <div role="alert" style={{ background:'#3a1618', border:'1px solid #ef4444', color:'#fca5a5', padding:'10px 14px', borderRadius:8, fontSize:13, marginBottom:12 }}>⚠️ {err}</div>}
+              <button type="submit" disabled={!consent || busy} style={{ width:'100%', background:'#3b82f6', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: (consent && !busy) ? 'pointer' : 'not-allowed', opacity: (consent && !busy) ? 1 : 0.5 }}>{busy ? '...' : t.form.submit}</button>
             </form>}
           </div>
         </div>
