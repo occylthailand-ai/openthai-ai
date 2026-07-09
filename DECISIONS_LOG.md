@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 72: PromptPay shop orders were never finalized — customers paid but stock wasn't cut and orders stuck 'new' (real money-path bug)
+
+PR #79: run 71 deployed all-3-Ready. No actionable webhook events (Vercel status only).
+
+**Audited the shop/order/payment money path** (core marketplace, real THB). Most of it is genuinely well-built and I logged the negatives so they aren't re-scanned: `/api/shop/checkout` computes `amount` from the **server-side** product price (no client price-tampering), clamps qty to [1,999], checks stock, and returns 404/400/409 correctly; all `/api/orders/admin/*` and `/api/disputes/admin/*` endpoints check `checkAdminKey`; public `/api/orders/track` requires the **contact to match** and returns no name/address (no IDOR/PII leak); SEO is fully consistent (prerender routes == sitemap, per-route title/desc/canonical/OG/twitter, og-image.png is a real 1200×630 matching its declared dims). `orders.place()` requires contact so the `track()` `o.contact.toLowerCase()` path isn't reachable with a null contact.
+
+**The one real bug found — PromptPay checkout never completes:** card checkout finalizes synchronously in-request (cut stock + mark `confirmed`), but PromptPay returns a QR and expects the Omise `charge.complete` webhook to finalize later, tracking the order only via the charge's `metadata {order_id, product_id, qty}`. The webhook handler (`/api/payment/webhook`) only looked up **subscription** payments (`payments.find(p => p.charge_id === data.id)`) — shop checkout never creates a `payments` record, so a completed PromptPay charge matched nothing and finalized nothing. A customer scans the QR, **pays real money, but the order stays `new` forever and stock is never decremented** → invisible-paid orders + overselling, on a primary Thai payment method.
+
+**Fix (`server.js`, webhook handler):** in the `charge.complete` branch, also finalize shop orders from `data.metadata` — when `order_id` + `product_id` are present, look up the order and, **only if still `new`** (idempotent — card orders are already `confirmed`, duplicate webhooks are no-ops), `inventory.adjust(-qty, 'sale')` + `orders.setStatus('confirmed')`. Subscription flow untouched; the guard needs both `order_id` **and** `product_id`, which only shop checkout sets, so no collision with plan/quickpay charges.
+
+**Verified live end-to-end (test `OMISE_WEBHOOK_SECRET`, real HMAC-signed webhook):** seed product stock 10 → PromptPay checkout qty 3 leaves order `new` & stock 10 (**reproduces the bug**) → signed `charge.complete` webhook → stock **7** & order **`confirmed`** → resending the same webhook keeps stock 7 (**idempotent**) → a **bad signature is rejected 401**. `node --check` passes; data dir snapshotted + restored, `git status` clean. Pushed on the branch.
+
+8 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 71: owner asked "which part uses the most tokens" — answered from code, then fixed a real Thai-undercount bug in the AI budget governor it exposed
 
 **Owner question this cycle:** "ส่วนไหนกินโทเค้นเยอะที่สุดของ OpenThaiAi". Answered from the real code (every `callAI(prompt, maxTokens)` site + measured prompt sizes), no guessing:
