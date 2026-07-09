@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T14:13:20.738Z · branch `claude/daily-reporter-improvements-8vc9ct` (168 commit(s) ahead of main)
+Generated: 2026-07-09T17:15:26.167Z · branch `claude/daily-reporter-improvements-8vc9ct` (171 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 378 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 381 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,21 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 71: owner asked "which part uses the most tokens" — answered from code, then fixed a real Thai-undercount bug in the AI budget governor it exposed
+
+**Owner question this cycle:** "ส่วนไหนกินโทเค้นเยอะที่สุดของ OpenThaiAi". Answered from the real code (every `callAI(prompt, maxTokens)` site + measured prompt sizes), no guessing:
+- Heaviest **per call**: `/api/ultra-promo` — input prompt ~11,449 chars (~4,600 tok) + `callAI(prompt, 6000)` ≈ **~10,600 tok/call**; `/api/pr/global-content` — `callAI(prompt, 8000)` (biggest single output) ≈ ~9,400 tok/call. Then content-benchmark (4000), pr/daily-content (3000), catalog-ai/generate + skills/kol-brief (3000 each).
+- The marketing/PR skills (big few-shot JSON-template prompts + high `max_tokens`) are the token hogs; the flagship `/api/generate` and `/api/chat` are **light** (1024 output).
+- Honest caveat given to owner: these are **per-call** weights from code; true **totals** need runtime request-count logging, which the code alone can't show.
+
+**Real bug the investigation exposed (and fixed this cycle):** the Smart Model Router already has a cost governor (`routeAI`/`routerState`, exposed at `GET /api/router/status`) that sums estimated tokens → USD → trips **Eco Mode** (cheap-models-only) once `AI_DAILY_BUDGET_USD` (default $1) is hit. But its estimator was `estTokens = len/4` for **every** language. Thai/CJK tokenize far denser (Thai ~1 token per 1–2 chars, not 4), so on this Thai-first platform `spentUsd` accumulated ~2–3× slower than real spend → **Eco Mode fired ~40% too late**, and `/api/router/status` under-reported cost. Rewrote `estTokens` to classify chars: Thai (U+0E00–0E7F) ~1 tok/1.5, CJK ~1 tok/1.3, else ~1 tok/4 (Latin unchanged).
+
+**Verified (pure function, real inputs + boot):** pure-English **1.00×** (unchanged — no regression for Latin), pure-Thai **2.65×**, Chinese **3.00×**, mixed th/en hook 1.68×, real 11,449-char ultra-promo prompt 2863→3702 tok (1.29×, it's mostly Latin JSON scaffold). `node --check` passes; server boots and `GET /api/router/status` still returns valid JSON with the estimate in the hot path. Data dir snapshotted + restored, `git status` clean. Pushed on the branch.
+
+**Offered as a possible follow-up (NOT built — needs owner OK):** real per-endpoint token-usage logging (capture `usage.input_tokens/output_tokens`, aggregate by skill, expose a dashboard) to turn the per-call estimates into measured totals. 8 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 70: the homepage hero waitlist (highest-traffic consent funnel) faked success on network error and gave zero feedback on rejection — fixed
 
@@ -2503,14 +2518,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 40ab0cf docs: log run 70 — homepage waitlist fake-success fix; consent-funnel sweep complete (24 seconds ago)
-- fa175e6 fix: homepage waitlist showed fake success on network error, silent no-op on rejection (47 seconds ago)
-- 662730e chore: sync PROJECT_STATUS.md [skip ci] (51 minutes ago)
-- f7c72bb docs: log run 69 — fake-success fix across all 9 portal signup funnels (53 minutes ago)
-- a4c35d6 fix: portal signup forms showed fake success when the lead was rejected (53 minutes ago)
-- b7bb512 chore: sync PROJECT_STATUS.md [skip ci] (88 minutes ago)
-- 80f9e46 docs: log run 68 — stored-XSS fix in smart-e admin dashboard (2 hours ago)
-- 6ef39b0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- d1d7e06 docs: log run 71 — answered owner token question; fixed Thai-undercount in AI budget governor (15 seconds ago)
+- 6a33223 fix: token estimate undercounted Thai/CJK, making the AI daily-budget cap fire ~40% too late (45 seconds ago)
+- caa96ff chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 40ab0cf docs: log run 70 — homepage waitlist fake-success fix; consent-funnel sweep complete (3 hours ago)
+- fa175e6 fix: homepage waitlist showed fake success on network error, silent no-op on rejection (3 hours ago)
+- 662730e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- f7c72bb docs: log run 69 — fake-success fix across all 9 portal signup funnels (4 hours ago)
+- a4c35d6 fix: portal signup forms showed fake success when the lead was rejected (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2532,8 +2547,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 63,
-  "memory_mb": "19.7",
+  "uptime_sec": 0,
+  "memory_mb": "19.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -2699,7 +2714,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8496 | Vercel serverless detection |
+| `server.js` | 8512 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
