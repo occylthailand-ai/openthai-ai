@@ -9,6 +9,24 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 59: smart-e's POST /api/orders never validated per-item price/qty — crash on non-numeric, and negative qty *inflated* stock (run-48 data-integrity class, order path)
+
+PR #79: GitHub MCP reconnected this cycle — verified via the real commit-status API for the first time since it dropped: all 3 Vercel checks `success` on head `c193a09` (which includes runs 57 & 58). The runs 57/58 "couldn't confirm via API" flag is now cleared.
+
+**Confirmed clean first (logged so they aren't re-swept):** openthai-ai's `prerender-meta.mjs` covers all 19 public routes with unique titles/descriptions and now matches `sitemap.xml` exactly (19 + `/` homepage = 20) after run 58. Portal consent is enforced server-side (`portal-leads.js` rejects `consent !== true`). smart-e's auth model is solid: every API route is behind `_require_admin()` (fails closed 503 if `ADMIN_KEY` unset, timing-safe `hmac.compare_digest`), and the LINE webhook uses timing-safe signature verification that fails closed on an empty secret. Public pages use almost no `<img>` (emoji/CSS), and the ones present have alt.
+
+**Then found the real bug in smart-e (`server.py` `_create_order`) — the run-48 "no crash is not no bug" class on a path runs 48/54 never covered** (run 54 only checked the *frontend* rejects an empty item list; the backend numeric validation was never there). The handler validated that `items` is a list of dicts but never the `price`/`qty` values inside each item:
+- `price:"abc"` → `total = sum(item['price'] * item['qty'])` hits `int + str` → **uncaught TypeError → empty response** (the same crash class this function's own comments already guard against for the items *shape*).
+- `qty:-5` → `UPDATE products SET stock=MAX(0,stock-(-5))` = **stock+5**: placing an "order" *inflates* product stock, writes a negative order line, and pushes a negative `total` into `orders.total`, dashboard revenue, and `customers.total_spent`.
+
+**Fix:** coerce+validate each item like `_create_product` — `price` float ≥ 0, `qty` int ≥ 1, else 400; `total` and the stock decrement then use the coerced values. (smart-e has no DECISIONS_LOG, so the full write-up is in the commit message per the standing order.)
+
+**Verified live (booted smart-e with an admin key, isolated DB):** created a product (stock 10); valid order (100×2) → **201**, stock → **8**; `price:"abc"` → **400** with a readable Thai error (no crash / no empty response); `qty:-5` → **400** and stock stayed **8** (not inflated to 13). `server.py` parses; only that file changed. Pushed to smart-e's `claude/daily-reporter-improvements-8vc9ct` as `b4e26ee` (PR #1).
+
+7 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 58: the personal, ref-gated affiliate dashboard was in the sitemap (told Google to index an empty ref-code shell) — made it consistent with every other personal surface
 
 PR #79: run 57's deploys completed normally — all 3 projects reached Ready in the final webhook state (frontend `9kuvgjYw`/`CuKXTbCt`, backend `7mSP3NNs`, npxn `Gri1y8Lu`; Canceled = build-supersede). GitHub MCP is still disconnected/needs re-auth, so still no commit-status-API confirmation this cycle — relied on settled Vercel webhooks + local git, as noted in run 57.

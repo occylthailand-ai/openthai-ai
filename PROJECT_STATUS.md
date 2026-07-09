@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T02:16:38.789Z · branch `claude/daily-reporter-improvements-8vc9ct` (136 commit(s) ahead of main)
+Generated: 2026-07-09T03:13:53.767Z · branch `claude/daily-reporter-improvements-8vc9ct` (137 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 346 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 220 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,24 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 59: smart-e's POST /api/orders never validated per-item price/qty — crash on non-numeric, and negative qty *inflated* stock (run-48 data-integrity class, order path)
+
+PR #79: GitHub MCP reconnected this cycle — verified via the real commit-status API for the first time since it dropped: all 3 Vercel checks `success` on head `c193a09` (which includes runs 57 & 58). The runs 57/58 "couldn't confirm via API" flag is now cleared.
+
+**Confirmed clean first (logged so they aren't re-swept):** openthai-ai's `prerender-meta.mjs` covers all 19 public routes with unique titles/descriptions and now matches `sitemap.xml` exactly (19 + `/` homepage = 20) after run 58. Portal consent is enforced server-side (`portal-leads.js` rejects `consent !== true`). smart-e's auth model is solid: every API route is behind `_require_admin()` (fails closed 503 if `ADMIN_KEY` unset, timing-safe `hmac.compare_digest`), and the LINE webhook uses timing-safe signature verification that fails closed on an empty secret. Public pages use almost no `<img>` (emoji/CSS), and the ones present have alt.
+
+**Then found the real bug in smart-e (`server.py` `_create_order`) — the run-48 "no crash is not no bug" class on a path runs 48/54 never covered** (run 54 only checked the *frontend* rejects an empty item list; the backend numeric validation was never there). The handler validated that `items` is a list of dicts but never the `price`/`qty` values inside each item:
+- `price:"abc"` → `total = sum(item['price'] * item['qty'])` hits `int + str` → **uncaught TypeError → empty response** (the same crash class this function's own comments already guard against for the items *shape*).
+- `qty:-5` → `UPDATE products SET stock=MAX(0,stock-(-5))` = **stock+5**: placing an "order" *inflates* product stock, writes a negative order line, and pushes a negative `total` into `orders.total`, dashboard revenue, and `customers.total_spent`.
+
+**Fix:** coerce+validate each item like `_create_product` — `price` float ≥ 0, `qty` int ≥ 1, else 400; `total` and the stock decrement then use the coerced values. (smart-e has no DECISIONS_LOG, so the full write-up is in the commit message per the standing order.)
+
+**Verified live (booted smart-e with an admin key, isolated DB):** created a product (stock 10); valid order (100×2) → **201**, stock → **8**; `price:"abc"` → **400** with a readable Thai error (no crash / no empty response); `qty:-5` → **400** and stock stayed **8** (not inflated to 13). `server.py` parses; only that file changed. Pushed to smart-e's `claude/daily-reporter-improvements-8vc9ct` as `b4e26ee` (PR #1).
+
+7 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 58: the personal, ref-gated affiliate dashboard was in the sitemap (told Google to index an empty ref-code shell) — made it consistent with every other personal surface
 
@@ -2314,54 +2332,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 4693f87 fix(seo): stop advertising the personal affiliate dashboard for indexing (21 seconds ago)
-- abef010 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- 6246daf fix(seo): correct homepage JSON-LD — real prices + drop fabricated rating (5 minutes ago)
-- 42b4ae1 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 329ad82 fix(a11y): keep <html lang> in sync with the displayed language on every path (5 hours ago)
-- a0c673e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 26089fd docs: log run 55 -- rate-limited public ref_code-keyed affiliate read endpoints (name+earnings enumeration); affiliate-auth question escalated to owner (5 hours ago)
-- 808095a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- c193a09 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- 4693f87 fix(seo): stop advertising the personal affiliate dashboard for indexing (58 minutes ago)
+- abef010 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 6246daf fix(seo): correct homepage JSON-LD — real prices + drop fabricated rating (62 minutes ago)
+- 42b4ae1 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 329ad82 fix(a11y): keep <html lang> in sync with the displayed language on every path (6 hours ago)
+- a0c673e chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 26089fd docs: log run 55 -- rate-limited public ref_code-keyed affiliate read endpoints (name+earnings enumeration); affiliate-auth question escalated to owner (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
