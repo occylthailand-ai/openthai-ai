@@ -109,6 +109,23 @@ export function createProducers(dataDir) {
     return { ok: true, email: e, status };
   }
 
+  // ลบข้อมูลผู้ผลิตตามอีเมลจนหมด (สิทธิ์ลบข้อมูล PDPA มาตรา 33) — ลบทั้งฝั่ง Supabase และไฟล์
+  // เดิม /api/privacy/erasure/confirm ลบแค่ waitlist + consents ทำให้ผู้ที่สมัครเป็นผู้ผลิต
+  // (เก็บชื่อบริษัท/ผู้ติดต่อ/เบอร์/อีเมล) ถูกแจ้งว่า "ลบข้อมูลแล้ว" ทั้งที่ระเบียนผู้ผลิตยังอยู่ครบ
+  async function eraseByEmail(email) {
+    const e = (email || '').toString().trim().toLowerCase();
+    if (!isEmail(e)) return { ok: false, removed: 0 };
+    let removed = 0;
+    if (useSB) {
+      try {
+        const rows = await sbReq('DELETE', '/producers', { params: { email: `eq.${e}` }, prefer: 'return=representation' });
+        removed += Array.isArray(rows) ? rows.length : 0;
+      } catch (err) { console.warn('[producers] Supabase erase failed, using file:', err.message); }
+    }
+    if (store[e]) { delete store[e]; saveFile(); removed += 1; }
+    return { ok: true, removed };
+  }
+
   // แก้ไขข้อมูลสินค้าของผู้ผลิตที่มีอยู่แล้ว (admin เท่านั้น) — เดิมไม่มีทางแก้ไข
   // product_name/price/stock/description ของผู้ผลิตที่อนุมัติแล้วเลย นอกจากให้ผู้ผลิต
   // ส่งใบสมัครซ้ำผ่าน /api/producers/apply ซึ่งจะรีเซ็ต status กลับเป็น 'pending' ทุกครั้ง
@@ -240,5 +257,5 @@ export function createProducers(dataDir) {
     if (store[e] && store[e].stock != null) { store[e].stock = Math.max(0, store[e].stock - n); saveFile(); }
   }
 
-  return { router, register, all, summary, setStatus, updateListing, catalog, decrementStock, CATEGORIES };
+  return { router, register, all, summary, setStatus, updateListing, catalog, decrementStock, eraseByEmail, CATEGORIES };
 }

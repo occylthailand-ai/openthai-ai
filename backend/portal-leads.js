@@ -122,5 +122,26 @@ export function createPortalLeads(dataDir, opts = {}) {
     return { ok: true, matched };
   }
 
-  return { router, submit, all, unsubscribe, KNOWN_TYPES };
+  // ลบ lead ทุกรายการที่อีเมลตรงกัน ทุก type (สิทธิ์ลบข้อมูล PDPA มาตรา 33) — ทั้ง Supabase และไฟล์
+  // เดิม /api/privacy/erasure/confirm ไม่เคยแตะ portal_leads เลย ทำให้ผู้ที่ส่งฟอร์มผ่าน /portals/*
+  // (เก็บชื่อ/อีเมล/ข้อมูลในฟอร์ม) ถูกแจ้งว่า "ลบข้อมูลแล้ว" ทั้งที่ระเบียน lead ยังอยู่ครบ
+  async function eraseByEmail(email) {
+    const e = (email || '').toString().trim().toLowerCase();
+    if (!isEmailLike(e)) return { ok: false, removed: 0 };
+    let removed = 0;
+    if (useSB) {
+      try {
+        const rows = await sbReq('DELETE', '/portal_leads', { params: { email: `eq.${e}` }, prefer: 'return=representation' });
+        removed += Array.isArray(rows) ? rows.length : 0;
+      } catch (err) { console.warn('[portal-leads] Supabase erase failed, using file:', err.message); }
+    }
+    let fileRemoved = 0;
+    for (const [id, rec] of Object.entries(store)) {
+      if ((rec.email || '').toLowerCase() === e) { delete store[id]; fileRemoved += 1; }
+    }
+    if (fileRemoved > 0) saveFile();
+    return { ok: true, removed: removed + fileRemoved };
+  }
+
+  return { router, submit, all, unsubscribe, eraseByEmail, KNOWN_TYPES };
 }

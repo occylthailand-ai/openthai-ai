@@ -6114,17 +6114,40 @@ app.post('/api/privacy/erasure', rateLimit({ windowMs: 3600000, max: 5 }), async
   res.json({ success: true, message: 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันการลบข้อมูลภายใน 30 วันตาม PDPA' });
 });
 
-app.get('/api/privacy/erasure/confirm', unsubLimiter, (req, res) => {
+app.get('/api/privacy/erasure/confirm', unsubLimiter, async (req, res) => {
   const { email, token } = req.query;
   if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
   const sanitized = String(email).toLowerCase().trim();
   if (token !== unsubToken(sanitized, 'erasure')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
 
+  // PDPA มาตรา 33 — ต้องลบข้อมูลส่วนบุคคลให้ครบทุกที่ที่ funnel เก็บไว้จริง เดิมลบแค่ waitlist +
+  // consents ทำให้คนที่สมัครเป็นผู้ผลิต/พันธมิตร หรือส่งฟอร์ม /portals/* ถูกแจ้งว่า "ลบข้อมูลแล้ว"
+  // ทั้งที่ชื่อ/อีเมล/เบอร์ (และเลขพร้อมเพย์ของ affiliate) ยังอยู่ครบ — คำยืนยันเป็นเท็จและผิด PDPA
   let removed = 0;
   const wIdx = waitlist.findIndex(w => w.email === sanitized);
   if (wIdx >= 0) { waitlist.splice(wIdx, 1); saveWaitlist(waitlist); removed++; }
   const cIdx = consents.findIndex(c => c.email === sanitized);
   if (cIdx >= 0) { consents.splice(cIdx, 1); saveConsents(consents); removed++; }
+
+  // ผู้ผลิต + portal leads (โมดูล dual-mode Supabase/ไฟล์)
+  try { removed += (await producers.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] producers:', e.message); }
+  try { removed += (await portalLeads.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] portalLeads:', e.message); }
+
+  // พันธมิตร (affiliate) — ระเบียนเก็บชื่อ/อีเมล/เบอร์ ลบทั้งไฟล์และ Supabase
+  // หมายเหตุ: ประวัติการถอนเงิน (withdrawals) เป็นบันทึกธุรกรรมการเงิน จึง "ไม่ลบ" ที่นี่ — PDPA
+  // ยกเว้นข้อมูลที่ต้องเก็บตามกฎหมายอื่น (บัญชี/ภาษี); ให้เจ้าของตัดสินใจ scope นี้ (ดู DECISIONS_LOG)
+  const affBefore = affiliates.length;
+  for (let i = affiliates.length - 1; i >= 0; i--) {
+    if ((affiliates[i].email || '').toLowerCase() === sanitized) affiliates.splice(i, 1);
+  }
+  if (affiliates.length < affBefore) {
+    _affFileSave(affiliates);
+    if (_useSB) {
+      try { await _sbReq('DELETE', '/affiliates', { params: { email: `eq.${sanitized}` }, prefer: 'return=minimal' }); }
+      catch (e) { console.error('[erasure] affiliates SB:', e.message); }
+    }
+    removed += (affBefore - affiliates.length);
+  }
 
   addLog('info', 'PDPA', `🗑️ Erasure ยืนยันแล้ว: ${sanitized} — ลบแล้ว ${removed} รายการ`);
   res.send(`<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยืนยันและลบข้อมูลเรียบร้อยแล้ว (${removed} รายการ)</div>`);
