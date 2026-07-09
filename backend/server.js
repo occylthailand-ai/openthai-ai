@@ -352,7 +352,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   const quota = await checkQuota(req);
   if (!quota.allowed) {
     return res.status(429).json({
-      error: `ใช้สิทธิ์ฟรีครบ ${quota.limit} ชิ้นแล้ววันนี้ — อัพเกรดเป็น Pro (฿20/เดือน) เพื่อสร้างไม่จำกัด`,
+      error: `ใช้สิทธิ์ฟรีครบ ${quota.limit} ชิ้นแล้ววันนี้ — อัพเกรดเป็น Pro (฿299/เดือน) เพื่อสร้างไม่จำกัด`,
       code: 'QUOTA_EXCEEDED', plan: 'free', used: quota.used, limit: quota.limit, upgrade_url: '/payment?plan=pro',
     });
   }
