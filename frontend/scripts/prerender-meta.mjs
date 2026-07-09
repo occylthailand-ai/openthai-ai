@@ -78,3 +78,32 @@ for (const { path, title, desc } of ROUTES) {
   writeFileSync(join(outDir, 'index.html'), html, 'utf8');
   console.log(`[prerender-meta] wrote ${path}/index.html — "${fullTitle}"`);
 }
+
+// ── sitemap.xml (generated from the same ROUTES list) ────────────────────────
+// เดิม sitemap.xml เป็นไฟล์ static ใน public/ ที่ต้องแก้มือ — lastmod ค้างอยู่ที่
+// 2026-05-03 ทั้งไฟล์ทั้งที่โค้ดถูกอัปเดตต่อเนื่อง (search engine ใช้ lastmod จัดลำดับ
+// การ recrawl หน้าจึงถูกดีเลย์) และเป็นสำเนา route list ชุดที่ 3 (คู่กับ ROUTES ที่นี่
+// และ robots.txt) ที่พร้อมจะ drift สร้างจาก ROUTES ตรงนี้แทน — lastmod = วันที่ build
+// เสมอ และชุด URL sync กับ prerender เองอัตโนมัติ
+const today = new Date().toISOString().slice(0, 10);
+const LEGAL = new Set(['/privacy', '/terms', '/about', '/contact']);
+const hints = (p) =>
+  p === '/' ? { priority: '1.0', changefreq: 'weekly' }
+  : LEGAL.has(p) ? { priority: '0.5', changefreq: 'monthly' }
+  : { priority: '0.8', changefreq: 'weekly' };
+const sitemapPaths = ['/', ...ROUTES.map((r) => r.path)];
+const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${sitemapPaths.map((p) => {
+  const { priority, changefreq } = hints(p);
+  return `  <url>
+    <loc>${DOMAIN}${p}</loc>
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+    <lastmod>${today}</lastmod>
+  </url>`;
+}).join('\n')}
+</urlset>
+`;
+writeFileSync(join(DIST, 'sitemap.xml'), sitemap, 'utf8');
+console.log(`[prerender-meta] wrote sitemap.xml — ${sitemapPaths.length} urls, lastmod ${today}`);
