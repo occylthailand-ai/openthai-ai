@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T06:17:23.703Z · branch `claude/daily-reporter-improvements-8vc9ct` (145 commit(s) ahead of main)
+Generated: 2026-07-09T07:12:07.549Z · branch `claude/daily-reporter-improvements-8vc9ct` (147 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 355 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 230 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,23 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 63: the privacy policy promised a right-of-access ("ขอดูข้อมูล") with no endpoint behind it — added the data-export endpoint (PDPA §30/§31)
+
+PR #79: run 62's PDPA-erasure fix deployed and settled all-3-Ready (frontend `6dNcTs9e`, backend `5mwuSmJx`, npxn `BenCFGLw`; interleaved Canceled = build-supersede). This cycle continues the PDPA-completeness thread on the same #1 priority.
+
+**Found by reading what the policy claims vs. what exists.** `GET /api/privacy/policy` advertises `rights: ['ขอดูข้อมูล','แก้ไข','ลบ','โอนย้าย','คัดค้าน']` and returns an `erasure_url` — but grep of `/api/privacy/*` shows only `consent`, `erasure`, `erasure/confirm`, `policy`. There was **no access/export endpoint at all**, so the platform advertised a PDPA §30 right-of-access it could not fulfil — the same promise-vs-reality gap the repo's philosophy targets, and a direct parallel to run 62's erasure fix.
+
+**Added (mirrors the email-confirmed erasure flow so it can't become a data-leak vector — anyone typing an email must not be able to pull another person's PII):**
+- `POST /api/privacy/access {email}` → validates, rate-limited 5/hr, emails a tokenised confirm link (HMAC token, type `access`).
+- `GET /api/privacy/access/confirm?email=&token=` → verifies the token, gathers everything held for that email across waitlist, consents, producers, portal_leads, affiliates, withdrawals, and orders, and returns a **downloadable JSON export** (also satisfies data-portability, §31). Unlike erasure this **intentionally includes** the financial records (withdrawals, orders) — a data subject has the right to *see* their own data in full, even where those records are retained against deletion.
+- policy endpoint now returns `access_url` and marks `GAP-003: Right of access / data export endpoint ✅`.
+
+**Verified live (backend booted, file mode, isolated+restored data dir):** registered a producer + affiliate + portal lead under one email; `POST /api/privacy/access` → confirmation message; `GET .../access/confirm` with the valid token → JSON `total_records=3` (producers/portal_leads/affiliates each 1, email present in each); bad token → 403; invalid email → 400; policy now lists `access_url` and GAP-003. `node --check` passes; only `server.js` changed; data dir clean afterwards. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+8 items still pending an owner decision, unchanged (the run-62 financial-record-retention question and the run-61 payment↔order note still stand).
+
+---
 
 ### 2026-07-09 — Hourly loop, run 62: PDPA erasure falsely claimed "ลบข้อมูลแล้ว" while keeping every producer/affiliate/portal-lead record — now erases them for real
 
@@ -2376,54 +2393,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b7edaa5 docs: log run 62 -- PDPA erasure now purges producer/affiliate/portal-lead PII (verified live); financial-record retention escalated to owner (18 seconds ago)
-- 923581d fix(pdpa): erasure now deletes producer/affiliate/portal-lead data, not just waitlist+consents (55 seconds ago)
-- eb4926b chore: sync PROJECT_STATUS.md [skip ci] (66 minutes ago)
-- 1c5eec3 docs: log run 61 -- smart-e _confirm_payment 404 on missing/nonexistent id (verified live); payment->order-status linking noted for owner (66 minutes ago)
-- 5372e8a chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- f07b91a docs: log run 60 -- smart-e cancel-restores-stock + order-status validation (verified live) (2 hours ago)
-- 90d6e6d chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 63338ef docs: log run 59 -- smart-e POST /api/orders per-item price/qty validation (crash + negative-qty stock inflation fixed, verified live) (3 hours ago)
+- 824ff18 feat(pdpa): add right-of-access / data-export endpoint the policy already promised (31 seconds ago)
+- 98f438f chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
+- b7edaa5 docs: log run 62 -- PDPA erasure now purges producer/affiliate/portal-lead PII (verified live); financial-record retention escalated to owner (55 minutes ago)
+- 923581d fix(pdpa): erasure now deletes producer/affiliate/portal-lead data, not just waitlist+consents (56 minutes ago)
+- eb4926b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 1c5eec3 docs: log run 61 -- smart-e _confirm_payment 404 on missing/nonexistent id (verified live); payment->order-status linking noted for owner (2 hours ago)
+- 5372e8a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- f07b91a docs: log run 60 -- smart-e cancel-restores-stock + order-status validation (verified live) (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.7",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -2572,7 +2551,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 262 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8425 | Vercel serverless detection |
+| `server.js` | 8483 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

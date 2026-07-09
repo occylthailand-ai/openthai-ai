@@ -9,6 +9,23 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 63: the privacy policy promised a right-of-access ("ขอดูข้อมูล") with no endpoint behind it — added the data-export endpoint (PDPA §30/§31)
+
+PR #79: run 62's PDPA-erasure fix deployed and settled all-3-Ready (frontend `6dNcTs9e`, backend `5mwuSmJx`, npxn `BenCFGLw`; interleaved Canceled = build-supersede). This cycle continues the PDPA-completeness thread on the same #1 priority.
+
+**Found by reading what the policy claims vs. what exists.** `GET /api/privacy/policy` advertises `rights: ['ขอดูข้อมูล','แก้ไข','ลบ','โอนย้าย','คัดค้าน']` and returns an `erasure_url` — but grep of `/api/privacy/*` shows only `consent`, `erasure`, `erasure/confirm`, `policy`. There was **no access/export endpoint at all**, so the platform advertised a PDPA §30 right-of-access it could not fulfil — the same promise-vs-reality gap the repo's philosophy targets, and a direct parallel to run 62's erasure fix.
+
+**Added (mirrors the email-confirmed erasure flow so it can't become a data-leak vector — anyone typing an email must not be able to pull another person's PII):**
+- `POST /api/privacy/access {email}` → validates, rate-limited 5/hr, emails a tokenised confirm link (HMAC token, type `access`).
+- `GET /api/privacy/access/confirm?email=&token=` → verifies the token, gathers everything held for that email across waitlist, consents, producers, portal_leads, affiliates, withdrawals, and orders, and returns a **downloadable JSON export** (also satisfies data-portability, §31). Unlike erasure this **intentionally includes** the financial records (withdrawals, orders) — a data subject has the right to *see* their own data in full, even where those records are retained against deletion.
+- policy endpoint now returns `access_url` and marks `GAP-003: Right of access / data export endpoint ✅`.
+
+**Verified live (backend booted, file mode, isolated+restored data dir):** registered a producer + affiliate + portal lead under one email; `POST /api/privacy/access` → confirmation message; `GET .../access/confirm` with the valid token → JSON `total_records=3` (producers/portal_leads/affiliates each 1, email present in each); bad token → 403; invalid email → 400; policy now lists `access_url` and GAP-003. `node --check` passes; only `server.js` changed; data dir clean afterwards. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+8 items still pending an owner decision, unchanged (the run-62 financial-record-retention question and the run-61 payment↔order note still stand).
+
+---
+
 ### 2026-07-09 — Hourly loop, run 62: PDPA erasure falsely claimed "ลบข้อมูลแล้ว" while keeping every producer/affiliate/portal-lead record — now erases them for real
 
 PR #79: verified green via the real commit-status API — all 3 Vercel checks `success` on head `eb4926b` (runs 60+61). This cycle's change is a backend fix on openthai-ai itself, so it deploys on #79.
