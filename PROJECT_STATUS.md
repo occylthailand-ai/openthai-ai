@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T03:14:11.522Z · branch `claude/daily-reporter-improvements-8vc9ct` (138 commit(s) ahead of main)
+Generated: 2026-07-09T04:11:21.919Z · branch `claude/daily-reporter-improvements-8vc9ct` (139 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 348 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 222 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 60: smart-e cancelled orders never returned their stock (inventory drifted down permanently), and order-status was writable to any garbage value
+
+PR #79: GitHub MCP dropped again at the start of this cycle (reconnected mid-run). Run 59's openthai-ai deploy (the DECISIONS_LOG/PROJECT_STATUS commit `63338ef`) settled all-3-Ready in the final webhook state; the smart-e fix itself is on smart-e's PR #1, not #79.
+
+**Direct follow-through on run 59** (which fixed `_create_order`'s stock *decrement*): checked the other order write path, `_update_order_status` — two real bugs, both verified by reproduction:
+- **Stock never restored on cancel.** `_create_order` decrements product stock, but cancelling an order only flipped `orders.status` to `'cancelled'` — it never added the reserved units back. So every cancellation drifted real inventory *down* permanently (and the dashboard revenue query already excludes cancelled orders, so the sale correctly vanishes from revenue while the stock stayed gone — a pure loss). Fixed by restoring each `order_items.qty` to `products.stock` on the transition *into* `cancelled`, and re-decrementing on the reverse transition (`cancelled → active`) so toggling status can't mint free stock; the guard only fires on an actual cancel↔active flip, so a repeated `cancelled` PUT is a no-op.
+- **Order status accepted any value.** `status` was written straight from `body.get('status')` with no validation — any arbitrary string, or `None` when the key was absent, was persisted, setting the column to garbage/NULL and corrupting the dashboard queries that key on it (`pending` count, `status!='cancelled'` revenue). Now validated against the real status set the UI can set (`pending/confirmed/shipped/delivered/cancelled`) plus the `paid/processing` values already present in seed/data; anything else → 400. Also returns 404 for a non-existent order instead of a silent success.
+
+**Verified live (booted smart-e with an admin key, isolated DB):** product stock 10; order of qty 3 → stock 7; **cancel → 200 and stock restored to 10**; **un-cancel to pending → 200 and stock back to 7** (symmetric, no free stock); status `'banana'` → 400; missing status → 400; unknown order id → 404; stock unchanged after all rejected calls. `server.py` parses; only that file changed. Pushed to smart-e's `claude/daily-reporter-improvements-8vc9ct` as `737ca0c` (PR #1). (smart-e has no DECISIONS_LOG — full write-up is in the commit message per the standing order.)
+
+7 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 59: smart-e's POST /api/orders never validated per-item price/qty — crash on non-numeric, and negative qty *inflated* stock (run-48 data-integrity class, order path)
 
@@ -2332,54 +2346,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 63338ef docs: log run 59 -- smart-e POST /api/orders per-item price/qty validation (crash + negative-qty stock inflation fixed, verified live) (16 seconds ago)
-- c193a09 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- 4693f87 fix(seo): stop advertising the personal affiliate dashboard for indexing (58 minutes ago)
-- abef010 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- 6246daf fix(seo): correct homepage JSON-LD — real prices + drop fabricated rating (62 minutes ago)
-- 42b4ae1 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 329ad82 fix(a11y): keep <html lang> in sync with the displayed language on every path (6 hours ago)
-- a0c673e chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 90d6e6d chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- 63338ef docs: log run 59 -- smart-e POST /api/orders per-item price/qty validation (crash + negative-qty stock inflation fixed, verified live) (57 minutes ago)
+- c193a09 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 4693f87 fix(seo): stop advertising the personal affiliate dashboard for indexing (2 hours ago)
+- abef010 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 6246daf fix(seo): correct homepage JSON-LD — real prices + drop fabricated rating (2 hours ago)
+- 42b4ae1 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 329ad82 fix(a11y): keep <html lang> in sync with the displayed language on every path (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

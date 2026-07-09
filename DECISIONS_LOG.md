@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 60: smart-e cancelled orders never returned their stock (inventory drifted down permanently), and order-status was writable to any garbage value
+
+PR #79: GitHub MCP dropped again at the start of this cycle (reconnected mid-run). Run 59's openthai-ai deploy (the DECISIONS_LOG/PROJECT_STATUS commit `63338ef`) settled all-3-Ready in the final webhook state; the smart-e fix itself is on smart-e's PR #1, not #79.
+
+**Direct follow-through on run 59** (which fixed `_create_order`'s stock *decrement*): checked the other order write path, `_update_order_status` — two real bugs, both verified by reproduction:
+- **Stock never restored on cancel.** `_create_order` decrements product stock, but cancelling an order only flipped `orders.status` to `'cancelled'` — it never added the reserved units back. So every cancellation drifted real inventory *down* permanently (and the dashboard revenue query already excludes cancelled orders, so the sale correctly vanishes from revenue while the stock stayed gone — a pure loss). Fixed by restoring each `order_items.qty` to `products.stock` on the transition *into* `cancelled`, and re-decrementing on the reverse transition (`cancelled → active`) so toggling status can't mint free stock; the guard only fires on an actual cancel↔active flip, so a repeated `cancelled` PUT is a no-op.
+- **Order status accepted any value.** `status` was written straight from `body.get('status')` with no validation — any arbitrary string, or `None` when the key was absent, was persisted, setting the column to garbage/NULL and corrupting the dashboard queries that key on it (`pending` count, `status!='cancelled'` revenue). Now validated against the real status set the UI can set (`pending/confirmed/shipped/delivered/cancelled`) plus the `paid/processing` values already present in seed/data; anything else → 400. Also returns 404 for a non-existent order instead of a silent success.
+
+**Verified live (booted smart-e with an admin key, isolated DB):** product stock 10; order of qty 3 → stock 7; **cancel → 200 and stock restored to 10**; **un-cancel to pending → 200 and stock back to 7** (symmetric, no free stock); status `'banana'` → 400; missing status → 400; unknown order id → 404; stock unchanged after all rejected calls. `server.py` parses; only that file changed. Pushed to smart-e's `claude/daily-reporter-improvements-8vc9ct` as `737ca0c` (PR #1). (smart-e has no DECISIONS_LOG — full write-up is in the commit message per the standing order.)
+
+7 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 59: smart-e's POST /api/orders never validated per-item price/qty — crash on non-numeric, and negative qty *inflated* stock (run-48 data-integrity class, order path)
 
 PR #79: GitHub MCP reconnected this cycle — verified via the real commit-status API for the first time since it dropped: all 3 Vercel checks `success` on head `c193a09` (which includes runs 57 & 58). The runs 57/58 "couldn't confirm via API" flag is now cleared.
