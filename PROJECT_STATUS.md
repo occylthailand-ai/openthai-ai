@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T10:13:16.924Z · branch `claude/daily-reporter-improvements-8vc9ct` (157 commit(s) ahead of main)
+Generated: 2026-07-09T12:16:45.640Z · branch `claude/daily-reporter-improvements-8vc9ct` (159 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 367 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 242 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 67: producers were the only signup funnel with no confirmation email — now they get one on both signup paths (the #1 growth priority)
+
+PR #79: run 66's email-domain fix deployed all-3-Ready.
+
+**Found by asking which consent funnels actually acknowledge the applicant.** Every signup type sends the applicant an immediate "we received your application" email — consumer / middleman / creator / gov-thai / gov-intl / intl-org / foundation via `PORTAL_WELCOME_COPY`, affiliate via `sendAffiliateWelcome` — **except the producer**, which is the platform's core funnel (the whole point is selling Thai products). A producer who submitted their business + product details heard nothing until (and only if) an admin later approved them. Both producer paths were silent: `/portals/producer` reached `sendPortalWelcomeEmail` but there was no `producer` key in the copy set (so it returned early), and `/join` → `/api/producers/apply` → `producers.register()` never sent anything. This is exactly the promise-vs-reality gap the code's own consumer/middleman comment (line ~972) already established as a bug.
+
+**Fix (2 files, backend):**
+- `server.js`: added a `producer` entry to `PORTAL_WELCOME_COPY` (th/en/zh) — this alone fixes `/portals/producer`. The copy states the *real* flow (pending → admin review → approval email with a manage-listings link), no false "you're live" promise.
+- `producers.js`: added an `onApply` hook to `createProducers`, fired **only** from the `/api/producers/apply` route handler (not from `register()` itself, so the `/portals/producer` path — which also calls `register()` via `handleNewPortalLead` — can't double-send) and only for new applicants, not re-submits. `server.js` wires `onApply` to the same welcome email.
+
+**Verified live end-to-end against a local capture SMTP (wrote a minimal Node SMTP stub since `smtp-server` isn't installed):** a `/join` producer signup sent exactly one 📦 producer-welcome to the applicant; a `/portals/producer` signup sent one welcome to the applicant plus the admin lead-notification; a re-submit of the same `/join` email sent **no** duplicate; neither path double-sends. Decoded the captured MIME subject to confirm it's the producer-welcome copy. `node --check` passes; only the two backend files changed; data dir snapshotted + restored, `git status` clean. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+8 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 66: price-consistency + money-path sweep came back clean; fixed the one real defect found — broken hr@/ir@ email domain on the corporate pages
 
@@ -2435,54 +2451,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c944888 docs: log run 66 -- price/money sweep clean; fixed broken hr@/ir@ email domain; twitter:site handle flagged to owner (20 seconds ago)
-- fe2823d fix: correct broken hr@/ir@ email domain (.ai.com -> openthai.ai) on corporate pages (50 seconds ago)
-- ce2a2c4 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- 577692b docs: log run 65 -- free-quota upgrade prompt corrected from stale ฿20 to real ฿299 Pro price (verified live) (62 minutes ago)
-- 47f0dc2 fix: quota-exceeded upgrade prompt advertised Pro at ฿20/mo — real price is ฿299 (63 minutes ago)
-- 5a7c797 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 62aa2dc docs: log run 64 -- privacy page now has working self-service PDPA access/erasure UI (verified live in browser) (2 hours ago)
-- b32a271 feat(pdpa): let users exercise access/erasure from the privacy page, not just read about it (2 hours ago)
+- 1b5110d feat: send producers a confirmation email on signup like every other funnel (30 seconds ago)
+- c132abe chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- c944888 docs: log run 66 -- price/money sweep clean; fixed broken hr@/ir@ email domain; twitter:site handle flagged to owner (2 hours ago)
+- fe2823d fix: correct broken hr@/ir@ email domain (.ai.com -> openthai.ai) on corporate pages (2 hours ago)
+- ce2a2c4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 577692b docs: log run 65 -- free-quota upgrade prompt corrected from stale ฿20 to real ฿299 Pro price (verified live) (3 hours ago)
+- 47f0dc2 fix: quota-exceeded upgrade prompt advertised Pro at ฿20/mo — real price is ฿299 (3 hours ago)
+- 5a7c797 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -2628,10 +2606,10 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `portal-leads.js` | 148 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 262 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8483 | Vercel serverless detection |
+| `server.js` | 8496 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

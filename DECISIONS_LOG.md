@@ -9,6 +9,22 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 67: producers were the only signup funnel with no confirmation email — now they get one on both signup paths (the #1 growth priority)
+
+PR #79: run 66's email-domain fix deployed all-3-Ready.
+
+**Found by asking which consent funnels actually acknowledge the applicant.** Every signup type sends the applicant an immediate "we received your application" email — consumer / middleman / creator / gov-thai / gov-intl / intl-org / foundation via `PORTAL_WELCOME_COPY`, affiliate via `sendAffiliateWelcome` — **except the producer**, which is the platform's core funnel (the whole point is selling Thai products). A producer who submitted their business + product details heard nothing until (and only if) an admin later approved them. Both producer paths were silent: `/portals/producer` reached `sendPortalWelcomeEmail` but there was no `producer` key in the copy set (so it returned early), and `/join` → `/api/producers/apply` → `producers.register()` never sent anything. This is exactly the promise-vs-reality gap the code's own consumer/middleman comment (line ~972) already established as a bug.
+
+**Fix (2 files, backend):**
+- `server.js`: added a `producer` entry to `PORTAL_WELCOME_COPY` (th/en/zh) — this alone fixes `/portals/producer`. The copy states the *real* flow (pending → admin review → approval email with a manage-listings link), no false "you're live" promise.
+- `producers.js`: added an `onApply` hook to `createProducers`, fired **only** from the `/api/producers/apply` route handler (not from `register()` itself, so the `/portals/producer` path — which also calls `register()` via `handleNewPortalLead` — can't double-send) and only for new applicants, not re-submits. `server.js` wires `onApply` to the same welcome email.
+
+**Verified live end-to-end against a local capture SMTP (wrote a minimal Node SMTP stub since `smtp-server` isn't installed):** a `/join` producer signup sent exactly one 📦 producer-welcome to the applicant; a `/portals/producer` signup sent one welcome to the applicant plus the admin lead-notification; a re-submit of the same `/join` email sent **no** duplicate; neither path double-sends. Decoded the captured MIME subject to confirm it's the producer-welcome copy. `node --check` passes; only the two backend files changed; data dir snapshotted + restored, `git status` clean. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+8 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 66: price-consistency + money-path sweep came back clean; fixed the one real defect found — broken hr@/ir@ email domain on the corporate pages
 
 PR #79: run 65's price fix deployed all-3-Ready.
