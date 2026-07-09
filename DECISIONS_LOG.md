@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 73: fixed PromptPay sales losing referral-channel attribution (run-72 follow-up); flagged an affiliate-commission gap for the owner to decide
+
+PR #79: run 72 deployed all-3-Ready. No actionable webhook events (Vercel status only).
+
+**Continued auditing the shop money path from the frontend side down — all clean, logged so it isn't re-scanned:** `StorePage.jsx` checkout correctly checks `r.success` and shows the server error otherwise (no fake-success), and renders the PromptPay QR from `res.qr_image_url` — which the backend really returns (`createPromptPayCharge` → `charge.source.scannable_code.image.download_uri`, spread into the checkout response), so field names match and the QR shows. The public `/api/shop/products` maps to a **public view that excludes `cost`** (no margin/business-data leak).
+
+**Shipped fix — PromptPay sales lost referral-channel attribution (a small inconsistency the run-72 fix introduced):** the sync **card** path records the checkout's computed `channel` (`ref:<code>` when the buyer arrived via an affiliate link, else the platform) on the inventory `sale` movement, but the async **PromptPay** finalize in the Omise webhook hardcoded `'store'` — the channel was never in the charge metadata, so the webhook had nothing to record. Fix (**reporting/attribution only — no commission/payout logic touched**): include `channel` in both card & PromptPay charge metadata, and have the webhook use `data.metadata.channel` (fallback `'store'`). Verified live (HMAC-signed webhook): a PromptPay checkout with `ref=aff123` → signed `charge.complete` → the `sale` movement now has `platform: 'ref:aff123'` (was `'store'`). `node --check` passes; data dir snapshotted + restored.
+
+**⚠️ Flagged for the owner (NOT acted on — financial/product decision, per standing-order point 8): should affiliates earn commission on marketplace product sales?** Evidence it may be an intended-but-incomplete feature: (1) `StorePage.jsx` already sends `ref` (from `localStorage.otai_ref`) into `/api/shop/checkout`; (2) `/api/shop/checkout` captures it into the movement `channel`; (3) the affiliate program copy explicitly advertises "ขายสินค้าจาก OpenThai.ai และรับค่าคอมมิชชั่นสูงสุด 30%"; (4) `creditAffiliateSale()` exists and is wired for **subscription/quickpay** payments (charge-status poll + webhook) — **but shop checkout never calls it**, so an affiliate who drives a physical-product sale currently earns **nothing**. This is a promise-vs-reality gap on a core growth funnel, but wiring commission = paying real money (rate, timing, idempotency, refund-clawback all need deciding), so it needs the owner's call rather than a guess. This is now item #9 of the pending owner-decision list (the prior 8 unchanged).
+
+---
+
 ### 2026-07-09 — Hourly loop, run 72: PromptPay shop orders were never finalized — customers paid but stock wasn't cut and orders stuck 'new' (real money-path bug)
 
 PR #79: run 71 deployed all-3-Ready. No actionable webhook events (Vercel status only).
