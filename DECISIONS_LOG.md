@@ -9,6 +9,21 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 71: owner asked "which part uses the most tokens" — answered from code, then fixed a real Thai-undercount bug in the AI budget governor it exposed
+
+**Owner question this cycle:** "ส่วนไหนกินโทเค้นเยอะที่สุดของ OpenThaiAi". Answered from the real code (every `callAI(prompt, maxTokens)` site + measured prompt sizes), no guessing:
+- Heaviest **per call**: `/api/ultra-promo` — input prompt ~11,449 chars (~4,600 tok) + `callAI(prompt, 6000)` ≈ **~10,600 tok/call**; `/api/pr/global-content` — `callAI(prompt, 8000)` (biggest single output) ≈ ~9,400 tok/call. Then content-benchmark (4000), pr/daily-content (3000), catalog-ai/generate + skills/kol-brief (3000 each).
+- The marketing/PR skills (big few-shot JSON-template prompts + high `max_tokens`) are the token hogs; the flagship `/api/generate` and `/api/chat` are **light** (1024 output).
+- Honest caveat given to owner: these are **per-call** weights from code; true **totals** need runtime request-count logging, which the code alone can't show.
+
+**Real bug the investigation exposed (and fixed this cycle):** the Smart Model Router already has a cost governor (`routeAI`/`routerState`, exposed at `GET /api/router/status`) that sums estimated tokens → USD → trips **Eco Mode** (cheap-models-only) once `AI_DAILY_BUDGET_USD` (default $1) is hit. But its estimator was `estTokens = len/4` for **every** language. Thai/CJK tokenize far denser (Thai ~1 token per 1–2 chars, not 4), so on this Thai-first platform `spentUsd` accumulated ~2–3× slower than real spend → **Eco Mode fired ~40% too late**, and `/api/router/status` under-reported cost. Rewrote `estTokens` to classify chars: Thai (U+0E00–0E7F) ~1 tok/1.5, CJK ~1 tok/1.3, else ~1 tok/4 (Latin unchanged).
+
+**Verified (pure function, real inputs + boot):** pure-English **1.00×** (unchanged — no regression for Latin), pure-Thai **2.65×**, Chinese **3.00×**, mixed th/en hook 1.68×, real 11,449-char ultra-promo prompt 2863→3702 tok (1.29×, it's mostly Latin JSON scaffold). `node --check` passes; server boots and `GET /api/router/status` still returns valid JSON with the estimate in the hot path. Data dir snapshotted + restored, `git status` clean. Pushed on the branch.
+
+**Offered as a possible follow-up (NOT built — needs owner OK):** real per-endpoint token-usage logging (capture `usage.input_tokens/output_tokens`, aggregate by skill, expose a dashboard) to turn the per-call estimates into measured totals. 8 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 70: the homepage hero waitlist (highest-traffic consent funnel) faked success on network error and gave zero feedback on rejection — fixed
 
 PR #79: run 69 (portal fake-success fix) deployed all-3-Ready. No actionable webhook events (Vercel redeploy status only).
