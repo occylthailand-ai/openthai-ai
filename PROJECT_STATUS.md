@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T18:15:25.502Z · branch `claude/daily-reporter-improvements-8vc9ct` (174 commit(s) ahead of main)
+Generated: 2026-07-09T19:13:12.339Z · branch `claude/daily-reporter-improvements-8vc9ct` (177 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 384 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 387 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 73: fixed PromptPay sales losing referral-channel attribution (run-72 follow-up); flagged an affiliate-commission gap for the owner to decide
+
+PR #79: run 72 deployed all-3-Ready. No actionable webhook events (Vercel status only).
+
+**Continued auditing the shop money path from the frontend side down — all clean, logged so it isn't re-scanned:** `StorePage.jsx` checkout correctly checks `r.success` and shows the server error otherwise (no fake-success), and renders the PromptPay QR from `res.qr_image_url` — which the backend really returns (`createPromptPayCharge` → `charge.source.scannable_code.image.download_uri`, spread into the checkout response), so field names match and the QR shows. The public `/api/shop/products` maps to a **public view that excludes `cost`** (no margin/business-data leak).
+
+**Shipped fix — PromptPay sales lost referral-channel attribution (a small inconsistency the run-72 fix introduced):** the sync **card** path records the checkout's computed `channel` (`ref:<code>` when the buyer arrived via an affiliate link, else the platform) on the inventory `sale` movement, but the async **PromptPay** finalize in the Omise webhook hardcoded `'store'` — the channel was never in the charge metadata, so the webhook had nothing to record. Fix (**reporting/attribution only — no commission/payout logic touched**): include `channel` in both card & PromptPay charge metadata, and have the webhook use `data.metadata.channel` (fallback `'store'`). Verified live (HMAC-signed webhook): a PromptPay checkout with `ref=aff123` → signed `charge.complete` → the `sale` movement now has `platform: 'ref:aff123'` (was `'store'`). `node --check` passes; data dir snapshotted + restored.
+
+**⚠️ Flagged for the owner (NOT acted on — financial/product decision, per standing-order point 8): should affiliates earn commission on marketplace product sales?** Evidence it may be an intended-but-incomplete feature: (1) `StorePage.jsx` already sends `ref` (from `localStorage.otai_ref`) into `/api/shop/checkout`; (2) `/api/shop/checkout` captures it into the movement `channel`; (3) the affiliate program copy explicitly advertises "ขายสินค้าจาก OpenThai.ai และรับค่าคอมมิชชั่นสูงสุด 30%"; (4) `creditAffiliateSale()` exists and is wired for **subscription/quickpay** payments (charge-status poll + webhook) — **but shop checkout never calls it**, so an affiliate who drives a physical-product sale currently earns **nothing**. This is a promise-vs-reality gap on a core growth funnel, but wiring commission = paying real money (rate, timing, idempotency, refund-clawback all need deciding), so it needs the owner's call rather than a guess. This is now item #9 of the pending owner-decision list (the prior 8 unchanged).
+
+---
 
 ### 2026-07-09 — Hourly loop, run 72: PromptPay shop orders were never finalized — customers paid but stock wasn't cut and orders stuck 'new' (real money-path bug)
 
@@ -2534,14 +2546,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- eb8cf6b docs: log run 72 — fixed PromptPay shop orders never finalizing (stock/confirm) (15 seconds ago)
-- ab22a66 fix: PromptPay shop orders were never finalized — stock uncut, order stuck 'new' after real payment (42 seconds ago)
-- ca9088f chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- d1d7e06 docs: log run 71 — answered owner token question; fixed Thai-undercount in AI budget governor (60 minutes ago)
-- 6a33223 fix: token estimate undercounted Thai/CJK, making the AI daily-budget cap fire ~40% too late (61 minutes ago)
-- caa96ff chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 40ab0cf docs: log run 70 — homepage waitlist fake-success fix; consent-funnel sweep complete (4 hours ago)
-- fa175e6 fix: homepage waitlist showed fake success on network error, silent no-op on rejection (4 hours ago)
+- 8b9c030 docs: log run 73 — PromptPay referral-channel attribution fix + flag affiliate-commission-on-shop for owner (17 seconds ago)
+- e7ac871 fix: PromptPay shop sales lost referral-channel attribution (card path kept it) (45 seconds ago)
+- 03819f5 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- eb8cf6b docs: log run 72 — fixed PromptPay shop orders never finalizing (stock/confirm) (58 minutes ago)
+- ab22a66 fix: PromptPay shop orders were never finalized — stock uncut, order stuck 'new' after real payment (58 minutes ago)
+- ca9088f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- d1d7e06 docs: log run 71 — answered owner token question; fixed Thai-undercount in AI budget governor (2 hours ago)
+- 6a33223 fix: token estimate undercounted Thai/CJK, making the AI daily-budget cap fire ~40% too late (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2564,7 +2576,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.1",
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -2730,7 +2742,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8533 | Vercel serverless detection |
+| `server.js` | 8537 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
