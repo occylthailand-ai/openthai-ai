@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T13:22:27.211Z · branch `claude/daily-reporter-improvements-8vc9ct` (165 commit(s) ahead of main)
+Generated: 2026-07-09T14:13:20.738Z · branch `claude/daily-reporter-improvements-8vc9ct` (168 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 375 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 378 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,26 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 70: the homepage hero waitlist (highest-traffic consent funnel) faked success on network error and gave zero feedback on rejection — fixed
+
+PR #79: run 69 (portal fake-success fix) deployed all-3-Ready. No actionable webhook events (Vercel redeploy status only).
+
+**Continued the run-69 consent-funnel audit into the non-portal lead paths.** Checked `/join` (ProducerJoinPage — already correct, checks `d.success`), ContactPage (already correct — success/else/catch all handled), and the homepage hero email capture on `LandingPage`. The last one was broken:
+```js
+const data = await res.json();
+if (data.success) setJoined(true);   // no else
+} catch (_) { setJoined(true); }      // "show success anyway"
+```
+`/api/waitlist` really rejects with **400** (invalid email), **429** (`waitlistLimiter` — only **3/hour per IP**), or **500**, each with a helpful Thai message. Two failure modes, both bad: on any rejection `data.success` is false and there's **no else**, so the visitor gets **zero feedback** — the email isn't saved, nothing tells them, and they may retry straight into the 3/hr limit; and on a network error the catch set `joined=true`, showing the ✅ "you're on the list" screen while **nothing was sent** (the comment literally said "show success anyway"). This is the single highest-traffic consent point on the platform.
+
+**Fix (1 file, `LandingPage.jsx`):** show the joined screen only on a real save (`res.ok && data.success`); otherwise surface the backend's own message (or a localized th/en/zh fallback) in an inline `role="alert"`, keep the form on screen, and clear the error when the visitor edits the email. Guarded the JSON parse against non-JSON bodies.
+
+**Verified live end-to-end (real backend + vite dev proxy + real Chromium via Playwright):** a valid email replaces the hero form with the joined screen and shows no error (lead saved); after exhausting the real 3/hr limiter (statuses 200,200,429) the next submit **keeps the form** and shows `⚠️ ส่งคำขอบ่อยเกินไป กรุณารอแล้วลองใหม่` (the backend's real 429 message) instead of a fake ✅. `npm run build` passes; backend data dir snapshotted + restored, `git status` clean.
+
+**Consent-funnel fake-success sweep is now complete:** all 9 `/portals/*` (run 69) + `/join` + Contact (already correct) + homepage waitlist (this run) either check the real response or were already doing so. 8 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 69: every /portals/* signup showed a fake ✅ success even when the backend rejected the consented lead — fixed all 9
 
@@ -2483,14 +2503,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- f7c72bb docs: log run 69 — fake-success fix across all 9 portal signup funnels (2 minutes ago)
-- a4c35d6 fix: portal signup forms showed fake success when the lead was rejected (2 minutes ago)
-- b7bb512 chore: sync PROJECT_STATUS.md [skip ci] (37 minutes ago)
-- 80f9e46 docs: log run 68 — stored-XSS fix in smart-e admin dashboard (55 minutes ago)
-- 6ef39b0 chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
-- 8308b84 docs: log run 67 -- producers now get a signup confirmation email on both paths (verified live via capture SMTP) (66 minutes ago)
-- 1b5110d feat: send producers a confirmation email on signup like every other funnel (66 minutes ago)
-- c132abe chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 40ab0cf docs: log run 70 — homepage waitlist fake-success fix; consent-funnel sweep complete (24 seconds ago)
+- fa175e6 fix: homepage waitlist showed fake success on network error, silent no-op on rejection (47 seconds ago)
+- 662730e chore: sync PROJECT_STATUS.md [skip ci] (51 minutes ago)
+- f7c72bb docs: log run 69 — fake-success fix across all 9 portal signup funnels (53 minutes ago)
+- a4c35d6 fix: portal signup forms showed fake success when the lead was rejected (53 minutes ago)
+- b7bb512 chore: sync PROJECT_STATUS.md [skip ci] (88 minutes ago)
+- 80f9e46 docs: log run 68 — stored-XSS fix in smart-e admin dashboard (2 hours ago)
+- 6ef39b0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2512,8 +2532,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
+  "uptime_sec": 63,
+  "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
