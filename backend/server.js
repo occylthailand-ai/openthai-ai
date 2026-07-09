@@ -617,13 +617,13 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
     }
     if (method === 'card') {
       if (!token) return res.status(400).json({ success: false, error: 'ต้องการ card token' });
-      const charge = await createCardCharge({ amount_thb: amount, token, description: `Openthai Store — ${p.name} ×${qty}`, metadata: { order_id: orderId, product_id, qty } });
+      const charge = await createCardCharge({ amount_thb: amount, token, description: `Openthai Store — ${p.name} ×${qty}`, metadata: { order_id: orderId, product_id, qty, channel } });
       if (charge.status === 'failed') return res.status(402).json({ success: false, error: charge.failure_message || 'บัตรถูกปฏิเสธ', order_id: orderId });
       if (charge.paid) return finalizePaid({ charge_id: charge.charge_id });
       return res.json({ success: true, paid: false, order_id: orderId, amount, ...charge });
     }
     if (method === 'promptpay') {
-      const charge = await createPromptPayCharge({ amount_thb: amount, description: `Openthai Store — ${p.name} ×${qty}`, metadata: { order_id: orderId, product_id, qty } });
+      const charge = await createPromptPayCharge({ amount_thb: amount, description: `Openthai Store — ${p.name} ×${qty}`, metadata: { order_id: orderId, product_id, qty, channel } });
       return res.json({ success: true, paid: false, order_id: orderId, amount, ...charge, note: 'สแกนจ่ายแล้วสต๊อกจะตัดเมื่อยืนยันการชำระ' });
     }
     return res.status(400).json({ success: false, error: 'method ต้องเป็น card หรือ promptpay' });
@@ -7739,7 +7739,11 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
             const ord = await orders.getOne(shopOrderId);
             if (ord && ord.status === 'new') {
               const q = Math.max(1, parseInt(data.metadata?.qty, 10) || 1);
-              await inventory.adjust(shopProductId, -q, 'sale', `ชำระผ่าน PromptPay (ออเดอร์ ${shopOrderId})`, shopOrderId, 'store');
+              // ใช้ channel จริงจาก metadata (เช่น ref:xxx ที่ลูกค้าเข้ามาผ่านลิงก์ affiliate)
+              // ให้ตรงกับเส้นบัตรที่ finalize แบบ sync — เดิม hardcode 'store' ทำให้ยอด PromptPay
+              // เสีย attribution ช่องทาง/ผู้แนะนำในรายงานสต๊อก
+              const shopChannel = (data.metadata?.channel || 'store').toString().slice(0, 40);
+              await inventory.adjust(shopProductId, -q, 'sale', `ชำระผ่าน PromptPay (ออเดอร์ ${shopOrderId})`, shopOrderId, shopChannel);
               await orders.setStatus(shopOrderId, 'confirmed', 'ชำระเงินผ่าน PromptPay สำเร็จ');
               addLog('info', 'OmiseWebhook', `Shop order finalized: ${shopOrderId} (stock -${q})`);
             }
