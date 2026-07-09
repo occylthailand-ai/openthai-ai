@@ -62,6 +62,7 @@ export default function LandingPage() {
   const [email, setEmail] = useState('');
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [joinErr, setJoinErr] = useState('');
   const [skills, setSkills] = useState(null); // live จาก /api/skills
 
   useEffect(() => { document.title = 'Openthai.ai — สร้างคอนเทนต์ TikTok ปัง ด้วย AI ไทยแท้'; }, []);
@@ -69,9 +70,15 @@ export default function LandingPage() {
 
   const handleFreeStart = () => navigate('/ai-generator');
 
+  // เดิม: setJoined(true) ใน catch (แสดง success ทั้งที่ต่อ backend ไม่ติด) และไม่มี else
+  // เมื่อ data.success เป็น false (400 อีเมลผิด / 429 เกินโควตา 3 ครั้ง/ชม. / 500) ผู้ใช้จึงไม่รู้
+  // ผลอะไรเลย — อีเมลไม่ถูกบันทึกแต่ไม่มี feedback หรือเห็น success ปลอม ตอนนี้: โชว์ success
+  // เฉพาะตอนบันทึกจริง (res.ok && data.success) มิฉะนั้นโชว์ error จริงจาก backend
+  const JOIN_ERR_FALLBACK = { th: 'ลงทะเบียนไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', en: 'Could not sign you up. Please try again.', zh: '注册失败，请重试。' };
   const handleJoin = async (e) => {
     e.preventDefault();
     if (!email || joining) return;
+    setJoinErr('');
     setJoining(true);
     try {
       const res = await fetch(apiUrl('/api/waitlist'), {
@@ -79,10 +86,11 @@ export default function LandingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, source: 'landing-hero' }),
       });
-      const data = await res.json();
-      if (data.success) setJoined(true);
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && data.success) setJoined(true);
+      else setJoinErr((data && data.message) || JOIN_ERR_FALLBACK[lang] || JOIN_ERR_FALLBACK.th);
     } catch (_) {
-      setJoined(true); // fallback — show success anyway
+      setJoinErr(JOIN_ERR_FALLBACK[lang] || JOIN_ERR_FALLBACK.th);
     } finally {
       setJoining(false);
     }
@@ -309,12 +317,15 @@ export default function LandingPage() {
           {joined ? (
             <div style={{ color: '#10b981', fontWeight: 700, fontSize: 15 }}>{t('email.joined')}</div>
           ) : (
-            <form onSubmit={handleJoin} style={{ display: 'flex', gap: 8 }}>
-              <input type="email" placeholder={t('email.placeholder')} value={email} onChange={(e) => setEmail(e.target.value)} required style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 16px', color: '#f8fafc', fontSize: 14, outline: 'none' }} />
-              <button type="submit" disabled={joining} style={{ ...ctaPrimary, whiteSpace: 'nowrap', opacity: joining ? 0.7 : 1 }}>
-                {joining ? t('email.submitting') : t('email.submit')}
-              </button>
-            </form>
+            <>
+              <form onSubmit={handleJoin} style={{ display: 'flex', gap: 8 }}>
+                <input type="email" placeholder={t('email.placeholder')} value={email} onChange={(e) => { setEmail(e.target.value); if (joinErr) setJoinErr(''); }} required style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '12px 16px', color: '#f8fafc', fontSize: 14, outline: 'none' }} />
+                <button type="submit" disabled={joining} style={{ ...ctaPrimary, whiteSpace: 'nowrap', opacity: joining ? 0.7 : 1 }}>
+                  {joining ? t('email.submitting') : t('email.submit')}
+                </button>
+              </form>
+              {joinErr && <div role="alert" style={{ color: '#fca5a5', fontSize: 13, marginTop: 10 }}>⚠️ {joinErr}</div>}
+            </>
           )}
         </div>
       </section>
