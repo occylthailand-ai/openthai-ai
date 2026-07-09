@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-08T21:22:13.850Z · branch `claude/daily-reporter-improvements-8vc9ct` (132 commit(s) ahead of main)
+Generated: 2026-07-09T02:11:45.265Z · branch `claude/daily-reporter-improvements-8vc9ct` (133 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 342 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 216 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,24 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-08 — Hourly loop, run 57: homepage JSON-LD advertised wrong prices (฿20/฿30 vs real ฿299/฿599) and a fabricated 4.9★/1200-review rating to Google
+
+PR #79: run 56's deploys completed normally — all 3 projects reached Ready in the final webhook state (backend `5bVXvAtE`, frontend `FCTAukiA`, npxn `8omrdMem`; the Canceled entries were the usual build-supersede). NOTE: the GitHub MCP server disconnected and now requires re-auth, so I could not confirm via the commit-status API this cycle — relied on the settled Vercel webhooks + local git. Flagging so a later cycle re-verifies via the API once GitHub is reconnected.
+
+**First re-checked the accessibility lens on the consent funnels (form labels) — all clean, no fix needed:** `LanguageSwitcher` already has `role="group"`, `aria-label`, `aria-pressed`, `type="button"`, `aria-hidden` separators. `ProducerJoinPage`'s inputs *look* unlabeled to a naive grep (2 literal `<label>` for 11 inputs) but its `Field` wrapper does `React.cloneElement(children, { id })`, so every `<label htmlFor>` is correctly associated. `AffiliatePage` and `ContactPage` wrap each input inside its `<label>` (valid implicit association). Logged negative so this isn't re-swept.
+
+**Then found the real gap — in the homepage `SoftwareApplication` JSON-LD structured data (`index.html`), and it's a ground-truth/honesty problem, not a missing feature:**
+- **Wrong prices shipped to search engines.** The `offers` block claimed Pro=฿20 and Premier=฿30. The real pricing (`PricingPage.jsx` `PP_META`) is Free ฿0 / Pro ฿299 / Premier ฿599 / Enterprise ฿1299. Google can render Offer prices directly in results, so a user could see "฿20", click through, and hit ฿299 — a misleading ~15× understatement. Enterprise was missing entirely.
+- **Fabricated review rating.** `aggregateRating: { ratingValue: "4.9", reviewCount: "1200" }` — but there is **no** reviews/ratings system anywhere in the backend (grep for aggregateRating/reviewCount/review routes: only an unrelated AI review-reply skill and a memory review-queue). The "1200" was evidently lifted from the "คนไทยกว่า 1,200 คน" (1,200 *users*) marketing line — users are not reviews. Fabricated review markup violates Google's structured-data policy (manual-action risk) and directly contradicts this repo's core philosophy (ground truth over narrative confidence — the same rule that rejected Neo4j/Stripe-escrow).
+
+**Fix:** corrected the four `offers` to the real THB prices (added Enterprise) and removed the fabricated `aggregateRating` block entirely. Chose removal over inventing a plausible rating — keeping fabricated data would be exactly the failure mode CLAUDE.md warns against, and there's no real review corpus to cite.
+
+**Verified with the real build, not by eye:** parsed the JSON-LD out of `index.html` with `JSON.parse` (valid; offers = Free 0 / Pro 299 / Premier 599 / Enterprise 1299; `aggregateRating` absent), then ran `npm run build` and re-parsed both `dist/index.html` and the prerendered `dist/pricing/index.html` — both carry the corrected offers and no rating. Only `frontend/index.html` changed; `git status` clean. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+7 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-08 — Hourly loop, run 56: `<html lang>` never re-synced to the actually-displayed language — screen readers read en/zh content with Thai phonemes (WCAG 3.1.1)
 
@@ -2280,54 +2298,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 329ad82 fix(a11y): keep <html lang> in sync with the displayed language on every path (19 seconds ago)
-- a0c673e chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
-- 26089fd docs: log run 55 -- rate-limited public ref_code-keyed affiliate read endpoints (name+earnings enumeration); affiliate-auth question escalated to owner (7 minutes ago)
-- 808095a chore: sync PROJECT_STATUS.md [skip ci] (7 minutes ago)
-- 1693cd1 fix: rate-limit the two public ref_code-keyed affiliate read endpoints (name + earnings enumeration) (7 minutes ago)
-- 348e05a chore: sync PROJECT_STATUS.md [skip ci] (11 minutes ago)
-- 059960a docs: log run 54 -- money/order flows clean under the fake-success lens; smart-e PR #1 description rewritten to match the real 8-commit diff (11 minutes ago)
-- 96abee2 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 42b4ae1 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 329ad82 fix(a11y): keep <html lang> in sync with the displayed language on every path (5 hours ago)
+- a0c673e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 26089fd docs: log run 55 -- rate-limited public ref_code-keyed affiliate read endpoints (name+earnings enumeration); affiliate-auth question escalated to owner (5 hours ago)
+- 808095a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 1693cd1 fix: rate-limit the two public ref_code-keyed affiliate read endpoints (name + earnings enumeration) (5 hours ago)
+- 348e05a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 059960a docs: log run 54 -- money/order flows clean under the fake-success lens; smart-e PR #1 description rewritten to match the real 8-commit diff (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 394,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

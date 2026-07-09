@@ -9,6 +9,24 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-08 — Hourly loop, run 57: homepage JSON-LD advertised wrong prices (฿20/฿30 vs real ฿299/฿599) and a fabricated 4.9★/1200-review rating to Google
+
+PR #79: run 56's deploys completed normally — all 3 projects reached Ready in the final webhook state (backend `5bVXvAtE`, frontend `FCTAukiA`, npxn `8omrdMem`; the Canceled entries were the usual build-supersede). NOTE: the GitHub MCP server disconnected and now requires re-auth, so I could not confirm via the commit-status API this cycle — relied on the settled Vercel webhooks + local git. Flagging so a later cycle re-verifies via the API once GitHub is reconnected.
+
+**First re-checked the accessibility lens on the consent funnels (form labels) — all clean, no fix needed:** `LanguageSwitcher` already has `role="group"`, `aria-label`, `aria-pressed`, `type="button"`, `aria-hidden` separators. `ProducerJoinPage`'s inputs *look* unlabeled to a naive grep (2 literal `<label>` for 11 inputs) but its `Field` wrapper does `React.cloneElement(children, { id })`, so every `<label htmlFor>` is correctly associated. `AffiliatePage` and `ContactPage` wrap each input inside its `<label>` (valid implicit association). Logged negative so this isn't re-swept.
+
+**Then found the real gap — in the homepage `SoftwareApplication` JSON-LD structured data (`index.html`), and it's a ground-truth/honesty problem, not a missing feature:**
+- **Wrong prices shipped to search engines.** The `offers` block claimed Pro=฿20 and Premier=฿30. The real pricing (`PricingPage.jsx` `PP_META`) is Free ฿0 / Pro ฿299 / Premier ฿599 / Enterprise ฿1299. Google can render Offer prices directly in results, so a user could see "฿20", click through, and hit ฿299 — a misleading ~15× understatement. Enterprise was missing entirely.
+- **Fabricated review rating.** `aggregateRating: { ratingValue: "4.9", reviewCount: "1200" }` — but there is **no** reviews/ratings system anywhere in the backend (grep for aggregateRating/reviewCount/review routes: only an unrelated AI review-reply skill and a memory review-queue). The "1200" was evidently lifted from the "คนไทยกว่า 1,200 คน" (1,200 *users*) marketing line — users are not reviews. Fabricated review markup violates Google's structured-data policy (manual-action risk) and directly contradicts this repo's core philosophy (ground truth over narrative confidence — the same rule that rejected Neo4j/Stripe-escrow).
+
+**Fix:** corrected the four `offers` to the real THB prices (added Enterprise) and removed the fabricated `aggregateRating` block entirely. Chose removal over inventing a plausible rating — keeping fabricated data would be exactly the failure mode CLAUDE.md warns against, and there's no real review corpus to cite.
+
+**Verified with the real build, not by eye:** parsed the JSON-LD out of `index.html` with `JSON.parse` (valid; offers = Free 0 / Pro 299 / Premier 599 / Enterprise 1299; `aggregateRating` absent), then ran `npm run build` and re-parsed both `dist/index.html` and the prerendered `dist/pricing/index.html` — both carry the corrected offers and no rating. Only `frontend/index.html` changed; `git status` clean. Pushed on `claude/daily-reporter-improvements-8vc9ct`.
+
+7 items still pending an owner decision, unchanged.
+
+---
+
 ### 2026-07-08 — Hourly loop, run 56: `<html lang>` never re-synced to the actually-displayed language — screen readers read en/zh content with Thai phonemes (WCAG 3.1.1)
 
 PR #79: run 55's deploys completed normally — verified green via the real commit-status API (all 3 Vercel checks `success` on head `a0c673e`, "Deployment has completed"). The interleaved Building/Canceled webhook entries were the usual build-supersede noise.
