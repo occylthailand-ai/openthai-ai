@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T12:17:07.750Z · branch `claude/daily-reporter-improvements-8vc9ct` (160 commit(s) ahead of main)
+Generated: 2026-07-09T12:44:55.689Z · branch `claude/daily-reporter-improvements-8vc9ct` (162 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 370 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 372 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 68: closed a real stored-XSS in the smart-e admin dashboard reachable by any external LINE user
+
+PR #79 (openthai-ai): run 67's producer-welcome fix deployed all-3-Ready; the only new webhook events were Vercel deploy-status updates (all Ready), nothing actionable.
+
+**This cycle's task was in the `smart-e` repo** (its own repo, own branch — no DECISIONS_LOG there, so the full record is here + in the commit message). Code-scanned `index.html`, the admin dashboard: it builds every table/list/form via `innerHTML` template literals with **no output encoding** (22 `innerHTML` sites, 0 `escapeHtml`). User- and externally-controlled strings were interpolated raw.
+
+**The genuine vulnerability — stored XSS via LINE, reachable by unauthenticated external users:** `server.py`'s `_line_webhook` stores the raw `event.message.text` from any LINE user into `line_messages.message` with no sanitization, and `renderLine()` printed `${m.message}` straight into a `<td>` via `innerHTML`. So a LINE user messaging the Official Account could send `<img src=x onerror=...>` / `<script>` that executes **in the admin's browser with their session** the moment they open the LINE tab. The webhook is HMAC-signature-verified (good — that authenticates it's really from LINE's platform), but the *message body* a real customer types is still attacker-controlled untrusted input. Sender display-name (from the LINE profile) is the same class of input.
+
+**Fix (1 file, `index.html`):** added an `escapeHtml()` helper (escapes `& < > " '`) next to the other formatters and applied it to every user/external-controlled field rendered via `innerHTML` — LINE message text + sender name; `customer_name` across orders/payments/dashboard-recent/TikTok orders; product name/description/category; customer name/email/phone/line_display_name; items_summary/items_json; the category & channel `<option>` lists. Also escaped values interpolated into `value="…"` / `data-*="…"` attributes and `<textarea>` bodies in the product/customer/settings edit forms, so a stored quote can't break out of the attribute (attribute-injection variant of the same bug).
+
+**Verified live with a real browser (not "should work"):** booted the server with a test `LINE_CHANNEL_SECRET` + `ADMIN_KEY`, sent `<img src=x onerror="alert(1)">HELLO_XSS` through the **HMAC-signed** `/api/webhook/line`, confirmed via `/api/line/messages` it is stored **raw** (input path is vulnerable), then rendered the dashboard in real Chromium via Playwright with the admin key seeded in localStorage. Post-fix: the cell `innerHTML` is `&lt;img …&gt;HELLO_XSS`, **zero** `<img>` elements are injected, and **no** alert / `onerror` fires (`window.__XSS_FIRED` stays 0). A bad webhook signature is still rejected 401. Committed + pushed on `claude/daily-reporter-improvements-8vc9ct` (smart-e).
+
+8 items still pending an owner decision, unchanged.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 67: producers were the only signup funnel with no confirmation email — now they get one on both signup paths (the #1 growth priority)
 
@@ -2451,14 +2467,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 8308b84 docs: log run 67 -- producers now get a signup confirmation email on both paths (verified live via capture SMTP) (20 seconds ago)
-- 1b5110d feat: send producers a confirmation email on signup like every other funnel (50 seconds ago)
-- c132abe chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- c944888 docs: log run 66 -- price/money sweep clean; fixed broken hr@/ir@ email domain; twitter:site handle flagged to owner (2 hours ago)
-- fe2823d fix: correct broken hr@/ir@ email domain (.ai.com -> openthai.ai) on corporate pages (2 hours ago)
-- ce2a2c4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 577692b docs: log run 65 -- free-quota upgrade prompt corrected from stale ฿20 to real ฿299 Pro price (verified live) (3 hours ago)
-- 47f0dc2 fix: quota-exceeded upgrade prompt advertised Pro at ฿20/mo — real price is ฿299 (3 hours ago)
+- 80f9e46 docs: log run 68 — stored-XSS fix in smart-e admin dashboard (17 minutes ago)
+- 6ef39b0 chore: sync PROJECT_STATUS.md [skip ci] (28 minutes ago)
+- 8308b84 docs: log run 67 -- producers now get a signup confirmation email on both paths (verified live via capture SMTP) (28 minutes ago)
+- 1b5110d feat: send producers a confirmation email on signup like every other funnel (29 minutes ago)
+- c132abe chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- c944888 docs: log run 66 -- price/money sweep clean; fixed broken hr@/ir@ email domain; twitter:site handle flagged to owner (3 hours ago)
+- fe2823d fix: correct broken hr@/ir@ email domain (.ai.com -> openthai.ai) on corporate pages (3 hours ago)
+- ce2a2c4 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2480,8 +2496,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.5",
+  "uptime_sec": 0,
+  "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
