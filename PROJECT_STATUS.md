@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T12:21:48.827Z · branch `claude/daily-reporter-improvements-8vc9ct` (196 commit(s) ahead of main)
+Generated: 2026-07-10T14:16:07.584Z · branch `claude/daily-reporter-improvements-8vc9ct` (198 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 406 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 408 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 81: fixed a real keyboard/screen-reader accessibility gap in the FAQ accordions on the two public conversion funnels (/affiliate, /pricing)
+
+openthai-ai synced (HEAD c0fa2f8, run-80 SEO structured-data shipped; consistency-check clean, exit 0). Scanned the consent-based registration funnel first (the standing order's #1 frame) and **logged it clean so future cycles don't re-scan:** all 9 `/portals/*` pages enforce consent uniformly (`disabled={!consent || busy}` on submit **and** send `consent` in the payload), the consent checkbox is wrapped in a `<label>` (clickable text + SR-associated), text inputs have `htmlFor`/`id`, and the **backend** enforces it server-side at multiple layers (`registerAffiliateCore` returns a 400 `ต้องยินยอม…` when `consent !== true`; the portal-leads submit path forces `consent:true`). Nothing to fix there.
+
+**Considered but deliberately did NOT ship (scope/risk):** real FAQ sections exist on `/pricing` and `/affiliate`, so `FAQPage` structured data would be a strong Thai rich-result win — but Google requires the JSON-LD to match the *rendered* text exactly, and the two pages use two different multilingual i18n systems (`t('pp.faq.*')` vs an `AF.faqs` `[q,a]` array × 3 languages). Emitting matching JSON-LD from the separate build script would either duplicate that copy (drift risk CLAUDE.md explicitly warns against) or require a multi-file refactor to a shared imported FAQ module — scope-creep for one cycle. Left for a future dedicated pass.
+
+**The real gap shipped (a11y — matches CLAUDE.md's "accessible platform" goal):** the FAQ accordions on both public funnels were bare `<div onClick>` toggles — `AffiliatePage.jsx`'s `FAQItem` (line 280) and `PricingPage.jsx`'s `faq.map` (line 84). A `<div>` with only `onClick` is **not keyboard-operable and not announced to screen readers** (WCAG 2.1.1 Keyboard + 4.1.2 Name/Role/Value): keyboard-only and SR users literally cannot open any FAQ answer on the two pages that most drive conversion. Fix: made each a proper disclosure — `role="button"`, `tabIndex={0}`, `aria-expanded={open}`, an `onKeyDown` that toggles on Enter/Space (with `preventDefault` on Space so it doesn't scroll the page), and `aria-hidden` on the decorative ▲/▼ caret. Purely additive — same visual styling, same mouse behavior.
+
+**Verified by actually running the real components (not "should work"):** added `src/__tests__/faqAccordionA11y.test.jsx` that renders the **real** `AffiliatePage` and `PricingPage` (inside `MemoryRouter` + `ToastProvider`) and drives the DOM — asserts every FAQ disclosure is `tabindex=0` + `aria-expanded=false` collapsed, that **Enter** toggles `aria-expanded` open→closed, that **Space** toggles open **and** returns `preventDefault` (no page scroll), and that the caret flips ▼→▲ on activation. Result: **8/8 new tests pass; full frontend suite 38/38 (was 30), no regression; `npm run build` exits 0.** Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
 
 ### 2026-07-10 — Hourly loop, run 80: enriched SEO structured data (Organization + WebSite entities + per-route BreadcrumbList) — go-to-market
 
@@ -2647,14 +2661,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 4afe6d4 feat(seo): add Organization + WebSite entities and per-route BreadcrumbList structured data (16 seconds ago)
-- 46097d4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 6c1e049 docs(run79): add owner-decision #12 — v9.0 Vercel deploys fail (pre-existing: no build config), and duplicate Vercel projects (2 hours ago)
-- 553a68f chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- a42b9d3 docs(run79): log verification of clean portal→email surface + PDPA-consent fix shipped to OpenThai-AI-v9.0 (3 hours ago)
-- f8573de chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- ef1705b docs(run78): escalate ai_usage_log dead-schema — the token-tracking table the owner asked about already exists but is unwired (3 hours ago)
-- cb1d97d chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- c165e06 fix(a11y): make FAQ accordions on /affiliate and /pricing keyboard-operable (19 seconds ago)
+- c0fa2f8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 4afe6d4 feat(seo): add Organization + WebSite entities and per-route BreadcrumbList structured data (2 hours ago)
+- 46097d4 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 6c1e049 docs(run79): add owner-decision #12 — v9.0 Vercel deploys fail (pre-existing: no build config), and duplicate Vercel projects (4 hours ago)
+- 553a68f chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- a42b9d3 docs(run79): log verification of clean portal→email surface + PDPA-consent fix shipped to OpenThai-AI-v9.0 (5 hours ago)
+- f8573de chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2677,7 +2691,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.6",
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
