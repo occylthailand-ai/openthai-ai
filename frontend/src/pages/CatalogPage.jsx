@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
@@ -63,7 +63,7 @@ export default function CatalogPage() {
   );
 }
 
-function OrderModal({ product, onClose, t }) {
+export function OrderModal({ product, onClose, t }) {
   const [form, setForm] = useState({ customer_name: '', contact: '', qty: 1, address: '', note: '' });
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -71,6 +71,16 @@ function OrderModal({ product, onClose, t }) {
   const [err, setErr] = useState('');
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const total = product.price ? Number(product.price) * (parseInt(form.qty, 10) || 1) : null;
+  // Accessible dialog: close on Escape, move focus into the dialog on open and
+  // restore it to the trigger on close, so keyboard/SR users aren't stranded.
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const prev = document.activeElement;
+    dialogRef.current?.focus();
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); if (prev && prev.focus) prev.focus(); };
+  }, [onClose]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -90,8 +100,8 @@ function OrderModal({ product, onClose, t }) {
 
   return (
     <div onClick={onClose} style={overlay}>
-      <div onClick={(e) => e.stopPropagation()} style={{ ...card, width: '100%', maxWidth: 400, position: 'relative' }}>
-        <button onClick={onClose} aria-label="close" style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#7c8797', fontSize: 22, cursor: 'pointer' }}>×</button>
+      <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={product.product_name || t('mk.cat.order') || 'สั่งซื้อสินค้า'} onClick={(e) => e.stopPropagation()} style={{ ...card, width: '100%', maxWidth: 400, position: 'relative', outline: 'none' }}>
+        <button onClick={onClose} aria-label={t('mk.close') || 'ปิด'} style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#7c8797', fontSize: 22, cursor: 'pointer' }}>×</button>
         {done ? (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             <div style={{ fontSize: 44, marginBottom: 8 }}>🎉</div>

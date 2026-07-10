@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-10 — Hourly loop, run 83: the checkout/order modals (Store + Catalog — the real purchase path) had no dialog semantics, no Escape-to-close, and no focus management
+
+openthai-ai synced (HEAD 1b7fbb7, run-82 footer-a11y shipped; consistency-check clean, exit 0). Continued the accessibility sweep onto the **money path** — the two order modals real buyers use. Scanned the remaining interactive-`<div onClick>` sites and correctly **ruled the backdrop/stopPropagation divs NOT the run-81/82 bug class** (backdrop-click-to-close is a mouse convenience, and each modal already has a real `×` close button), but the scan surfaced the deeper modal-a11y gaps.
+
+**The real gaps fixed (`StorePage.jsx` `BuyModal` + `CatalogPage.jsx` `OrderModal`, two near-identical inline modals):** grep confirmed **neither had `role="dialog"`, `aria-modal`, an Escape handler, or any focus management** anywhere in either file. For a payment/checkout dialog that fails the ARIA dialog pattern three ways: (1) screen readers don't announce it as a modal or convey its boundary, (2) keyboard users can't dismiss with Escape (the near-universal expectation), (3) focus stays behind on the trigger, so SR/keyboard users are stranded outside the dialog content they just opened. Fix (identical in both): added `role="dialog"` + `aria-modal="true"` + an `aria-label` (product name) on the dialog container, a `useEffect` that **moves focus into the dialog on open and restores it to the trigger on unmount**, and a document-level **Escape→onClose** handler (cleaned up on unmount); also gave the `×` button an `aria-label` on the Store side (Catalog already had one) and `tabIndex={-1}`+`outline:none` on the container so programmatic focus doesn't show a stray ring. (A full focus-**trap** — cycling Tab within the dialog — is the one remaining ARIA-dialog nicety not added here; noted as a possible future enhancement. Escape + focus-in + focus-return + role/label covers the highest-impact parts.)
+
+**Verified by rendering the real components (not "should work"):** exported the two modals (named exports; default page exports unchanged) and added `src/__tests__/modalDialogA11y.test.jsx` — renders the **real** `BuyModal` and `OrderModal` and asserts each surfaces via `getByRole('dialog')` with `aria-modal=true` + a non-empty `aria-label`, that focus lands on the dialog on open, that **Escape** calls `onClose` once, and that a **backdrop** click closes while a click **inside** the dialog does not (stopPropagation intact). **8/8 new tests pass (4 assertions × 2 modals); full suite 49/49 (was 41); `npm run build` exits 0.** Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
+
 ### 2026-07-10 — Hourly loop, run 82: homepage footer nav links were mouse-only `<div onClick>` — converted to real `<a href>` links (a11y continuation of run 81)
 
 openthai-ai synced (HEAD acf5b62, run-81 FAQ-a11y shipped; consistency-check clean, exit 0). Continued the keyboard-accessibility sweep from run 81 — same bug class (`<div onClick>` used as an interactive control), now on the highest-traffic public page. Scanned the interactive-div count across the public/funnel pages (LandingPage, Pricing, Catalog, Store, PortalHub, Contact, About, Affiliate) to target real user-facing violations, not force-fit changes.
