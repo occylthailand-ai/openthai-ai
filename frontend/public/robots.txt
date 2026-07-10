@@ -13,6 +13,7 @@ Allow: /portals/gov-intl
 Allow: /portals/intl-org
 Allow: /portals/foundation
 Allow: /catalog
+Allow: /store
 Allow: /join
 Allow: /find-producers
 Allow: /contact

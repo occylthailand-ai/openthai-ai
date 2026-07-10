@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-10 — Hourly loop, run 84: the public `/store` page was invisible to search/social — missing from prerender meta, sitemap, AND robots.txt (SEO / go-to-market)
+
+openthai-ai synced (HEAD 2df945e, run-83 modal-a11y shipped; consistency-check clean, exit 0). Diversified off the a11y sweep. First **verified two funnels clean and logged so they aren't re-scanned:** (1) `TrackOrderPage` (post-purchase tracking + dispute-open, the flow the run-83 modals link to) — `track()` and `openDispute()` both check `d.success`/`d.id` and show the real error otherwise (no fake-success), fetches are wrapped, output is React-escaped; solid. (2) `ProducerJoinPage` (`/join`, the producer-onboarding funnel *outside* `/portals/*`) — already has the PDPA consent checkbox + `disabled={busy || !consent}` + sends `consent` (a prior cycle added it, per its own header comment); no gap.
+
+**The real gap shipped (SEO):** `/store` (the public "Openthai Store", `<Route path="/store">`) is a genuine commerce funnel — linked from the homepage footer (the `<a href>` I fixed in run 82) and the nav — but it was **missing from all three SEO surfaces**: not in `prerender-meta.mjs` ROUTES (so its `dist/store/index.html` served the homepage's TikTok-pitch `<title>`/OG to LINE/Facebook crawlers), not in the generated sitemap, and not in `robots.txt` Allow — even though its sibling `/catalog` had all three. Fix: added one ROUTES entry (`title: 'Openthai Store'`, `desc: 'สินค้าอย่างเป็นทางการจาก Openthai.ai'` — copied verbatim from the page's own `mk.store.title`/`mk.store.sub` Thai i18n) and `Allow: /store` to robots.txt. Because run-76's sitemap and run-80's per-route BreadcrumbList are both generated from that same ROUTES list, this one entry auto-propagates to the sitemap + a Home›Openthai Store breadcrumb; adding it to robots.txt too preserves run-76's **"sitemap URL set == robots Allow list"** invariant.
+
+**Verified by running the build (not "should work"):** `npm run build` → `dist/store/index.html` now has `<title>Openthai Store — Openthai.ai</title>`, the matching description, `canonical`/`og:url` = `https://www.openthai-ai.com/store`, and two valid JSON-LD blocks (the inherited `@graph[Organization,WebSite,SoftwareApplication]` + a `BreadcrumbList` หน้าแรก›Openthai Store); `/store` now appears in `dist/sitemap.xml`; a script confirmed the **invariant holds** — sitemap 21 URLs vs robots Allow 21, both-way diff empty (was 20/20). Full frontend suite **49/49**, no regression (build-config change only). Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
+
 ### 2026-07-10 — Hourly loop, run 83: the checkout/order modals (Store + Catalog — the real purchase path) had no dialog semantics, no Escape-to-close, and no focus management
 
 openthai-ai synced (HEAD 1b7fbb7, run-82 footer-a11y shipped; consistency-check clean, exit 0). Continued the accessibility sweep onto the **money path** — the two order modals real buyers use. Scanned the remaining interactive-`<div onClick>` sites and correctly **ruled the backdrop/stopPropagation divs NOT the run-81/82 bug class** (backdrop-click-to-close is a mouse convenience, and each modal already has a real `×` close button), but the scan surfaced the deeper modal-a11y gaps.

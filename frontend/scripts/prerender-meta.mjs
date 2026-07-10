@@ -46,6 +46,12 @@ const ROUTES = [
   { path: '/pricing', title: 'เลือกแพ็กเกจที่ใช่สำหรับคุณ', desc: 'ทดลองฟรี ไม่ต้องผูกบัตร • ยกเลิกได้ทุกเมื่อ' },
   { path: '/affiliate', title: 'โปรแกรม Affiliate', desc: 'แนะนำ Openthai.ai ให้เพื่อน Creator ไทย — เมื่อลูกค้าชำระเสร็จและแพลตฟอร์มโอนเงินส่วนต่างมาให้เรา เราโอนค่าคอมมิชชั่นให้คุณทุกวันจันทร์ โปร่งใส ไม่มีเงื่อนไขซ่อน' },
   { path: '/catalog', title: 'สินค้าไทยจากผู้ผลิตโดยตรง', desc: 'เลือกสินค้า → สั่งซื้อ → ผู้ผลิตติดต่อกลับเพื่อยืนยันและจัดส่ง' },
+  // /store (public "Openthai Store") is linked from the homepage footer + nav and is a real
+  // commerce funnel, but was never in this list, robots.txt, or the sitemap — so sharing it on
+  // LINE/Facebook showed the homepage's TikTok pitch. title/desc copied verbatim from the page's
+  // own mk.store.title / mk.store.sub (Thai default). Also added to robots.txt Allow to keep the
+  // sitemap URL set == robots Allow list invariant (see run 76).
+  { path: '/store', title: 'Openthai Store', desc: 'สินค้าอย่างเป็นทางการจาก Openthai.ai' },
   { path: '/join', title: 'เอาสินค้าคุณมาขายกับครีเอเตอร์ทั่วไทย', desc: 'สังกัด Openthai.ai ฟรี — ให้ครีเอเตอร์กว่า 1,200 คนช่วยสร้างคอนเทนต์ + ดันยอดขายสินค้าคุณ จ่ายค่าคอมเฉพาะเมื่อขายได้' },
   { path: '/find-producers', title: 'หาผู้ผลิตสินค้าไทยที่ใช่', desc: 'ครีเอเตอร์หาสินค้ามาโปรโมต · ลูกค้าหาของจากผู้ผลิตโดยตรง' },
   { path: '/about', title: 'เกี่ยวกับเรา', desc: 'ทีมงานเบื้องหลัง Openthai.ai และความเชี่ยวชาญที่อยู่เบื้องหลังแพลตฟอร์ม' },
