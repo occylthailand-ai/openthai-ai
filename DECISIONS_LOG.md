@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-10 — Hourly loop, run 88: turned the hand-maintained SEO invariant (sitemap == robots Allow, all-public) into an automated regression-guard test + single source of truth
+
+openthai-ai synced (HEAD f2721a6, run-87 `/earn` SEO shipped; consistency-check clean, exit 0). Run 87 (and 76, 84) each **manually** diffed the prerender ROUTES list against robots.txt and against the auth-gated routes before shipping a new public page. That manual cross-check is exactly the "hand-maintained thing that silently drifts" CLAUDE.md warns against — the moment a future change adds a page to the sitemap but forgets `robots.txt` (or advertises an auth-gated page), the drift ships silently as a real SEO defect. This run **codifies the check** so it can't.
+
+**Two structural facts made it worth doing, both verified first (grep, not assumed):** (1) the canonical route list lived **inside** `scripts/prerender-meta.mjs`, which reads `dist/index.html` at import time — so no test could import the real list without a build. (2) The "sitemap URL set == robots Allow list" invariant + "every advertised path is a real PUBLIC route" were only ever enforced by me remembering to run a diff by hand.
+
+**Shipped (build-config/test only — zero runtime/behavior change, verified below):**
+- Extracted `DOMAIN` + `ROUTES` verbatim into a new side-effect-free module `frontend/scripts/seo-routes.mjs`; `prerender-meta.mjs` now imports them (single source of truth — the build script and the test consume the identical list). Build output is byte-identical.
+- New `frontend/src/__tests__/seoInvariants.test.js` (5 tests) pins: sitemap set (`ROUTES` + `/`) **exactly equals** robots `Allow:` list; no advertised path is also `Disallow:`; **every advertised path is a public route in `App.jsx`** (regex-checks the `<Route>` element does NOT redirect to `/login` — advertising an auth-gated page makes Google index a login redirect / soft-404); every route has non-empty title+desc for OG tags; `DOMAIN` is the https origin robots' `Sitemap:` directive points at.
+
+**Verified by running, not "should work":** confirmed the current tree satisfies all three invariants first (both-way diff of ROUTES vs robots Allow = IDENTICAL, 21 paths; all 21 map to public `<Route>`s with no `/login` redirect). Then proved the guard is **non-vacuous** — ran its auth-gated regex against a real gated route (`/skills-catalog`) → correctly detected the `/login` redirect; against `/store` → correctly passed. `npx vitest run` **56/56** (was 51; +5 new). `npm run build` → all 21 prerender pages + 22-url sitemap emitted identically after the extraction. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+**Owner-decision items unchanged** (#9 affiliate-commission-on-shop, #10 dispute-split, #11 AI-usage-log migration-applied?, #12 v9.0 build-out, + soft: index app/tool surfaces like `/skills-catalog`?). Nothing here touches them.
+
 ### 2026-07-10 — Hourly loop, run 87: systematic prerender-coverage audit found `/earn` (a homepage hero CTA) invisible to search/social — added it; deliberately left `/skills-catalog` for the owner
 
 openthai-ai synced (HEAD 02fbc17, run-86 webhook-hardening shipped; consistency-check clean, exit 0). Followed up run 84's `/store` find with a **systematic** cross-check instead of a one-off: diffed the prerender ROUTES list against robots.txt's Disallow set and against every `navigate('/x')` on the public marketing pages, to surface any *other* public page that's linked but has neither prerendered meta nor an index directive. Two candidates fell out: `/earn` and `/skills-catalog`.
