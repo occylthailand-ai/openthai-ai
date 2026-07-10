@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-10 — Hourly loop, run 86: hardened both signed-webhook signature checks to constant-time comparison (payment + LINE) — backend security
+
+openthai-ai synced (HEAD dc842f6, run-85 focus-trap shipped; consistency-check clean, exit 0). Diversified from the frontend sweep to the **backend money path**. Audited the Omise payment webhook (`/api/payment/webhook`) end-to-end and **logged the parts that are already correct** so they aren't re-scanned: it uses `express.raw` + a raw-buffer HMAC (the global JSON parser is correctly skipped for it, server.js:125), `verifyOmiseWebhook` **fails closed** when `OMISE_WEBHOOK_SECRET` is unset (returns false + logs — no forged-payment bypass), and the handler is idempotent (`!rec.paid_at` guard before granting entitlements / crediting affiliates / finalizing shop orders). Solid.
+
+**The real gap fixed (defense-in-depth on a payment path):** both signed webhooks compared the HMAC with a plain `===` / `!==` — **non-constant-time**. Constant-time comparison via `crypto.timingSafeEqual` is the established standard for webhook signatures (Stripe/GitHub/LINE SDKs all mandate it) because a plain string compare leaks, through response timing, how many leading bytes of the expected HMAC matched — a side channel an attacker can use to forge a signature byte-by-byte. Low practical exploitability over a network, but it's a recognized best-practice gap on the endpoint that grants paid entitlements + credits affiliate commissions, so worth closing. Fixes:
+- `omise-payment.js` `verifyOmiseWebhook`: import `timingSafeEqual`; compare the hex HMACs constant-time, rejecting a length mismatch first (timingSafeEqual throws on unequal lengths) and guarding non-string input — still fails closed on missing secret.
+- `server.js` `/api/line/webhook`: same constant-time compare on the base64 HMAC (its secret-absent skip is left as the documented dev-mode choice — lower severity since LINE events aren't a money path).
+
+**Verified by unit-testing the real exported function (not "should work"):** a standalone ESM harness imported the actual `verifyOmiseWebhook` and asserted **10/10**: a correctly-computed HMAC is accepted; a tampered one, a wrong-**length** one (the case that would throw without the length guard), an empty one, an `undefined` one, and a valid HMAC-for-a-different-body are all rejected; and with the secret unset it fails closed. Also verified the identical constant-time pattern on **base64** digests (LINE's form) — valid accepted, tampered + wrong-length rejected without throwing. Both files pass `node --check`. (Backend has no committed test runner, so — as with the smart-e fixes in runs 74–75 — the verification harness was run live but not committed.) Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
+
 ### 2026-07-10 — Hourly loop, run 85: completed the checkout-modal focus-trap (the piece explicitly deferred in run 83) via a shared `useDialog` hook
 
 openthai-ai synced (HEAD 75cc988, run-84 store-SEO shipped; consistency-check clean, exit 0). First **verified two more flows clean and logged so they aren't re-scanned:** (1) `DisputeTrackPage` (`/dispute`, the status page the run-83 checkout-success path links to) — `check()` verifies `d.success`, shows the real error otherwise, fetch wrapped, output React-escaped; solid. (2) **Affiliate ref-code case consistency** (a suspected attribution bug) — traced the whole path: `genRefCode()` uppercases (name `.toUpperCase()` + random `.toUpperCase()`), portal/auto signups get `AFF######` (uppercase), the backend stores `finalCode` and matches `a.ref_code === ref` exactly, and `AffiliateDashboard` `.toUpperCase()`s the lookup input — so every real code is uppercase end-to-end; **no mismatch** (and `buildRefLink`, which uppercases, turned out to be a *test-file-local helper*, not app code). No bug.

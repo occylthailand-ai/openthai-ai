@@ -10,7 +10,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import cron from 'node-cron';
 import https from 'https';
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { openapiSpec } from './openapi.js';
 import { handleMcp } from './mcp-handler.js';
 import { createMemorySystem } from './vector-memory.js';
@@ -7972,7 +7972,11 @@ app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (
   // Signature check (skip if no secret configured — dev mode)
   if (process.env.LINE_CHANNEL_SECRET && signature) {
     const expected = createHmac('sha256', process.env.LINE_CHANNEL_SECRET).update(rawBodyBuf).digest('base64');
-    if (signature !== expected) {
+    // Constant-time comparison (same rationale as the Omise webhook); guard the
+    // length first since timingSafeEqual throws on unequal-length buffers.
+    let ok = false;
+    try { ok = signature.length === expected.length && timingSafeEqual(Buffer.from(signature), Buffer.from(expected)); } catch { ok = false; }
+    if (!ok) {
       addLog('warn', 'LINE', 'Webhook signature mismatch — ignored');
       return;
     }

@@ -2,7 +2,7 @@
 // PromptPay QR · Credit Card · Subscription Billing
 // Docs: https://docs.opn.ooo/
 
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 const OMISE_API_URL = 'https://api.omise.co';
 
@@ -144,7 +144,16 @@ export function verifyOmiseWebhook(rawBody, signatureHeader) {
     return false;
   }
   const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
-  return signatureHeader === expected;
+  const provided = typeof signatureHeader === 'string' ? signatureHeader : '';
+  // Constant-time comparison so the expected HMAC can't be recovered via a
+  // response-timing side channel. timingSafeEqual requires equal-length
+  // buffers, so a length mismatch is rejected up front (and can't throw).
+  if (provided.length !== expected.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+  } catch {
+    return false;
+  }
 }
 
 // ── Create Omise Plans (run once at setup) ─────────────────────────────────────
