@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-10 — Hourly loop, run 81: fixed a real keyboard/screen-reader accessibility gap in the FAQ accordions on the two public conversion funnels (/affiliate, /pricing)
+
+openthai-ai synced (HEAD c0fa2f8, run-80 SEO structured-data shipped; consistency-check clean, exit 0). Scanned the consent-based registration funnel first (the standing order's #1 frame) and **logged it clean so future cycles don't re-scan:** all 9 `/portals/*` pages enforce consent uniformly (`disabled={!consent || busy}` on submit **and** send `consent` in the payload), the consent checkbox is wrapped in a `<label>` (clickable text + SR-associated), text inputs have `htmlFor`/`id`, and the **backend** enforces it server-side at multiple layers (`registerAffiliateCore` returns a 400 `ต้องยินยอม…` when `consent !== true`; the portal-leads submit path forces `consent:true`). Nothing to fix there.
+
+**Considered but deliberately did NOT ship (scope/risk):** real FAQ sections exist on `/pricing` and `/affiliate`, so `FAQPage` structured data would be a strong Thai rich-result win — but Google requires the JSON-LD to match the *rendered* text exactly, and the two pages use two different multilingual i18n systems (`t('pp.faq.*')` vs an `AF.faqs` `[q,a]` array × 3 languages). Emitting matching JSON-LD from the separate build script would either duplicate that copy (drift risk CLAUDE.md explicitly warns against) or require a multi-file refactor to a shared imported FAQ module — scope-creep for one cycle. Left for a future dedicated pass.
+
+**The real gap shipped (a11y — matches CLAUDE.md's "accessible platform" goal):** the FAQ accordions on both public funnels were bare `<div onClick>` toggles — `AffiliatePage.jsx`'s `FAQItem` (line 280) and `PricingPage.jsx`'s `faq.map` (line 84). A `<div>` with only `onClick` is **not keyboard-operable and not announced to screen readers** (WCAG 2.1.1 Keyboard + 4.1.2 Name/Role/Value): keyboard-only and SR users literally cannot open any FAQ answer on the two pages that most drive conversion. Fix: made each a proper disclosure — `role="button"`, `tabIndex={0}`, `aria-expanded={open}`, an `onKeyDown` that toggles on Enter/Space (with `preventDefault` on Space so it doesn't scroll the page), and `aria-hidden` on the decorative ▲/▼ caret. Purely additive — same visual styling, same mouse behavior.
+
+**Verified by actually running the real components (not "should work"):** added `src/__tests__/faqAccordionA11y.test.jsx` that renders the **real** `AffiliatePage` and `PricingPage` (inside `MemoryRouter` + `ToastProvider`) and drives the DOM — asserts every FAQ disclosure is `tabindex=0` + `aria-expanded=false` collapsed, that **Enter** toggles `aria-expanded` open→closed, that **Space** toggles open **and** returns `preventDefault` (no page scroll), and that the caret flips ▼→▲ on activation. Result: **8/8 new tests pass; full frontend suite 38/38 (was 30), no regression; `npm run build` exits 0.** Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
+
 ### 2026-07-10 — Hourly loop, run 80: enriched SEO structured data (Organization + WebSite entities + per-route BreadcrumbList) — go-to-market
 
 openthai-ai synced (HEAD 46097d4, run-79's PDPA fix + owner-decision #12 logged; consistency-check clean — every backend env var documented, registries agree). Both main codebases are heavily hardened, so this cycle took the **SEO / go-to-market** frame (explicitly allowed, low-risk, fully verifiable at build time, no owner decision, no production-domain blocker since `DOMAIN` is already a constant in the prerender script).

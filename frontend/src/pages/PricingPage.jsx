@@ -80,15 +80,23 @@ export default function PricingPage() {
       {/* FAQ */}
       <section style={{ maxWidth: 680, margin: '0 auto', padding: '0 5% 80px' }}>
         <h2 style={{ textAlign: 'center', fontSize: 24, fontWeight: 800, marginBottom: 24 }}>{t('pp.faq.title')}</h2>
-        {faq.map(([q, a], i) => (
-          <div key={i} onClick={() => setOpenFaq(openFaq === i ? null : i)}
-            style={{ ...card, marginBottom: 10, cursor: 'pointer', padding: '14px 20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 14 }}>
-              {q} <span style={{ color: '#6366f1' }}>{openFaq === i ? '▲' : '▼'}</span>
+        {faq.map(([q, a], i) => {
+          // role/tabIndex/aria-expanded + Enter/Space handler make this FAQ
+          // disclosure keyboard- and screen-reader-operable (WCAG 2.1.1 Keyboard,
+          // 4.1.2 Role/State); it was a bare <div onClick> (mouse-only).
+          const toggle = () => setOpenFaq(openFaq === i ? null : i);
+          return (
+            <div key={i} role="button" tabIndex={0} aria-expanded={openFaq === i}
+              onClick={toggle}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}
+              style={{ ...card, marginBottom: 10, cursor: 'pointer', padding: '14px 20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 14 }}>
+                {q} <span style={{ color: '#6366f1' }} aria-hidden="true">{openFaq === i ? '▲' : '▼'}</span>
+              </div>
+              {openFaq === i && <div style={{ marginTop: 10, fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{a}</div>}
             </div>
-            {openFaq === i && <div style={{ marginTop: 10, fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{a}</div>}
-          </div>
-        ))}
+          );
+        })}
       </section>
 
       {/* AFFILIATE BANNER */}

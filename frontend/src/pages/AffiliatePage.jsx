@@ -276,9 +276,16 @@ function SectionTitle({ children }) {
 }
 function FAQItem({ q, a }) {
   const [open, setOpen] = useState(false);
+  const toggle = () => setOpen((o) => !o);
+  // role/tabIndex/aria-expanded + Enter/Space handler make this disclosure
+  // keyboard- and screen-reader-operable (WCAG 2.1.1 Keyboard, 4.1.2 Role/State);
+  // it was a bare <div onClick> that only responded to a mouse click.
   return (
-    <div style={{ ...glassCard, marginBottom: 10, cursor: 'pointer', padding: '14px 20px' }} onClick={() => setOpen((o) => !o)}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 14 }}>{q}<span style={{ color: '#6366f1', marginLeft: 8 }}>{open ? '▲' : '▼'}</span></div>
+    <div role="button" tabIndex={0} aria-expanded={open}
+      style={{ ...glassCard, marginBottom: 10, cursor: 'pointer', padding: '14px 20px' }}
+      onClick={toggle}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 14 }}>{q}<span style={{ color: '#6366f1', marginLeft: 8 }} aria-hidden="true">{open ? '▲' : '▼'}</span></div>
       {open && <div style={{ marginTop: 10, fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{a}</div>}
     </div>
   );
