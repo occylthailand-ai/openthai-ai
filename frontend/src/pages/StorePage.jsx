@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import { useDialog } from '../hooks/useDialog';
 
 export default function StorePage() {
   const navigate = useNavigate();
@@ -69,16 +70,9 @@ export function BuyModal({ product, t, onClose }) {
   const [err, setErr] = useState('');
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const total = Number(product.price) * (parseInt(form.qty, 10) || 1);
-  // Accessible dialog: close on Escape, move focus into the dialog on open and
-  // restore it to the trigger on close, so keyboard/SR users aren't stranded.
-  const dialogRef = useRef(null);
-  useEffect(() => {
-    const prev = document.activeElement;
-    dialogRef.current?.focus();
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('keydown', onKey); if (prev && prev.focus) prev.focus(); };
-  }, [onClose]);
+  // Accessible dialog: Escape-to-close, focus-in on open, focus-return on close,
+  // and Tab focus-trap — see hooks/useDialog.
+  const dialogRef = useDialog(onClose);
 
   const submit = async (e) => {
     e.preventDefault();
