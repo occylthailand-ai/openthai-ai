@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T14:20:06.327Z · branch `claude/daily-reporter-improvements-8vc9ct` (200 commit(s) ahead of main)
+Generated: 2026-07-10T15:14:19.267Z · branch `claude/daily-reporter-improvements-8vc9ct` (202 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 410 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 412 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 83: the checkout/order modals (Store + Catalog — the real purchase path) had no dialog semantics, no Escape-to-close, and no focus management
+
+openthai-ai synced (HEAD 1b7fbb7, run-82 footer-a11y shipped; consistency-check clean, exit 0). Continued the accessibility sweep onto the **money path** — the two order modals real buyers use. Scanned the remaining interactive-`<div onClick>` sites and correctly **ruled the backdrop/stopPropagation divs NOT the run-81/82 bug class** (backdrop-click-to-close is a mouse convenience, and each modal already has a real `×` close button), but the scan surfaced the deeper modal-a11y gaps.
+
+**The real gaps fixed (`StorePage.jsx` `BuyModal` + `CatalogPage.jsx` `OrderModal`, two near-identical inline modals):** grep confirmed **neither had `role="dialog"`, `aria-modal`, an Escape handler, or any focus management** anywhere in either file. For a payment/checkout dialog that fails the ARIA dialog pattern three ways: (1) screen readers don't announce it as a modal or convey its boundary, (2) keyboard users can't dismiss with Escape (the near-universal expectation), (3) focus stays behind on the trigger, so SR/keyboard users are stranded outside the dialog content they just opened. Fix (identical in both): added `role="dialog"` + `aria-modal="true"` + an `aria-label` (product name) on the dialog container, a `useEffect` that **moves focus into the dialog on open and restores it to the trigger on unmount**, and a document-level **Escape→onClose** handler (cleaned up on unmount); also gave the `×` button an `aria-label` on the Store side (Catalog already had one) and `tabIndex={-1}`+`outline:none` on the container so programmatic focus doesn't show a stray ring. (A full focus-**trap** — cycling Tab within the dialog — is the one remaining ARIA-dialog nicety not added here; noted as a possible future enhancement. Escape + focus-in + focus-return + role/label covers the highest-impact parts.)
+
+**Verified by rendering the real components (not "should work"):** exported the two modals (named exports; default page exports unchanged) and added `src/__tests__/modalDialogA11y.test.jsx` — renders the **real** `BuyModal` and `OrderModal` and asserts each surfaces via `getByRole('dialog')` with `aria-modal=true` + a non-empty `aria-label`, that focus lands on the dialog on open, that **Escape** calls `onClose` once, and that a **backdrop** click closes while a click **inside** the dialog does not (stopPropagation intact). **8/8 new tests pass (4 assertions × 2 modals); full suite 49/49 (was 41); `npm run build` exits 0.** Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
 
 ### 2026-07-10 — Hourly loop, run 82: homepage footer nav links were mouse-only `<div onClick>` — converted to real `<a href>` links (a11y continuation of run 81)
 
@@ -2673,14 +2685,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 4381d5f fix(a11y): homepage footer nav links were mouse-only divs — make them real <a href> (14 seconds ago)
-- acf5b62 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- c165e06 fix(a11y): make FAQ accordions on /affiliate and /pricing keyboard-operable (4 minutes ago)
-- c0fa2f8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 4afe6d4 feat(seo): add Organization + WebSite entities and per-route BreadcrumbList structured data (2 hours ago)
-- 46097d4 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 6c1e049 docs(run79): add owner-decision #12 — v9.0 Vercel deploys fail (pre-existing: no build config), and duplicate Vercel projects (4 hours ago)
-- 553a68f chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 7977439 fix(a11y): make checkout/order modals real dialogs — Escape-to-close + focus mgmt + role (16 seconds ago)
+- 1b7fbb7 chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
+- 4381d5f fix(a11y): homepage footer nav links were mouse-only divs — make them real <a href> (54 minutes ago)
+- acf5b62 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- c165e06 fix(a11y): make FAQ accordions on /affiliate and /pricing keyboard-operable (59 minutes ago)
+- c0fa2f8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 4afe6d4 feat(seo): add Organization + WebSite entities and per-route BreadcrumbList structured data (3 hours ago)
+- 46097d4 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2702,8 +2714,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 239,
-  "memory_mb": "19.5",
+  "uptime_sec": 1,
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
