@@ -9,6 +9,23 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-10 — Hourly loop, run 78: discovered the token/cost-tracking table the owner asked about (run 71) already EXISTS as dead schema — escalating to wire it up
+
+openthai-ai synced (HEAD cb1d97d, run-77 deployed all-3-Ready). Ran `generate-project-status.mjs` — **no consistency-check failures** (every backend-referenced env var is documented in `.env.example`; skills/routes/migrations registries agree with code). Clean.
+
+**The find (directly closes the loop on run 71's "which part uses the most tokens" question):** migration `backend/migrations/003_ai_usage_log.sql` defines a **complete AI cost-tracking schema** — `ai_usage_log` (per-request row: `endpoint`, `ai_source`, `model_id`, `input_tokens`, `output_tokens`, `cost_usd`, `cost_thb`, `response_ms`, `critic_score`, `user_id`…), `daily_cost_summary`, a `monthly_cost_per_user` view, indexes, and RLS. This is **exactly** the per-endpoint token/cost logging I said (run 71) the platform lacked. But a full-repo grep (`ai_usage_log|daily_cost_summary`) finds **zero** references in any `.js` — **nothing ever writes to or reads these tables.** It's entirely dead schema; the design plainly expects the app to `INSERT` into `ai_usage_log` on each AI call (no DB trigger populates it).
+
+So the answer to run 71 improved: it's not that the platform *can't* log per-endpoint token usage — the table for it was **built and then never connected**.
+
+**Why I'm escalating instead of just wiring it (step 8 + CLAUDE.md "verify before build"):** activating it safely needs facts only the owner has, and the repo's own rules forbid guessing them:
+1. **Is migration 003 actually applied in the live Supabase?** The migration file says verbatim: *"Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project."* If it isn't applied, wiring `INSERT`s would just spew caught errors in prod.
+2. **Scope/granularity:** true per-endpoint logging needs an `endpoint` label threaded through the ~50 `callAI()` sites (or logged at the `routeAI` level at coarser `taskType` granularity). Which does the owner want?
+3. On Vercel **serverless**, a file-mode fallback is useless (ephemeral disk), so this feature only produces value via Supabase — reinforcing that #1 must be answered first.
+
+**Ready to implement the moment the owner confirms:** a fire-and-forget, non-throwing `recordAiUsage()` in `routeAI` (it already computes provider, tokens, and `cost_usd` per call) that INSERTs into `ai_usage_log`, plus a small admin read endpoint / extend `/api/router/status` to surface real per-endpoint totals. This is item **#11** for the owner (the prior 10 unchanged, incl. run-77's dispute-split and run-73's affiliate-commission questions). No code shipped this cycle — the honest blocker is unverified prod migration state, which CLAUDE.md says not to build on.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 77: verification cycle — several modules audited clean; surfaced a real money-path finding for the owner (dispute "แบ่งครึ่ง"/split doesn't actually split)
 
 openthai-ai synced (HEAD fa71772, run-76 deployed all-3-Ready). This cycle turned up no *cleanly-shippable, unblocked* bug — both main codebases are now heavily hardened — so it's an honest verification + escalation cycle rather than a forced change. Logged so future cycles don't re-scan:
