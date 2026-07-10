@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T10:10:26.319Z · branch `claude/daily-reporter-improvements-8vc9ct` (194 commit(s) ahead of main)
+Generated: 2026-07-10T12:21:48.827Z · branch `claude/daily-reporter-improvements-8vc9ct` (196 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 404 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 406 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,22 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 80: enriched SEO structured data (Organization + WebSite entities + per-route BreadcrumbList) — go-to-market
+
+openthai-ai synced (HEAD 46097d4, run-79's PDPA fix + owner-decision #12 logged; consistency-check clean — every backend env var documented, registries agree). Both main codebases are heavily hardened, so this cycle took the **SEO / go-to-market** frame (explicitly allowed, low-risk, fully verifiable at build time, no owner decision, no production-domain blocker since `DOMAIN` is already a constant in the prerender script).
+
+**First verified an existing claim before building on it (CLAUDE.md rule):** the homepage's existing `SoftwareApplication` JSON-LD hardcodes Pro=299 / Premier=599 / Enterprise=1299 THB. Grep of the real `PricingPage.jsx` (`pro:299, premier:599, enterprise:1299`) → **prices match**, so that block is factually correct (no inconsistent-structured-data bug to fix).
+
+**The real gap shipped:** the site had only a bare `SoftwareApplication` node, and the per-route prerendered pages (`/portals/*`, `/pricing`, `/catalog`, …) carried **no page-specific structured data at all** — Google saw no brand/logo entity and no breadcrumbs, so funnel pages appeared in the SERP as bare URLs. Two coherent additions:
+1. **`frontend/index.html`** — expanded the single JSON-LD block into an `@graph` linking the existing `SoftwareApplication` with a new **`Organization`** (name + url + `logo: /icon-512.png`, a real 512×512 square asset that ships in `dist/`) and a **`WebSite`** entity, cross-referenced by `@id`/`publisher`. Because `prerender-meta.mjs` copies the base `index.html` onto every route, all funnel pages now inherit the brand entity + logo. (No `SearchAction` added — there's no verified public search-results URL template, and fabricating one would be exactly the kind of unverified claim CLAUDE.md forbids.)
+2. **`frontend/scripts/prerender-meta.mjs`** — emits a per-route **`BreadcrumbList`** (the one structured-data piece that must differ per page), hierarchy derived from the real path (child portals sit under `/portals`; everything else is one level under home), names reused from the same `ROUTES` titles that drive `<title>`/OG so the crumb matches the page. `JSON.stringify` + a `<`→`<` escape guarantee it can't break out of the `<script>` element.
+
+**Verified by actually running `npm run build` (not "should work"):** base `dist/index.html` → one `@graph[Organization,WebSite,SoftwareApplication]` block that `JSON.parse`s clean; `dist/portals/producer/index.html` → inherited `@graph` **plus** a 3-level breadcrumb (หน้าแรก › ประตูสู่ OpenThai.ai › ทางเข้าผู้ผลิต); `dist/pricing/index.html` → inherited `@graph` + 2-level breadcrumb; all breadcrumb `item` URLs absolute + correct; `icon-512.png` + `og-image.png` confirmed present in `dist/`; `sitemap.xml` still emitted with 20 urls (no regression); **all 30 frontend unit tests pass**. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open for this branch.
+
+Owner-decision list unchanged (12 items, incl. run-79's v9.0-deploy #12, run-78's AI-usage-logging #11, run-77's dispute-split #10, run-73's affiliate-commission-on-shop #9).
+
+---
 
 ### 2026-07-10 — Hourly loop, run 79: verified the whole openthai-ai portal→email surface is already clean; shipped a real PDPA-consent gap fix in OpenThai-AI-v9.0's affiliate-hub form
 
@@ -2631,14 +2647,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 6c1e049 docs(run79): add owner-decision #12 — v9.0 Vercel deploys fail (pre-existing: no build config), and duplicate Vercel projects (58 seconds ago)
-- 553a68f chore: sync PROJECT_STATUS.md [skip ci] (49 minutes ago)
-- a42b9d3 docs(run79): log verification of clean portal→email surface + PDPA-consent fix shipped to OpenThai-AI-v9.0 (49 minutes ago)
-- f8573de chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- ef1705b docs(run78): escalate ai_usage_log dead-schema — the token-tracking table the owner asked about already exists but is unwired (57 minutes ago)
-- cb1d97d chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 43bba22 docs: log run 77 — verification cycle; flag dispute "split" money-path bug for owner (6 hours ago)
-- fa71772 chore: sync PROJECT_STATUS.md [skip ci] (11 hours ago)
+- 4afe6d4 feat(seo): add Organization + WebSite entities and per-route BreadcrumbList structured data (16 seconds ago)
+- 46097d4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 6c1e049 docs(run79): add owner-decision #12 — v9.0 Vercel deploys fail (pre-existing: no build config), and duplicate Vercel projects (2 hours ago)
+- 553a68f chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- a42b9d3 docs(run79): log verification of clean portal→email surface + PDPA-consent fix shipped to OpenThai-AI-v9.0 (3 hours ago)
+- f8573de chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- ef1705b docs(run78): escalate ai_usage_log dead-schema — the token-tracking table the owner asked about already exists but is unwired (3 hours ago)
+- cb1d97d chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2661,7 +2677,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.0",
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
