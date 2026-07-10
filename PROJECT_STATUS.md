@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T09:13:37.628Z · branch `claude/daily-reporter-improvements-8vc9ct` (190 commit(s) ahead of main)
+Generated: 2026-07-10T09:21:42.583Z · branch `claude/daily-reporter-improvements-8vc9ct` (192 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 400 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 402 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 79: verified the whole openthai-ai portal→email surface is already clean; shipped a real PDPA-consent gap fix in OpenThai-AI-v9.0's affiliate-hub form
+
+**openthai-ai — verified clean (logged so future cycles don't re-scan):** chased a suspected "affiliate signups get no confirmation email" gap. `PORTAL_WELCOME_COPY` covers producer/consumer/middleman/creator/gov-thai/gov-intl/intl-org/foundation but **not** affiliate — which *looked* like the same class of gap a prior run fixed for gov/foundation. **Not a bug:** affiliate has its own dedicated `sendAffiliateWelcome()` (called inside `registerAffiliateCore`, backend/server.js:1304) that includes the ref_code + ref_link — richer than the generic copy could be, so affiliate is *intentionally* omitted from `PORTAL_WELCOME_COPY` to avoid a double email. Also re-verified `sendPortalLeadNotification` (the admin-inbox email) already escapes both key and value with `escapeHtml` (server.js:950) — no stored-XSS-into-admin-inbox. Net: the portal email surface is fully hardened; nothing to ship in openthai-ai this cycle. (Minor note, NOT shipped: `sendAffiliateWelcome`/`sendProducerApproval` interpolate `${name}`/`${company}`/`${product_name}` without `escapeHtml`, unlike every other render site — but these emails are delivered only to the applicant's *own* inbox, so it's self-only, not a real vuln; left as-is to avoid fabricating a marginal change.)
+
+**OpenThai-AI-v9.0 — real fix shipped** (`app/affiliate-hub/page.tsx`): this pre-production scaffold's affiliate signup form collected PII (name, email, phone) and POSTed to `/api/affiliate/apply` with **zero PDPA consent** — no checkbox, no `consent` field in the payload, and `grep consent|pdpa|ยินยอม` across the whole repo returned nothing. Two concrete defects: (1) **consent gap** — directly contradicts the standing order's mandatory-consent rule (point 3) and the platform's PDPA-everywhere policy; the real backend `registerAffiliateCore` hard-rejects `consent !== true`, so *every* submission would also have failed. (2) **fake-success looseness** — checked only `data.success`, not `res.ok`, and `await res.json()` on a non-JSON response (e.g. a 404 HTML page — note v9.0 has no `/api/affiliate/apply` route of its own) would throw into the catch as a vague error. Fix: added a required consent checkbox linking to `https://www.openthai-ai.com/privacy`, block submit until checked (guard + `disabled={loading || !consent}`), send `consent` in the body, guard `res.json()` and require `res.ok && data.success` before showing success. Verified: repo has no build tooling (no package.json/tsconfig — README targets "Production Ready Q2 2026"), so ran a standalone `ts.transpileModule` (ReactJSX) check → **0 syntax diagnostics**. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of OpenThai-AI-v9.0 (full detail in that commit message, since that repo has no DECISIONS_LOG).
+
+---
 
 ### 2026-07-10 — Hourly loop, run 78: discovered the token/cost-tracking table the owner asked about (run 71) already EXISTS as dead schema — escalating to wire it up
 
@@ -2621,14 +2629,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- ef1705b docs(run78): escalate ai_usage_log dead-schema — the token-tracking table the owner asked about already exists but is unwired (23 seconds ago)
+- a42b9d3 docs(run79): log verification of clean portal→email surface + PDPA-consent fix shipped to OpenThai-AI-v9.0 (15 seconds ago)
+- f8573de chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
+- ef1705b docs(run78): escalate ai_usage_log dead-schema — the token-tracking table the owner asked about already exists but is unwired (8 minutes ago)
 - cb1d97d chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 43bba22 docs: log run 77 — verification cycle; flag dispute "split" money-path bug for owner (5 hours ago)
 - fa71772 chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
 - 59e473e fix: actually include the sitemap generator (prior commit deleted the static file but not the generator) (10 hours ago)
 - 83f287a chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
-- e5f5bc0 docs: log run 76 — build-time sitemap generation (fresh lastmod); credits.js audited clean (10 hours ago)
-- 9786bba seo: generate sitemap.xml at build time with fresh lastmod instead of a stale hand-maintained file (10 hours ago)
 
 ## Production health (✅ reachable)
 ```json
