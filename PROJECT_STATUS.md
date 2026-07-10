@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T05:08:47.219Z · branch `claude/daily-reporter-improvements-8vc9ct` (189 commit(s) ahead of main)
+Generated: 2026-07-10T09:13:37.628Z · branch `claude/daily-reporter-improvements-8vc9ct` (190 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 272 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 400 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,23 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 78: discovered the token/cost-tracking table the owner asked about (run 71) already EXISTS as dead schema — escalating to wire it up
+
+openthai-ai synced (HEAD cb1d97d, run-77 deployed all-3-Ready). Ran `generate-project-status.mjs` — **no consistency-check failures** (every backend-referenced env var is documented in `.env.example`; skills/routes/migrations registries agree with code). Clean.
+
+**The find (directly closes the loop on run 71's "which part uses the most tokens" question):** migration `backend/migrations/003_ai_usage_log.sql` defines a **complete AI cost-tracking schema** — `ai_usage_log` (per-request row: `endpoint`, `ai_source`, `model_id`, `input_tokens`, `output_tokens`, `cost_usd`, `cost_thb`, `response_ms`, `critic_score`, `user_id`…), `daily_cost_summary`, a `monthly_cost_per_user` view, indexes, and RLS. This is **exactly** the per-endpoint token/cost logging I said (run 71) the platform lacked. But a full-repo grep (`ai_usage_log|daily_cost_summary`) finds **zero** references in any `.js` — **nothing ever writes to or reads these tables.** It's entirely dead schema; the design plainly expects the app to `INSERT` into `ai_usage_log` on each AI call (no DB trigger populates it).
+
+So the answer to run 71 improved: it's not that the platform *can't* log per-endpoint token usage — the table for it was **built and then never connected**.
+
+**Why I'm escalating instead of just wiring it (step 8 + CLAUDE.md "verify before build"):** activating it safely needs facts only the owner has, and the repo's own rules forbid guessing them:
+1. **Is migration 003 actually applied in the live Supabase?** The migration file says verbatim: *"Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project."* If it isn't applied, wiring `INSERT`s would just spew caught errors in prod.
+2. **Scope/granularity:** true per-endpoint logging needs an `endpoint` label threaded through the ~50 `callAI()` sites (or logged at the `routeAI` level at coarser `taskType` granularity). Which does the owner want?
+3. On Vercel **serverless**, a file-mode fallback is useless (ephemeral disk), so this feature only produces value via Supabase — reinforcing that #1 must be answered first.
+
+**Ready to implement the moment the owner confirms:** a fire-and-forget, non-throwing `recordAiUsage()` in `routeAI` (it already computes provider, tokens, and `cost_usd` per call) that INSERTs into `ai_usage_log`, plus a small admin read endpoint / extend `/api/router/status` to surface real per-endpoint totals. This is item **#11** for the owner (the prior 10 unchanged, incl. run-77's dispute-split and run-73's affiliate-commission questions). No code shipped this cycle — the honest blocker is unverified prod migration state, which CLAUDE.md says not to build on.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 77: verification cycle — several modules audited clean; surfaced a real money-path finding for the owner (dispute "แบ่งครึ่ง"/split doesn't actually split)
 
@@ -2604,16 +2621,54 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- cb1d97d chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- 43bba22 docs: log run 77 — verification cycle; flag dispute "split" money-path bug for owner (59 minutes ago)
-- fa71772 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 59e473e fix: actually include the sitemap generator (prior commit deleted the static file but not the generator) (6 hours ago)
-- 83f287a chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- e5f5bc0 docs: log run 76 — build-time sitemap generation (fresh lastmod); credits.js audited clean (6 hours ago)
-- 9786bba seo: generate sitemap.xml at build time with fresh lastmod instead of a stale hand-maintained file (6 hours ago)
-- 78327b2 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- ef1705b docs(run78): escalate ai_usage_log dead-schema — the token-tracking table the owner asked about already exists but is unwired (23 seconds ago)
+- cb1d97d chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 43bba22 docs: log run 77 — verification cycle; flag dispute "split" money-path bug for owner (5 hours ago)
+- fa71772 chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
+- 59e473e fix: actually include the sitemap generator (prior commit deleted the static file but not the generator) (10 hours ago)
+- 83f287a chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
+- e5f5bc0 docs: log run 76 — build-time sitemap generation (fresh lastmod); credits.js audited clean (10 hours ago)
+- 9786bba seo: generate sitemap.xml at build time with fresh lastmod instead of a stale hand-maintained file (10 hours ago)
 
-## Production health (⚠️ HTTP 403)
+## Production health (✅ reachable)
+```json
+{
+  "status": "ok",
+  "version": "2.1.0",
+  "charter_version": 2,
+  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "ai_primary": "✅ Claude Haiku",
+  "ai_fallback": "✅ Gemini Flash Latest",
+  "ai_active": "claude-haiku-4-5-20251001",
+  "google_oauth": true,
+  "affiliates": 0,
+  "waitlist": 0,
+  "agents": 0,
+  "active_agents": 0,
+  "line_oa": true,
+  "elevenlabs": false,
+  "watchdog": "idle",
+  "last_watchdog": null,
+  "system_logs": 2,
+  "uptime_sec": 0,
+  "memory_mb": "19.2",
+  "services": {
+    "news_rag": "✅ Active",
+    "news_rag_refresh": "✅ Auto cache clear every 4h",
+    "competitor_analysis": "✅ Active",
+    "tts": "⚠️ No API Key",
+    "line_oa": "✅ Active",
+    "auto_heal": "✅ Active (every 30 min)",
+    "agent_cron": "✅ Active (every hour)",
+    "watchdog": "✅ Active",
+    "diagnostics": "✅ Active",
+    "persistence": "✅ system_log + agents.json + agent_checkpoint",
+    "vector_memory": "✅ Active (semantic long-term memory)",
+    "webhook_system": "✅ Active (0 registered)",
+    "multi_tenant": "✅ Active (0 tenants)"
+  }
+}
+```
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
