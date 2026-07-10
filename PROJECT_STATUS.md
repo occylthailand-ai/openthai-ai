@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T20:14:40.108Z · branch `claude/daily-reporter-improvements-8vc9ct` (212 commit(s) ahead of main)
+Generated: 2026-07-10T22:15:17.668Z · branch `claude/daily-reporter-improvements-8vc9ct` (214 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 422 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 424 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 90: diversified to the deployed `all-platform-files` dashboard — fixed a real hero-stat-clobber bug (verified in jsdom); otop-ai-landing SEO fix still blocked on owner (domain)
+
+openthai-ai synced (HEAD 1e412c3; consistency-check clean, exit 0). openthai-ai + smart-e are saturated from prior runs, so I swept the remaining in-scope repos. Findings, so future runs don't re-scan:
+- **all-platform-files** — deployed Vercel dashboard (`vercel.json` name `openthai-ai-dashboard`). The 35 `*Onboarding.jsx` files are **self-contained roadmap checklists** (local checkbox state only, no PII/API/credentials — no consent surface). **Real bug found + fixed in `index.html`** (see below).
+- **otop-ai-landing** (from run 89, still open) — real defect: `og:image`/`twitter:image` are **relative** URLs (spec requires absolute → blank Twitter preview, inconsistent LINE/FB), plus no canonical/og:url/sitemap. The correct fix needs the page's **own production domain**, which appears in **no** repo (every CTA points to openthai-ai.com; the landing deploys separately). Guessing a domain would leave previews broken while looking fixed — worse than now. **Asked the owner** (run 89) for the domain; no answer yet, so NOT acted on (won't guess).
+
+**The real bug fixed — `all-platform-files/index.html` hero stat clobber:** the hero advertises **"241 แพลตฟอร์ม"**, but `renderCards()` ran `document.querySelector('.hero-stats .stat:first-child .stat-num').textContent = filtered.length` on **every** render including the initial load — so on page load the headline silently flipped **241 → 93** (the real `platforms[]` array length), and dropped to **0** during a no-match search. The stat is labelled `แพลตฟอร์ม` (a marketing count), not "results", so this corrupted the hero on the most-visited surface. **Fix (index.html only, no domain/deploy change):** removed the hero overwrite so `241` stays as authored (the true cross-file total is the owner's marketing claim — I can't verify it from 515 files, so I did **not** change the number itself); added a dedicated `#resultCount` line above the grid for honest live filter/search feedback (`แสดง N แพลตฟอร์ม`); added an explicit empty-state (`ไม่พบแพลตฟอร์มที่ตรงกับการค้นหา`) instead of a blank grid on no match.
+
+**Verified by running the real page script in jsdom (8/8), not "should work":** hero stays `241` after load and during filtering/empty search; `#resultCount` shows `แสดง 93 แพลตฟอร์ม` initially and `0` on no-match; all 93 cards render; empty-state appears on no match; a `shopee` search narrows the grid. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of **all-platform-files** (full detail in commit `729635b`, since that repo has no DECISIONS_LOG); **draft PR #1** opened against `master`.
+
+**Owner-decision items unchanged** (#9 affiliate-commission-on-shop, #10 dispute-split, #11 migration 003, #12 v9.0 build-out) + the run-89 open question: **what is otop-ai-landing's production domain?** (needed to fix its OG/canonical/sitemap).
 
 ### 2026-07-10 — Hourly loop, run 88: turned the hand-maintained SEO invariant (sitemap == robots Allow, all-public) into an automated regression-guard test + single source of truth
 
@@ -2751,14 +2763,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 7c85023 test(seo): guard sitemap==robots invariant + all-public rule; extract ROUTES to shared module (20 seconds ago)
-- f2721a6 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- 56fc37b seo: add public /earn (homepage hero CTA) to prerender meta, sitemap, robots (59 minutes ago)
-- 02fbc17 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- efea5db security: constant-time comparison for Omise + LINE webhook signatures (63 minutes ago)
-- dc842f6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 6acc17a a11y: add Tab focus-trap to checkout modals via shared useDialog hook (3 hours ago)
-- 75cc988 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- b4e3a9f log: run 90 — fixed all-platform-files dashboard hero-stat clobber; otop-ai-landing SEO still blocked on owner domain (15 seconds ago)
+- 1e412c3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 7c85023 test(seo): guard sitemap==robots invariant + all-public rule; extract ROUTES to shared module (2 hours ago)
+- f2721a6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 56fc37b seo: add public /earn (homepage hero CTA) to prerender meta, sitemap, robots (3 hours ago)
+- 02fbc17 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- efea5db security: constant-time comparison for Omise + LINE webhook signatures (3 hours ago)
+- dc842f6 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2781,7 +2793,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.7",
+  "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
