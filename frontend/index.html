@@ -67,22 +67,47 @@
     </script>
 
     <!-- ── JSON-LD Structured Data ───────────────────────────────────── -->
+    <!-- @graph so the SoftwareApplication, the Organization (brand entity +
+         logo for search results) and the WebSite entity are all linked by @id.
+         This base block is copied verbatim onto every prerendered route page by
+         scripts/prerender-meta.mjs, so all funnel pages carry the same brand
+         entity; that script adds a per-page BreadcrumbList on top. -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "Openthai.ai",
-      "url": "https://www.openthai-ai.com",
-      "description": "AI ไทยแท้ สร้างคอนเทนต์ TikTok สคริปต์ แคปชั่น แฮชแท็ก ครบเซ็ตใน 10 วินาที",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "offers": [
-        { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "THB" },
-        { "@type": "Offer", "name": "Pro", "price": "299", "priceCurrency": "THB" },
-        { "@type": "Offer", "name": "Premier", "price": "599", "priceCurrency": "THB" },
-        { "@type": "Offer", "name": "Enterprise", "price": "1299", "priceCurrency": "THB" }
-      ],
-      "inLanguage": "th"
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.openthai-ai.com/#organization",
+          "name": "Openthai.ai",
+          "url": "https://www.openthai-ai.com",
+          "logo": "https://www.openthai-ai.com/icon-512.png"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.openthai-ai.com/#website",
+          "name": "Openthai.ai",
+          "url": "https://www.openthai-ai.com",
+          "publisher": { "@id": "https://www.openthai-ai.com/#organization" },
+          "inLanguage": "th"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Openthai.ai",
+          "url": "https://www.openthai-ai.com",
+          "description": "AI ไทยแท้ สร้างคอนเทนต์ TikTok สคริปต์ แคปชั่น แฮชแท็ก ครบเซ็ตใน 10 วินาที",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "publisher": { "@id": "https://www.openthai-ai.com/#organization" },
+          "offers": [
+            { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "THB" },
+            { "@type": "Offer", "name": "Pro", "price": "299", "priceCurrency": "THB" },
+            { "@type": "Offer", "name": "Premier", "price": "599", "priceCurrency": "THB" },
+            { "@type": "Offer", "name": "Enterprise", "price": "1299", "priceCurrency": "THB" }
+          ],
+          "inLanguage": "th"
+        }
+      ]
     }
     </script>
   </head>

@@ -58,6 +58,32 @@ function escapeAttr(s) {
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 }
 
+// Per-route BreadcrumbList JSON-LD. The base index.html already carries the
+// Organization + WebSite + SoftwareApplication @graph (copied onto every route),
+// but breadcrumbs are the one structured-data piece that must differ per page —
+// they make Google show a "หน้าแรก › พอร์ทัล › <page>" trail in the SERP instead
+// of a bare URL. Hierarchy is derived from the real path: child portals
+// (/portals/producer …) sit under /portals; everything else is one level below
+// home. Names come from the same ROUTES titles used for <title>/OG, so the crumb
+// matches the page. JSON.stringify handles value escaping; we additionally escape
+// "<" so the serialized JSON can never break out of the <script> element.
+const byPath = Object.fromEntries(ROUTES.map((r) => [r.path, r.title]));
+function breadcrumbJsonLd(path, title) {
+  const crumbs = [{ name: 'หน้าแรก', url: DOMAIN + '/' }];
+  if (path.startsWith('/portals/')) {
+    crumbs.push({ name: byPath['/portals'] || 'Portals', url: DOMAIN + '/portals' });
+  }
+  crumbs.push({ name: title, url: DOMAIN + path });
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: crumbs.map((c, i) => ({
+      '@type': 'ListItem', position: i + 1, name: c.name, item: c.url,
+    })),
+  };
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
 const base = readFileSync(join(DIST, 'index.html'), 'utf8');
 
 for (const { path, title, desc } of ROUTES) {
@@ -72,6 +98,8 @@ for (const { path, title, desc } of ROUTES) {
   html = html.replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${escapeAttr(desc)}" />`);
   html = html.replace(/<meta name="twitter:title" content=".*?" \/>/, `<meta name="twitter:title" content="${escapeAttr(fullTitle)}" />`);
   html = html.replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${escapeAttr(desc)}" />`);
+  // Add the page-specific BreadcrumbList alongside the inherited @graph block.
+  html = html.replace('</head>', `  <script type="application/ld+json">${breadcrumbJsonLd(path, title)}</script>\n  </head>`);
 
   const outDir = join(DIST, path.replace(/^\//, ''));
   mkdirSync(outDir, { recursive: true });
