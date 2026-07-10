@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T15:14:19.267Z · branch `claude/daily-reporter-improvements-8vc9ct` (202 commit(s) ahead of main)
+Generated: 2026-07-10T16:13:06.232Z · branch `claude/daily-reporter-improvements-8vc9ct` (204 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 412 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 414 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 84: the public `/store` page was invisible to search/social — missing from prerender meta, sitemap, AND robots.txt (SEO / go-to-market)
+
+openthai-ai synced (HEAD 2df945e, run-83 modal-a11y shipped; consistency-check clean, exit 0). Diversified off the a11y sweep. First **verified two funnels clean and logged so they aren't re-scanned:** (1) `TrackOrderPage` (post-purchase tracking + dispute-open, the flow the run-83 modals link to) — `track()` and `openDispute()` both check `d.success`/`d.id` and show the real error otherwise (no fake-success), fetches are wrapped, output is React-escaped; solid. (2) `ProducerJoinPage` (`/join`, the producer-onboarding funnel *outside* `/portals/*`) — already has the PDPA consent checkbox + `disabled={busy || !consent}` + sends `consent` (a prior cycle added it, per its own header comment); no gap.
+
+**The real gap shipped (SEO):** `/store` (the public "Openthai Store", `<Route path="/store">`) is a genuine commerce funnel — linked from the homepage footer (the `<a href>` I fixed in run 82) and the nav — but it was **missing from all three SEO surfaces**: not in `prerender-meta.mjs` ROUTES (so its `dist/store/index.html` served the homepage's TikTok-pitch `<title>`/OG to LINE/Facebook crawlers), not in the generated sitemap, and not in `robots.txt` Allow — even though its sibling `/catalog` had all three. Fix: added one ROUTES entry (`title: 'Openthai Store'`, `desc: 'สินค้าอย่างเป็นทางการจาก Openthai.ai'` — copied verbatim from the page's own `mk.store.title`/`mk.store.sub` Thai i18n) and `Allow: /store` to robots.txt. Because run-76's sitemap and run-80's per-route BreadcrumbList are both generated from that same ROUTES list, this one entry auto-propagates to the sitemap + a Home›Openthai Store breadcrumb; adding it to robots.txt too preserves run-76's **"sitemap URL set == robots Allow list"** invariant.
+
+**Verified by running the build (not "should work"):** `npm run build` → `dist/store/index.html` now has `<title>Openthai Store — Openthai.ai</title>`, the matching description, `canonical`/`og:url` = `https://www.openthai-ai.com/store`, and two valid JSON-LD blocks (the inherited `@graph[Organization,WebSite,SoftwareApplication]` + a `BreadcrumbList` หน้าแรก›Openthai Store); `/store` now appears in `dist/sitemap.xml`; a script confirmed the **invariant holds** — sitemap 21 URLs vs robots Allow 21, both-way diff empty (was 20/20). Full frontend suite **49/49**, no regression (build-config change only). Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
 
 ### 2026-07-10 — Hourly loop, run 83: the checkout/order modals (Store + Catalog — the real purchase path) had no dialog semantics, no Escape-to-close, and no focus management
 
@@ -2685,14 +2697,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 7977439 fix(a11y): make checkout/order modals real dialogs — Escape-to-close + focus mgmt + role (16 seconds ago)
-- 1b7fbb7 chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
-- 4381d5f fix(a11y): homepage footer nav links were mouse-only divs — make them real <a href> (54 minutes ago)
-- acf5b62 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- c165e06 fix(a11y): make FAQ accordions on /affiliate and /pricing keyboard-operable (59 minutes ago)
-- c0fa2f8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 4afe6d4 feat(seo): add Organization + WebSite entities and per-route BreadcrumbList structured data (3 hours ago)
-- 46097d4 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- cb0ad13 seo: add public /store to prerender meta, sitemap, and robots.txt (19 seconds ago)
+- 2df945e chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 7977439 fix(a11y): make checkout/order modals real dialogs — Escape-to-close + focus mgmt + role (59 minutes ago)
+- 1b7fbb7 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 4381d5f fix(a11y): homepage footer nav links were mouse-only divs — make them real <a href> (2 hours ago)
+- acf5b62 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- c165e06 fix(a11y): make FAQ accordions on /affiliate and /pricing keyboard-operable (2 hours ago)
+- c0fa2f8 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2715,7 +2727,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 1,
-  "memory_mb": "19.6",
+  "memory_mb": "20.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
