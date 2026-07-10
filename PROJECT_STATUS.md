@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T19:16:10.946Z · branch `claude/daily-reporter-improvements-8vc9ct` (210 commit(s) ahead of main)
+Generated: 2026-07-10T20:14:40.108Z · branch `claude/daily-reporter-improvements-8vc9ct` (212 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 420 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 422 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 88: turned the hand-maintained SEO invariant (sitemap == robots Allow, all-public) into an automated regression-guard test + single source of truth
+
+openthai-ai synced (HEAD f2721a6, run-87 `/earn` SEO shipped; consistency-check clean, exit 0). Run 87 (and 76, 84) each **manually** diffed the prerender ROUTES list against robots.txt and against the auth-gated routes before shipping a new public page. That manual cross-check is exactly the "hand-maintained thing that silently drifts" CLAUDE.md warns against — the moment a future change adds a page to the sitemap but forgets `robots.txt` (or advertises an auth-gated page), the drift ships silently as a real SEO defect. This run **codifies the check** so it can't.
+
+**Two structural facts made it worth doing, both verified first (grep, not assumed):** (1) the canonical route list lived **inside** `scripts/prerender-meta.mjs`, which reads `dist/index.html` at import time — so no test could import the real list without a build. (2) The "sitemap URL set == robots Allow list" invariant + "every advertised path is a real PUBLIC route" were only ever enforced by me remembering to run a diff by hand.
+
+**Shipped (build-config/test only — zero runtime/behavior change, verified below):**
+- Extracted `DOMAIN` + `ROUTES` verbatim into a new side-effect-free module `frontend/scripts/seo-routes.mjs`; `prerender-meta.mjs` now imports them (single source of truth — the build script and the test consume the identical list). Build output is byte-identical.
+- New `frontend/src/__tests__/seoInvariants.test.js` (5 tests) pins: sitemap set (`ROUTES` + `/`) **exactly equals** robots `Allow:` list; no advertised path is also `Disallow:`; **every advertised path is a public route in `App.jsx`** (regex-checks the `<Route>` element does NOT redirect to `/login` — advertising an auth-gated page makes Google index a login redirect / soft-404); every route has non-empty title+desc for OG tags; `DOMAIN` is the https origin robots' `Sitemap:` directive points at.
+
+**Verified by running, not "should work":** confirmed the current tree satisfies all three invariants first (both-way diff of ROUTES vs robots Allow = IDENTICAL, 21 paths; all 21 map to public `<Route>`s with no `/login` redirect). Then proved the guard is **non-vacuous** — ran its auth-gated regex against a real gated route (`/skills-catalog`) → correctly detected the `/login` redirect; against `/store` → correctly passed. `npx vitest run` **56/56** (was 51; +5 new). `npm run build` → all 21 prerender pages + 22-url sitemap emitted identically after the extraction. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+**Owner-decision items unchanged** (#9 affiliate-commission-on-shop, #10 dispute-split, #11 AI-usage-log migration-applied?, #12 v9.0 build-out, + soft: index app/tool surfaces like `/skills-catalog`?). Nothing here touches them.
 
 ### 2026-07-10 — Hourly loop, run 87: systematic prerender-coverage audit found `/earn` (a homepage hero CTA) invisible to search/social — added it; deliberately left `/skills-catalog` for the owner
 
@@ -2737,14 +2751,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 56fc37b seo: add public /earn (homepage hero CTA) to prerender meta, sitemap, robots (16 seconds ago)
-- 02fbc17 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- efea5db security: constant-time comparison for Omise + LINE webhook signatures (4 minutes ago)
-- dc842f6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 6acc17a a11y: add Tab focus-trap to checkout modals via shared useDialog hook (2 hours ago)
-- 75cc988 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- cb0ad13 seo: add public /store to prerender meta, sitemap, and robots.txt (3 hours ago)
-- 2df945e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 7c85023 test(seo): guard sitemap==robots invariant + all-public rule; extract ROUTES to shared module (20 seconds ago)
+- f2721a6 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 56fc37b seo: add public /earn (homepage hero CTA) to prerender meta, sitemap, robots (59 minutes ago)
+- 02fbc17 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- efea5db security: constant-time comparison for Omise + LINE webhook signatures (63 minutes ago)
+- dc842f6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 6acc17a a11y: add Tab focus-trap to checkout modals via shared useDialog hook (3 hours ago)
+- 75cc988 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2766,8 +2780,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 238,
-  "memory_mb": "19.5",
+  "uptime_sec": 0,
+  "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
