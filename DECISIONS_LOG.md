@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-10 — Hourly loop, run 87: systematic prerender-coverage audit found `/earn` (a homepage hero CTA) invisible to search/social — added it; deliberately left `/skills-catalog` for the owner
+
+openthai-ai synced (HEAD 02fbc17, run-86 webhook-hardening shipped; consistency-check clean, exit 0). Followed up run 84's `/store` find with a **systematic** cross-check instead of a one-off: diffed the prerender ROUTES list against robots.txt's Disallow set and against every `navigate('/x')` on the public marketing pages, to surface any *other* public page that's linked but has neither prerendered meta nor an index directive. Two candidates fell out: `/earn` and `/skills-catalog`.
+
+**Shipped `/earn`:** `EarnHubPage` ("ศูนย์สร้างรายได้") is a **homepage hero CTA** (LandingPage "💸 หารายได้", two buttons) and an explicitly **shareable** earning/affiliate landing (the page builds `https://www.openthai-ai.com/earn?ref=CODE` and says "แชร์ลิงก์นี้ได้เลย") — the exact `/store`-class gap: not in prerender ROUTES, sitemap, or robots.txt, so sharing it on LINE/Facebook showed the homepage's TikTok pitch. Added one ROUTES entry (`title: 'ศูนย์สร้างรายได้'` from the page's own `document.title`; `desc` a factual restatement of its verified real content — ready-to-ship products paid via PromptPay + affiliate commission 20–40% with a share link/clip) plus `Allow: /earn` in robots.txt (keeping run-76's "sitemap URL set == robots Allow" invariant). The one entry auto-propagates to the sitemap + a Home›ศูนย์สร้างรายได้ breadcrumb.
+
+**Deliberately did NOT add `/skills-catalog`** (per standing-order restraint — don't force-fit): although it's public (no auth redirect) and homepage-linked, it reads as an **app/tool surface** (primary nav is "← Dashboard", light in-app theme, links to the /skills hub) rather than a share-on-LINE marketing page. Whether tool/app surfaces should be indexed is a judgment call for the owner, not something to decide unilaterally — noted here so it isn't re-scanned, and left for the owner to green-light if desired.
+
+**Verified by running the build (not "should work"):** `npm run build` → `dist/earn/index.html` has `<title>ศูนย์สร้างรายได้ — Openthai.ai</title>`, the matching description, `canonical`/`og:url` = `/earn`, and valid `@graph` + `BreadcrumbList` (หน้าแรก › ศูนย์สร้างรายได้); `/earn` is in `dist/sitemap.xml`; the **invariant holds** — sitemap 22 URLs vs robots Allow 22, both-way diff empty (was 21/21). Full frontend suite **51/51**, no regression (build-config change). Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items) — plus a soft note above: does the owner want app/tool surfaces like `/skills-catalog` indexed too?
+
+---
+
 ### 2026-07-10 — Hourly loop, run 86: hardened both signed-webhook signature checks to constant-time comparison (payment + LINE) — backend security
 
 openthai-ai synced (HEAD dc842f6, run-85 focus-trap shipped; consistency-check clean, exit 0). Diversified from the frontend sweep to the **backend money path**. Audited the Omise payment webhook (`/api/payment/webhook`) end-to-end and **logged the parts that are already correct** so they aren't re-scanned: it uses `express.raw` + a raw-buffer HMAC (the global JSON parser is correctly skipped for it, server.js:125), `verifyOmiseWebhook` **fails closed** when `OMISE_WEBHOOK_SECRET` is unset (returns false + logs — no forged-payment bypass), and the handler is idempotent (`!rec.paid_at` guard before granting entitlements / crediting affiliates / finalizing shop orders). Solid.

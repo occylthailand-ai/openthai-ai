@@ -52,6 +52,11 @@ const ROUTES = [
   // own mk.store.title / mk.store.sub (Thai default). Also added to robots.txt Allow to keep the
   // sitemap URL set == robots Allow list invariant (see run 76).
   { path: '/store', title: 'Openthai Store', desc: 'สินค้าอย่างเป็นทางการจาก Openthai.ai' },
+  // /earn ("ศูนย์สร้างรายได้") is a homepage hero CTA ("💸 หารายได้") and an explicitly
+  // shareable earning/affiliate landing (/earn?ref=CODE) — same missing-from-SEO gap /store had.
+  // title from the page's own document.title; desc is a factual restatement of its real content
+  // (ready-to-ship products paid via PromptPay + affiliate commission 20–40% with a share link).
+  { path: '/earn', title: 'ศูนย์สร้างรายได้', desc: 'หารายได้กับ Openthai.ai — สั่งซื้อสินค้าพร้อมส่งจ่ายผ่านพร้อมเพย์ หรือสมัครเป็นพันธมิตรรับค่าคอมมิชชั่น 20–40% ต่อดีล พร้อมลิงก์และคลิปไปแชร์' },
   { path: '/join', title: 'เอาสินค้าคุณมาขายกับครีเอเตอร์ทั่วไทย', desc: 'สังกัด Openthai.ai ฟรี — ให้ครีเอเตอร์กว่า 1,200 คนช่วยสร้างคอนเทนต์ + ดันยอดขายสินค้าคุณ จ่ายค่าคอมเฉพาะเมื่อขายได้' },
   { path: '/find-producers', title: 'หาผู้ผลิตสินค้าไทยที่ใช่', desc: 'ครีเอเตอร์หาสินค้ามาโปรโมต · ลูกค้าหาของจากผู้ผลิตโดยตรง' },
   { path: '/about', title: 'เกี่ยวกับเรา', desc: 'ทีมงานเบื้องหลัง Openthai.ai และความเชี่ยวชาญที่อยู่เบื้องหลังแพลตฟอร์ม' },
