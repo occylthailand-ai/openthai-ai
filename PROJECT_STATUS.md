@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T19:12:13.569Z · branch `claude/daily-reporter-improvements-8vc9ct` (208 commit(s) ahead of main)
+Generated: 2026-07-10T19:16:10.946Z · branch `claude/daily-reporter-improvements-8vc9ct` (210 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 418 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 420 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 87: systematic prerender-coverage audit found `/earn` (a homepage hero CTA) invisible to search/social — added it; deliberately left `/skills-catalog` for the owner
+
+openthai-ai synced (HEAD 02fbc17, run-86 webhook-hardening shipped; consistency-check clean, exit 0). Followed up run 84's `/store` find with a **systematic** cross-check instead of a one-off: diffed the prerender ROUTES list against robots.txt's Disallow set and against every `navigate('/x')` on the public marketing pages, to surface any *other* public page that's linked but has neither prerendered meta nor an index directive. Two candidates fell out: `/earn` and `/skills-catalog`.
+
+**Shipped `/earn`:** `EarnHubPage` ("ศูนย์สร้างรายได้") is a **homepage hero CTA** (LandingPage "💸 หารายได้", two buttons) and an explicitly **shareable** earning/affiliate landing (the page builds `https://www.openthai-ai.com/earn?ref=CODE` and says "แชร์ลิงก์นี้ได้เลย") — the exact `/store`-class gap: not in prerender ROUTES, sitemap, or robots.txt, so sharing it on LINE/Facebook showed the homepage's TikTok pitch. Added one ROUTES entry (`title: 'ศูนย์สร้างรายได้'` from the page's own `document.title`; `desc` a factual restatement of its verified real content — ready-to-ship products paid via PromptPay + affiliate commission 20–40% with a share link/clip) plus `Allow: /earn` in robots.txt (keeping run-76's "sitemap URL set == robots Allow" invariant). The one entry auto-propagates to the sitemap + a Home›ศูนย์สร้างรายได้ breadcrumb.
+
+**Deliberately did NOT add `/skills-catalog`** (per standing-order restraint — don't force-fit): although it's public (no auth redirect) and homepage-linked, it reads as an **app/tool surface** (primary nav is "← Dashboard", light in-app theme, links to the /skills hub) rather than a share-on-LINE marketing page. Whether tool/app surfaces should be indexed is a judgment call for the owner, not something to decide unilaterally — noted here so it isn't re-scanned, and left for the owner to green-light if desired.
+
+**Verified by running the build (not "should work"):** `npm run build` → `dist/earn/index.html` has `<title>ศูนย์สร้างรายได้ — Openthai.ai</title>`, the matching description, `canonical`/`og:url` = `/earn`, and valid `@graph` + `BreadcrumbList` (หน้าแรก › ศูนย์สร้างรายได้); `/earn` is in `dist/sitemap.xml`; the **invariant holds** — sitemap 22 URLs vs robots Allow 22, both-way diff empty (was 21/21). Full frontend suite **51/51**, no regression (build-config change). Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items) — plus a soft note above: does the owner want app/tool surfaces like `/skills-catalog` indexed too?
+
+---
 
 ### 2026-07-10 — Hourly loop, run 86: hardened both signed-webhook signature checks to constant-time comparison (payment + LINE) — backend security
 
@@ -2723,14 +2737,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- efea5db security: constant-time comparison for Omise + LINE webhook signatures (15 seconds ago)
+- 56fc37b seo: add public /earn (homepage hero CTA) to prerender meta, sitemap, robots (16 seconds ago)
+- 02fbc17 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- efea5db security: constant-time comparison for Omise + LINE webhook signatures (4 minutes ago)
 - dc842f6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 6acc17a a11y: add Tab focus-trap to checkout modals via shared useDialog hook (2 hours ago)
 - 75cc988 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - cb0ad13 seo: add public /store to prerender meta, sitemap, and robots.txt (3 hours ago)
 - 2df945e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 7977439 fix(a11y): make checkout/order modals real dialogs — Escape-to-close + focus mgmt + role (4 hours ago)
-- 1b7fbb7 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2752,8 +2766,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "20.1",
+  "uptime_sec": 238,
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
