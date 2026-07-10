@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T14:16:07.584Z · branch `claude/daily-reporter-improvements-8vc9ct` (198 commit(s) ahead of main)
+Generated: 2026-07-10T14:20:06.327Z · branch `claude/daily-reporter-improvements-8vc9ct` (200 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 408 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 410 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 82: homepage footer nav links were mouse-only `<div onClick>` — converted to real `<a href>` links (a11y continuation of run 81)
+
+openthai-ai synced (HEAD acf5b62, run-81 FAQ-a11y shipped; consistency-check clean, exit 0). Continued the keyboard-accessibility sweep from run 81 — same bug class (`<div onClick>` used as an interactive control), now on the highest-traffic public page. Scanned the interactive-div count across the public/funnel pages (LandingPage, Pricing, Catalog, Store, PortalHub, Contact, About, Affiliate) to target real user-facing violations, not force-fit changes.
+
+**The gap fixed:** `LandingPage.jsx`'s footer (lines 351 & 359) rendered its **10 internal navigation links** (Services column: generator/pricing/store/catalog/find-producers/affiliate/join; Info column: about/privacy/terms) as bare `<div onClick={() => navigate(r)}>`. These are pure navigation, so the defect is double: **not keyboard-focusable and not announced as links** (WCAG 2.1.1 Keyboard + 4.1.2 Name/Role/Value) — keyboard/screen-reader users can't Tab to or activate the whole primary footer nav on the site's most-visited page. The sibling mailto item was already a correct `<a>`, so this was an inconsistency too. Fix: converted both to real `<a href={r}>` with an `onClick` that `preventDefault()`s and calls `navigate(r)` for SPA routing — real anchors are inherently focusable + SR-announced + support right-click/middle-click "open in new tab", while `textDecoration:'none'` + identical color/size keep the visual output pixel-identical.
+
+**Verified by rendering the real component (not "should work"):** added `src/__tests__/footerNavA11y.test.jsx` — renders the actual `LandingPage` (in `MemoryRouter`, with `fetch` stubbed for its `/api/skills` mount call) and asserts all 10 internal footer targets are real `<a>` elements with the correct `href`, that they surface via `getByRole('link')` (keyboard-focusable + SR-announced), and that a click is `preventDefault`ed (SPA nav, no full reload). **3/3 new tests pass; full suite 41/41 (was 38); `npm run build` exits 0.** Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
 
 ### 2026-07-10 — Hourly loop, run 81: fixed a real keyboard/screen-reader accessibility gap in the FAQ accordions on the two public conversion funnels (/affiliate, /pricing)
 
@@ -2661,14 +2673,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c165e06 fix(a11y): make FAQ accordions on /affiliate and /pricing keyboard-operable (19 seconds ago)
+- 4381d5f fix(a11y): homepage footer nav links were mouse-only divs — make them real <a href> (14 seconds ago)
+- acf5b62 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- c165e06 fix(a11y): make FAQ accordions on /affiliate and /pricing keyboard-operable (4 minutes ago)
 - c0fa2f8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 4afe6d4 feat(seo): add Organization + WebSite entities and per-route BreadcrumbList structured data (2 hours ago)
 - 46097d4 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 6c1e049 docs(run79): add owner-decision #12 — v9.0 Vercel deploys fail (pre-existing: no build config), and duplicate Vercel projects (4 hours ago)
 - 553a68f chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- a42b9d3 docs(run79): log verification of clean portal→email surface + PDPA-consent fix shipped to OpenThai-AI-v9.0 (5 hours ago)
-- f8573de chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2690,7 +2702,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
+  "uptime_sec": 239,
   "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
