@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T16:13:06.232Z · branch `claude/daily-reporter-improvements-8vc9ct` (204 commit(s) ahead of main)
+Generated: 2026-07-10T17:15:07.744Z · branch `claude/daily-reporter-improvements-8vc9ct` (206 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 414 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 416 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 85: completed the checkout-modal focus-trap (the piece explicitly deferred in run 83) via a shared `useDialog` hook
+
+openthai-ai synced (HEAD 75cc988, run-84 store-SEO shipped; consistency-check clean, exit 0). First **verified two more flows clean and logged so they aren't re-scanned:** (1) `DisputeTrackPage` (`/dispute`, the status page the run-83 checkout-success path links to) — `check()` verifies `d.success`, shows the real error otherwise, fetch wrapped, output React-escaped; solid. (2) **Affiliate ref-code case consistency** (a suspected attribution bug) — traced the whole path: `genRefCode()` uppercases (name `.toUpperCase()` + random `.toUpperCase()`), portal/auto signups get `AFF######` (uppercase), the backend stores `finalCode` and matches `a.ref_code === ref` exactly, and `AffiliateDashboard` `.toUpperCase()`s the lookup input — so every real code is uppercase end-to-end; **no mismatch** (and `buildRefLink`, which uppercases, turned out to be a *test-file-local helper*, not app code). No bug.
+
+**The real work shipped (a11y completeness, unblocked):** run 83 gave the two checkout modals `role="dialog"`/`aria-modal`, Escape-to-close, and focus-in/return, but explicitly left the **Tab focus-trap** for later — without it, a keyboard user Tabbing through an open payment dialog eventually lands on the inert page behind it (WCAG 2.4.3 Focus Order). Also, run 83 left the accessible-dialog effect **duplicated verbatim** in `BuyModal` and `OrderModal`. Fixed both at once: extracted `src/hooks/useDialog.js` — a `useDialog(onClose)` hook that returns the dialog ref and provides Escape + focus-in + focus-return **+ the Tab/Shift+Tab trap** (queries the standard focusable set inside the container; wraps last→first on Tab and first→last on Shift+Tab). Both modals now call `const dialogRef = useDialog(onClose)` in place of the ~8-line inline effect (and dropped the now-unused `useRef` imports). Net: −16 duplicated lines, +1 shared, tested hook, and the trap that was missing.
+
+**Verified by running the real components (not "should work"):** extended `src/__tests__/modalDialogA11y.test.jsx` — the 8 existing assertions (role/aria-modal/label, focus-in, Escape, backdrop-vs-content click) still pass through the hook, and a new per-modal test drives the trap: with the real `BuyModal`/`OrderModal` rendered, focusing the **last** control + Tab moves focus to the **first**, and focusing the **first** + Shift+Tab moves it to the **last**. Added `afterEach(cleanup)` so stale dialogs' document listeners can't cross-talk. **10/10 modal tests pass (5 × 2 modals); full suite 51/51 (was 49); `npm run build` exits 0.** Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
 
 ### 2026-07-10 — Hourly loop, run 84: the public `/store` page was invisible to search/social — missing from prerender meta, sitemap, AND robots.txt (SEO / go-to-market)
 
@@ -2697,14 +2709,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- cb0ad13 seo: add public /store to prerender meta, sitemap, and robots.txt (19 seconds ago)
-- 2df945e chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 7977439 fix(a11y): make checkout/order modals real dialogs — Escape-to-close + focus mgmt + role (59 minutes ago)
-- 1b7fbb7 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 4381d5f fix(a11y): homepage footer nav links were mouse-only divs — make them real <a href> (2 hours ago)
-- acf5b62 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- c165e06 fix(a11y): make FAQ accordions on /affiliate and /pricing keyboard-operable (2 hours ago)
-- c0fa2f8 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 6acc17a a11y: add Tab focus-trap to checkout modals via shared useDialog hook (20 seconds ago)
+- 75cc988 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- cb0ad13 seo: add public /store to prerender meta, sitemap, and robots.txt (62 minutes ago)
+- 2df945e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 7977439 fix(a11y): make checkout/order modals real dialogs — Escape-to-close + focus mgmt + role (2 hours ago)
+- 1b7fbb7 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 4381d5f fix(a11y): homepage footer nav links were mouse-only divs — make them real <a href> (3 hours ago)
+- acf5b62 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2726,8 +2738,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "20.1",
+  "uptime_sec": 629,
+  "memory_mb": "22.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
