@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-09 — Hourly loop, run 77: verification cycle — several modules audited clean; surfaced a real money-path finding for the owner (dispute "แบ่งครึ่ง"/split doesn't actually split)
+
+openthai-ai synced (HEAD fa71772, run-76 deployed all-3-Ready). This cycle turned up no *cleanly-shippable, unblocked* bug — both main codebases are now heavily hardened — so it's an honest verification + escalation cycle rather than a forced change. Logged so future cycles don't re-scan:
+
+- **Accessibility:** all 8 `<img>` in `pages/` + `components/` have `alt` text — no missing-alt gap.
+- **`credits.js`** (free-tier credit economy, every user): `/api/credits/claim` requires `source ∈ ALLOWED_CLAIMS` whitelist (no arbitrary-source farming), idempotent per source, `addCredits` floors+clamps amount and balance, `consumeCredit` only decrements when `balance>0` (no negative balance), spin/checkin idempotent. Clean.
+- **`disputes.js`** (escrow/arbitration): `open()` validates all fields + verifies the opener's contact matches the order's buyer/producer + blocks duplicate open disputes; `resolve()` is idempotent (won't re-resolve). Escrow is explicitly a **ledger flag** for humans to execute the real payout. Clean **except** the split finding below.
+- **`smart-e` `_line_broadcast`:** returns an honest `sent` / `error:…` / `simulated` status — not fake success.
+- **`otop-ai-landing`:** already fully audited run 39 (axe-core 0 violations, all 13 CTA links resolve, image dims 1200×655 match). Its one open issue — `og:image`/`twitter:image` are **relative** URLs (`og-image.png`) which social crawlers (LINE/Facebook) often won't render — can't be fixed to absolute without the production domain, which is **already the pending owner-decision item**. Not re-touched.
+
+**⚠️ New finding flagged for the owner (financial/design decision, per standing-order point 8) — dispute "split" does not split:** the admin dispute UI (`AdminPage.jsx:613`) shows a **"แบ่งครึ่ง" (split in half)** button → `POST /api/disputes/admin/resolve` with `decision:'split'`. But `disputes.resolve()` maps `split` to escrow **`released`** + status **`resolved_supplier`** — i.e. it silently releases the **full** escrow to the supplier; the buyer gets nothing. The escrow model (`order.escrow_status ∈ {none,held,released,refunded}`) has **no partial-amount field**, so a real 50/50 split can't be represented, and the order's ledger flag will tell the team to pay the supplier in full. The AI-suggest prompt also offers `split` as a recommendation. Fixing it means deciding how a split should actually move money (ratio, partial-payout mechanics, ledger representation) — a money decision I won't guess. **Owner-decision item #10** (the prior 9 unchanged). Minimal safe options for the owner to pick from: (a) implement a real partial-split escrow amount, (b) relabel/remove the "แบ่งครึ่ง" button until (a) exists, or (c) define "split" as a documented manual process the note field drives.
+
+---
+
 ### 2026-07-09 — Hourly loop, run 76: sitemap.xml is now generated at build time (fresh lastmod) instead of a stale hand-maintained file — SEO / go-to-market
 
 openthai-ai synced (HEAD 78327b2, run-75 deployed all-3-Ready). Vercel webhooks were deploy-status only (a Canceled = normal build-supersede), nothing actionable.
