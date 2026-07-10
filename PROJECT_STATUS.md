@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-09T23:15:41.881Z · branch `claude/daily-reporter-improvements-8vc9ct` (186 commit(s) ahead of main)
+Generated: 2026-07-10T04:10:29.568Z · branch `claude/daily-reporter-improvements-8vc9ct` (188 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 396 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 398 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-09 — Hourly loop, run 77: verification cycle — several modules audited clean; surfaced a real money-path finding for the owner (dispute "แบ่งครึ่ง"/split doesn't actually split)
+
+openthai-ai synced (HEAD fa71772, run-76 deployed all-3-Ready). This cycle turned up no *cleanly-shippable, unblocked* bug — both main codebases are now heavily hardened — so it's an honest verification + escalation cycle rather than a forced change. Logged so future cycles don't re-scan:
+
+- **Accessibility:** all 8 `<img>` in `pages/` + `components/` have `alt` text — no missing-alt gap.
+- **`credits.js`** (free-tier credit economy, every user): `/api/credits/claim` requires `source ∈ ALLOWED_CLAIMS` whitelist (no arbitrary-source farming), idempotent per source, `addCredits` floors+clamps amount and balance, `consumeCredit` only decrements when `balance>0` (no negative balance), spin/checkin idempotent. Clean.
+- **`disputes.js`** (escrow/arbitration): `open()` validates all fields + verifies the opener's contact matches the order's buyer/producer + blocks duplicate open disputes; `resolve()` is idempotent (won't re-resolve). Escrow is explicitly a **ledger flag** for humans to execute the real payout. Clean **except** the split finding below.
+- **`smart-e` `_line_broadcast`:** returns an honest `sent` / `error:…` / `simulated` status — not fake success.
+- **`otop-ai-landing`:** already fully audited run 39 (axe-core 0 violations, all 13 CTA links resolve, image dims 1200×655 match). Its one open issue — `og:image`/`twitter:image` are **relative** URLs (`og-image.png`) which social crawlers (LINE/Facebook) often won't render — can't be fixed to absolute without the production domain, which is **already the pending owner-decision item**. Not re-touched.
+
+**⚠️ New finding flagged for the owner (financial/design decision, per standing-order point 8) — dispute "split" does not split:** the admin dispute UI (`AdminPage.jsx:613`) shows a **"แบ่งครึ่ง" (split in half)** button → `POST /api/disputes/admin/resolve` with `decision:'split'`. But `disputes.resolve()` maps `split` to escrow **`released`** + status **`resolved_supplier`** — i.e. it silently releases the **full** escrow to the supplier; the buyer gets nothing. The escrow model (`order.escrow_status ∈ {none,held,released,refunded}`) has **no partial-amount field**, so a real 50/50 split can't be represented, and the order's ledger flag will tell the team to pay the supplier in full. The AI-suggest prompt also offers `split` as a recommendation. Fixing it means deciding how a split should actually move money (ratio, partial-payout mechanics, ledger representation) — a money decision I won't guess. **Owner-decision item #10** (the prior 9 unchanged). Minimal safe options for the owner to pick from: (a) implement a real partial-split escrow amount, (b) relabel/remove the "แบ่งครึ่ง" button until (a) exists, or (c) define "split" as a documented manual process the note field drives.
+
+---
 
 ### 2026-07-09 — Hourly loop, run 76: sitemap.xml is now generated at build time (fresh lastmod) instead of a stale hand-maintained file — SEO / go-to-market
 
@@ -2590,14 +2604,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 59e473e fix: actually include the sitemap generator (prior commit deleted the static file but not the generator) (65 seconds ago)
-- 83f287a chore: sync PROJECT_STATUS.md [skip ci] (2 minutes ago)
-- e5f5bc0 docs: log run 76 — build-time sitemap generation (fresh lastmod); credits.js audited clean (2 minutes ago)
-- 9786bba seo: generate sitemap.xml at build time with fresh lastmod instead of a stale hand-maintained file (3 minutes ago)
-- 78327b2 chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
-- 0e46af8 docs: log run 75 — smart-e blanket dispatcher guard (root-cause fix for the crash class) (6 minutes ago)
-- 47a8601 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- bde6e9e docs: log run 74 — smart-e crash fix on non-numeric ?limit/?days admin GET params (3 hours ago)
+- 43bba22 docs: log run 77 — verification cycle; flag dispute "split" money-path bug for owner (17 seconds ago)
+- fa71772 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 59e473e fix: actually include the sitemap generator (prior commit deleted the static file but not the generator) (5 hours ago)
+- 83f287a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- e5f5bc0 docs: log run 76 — build-time sitemap generation (fresh lastmod); credits.js audited clean (5 hours ago)
+- 9786bba seo: generate sitemap.xml at build time with fresh lastmod instead of a stale hand-maintained file (5 hours ago)
+- 78327b2 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 0e46af8 docs: log run 75 — smart-e blanket dispatcher guard (root-cause fix for the crash class) (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2619,8 +2633,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 357,
-  "memory_mb": "20.2",
+  "uptime_sec": 0,
+  "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
