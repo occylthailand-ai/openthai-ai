@@ -348,7 +348,7 @@ export default function LandingPage() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.services')}</div>
               {[[t('footer.link.generator'), '/ai-generator'], [t('footer.link.pricing'), '/pricing'], [t('mk.nav.store'), '/store'], [t('footer.link.catalog'), '/catalog'], [t('footer.link.find'), '/find-producers'], [t('footer.link.affiliate'), '/affiliate'], [t('footer.link.producer'), '/join']].map(([l, r]) => (
-                <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
+                <a key={r} href={r} onClick={(e) => { e.preventDefault(); navigate(r); }} style={{ display: 'block', color: '#94a3b8', fontSize: 13, textDecoration: 'none', cursor: 'pointer', marginBottom: 6 }}>{l}</a>
               ))}
             </div>
             <div>
@@ -356,7 +356,7 @@ export default function LandingPage() {
               {[['เกี่ยวกับเรา', '/about'], [t('footer.link.privacy'), '/privacy'], [t('footer.link.terms'), '/terms'], [t('footer.link.contact'), 'mailto:support@openthai.ai']].map(([l, r]) => (
                 r.startsWith('mailto')
                   ? <a key={r} href={r} style={{ display: 'block', color: '#94a3b8', fontSize: 13, textDecoration: 'none', marginBottom: 6 }}>{l}</a>
-                  : <div key={r} onClick={() => navigate(r)} style={{ color: '#94a3b8', fontSize: 13, cursor: 'pointer', marginBottom: 6 }}>{l}</div>
+                  : <a key={r} href={r} onClick={(e) => { e.preventDefault(); navigate(r); }} style={{ display: 'block', color: '#94a3b8', fontSize: 13, textDecoration: 'none', cursor: 'pointer', marginBottom: 6 }}>{l}</a>
               ))}
             </div>
           </div>

@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-10 — Hourly loop, run 82: homepage footer nav links were mouse-only `<div onClick>` — converted to real `<a href>` links (a11y continuation of run 81)
+
+openthai-ai synced (HEAD acf5b62, run-81 FAQ-a11y shipped; consistency-check clean, exit 0). Continued the keyboard-accessibility sweep from run 81 — same bug class (`<div onClick>` used as an interactive control), now on the highest-traffic public page. Scanned the interactive-div count across the public/funnel pages (LandingPage, Pricing, Catalog, Store, PortalHub, Contact, About, Affiliate) to target real user-facing violations, not force-fit changes.
+
+**The gap fixed:** `LandingPage.jsx`'s footer (lines 351 & 359) rendered its **10 internal navigation links** (Services column: generator/pricing/store/catalog/find-producers/affiliate/join; Info column: about/privacy/terms) as bare `<div onClick={() => navigate(r)}>`. These are pure navigation, so the defect is double: **not keyboard-focusable and not announced as links** (WCAG 2.1.1 Keyboard + 4.1.2 Name/Role/Value) — keyboard/screen-reader users can't Tab to or activate the whole primary footer nav on the site's most-visited page. The sibling mailto item was already a correct `<a>`, so this was an inconsistency too. Fix: converted both to real `<a href={r}>` with an `onClick` that `preventDefault()`s and calls `navigate(r)` for SPA routing — real anchors are inherently focusable + SR-announced + support right-click/middle-click "open in new tab", while `textDecoration:'none'` + identical color/size keep the visual output pixel-identical.
+
+**Verified by rendering the real component (not "should work"):** added `src/__tests__/footerNavA11y.test.jsx` — renders the actual `LandingPage` (in `MemoryRouter`, with `fetch` stubbed for its `/api/skills` mount call) and asserts all 10 internal footer targets are real `<a>` elements with the correct `href`, that they surface via `getByRole('link')` (keyboard-focusable + SR-announced), and that a click is `preventDefault`ed (SPA nav, no full reload). **3/3 new tests pass; full suite 41/41 (was 38); `npm run build` exits 0.** Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
+
 ### 2026-07-10 — Hourly loop, run 81: fixed a real keyboard/screen-reader accessibility gap in the FAQ accordions on the two public conversion funnels (/affiliate, /pricing)
 
 openthai-ai synced (HEAD c0fa2f8, run-80 SEO structured-data shipped; consistency-check clean, exit 0). Scanned the consent-based registration funnel first (the standing order's #1 frame) and **logged it clean so future cycles don't re-scan:** all 9 `/portals/*` pages enforce consent uniformly (`disabled={!consent || busy}` on submit **and** send `consent` in the payload), the consent checkbox is wrapped in a `<label>` (clickable text + SR-associated), text inputs have `htmlFor`/`id`, and the **backend** enforces it server-side at multiple layers (`registerAffiliateCore` returns a 400 `ต้องยินยอม…` when `consent !== true`; the portal-leads submit path forces `consent:true`). Nothing to fix there.
