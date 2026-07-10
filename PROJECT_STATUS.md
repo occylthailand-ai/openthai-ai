@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T17:15:07.744Z · branch `claude/daily-reporter-improvements-8vc9ct` (206 commit(s) ahead of main)
+Generated: 2026-07-10T19:12:13.569Z · branch `claude/daily-reporter-improvements-8vc9ct` (208 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 416 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 418 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-10 — Hourly loop, run 86: hardened both signed-webhook signature checks to constant-time comparison (payment + LINE) — backend security
+
+openthai-ai synced (HEAD dc842f6, run-85 focus-trap shipped; consistency-check clean, exit 0). Diversified from the frontend sweep to the **backend money path**. Audited the Omise payment webhook (`/api/payment/webhook`) end-to-end and **logged the parts that are already correct** so they aren't re-scanned: it uses `express.raw` + a raw-buffer HMAC (the global JSON parser is correctly skipped for it, server.js:125), `verifyOmiseWebhook` **fails closed** when `OMISE_WEBHOOK_SECRET` is unset (returns false + logs — no forged-payment bypass), and the handler is idempotent (`!rec.paid_at` guard before granting entitlements / crediting affiliates / finalizing shop orders). Solid.
+
+**The real gap fixed (defense-in-depth on a payment path):** both signed webhooks compared the HMAC with a plain `===` / `!==` — **non-constant-time**. Constant-time comparison via `crypto.timingSafeEqual` is the established standard for webhook signatures (Stripe/GitHub/LINE SDKs all mandate it) because a plain string compare leaks, through response timing, how many leading bytes of the expected HMAC matched — a side channel an attacker can use to forge a signature byte-by-byte. Low practical exploitability over a network, but it's a recognized best-practice gap on the endpoint that grants paid entitlements + credits affiliate commissions, so worth closing. Fixes:
+- `omise-payment.js` `verifyOmiseWebhook`: import `timingSafeEqual`; compare the hex HMACs constant-time, rejecting a length mismatch first (timingSafeEqual throws on unequal lengths) and guarding non-string input — still fails closed on missing secret.
+- `server.js` `/api/line/webhook`: same constant-time compare on the base64 HMAC (its secret-absent skip is left as the documented dev-mode choice — lower severity since LINE events aren't a money path).
+
+**Verified by unit-testing the real exported function (not "should work"):** a standalone ESM harness imported the actual `verifyOmiseWebhook` and asserted **10/10**: a correctly-computed HMAC is accepted; a tampered one, a wrong-**length** one (the case that would throw without the length guard), an empty one, an `undefined` one, and a valid HMAC-for-a-different-body are all rejected; and with the secret unset it fails closed. Also verified the identical constant-time pattern on **base64** digests (LINE's form) — valid accepted, tampered + wrong-length rejected without throwing. Both files pass `node --check`. (Backend has no committed test runner, so — as with the smart-e fixes in runs 74–75 — the verification harness was run live but not committed.) Committed + pushed to `claude/daily-reporter-improvements-8vc9ct`; PR #79 already open.
+
+Owner-decision list unchanged (12 items).
+
+---
 
 ### 2026-07-10 — Hourly loop, run 85: completed the checkout-modal focus-trap (the piece explicitly deferred in run 83) via a shared `useDialog` hook
 
@@ -2709,14 +2723,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 6acc17a a11y: add Tab focus-trap to checkout modals via shared useDialog hook (20 seconds ago)
-- 75cc988 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- cb0ad13 seo: add public /store to prerender meta, sitemap, and robots.txt (62 minutes ago)
-- 2df945e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 7977439 fix(a11y): make checkout/order modals real dialogs — Escape-to-close + focus mgmt + role (2 hours ago)
-- 1b7fbb7 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 4381d5f fix(a11y): homepage footer nav links were mouse-only divs — make them real <a href> (3 hours ago)
-- acf5b62 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- efea5db security: constant-time comparison for Omise + LINE webhook signatures (15 seconds ago)
+- dc842f6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 6acc17a a11y: add Tab focus-trap to checkout modals via shared useDialog hook (2 hours ago)
+- 75cc988 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- cb0ad13 seo: add public /store to prerender meta, sitemap, and robots.txt (3 hours ago)
+- 2df945e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 7977439 fix(a11y): make checkout/order modals real dialogs — Escape-to-close + focus mgmt + role (4 hours ago)
+- 1b7fbb7 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2738,8 +2752,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 629,
-  "memory_mb": "22.1",
+  "uptime_sec": 1,
+  "memory_mb": "20.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -2896,7 +2910,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
-| `omise-payment.js` | 171 | PromptPay QR · Credit Card · Subscription Billing |
+| `omise-payment.js` | 180 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 148 | Portal Leads — captures submissions from the /portals/* landing pages |
@@ -2905,7 +2919,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8537 | Vercel serverless detection |
+| `server.js` | 8541 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
