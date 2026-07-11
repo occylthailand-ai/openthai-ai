@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T14:12:23.708Z · branch `claude/daily-reporter-improvements-8vc9ct` (268 commit(s) ahead of main)
+Generated: 2026-07-11T15:16:48.649Z · branch `claude/daily-reporter-improvements-8vc9ct` (270 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 478 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 480 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop: audited two areas clean (no diff manufactured) — flagship SEO route curation + smart-e security
+
+Diversified off the AI-cost thread. Two areas scanned and **verified clean**, recorded so future cycles don't re-scan (and to avoid manufacturing a low-value diff in already-hardened code):
+
+**openthai-ai SEO/sitemap curation — sound.** Compared `frontend/scripts/seo-routes.mjs` ROUTES (21 public entries) against the full `App.jsx` route table (~90). The one tempting "missing" page, `/ai-generator` (the free-tool funnel destination), is actually **auth-gated** (`isAuthenticated ? <AIGeneratorPage/> : <Navigate to="/login"/>`) — adding it would create the soft-404 the `seoInvariants` test guards against. `/income` is an **alias of the already-listed `/earn`** (both render `EarnHubPage`) and is linked nowhere, so correctly not double-listed (no duplicate-content URL in the sitemap). `/starter` is auth-gated; the rest are interactive app tools, not shareable marketing pages. `seoInvariants.test.js` passes 5/5 (sitemap == robots Allow == real public routes). No gap.
+
+**smart-e security/SQL/validation — hardened.** Fresh pass over `server.py` (1022 lines): all SQL is parameterized; the two dynamic `UPDATE` SET-clauses (`_update_product`, `_update_customer`) build columns from a **whitelist**, values via `?` — no SQLi. Search filters (`q` LIKE) are parameterized. Numeric query inputs are validated (`?limit`, `?days` both try/except→default+clamp). Admin auth is fail-closed (503 when `ADMIN_KEY` unset) with `hmac.compare_digest`. LINE webhook verifies `X-Line-Signature` as base64(HMAC-SHA256(secret, raw_body)) with `compare_digest` — correct per LINE spec. **Run-verified** the fail-closed path against a booted server: `GET /api/products` with no `ADMIN_KEY` → **503**, static `/` → **200** (remaining boundaries confirmed by reading the unambiguous code; the sandbox reaped the second bound-server boot). No code changed in smart-e (working tree clean).
 
 ### 2026-07-11 — Hourly loop: made the daily AI-cost metric + budget guard count the main generate endpoints (were blind to them)
 
@@ -2913,14 +2921,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 4680f7d docs: log AI-cost metric now counts generate endpoints (14 seconds ago)
-- 206e229 chore: sync PROJECT_STATUS.md [skip ci] (18 seconds ago)
-- d2542e5 fix(cost): count /api/generate* spend toward the shared AI budget + ops metric (37 seconds ago)
-- 3f4ffc0 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 908f063 docs: log Admin OPS AI-cost breakdown panel (59 minutes ago)
-- a774d45 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 6140adc feat(admin): surface per-endpoint AI cost breakdown in the OPS tab (59 minutes ago)
-- 6a353a0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 12905c0 docs: audit-clean record — flagship SEO curation + smart-e security (no diff needed) (14 seconds ago)
+- b654497 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- 4680f7d docs: log AI-cost metric now counts generate endpoints (65 minutes ago)
+- 206e229 chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
+- d2542e5 fix(cost): count /api/generate* spend toward the shared AI budget + ops metric (65 minutes ago)
+- 3f4ffc0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 908f063 docs: log Admin OPS AI-cost breakdown panel (2 hours ago)
+- a774d45 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2942,8 +2950,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 21,
-  "memory_mb": "19.4",
+  "uptime_sec": 0,
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
