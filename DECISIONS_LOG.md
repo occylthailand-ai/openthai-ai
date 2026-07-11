@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop, run 99: closed a freemium-bypass bug — /api/generate-ab and /api/generate/stream skipped the daily quota that /api/generate enforces
+
+openthai-ai synced. Code scan of the three AI generation endpoints in `backend/server.js` found a real **monetization-critical bug**: only `/api/generate` (line ~343) enforced the daily plan quota (`checkQuota` → 429, `consumeQuota` on success). Its two siblings — `/api/generate-ab` (A/B variants, line ~1841) and `/api/generate/stream` (SSE streaming, line ~1870) — had **only the burst rate-limiter, no quota check**. A Free user could bypass `FREE_DAILY_LIMIT` (3/day) entirely just by hitting those endpoints, and `/generate-ab` even returns **two** variants per call. This defeats the core freemium upgrade lever (the 3/day cap is what drives the ฿299 Pro upsell).
+
+**Fix (mirrors /api/generate exactly):**
+- `/api/generate-ab`: added `checkQuota()` → 429 `QUOTA_EXCEEDED` gate before generating; `consumeQuota()` on success (one A/B request = one use). **Not** consumed on the AI-failure mock fallback (same as /api/generate — a failed generation shouldn't burn quota).
+- `/api/generate/stream`: added the same 429 gate **before** opening the SSE stream (so a rejected request gets a clean JSON 429, not a half-open stream); `consumeQuota()` on successful completion, wrapped best-effort/guarded so a bookkeeping error can never break a stream that already delivered content, and **skipped if the client aborted** (`!closed`).
+
+**Verified by actually running the real server** (`PORT=8199`, no API keys → `smartGenerate` returns mock success, `FREE_DAILY_LIMIT=3`), not by inspection: boot 1 — `/api/generate-ab` calls 1/2/3 → HTTP 200, call 4 → HTTP 429 `QUOTA_EXCEEDED`, and a subsequent `/stream` after exhaustion → 429. Boot 2 (fresh quota) — `/api/generate/stream` calls 1/2/3 → streamed `done`, call 4 → HTTP 429. `git status` clean (only `backend/server.js`, no data-file pollution). Committed + pushed `ad0c517` to `claude/daily-reporter-improvements-8vc9ct` → draft **PR #79**.
+
+**Owner-decision backlog unchanged:** otop-ai-landing domain, all-platform-files domain (sitemap) + orphan-file cleanup, and openthai-ai #9 (affiliate commission on shop), #10 (dispute split), #11 (AI-usage-log migration), #12 (v9.0 build-out).
+
 ### 2026-07-11 — Hourly loop, run 98: extended the FAQPage JSON-LD to the /affiliate growth funnel (same drift-proof pattern); test now covers both pages
 
 openthai-ai synced (HEAD 4d4b738). Direct follow-up to run 97: `/affiliate` (a core growth funnel) renders a visible FAQ (`T.faqs`) with the **same missing-FAQPage gap** /pricing had. Added FAQPage JSON-LD in `AffiliatePage.jsx` built from the **same `T.faqs` array** it renders (drift-proof), client-side (Google-only feature, Google renders JS), guarded for locales missing the key + escapes `<` — identical to the /pricing approach. **Generalized** `src/__tests__/pricingFaqSchema.test.jsx` to cover **both** `/pricing` and `/affiliate` via `describe.each`.
