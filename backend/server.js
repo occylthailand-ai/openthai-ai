@@ -660,6 +660,10 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
     const finalizePaid = async (charge) => {
       await inventory.adjust(product_id, -qty, 'sale', `ขายผ่านร้าน (ออเดอร์ ${orderId})`, orderId, channel);
       await orders.setStatus(orderId, 'confirmed', 'ชำระเงินสำเร็จ');
+      // #9 — ให้คอมมิชชัน affiliate ถ้าลูกค้าเข้าร้านผ่านลิงก์ ref (เรตตามขั้นของ affiliate เดิม,
+      // เหมือน subscription/quickpay) เดิมร้านค้าเก็บ ref ไว้แค่ attribution ช่องทาง ไม่จ่ายคอมมิชชัน
+      // เส้นบัตร/mock finalize ทันทีที่นี่ครั้งเดียว (PromptPay เครดิตใน webhook แทน — ไม่ซ้ำ)
+      if (ref) creditAffiliateSale(String(ref).slice(0, 40), amount, { charge_id: charge?.charge_id || null, source: platform || 'shop' });
       return res.json({ success: true, paid: true, order_id: orderId, amount, stock_left: Math.max(0, (p.stock || 0) - qty), ...(charge || {}) });
     };
 
@@ -7856,6 +7860,10 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
               const shopChannel = (data.metadata?.channel || 'store').toString().slice(0, 40);
               await inventory.adjust(shopProductId, -q, 'sale', `ชำระผ่าน PromptPay (ออเดอร์ ${shopOrderId})`, shopOrderId, shopChannel);
               await orders.setStatus(shopOrderId, 'confirmed', 'ชำระเงินผ่าน PromptPay สำเร็จ');
+              // #9 — เครดิตคอมมิชชัน affiliate สำหรับร้านค้าจ่ายผ่าน PromptPay (channel = 'ref:CODE')
+              // guard ด้วย status==='new' ด้านบนแล้ว → idempotent จ่ายครั้งเดียว (เส้นบัตรจ่ายใน finalizePaid)
+              const shopRef = shopChannel.startsWith('ref:') ? shopChannel.slice(4) : null;
+              if (shopRef) creditAffiliateSale(shopRef, data.amount / 100, { charge_id: data.id, source: 'shop' });
               addLog('info', 'OmiseWebhook', `Shop order finalized: ${shopOrderId} (stock -${q})`);
             }
           } catch (e) { addLog('warn', 'OmiseWebhook', `shop finalize ${shopOrderId}: ${e.message}`); }
