@@ -9,6 +9,15 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Owner request: Data Classification Framework — built a self-verifying tool grounded in real fields; caught 7 fabricated fields in the pasted spec
+
+Owner asked (in Thai) to build a "data connector/classification tool" organizing system fields by the 6 statistical data types (Quantitative/Qualitative × Nominal/Ordinal/Discrete/Continuous), seeded from a detailed pasted spec citing the "MVP AI Income Starter" and "LLM Router". Per CLAUDE.md (verify-before-build), **grepped every field against the real repo first** — and the spec was the classic mixed real+fabricated paste:
+
+- **Real (14 fields, kept):** `revenue_thb`, `latency_ms`, `model_accuracy`, `ai_calls_today`, `orders_total` (progress-tracker.js); `criticScore`, `caption`, `hashtags`, `platform`, `costPer1k`, `AI_DAILY_BUDGET_USD`, `ROUTER_PROVIDERS` (claude/gemini/grok), `ROUTER_TIERS` (heavy›bulk›eco), `privacy_level` (server.js).
+- **Fabricated (7, verified 0 hits, NOT built):** `est_margin_pct`, `cost_thb`, `fairnessScore`, `journey_progress`, `local-llama`, `mistral`, `competition_level`. The spec's `provider: ['grok,claude,gemini,local-llama,mistral']` is wrong — the real Router has only **3** providers; the real cost field is `costPer1k` (per-model USD), not a product `cost_thb`; `privacy_level` is a **TikTok publish-visibility constant** (`'PUBLIC_TO_EVERYONE'`), not the `['low,med,high]` router weight the spec claimed (no `local-llama +25` logic exists).
+
+**Built:** `scripts/data-classification.mjs` + generated `docs/DATA_CLASSIFICATION.md`. Each classified field is anchored to a source file + a token that must appear in it; the script reads the real files and **exits non-zero on drift** (same contract as `generate-project-status.mjs`), and records the 7 fabricated tokens as verified-absent so they can't be built on by mistake. **Verified by running:** clean run classifies 14 / confirms 7 absent / writes doc / exit 0; a deliberately broken anchor → exit 1 naming the field; `--check` and write modes both exercised. Committed + pushed `26521d1` → draft **PR #79**.
+
 ### 2026-07-11 — Hourly loop, run 100: fixed the frontend fallout of run 99 — the live-stream generator sent no identity headers and mishandled the new 429
 
 openthai-ai synced (HEAD 95d431d). Direct, high-impact follow-up to run 99: once `/api/generate/stream` started enforcing the daily quota, its **frontend caller** (`AIGeneratorPage.jsx` `handleStream`, the "เขียนสด/Live" button) had two real defects that enforcement exposed. First **verified the quota model** to avoid over-reaching: `checkQuota`/`consumeQuota` are enforced on exactly the three generate endpoints (`/api/generate`, `-ab`, `/stream`); the ~30 `/api/skills/*` tools are deliberately NOT quota-gated — whether they should be is a **product decision left for the owner**, not guessed here.
