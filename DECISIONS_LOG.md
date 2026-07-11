@@ -9,6 +9,16 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Owner set a 30 Jul 2026 deadline to finish the backlog; owner-decided #10, completed #10 + #11
+
+Owner instruction: complete the pending mission before 30 ก.ค. 2569 (2026), and "ทำต่อเนื่องอัตโนมัติทั้งหมด" (proceed through it autonomously). Surfaced the 4 stop-and-ask forks (#9/#10/#11/#12) for decisions; the interactive prompt failed in this background run, but the owner replied for **#10** = "ปิด/เปลี่ยนป้ายปุ่มก่อน" (relabel/disable until a real split exists). Executed:
+
+**#10 dispute "split" (owner-decided) — shipped `5bb244a`.** The admin "แบ่งครึ่ง" button mapped to a `split` decision that `disputes.resolve()` turned into escrow `released` + `resolved_supplier` — i.e. released the **full** escrow to the supplier, buyer got nothing, opposite of the label (a live money bug). Removed `split` from `DECISIONS` (resolve() now returns `invalid decision` for it — defense in depth vs old clients/direct API), simplified the now-exhaustive escrow mapping over {favor_supplier, favor_buyer, refund}, dropped `split` from the AI-suggest enum, and removed the button in `AdminPage.jsx`. **Verified** against the real module: open→escrow `held`; favor_buyer→`resolved_buyer`+`refunded`; split→rejected `invalid decision`; frontend build clean.
+
+**#11 AI-usage logging — shipped `ea60d8d`.** migration 003's `ai_usage_log` was dead schema (nothing wrote to it). Added `recordAiUsage()` wired into `/api/generate` (success + mock-fallback) + `GET /api/ai-usage/admin/summary` (Admin Key) that aggregates per-endpoint/per-source token+cost totals (answers run-71's "what uses the most tokens"). Ships safely without confirming prod migration state because it's **fire-and-forget** (never awaited → no latency / can't fail a generation) and **self-disabling** (first INSERT against a missing table flips logging off for the process; applying migration 003 re-enables on reboot). **Verified** against a booted server + mock Supabase: table present → 3 generates = 3 rows, summary aggregates correctly; table missing → generate still 200, logging self-disables, summary returns `enabled:false` + "run migration 003" note; admin endpoint 401 without key. Tokens/cost are estimates (same basis as the router cost model).
+
+**Still open (the genuine money/architecture forks, awaiting owner specifics):** #9 (affiliate commission on shop — needs the commission-rate decision) and #12 (v9.0 build-out — standing up the whole Next.js stack is large; README targets Q2 2026).
+
 ### 2026-07-11 — Owner request: Data Classification Framework — built a self-verifying tool grounded in real fields; caught 7 fabricated fields in the pasted spec
 
 Owner asked (in Thai) to build a "data connector/classification tool" organizing system fields by the 6 statistical data types (Quantitative/Qualitative × Nominal/Ordinal/Discrete/Continuous), seeded from a detailed pasted spec citing the "MVP AI Income Starter" and "LLM Router". Per CLAUDE.md (verify-before-build), **grepped every field against the real repo first** — and the spec was the classic mixed real+fabricated paste:
