@@ -9,6 +9,10 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop: completed the #11 AI-usage logging across all three generate endpoints
+
+Follow-up consistency fix to #11 (which only instrumented `/api/generate`): its two siblings `/api/generate-ab` and `/api/generate/stream` also consume the daily quota, so the per-endpoint cost summary was undercounting them. Wired `recordAiUsage()` into both — generate-ab logs one row per request (input tokens ×2 for the two variants; output = both A+B); stream accumulates its SSE text via a small `emit()` helper and logs on successful completion (skipped on client abort, same guard as the quota consume). Same fire-and-forget + self-disabling path. **Verified** on a booted server + mock Supabase (FREE_DAILY_LIMIT=3): 2 generate-ab + 1 stream logged → summary `{/api/generate-ab:2, /api/generate/stream:1}`; the quota-exhausted 4th/5th calls returned 429 and correctly did NOT log. `9522f9e`.
+
 ### 2026-07-11 — Owner set a 30 Jul 2026 deadline to finish the backlog; owner-decided #10, completed #10 + #11
 
 Owner instruction: complete the pending mission before 30 ก.ค. 2569 (2026), and "ทำต่อเนื่องอัตโนมัติทั้งหมด" (proceed through it autonomously). Surfaced the 4 stop-and-ask forks (#9/#10/#11/#12) for decisions; the interactive prompt failed in this background run, but the owner replied for **#10** = "ปิด/เปลี่ยนป้ายปุ่มก่อน" (relabel/disable until a real split exists). Executed:
