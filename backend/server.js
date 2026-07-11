@@ -1898,6 +1898,7 @@ app.post('/api/generate-ab', generateLimiter, async (req, res) => {
   form.product = sanitize(form.product);
   form.audience = sanitize(form.audience);
   form.price = sanitize(form.price);
+  const t0 = Date.now();
   // Enforce the same daily plan quota as /api/generate. This A/B endpoint previously had
   // NO quota check (only the burst rate-limiter), so a Free user could bypass FREE_DAILY_LIMIT
   // entirely — and get two variants per call — just by using /api/generate-ab. Count one A/B
@@ -1912,6 +1913,13 @@ app.post('/api/generate-ab', generateLimiter, async (req, res) => {
   try {
     const [a, b] = await Promise.all([smartGenerate(form), smartGenerate({ ...form, style: form.style === 'sales' ? 'entertainment' : 'sales' })]);
     await consumeQuota(req);
+    // #11 — log AI usage (A/B = two generations in one request; count both variants' output)
+    recordAiUsage({
+      endpoint: '/api/generate-ab', ai_source: a.source, product: form.product, platform: form.platform,
+      category: form.category, style: form.style, critic_score: a.criticScore, response_ms: Date.now() - t0,
+      input_tokens: estTokens(buildPrompt(form)) * 2,
+      output_tokens: estTokens([a.hook, ...(a.script || []), a.caption, b.hook, ...(b.script || []), b.caption].filter(Boolean).join(' ')),
+    });
     return res.json({ a, b });
   } catch (err) {
     // AI failed → mock fallback; do NOT consume quota on failure (same as /api/generate).
@@ -1952,8 +1960,12 @@ app.post('/api/generate/stream', generateLimiter, async (req, res) => {
 สินค้า: "${String(product).slice(0, 200)}" · หมวด: ${category} · กลุ่มเป้าหมาย: ${audience}
 เขียนเป็นข้อความต่อเนื่อง (ไม่ต้องมีหัวข้อ/JSON) มี hook เปิดที่ดึงดูด · ประโยชน์ · call-to-action · อิโมจิพอเหมาะ · แฮชแท็ก 3-5 ตัวท้ายสุด`;
 
+  const t0 = Date.now();
+  const source = anthropic ? 'claude' : (gemini ? 'gemini' : 'mock');
+  let full = '';                            // accumulate output for #11 token estimate
+  const emit = (text) => { full += text; send('delta', { text }); };
   try {
-    send('start', { source: anthropic ? 'claude' : (gemini ? 'gemini' : 'mock') });
+    send('start', { source });
 
     if (anthropic) {
       const stream = await anthropic.messages.create({
@@ -1962,26 +1974,30 @@ app.post('/api/generate/stream', generateLimiter, async (req, res) => {
       });
       for await (const ev of stream) {
         if (closed) break;
-        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) send('delta', { text: ev.delta.text });
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) emit(ev.delta.text);
       }
     } else if (gemini) {
       const result = await gemini.generateContentStream(prompt);
       for await (const chunk of result.stream) {
         if (closed) break;
-        const t = chunk.text(); if (t) send('delta', { text: t });
+        const t = chunk.text(); if (t) emit(t);
       }
     } else {
       // Mock — สตรีมทีละคำเพื่อให้เห็น UX จริง
       const mock = `🔥 หยุดเลื่อน! ${String(product).slice(0, 40)} ที่ทุกคนตามหา มาแล้ว ✨\n\nคุณภาพคัดเกรด ส่งตรงถึงมือคุณ ราคาที่จับต้องได้ รับประกันความพอใจ 💯\n\n👉 ทักแชทสั่งเลยวันนี้ ของมีจำนวนจำกัด!\n\n#${category} #ของดีบอกต่อ #Openthai_ai`;
       for (const word of mock.split(/(\s+)/)) {
         if (closed) break;
-        send('delta', { text: word });
+        emit(word);
         await new Promise(r => setTimeout(r, 35));
       }
     }
     // Count this generation against the daily quota (best-effort so a bookkeeping error
     // never breaks a stream that already delivered content). Skipped if the client aborted.
-    if (!closed) { try { await consumeQuota(req); } catch { /* quota bookkeeping best-effort */ } }
+    if (!closed) {
+      try { await consumeQuota(req); } catch { /* quota bookkeeping best-effort */ }
+      recordAiUsage({ endpoint: '/api/generate/stream', ai_source: source, product, platform, category,
+        response_ms: Date.now() - t0, input_tokens: estTokens(prompt), output_tokens: estTokens(full) });
+    }
     send('done', { ok: true });
   } catch (e) {
     addLog('warn', 'GenerateStream', e.message);
