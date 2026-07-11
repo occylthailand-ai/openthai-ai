@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T07:14:28.084Z · branch `claude/daily-reporter-improvements-8vc9ct` (228 commit(s) ahead of main)
+Generated: 2026-07-11T07:15:42.853Z · branch `claude/daily-reporter-improvements-8vc9ct` (230 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 438 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 440 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop, run 97: added FAQPage JSON-LD to the flagship /pricing (Google FAQ rich-result eligibility) — an unblocked SEO win on the known domain; verified with a new drift-guard test
+
+openthai-ai synced (HEAD 0a78af9). Diversified back to the **flagship** (known domain openthai-ai.com → SEO work here is NOT domain-blocked, unlike the satellites). First **verified two core areas clean** (recording so they aren't re-scanned): (1) the existing JSON-LD @graph in `frontend/index.html` (Organization + WebSite + SoftwareApplication) — its offer prices **exactly match** the real `SUBSCRIPTION_PLANS` in `backend/omise-payment.js` (Free 0 / Pro 299 / Premier 599 / Enterprise 1299 THB), so the structured-data pricing is accurate. (2) public `GET /api/shop/products` (`inventory.js`) exposes only id/sku/name/category/price/image/description/in_stock/stock — **no `cost`/margin leak** — and `adjust(type:'sale')` blocks overselling (`before+d<0` → "สต๊อกไม่พอ").
+
+**Real unblocked SEO win shipped:** `/pricing` renders a visible FAQ (`t('pp.faq')`) but had **no FAQPage structured data**, so Google couldn't surface it as an FAQ rich result (expandable Q&A in the SERP — high-CTR on a core conversion page). Added FAQPage JSON-LD in `PricingPage.jsx` built from the **same `faq` array** the page already renders (so it can't drift from the visible Q&A). FAQ rich results are Google-only and Google renders SPA JS + reads DOM JSON-LD, so **client-side injection is sufficient** — deliberately NOT added to `prerender-meta.mjs`, since that would require duplicating the FAQ text into the build script (the exact drift risk CLAUDE.md warns against). Guarded for locales missing the key (filters to valid `[q,a]` pairs; renders nothing if none) and escapes `<`.
+
+**Verified by running the real component in vitest/jsdom** (new `src/__tests__/pricingFaqSchema.test.jsx` + existing `faqAccordionA11y` unaffected → **10/10 pass**): exactly one valid FAQPage block; correct @context/@type; **one Question per rendered FAQ disclosure** (schema mirrors the visible FAQ — the test pins this so it can't silently drift); every Question has a non-empty name + acceptedAnswer.text. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` (commit `b688ebc`) — draft **PR #79**.
+
+**Owner-decision backlog unchanged:** otop-ai-landing domain, all-platform-files domain (sitemap) + orphan-file cleanup, and openthai-ai #9 (affiliate commission on shop), #10 (dispute split), #11 (AI-usage-log migration), #12 (v9.0 build-out).
 
 ### 2026-07-11 — Hourly loop, run 96: verified the otop-ai-landing signup funnel is correctly wired (all 6 CTA paths map to real routes) + one mobile polish; og:image still domain-blocked
 
@@ -2836,14 +2846,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b688ebc seo(pricing): emit FAQPage JSON-LD on /pricing (Google FAQ rich-result eligibility) (35 seconds ago)
-- 0a78af9 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- a428055 log: run 96 — verified otop-ai-landing funnel links (6/6 map to real routes) + added theme-color; og:image still domain-blocked (62 minutes ago)
+- 16faa22 log: run 97 — FAQPage JSON-LD on /pricing (verified, drift-guard test); flagship JSON-LD pricing + shop endpoint verified clean (49 seconds ago)
+- 6681023 chore: sync PROJECT_STATUS.md [skip ci] (72 seconds ago)
+- b688ebc seo(pricing): emit FAQPage JSON-LD on /pricing (Google FAQ rich-result eligibility) (2 minutes ago)
+- 0a78af9 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- a428055 log: run 96 — verified otop-ai-landing funnel links (6/6 map to real routes) + added theme-color; og:image still domain-blocked (63 minutes ago)
 - 0e7f115 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 47269ae log: run 95 — SEO/OG metadata on 93 dashboard pages + fixed affiliate-hub.html double-wrap from run 92 (verified in jsdom) (2 hours ago)
 - 5b6fe8d chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 08fe246 log: run 94 — smart-e review (flows solid); fixed negative-amount gap in POST /api/payments/qr, verified on booted server (3 hours ago)
-- 700ae02 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2866,7 +2876,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.7",
+  "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
