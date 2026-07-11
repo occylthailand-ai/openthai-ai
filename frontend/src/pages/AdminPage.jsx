@@ -46,6 +46,7 @@ export default function AdminPage() {
   const [reviewQueue, setReviewQueue] = useState(null); // Human review queue (AI-generated content)
   const [reviewTenant, setReviewTenant] = useState('global');
   const [opsSummary, setOpsSummary] = useState(null); // ต้นทุน(ขาออก)+รายรับ(ขาเข้า)+สัญญาณความหย่อนยาน
+  const [aiUsage, setAiUsage] = useState(null);       // ต้นทุน/โทเคน AI แยกตาม endpoint (จาก ai_usage_log)
 
   useEffect(() => { document.title = 'Admin Panel — Openthai.ai'; }, []);
 
@@ -80,6 +81,7 @@ export default function AdminPage() {
     fetch(apiUrl('/api/disputes/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setEscrowSum(d); }).catch(apiErr('disputes-summary'));
   };
   const loadOpsSummary = () => fetch(apiUrl('/api/admin/ops-summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setOpsSummary(d); else console.warn('[admin] ops-summary:', d.message); }).catch(apiErr('ops-summary'));
+  const loadAiUsage = () => fetch(apiUrl('/api/ai-usage/admin/summary'), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setAiUsage(d); else console.warn('[admin] ai-usage:', d.message); }).catch(apiErr('ai-usage'));
   const loadReviewQueue = (tenantId = reviewTenant) => {
     fetch(apiUrl(`/api/memory/admin/review-queue?tenantId=${encodeURIComponent(tenantId)}`), { headers: { 'x-admin-key': adminKey() } }).then(r => r.json()).then(d => { if (d.success) setReviewQueue(d); else console.warn('[admin] review-queue:', d.message); }).catch(apiErr('review-queue'));
   };
@@ -88,7 +90,7 @@ export default function AdminPage() {
     if (!r.success) alert(r.error || 'บันทึกรีวิวไม่สำเร็จ');
     loadReviewQueue();
   };
-  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); loadDisputes(); loadReviewQueue(); loadOpsSummary(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (authed) { loadProducers(); loadOrders(); loadLeads(); loadAffiliates(); loadWithdrawals(); loadScheduler(); loadInventory(); loadDisputes(); loadReviewQueue(); loadOpsSummary(); loadAiUsage(); } }, [authed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveProduct = async (data) => {
     const r = await fetch(apiUrl('/api/inventory/admin/upsert'), { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() }, body: JSON.stringify(data) }).then(x => x.json());
@@ -658,7 +660,44 @@ export default function AdminPage() {
                 <div style={{ ...glass, fontSize: 12, color: '#94a3b8' }}>
                   {opsSummary.cost_outbound.note}
                 </div>
-                <button onClick={loadOpsSummary} style={{ ...tabBtn, padding: '6px 14px', fontSize: 12, width: 'fit-content' }}>🔄 รีเฟรช</button>
+
+                {/* ต้นทุน/โทเคน AI แยกตาม endpoint (จาก ai_usage_log · #11) — บอกว่า "ส่วนไหนกินโทเคนมากสุด" */}
+                {aiUsage && (
+                  <div style={{ ...glass }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>🧮 ต้นทุน AI แยกตาม endpoint</div>
+                    {!aiUsage.enabled ? (
+                      <div style={{ fontSize: 12, color: '#94a3b8' }}>{aiUsage.note || 'ยังไม่ได้เปิดใช้งาน — รัน migration 003 ก่อน'}</div>
+                    ) : aiUsage.sample_rows === 0 ? (
+                      <div style={{ fontSize: 12, color: '#94a3b8' }}>ยังไม่มีข้อมูลการใช้งาน AI</div>
+                    ) : (
+                      <>
+                        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>
+                          รวม {aiUsage.total_tokens.toLocaleString()} tokens · ${aiUsage.total_cost_usd.toFixed(4)} (≈ {baht(aiUsage.total_cost_thb)}) จาก {aiUsage.sample_rows} รายการล่าสุด
+                        </div>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                            <thead><tr style={{ color: '#7c8797', textAlign: 'left' }}>
+                              <th style={{ padding: '4px 8px' }}>Endpoint</th><th style={{ padding: '4px 8px' }}>ครั้ง</th>
+                              <th style={{ padding: '4px 8px' }}>Tokens</th><th style={{ padding: '4px 8px' }}>ต้นทุน (USD)</th>
+                            </tr></thead>
+                            <tbody>
+                              {Object.entries(aiUsage.by_endpoint).sort((a, b) => (b[1].input_tokens + b[1].output_tokens) - (a[1].input_tokens + a[1].output_tokens)).map(([ep, v]) => (
+                                <tr key={ep} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                  <td style={{ padding: '4px 8px', fontFamily: 'monospace' }}>{ep}</td>
+                                  <td style={{ padding: '4px 8px' }}>{v.requests}</td>
+                                  <td style={{ padding: '4px 8px' }}>{(v.input_tokens + v.output_tokens).toLocaleString()}</td>
+                                  <td style={{ padding: '4px 8px', color: '#f59e0b' }}>${v.cost_usd.toFixed(4)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <button onClick={() => { loadOpsSummary(); loadAiUsage(); }} style={{ ...tabBtn, padding: '6px 14px', fontSize: 12, width: 'fit-content' }}>🔄 รีเฟรช</button>
               </>
             )}
           </div>
