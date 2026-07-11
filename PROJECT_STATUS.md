@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T20:11:18.777Z · branch `claude/daily-reporter-improvements-8vc9ct` (288 commit(s) ahead of main)
+Generated: 2026-07-11T20:11:34.237Z · branch `claude/daily-reporter-improvements-8vc9ct` (290 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 498 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 500 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop: completed test coverage — self-contained regression guard for #11 AI-usage logging + spend tracking
+
+The third money/cost change (#11 AI-usage logging + the shared-budget spend tracking) was the only one still lacking a committed test. Added `backend/scripts/test-ai-usage.mjs` + `test:ai-usage` + a CI step. **Fully self-contained** (no external services): starts an in-process mock Supabase, spawns the real server pointed at it, drives 3× `/api/generate`, then asserts the mock received 3 `ai_usage_log` inserts (each with endpoint + valid ai_source), `/api/ai-usage/admin/summary` reports `by_endpoint['/api/generate'].requests === 3`, and `/api/router/status.calls ≥ 3` (generate now feeds the shared budget counter). Wired into the backend CI job as a single command. **Verified real guard:** 6/6 pass; disabling `recordAiUsage` in `/api/generate` fails it 3/3 (exit 1), catching both the logging and spend-tracking regressions. `f2cb210`. → All three money/cost fixes (#9 shop-commission, #10 dispute-split, #11 ai-usage) now have committed regression guards, and #10/#11 + shop-commission all run in CI.
 
 ### 2026-07-11 — Hourly loop: also wired the shop-commission E2E money guard into CI (verified the prior CI run went green first)
 
@@ -2937,14 +2941,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- f2cb210 test(ai-usage): self-contained regression guard for AI-usage logging + spend tracking (#11) (14 seconds ago)
-- e6b88b5 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- cfc33f0 docs: log self-contained AI-usage regression guard (#11) — coverage complete (13 seconds ago)
+- 860ffaa chore: sync PROJECT_STATUS.md [skip ci] (14 seconds ago)
+- f2cb210 test(ai-usage): self-contained regression guard for AI-usage logging + spend tracking (#11) (31 seconds ago)
+- e6b88b5 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
 - 2f43ab5 docs: log CI wiring of shop-commission E2E guard + verified prior CI green (61 minutes ago)
 - 6b6ae2b chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
 - 626bc0a ci: also run the shop-commission E2E money guard in the Tests workflow (61 minutes ago)
 - 783c84f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 2bc3261 docs: log CI wiring of dispute-split regression guard (2 hours ago)
-- 595b0a0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2966,8 +2970,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "uptime_sec": 16,
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
