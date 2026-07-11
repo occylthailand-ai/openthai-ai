@@ -73,6 +73,20 @@ jobs:
           echo "─── server.log ───"; cat /tmp/server.log
           kill $SERVER_PID 2>/dev/null || true
           exit 1
+      - name: E2E — shop-commission money guard (#9)
+        working-directory: backend
+        run: |
+          ADMIN_KEY=ci-admin PORT=8898 node server.js > /tmp/shop-server.log 2>&1 &
+          SP=$!
+          for i in $(seq 1 20); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8898/api/health || echo 000)" = "200" ] && break
+            sleep 1
+          done
+          TEST_BASE=http://127.0.0.1:8898 ADMIN_KEY=ci-admin node scripts/test-shop-commission.mjs
+          RC=$?
+          kill $SP 2>/dev/null || true
+          if [ "$RC" != "0" ]; then echo "─── shop-server.log ───"; cat /tmp/shop-server.log; fi
+          exit $RC
 
   # ── Quality: ตรวจ hardcoded secrets ────────────────────────────────────────
   quality:
