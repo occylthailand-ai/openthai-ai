@@ -9,6 +9,19 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop, run 93: verification run — swept the #1-priority consent/PDPA funnel end-to-end and confirmed it fully solid (negative result, logged so it isn't re-swept); surfaced 2 all-platform-files owner-decision items
+
+openthai-ai synced (HEAD c9acce3). Diversified off the all-platform-files SEO thread back to the standing order's **top-listed** priority (consent-based registration funnel). Read the real code rather than trusting prior claims; **found no gap — everything is correctly wired**, so recording the negative result to prevent re-sweeping:
+
+- **Backend `portal-leads.js`:** `submit()` hard-rejects `consent !== true` (400) and stores `consent:true` on the record; rate-limited 10/15min; dual-mode Supabase/file. `unsubscribe()` + `eraseByEmail()` both exported **and wired**: `GET /api/leads/unsubscribe` (server.js:147) validates the HMAC token + rate-limits; `sendConsumerDigest` skips `l.unsubscribed` (server.js:1107).
+- **PDPA rights (server.js):** `/api/privacy/erasure/confirm` (6146) erases waitlist+consents+producers+**portal_leads**+affiliates (token-gated); `/api/privacy/access/confirm` (6219) returns all 7 categories incl. portal_leads (token-gated, §30/§31). The one open item (whether erasure should also purge/anonymise **orders/withdrawals** financial records, or retain under the accounting/tax exemption) is **already a logged owner-decision** from run 62 — not a new gap.
+- **Email-injection defense:** `escapeHtml()` (server.js:853) is applied at every user-value insertion point across all 3 notification paths (order 874-879, dispute 928-930, portal-lead 950) + consumer digest — closing the `clip()` unclosed-`<` bypass. Affiliate withdrawal email interpolates `${promptpay}` unescaped but it's validated to exactly 10/13 **digits** upstream (server.js:1493-1496), so no injection.
+- **All 9 frontend portal pages** (`/portals/*`): each holds `consent` state, gates the submit button (`disabled={!consent||busy}`), and **sends `consent` in the POST body** via the shared `submitLead()` — which posts the full payload and reports **honest** success/failure (`res.ok && data.success===true`), not fake success. The 9 page types exactly match backend `KNOWN_TYPES`.
+
+**2 new all-platform-files owner-decision items surfaced (not acted on — scope/domain):** (a) **230 `OpenThaiAI_*_Roadmap.html` files are true orphans** — not linked from any page, no sitemap; they're deployed/publicly reachable by direct URL only and are older duplicates of the 93 live lowercase pages. Deleting 230 files is a product call for the owner. (b) the deployed dashboard site has **no `sitemap.xml`/`robots.txt`** — a real SEO gap, but a correct sitemap needs the site's **production domain**, which (like otop-ai-landing) appears in no repo. Both deferred rather than guessed.
+
+**No code shipped this run** — the priority area is genuinely clean; fabricating a change would violate the repo's verify-before-build / no-marginal-change philosophy. Draft PR #1 (all-platform-files, runs 90-92) and the owner-decision backlog are unchanged.
+
 ### 2026-07-11 — Hourly loop, run 92: made all 93 dashboard-reachable content pages mobile-ready + SEO-valid (wrapped bare `<section>` fragments in a proper HTML5 shell; verified in jsdom)
 
 openthai-ai synced (HEAD 081a9c0). Continuing the `all-platform-files` sweep. First ran a **full internal-link integrity check** across all 516 HTML files (href + JS-string `.html` refs) → **0 broken** — confirming run 91's Coupang fix was the last dead link.
