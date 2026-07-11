@@ -9,6 +9,14 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop, run 98: extended the FAQPage JSON-LD to the /affiliate growth funnel (same drift-proof pattern); test now covers both pages
+
+openthai-ai synced (HEAD 4d4b738). Direct follow-up to run 97: `/affiliate` (a core growth funnel) renders a visible FAQ (`T.faqs`) with the **same missing-FAQPage gap** /pricing had. Added FAQPage JSON-LD in `AffiliatePage.jsx` built from the **same `T.faqs` array** it renders (drift-proof), client-side (Google-only feature, Google renders JS), guarded for locales missing the key + escapes `<` — identical to the /pricing approach. **Generalized** `src/__tests__/pricingFaqSchema.test.jsx` to cover **both** `/pricing` and `/affiliate` via `describe.each`.
+
+**Verified by running the real components in vitest/jsdom (12/12 pass** incl. existing `faqAccordionA11y`): each page emits exactly one valid FAQPage block; correct @context/@type; **one Question per rendered FAQ disclosure** (schema mirrors the visible FAQ, pinned so it can't drift); every Question has a non-empty name + acceptedAnswer.text. Committed + pushed (`3c7e0f3`) — draft **PR #79**. Both public FAQ pages now carry FAQPage structured data.
+
+**Owner-decision backlog unchanged:** otop-ai-landing domain, all-platform-files domain (sitemap) + orphan-file cleanup, and openthai-ai #9 (affiliate commission on shop), #10 (dispute split), #11 (AI-usage-log migration), #12 (v9.0 build-out).
+
 ### 2026-07-11 — Hourly loop, run 97: added FAQPage JSON-LD to the flagship /pricing (Google FAQ rich-result eligibility) — an unblocked SEO win on the known domain; verified with a new drift-guard test
 
 openthai-ai synced (HEAD 0a78af9). Diversified back to the **flagship** (known domain openthai-ai.com → SEO work here is NOT domain-blocked, unlike the satellites). First **verified two core areas clean** (recording so they aren't re-scanned): (1) the existing JSON-LD @graph in `frontend/index.html` (Organization + WebSite + SoftwareApplication) — its offer prices **exactly match** the real `SUBSCRIPTION_PLANS` in `backend/omise-payment.js` (Free 0 / Pro 299 / Premier 599 / Enterprise 1299 THB), so the structured-data pricing is accurate. (2) public `GET /api/shop/products` (`inventory.js`) exposes only id/sku/name/category/price/image/description/in_stock/stock — **no `cost`/margin leak** — and `adjust(type:'sale')` blocks overselling (`before+d<0` → "สต๊อกไม่พอ").
