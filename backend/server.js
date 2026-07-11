@@ -93,13 +93,30 @@ async function _sbReq(method, table, opts = {}) {
 let _aiUsageLogOff = !_useSB;              // off entirely when Supabase isn't configured
 const USD_TO_THB = 36.5;                   // rough display rate; cost is an estimate anyway
 const AI_SOURCE_COST_PER_1K = { claude: 0.0008, gemini: 0.0004, mock: 0, 'mock-fallback': 0 };
+// Attribute AI spend from the content-generation endpoints (which use smartGenerate,
+// NOT routeAI) to the shared daily budget/cost counters, so ops-summary's
+// ai_spent_today_usd and the Eco-mode budget guard reflect the biggest AI consumer
+// too — previously they only counted router/council traffic, so a heavy /api/generate
+// day showed near-$0 cost and never tripped the daily budget.
+function trackGenerateSpend(source, tokens, usd) {
+  routerRollover();
+  routerState.spentUsd = +(routerState.spentUsd + (usd || 0)).toFixed(6);
+  routerState.calls++;
+  if (source === 'claude' || source === 'gemini') {
+    const bp = routerState.byProvider[source] || { calls: 0, usd: 0, tokens: 0 };
+    bp.calls++; bp.usd = +(bp.usd + (usd || 0)).toFixed(6); bp.tokens += (tokens || 0);
+    routerState.byProvider[source] = bp;
+  }
+}
 function recordAiUsage(row = {}) {
-  if (_aiUsageLogOff) return;
   const source = ['claude', 'gemini', 'mock', 'mock-fallback'].includes(row.ai_source) ? row.ai_source : 'mock';
   const inTok = Math.max(0, Math.round(row.input_tokens || 0));
   const outTok = Math.max(0, Math.round(row.output_tokens || 0));
   const costUsd = row.cost_usd != null ? +Number(row.cost_usd).toFixed(6)
     : +(((inTok + outTok) / 1000) * (AI_SOURCE_COST_PER_1K[source] || 0)).toFixed(6);
+  // in-memory budget/cost accounting — runs even when DB logging is off (no Supabase)
+  trackGenerateSpend(source, inTok + outTok, costUsd);
+  if (_aiUsageLogOff) return;   // Supabase persistence below only when migration 003 is applied
   const body = {
     endpoint: String(row.endpoint || '').slice(0, 120),
     ai_source: source,
@@ -7812,7 +7829,7 @@ app.get('/api/admin/ops-summary', adminLimiter, async (req, res) => {
         ai_budget_usd: AI_DAILY_BUDGET_USD,
         ai_budget_used_pct: AI_DAILY_BUDGET_USD > 0 ? +(routerState.spentUsd / AI_DAILY_BUDGET_USD * 100).toFixed(1) : 0,
         ai_eco_mode: routerEco(),
-        note: 'ไม่รวมค่า hosting/database/SMTP/SMS — เช็ค dashboard ของ Vercel/Supabase/ผู้ให้บริการนั้นๆ โดยตรง',
+        note: 'รวมต้นทุน AI ทั้ง generate + router (ประมาณจากโทเคน) · ไม่รวมค่า hosting/database/SMTP/SMS — เช็ค dashboard ของ Vercel/Supabase/ผู้ให้บริการนั้นๆ โดยตรง',
       },
       revenue_inbound: {
         total_thb: sum(paid),
