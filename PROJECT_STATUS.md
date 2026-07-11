@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T12:31:02.760Z · branch `claude/daily-reporter-improvements-8vc9ct` (250 commit(s) ahead of main)
+Generated: 2026-07-11T12:31:43.171Z · branch `claude/daily-reporter-improvements-8vc9ct` (252 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 460 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 462 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Owner set a 30 Jul 2026 deadline to finish the backlog; owner-decided #10, completed #10 + #11
+
+Owner instruction: complete the pending mission before 30 ก.ค. 2569 (2026), and "ทำต่อเนื่องอัตโนมัติทั้งหมด" (proceed through it autonomously). Surfaced the 4 stop-and-ask forks (#9/#10/#11/#12) for decisions; the interactive prompt failed in this background run, but the owner replied for **#10** = "ปิด/เปลี่ยนป้ายปุ่มก่อน" (relabel/disable until a real split exists). Executed:
+
+**#10 dispute "split" (owner-decided) — shipped `5bb244a`.** The admin "แบ่งครึ่ง" button mapped to a `split` decision that `disputes.resolve()` turned into escrow `released` + `resolved_supplier` — i.e. released the **full** escrow to the supplier, buyer got nothing, opposite of the label (a live money bug). Removed `split` from `DECISIONS` (resolve() now returns `invalid decision` for it — defense in depth vs old clients/direct API), simplified the now-exhaustive escrow mapping over {favor_supplier, favor_buyer, refund}, dropped `split` from the AI-suggest enum, and removed the button in `AdminPage.jsx`. **Verified** against the real module: open→escrow `held`; favor_buyer→`resolved_buyer`+`refunded`; split→rejected `invalid decision`; frontend build clean.
+
+**#11 AI-usage logging — shipped `ea60d8d`.** migration 003's `ai_usage_log` was dead schema (nothing wrote to it). Added `recordAiUsage()` wired into `/api/generate` (success + mock-fallback) + `GET /api/ai-usage/admin/summary` (Admin Key) that aggregates per-endpoint/per-source token+cost totals (answers run-71's "what uses the most tokens"). Ships safely without confirming prod migration state because it's **fire-and-forget** (never awaited → no latency / can't fail a generation) and **self-disabling** (first INSERT against a missing table flips logging off for the process; applying migration 003 re-enables on reboot). **Verified** against a booted server + mock Supabase: table present → 3 generates = 3 rows, summary aggregates correctly; table missing → generate still 200, logging self-disables, summary returns `enabled:false` + "run migration 003" note; admin endpoint 401 without key. Tokens/cost are estimates (same basis as the router cost model).
+
+**Still open (the genuine money/architecture forks, awaiting owner specifics):** #9 (affiliate commission on shop — needs the commission-rate decision) and #12 (v9.0 build-out — standing up the whole Next.js stack is large; README targets Q2 2026).
 
 ### 2026-07-11 — Owner request: Data Classification Framework — built a self-verifying tool grounded in real fields; caught 7 fabricated fields in the pasted spec
 
@@ -2887,14 +2897,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 6c40b5f feat(ai-usage): wire per-request AI cost logging into ai_usage_log (#11) (24 seconds ago)
+- 465c56f docs: log #10 dispute-split fix + #11 AI-usage logging (owner deadline 30 Jul) (18 seconds ago)
+- 3fc6d9d chore: sync PROJECT_STATUS.md [skip ci] (39 seconds ago)
+- 6c40b5f feat(ai-usage): wire per-request AI cost logging into ai_usage_log (#11) (66 seconds ago)
 - 6672a0f chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
-- 3c1da60 fix(disputes): remove the misleading "split" resolution that paid the supplier in full (5 minutes ago)
-- 50d3f4c chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- ff85183 docs: log Data Classification Framework tool + 7 fabricated fields caught (63 minutes ago)
-- 87c5203 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 26521d1 feat(analytics): add self-verifying Data Classification Framework tool (64 minutes ago)
-- 50c3496 chore: sync PROJECT_STATUS.md [skip ci] (78 minutes ago)
+- 3c1da60 fix(disputes): remove the misleading "split" resolution that paid the supplier in full (6 minutes ago)
+- 50d3f4c chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- ff85183 docs: log Data Classification Framework tool + 7 fabricated fields caught (64 minutes ago)
+- 87c5203 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2916,8 +2926,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
+  "uptime_sec": 41,
+  "memory_mb": "19.9",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
