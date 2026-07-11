@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T12:35:09.389Z · branch `claude/daily-reporter-improvements-8vc9ct` (254 commit(s) ahead of main)
+Generated: 2026-07-11T12:36:10.698Z · branch `claude/daily-reporter-improvements-8vc9ct` (256 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 464 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 466 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -32,7 +32,9 @@ Owner instruction: complete the pending mission before 30 ก.ค. 2569 (2026), 
 
 **#11 AI-usage logging — shipped `ea60d8d`.** migration 003's `ai_usage_log` was dead schema (nothing wrote to it). Added `recordAiUsage()` wired into `/api/generate` (success + mock-fallback) + `GET /api/ai-usage/admin/summary` (Admin Key) that aggregates per-endpoint/per-source token+cost totals (answers run-71's "what uses the most tokens"). Ships safely without confirming prod migration state because it's **fire-and-forget** (never awaited → no latency / can't fail a generation) and **self-disabling** (first INSERT against a missing table flips logging off for the process; applying migration 003 re-enables on reboot). **Verified** against a booted server + mock Supabase: table present → 3 generates = 3 rows, summary aggregates correctly; table missing → generate still 200, logging self-disables, summary returns `enabled:false` + "run migration 003" note; admin endpoint 401 without key. Tokens/cost are estimates (same basis as the router cost model).
 
-**Still open (the genuine money/architecture forks, awaiting owner specifics):** #9 (affiliate commission on shop — needs the commission-rate decision) and #12 (v9.0 build-out — standing up the whole Next.js stack is large; README targets Q2 2026).
+**#9 affiliate commission on shop — shipped `b964385`.** Turned out NOT to need a rate decision: the commission rate is already an established platform constant (tiered starter 20% / pro 30% / elite 40%), and `creditAffiliateSale()` already fires on subscription/quickpay Omise success. The real gap was that `/api/shop/checkout` captured the affiliate `ref` (as the stock `channel`) but never credited it. Wired `creditAffiliateSale()` into both shop payment paths — card/mock in `finalizePaid()`, PromptPay in the Omise webhook's shop-finalize block (parsing ref from `metadata.channel` `'ref:CODE'`, guarded by the existing `status==='new'` idempotency) — mutually exclusive per order, no double credit. **Verified** on a booted server: affiliate rate 0.20, ฿500 product, checkout qty 2 with ref → `total_sales 1`, `total_earned 200` (฿1000 × 0.20). (Note: the run wrote a test affiliate into the tracked `backend/data/affiliates.json`; reverted before commit so no test data shipped.)
+
+**#12 v9.0 build-out — NOT done unilaterally (standing-order #8).** Unlike #9–#11 (a money-safety bug, a dead-schema wiring, and a ref-attribution wiring — all bounded), #12 means standing up an entire Next.js application stack (package.json + deps + next.config + tsconfig + a new `/api/affiliate/apply` route) for a repo whose own README deliberately parks it until **Q2 2026**. That's a large architecture commitment against a documented parking decision, so — even under "ทำต่อเนื่องอัตโนมัติทั้งหมด" — it warrants an explicit go/no-go rather than a guess. Completed the three tractable backlog items before the 30 Jul deadline; #12 awaits the owner's explicit "activate v9.0 now" (with scope: Next version, and whether `/api/affiliate/apply` should proxy the existing openthai-ai backend or be standalone).
 
 ### 2026-07-11 — Owner request: Data Classification Framework — built a self-verifying tool grounded in real fields; caught 7 fabricated fields in the pasted spec
 
@@ -2897,14 +2899,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 459643c feat(affiliate): credit affiliate commission on shop purchases made via a ref link (#9) (31 seconds ago)
-- 38cf8ec chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
-- 465c56f docs: log #10 dispute-split fix + #11 AI-usage logging (owner deadline 30 Jul) (4 minutes ago)
-- 3fc6d9d chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- 6c40b5f feat(ai-usage): wire per-request AI cost logging into ai_usage_log (#11) (5 minutes ago)
-- 6672a0f chore: sync PROJECT_STATUS.md [skip ci] (9 minutes ago)
-- 3c1da60 fix(disputes): remove the misleading "split" resolution that paid the supplier in full (9 minutes ago)
-- 50d3f4c chore: sync PROJECT_STATUS.md [skip ci] (67 minutes ago)
+- c7603e5 docs: log #9 shop-commission wiring + #12 v9.0 go/no-go rationale (16 seconds ago)
+- 5721f11 chore: sync PROJECT_STATUS.md [skip ci] (60 seconds ago)
+- 459643c feat(affiliate): credit affiliate commission on shop purchases made via a ref link (#9) (2 minutes ago)
+- 38cf8ec chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- 465c56f docs: log #10 dispute-split fix + #11 AI-usage logging (owner deadline 30 Jul) (5 minutes ago)
+- 3fc6d9d chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
+- 6c40b5f feat(ai-usage): wire per-request AI cost logging into ai_usage_log (#11) (6 minutes ago)
+- 6672a0f chore: sync PROJECT_STATUS.md [skip ci] (10 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2926,8 +2928,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 247,
-  "memory_mb": "19.6",
+  "uptime_sec": 308,
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
