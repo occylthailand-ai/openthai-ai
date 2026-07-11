@@ -9,6 +9,10 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop: surfaced the #11 AI-cost breakdown in the Admin OPS tab (made the data usable)
+
+The #11 endpoint `/api/ai-usage/admin/summary` had no UI consumer — the owner couldn't actually see the per-endpoint token/cost data. Added an "🧮 ต้นทุน AI แยกตาม endpoint" panel to the Admin **OPS tab** (`AdminPage.jsx`): fetches the summary alongside ops-summary, renders a per-endpoint table (requests / total tokens / USD cost) sorted by token usage + a totals line, and degrades cleanly to the "run migration 003" note when logging isn't enabled (and "ยังไม่มีข้อมูล" when zero rows). **Verified** in vitest/jsdom (new `adminAiUsagePanel.test.jsx`): driving the authed AdminPage to the OPS tab renders the endpoint rows from the real summary shape, and shows the migration note when `enabled:false`. Full suite **10 files / 63 tests pass**; vite build clean. `6140adc`.
+
 ### 2026-07-11 — Hourly loop: completed the #11 AI-usage logging across all three generate endpoints
 
 Follow-up consistency fix to #11 (which only instrumented `/api/generate`): its two siblings `/api/generate-ab` and `/api/generate/stream` also consume the daily quota, so the per-endpoint cost summary was undercounting them. Wired `recordAiUsage()` into both — generate-ab logs one row per request (input tokens ×2 for the two variants; output = both A+B); stream accumulates its SSE text via a small `emit()` helper and logs on successful completion (skipped on client abort, same guard as the quota consume). Same fire-and-forget + self-disabling path. **Verified** on a booted server + mock Supabase (FREE_DAILY_LIMIT=3): 2 generate-ab + 1 stream logged → summary `{/api/generate-ab:2, /api/generate/stream:1}`; the quota-exhausted 4th/5th calls returned 429 and correctly did NOT log. `9522f9e`.
