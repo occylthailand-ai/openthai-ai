@@ -1841,10 +1841,23 @@ app.post('/api/generate-ab', generateLimiter, async (req, res) => {
   form.product = sanitize(form.product);
   form.audience = sanitize(form.audience);
   form.price = sanitize(form.price);
+  // Enforce the same daily plan quota as /api/generate. This A/B endpoint previously had
+  // NO quota check (only the burst rate-limiter), so a Free user could bypass FREE_DAILY_LIMIT
+  // entirely — and get two variants per call — just by using /api/generate-ab. Count one A/B
+  // request as one use (matches the per-action daily model), same key as /api/generate.
+  const quota = await checkQuota(req);
+  if (!quota.allowed) {
+    return res.status(429).json({
+      error: `ใช้สิทธิ์ฟรีครบ ${quota.limit} ชิ้นแล้ววันนี้ — อัพเกรดเป็น Pro (฿299/เดือน) เพื่อสร้างไม่จำกัด`,
+      code: 'QUOTA_EXCEEDED', plan: 'free', used: quota.used, limit: quota.limit, upgrade_url: '/payment?plan=pro',
+    });
+  }
   try {
     const [a, b] = await Promise.all([smartGenerate(form), smartGenerate({ ...form, style: form.style === 'sales' ? 'entertainment' : 'sales' })]);
+    await consumeQuota(req);
     return res.json({ a, b });
   } catch (err) {
+    // AI failed → mock fallback; do NOT consume quota on failure (same as /api/generate).
     const a = mockGenerate(form);
     const b = mockGenerate({ ...form, style: 'entertainment' });
     return res.json({ a, b });
@@ -1856,6 +1869,16 @@ app.post('/api/generate-ab', generateLimiter, async (req, res) => {
 app.post('/api/generate/stream', generateLimiter, async (req, res) => {
   const { product, platform = 'TikTok', tone = 'สนุก/กระตุ้น', category = 'OTOP', audience = 'ทั่วไป' } = req.body || {};
   if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  // Enforce the daily plan quota BEFORE opening the stream — this SSE endpoint previously
+  // skipped it, letting Free users generate unlimited captions past FREE_DAILY_LIMIT via /stream.
+  const quota = await checkQuota(req);
+  if (!quota.allowed) {
+    return res.status(429).json({
+      error: `ใช้สิทธิ์ฟรีครบ ${quota.limit} ชิ้นแล้ววันนี้ — อัพเกรดเป็น Pro (฿299/เดือน) เพื่อสร้างไม่จำกัด`,
+      code: 'QUOTA_EXCEEDED', plan: 'free', used: quota.used, limit: quota.limit, upgrade_url: '/payment?plan=pro',
+    });
+  }
 
   // SSE headers — ปิด buffering เพื่อให้ไหลทันที
   res.writeHead(200, {
@@ -1899,6 +1922,9 @@ app.post('/api/generate/stream', generateLimiter, async (req, res) => {
         await new Promise(r => setTimeout(r, 35));
       }
     }
+    // Count this generation against the daily quota (best-effort so a bookkeeping error
+    // never breaks a stream that already delivered content). Skipped if the client aborted.
+    if (!closed) { try { await consumeQuota(req); } catch { /* quota bookkeeping best-effort */ } }
     send('done', { ok: true });
   } catch (e) {
     addLog('warn', 'GenerateStream', e.message);
