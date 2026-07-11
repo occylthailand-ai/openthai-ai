@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T01:13:18.947Z · branch `claude/daily-reporter-improvements-8vc9ct` (216 commit(s) ahead of main)
+Generated: 2026-07-11T02:12:44.314Z · branch `claude/daily-reporter-improvements-8vc9ct` (218 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 426 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 428 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop, run 92: made all 93 dashboard-reachable content pages mobile-ready + SEO-valid (wrapped bare `<section>` fragments in a proper HTML5 shell; verified in jsdom)
+
+openthai-ai synced (HEAD 081a9c0). Continuing the `all-platform-files` sweep. First ran a **full internal-link integrity check** across all 516 HTML files (href + JS-string `.html` refs) → **0 broken** — confirming run 91's Coupang fix was the last dead link.
+
+**New real finding:** **515 of 516 files are bare `<section>` fragments** — no `<!doctype>`, `<head>`, charset, or viewport meta (only `index.html` is a full document). The dashboard cards navigate to them **directly** (`<a href>`, not fetch/embed — grep confirmed nothing embeds them), so each renders standalone as a headless fragment: **non-mobile-optimized** (no viewport → desktop-width, pinch-to-zoom) for a **Thai mobile-first audience**, no explicit charset, and no `<title>` (tab showed the filename). This degrades both real UX and mobile SEO on every content page users actually reach.
+
+**Scope decision (standing order #8 — avoid over-reach):** limited the fix to the **93 pages actually reachable from the dashboard** (the `file:` targets + `affiliate-hub.html`). The other ~420 `OpenThaiAI_*_Roadmap.html` fragments are **orphans not linked from anywhere**, so I left them untouched rather than mass-editing 500+ files no user reaches.
+
+**What shipped:** wrapped each of the 93 fragments in a minimal, correct, **idempotent** HTML5 shell — `<!doctype html>`, `<html lang="th">`, `<meta charset="UTF-8">`, `<meta name="viewport" content="width=device-width, initial-scale=1.0">`, and a `<title>` derived from the page's own `<h2>`. Body content left **byte-for-byte unchanged**; wrapper is purely additive and skips any file already starting with `<!doctype>` (safe to re-run).
+
+**Verified by running (not "should work"):** all 93 now have doctype+charset+viewport+title and a single (non-doubled) `<!doctype>` closing with `</html>`; `<li>` step counts **unchanged vs HEAD on every file** (bodies preserved); and in jsdom the wrapped naver + coupang pages expose `lang=th` + viewport + title and their phase-switcher scripts still toggle the correct section. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of **all-platform-files** (commit `54dbdc6`, full detail there) — adds to **draft PR #1**.
+
+**Still blocked on owner (not acted on, won't guess):** otop-ai-landing production domain (og:image/canonical/sitemap) + owner-decisions #9 (affiliate commission on shop), #10 (dispute split), #11 (migration 003), #12 (v9.0 build-out).
 
 ### 2026-07-11 — Hourly loop, run 91: fixed a real dead link on the deployed `all-platform-files` dashboard — the Coupang card had no roadmap file (built a genuine one, verified in jsdom)
 
@@ -2775,14 +2789,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- fcccd91 log: run 91 — fixed dead Coupang card link on all-platform-files dashboard (built missing roadmap, verified in jsdom) (18 seconds ago)
-- 0ac1070 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- b4e3a9f log: run 90 — fixed all-platform-files dashboard hero-stat clobber; otop-ai-landing SEO still blocked on owner domain (3 hours ago)
-- 1e412c3 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 7c85023 test(seo): guard sitemap==robots invariant + all-public rule; extract ROUTES to shared module (5 hours ago)
-- f2721a6 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 56fc37b seo: add public /earn (homepage hero CTA) to prerender meta, sitemap, robots (6 hours ago)
-- 02fbc17 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 092ba07 log: run 92 — wrapped 93 dashboard-reachable content pages in proper HTML5 shell for mobile/SEO (verified in jsdom) (17 seconds ago)
+- 081a9c0 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- fcccd91 log: run 91 — fixed dead Coupang card link on all-platform-files dashboard (built missing roadmap, verified in jsdom) (60 minutes ago)
+- 0ac1070 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- b4e3a9f log: run 90 — fixed all-platform-files dashboard hero-stat clobber; otop-ai-landing SEO still blocked on owner domain (4 hours ago)
+- 1e412c3 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 7c85023 test(seo): guard sitemap==robots invariant + all-public rule; extract ROUTES to shared module (6 hours ago)
+- f2721a6 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2805,7 +2819,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.2",
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
