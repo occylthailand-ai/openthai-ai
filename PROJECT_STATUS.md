@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T11:27:38.071Z · branch `claude/daily-reporter-improvements-8vc9ct` (244 commit(s) ahead of main)
+Generated: 2026-07-11T11:27:59.470Z · branch `claude/daily-reporter-improvements-8vc9ct` (246 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 454 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 456 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,15 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Owner request: Data Classification Framework — built a self-verifying tool grounded in real fields; caught 7 fabricated fields in the pasted spec
+
+Owner asked (in Thai) to build a "data connector/classification tool" organizing system fields by the 6 statistical data types (Quantitative/Qualitative × Nominal/Ordinal/Discrete/Continuous), seeded from a detailed pasted spec citing the "MVP AI Income Starter" and "LLM Router". Per CLAUDE.md (verify-before-build), **grepped every field against the real repo first** — and the spec was the classic mixed real+fabricated paste:
+
+- **Real (14 fields, kept):** `revenue_thb`, `latency_ms`, `model_accuracy`, `ai_calls_today`, `orders_total` (progress-tracker.js); `criticScore`, `caption`, `hashtags`, `platform`, `costPer1k`, `AI_DAILY_BUDGET_USD`, `ROUTER_PROVIDERS` (claude/gemini/grok), `ROUTER_TIERS` (heavy›bulk›eco), `privacy_level` (server.js).
+- **Fabricated (7, verified 0 hits, NOT built):** `est_margin_pct`, `cost_thb`, `fairnessScore`, `journey_progress`, `local-llama`, `mistral`, `competition_level`. The spec's `provider: ['grok,claude,gemini,local-llama,mistral']` is wrong — the real Router has only **3** providers; the real cost field is `costPer1k` (per-model USD), not a product `cost_thb`; `privacy_level` is a **TikTok publish-visibility constant** (`'PUBLIC_TO_EVERYONE'`), not the `['low,med,high]` router weight the spec claimed (no `local-llama +25` logic exists).
+
+**Built:** `scripts/data-classification.mjs` + generated `docs/DATA_CLASSIFICATION.md`. Each classified field is anchored to a source file + a token that must appear in it; the script reads the real files and **exits non-zero on drift** (same contract as `generate-project-status.mjs`), and records the 7 fabricated tokens as verified-absent so they can't be built on by mistake. **Verified by running:** clean run classifies 14 / confirms 7 absent / writes doc / exit 0; a deliberately broken anchor → exit 1 naming the field; `--check` and write modes both exercised. Committed + pushed `26521d1` → draft **PR #79**.
 
 ### 2026-07-11 — Hourly loop, run 100: fixed the frontend fallout of run 99 — the live-stream generator sent no identity headers and mishandled the new 429
 
@@ -2878,14 +2887,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 26521d1 feat(analytics): add self-verifying Data Classification Framework tool (22 seconds ago)
+- ff85183 docs: log Data Classification Framework tool + 7 fabricated fields caught (14 seconds ago)
+- 87c5203 chore: sync PROJECT_STATUS.md [skip ci] (20 seconds ago)
+- 26521d1 feat(analytics): add self-verifying Data Classification Framework tool (43 seconds ago)
 - 50c3496 chore: sync PROJECT_STATUS.md [skip ci] (15 minutes ago)
 - e8fc61a docs: log run 100 — frontend live-stream auth headers + 429 upgrade CTA fix (15 minutes ago)
 - a530e2c chore: sync PROJECT_STATUS.md [skip ci] (15 minutes ago)
-- 475c6ab fix(generator): send auth headers + upgrade CTA on the live-stream quota path (15 minutes ago)
-- 95d431d chore: sync PROJECT_STATUS.md [skip ci] (78 minutes ago)
-- e6454ff docs: log run 99 — quota-bypass fix on generate-ab and generate/stream (79 minutes ago)
-- ad63251 chore: sync PROJECT_STATUS.md [skip ci] (79 minutes ago)
+- 475c6ab fix(generator): send auth headers + upgrade CTA on the live-stream quota path (16 minutes ago)
+- 95d431d chore: sync PROJECT_STATUS.md [skip ci] (79 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2907,8 +2916,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 135,
-  "memory_mb": "21.5",
+  "uptime_sec": 157,
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
