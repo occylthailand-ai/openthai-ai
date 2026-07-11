@@ -51,6 +51,9 @@ jobs:
       - name: Syntax check
         working-directory: backend
         run: node --check server.js
+      - name: Unit tests (deterministic, no server)
+        working-directory: backend
+        run: npm run test:disputes
       - name: Boot + health smoke test
         working-directory: backend
         run: |
