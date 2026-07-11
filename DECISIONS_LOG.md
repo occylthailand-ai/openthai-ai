@@ -9,6 +9,14 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop: audited two areas clean (no diff manufactured) — flagship SEO route curation + smart-e security
+
+Diversified off the AI-cost thread. Two areas scanned and **verified clean**, recorded so future cycles don't re-scan (and to avoid manufacturing a low-value diff in already-hardened code):
+
+**openthai-ai SEO/sitemap curation — sound.** Compared `frontend/scripts/seo-routes.mjs` ROUTES (21 public entries) against the full `App.jsx` route table (~90). The one tempting "missing" page, `/ai-generator` (the free-tool funnel destination), is actually **auth-gated** (`isAuthenticated ? <AIGeneratorPage/> : <Navigate to="/login"/>`) — adding it would create the soft-404 the `seoInvariants` test guards against. `/income` is an **alias of the already-listed `/earn`** (both render `EarnHubPage`) and is linked nowhere, so correctly not double-listed (no duplicate-content URL in the sitemap). `/starter` is auth-gated; the rest are interactive app tools, not shareable marketing pages. `seoInvariants.test.js` passes 5/5 (sitemap == robots Allow == real public routes). No gap.
+
+**smart-e security/SQL/validation — hardened.** Fresh pass over `server.py` (1022 lines): all SQL is parameterized; the two dynamic `UPDATE` SET-clauses (`_update_product`, `_update_customer`) build columns from a **whitelist**, values via `?` — no SQLi. Search filters (`q` LIKE) are parameterized. Numeric query inputs are validated (`?limit`, `?days` both try/except→default+clamp). Admin auth is fail-closed (503 when `ADMIN_KEY` unset) with `hmac.compare_digest`. LINE webhook verifies `X-Line-Signature` as base64(HMAC-SHA256(secret, raw_body)) with `compare_digest` — correct per LINE spec. **Run-verified** the fail-closed path against a booted server: `GET /api/products` with no `ADMIN_KEY` → **503**, static `/` → **200** (remaining boundaries confirmed by reading the unambiguous code; the sandbox reaped the second bound-server boot). No code changed in smart-e (working tree clean).
+
 ### 2026-07-11 — Hourly loop: made the daily AI-cost metric + budget guard count the main generate endpoints (were blind to them)
 
 Code-scan finding: `ops-summary.ai_spent_today_usd`, `/api/router/status.spent_usd`, and the Eco-mode budget guard (`routerEco`) all read `routerState.spentUsd`, which was only incremented inside `routeAI`. But the three main content endpoints (`/api/generate`, `-ab`, `/stream`) use `smartGenerate`, **not** routeAI — so their spend never counted. Effect: the owner's "AI cost today" excluded the biggest consumer, and a heavy generate day never tripped the daily budget (cost control blind to it). The ops note also didn't disclose this.
