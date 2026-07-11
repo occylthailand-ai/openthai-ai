@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T11:12:41.518Z · branch `claude/daily-reporter-improvements-8vc9ct` (240 commit(s) ahead of main)
+Generated: 2026-07-11T11:13:03.389Z · branch `claude/daily-reporter-improvements-8vc9ct` (242 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 450 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 452 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop, run 100: fixed the frontend fallout of run 99 — the live-stream generator sent no identity headers and mishandled the new 429
+
+openthai-ai synced (HEAD 95d431d). Direct, high-impact follow-up to run 99: once `/api/generate/stream` started enforcing the daily quota, its **frontend caller** (`AIGeneratorPage.jsx` `handleStream`, the "เขียนสด/Live" button) had two real defects that enforcement exposed. First **verified the quota model** to avoid over-reaching: `checkQuota`/`consumeQuota` are enforced on exactly the three generate endpoints (`/api/generate`, `-ab`, `/stream`); the ~30 `/api/skills/*` tools are deliberately NOT quota-gated — whether they should be is a **product decision left for the owner**, not guessed here.
+
+**Two bugs fixed (both mirror the already-correct non-stream path):**
+- The stream `fetch` sent only `Content-Type` — **no `x-user-email` / `x-device-id`**. So the backend saw the stream as anonymous: a **paying user was wrongly quota-limited** on streaming, and spin/streak **bonus credits were ignored** on that path. Now uses `authHeaders()` like `/api/generate` and `/api/generate-ab`, so plan + credit identity are honored consistently. (This is a paying-customer-blocking bug, the inverse of the run-99 leak.)
+- A **429** showed a generic `สตรีมไม่สำเร็จ` toast instead of the upgrade CTA. Now parses the 429 body and routes to `upgrade_url` (`/payment?plan=pro`), matching `handleGenerate` — the stream path drives the same Pro upsell instead of looking broken. Also added `refreshUsage()` after a successful stream so the remaining-quota chip stays accurate.
+
+**Verified by running the real component in vitest/jsdom** (new `src/__tests__/aiGeneratorStreamQuota.test.jsx`), not by inspection: rendering the actual page, filling the product field, and clicking the Live button issues the `/api/generate/stream` request **carrying `x-user-email` + `x-device-id`**, and a 429 response **navigates to `/payment?plan=pro`**. Full frontend suite **9 files / 61 tests pass**; `vite build` clean (dist removed after). Committed + pushed `475c6ab` to `claude/daily-reporter-improvements-8vc9ct` → draft **PR #79**.
+
+**Owner-decision backlog unchanged:** whether `/api/skills/*` should count against the free quota; otop-ai-landing domain; all-platform-files domain (sitemap) + orphan-file cleanup; openthai-ai #9 (affiliate commission on shop), #10 (dispute split), #11 (AI-usage-log migration), #12 (v9.0 build-out).
 
 ### 2026-07-11 — Hourly loop, run 99: closed a freemium-bypass bug — /api/generate-ab and /api/generate/stream skipped the daily quota that /api/generate enforces
 
@@ -2866,14 +2878,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 475c6ab fix(generator): send auth headers + upgrade CTA on the live-stream quota path (18 seconds ago)
-- 95d431d chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- e8fc61a docs: log run 100 — frontend live-stream auth headers + 429 upgrade CTA fix (13 seconds ago)
+- a530e2c chore: sync PROJECT_STATUS.md [skip ci] (20 seconds ago)
+- 475c6ab fix(generator): send auth headers + upgrade CTA on the live-stream quota path (40 seconds ago)
+- 95d431d chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
 - e6454ff docs: log run 99 — quota-bypass fix on generate-ab and generate/stream (64 minutes ago)
 - ad63251 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
-- ad0c517 fix(quota): enforce daily plan quota on /api/generate-ab and /api/generate/stream (64 minutes ago)
+- ad0c517 fix(quota): enforce daily plan quota on /api/generate-ab and /api/generate/stream (65 minutes ago)
 - 367fe06 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 789e72c log: run 98 — FAQPage JSON-LD extended to /affiliate; schema test now covers both FAQ pages (12/12) (3 hours ago)
-- 7abd5ff chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2896,7 +2908,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.0",
+  "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
