@@ -24,6 +24,24 @@ export default function PricingPage() {
   const plans = t('pp.plans');
   const faq = t('pp.faq');
 
+  // FAQPage structured data — derived from the SAME `faq` array rendered below, so it
+  // can never drift from the visible Q&A. Google renders this SPA's JS and reads JSON-LD
+  // from the DOM, making /pricing eligible for FAQ rich results in search. FAQ rich
+  // results are a Google-only feature (social crawlers ignore FAQPage), and Google runs
+  // JS, so client-side injection here is sufficient — no prerender/duplicate-copy needed.
+  const faqPairs = Array.isArray(faq) ? faq.filter((x) => Array.isArray(x) && x.length >= 2) : [];
+  const faqLd = faqPairs.length
+    ? JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqPairs.map(([q, a]) => ({
+          '@type': 'Question',
+          name: String(q),
+          acceptedAnswer: { '@type': 'Answer', text: String(a) },
+        })),
+      }).replace(/</g, '\\u003c')
+    : null;
+
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif" }}>
 
@@ -79,6 +97,7 @@ export default function PricingPage() {
 
       {/* FAQ */}
       <section style={{ maxWidth: 680, margin: '0 auto', padding: '0 5% 80px' }}>
+        {faqLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} />}
         <h2 style={{ textAlign: 'center', fontSize: 24, fontWeight: 800, marginBottom: 24 }}>{t('pp.faq.title')}</h2>
         {faq.map(([q, a], i) => {
           // role/tabIndex/aria-expanded + Enter/Space handler make this FAQ
