@@ -9,6 +9,10 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop: added E2E regression guard for #9 shop-commission crediting
+
+Completed regression coverage for the second money-safety fix. Added `backend/scripts/test-shop-commission.mjs` + `test:shop-commission` npm script (E2E, same convention as `test:affiliate`). Boots against a running server (mock mode): registers an affiliate (rate 0.20), creates a ฿500 product, checks out qty 2 **with** the ref → asserts the affiliate gets `total_sales 1` / `total_earned 200` (฿1000×0.20); a second checkout **without** a ref → asserts the affiliate is unchanged (no spurious credit). **Verified it's a real guard:** 8/8 pass (exit 0) with the fix; disabling the `creditAffiliateSale` call in `finalizePaid` fails it 3/8 (exit 1, earned → 0). Data writes reverted after the run (note: local boot writes to tracked `backend/data`; `VERCEL=1` would isolate to /tmp but disables `app.listen`, so revert-after is the clean path). `3a46361`.
+
 ### 2026-07-11 — Hourly loop: added the first backend regression test — guards the dispute-split money-safety fix
 
 The backend has no test runner (only standalone `scripts/test-*.mjs` E2E scripts run via `test:affiliate`/`test:revenue`), so the money-safety fixes shipped this session had no automated guard. Added `backend/scripts/test-disputes.mjs` + `test:disputes` npm script in that same convention, but pure/deterministic (exercises the real `disputes.js` factory with an in-memory orders stub — no server/network). Asserts: `DECISIONS` no longer contains `split` (keeps the 3 real decisions); `resolve('split')` → rejected `invalid decision`; open holds escrow; favor_supplier → resolved_supplier+released; favor_buyer → resolved_buyer+refunded; refund → refunded; already-resolved can't be re-resolved. **Verified it's a real guard:** 10/10 pass (exit 0) with the fix, and re-adding `split` to `DECISIONS` makes it fail 2/10 (exit 1). `1f895c6`.
