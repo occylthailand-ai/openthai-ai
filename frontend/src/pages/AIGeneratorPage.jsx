@@ -494,9 +494,20 @@ const AIGeneratorPage = () => {
     setStreaming(true); setStreamText('');
     try {
       const res = await fetch(apiUrl('/api/generate/stream'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        // ต้องส่ง authHeaders() (x-user-email / x-device-id) เหมือน generate/generate-ab —
+        // ไม่งั้น backend มองสตรีมเป็น anonymous: ผู้ใช้ที่จ่ายเงินแล้วจะโดนจำกัดโควต้าผิด และ
+        // เครดิตโบนัสจะใช้ไม่ได้บนเส้นทางสตรีม
+        method: 'POST', headers: authHeaders(),
         body: JSON.stringify({ product: form.product, platform: form.platform, category: form.category, audience: form.audience }),
       });
+      // โควต้าฟรีหมด → ชวนอัพเกรดเหมือนเส้นทางปกติ (ไม่ใช่แค่ "สตรีมไม่สำเร็จ" กว้างๆ)
+      if (res.status === 429) {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error || 'ใช้สิทธิ์ฟรีครบแล้ววันนี้ — กำลังพาไปอัพเกรด');
+        setStreaming(false);
+        setTimeout(() => navigate(d.upgrade_url || '/payment?plan=pro'), 1200);
+        return;
+      }
       if (!res.ok || !res.body) { toast.error('สตรีมไม่สำเร็จ'); setStreaming(false); return; }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -517,6 +528,7 @@ const AIGeneratorPage = () => {
       }
     } catch { toast.error('การเชื่อมต่อสตรีมขัดข้อง'); }
     setStreaming(false);
+    refreshUsage();  // สตรีมหักโควต้า 1 ครั้งเมื่อสำเร็จ → รีเฟรชตัวเลขคงเหลือให้ตรง
   };
 
   const handleGenerate = async () => {
