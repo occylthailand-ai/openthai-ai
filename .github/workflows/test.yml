@@ -53,7 +53,9 @@ jobs:
         run: node --check server.js
       - name: Unit tests (deterministic, no server)
         working-directory: backend
-        run: npm run test:disputes
+        run: |
+          npm run test:disputes
+          npm run test:portal-leads
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage
