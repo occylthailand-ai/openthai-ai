@@ -80,6 +80,51 @@ async function _sbReq(method, table, opts = {}) {
   if (!r.ok) throw new Error((d?.message || d?.hint) || `SB HTTP ${r.status}`);
   return d;
 }
+
+// ── AI usage logging (#11) — writes each AI generation to ai_usage_log (migration 003)
+// so the team can see real per-endpoint token/cost totals. Two safety properties:
+//   • fire-and-forget — never awaited in a request path, so it can't add latency or
+//     turn a successful generation into an error.
+//   • self-disabling — if migration 003 isn't applied in this environment, the first
+//     INSERT fails with a "relation/schema cache" error and logging turns itself OFF
+//     for the process, so prod is never spammed. Applying the migration re-enables it
+//     on the next boot. (This is why it's safe to ship without first confirming prod
+//     migration state — worst case it silently no-ops.)
+let _aiUsageLogOff = !_useSB;              // off entirely when Supabase isn't configured
+const USD_TO_THB = 36.5;                   // rough display rate; cost is an estimate anyway
+const AI_SOURCE_COST_PER_1K = { claude: 0.0008, gemini: 0.0004, mock: 0, 'mock-fallback': 0 };
+function recordAiUsage(row = {}) {
+  if (_aiUsageLogOff) return;
+  const source = ['claude', 'gemini', 'mock', 'mock-fallback'].includes(row.ai_source) ? row.ai_source : 'mock';
+  const inTok = Math.max(0, Math.round(row.input_tokens || 0));
+  const outTok = Math.max(0, Math.round(row.output_tokens || 0));
+  const costUsd = row.cost_usd != null ? +Number(row.cost_usd).toFixed(6)
+    : +(((inTok + outTok) / 1000) * (AI_SOURCE_COST_PER_1K[source] || 0)).toFixed(6);
+  const body = {
+    endpoint: String(row.endpoint || '').slice(0, 120),
+    ai_source: source,
+    model_id: row.model_id ? String(row.model_id).slice(0, 80) : null,
+    product: row.product ? String(row.product).slice(0, 200) : null,
+    platform: row.platform ? String(row.platform).slice(0, 80) : null,
+    category: row.category ? String(row.category).slice(0, 80) : null,
+    style: row.style ? String(row.style).slice(0, 40) : null,
+    input_tokens: inTok,
+    output_tokens: outTok,
+    cost_usd: costUsd,
+    cost_thb: +(costUsd * USD_TO_THB).toFixed(2),
+    response_ms: row.response_ms != null ? Math.round(row.response_ms) : null,
+    critic_score: row.critic_score != null && !isNaN(parseFloat(row.critic_score)) ? +parseFloat(row.critic_score).toFixed(1) : null,
+  };
+  _sbReq('POST', '/ai_usage_log', { body, prefer: 'return=minimal' }).catch((e) => {
+    const msg = String(e?.message || '');
+    if (/relation|does not exist|PGRST205|schema cache|not found|404/i.test(msg)) {
+      _aiUsageLogOff = true;
+      console.warn('[ai_usage_log] disabled — table not found (apply migration 003 to enable):', msg);
+    } else {
+      console.warn('[ai_usage_log] insert failed (ignored):', msg);
+    }
+  });
+}
 // ── Infrastructure Layer — Vector Memory · Webhooks · Multi-tenant ────────────
 // Initialized after WRITE_DATA_DIR is known
 const memory    = createMemorySystem(WRITE_DATA_DIR, () => gemini ? { _googleAI: { getGenerativeModel: (o) => new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel(o) } } : null);
@@ -362,14 +407,22 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
     });
   }
 
+  const t0 = Date.now();
   try {
     const data = await smartGenerate(form);
     const u = await consumeQuota(req);
+    recordAiUsage({
+      endpoint: '/api/generate', ai_source: data.source, product: form.product, platform: form.platform,
+      category: form.category, style: form.style, critic_score: data.criticScore, response_ms: Date.now() - t0,
+      input_tokens: estTokens(buildPrompt(form)),
+      output_tokens: estTokens([data.hook, ...(data.script || []), data.caption].filter(Boolean).join(' ')),
+    });
     return res.json({ ...data, usage: { plan: u.plan, used: u.used ?? null, limit: u.limit ?? null, remaining: u.remaining ?? null, unlimited: !!u.unlimited, viaCredit: !!u.viaCredit, creditBalance: u.creditBalance ?? null } });
   } catch (err) {
     console.error('[generate error]', err.message);
     const fallback = mockGenerate(form);
     fallback.source = 'mock-fallback';
+    recordAiUsage({ endpoint: '/api/generate', ai_source: 'mock-fallback', product: form.product, platform: form.platform, category: form.category, style: form.style, critic_score: fallback.criticScore, response_ms: Date.now() - t0 });
     return res.json(fallback);
   }
 });
@@ -2119,6 +2172,38 @@ app.get('/api/router/status', (req, res) => {
     tiers: ROUTER_TIERS,
     note: 'cost เป็นค่าประมาณต่อ 1k tokens · เกินงบ/วัน → Eco Mode (เฉพาะรุ่นถูก) · health รีเซ็ตรายวัน',
   });
+});
+
+// GET /api/ai-usage/admin/summary — สรุปต้นทุน/โทเคน AI จริงจากตาราง ai_usage_log (#11, Admin Key)
+// รวมยอดต่อ endpoint และต่อ ai_source จาก N แถวล่าสุด — ตอบว่า "ส่วนไหนกินโทเคนมากสุด"
+app.get('/api/ai-usage/admin/summary', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  if (!_useSB) return res.json({ success: true, enabled: false, note: 'ยังไม่ได้ตั้ง SUPABASE_URL/SERVICE_KEY — logging ปิดอยู่', rows: 0 });
+  const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit, 10) || 1000));
+  try {
+    const rows = await _sbReq('GET', '/ai_usage_log', {
+      params: { select: 'endpoint,ai_source,input_tokens,output_tokens,cost_usd,cost_thb,response_ms,critic_score,created_at', order: 'created_at.desc', limit },
+    });
+    const list = Array.isArray(rows) ? rows : [];
+    const bucket = () => ({ requests: 0, input_tokens: 0, output_tokens: 0, cost_usd: 0, cost_thb: 0 });
+    const byEndpoint = {}, bySource = {};
+    let totalCostUsd = 0, totalTokens = 0;
+    for (const r of list) {
+      const e = (byEndpoint[r.endpoint] ||= bucket());
+      const s = (bySource[r.ai_source] ||= bucket());
+      const it = Number(r.input_tokens) || 0, ot = Number(r.output_tokens) || 0, cu = Number(r.cost_usd) || 0, ct = Number(r.cost_thb) || 0;
+      for (const b of [e, s]) { b.requests++; b.input_tokens += it; b.output_tokens += ot; b.cost_usd = +(b.cost_usd + cu).toFixed(6); b.cost_thb = +(b.cost_thb + ct).toFixed(2); }
+      totalCostUsd = +(totalCostUsd + cu).toFixed(6); totalTokens += it + ot;
+    }
+    res.json({ success: true, enabled: true, sample_rows: list.length, total_tokens: totalTokens, total_cost_usd: totalCostUsd, total_cost_thb: +(totalCostUsd * USD_TO_THB).toFixed(2), by_endpoint: byEndpoint, by_source: bySource });
+  } catch (e) {
+    const msg = String(e.message || '');
+    if (/relation|does not exist|PGRST205|schema cache|not found|404/i.test(msg)) {
+      return res.json({ success: true, enabled: false, note: 'ตาราง ai_usage_log ยังไม่มี — รัน migration 003 ก่อน แล้วจึงเริ่มเก็บ log', rows: 0 });
+    }
+    res.status(500).json({ success: false, error: msg });
+  }
 });
 
 // POST /api/router/run — ส่งงานให้ router เลือกโมเดลถูกสุด/สลับค่ายอัตโนมัติ
