@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T12:39:05.398Z · branch `claude/daily-reporter-improvements-8vc9ct` (258 commit(s) ahead of main)
+Generated: 2026-07-11T12:39:21.315Z · branch `claude/daily-reporter-improvements-8vc9ct` (260 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 468 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 470 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop: completed the #11 AI-usage logging across all three generate endpoints
+
+Follow-up consistency fix to #11 (which only instrumented `/api/generate`): its two siblings `/api/generate-ab` and `/api/generate/stream` also consume the daily quota, so the per-endpoint cost summary was undercounting them. Wired `recordAiUsage()` into both — generate-ab logs one row per request (input tokens ×2 for the two variants; output = both A+B); stream accumulates its SSE text via a small `emit()` helper and logs on successful completion (skipped on client abort, same guard as the quota consume). Same fire-and-forget + self-disabling path. **Verified** on a booted server + mock Supabase (FREE_DAILY_LIMIT=3): 2 generate-ab + 1 stream logged → summary `{/api/generate-ab:2, /api/generate/stream:1}`; the quota-exhausted 4th/5th calls returned 429 and correctly did NOT log. `9522f9e`.
 
 ### 2026-07-11 — Owner set a 30 Jul 2026 deadline to finish the backlog; owner-decided #10, completed #10 + #11
 
@@ -2899,14 +2903,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 9522f9e feat(ai-usage): also log /api/generate-ab and /api/generate/stream to ai_usage_log (21 seconds ago)
+- 30281d4 docs: log AI-usage logging extended to generate-ab + stream (15 seconds ago)
+- 51d12b3 chore: sync PROJECT_STATUS.md [skip ci] (15 seconds ago)
+- 9522f9e feat(ai-usage): also log /api/generate-ab and /api/generate/stream to ai_usage_log (37 seconds ago)
 - 7107313 chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
 - c7603e5 docs: log #9 shop-commission wiring + #12 v9.0 go/no-go rationale (3 minutes ago)
 - 5721f11 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- 459643c feat(affiliate): credit affiliate commission on shop purchases made via a ref link (#9) (4 minutes ago)
-- 38cf8ec chore: sync PROJECT_STATUS.md [skip ci] (7 minutes ago)
-- 465c56f docs: log #10 dispute-split fix + #11 AI-usage logging (owner deadline 30 Jul) (8 minutes ago)
-- 3fc6d9d chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
+- 459643c feat(affiliate): credit affiliate commission on shop purchases made via a ref link (#9) (5 minutes ago)
+- 38cf8ec chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2928,8 +2932,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 483,
-  "memory_mb": "19.5",
+  "uptime_sec": 499,
+  "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
