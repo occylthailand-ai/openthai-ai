@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T03:13:34.434Z · branch `claude/daily-reporter-improvements-8vc9ct` (220 commit(s) ahead of main)
+Generated: 2026-07-11T04:13:03.331Z · branch `claude/daily-reporter-improvements-8vc9ct` (222 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 430 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 432 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop, run 94: smart-e deep review — verified order/payment/auth/LINE flows solid; fixed one real data-integrity gap (negative PromptPay amount) verified against the booted server
+
+openthai-ai synced (HEAD 700ae02). Diversified to **smart-e** (Python commerce server, `server.py` 1016 lines) for a fresh-codebase pass beyond run 89's lighter review. Read the real handlers; **most of it is solid** (recording so it isn't re-swept):
+- **Auth:** every `/api/*` route requires `X-Admin-Key` via `hmac.compare_digest`, fail-closed 503 when `ADMIN_KEY` unset; `/api/webhook/line` verifies LINE HMAC signature instead. So `_create_order` trusting client-supplied item price is **not** a vuln — it's admin/merchant order-entry, not customer checkout.
+- **Orders:** `_create_order` validates items shape + coerces price≥0/qty≥1; `_update_order_status` validates the status enum, returns stock on cancel and re-decrements on un-cancel (no free stock via status flips), 404s on missing order.
+- **Payments:** `_confirm_payment` 404s on missing id and is idempotent (flips status to 'paid', no side effects). 
+- **LINE broadcast:** uses LINE's official `/v2/bot/message/broadcast`, which only reaches opt-in followers (LINE handles unfollow/block) — consent handled by the platform model; admin-gated. No consent gap.
+
+**Real fix shipped — `_create_qr` negative-amount gap:** it validated that `amount` is numeric but not its sign. `generate_promptpay_payload` only adds the EMV amount tag when `amount and amount > 0`, so a **negative** amount silently produced an amount-less "payer enters amount" QR — while the `payments` row was still INSERTed with the negative value, polluting any revenue/stat aggregate summing `payments.amount`. Same input-validation class the smart-e PR has been closing (non-numeric `?limit`, order-status enum, missing-payment 404). Fix: reject `amount < 0` with a 400; **`amount == 0`/omitted is deliberately still allowed** — that's the valid dynamic "any amount" PromptPay QR the generator already supports.
+
+**Verified against the booted server** (isolated DB under scratch `$HOME`, `ADMIN_KEY` set), not "should work": `amount=-50` → 400; `amount=0` → 200 with a payload carrying **no** `54` amount tag (dynamic QR preserved); `amount=100` → 200 with `5406100.00`; `amount="abc"` → 400 (pre-existing guard intact). `ast.parse` clean. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of **smart-e** (commit `decbd8f`, full detail there) — lands on the existing **smart-e PR #1**.
+
+**Owner-decision backlog unchanged:** otop-ai-landing domain, all-platform-files domain (sitemap) + orphan-file cleanup, and openthai-ai items #9–#12.
 
 ### 2026-07-11 — Hourly loop, run 93: verification run — swept the #1-priority consent/PDPA funnel end-to-end and confirmed it fully solid (negative result, logged so it isn't re-swept); surfaced 2 all-platform-files owner-decision items
 
@@ -2802,14 +2816,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 79ae156 log: run 93 — verified consent/PDPA funnel solid end-to-end (negative result); surfaced 2 all-platform-files owner-decision items (15 seconds ago)
-- c9acce3 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 092ba07 log: run 92 — wrapped 93 dashboard-reachable content pages in proper HTML5 shell for mobile/SEO (verified in jsdom) (61 minutes ago)
-- 081a9c0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- fcccd91 log: run 91 — fixed dead Coupang card link on all-platform-files dashboard (built missing roadmap, verified in jsdom) (2 hours ago)
-- 0ac1070 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- b4e3a9f log: run 90 — fixed all-platform-files dashboard hero-stat clobber; otop-ai-landing SEO still blocked on owner domain (5 hours ago)
-- 1e412c3 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 08fe246 log: run 94 — smart-e review (flows solid); fixed negative-amount gap in POST /api/payments/qr, verified on booted server (23 seconds ago)
+- 700ae02 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 79ae156 log: run 93 — verified consent/PDPA funnel solid end-to-end (negative result); surfaced 2 all-platform-files owner-decision items (60 minutes ago)
+- c9acce3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 092ba07 log: run 92 — wrapped 93 dashboard-reachable content pages in proper HTML5 shell for mobile/SEO (verified in jsdom) (2 hours ago)
+- 081a9c0 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- fcccd91 log: run 91 — fixed dead Coupang card link on all-platform-files dashboard (built missing roadmap, verified in jsdom) (3 hours ago)
+- 0ac1070 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2832,7 +2846,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.1",
+  "memory_mb": "19.8",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
