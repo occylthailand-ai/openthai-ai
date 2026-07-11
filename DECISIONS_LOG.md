@@ -9,6 +9,16 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop, run 95: added SEO + Open Graph metadata to the 93 dashboard content pages (priority #2), and caught+fixed a real double-wrap defect my own run-92 pass left in affiliate-hub.html
+
+openthai-ai synced (HEAD 5b6fe8d). Continued the market-reach thread on `all-platform-files`. After run 92 gave the 93 dashboard-reachable pages a proper `<head>` (mobile), they still had **no `<meta name="description">` and no Open Graph tags** — and they're both crawlable (linked from the dashboard) and shared on LINE/Facebook, so a bare share-card + no SERP snippet is a real reach gap. Added per page, all **domain-independent** (no production URL needed): `meta description` + `og:type/title/description/site_name/locale`, derived from each page's own `<title>` + subtitle; idempotent.
+
+**Caught a real defect in my own run-92 output (verify-before-trust paid off):** the metadata check flagged `affiliate-hub.html` with **two `</head>`**. Root cause: it was actually a **full** document (`<html><head><style>…</head><body>`) that merely lacked a leading `<!doctype>`, so run 92's `hasDoctype && hasHead` fragment-detector mis-classified it and wrapped it again → nested `<html>/<head>`. It was the **only** originally-full page among the 93 (verified: the other 92 have exactly one html/head/body). Rebuilt it from the pre-wrap original (`git show c541f31:`) as a single clean document — `<!doctype html>` + `<html lang="th">` + viewport + title + the same SEO/OG metas in its existing `<head>`.
+
+**Verified (jsdom + structural counts), not "should work":** all 93 pages now have exactly one html/head/body (no nesting) and a non-empty description + og:title/type/description; `<li>` step counts unchanged vs the prior commit on every fragment (bodies preserved); affiliate-hub keeps all 30 program cards + 30 links + its CTA and renders with title/lang=th/viewport/description; the coupang phase-switcher still toggles correctly after injection. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of **all-platform-files** (commit `0515aa2`, 93 files) — draft **PR #1**.
+
+**Owner-decision backlog unchanged:** otop-ai-landing domain, all-platform-files domain (sitemap) + orphan-file cleanup, openthai-ai #9–#12.
+
 ### 2026-07-11 — Hourly loop, run 94: smart-e deep review — verified order/payment/auth/LINE flows solid; fixed one real data-integrity gap (negative PromptPay amount) verified against the booted server
 
 openthai-ai synced (HEAD 700ae02). Diversified to **smart-e** (Python commerce server, `server.py` 1016 lines) for a fresh-codebase pass beyond run 89's lighter review. Read the real handlers; **most of it is solid** (recording so it isn't re-swept):
