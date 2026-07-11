@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T14:12:03.816Z · branch `claude/daily-reporter-improvements-8vc9ct` (266 commit(s) ahead of main)
+Generated: 2026-07-11T14:12:23.708Z · branch `claude/daily-reporter-improvements-8vc9ct` (268 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 476 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 478 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,12 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop: made the daily AI-cost metric + budget guard count the main generate endpoints (were blind to them)
+
+Code-scan finding: `ops-summary.ai_spent_today_usd`, `/api/router/status.spent_usd`, and the Eco-mode budget guard (`routerEco`) all read `routerState.spentUsd`, which was only incremented inside `routeAI`. But the three main content endpoints (`/api/generate`, `-ab`, `/stream`) use `smartGenerate`, **not** routeAI — so their spend never counted. Effect: the owner's "AI cost today" excluded the biggest consumer, and a heavy generate day never tripped the daily budget (cost control blind to it). The ops note also didn't disclose this.
+
+Fix: added `trackGenerateSpend()` and call it from `recordAiUsage()` (which all three generate endpoints already invoke) to attribute estimated token cost to `routerState`. Restructured `recordAiUsage` so this **in-memory accounting runs even when Supabase logging is off** (independent of migration 003), and updated the ops note to say the figure now includes generate + router estimated cost. **Verified** on a booted server (no Supabase, mock, FREE_DAILY_LIMIT=3): router/status calls 0 → 3 after 2 generate + 1 ab (the 4th, a stream, correctly hit the 3/day quota → 429 → not counted), with logging off; spent_usd stays 0 under free mock; cost formula matches the proven routeAI path. `d2542e5`.
 
 ### 2026-07-11 — Hourly loop: surfaced the #11 AI-cost breakdown in the Admin OPS tab (made the data usable)
 
@@ -2907,14 +2913,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- d2542e5 fix(cost): count /api/generate* spend toward the shared AI budget + ops metric (16 seconds ago)
-- 3f4ffc0 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 4680f7d docs: log AI-cost metric now counts generate endpoints (14 seconds ago)
+- 206e229 chore: sync PROJECT_STATUS.md [skip ci] (18 seconds ago)
+- d2542e5 fix(cost): count /api/generate* spend toward the shared AI budget + ops metric (37 seconds ago)
+- 3f4ffc0 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
 - 908f063 docs: log Admin OPS AI-cost breakdown panel (59 minutes ago)
 - a774d45 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
 - 6140adc feat(admin): surface per-endpoint AI cost breakdown in the OPS tab (59 minutes ago)
 - 6a353a0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 30281d4 docs: log AI-usage logging extended to generate-ab + stream (2 hours ago)
-- 51d12b3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2936,8 +2942,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.6",
+  "uptime_sec": 21,
+  "memory_mb": "19.4",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
