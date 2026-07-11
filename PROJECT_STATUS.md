@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T17:11:31.352Z · branch `claude/daily-reporter-improvements-8vc9ct` (276 commit(s) ahead of main)
+Generated: 2026-07-11T17:11:50.696Z · branch `claude/daily-reporter-improvements-8vc9ct` (278 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 486 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 488 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop: added E2E regression guard for #9 shop-commission crediting
+
+Completed regression coverage for the second money-safety fix. Added `backend/scripts/test-shop-commission.mjs` + `test:shop-commission` npm script (E2E, same convention as `test:affiliate`). Boots against a running server (mock mode): registers an affiliate (rate 0.20), creates a ฿500 product, checks out qty 2 **with** the ref → asserts the affiliate gets `total_sales 1` / `total_earned 200` (฿1000×0.20); a second checkout **without** a ref → asserts the affiliate is unchanged (no spurious credit). **Verified it's a real guard:** 8/8 pass (exit 0) with the fix; disabling the `creditAffiliateSale` call in `finalizePaid` fails it 3/8 (exit 1, earned → 0). Data writes reverted after the run (note: local boot writes to tracked `backend/data`; `VERCEL=1` would isolate to /tmp but disables `app.listen`, so revert-after is the clean path). `3a46361`.
 
 ### 2026-07-11 — Hourly loop: added the first backend regression test — guards the dispute-split money-safety fix
 
@@ -2925,14 +2929,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 3a46361 test(shop): E2E regression guard for affiliate commission on store purchases (#9) (14 seconds ago)
+- 378abdd docs: log E2E shop-commission regression guard (#9) (15 seconds ago)
+- 4e04640 chore: sync PROJECT_STATUS.md [skip ci] (18 seconds ago)
+- 3a46361 test(shop): E2E regression guard for affiliate commission on store purchases (#9) (34 seconds ago)
 - c3e0653 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
 - aa5e146 docs: log first backend regression test (dispute-split guard) (61 minutes ago)
 - 27ba7fd chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
 - 1f895c6 test(disputes): add regression guard for the dispute-split escrow fix (61 minutes ago)
 - 76fd841 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 12905c0 docs: audit-clean record — flagship SEO curation + smart-e security (no diff needed) (2 hours ago)
-- b654497 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2954,8 +2958,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
+  "uptime_sec": 20,
+  "memory_mb": "20.9",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
