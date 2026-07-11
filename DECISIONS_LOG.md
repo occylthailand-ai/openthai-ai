@@ -9,6 +9,10 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop: wired the dispute-split guard into CI so it actually runs
+
+A regression test only protects if CI runs it. The `test.yml` backend job did syntax + boot/health smoke only — it never ran the backend `test:*` scripts, so the money-safety `test:disputes` guard added earlier could only catch a regression when run by hand. Added a "Unit tests (deterministic, no server)" step to the backend job running `npm run test:disputes` (pure/deterministic — no server/network/env, so a fast reliable gate on every push+PR). The E2E money guards (`test:affiliate`, `test:shop-commission`) need a booted server + admin/webhook env, so wiring those into CI is left as a separate, more involved change. **Verified:** `npm run test:disputes` exits 0; the workflow YAML parses and the new step appears in the backend job. `75ff505`.
+
 ### 2026-07-11 — Hourly loop: added E2E regression guard for #9 shop-commission crediting
 
 Completed regression coverage for the second money-safety fix. Added `backend/scripts/test-shop-commission.mjs` + `test:shop-commission` npm script (E2E, same convention as `test:affiliate`). Boots against a running server (mock mode): registers an affiliate (rate 0.20), creates a ฿500 product, checks out qty 2 **with** the ref → asserts the affiliate gets `total_sales 1` / `total_earned 200` (฿1000×0.20); a second checkout **without** a ref → asserts the affiliate is unchanged (no spurious credit). **Verified it's a real guard:** 8/8 pass (exit 0) with the fix; disabling the `creditAffiliateSale` call in `finalizePaid` fails it 3/8 (exit 1, earned → 0). Data writes reverted after the run (note: local boot writes to tracked `backend/data`; `VERCEL=1` would isolate to /tmp but disables `app.listen`, so revert-after is the clean path). `3a46361`.
