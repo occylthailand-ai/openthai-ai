@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T18:09:38.045Z · branch `claude/daily-reporter-improvements-8vc9ct` (280 commit(s) ahead of main)
+Generated: 2026-07-11T18:09:57.025Z · branch `claude/daily-reporter-improvements-8vc9ct` (282 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 490 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 492 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop: wired the dispute-split guard into CI so it actually runs
+
+A regression test only protects if CI runs it. The `test.yml` backend job did syntax + boot/health smoke only — it never ran the backend `test:*` scripts, so the money-safety `test:disputes` guard added earlier could only catch a regression when run by hand. Added a "Unit tests (deterministic, no server)" step to the backend job running `npm run test:disputes` (pure/deterministic — no server/network/env, so a fast reliable gate on every push+PR). The E2E money guards (`test:affiliate`, `test:shop-commission`) need a booted server + admin/webhook env, so wiring those into CI is left as a separate, more involved change. **Verified:** `npm run test:disputes` exits 0; the workflow YAML parses and the new step appears in the backend job. `75ff505`.
 
 ### 2026-07-11 — Hourly loop: added E2E regression guard for #9 shop-commission crediting
 
@@ -2929,14 +2933,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 75ff505 ci: run the deterministic backend dispute test in the Tests workflow (13 seconds ago)
+- 2bc3261 docs: log CI wiring of dispute-split regression guard (14 seconds ago)
+- 595b0a0 chore: sync PROJECT_STATUS.md [skip ci] (18 seconds ago)
+- 75ff505 ci: run the deterministic backend dispute test in the Tests workflow (34 seconds ago)
 - 5c82f6c chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
 - 378abdd docs: log E2E shop-commission regression guard (#9) (58 minutes ago)
 - 4e04640 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- 3a46361 test(shop): E2E regression guard for affiliate commission on store purchases (#9) (58 minutes ago)
+- 3a46361 test(shop): E2E regression guard for affiliate commission on store purchases (#9) (59 minutes ago)
 - c3e0653 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- aa5e146 docs: log first backend regression test (dispute-split guard) (2 hours ago)
-- 27ba7fd chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2958,7 +2962,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
+  "uptime_sec": 19,
   "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
