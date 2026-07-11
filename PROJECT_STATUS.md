@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T16:10:56.513Z · branch `claude/daily-reporter-improvements-8vc9ct` (272 commit(s) ahead of main)
+Generated: 2026-07-11T16:11:24.089Z · branch `claude/daily-reporter-improvements-8vc9ct` (274 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 482 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 484 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop: added the first backend regression test — guards the dispute-split money-safety fix
+
+The backend has no test runner (only standalone `scripts/test-*.mjs` E2E scripts run via `test:affiliate`/`test:revenue`), so the money-safety fixes shipped this session had no automated guard. Added `backend/scripts/test-disputes.mjs` + `test:disputes` npm script in that same convention, but pure/deterministic (exercises the real `disputes.js` factory with an in-memory orders stub — no server/network). Asserts: `DECISIONS` no longer contains `split` (keeps the 3 real decisions); `resolve('split')` → rejected `invalid decision`; open holds escrow; favor_supplier → resolved_supplier+released; favor_buyer → resolved_buyer+refunded; refund → refunded; already-resolved can't be re-resolved. **Verified it's a real guard:** 10/10 pass (exit 0) with the fix, and re-adding `split` to `DECISIONS` makes it fail 2/10 (exit 1). `1f895c6`.
 
 ### 2026-07-11 — Hourly loop: audited two areas clean (no diff manufactured) — flagship SEO route curation + smart-e security
 
@@ -2921,14 +2925,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 1f895c6 test(disputes): add regression guard for the dispute-split escrow fix (17 seconds ago)
-- 76fd841 chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
-- 12905c0 docs: audit-clean record — flagship SEO curation + smart-e security (no diff needed) (54 minutes ago)
+- aa5e146 docs: log first backend regression test (dispute-split guard) (26 seconds ago)
+- 27ba7fd chore: sync PROJECT_STATUS.md [skip ci] (26 seconds ago)
+- 1f895c6 test(disputes): add regression guard for the dispute-split escrow fix (45 seconds ago)
+- 76fd841 chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
+- 12905c0 docs: audit-clean record — flagship SEO curation + smart-e security (no diff needed) (55 minutes ago)
 - b654497 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 4680f7d docs: log AI-cost metric now counts generate endpoints (2 hours ago)
 - 206e229 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- d2542e5 fix(cost): count /api/generate* spend toward the shared AI budget + ops metric (2 hours ago)
-- 3f4ffc0 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2950,8 +2954,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
+  "uptime_sec": 28,
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
