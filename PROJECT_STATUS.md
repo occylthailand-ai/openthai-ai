@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T02:12:44.314Z · branch `claude/daily-reporter-improvements-8vc9ct` (218 commit(s) ahead of main)
+Generated: 2026-07-11T03:13:34.434Z · branch `claude/daily-reporter-improvements-8vc9ct` (220 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 428 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 430 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,19 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop, run 93: verification run — swept the #1-priority consent/PDPA funnel end-to-end and confirmed it fully solid (negative result, logged so it isn't re-swept); surfaced 2 all-platform-files owner-decision items
+
+openthai-ai synced (HEAD c9acce3). Diversified off the all-platform-files SEO thread back to the standing order's **top-listed** priority (consent-based registration funnel). Read the real code rather than trusting prior claims; **found no gap — everything is correctly wired**, so recording the negative result to prevent re-sweeping:
+
+- **Backend `portal-leads.js`:** `submit()` hard-rejects `consent !== true` (400) and stores `consent:true` on the record; rate-limited 10/15min; dual-mode Supabase/file. `unsubscribe()` + `eraseByEmail()` both exported **and wired**: `GET /api/leads/unsubscribe` (server.js:147) validates the HMAC token + rate-limits; `sendConsumerDigest` skips `l.unsubscribed` (server.js:1107).
+- **PDPA rights (server.js):** `/api/privacy/erasure/confirm` (6146) erases waitlist+consents+producers+**portal_leads**+affiliates (token-gated); `/api/privacy/access/confirm` (6219) returns all 7 categories incl. portal_leads (token-gated, §30/§31). The one open item (whether erasure should also purge/anonymise **orders/withdrawals** financial records, or retain under the accounting/tax exemption) is **already a logged owner-decision** from run 62 — not a new gap.
+- **Email-injection defense:** `escapeHtml()` (server.js:853) is applied at every user-value insertion point across all 3 notification paths (order 874-879, dispute 928-930, portal-lead 950) + consumer digest — closing the `clip()` unclosed-`<` bypass. Affiliate withdrawal email interpolates `${promptpay}` unescaped but it's validated to exactly 10/13 **digits** upstream (server.js:1493-1496), so no injection.
+- **All 9 frontend portal pages** (`/portals/*`): each holds `consent` state, gates the submit button (`disabled={!consent||busy}`), and **sends `consent` in the POST body** via the shared `submitLead()` — which posts the full payload and reports **honest** success/failure (`res.ok && data.success===true`), not fake success. The 9 page types exactly match backend `KNOWN_TYPES`.
+
+**2 new all-platform-files owner-decision items surfaced (not acted on — scope/domain):** (a) **230 `OpenThaiAI_*_Roadmap.html` files are true orphans** — not linked from any page, no sitemap; they're deployed/publicly reachable by direct URL only and are older duplicates of the 93 live lowercase pages. Deleting 230 files is a product call for the owner. (b) the deployed dashboard site has **no `sitemap.xml`/`robots.txt`** — a real SEO gap, but a correct sitemap needs the site's **production domain**, which (like otop-ai-landing) appears in no repo. Both deferred rather than guessed.
+
+**No code shipped this run** — the priority area is genuinely clean; fabricating a change would violate the repo's verify-before-build / no-marginal-change philosophy. Draft PR #1 (all-platform-files, runs 90-92) and the owner-decision backlog are unchanged.
 
 ### 2026-07-11 — Hourly loop, run 92: made all 93 dashboard-reachable content pages mobile-ready + SEO-valid (wrapped bare `<section>` fragments in a proper HTML5 shell; verified in jsdom)
 
@@ -2789,14 +2802,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 092ba07 log: run 92 — wrapped 93 dashboard-reachable content pages in proper HTML5 shell for mobile/SEO (verified in jsdom) (17 seconds ago)
-- 081a9c0 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- fcccd91 log: run 91 — fixed dead Coupang card link on all-platform-files dashboard (built missing roadmap, verified in jsdom) (60 minutes ago)
-- 0ac1070 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- b4e3a9f log: run 90 — fixed all-platform-files dashboard hero-stat clobber; otop-ai-landing SEO still blocked on owner domain (4 hours ago)
-- 1e412c3 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 7c85023 test(seo): guard sitemap==robots invariant + all-public rule; extract ROUTES to shared module (6 hours ago)
-- f2721a6 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 79ae156 log: run 93 — verified consent/PDPA funnel solid end-to-end (negative result); surfaced 2 all-platform-files owner-decision items (15 seconds ago)
+- c9acce3 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 092ba07 log: run 92 — wrapped 93 dashboard-reachable content pages in proper HTML5 shell for mobile/SEO (verified in jsdom) (61 minutes ago)
+- 081a9c0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- fcccd91 log: run 91 — fixed dead Coupang card link on all-platform-files dashboard (built missing roadmap, verified in jsdom) (2 hours ago)
+- 0ac1070 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- b4e3a9f log: run 90 — fixed all-platform-files dashboard hero-stat clobber; otop-ai-landing SEO still blocked on owner domain (5 hours ago)
+- 1e412c3 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2819,7 +2832,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.6",
+  "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
