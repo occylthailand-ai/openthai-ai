@@ -9,6 +9,16 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop, run 96: verified the otop-ai-landing signup funnel is correctly wired (all 6 CTA paths map to real routes) + one mobile polish; og:image still domain-blocked
+
+openthai-ai synced (HEAD 0e7f115). Examined **otop-ai-landing** in full (run 89 only checked its `<head>`). It's a single gateway page (no forms of its own — consent happens on the main platform's `/portals/*`, already verified solid in run 93). Since commit `5c1206a` a prior pass added Twitter tags + `og:image:width/height` + robots.txt.
+
+**High-impact verification (the reason this page exists):** the 5 role CTAs + hub link all deep-link to `https://www.openthai-ai.com/portals/{producer,consumer,middleman,creator,affiliate}` and `/portals`. A single wrong path would silently 404 and kill signups (esp. producer = the supply side). Cross-checked every one against `frontend/src/App.jsx`'s route table → **all 6 map exactly to real routes**. Funnel is correctly wired.
+
+**Shipped (real, unblocked, verified):** the page is dark-themed (`--bg #06070d`) and mobile-first for a Thai Android audience but had **no `<meta name="theme-color">`**, so the mobile browser toolbar stayed light and clashed on first impression. Added `<meta name="theme-color" content="#06070d">` matching the bg. Verified in jsdom: parses, exactly one theme-color = `#06070d`, all 5 role CTAs + h1 + title intact. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of **otop-ai-landing** (commit `7403909`) — lands on existing **PR #1**.
+
+**Still blocked on owner (unchanged, won't guess):** `og:image`/`twitter:image` on otop-ai-landing are relative (`og-image.png`); the OG spec wants absolute URLs and Twitter's `summary_large_image` needs one, but that requires **this deploy's own production domain**, which appears in no repo (its CTAs point to openthai-ai.com, but the landing deploys separately). Plus all-platform-files domain (sitemap) + orphan-file cleanup, and openthai-ai #9–#12.
+
 ### 2026-07-11 — Hourly loop, run 95: added SEO + Open Graph metadata to the 93 dashboard content pages (priority #2), and caught+fixed a real double-wrap defect my own run-92 pass left in affiliate-hub.html
 
 openthai-ai synced (HEAD 5b6fe8d). Continued the market-reach thread on `all-platform-files`. After run 92 gave the 93 dashboard-reachable pages a proper `<head>` (mobile), they still had **no `<meta name="description">` and no Open Graph tags** — and they're both crawlable (linked from the dashboard) and shared on LINE/Facebook, so a bare share-card + no SERP snippet is a real reach gap. Added per page, all **domain-independent** (no production URL needed): `meta description` + `og:type/title/description/site_name/locale`, derived from each page's own `<title>` + subtitle; idempotent.
