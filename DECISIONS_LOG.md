@@ -9,6 +9,10 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop: added the first backend regression test — guards the dispute-split money-safety fix
+
+The backend has no test runner (only standalone `scripts/test-*.mjs` E2E scripts run via `test:affiliate`/`test:revenue`), so the money-safety fixes shipped this session had no automated guard. Added `backend/scripts/test-disputes.mjs` + `test:disputes` npm script in that same convention, but pure/deterministic (exercises the real `disputes.js` factory with an in-memory orders stub — no server/network). Asserts: `DECISIONS` no longer contains `split` (keeps the 3 real decisions); `resolve('split')` → rejected `invalid decision`; open holds escrow; favor_supplier → resolved_supplier+released; favor_buyer → resolved_buyer+refunded; refund → refunded; already-resolved can't be re-resolved. **Verified it's a real guard:** 10/10 pass (exit 0) with the fix, and re-adding `split` to `DECISIONS` makes it fail 2/10 (exit 1). `1f895c6`.
+
 ### 2026-07-11 — Hourly loop: audited two areas clean (no diff manufactured) — flagship SEO route curation + smart-e security
 
 Diversified off the AI-cost thread. Two areas scanned and **verified clean**, recorded so future cycles don't re-scan (and to avoid manufacturing a low-value diff in already-hardened code):
