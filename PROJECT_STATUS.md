@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T12:31:43.171Z · branch `claude/daily-reporter-improvements-8vc9ct` (252 commit(s) ahead of main)
+Generated: 2026-07-11T12:35:09.389Z · branch `claude/daily-reporter-improvements-8vc9ct` (254 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 462 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 464 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -2897,14 +2897,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 465c56f docs: log #10 dispute-split fix + #11 AI-usage logging (owner deadline 30 Jul) (18 seconds ago)
-- 3fc6d9d chore: sync PROJECT_STATUS.md [skip ci] (39 seconds ago)
-- 6c40b5f feat(ai-usage): wire per-request AI cost logging into ai_usage_log (#11) (66 seconds ago)
-- 6672a0f chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
-- 3c1da60 fix(disputes): remove the misleading "split" resolution that paid the supplier in full (6 minutes ago)
-- 50d3f4c chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
-- ff85183 docs: log Data Classification Framework tool + 7 fabricated fields caught (64 minutes ago)
-- 87c5203 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- 459643c feat(affiliate): credit affiliate commission on shop purchases made via a ref link (#9) (31 seconds ago)
+- 38cf8ec chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
+- 465c56f docs: log #10 dispute-split fix + #11 AI-usage logging (owner deadline 30 Jul) (4 minutes ago)
+- 3fc6d9d chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- 6c40b5f feat(ai-usage): wire per-request AI cost logging into ai_usage_log (#11) (5 minutes ago)
+- 6672a0f chore: sync PROJECT_STATUS.md [skip ci] (9 minutes ago)
+- 3c1da60 fix(disputes): remove the misleading "split" resolution that paid the supplier in full (9 minutes ago)
+- 50d3f4c chore: sync PROJECT_STATUS.md [skip ci] (67 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2926,8 +2926,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 41,
-  "memory_mb": "19.9",
+  "uptime_sec": 247,
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3093,7 +3093,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8652 | Vercel serverless detection |
+| `server.js` | 8660 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
