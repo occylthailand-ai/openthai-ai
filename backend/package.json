@@ -12,7 +12,8 @@
     "test:affiliate": "node scripts/test-affiliate-flow.mjs",
     "test:revenue": "node scripts/test-revenue-system.mjs",
     "test:disputes": "node scripts/test-disputes.mjs",
-    "test:shop-commission": "node scripts/test-shop-commission.mjs"
+    "test:shop-commission": "node scripts/test-shop-commission.mjs",
+    "test:ai-usage": "node scripts/test-ai-usage.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

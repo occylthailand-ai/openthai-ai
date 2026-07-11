@@ -54,6 +54,9 @@ jobs:
       - name: Unit tests (deterministic, no server)
         working-directory: backend
         run: npm run test:disputes
+      - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
+        working-directory: backend
+        run: npm run test:ai-usage
       - name: Boot + health smoke test
         working-directory: backend
         run: |
