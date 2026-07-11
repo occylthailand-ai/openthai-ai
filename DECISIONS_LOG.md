@@ -9,6 +9,16 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop, run 97: added FAQPage JSON-LD to the flagship /pricing (Google FAQ rich-result eligibility) — an unblocked SEO win on the known domain; verified with a new drift-guard test
+
+openthai-ai synced (HEAD 0a78af9). Diversified back to the **flagship** (known domain openthai-ai.com → SEO work here is NOT domain-blocked, unlike the satellites). First **verified two core areas clean** (recording so they aren't re-scanned): (1) the existing JSON-LD @graph in `frontend/index.html` (Organization + WebSite + SoftwareApplication) — its offer prices **exactly match** the real `SUBSCRIPTION_PLANS` in `backend/omise-payment.js` (Free 0 / Pro 299 / Premier 599 / Enterprise 1299 THB), so the structured-data pricing is accurate. (2) public `GET /api/shop/products` (`inventory.js`) exposes only id/sku/name/category/price/image/description/in_stock/stock — **no `cost`/margin leak** — and `adjust(type:'sale')` blocks overselling (`before+d<0` → "สต๊อกไม่พอ").
+
+**Real unblocked SEO win shipped:** `/pricing` renders a visible FAQ (`t('pp.faq')`) but had **no FAQPage structured data**, so Google couldn't surface it as an FAQ rich result (expandable Q&A in the SERP — high-CTR on a core conversion page). Added FAQPage JSON-LD in `PricingPage.jsx` built from the **same `faq` array** the page already renders (so it can't drift from the visible Q&A). FAQ rich results are Google-only and Google renders SPA JS + reads DOM JSON-LD, so **client-side injection is sufficient** — deliberately NOT added to `prerender-meta.mjs`, since that would require duplicating the FAQ text into the build script (the exact drift risk CLAUDE.md warns against). Guarded for locales missing the key (filters to valid `[q,a]` pairs; renders nothing if none) and escapes `<`.
+
+**Verified by running the real component in vitest/jsdom** (new `src/__tests__/pricingFaqSchema.test.jsx` + existing `faqAccordionA11y` unaffected → **10/10 pass**): exactly one valid FAQPage block; correct @context/@type; **one Question per rendered FAQ disclosure** (schema mirrors the visible FAQ — the test pins this so it can't silently drift); every Question has a non-empty name + acceptedAnswer.text. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` (commit `b688ebc`) — draft **PR #79**.
+
+**Owner-decision backlog unchanged:** otop-ai-landing domain, all-platform-files domain (sitemap) + orphan-file cleanup, and openthai-ai #9 (affiliate commission on shop), #10 (dispute split), #11 (AI-usage-log migration), #12 (v9.0 build-out).
+
 ### 2026-07-11 — Hourly loop, run 96: verified the otop-ai-landing signup funnel is correctly wired (all 6 CTA paths map to real routes) + one mobile polish; og:image still domain-blocked
 
 openthai-ai synced (HEAD 0e7f115). Examined **otop-ai-landing** in full (run 89 only checked its `<head>`). It's a single gateway page (no forms of its own — consent happens on the main platform's `/portals/*`, already verified solid in run 93). Since commit `5c1206a` a prior pass added Twitter tags + `og:image:width/height` + robots.txt.
