@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-10T22:15:17.668Z · branch `claude/daily-reporter-improvements-8vc9ct` (214 commit(s) ahead of main)
+Generated: 2026-07-11T01:13:18.947Z · branch `claude/daily-reporter-improvements-8vc9ct` (216 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 424 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 426 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop, run 91: fixed a real dead link on the deployed `all-platform-files` dashboard — the Coupang card had no roadmap file (built a genuine one, verified in jsdom)
+
+openthai-ai synced (HEAD 0ac1070; PROJECT_STATUS regenerated clean). Continuing the `all-platform-files` sweep from run 90. Ran a **link-integrity check** on the deployed dashboard: extracted all 93 `file:` targets the platform cards link to and checked each on disk → **92 exist, 1 missing**. The **Coupang** card (`group:kr, steps:55, 30M+ KR`, type Marketplace) linked to `coupang-roadmap-section.html`, which **did not exist** — only `aff-coupang-affiliate.html` (a 2KB affiliate page) was present. Because `vercel.json` ends with a catch-all `{src:'/(.*)', dest:'/index.html'}`, clicking Coupang **soft-404'd back to the dashboard** — a dead click on an intended Korea-market platform.
+
+**Fork considered (standing order #8):** three options — (a) delete the Coupang card (drops a platform the owner clearly intended, card metadata present), (b) point it at the affiliate page (misleading: "เปิด Roadmap" → affiliate), (c) build the missing roadmap. Chose **(c)** because it's the only option that neither drops an intended market nor misleads, and it directly serves the standing priority (help Thai sellers reach more markets). This is **not** fabrication in the CLAUDE.md sense: the other 92 cards are exactly this kind of factual how-to-sell guide; I wrote real, publicly-documented Coupang Wing seller steps, not invented repo features.
+
+**What shipped:** `coupang-roadmap-section.html` matching the existing roadmap-section template exactly (namespaced `cp-` classes + `showCpPhase()` switcher, Coupang brand color `#E01E5A`), 9 sections totalling **exactly 55 steps** to match the card's `steps:55` — Coupang Wing signup + 통신판매업, Marketplace vs Rocket Growth fulfillment, listing + Item Winner/Buy Box, Coupang Ads, order/delivery SLA, and the Coupang settlement cycle. No card metadata changed.
+
+**Verified by running (jsdom, 6/6), not "should work":** dashboard card links now 0 missing; tabs==9, phases==9, total `<li>` steps==55; step numbering contiguous 1..55 with no gaps/overlap; `showCpPhase` toggles exactly one correct phase for all 9 sections. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of **all-platform-files** (commit `c541f31`, full detail there since that repo has no DECISIONS_LOG) — adds to the existing **draft PR #1**.
+
+**Still blocked on owner (not acted on, won't guess):** otop-ai-landing production domain (for og:image/canonical/sitemap) + owner-decisions #9 (affiliate commission on shop), #10 (dispute split), #11 (migration 003), #12 (v9.0 build-out).
 
 ### 2026-07-10 — Hourly loop, run 90: diversified to the deployed `all-platform-files` dashboard — fixed a real hero-stat-clobber bug (verified in jsdom); otop-ai-landing SEO fix still blocked on owner (domain)
 
@@ -2763,14 +2775,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b4e3a9f log: run 90 — fixed all-platform-files dashboard hero-stat clobber; otop-ai-landing SEO still blocked on owner domain (15 seconds ago)
-- 1e412c3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 7c85023 test(seo): guard sitemap==robots invariant + all-public rule; extract ROUTES to shared module (2 hours ago)
-- f2721a6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 56fc37b seo: add public /earn (homepage hero CTA) to prerender meta, sitemap, robots (3 hours ago)
-- 02fbc17 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- efea5db security: constant-time comparison for Omise + LINE webhook signatures (3 hours ago)
-- dc842f6 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- fcccd91 log: run 91 — fixed dead Coupang card link on all-platform-files dashboard (built missing roadmap, verified in jsdom) (18 seconds ago)
+- 0ac1070 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- b4e3a9f log: run 90 — fixed all-platform-files dashboard hero-stat clobber; otop-ai-landing SEO still blocked on owner domain (3 hours ago)
+- 1e412c3 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 7c85023 test(seo): guard sitemap==robots invariant + all-public rule; extract ROUTES to shared module (5 hours ago)
+- f2721a6 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 56fc37b seo: add public /earn (homepage hero CTA) to prerender meta, sitemap, robots (6 hours ago)
+- 02fbc17 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2793,7 +2805,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.1",
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
