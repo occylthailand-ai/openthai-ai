@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T05:12:50.067Z · branch `claude/daily-reporter-improvements-8vc9ct` (224 commit(s) ahead of main)
+Generated: 2026-07-11T06:12:43.166Z · branch `claude/daily-reporter-improvements-8vc9ct` (226 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 434 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 436 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop, run 96: verified the otop-ai-landing signup funnel is correctly wired (all 6 CTA paths map to real routes) + one mobile polish; og:image still domain-blocked
+
+openthai-ai synced (HEAD 0e7f115). Examined **otop-ai-landing** in full (run 89 only checked its `<head>`). It's a single gateway page (no forms of its own — consent happens on the main platform's `/portals/*`, already verified solid in run 93). Since commit `5c1206a` a prior pass added Twitter tags + `og:image:width/height` + robots.txt.
+
+**High-impact verification (the reason this page exists):** the 5 role CTAs + hub link all deep-link to `https://www.openthai-ai.com/portals/{producer,consumer,middleman,creator,affiliate}` and `/portals`. A single wrong path would silently 404 and kill signups (esp. producer = the supply side). Cross-checked every one against `frontend/src/App.jsx`'s route table → **all 6 map exactly to real routes**. Funnel is correctly wired.
+
+**Shipped (real, unblocked, verified):** the page is dark-themed (`--bg #06070d`) and mobile-first for a Thai Android audience but had **no `<meta name="theme-color">`**, so the mobile browser toolbar stayed light and clashed on first impression. Added `<meta name="theme-color" content="#06070d">` matching the bg. Verified in jsdom: parses, exactly one theme-color = `#06070d`, all 5 role CTAs + h1 + title intact. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of **otop-ai-landing** (commit `7403909`) — lands on existing **PR #1**.
+
+**Still blocked on owner (unchanged, won't guess):** `og:image`/`twitter:image` on otop-ai-landing are relative (`og-image.png`); the OG spec wants absolute URLs and Twitter's `summary_large_image` needs one, but that requires **this deploy's own production domain**, which appears in no repo (its CTAs point to openthai-ai.com, but the landing deploys separately). Plus all-platform-files domain (sitemap) + orphan-file cleanup, and openthai-ai #9–#12.
 
 ### 2026-07-11 — Hourly loop, run 95: added SEO + Open Graph metadata to the 93 dashboard content pages (priority #2), and caught+fixed a real double-wrap defect my own run-92 pass left in affiliate-hub.html
 
@@ -2826,14 +2836,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 47269ae log: run 95 — SEO/OG metadata on 93 dashboard pages + fixed affiliate-hub.html double-wrap from run 92 (verified in jsdom) (18 seconds ago)
-- 5b6fe8d chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 08fe246 log: run 94 — smart-e review (flows solid); fixed negative-amount gap in POST /api/payments/qr, verified on booted server (60 minutes ago)
-- 700ae02 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 79ae156 log: run 93 — verified consent/PDPA funnel solid end-to-end (negative result); surfaced 2 all-platform-files owner-decision items (2 hours ago)
-- c9acce3 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 092ba07 log: run 92 — wrapped 93 dashboard-reachable content pages in proper HTML5 shell for mobile/SEO (verified in jsdom) (3 hours ago)
-- 081a9c0 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- a428055 log: run 96 — verified otop-ai-landing funnel links (6/6 map to real routes) + added theme-color; og:image still domain-blocked (16 seconds ago)
+- 0e7f115 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- 47269ae log: run 95 — SEO/OG metadata on 93 dashboard pages + fixed affiliate-hub.html double-wrap from run 92 (verified in jsdom) (60 minutes ago)
+- 5b6fe8d chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 08fe246 log: run 94 — smart-e review (flows solid); fixed negative-amount gap in POST /api/payments/qr, verified on booted server (2 hours ago)
+- 700ae02 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 79ae156 log: run 93 — verified consent/PDPA funnel solid end-to-end (negative result); surfaced 2 all-platform-files owner-decision items (3 hours ago)
+- c9acce3 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2856,7 +2866,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.0",
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
