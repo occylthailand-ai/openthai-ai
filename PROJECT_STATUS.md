@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T04:13:03.331Z · branch `claude/daily-reporter-improvements-8vc9ct` (222 commit(s) ahead of main)
+Generated: 2026-07-11T05:12:50.067Z · branch `claude/daily-reporter-improvements-8vc9ct` (224 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 432 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 434 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop, run 95: added SEO + Open Graph metadata to the 93 dashboard content pages (priority #2), and caught+fixed a real double-wrap defect my own run-92 pass left in affiliate-hub.html
+
+openthai-ai synced (HEAD 5b6fe8d). Continued the market-reach thread on `all-platform-files`. After run 92 gave the 93 dashboard-reachable pages a proper `<head>` (mobile), they still had **no `<meta name="description">` and no Open Graph tags** — and they're both crawlable (linked from the dashboard) and shared on LINE/Facebook, so a bare share-card + no SERP snippet is a real reach gap. Added per page, all **domain-independent** (no production URL needed): `meta description` + `og:type/title/description/site_name/locale`, derived from each page's own `<title>` + subtitle; idempotent.
+
+**Caught a real defect in my own run-92 output (verify-before-trust paid off):** the metadata check flagged `affiliate-hub.html` with **two `</head>`**. Root cause: it was actually a **full** document (`<html><head><style>…</head><body>`) that merely lacked a leading `<!doctype>`, so run 92's `hasDoctype && hasHead` fragment-detector mis-classified it and wrapped it again → nested `<html>/<head>`. It was the **only** originally-full page among the 93 (verified: the other 92 have exactly one html/head/body). Rebuilt it from the pre-wrap original (`git show c541f31:`) as a single clean document — `<!doctype html>` + `<html lang="th">` + viewport + title + the same SEO/OG metas in its existing `<head>`.
+
+**Verified (jsdom + structural counts), not "should work":** all 93 pages now have exactly one html/head/body (no nesting) and a non-empty description + og:title/type/description; `<li>` step counts unchanged vs the prior commit on every fragment (bodies preserved); affiliate-hub keeps all 30 program cards + 30 links + its CTA and renders with title/lang=th/viewport/description; the coupang phase-switcher still toggles correctly after injection. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of **all-platform-files** (commit `0515aa2`, 93 files) — draft **PR #1**.
+
+**Owner-decision backlog unchanged:** otop-ai-landing domain, all-platform-files domain (sitemap) + orphan-file cleanup, openthai-ai #9–#12.
 
 ### 2026-07-11 — Hourly loop, run 94: smart-e deep review — verified order/payment/auth/LINE flows solid; fixed one real data-integrity gap (negative PromptPay amount) verified against the booted server
 
@@ -2816,14 +2826,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 08fe246 log: run 94 — smart-e review (flows solid); fixed negative-amount gap in POST /api/payments/qr, verified on booted server (23 seconds ago)
-- 700ae02 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 79ae156 log: run 93 — verified consent/PDPA funnel solid end-to-end (negative result); surfaced 2 all-platform-files owner-decision items (60 minutes ago)
-- c9acce3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 092ba07 log: run 92 — wrapped 93 dashboard-reachable content pages in proper HTML5 shell for mobile/SEO (verified in jsdom) (2 hours ago)
-- 081a9c0 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- fcccd91 log: run 91 — fixed dead Coupang card link on all-platform-files dashboard (built missing roadmap, verified in jsdom) (3 hours ago)
-- 0ac1070 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 47269ae log: run 95 — SEO/OG metadata on 93 dashboard pages + fixed affiliate-hub.html double-wrap from run 92 (verified in jsdom) (18 seconds ago)
+- 5b6fe8d chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- 08fe246 log: run 94 — smart-e review (flows solid); fixed negative-amount gap in POST /api/payments/qr, verified on booted server (60 minutes ago)
+- 700ae02 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 79ae156 log: run 93 — verified consent/PDPA funnel solid end-to-end (negative result); surfaced 2 all-platform-files owner-decision items (2 hours ago)
+- c9acce3 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 092ba07 log: run 92 — wrapped 93 dashboard-reachable content pages in proper HTML5 shell for mobile/SEO (verified in jsdom) (3 hours ago)
+- 081a9c0 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2846,7 +2856,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.8",
+  "memory_mb": "19.0",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
