@@ -610,7 +610,8 @@ export default function AdminPage() {
                       <button onClick={() => aiSuggestDispute(d.id)} style={miniBtn('#6366f1')}>🤖 ขอความเห็น AI</button>
                       <button onClick={() => resolveDispute(d.id, 'favor_supplier')} style={miniBtn('#10b981')}>ตัดสินให้ผู้ผลิต (ปล่อยเงิน)</button>
                       <button onClick={() => resolveDispute(d.id, 'favor_buyer')} style={miniBtn('#ef4444')}>ตัดสินให้ผู้ซื้อ (คืนเงิน)</button>
-                      <button onClick={() => resolveDispute(d.id, 'split')} style={miniBtn('#f59e0b')}>แบ่งครึ่ง</button>
+                      {/* ปุ่ม "แบ่งครึ่ง" ถูกถอดออก — escrow ยังไม่มีฟิลด์จำนวนเงิน partial จึงแบ่งครึ่งจริงไม่ได้
+                          (ของเดิมปล่อยเงินเต็มให้ผู้ผลิต ทั้งที่ป้ายบอกแบ่งครึ่ง) จะกลับมาเมื่อมีระบบ split จริง */}
                     </div>
                   )}
                 </div>

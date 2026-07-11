@@ -9,7 +9,11 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 const DISPUTE_STATUS = ['open', 'ai_reviewed', 'resolved_supplier', 'resolved_buyer', 'refunded'];
-const DECISIONS = ['favor_supplier', 'favor_buyer', 'refund', 'split'];
+// NB: no 'split' — the escrow model has no partial-amount field, so a 50/50 split
+// can't be represented. The old 'split' decision silently released the FULL escrow to
+// the supplier (buyer got nothing) while the admin UI labelled it "แบ่งครึ่ง". Removed
+// until a real partial-split escrow exists; resolve() now rejects it (defense in depth).
+const DECISIONS = ['favor_supplier', 'favor_buyer', 'refund'];
 const clip = (s, n = 800) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 
 export function createDisputes(dataDir, opts = {}) {
@@ -167,7 +171,7 @@ export function createDisputes(dataDir, opts = {}) {
 
 ตอบกลับ JSON เท่านั้น:
 {
-  "recommendation": "favor_supplier | favor_buyer | refund | split | need_more_info",
+  "recommendation": "favor_supplier | favor_buyer | refund | need_more_info",
   "confidence": 0.0,
   "reasoning": "เหตุผลสั้นๆ อ้างอิงข้อเท็จจริงที่มี ไม่ใช่การเดา",
   "missing_evidence": ["สิ่งที่ควรขอเพิ่มเติมก่อนตัดสินใจจริง ถ้ามี"]
@@ -194,8 +198,9 @@ export function createDisputes(dataDir, opts = {}) {
     if (d.status === 'resolved_supplier' || d.status === 'resolved_buyer' || d.status === 'refunded') {
       return { ok: false, error: 'ข้อพิพาทนี้ปิดไปแล้ว' };
     }
-    const escrowNext = (decision === 'favor_supplier' || decision === 'split') ? 'released' : 'refunded';
-    const statusNext = decision === 'favor_supplier' ? 'resolved_supplier' : decision === 'favor_buyer' ? 'resolved_buyer' : decision === 'refund' ? 'refunded' : 'resolved_supplier';
+    // decision ∈ {favor_supplier, favor_buyer, refund} (validated above)
+    const escrowNext = decision === 'favor_supplier' ? 'released' : 'refunded';
+    const statusNext = decision === 'favor_supplier' ? 'resolved_supplier' : decision === 'favor_buyer' ? 'resolved_buyer' : 'refunded';
     if (orders) { try { await orders.setEscrowStatus(d.order_id, escrowNext, `dispute ${id} resolved: ${decision}`); } catch (_) { /* ignore */ } }
 
     d.status = statusNext;
