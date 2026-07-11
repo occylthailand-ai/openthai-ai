@@ -9,6 +9,12 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop: made the daily AI-cost metric + budget guard count the main generate endpoints (were blind to them)
+
+Code-scan finding: `ops-summary.ai_spent_today_usd`, `/api/router/status.spent_usd`, and the Eco-mode budget guard (`routerEco`) all read `routerState.spentUsd`, which was only incremented inside `routeAI`. But the three main content endpoints (`/api/generate`, `-ab`, `/stream`) use `smartGenerate`, **not** routeAI — so their spend never counted. Effect: the owner's "AI cost today" excluded the biggest consumer, and a heavy generate day never tripped the daily budget (cost control blind to it). The ops note also didn't disclose this.
+
+Fix: added `trackGenerateSpend()` and call it from `recordAiUsage()` (which all three generate endpoints already invoke) to attribute estimated token cost to `routerState`. Restructured `recordAiUsage` so this **in-memory accounting runs even when Supabase logging is off** (independent of migration 003), and updated the ops note to say the figure now includes generate + router estimated cost. **Verified** on a booted server (no Supabase, mock, FREE_DAILY_LIMIT=3): router/status calls 0 → 3 after 2 generate + 1 ab (the 4th, a stream, correctly hit the 3/day quota → 429 → not counted), with logging off; spent_usd stays 0 under free mock; cost formula matches the proven routeAI path. `d2542e5`.
+
 ### 2026-07-11 — Hourly loop: surfaced the #11 AI-cost breakdown in the Admin OPS tab (made the data usable)
 
 The #11 endpoint `/api/ai-usage/admin/summary` had no UI consumer — the owner couldn't actually see the per-endpoint token/cost data. Added an "🧮 ต้นทุน AI แยกตาม endpoint" panel to the Admin **OPS tab** (`AdminPage.jsx`): fetches the summary alongside ops-summary, renders a per-endpoint table (requests / total tokens / USD cost) sorted by token usage + a totals line, and degrades cleanly to the "run migration 003" note when logging isn't enabled (and "ยังไม่มีข้อมูล" when zero rows). **Verified** in vitest/jsdom (new `adminAiUsagePanel.test.jsx`): driving the authed AdminPage to the OPS tab renders the endpoint rows from the real summary shape, and shows the migration note when `enabled:false`. Full suite **10 files / 63 tests pass**; vite build clean. `6140adc`.
