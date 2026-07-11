@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T13:13:21.564Z · branch `claude/daily-reporter-improvements-8vc9ct` (262 commit(s) ahead of main)
+Generated: 2026-07-11T13:13:39.999Z · branch `claude/daily-reporter-improvements-8vc9ct` (264 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 472 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 474 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop: surfaced the #11 AI-cost breakdown in the Admin OPS tab (made the data usable)
+
+The #11 endpoint `/api/ai-usage/admin/summary` had no UI consumer — the owner couldn't actually see the per-endpoint token/cost data. Added an "🧮 ต้นทุน AI แยกตาม endpoint" panel to the Admin **OPS tab** (`AdminPage.jsx`): fetches the summary alongside ops-summary, renders a per-endpoint table (requests / total tokens / USD cost) sorted by token usage + a totals line, and degrades cleanly to the "run migration 003" note when logging isn't enabled (and "ยังไม่มีข้อมูล" when zero rows). **Verified** in vitest/jsdom (new `adminAiUsagePanel.test.jsx`): driving the authed AdminPage to the OPS tab renders the endpoint rows from the real summary shape, and shows the migration note when `enabled:false`. Full suite **10 files / 63 tests pass**; vite build clean. `6140adc`.
 
 ### 2026-07-11 — Hourly loop: completed the #11 AI-usage logging across all three generate endpoints
 
@@ -2903,14 +2907,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 6140adc feat(admin): surface per-endpoint AI cost breakdown in the OPS tab (15 seconds ago)
+- 908f063 docs: log Admin OPS AI-cost breakdown panel (14 seconds ago)
+- a774d45 chore: sync PROJECT_STATUS.md [skip ci] (16 seconds ago)
+- 6140adc feat(admin): surface per-endpoint AI cost breakdown in the OPS tab (32 seconds ago)
 - 6a353a0 chore: sync PROJECT_STATUS.md [skip ci] (34 minutes ago)
-- 30281d4 docs: log AI-usage logging extended to generate-ab + stream (34 minutes ago)
-- 51d12b3 chore: sync PROJECT_STATUS.md [skip ci] (34 minutes ago)
+- 30281d4 docs: log AI-usage logging extended to generate-ab + stream (35 minutes ago)
+- 51d12b3 chore: sync PROJECT_STATUS.md [skip ci] (35 minutes ago)
 - 9522f9e feat(ai-usage): also log /api/generate-ab and /api/generate/stream to ai_usage_log (35 minutes ago)
 - 7107313 chore: sync PROJECT_STATUS.md [skip ci] (37 minutes ago)
-- c7603e5 docs: log #9 shop-commission wiring + #12 v9.0 go/no-go rationale (37 minutes ago)
-- 5721f11 chore: sync PROJECT_STATUS.md [skip ci] (38 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2932,8 +2936,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 33,
-  "memory_mb": "19.1",
+  "uptime_sec": 0,
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
