@@ -46,6 +46,23 @@ export default function AffiliatePage() {
   const T = AF[lang] || AF.th;
   const { copied, copy } = useCopy();
 
+  // FAQPage structured data — derived from the SAME T.faqs array rendered below, so it
+  // can't drift from the visible Q&A. /affiliate is a core growth funnel; FAQ rich results
+  // are a Google-only feature and Google renders SPA JS + reads DOM JSON-LD, so client-side
+  // injection is sufficient (mirrors the /pricing FAQ schema added the prior run).
+  const faqPairs = Array.isArray(T.faqs) ? T.faqs.filter((x) => Array.isArray(x) && x.length >= 2) : [];
+  const faqLd = faqPairs.length
+    ? JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqPairs.map(([q, a]) => ({
+          '@type': 'Question',
+          name: String(q),
+          acceptedAnswer: { '@type': 'Answer', text: String(a) },
+        })),
+      }).replace(/</g, '\\u003c')
+    : null;
+
   const [form, setForm] = useState({ name: '', email: '', phone: '', platform: 'TikTok', followers: T.followers[1], channel_url: '', note: '' });
   const [consent, setConsent] = useState(false);
   const [step, setStep] = useState('form');
@@ -257,6 +274,7 @@ export default function AffiliatePage() {
       </section>
 
       <section style={{ maxWidth: 700, margin: '0 auto', padding: '0 24px 80px' }}>
+        {faqLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} />}
         <SectionTitle>{T.faq.title}</SectionTitle>
         {T.faqs.map(([q, a], i) => <FAQItem key={i} q={q} a={a} />)}
       </section>
