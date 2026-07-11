@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T19:10:26.726Z · branch `claude/daily-reporter-improvements-8vc9ct` (284 commit(s) ahead of main)
+Generated: 2026-07-11T19:10:48.535Z · branch `claude/daily-reporter-improvements-8vc9ct` (286 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 494 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 496 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-11 — Hourly loop: also wired the shop-commission E2E money guard into CI (verified the prior CI run went green first)
+
+First **verified** the previous round's CI change actually works: the `test.yml` runs for `75ff505` (test:disputes wiring) and `2bc3261` both **completed / success** — the workflow with the new deterministic unit-test step passed. Then completed the money-guard CI coverage: added a self-contained "E2E — shop-commission money guard" step to the backend job (boots the server on its own port + admin key, waits for `/api/health`, runs `test:shop-commission`, kills the server, propagates exit code, dumps the log on failure). Only this E2E test is wired — it passes reliably in mock mode (8/8); the **pre-existing** `test:affiliate` is intentionally left out because it needs a full Omise/webhook env and fails in plain mock mode (9/22), so wiring it would make CI red. **Verified locally** against one booted server: `/api/health` 200, `test:shop-commission` 8/8. `626bc0a`.
 
 ### 2026-07-11 — Hourly loop: wired the dispute-split guard into CI so it actually runs
 
@@ -2933,14 +2937,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 626bc0a ci: also run the shop-commission E2E money guard in the Tests workflow (14 seconds ago)
-- 783c84f chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- 2f43ab5 docs: log CI wiring of shop-commission E2E guard + verified prior CI green (14 seconds ago)
+- 6b6ae2b chore: sync PROJECT_STATUS.md [skip ci] (20 seconds ago)
+- 626bc0a ci: also run the shop-commission E2E money guard in the Tests workflow (37 seconds ago)
+- 783c84f chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
 - 2bc3261 docs: log CI wiring of dispute-split regression guard (61 minutes ago)
 - 595b0a0 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
 - 75ff505 ci: run the deterministic backend dispute test in the Tests workflow (61 minutes ago)
 - 5c82f6c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 378abdd docs: log E2E shop-commission regression guard (#9) (2 hours ago)
-- 4e04640 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2962,8 +2966,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
+  "uptime_sec": 22,
+  "memory_mb": "19.9",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
