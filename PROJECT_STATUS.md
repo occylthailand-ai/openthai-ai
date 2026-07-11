@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T17:11:50.696Z · branch `claude/daily-reporter-improvements-8vc9ct` (278 commit(s) ahead of main)
+Generated: 2026-07-11T18:09:38.045Z · branch `claude/daily-reporter-improvements-8vc9ct` (280 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 488 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 490 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -2929,14 +2929,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 378abdd docs: log E2E shop-commission regression guard (#9) (15 seconds ago)
-- 4e04640 chore: sync PROJECT_STATUS.md [skip ci] (18 seconds ago)
-- 3a46361 test(shop): E2E regression guard for affiliate commission on store purchases (#9) (34 seconds ago)
-- c3e0653 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- aa5e146 docs: log first backend regression test (dispute-split guard) (61 minutes ago)
-- 27ba7fd chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 1f895c6 test(disputes): add regression guard for the dispute-split escrow fix (61 minutes ago)
-- 76fd841 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 75ff505 ci: run the deterministic backend dispute test in the Tests workflow (13 seconds ago)
+- 5c82f6c chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 378abdd docs: log E2E shop-commission regression guard (#9) (58 minutes ago)
+- 4e04640 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 3a46361 test(shop): E2E regression guard for affiliate commission on store purchases (#9) (58 minutes ago)
+- c3e0653 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- aa5e146 docs: log first backend regression test (dispute-split guard) (2 hours ago)
+- 27ba7fd chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2958,8 +2958,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 20,
-  "memory_mb": "20.9",
+  "uptime_sec": 0,
+  "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
