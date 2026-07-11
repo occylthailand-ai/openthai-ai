@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T21:12:37.433Z · branch `claude/daily-reporter-improvements-8vc9ct` (294 commit(s) ahead of main)
+Generated: 2026-07-11T22:11:06.339Z · branch `claude/daily-reporter-improvements-8vc9ct` (296 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 504 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 506 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -2947,14 +2947,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- afef0ff docs: log submitLead consent-funnel guard + CI/consistency verification (20 seconds ago)
-- 384f53c chore: sync PROJECT_STATUS.md [skip ci] (41 seconds ago)
-- 66168bf test(portals): guard the consent-funnel honest-feedback contract (submitLead) (62 seconds ago)
-- 6f037d8 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- cfc33f0 docs: log self-contained AI-usage regression guard (#11) — coverage complete (61 minutes ago)
-- 860ffaa chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- f2cb210 test(ai-usage): self-contained regression guard for AI-usage logging + spend tracking (#11) (62 minutes ago)
-- e6b88b5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 7c422fd test(portals): deterministic guard for the PDPA consent gate (standing-order #3) (17 seconds ago)
+- ecc8318 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- afef0ff docs: log submitLead consent-funnel guard + CI/consistency verification (59 minutes ago)
+- 384f53c chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 66168bf test(portals): guard the consent-funnel honest-feedback contract (submitLead) (60 minutes ago)
+- 6f037d8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- cfc33f0 docs: log self-contained AI-usage regression guard (#11) — coverage complete (2 hours ago)
+- 860ffaa chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2977,7 +2977,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.1",
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
