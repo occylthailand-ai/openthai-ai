@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop, run 100: fixed the frontend fallout of run 99 — the live-stream generator sent no identity headers and mishandled the new 429
+
+openthai-ai synced (HEAD 95d431d). Direct, high-impact follow-up to run 99: once `/api/generate/stream` started enforcing the daily quota, its **frontend caller** (`AIGeneratorPage.jsx` `handleStream`, the "เขียนสด/Live" button) had two real defects that enforcement exposed. First **verified the quota model** to avoid over-reaching: `checkQuota`/`consumeQuota` are enforced on exactly the three generate endpoints (`/api/generate`, `-ab`, `/stream`); the ~30 `/api/skills/*` tools are deliberately NOT quota-gated — whether they should be is a **product decision left for the owner**, not guessed here.
+
+**Two bugs fixed (both mirror the already-correct non-stream path):**
+- The stream `fetch` sent only `Content-Type` — **no `x-user-email` / `x-device-id`**. So the backend saw the stream as anonymous: a **paying user was wrongly quota-limited** on streaming, and spin/streak **bonus credits were ignored** on that path. Now uses `authHeaders()` like `/api/generate` and `/api/generate-ab`, so plan + credit identity are honored consistently. (This is a paying-customer-blocking bug, the inverse of the run-99 leak.)
+- A **429** showed a generic `สตรีมไม่สำเร็จ` toast instead of the upgrade CTA. Now parses the 429 body and routes to `upgrade_url` (`/payment?plan=pro`), matching `handleGenerate` — the stream path drives the same Pro upsell instead of looking broken. Also added `refreshUsage()` after a successful stream so the remaining-quota chip stays accurate.
+
+**Verified by running the real component in vitest/jsdom** (new `src/__tests__/aiGeneratorStreamQuota.test.jsx`), not by inspection: rendering the actual page, filling the product field, and clicking the Live button issues the `/api/generate/stream` request **carrying `x-user-email` + `x-device-id`**, and a 429 response **navigates to `/payment?plan=pro`**. Full frontend suite **9 files / 61 tests pass**; `vite build` clean (dist removed after). Committed + pushed `475c6ab` to `claude/daily-reporter-improvements-8vc9ct` → draft **PR #79**.
+
+**Owner-decision backlog unchanged:** whether `/api/skills/*` should count against the free quota; otop-ai-landing domain; all-platform-files domain (sitemap) + orphan-file cleanup; openthai-ai #9 (affiliate commission on shop), #10 (dispute split), #11 (AI-usage-log migration), #12 (v9.0 build-out).
+
 ### 2026-07-11 — Hourly loop, run 99: closed a freemium-bypass bug — /api/generate-ab and /api/generate/stream skipped the daily quota that /api/generate enforces
 
 openthai-ai synced. Code scan of the three AI generation endpoints in `backend/server.js` found a real **monetization-critical bug**: only `/api/generate` (line ~343) enforced the daily plan quota (`checkQuota` → 429, `consumeQuota` on success). Its two siblings — `/api/generate-ab` (A/B variants, line ~1841) and `/api/generate/stream` (SSE streaming, line ~1870) — had **only the burst rate-limiter, no quota check**. A Free user could bypass `FREE_DAILY_LIMIT` (3/day) entirely just by hitting those endpoints, and `/generate-ab` even returns **two** variants per call. This defeats the core freemium upgrade lever (the 3/day cap is what drives the ฿299 Pro upsell).
