@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop, run 91: fixed a real dead link on the deployed `all-platform-files` dashboard — the Coupang card had no roadmap file (built a genuine one, verified in jsdom)
+
+openthai-ai synced (HEAD 0ac1070; PROJECT_STATUS regenerated clean). Continuing the `all-platform-files` sweep from run 90. Ran a **link-integrity check** on the deployed dashboard: extracted all 93 `file:` targets the platform cards link to and checked each on disk → **92 exist, 1 missing**. The **Coupang** card (`group:kr, steps:55, 30M+ KR`, type Marketplace) linked to `coupang-roadmap-section.html`, which **did not exist** — only `aff-coupang-affiliate.html` (a 2KB affiliate page) was present. Because `vercel.json` ends with a catch-all `{src:'/(.*)', dest:'/index.html'}`, clicking Coupang **soft-404'd back to the dashboard** — a dead click on an intended Korea-market platform.
+
+**Fork considered (standing order #8):** three options — (a) delete the Coupang card (drops a platform the owner clearly intended, card metadata present), (b) point it at the affiliate page (misleading: "เปิด Roadmap" → affiliate), (c) build the missing roadmap. Chose **(c)** because it's the only option that neither drops an intended market nor misleads, and it directly serves the standing priority (help Thai sellers reach more markets). This is **not** fabrication in the CLAUDE.md sense: the other 92 cards are exactly this kind of factual how-to-sell guide; I wrote real, publicly-documented Coupang Wing seller steps, not invented repo features.
+
+**What shipped:** `coupang-roadmap-section.html` matching the existing roadmap-section template exactly (namespaced `cp-` classes + `showCpPhase()` switcher, Coupang brand color `#E01E5A`), 9 sections totalling **exactly 55 steps** to match the card's `steps:55` — Coupang Wing signup + 통신판매업, Marketplace vs Rocket Growth fulfillment, listing + Item Winner/Buy Box, Coupang Ads, order/delivery SLA, and the Coupang settlement cycle. No card metadata changed.
+
+**Verified by running (jsdom, 6/6), not "should work":** dashboard card links now 0 missing; tabs==9, phases==9, total `<li>` steps==55; step numbering contiguous 1..55 with no gaps/overlap; `showCpPhase` toggles exactly one correct phase for all 9 sections. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of **all-platform-files** (commit `c541f31`, full detail there since that repo has no DECISIONS_LOG) — adds to the existing **draft PR #1**.
+
+**Still blocked on owner (not acted on, won't guess):** otop-ai-landing production domain (for og:image/canonical/sitemap) + owner-decisions #9 (affiliate commission on shop), #10 (dispute split), #11 (migration 003), #12 (v9.0 build-out).
+
 ### 2026-07-10 — Hourly loop, run 90: diversified to the deployed `all-platform-files` dashboard — fixed a real hero-stat-clobber bug (verified in jsdom); otop-ai-landing SEO fix still blocked on owner (domain)
 
 openthai-ai synced (HEAD 1e412c3; consistency-check clean, exit 0). openthai-ai + smart-e are saturated from prior runs, so I swept the remaining in-scope repos. Findings, so future runs don't re-scan:
