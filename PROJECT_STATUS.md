@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T10:09:12.319Z · branch `claude/daily-reporter-improvements-8vc9ct` (238 commit(s) ahead of main)
+Generated: 2026-07-11T11:12:41.518Z · branch `claude/daily-reporter-improvements-8vc9ct` (240 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 448 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 450 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -2866,14 +2866,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- e6454ff docs: log run 99 — quota-bypass fix on generate-ab and generate/stream (18 seconds ago)
-- ad63251 chore: sync PROJECT_STATUS.md [skip ci] (32 seconds ago)
-- ad0c517 fix(quota): enforce daily plan quota on /api/generate-ab and /api/generate/stream (56 seconds ago)
-- 367fe06 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 789e72c log: run 98 — FAQPage JSON-LD extended to /affiliate; schema test now covers both FAQ pages (12/12) (2 hours ago)
-- 7abd5ff chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 3c7e0f3 seo(affiliate): emit FAQPage JSON-LD on /affiliate (Google FAQ rich-result eligibility) (2 hours ago)
-- 4d4b738 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 475c6ab fix(generator): send auth headers + upgrade CTA on the live-stream quota path (18 seconds ago)
+- 95d431d chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- e6454ff docs: log run 99 — quota-bypass fix on generate-ab and generate/stream (64 minutes ago)
+- ad63251 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- ad0c517 fix(quota): enforce daily plan quota on /api/generate-ab and /api/generate/stream (64 minutes ago)
+- 367fe06 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 789e72c log: run 98 — FAQPage JSON-LD extended to /affiliate; schema test now covers both FAQ pages (12/12) (3 hours ago)
+- 7abd5ff chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2895,8 +2895,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 34,
-  "memory_mb": "19.5",
+  "uptime_sec": 0,
+  "memory_mb": "19.0",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
