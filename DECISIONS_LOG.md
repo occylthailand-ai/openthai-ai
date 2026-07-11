@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop, run 92: made all 93 dashboard-reachable content pages mobile-ready + SEO-valid (wrapped bare `<section>` fragments in a proper HTML5 shell; verified in jsdom)
+
+openthai-ai synced (HEAD 081a9c0). Continuing the `all-platform-files` sweep. First ran a **full internal-link integrity check** across all 516 HTML files (href + JS-string `.html` refs) → **0 broken** — confirming run 91's Coupang fix was the last dead link.
+
+**New real finding:** **515 of 516 files are bare `<section>` fragments** — no `<!doctype>`, `<head>`, charset, or viewport meta (only `index.html` is a full document). The dashboard cards navigate to them **directly** (`<a href>`, not fetch/embed — grep confirmed nothing embeds them), so each renders standalone as a headless fragment: **non-mobile-optimized** (no viewport → desktop-width, pinch-to-zoom) for a **Thai mobile-first audience**, no explicit charset, and no `<title>` (tab showed the filename). This degrades both real UX and mobile SEO on every content page users actually reach.
+
+**Scope decision (standing order #8 — avoid over-reach):** limited the fix to the **93 pages actually reachable from the dashboard** (the `file:` targets + `affiliate-hub.html`). The other ~420 `OpenThaiAI_*_Roadmap.html` fragments are **orphans not linked from anywhere**, so I left them untouched rather than mass-editing 500+ files no user reaches.
+
+**What shipped:** wrapped each of the 93 fragments in a minimal, correct, **idempotent** HTML5 shell — `<!doctype html>`, `<html lang="th">`, `<meta charset="UTF-8">`, `<meta name="viewport" content="width=device-width, initial-scale=1.0">`, and a `<title>` derived from the page's own `<h2>`. Body content left **byte-for-byte unchanged**; wrapper is purely additive and skips any file already starting with `<!doctype>` (safe to re-run).
+
+**Verified by running (not "should work"):** all 93 now have doctype+charset+viewport+title and a single (non-doubled) `<!doctype>` closing with `</html>`; `<li>` step counts **unchanged vs HEAD on every file** (bodies preserved); and in jsdom the wrapped naver + coupang pages expose `lang=th` + viewport + title and their phase-switcher scripts still toggle the correct section. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` of **all-platform-files** (commit `54dbdc6`, full detail there) — adds to **draft PR #1**.
+
+**Still blocked on owner (not acted on, won't guess):** otop-ai-landing production domain (og:image/canonical/sitemap) + owner-decisions #9 (affiliate commission on shop), #10 (dispute split), #11 (migration 003), #12 (v9.0 build-out).
+
 ### 2026-07-11 — Hourly loop, run 91: fixed a real dead link on the deployed `all-platform-files` dashboard — the Coupang card had no roadmap file (built a genuine one, verified in jsdom)
 
 openthai-ai synced (HEAD 0ac1070; PROJECT_STATUS regenerated clean). Continuing the `all-platform-files` sweep from run 90. Ran a **link-integrity check** on the deployed dashboard: extracted all 93 `file:` targets the platform cards link to and checked each on disk → **92 exist, 1 missing**. The **Coupang** card (`group:kr, steps:55, 30M+ KR`, type Marketplace) linked to `coupang-roadmap-section.html`, which **did not exist** — only `aff-coupang-affiliate.html` (a 2KB affiliate page) was present. Because `vercel.json` ends with a catch-all `{src:'/(.*)', dest:'/index.html'}`, clicking Coupang **soft-404'd back to the dashboard** — a dead click on an intended Korea-market platform.
