@@ -9,6 +9,10 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-11 — Hourly loop: also wired the shop-commission E2E money guard into CI (verified the prior CI run went green first)
+
+First **verified** the previous round's CI change actually works: the `test.yml` runs for `75ff505` (test:disputes wiring) and `2bc3261` both **completed / success** — the workflow with the new deterministic unit-test step passed. Then completed the money-guard CI coverage: added a self-contained "E2E — shop-commission money guard" step to the backend job (boots the server on its own port + admin key, waits for `/api/health`, runs `test:shop-commission`, kills the server, propagates exit code, dumps the log on failure). Only this E2E test is wired — it passes reliably in mock mode (8/8); the **pre-existing** `test:affiliate` is intentionally left out because it needs a full Omise/webhook env and fails in plain mock mode (9/22), so wiring it would make CI red. **Verified locally** against one booted server: `/api/health` 200, `test:shop-commission` 8/8. `626bc0a`.
+
 ### 2026-07-11 — Hourly loop: wired the dispute-split guard into CI so it actually runs
 
 A regression test only protects if CI runs it. The `test.yml` backend job did syntax + boot/health smoke only — it never ran the backend `test:*` scripts, so the money-safety `test:disputes` guard added earlier could only catch a regression when run by hand. Added a "Unit tests (deterministic, no server)" step to the backend job running `npm run test:disputes` (pure/deterministic — no server/network/env, so a fast reliable gate on every push+PR). The E2E money guards (`test:affiliate`, `test:shop-commission`) need a booted server + admin/webhook env, so wiring those into CI is left as a separate, more involved change. **Verified:** `npm run test:disputes` exits 0; the workflow YAML parses and the new step appears in the backend job. `75ff505`.
