@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T06:11:58.577Z · branch `claude/daily-reporter-improvements-8vc9ct` (298 commit(s) ahead of main)
+Generated: 2026-07-15T06:22:13.758Z · branch `claude/daily-reporter-improvements-8vc9ct` (300 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 508 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 510 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -2951,14 +2951,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 80fb2e2 docs: log portal-lead PDPA consent-gate deterministic guard + CI wiring (27 seconds ago)
+- 6415306 fix: address Copilot review — stable progress snapshot shape, live-i18n dispute title, correct Pro/Premier prices (21 seconds ago)
+- b04139b chore: sync PROJECT_STATUS.md [skip ci] (10 minutes ago)
+- 80fb2e2 docs: log portal-lead PDPA consent-gate deterministic guard + CI wiring (11 minutes ago)
 - 2c0f8e7 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
 - 7c422fd test(portals): deterministic guard for the PDPA consent gate (standing-order #3) (3 days ago)
 - ecc8318 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
 - afef0ff docs: log submitLead consent-funnel guard + CI/consistency verification (3 days ago)
 - 384f53c chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
-- 66168bf test(portals): guard the consent-funnel honest-feedback contract (submitLead) (3 days ago)
-- 6f037d8 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2980,8 +2980,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 86,
-  "memory_mb": "21.5",
+  "uptime_sec": 276,
+  "memory_mb": "21.9",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
