@@ -676,13 +676,23 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
     const orderId = ord.id;
 
     const finalizePaid = async (charge) => {
-      await inventory.adjust(product_id, -qty, 'sale', `ขายผ่านร้าน (ออเดอร์ ${orderId})`, orderId, channel);
+      // ตัดสต๊อกแล้ว "ตรวจผล" — ห้ามละเลยค่าที่คืนมา: ถ้าออเดอร์อื่นที่เข้ามาพร้อมกันตัดสต๊อก
+      // หมดไปก่อน (race ระหว่าง pre-check ที่ 671 กับตอนตัดจริงตรงนี้ — มี await orders.place คั่น
+      // เป็นจุด yield) inventory.adjust จะคืน {ok:false} ทั้งที่ "เก็บเงินไปแล้ว" เดิมโค้ดไม่ดูค่านี้
+      // เลย → กลายเป็น: ลูกค้าจ่ายเงินแต่ไม่ได้ของ + จ่ายค่าคอมให้ affiliate ทั้งที่ขายไม่สำเร็จ +
+      // ออเดอร์ขึ้น confirmed ลอยๆ (เงินหาย ข้อมูลเพี้ยน) จึงต้องแยกเคสสต๊อกหมดออกมาชัดเจน
+      const adj = await inventory.adjust(product_id, -qty, 'sale', `ขายผ่านร้าน (ออเดอร์ ${orderId})`, orderId, channel);
+      if (!adj.ok) {
+        await orders.setStatus(orderId, 'cancelled', `ชำระเงินสำเร็จแต่สต๊อกหมดพอดี (race) — ต้องคืนเงินลูกค้า · charge ${charge?.charge_id || '-'}`);
+        addLog('error', 'Shop', `OVERSOLD: ออเดอร์ ${orderId} จ่ายแล้วแต่สต๊อก ${product_id} หมด — ต้องคืนเงิน (charge ${charge?.charge_id || '-'})`);
+        return res.status(200).json({ success: true, paid: true, fulfilled: false, refund_pending: true, order_id: orderId, amount, charge_id: charge?.charge_id || null, message: 'ชำระเงินสำเร็จ แต่สินค้าหมดสต๊อกพอดี ทีมงานจะติดต่อคืนเงินให้โดยเร็ว' });
+      }
       await orders.setStatus(orderId, 'confirmed', 'ชำระเงินสำเร็จ');
       // #9 — ให้คอมมิชชัน affiliate ถ้าลูกค้าเข้าร้านผ่านลิงก์ ref (เรตตามขั้นของ affiliate เดิม,
       // เหมือน subscription/quickpay) เดิมร้านค้าเก็บ ref ไว้แค่ attribution ช่องทาง ไม่จ่ายคอมมิชชัน
       // เส้นบัตร/mock finalize ทันทีที่นี่ครั้งเดียว (PromptPay เครดิตใน webhook แทน — ไม่ซ้ำ)
       if (ref) creditAffiliateSale(String(ref).slice(0, 40), amount, { charge_id: charge?.charge_id || null, source: platform || 'shop' });
-      return res.json({ success: true, paid: true, order_id: orderId, amount, stock_left: Math.max(0, (p.stock || 0) - qty), ...(charge || {}) });
+      return res.json({ success: true, paid: true, fulfilled: true, order_id: orderId, amount, stock_left: adj.stock, ...(charge || {}) });
     };
 
     // Mock mode (ยังไม่ตั้ง Omise) — บัตร/ม็อค ถือว่าจ่ายสำเร็จทันที
@@ -7886,13 +7896,21 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
               // ให้ตรงกับเส้นบัตรที่ finalize แบบ sync — เดิม hardcode 'store' ทำให้ยอด PromptPay
               // เสีย attribution ช่องทาง/ผู้แนะนำในรายงานสต๊อก
               const shopChannel = (data.metadata?.channel || 'store').toString().slice(0, 40);
-              await inventory.adjust(shopProductId, -q, 'sale', `ชำระผ่าน PromptPay (ออเดอร์ ${shopOrderId})`, shopOrderId, shopChannel);
-              await orders.setStatus(shopOrderId, 'confirmed', 'ชำระเงินผ่าน PromptPay สำเร็จ');
-              // #9 — เครดิตคอมมิชชัน affiliate สำหรับร้านค้าจ่ายผ่าน PromptPay (channel = 'ref:CODE')
-              // guard ด้วย status==='new' ด้านบนแล้ว → idempotent จ่ายครั้งเดียว (เส้นบัตรจ่ายใน finalizePaid)
-              const shopRef = shopChannel.startsWith('ref:') ? shopChannel.slice(4) : null;
-              if (shopRef) creditAffiliateSale(shopRef, data.amount / 100, { charge_id: data.id, source: 'shop' });
-              addLog('info', 'OmiseWebhook', `Shop order finalized: ${shopOrderId} (stock -${q})`);
+              // เช่นเดียวกับเส้นบัตรใน finalizePaid: ตรวจผลการตัดสต๊อก — ถ้าสต๊อกหมดพอดีทั้งที่
+              // ลูกค้าจ่าย PromptPay จริงแล้ว อย่ายืนยันออเดอร์เป็นขายสำเร็จ อย่าจ่ายค่าคอม แต่ flag
+              // ให้คืนเงิน (ยังคง idempotent เพราะ guard status==='new' ด้านบน)
+              const adj = await inventory.adjust(shopProductId, -q, 'sale', `ชำระผ่าน PromptPay (ออเดอร์ ${shopOrderId})`, shopOrderId, shopChannel);
+              if (!adj.ok) {
+                await orders.setStatus(shopOrderId, 'cancelled', `ชำระ PromptPay สำเร็จแต่สต๊อกหมดพอดี — ต้องคืนเงินลูกค้า · charge ${data.id}`);
+                addLog('error', 'OmiseWebhook', `OVERSOLD: ออเดอร์ ${shopOrderId} จ่าย PromptPay แล้วแต่สต๊อก ${shopProductId} หมด — ต้องคืนเงิน (charge ${data.id})`);
+              } else {
+                await orders.setStatus(shopOrderId, 'confirmed', 'ชำระเงินผ่าน PromptPay สำเร็จ');
+                // #9 — เครดิตคอมมิชชัน affiliate สำหรับร้านค้าจ่ายผ่าน PromptPay (channel = 'ref:CODE')
+                // guard ด้วย status==='new' ด้านบนแล้ว → idempotent จ่ายครั้งเดียว (เส้นบัตรจ่ายใน finalizePaid)
+                const shopRef = shopChannel.startsWith('ref:') ? shopChannel.slice(4) : null;
+                if (shopRef) creditAffiliateSale(shopRef, data.amount / 100, { charge_id: data.id, source: 'shop' });
+                addLog('info', 'OmiseWebhook', `Shop order finalized: ${shopOrderId} (stock -${q})`);
+              }
             }
           } catch (e) { addLog('warn', 'OmiseWebhook', `shop finalize ${shopOrderId}: ${e.message}`); }
         })();
