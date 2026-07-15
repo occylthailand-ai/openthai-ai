@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T12:15:00.640Z · branch `claude/daily-reporter-improvements-8vc9ct` (316 commit(s) ahead of main)
+Generated: 2026-07-15T13:11:42.750Z · branch `claude/daily-reporter-improvements-8vc9ct` (318 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 526 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 528 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop (cross-repo: smart-e): wired the regression guard into CI so it actually runs
+
+Completes the fix→guard→enforce arc for smart-e (a test only protects if CI runs it — the same principle applied to openthai-ai's money guards). smart-e had no CI at all, so last round's `test_server.py` could only catch a regression by hand. Added `.github/workflows/test.yml`: on every push + PR it `py_compile`s `server.py`+`test_server.py` then runs the guard (which boots the real server on a throwaway db + alt port; pure stdlib, no pip install). **Verified** by running the exact workflow steps locally: compile passes; guard 15/15 (exit 0); YAML parses. smart-e commit `bef027a`; covered by its open PR #1. (Verifying the first hosted Actions run is green is tracked below.)
 
 ### 2026-07-15 — Hourly loop (cross-repo: smart-e): first automated regression guard (auth + order validation + phantom-stock)
 
@@ -2988,14 +2992,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 3a1c0f0 docs: log cross-repo smart-e regression guard (first automated test) (21 seconds ago)
-- e4646ac chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 0fe2b5b docs: log cross-repo smart-e phantom-stock inventory fix (61 minutes ago)
-- ce746ab chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- c6a7900 docs: log cross-repo all-platform-files mobile/SEO fix (217 roadmap guides) + generator-drift flag (2 hours ago)
-- 2efa7f9 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 2b255e2 docs: log cross-repo otop-ai-landing SEO/perf polish + flag domain-gated SEO items (3 hours ago)
-- f6c78b3 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- d5078ba docs: log smart-e CI wiring for the regression guard (19 seconds ago)
+- 665d92a chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- 3a1c0f0 docs: log cross-repo smart-e regression guard (first automated test) (57 minutes ago)
+- e4646ac chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 0fe2b5b docs: log cross-repo smart-e phantom-stock inventory fix (2 hours ago)
+- ce746ab chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- c6a7900 docs: log cross-repo all-platform-files mobile/SEO fix (217 roadmap guides) + generator-drift flag (3 hours ago)
+- 2efa7f9 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3017,8 +3021,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
+  "uptime_sec": 424,
+  "memory_mb": "20.0",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
