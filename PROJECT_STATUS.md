@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T21:18:04.980Z · branch `claude/daily-reporter-improvements-8vc9ct` (332 commit(s) ahead of main)
+Generated: 2026-07-15T22:13:48.638Z · branch `claude/daily-reporter-improvements-8vc9ct` (334 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 542 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 544 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: stop search engines from indexing the /admin console (robots.txt gap + regression guard)
+
+SEO/exposure scan of the crawl surface. `frontend/public/robots.txt` curates the crawlable set (`Allow:` list == sitemap, enforced by `seoInvariants.test.js`), and private consoles are excluded via `Disallow:` (`/dashboard`, `/producers/manage`, `/track`, `/dispute`, `/login`, …). But **`/admin` — a real public route (`App.jsx` `<Route path="/admin" element={<AdminPage/>}>`, no `/login` gate; it's gated server-side by `ADMIN_KEY`, not at the router) — was in neither list**, so under `Allow: /` it was crawlable: Google could index the admin console's entry point. Root cause: the existing invariant test only checked that the *advertised* set stays correct (sitemap↔Allow, advertised routes are public), so a sensitive route could silently become crawlable just by never being added to `Disallow`. **Fix (verified, unblocked — nobody wants their admin page indexed, no owner decision needed):** added `Disallow: /admin` to robots.txt, and added a 6th assertion to `seoInvariants.test.js` pinning that a curated sensitive set (`/admin`, `/dashboard`, `/affiliate/dashboard`, `/track`, `/dispute`, `/producers/manage`, `/login`) stays Disallowed AND never leaks into the sitemap/Allow list. The generated `dist/sitemap.xml` (built from `seo-routes.mjs` `ROUTES`, which never contained `/admin`) was already correct — the gap was purely the missing Disallow. **Verified by running:** full frontend vitest suite 75/75 pass (seoInvariants now 6/6, was 5); mutation-tested — removing `Disallow: /admin` fails the new guard, restored to green. Note (not changed — SEO judgment left to owner): the transactional pages `/payment` `/pay` `/quickpay` are also public and not Disallowed; they're thin rather than sensitive, so I left them.
 
 ### 2026-07-15 — Hourly loop: guard the credit ledger's abuse-critical invariants (credits.js)
 
@@ -3026,14 +3030,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- ba04567 test(credits): deterministic guard for credit-ledger abuse invariants (20 seconds ago)
-- 405f41b chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
-- 402a245 docs: log affiliate tier-boundary guard + module extraction (6 minutes ago)
-- c1ea06a refactor+test: extract affiliate tier logic to a module + guard the commission boundaries (6 minutes ago)
-- b14263c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 039a600 docs: log verified finding — Free daily quota not enforced on serverless (in-memory only) (2 hours ago)
-- 4c92648 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 82518e9 docs: consolidate the owner-decision backlog (5 gated items) blocking the next wave (3 hours ago)
+- cdae6a0 seo: disallow /admin from crawlers + pin sensitive routes stay excluded (20 seconds ago)
+- a432f9b chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
+- ba04567 test(credits): deterministic guard for credit-ledger abuse invariants (56 minutes ago)
+- 405f41b chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 402a245 docs: log affiliate tier-boundary guard + module extraction (62 minutes ago)
+- c1ea06a refactor+test: extract affiliate tier logic to a module + guard the commission boundaries (62 minutes ago)
+- b14263c chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 039a600 docs: log verified finding — Free daily quota not enforced on serverless (in-memory only) (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3055,8 +3059,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
+  "uptime_sec": 386,
+  "memory_mb": "21.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
