@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T16:12:07.756Z · branch `claude/daily-reporter-improvements-8vc9ct` (320 commit(s) ahead of main)
+Generated: 2026-07-15T17:12:25.760Z · branch `claude/daily-reporter-improvements-8vc9ct` (323 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 530 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 533 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -35,6 +35,10 @@ smart-e had **no tests at all** (just an empty `test.txt`), yet this branch ship
 ### 2026-07-15 — Hourly loop (cross-repo: smart-e): fixed a phantom-stock inventory bug (oversell + cancel inflated stock)
 
 First **verified the /portals funnel in openthai-ai is healthy** (all 9 role routes have components + internal links; the bare `/portals` hub `PortalHubPage` surfaces all 9 roles) — audited clean, no diff manufactured there. Then diversified to `smart-e` (Python store server) and found a real inventory-integrity bug by code scan + live repro: `_create_order` deducts stock with `MAX(0, stock-qty)` (clamps to 0 on oversell) while `_update_order_status` restores a cancelled order with an unclamped `stock+qty`. So **ordering more than is in stock and cancelling conjures stock from nothing**: 5 → order qty 10 → `MAX(0,5-10)=0` → cancel → `0+10=10` (+5 phantom) — the mirror of the negative-qty attack the file already defends against. Reproduced live (5→0→10). Fixed by validating stock availability before accepting an order (qty summed per `product_id` so duplicate line items can't oversell in aggregate; missing product or `qty > stock` → 400, nothing written), making deduct/restore always symmetric. **Verified live** (ADMIN_KEY set, fresh db, restored after): oversell qty10/stock5 → 400 (stays 5); valid qty3 → 201 (5→2); cancel → 2→5 (symmetric); two qty-3 line items of one product vs stock5 → 400 (stays 5). smart-e commit `df4d3d4` (no DECISIONS_LOG there — full detail in commit message per standing-order #6); covered by its open PR #1.
+
+### 2026-07-15 — Hourly loop: guard the PDPA data-subject-rights helpers (unsubscribe + right-to-erasure)
+
+Verified the funnel/SEO first (all 10 `/portals/*` routes are in `seo-routes.mjs` → in the sitemap; consent gate uniform across all 9 pages — audited clean) and confirmed `OpenThai-AI-v9.0` is a non-runnable skeleton (no `package.json`/`tsconfig`) so any TS change there can't be verified per standing-order #4 — deliberately not touched. Then closed a real coverage gap in the #1 priority area: `portal-leads.js` has two legally load-bearing PDPA helpers with **no test** — `unsubscribe(email, type)` (consent withdrawal) and `eraseByEmail(email)` (right to erasure, มาตรา 33; a prior fix made `/api/privacy/erasure/confirm` actually delete `portal_leads`, which it never used to touch). Extended `backend/scripts/test-portal-leads.mjs` (+8 assertions, deterministic file store): unsubscribe rejects empty email, marks every email+type match `unsubscribed:true` (case-insensitive input, correct count) and leaves a same-email/different-type lead untouched (scoping); eraseByEmail rejects a non-email (removes nothing), deletes every lead for the email across all types (case-insensitive, no trace in `all()`), and leaves a different person's lead intact. **Verified real guard:** 20/20 pass (was 12); making unsubscribe ignore `type` fails 2/20 and making eraseByEmail a no-op fails 2/20. Runs in CI via the existing `test:portal-leads` step (no workflow change). `7081432`.
 
 ### 2026-07-15 — Hourly loop (cross-repo: all-platform-files): finished the mobile/SEO batch — 13 standalone product-catalog pages
 
@@ -2996,14 +3000,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 9fca279 docs: log all-platform-files catalog mobile/SEO fix (13 pages) (35 seconds ago)
-- 45e2154 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- d5078ba docs: log smart-e CI wiring for the regression guard (3 hours ago)
-- 665d92a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 3a1c0f0 docs: log cross-repo smart-e regression guard (first automated test) (4 hours ago)
-- e4646ac chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 0fe2b5b docs: log cross-repo smart-e phantom-stock inventory fix (5 hours ago)
-- ce746ab chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 760c005 docs: log PDPA unsubscribe/erasure test coverage (16 seconds ago)
+- 7081432 test(portals): guard the PDPA data-subject-rights helpers (unsubscribe + erasure) (34 seconds ago)
+- 15096b9 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- 9fca279 docs: log all-platform-files catalog mobile/SEO fix (13 pages) (61 minutes ago)
+- 45e2154 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- d5078ba docs: log smart-e CI wiring for the regression guard (4 hours ago)
+- 665d92a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 3a1c0f0 docs: log cross-repo smart-e regression guard (first automated test) (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3025,8 +3029,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.6",
+  "uptime_sec": 429,
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
