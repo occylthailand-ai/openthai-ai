@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-11T22:11:06.339Z · branch `claude/daily-reporter-improvements-8vc9ct` (296 commit(s) ahead of main)
+Generated: 2026-07-15T06:11:58.577Z · branch `claude/daily-reporter-improvements-8vc9ct` (298 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 506 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 508 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: deterministic guard for the portal-lead PDPA consent gate (standing-order #3, the legal foundation of the funnel)
+
+The `/portals/*` registration funnel exists **only** because of the standing rule that no real producer/consumer/creator is contacted without their consent — so the server-side gate in `backend/portal-leads.js` `submit()` (`if (input?.consent !== true) return { ok:false, ... PDPA }`) is the single most legally load-bearing line in the funnel, and it had **no test**. Added `backend/scripts/test-portal-leads.mjs` + `test:portal-leads` npm script (pure/deterministic — a `mkdtemp` file store, no Supabase or network) pinning the contract: missing consent / `consent:false` / `consent:'true'` (string, not boolean) are **all** rejected and **nothing is persisted or notified**; consent-but-no-name/email rejected; a valid consenting lead is saved carrying `consent:true` (auditable proof) with email lowercased, string form fields kept, non-string fields dropped, and appears in `all()`; name falls back to agency when absent. Wired into the backend CI job's "Unit tests (deterministic, no server)" step alongside `test:disputes`. **Verified real guard:** 12/12 pass (exit 0); loosening the strict `consent !== true` to a truthy `!consent` test fails it 2/12 (exit 1) — i.e. it actually catches a weakening of the consent boundary. `7c422fd`.
 
 ### 2026-07-11 — Hourly loop: verified CI green + registry-consistency clean; added a guard for the consent-funnel honest-feedback helper (standing-order #1)
 
@@ -2947,14 +2951,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 7c422fd test(portals): deterministic guard for the PDPA consent gate (standing-order #3) (17 seconds ago)
-- ecc8318 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- afef0ff docs: log submitLead consent-funnel guard + CI/consistency verification (59 minutes ago)
-- 384f53c chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 66168bf test(portals): guard the consent-funnel honest-feedback contract (submitLead) (60 minutes ago)
-- 6f037d8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- cfc33f0 docs: log self-contained AI-usage regression guard (#11) — coverage complete (2 hours ago)
-- 860ffaa chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 80fb2e2 docs: log portal-lead PDPA consent-gate deterministic guard + CI wiring (27 seconds ago)
+- 2c0f8e7 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
+- 7c422fd test(portals): deterministic guard for the PDPA consent gate (standing-order #3) (3 days ago)
+- ecc8318 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
+- afef0ff docs: log submitLead consent-funnel guard + CI/consistency verification (3 days ago)
+- 384f53c chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
+- 66168bf test(portals): guard the consent-funnel honest-feedback contract (submitLead) (3 days ago)
+- 6f037d8 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2976,8 +2980,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
+  "uptime_sec": 86,
+  "memory_mb": "21.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
