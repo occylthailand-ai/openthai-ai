@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-15 — ⏸️ Consolidated OWNER-DECISION backlog (blocks the next wave before the 30 Jul deadline)
+
+After a long series of autonomous rounds this session shipped verified work across **all 5 repos** — openthai-ai (Enterprise-checkout gap, ฿20/฿30 price drift, dispute-split money safety, ai-usage logging, shop-commission crediting, plan-price consistency guard, PDPA consent + unsubscribe + erasure test guards, funnel/SEO audit), otop-ai-landing (preconnect + social-card SEO), all-platform-files (mobile/SEO on 217 roadmap + 13 catalog pages), smart-e (phantom-stock inventory fix + first regression test + CI). The readily-available, *verifiable, unblocked* work is now largely done or audited-clean. What remains is genuinely **owner-gated** (standing-order #8) — verified real, but each needs a decision I must not guess:
+
+1. **otop-ai-landing production domain** — canonical `<link>`, absolute `og:image`/`og:url`, and a sitemap are ready to add but need the site's own deployed domain, which appears **nowhere in the repo**. Matters because `vercel.json` routes every path to index.html, so without a canonical any URL under the domain is an indexable duplicate. → *What is the production domain?*
+2. **all-platform-files generator reconcile** — the 217+13 standalone pages were fixed **in place**; their generators (`create_*.js` in openthai-ai) still emit the malformed head AND have drifted to a different output filename/branding (`Openthai.ai_*` vs committed `OpenThaiAI_*`), so re-running them makes differently-named duplicates. → *Reconcile generators + filename/branding, or freeze the generators and keep editing output in place?*
+3. **OpenThai-AI-v9.0** — real code exists (`app/api/monitor/health`, `app/affiliate-hub`) but there is **no `package.json`/`tsconfig`**, so nothing there is buildable/verifiable (can't satisfy standing-order #4). README parks it to Q2-2026. → *Activate v9.0 now (add build tooling) or keep parked?*
+4. **PDPA erasure scope for affiliate withdrawals** — `/api/privacy/erasure/confirm` intentionally **keeps** `withdrawals` (financial transaction records) while deleting all other PII, per legal-retention exception. → *Confirm this is the intended scope.*
+5. **`/api/skills/*` free-quota policy** — the ~30 skill tools currently do **not** count against the Free 3/day limit (only `/api/generate*` does). → *Intended, or should skills also consume quota?*
+
+No code diff this round — this is the disciplined outcome (CLAUDE.md: don't manufacture a low-value diff). Once any of the above is answered I can proceed immediately with a verified change.
+
 ### 2026-07-15 — Hourly loop (cross-repo: smart-e): wired the regression guard into CI so it actually runs
 
 Completes the fix→guard→enforce arc for smart-e (a test only protects if CI runs it — the same principle applied to openthai-ai's money guards). smart-e had no CI at all, so last round's `test_server.py` could only catch a regression by hand. Added `.github/workflows/test.yml`: on every push + PR it `py_compile`s `server.py`+`test_server.py` then runs the guard (which boots the real server on a throwaway db + alt port; pure stdlib, no pip install). **Verified** by running the exact workflow steps locally: compile passes; guard 15/15 (exit 0); YAML parses. smart-e commit `bef027a`; covered by its open PR #1. (Verifying the first hosted Actions run is green is tracked below.)
