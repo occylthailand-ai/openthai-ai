@@ -54,6 +54,20 @@ describe('SEO route invariants', () => {
     expect(problems).toEqual([]);
   });
 
+  it('sensitive/private routes are Disallowed so crawlers never index a console or transactional page', () => {
+    // The other invariants keep the *advertised* set correct, but nothing stopped a
+    // sensitive PUBLIC route (no /login gate — gated server-side by ADMIN_KEY instead)
+    // from being crawlable simply because it was never added to Disallow. /admin drifted
+    // in exactly this way: a real <Route path="/admin"> with no robots entry, so Google
+    // could index the admin console's entry point. Pin the ones that must stay excluded.
+    const mustDisallow = ['/admin', '/dashboard', '/affiliate/dashboard', '/track', '/dispute', '/producers/manage', '/login'];
+    const missing = mustDisallow.filter((p) => !disallowPaths.includes(p));
+    expect(missing).toEqual([]);
+    // and none of them may accidentally be advertised in the sitemap/Allow list
+    const leaked = mustDisallow.filter((p) => allowPaths.includes(p) || routePaths.includes(p));
+    expect(leaked).toEqual([]);
+  });
+
   it('every route has a non-empty title and description for meta/OG tags', () => {
     const bad = ROUTES.filter((r) => !r.title?.trim() || !r.desc?.trim()).map((r) => r.path);
     expect(bad).toEqual([]);
