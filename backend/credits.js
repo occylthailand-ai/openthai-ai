@@ -197,5 +197,7 @@ export function createCredits(dataDir) {
   }
 
   console.log(`[credits] ledger mode: ${useSB ? 'Supabase' : 'file'}`);
-  return { router, identityFrom, hasCredit, consumeCredit, pub, peekDiscount, consumeDiscount, adminSummary, SPIN_PRIZES };
+  // addCredits/checkin/spin exposed for deterministic unit tests (money-critical
+  // invariants — see scripts/test-credits.mjs); routes still call them internally.
+  return { router, identityFrom, hasCredit, consumeCredit, addCredits, checkin, spin, pub, peekDiscount, consumeDiscount, adminSummary, SPIN_PRIZES };
 }
