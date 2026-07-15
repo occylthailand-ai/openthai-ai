@@ -29,6 +29,14 @@ const PLANS = [
     features: ['ทุกอย่างใน Pro', 'ทีม 5 คน', 'API Access + SDK', 'White-label Solution', 'AI Video Generator', 'Dedicated Manager', 'SLA 99.9%'],
     limits: 'Team + API',
   },
+  {
+    key: 'enterprise',
+    name: 'Enterprise',
+    price: 1299,
+    color: '#0ea5e9',
+    features: ['ทุกอย่างใน Premier', 'ทีมไม่จำกัดจำนวน', 'รองรับหลายประเทศ/หลายสาขา', 'Onboarding เฉพาะทีมคุณ', 'ใบแจ้งหนี้ระดับองค์กร', 'Priority Support 24/7', 'Custom Integration'],
+    limits: 'องค์กร/หลายสาขา',
+  },
 ];
 
 // ช่องทางการชำระเงิน → ป้ายภาษาไทย
