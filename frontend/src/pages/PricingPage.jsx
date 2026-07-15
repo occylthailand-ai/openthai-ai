@@ -4,7 +4,7 @@ import { useLang } from '../i18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 // ข้อมูลโครงสร้างที่ไม่ขึ้นกับภาษา (ราคา/สี) — ข้อความแปลดึงจาก i18n ผ่าน t('pp.plans')
-const PP_META = [
+export const PP_META = [
   { id: 'free', thb: 0, usd: 0, color: '#10b981' },
   { id: 'pro', thb: 299, usd: 8, color: '#6366f1', hot: true },
   { id: 'premier', thb: 599, usd: 16, color: '#f59e0b' },

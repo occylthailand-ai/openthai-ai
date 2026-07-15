@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiUrl, authHeaders } from '../apiBase';
 import { useToast } from '../components/ToastContext';
 
-const PLANS = [
+export const PLANS = [
   {
     key: 'free',
     name: 'Free',
