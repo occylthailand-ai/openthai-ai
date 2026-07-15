@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T21:12:17.129Z · branch `claude/daily-reporter-improvements-8vc9ct` (330 commit(s) ahead of main)
+Generated: 2026-07-15T21:18:04.980Z · branch `claude/daily-reporter-improvements-8vc9ct` (332 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 540 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 542 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: guard the credit ledger's abuse-critical invariants (credits.js)
+
+Continued the "money-critical module with no test" scan (same pattern as the affiliate-tiers guard). `backend/credits.js` is money-adjacent: bonus credits from spin/streak/claim let a **Free user generate PAST the daily quota** (server.js ~7443: `hasCredit` → allow, `consumeCredit` → decrement), yet it had **no deterministic test**. The abuse-critical invariants were unguarded: `addCredits` **source-dedup** (`if (source && a.claims[source]) return {added:0, duplicate:true}` — stops re-claiming the same spin/streak/welcome reward to farm unlimited credits), `consumeCredit` **never going negative**, the `MAX_CLAIM`(50)/`MAX_BALANCE`(200) clamps, `checkin` once-per-day idempotency, and `spin` once-per-identity. Those three (`addCredits`/`checkin`/`spin`) were internal-only (reachable just via HTTP routes), so I exposed them **additively** on the factory's return object (server.js uses none of the new keys — no behavior change) to make them unit-testable without booting a server. Added `backend/scripts/test-credits.mjs` (18 assertions, file-store fallback in a temp dir, no Supabase — spin's random prize never affects the asserted properties) and wired `test:credits` into the deterministic backend CI step. **Verified:** 18/18 pass; **mutation-tested** — disabling the source-dedup fails it, and letting `consumeCredit` go negative fails it, both restored to green; `credits.js`/`server.js` `node --check` OK; server boots to `/api/health` 200 and `/api/credits` responds (`mode:file`) after the change.
 
 ### 2026-07-15 — Hourly loop: guard the affiliate commission tier boundaries (extracted to a testable module)
 
@@ -3022,14 +3026,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 402a245 docs: log affiliate tier-boundary guard + module extraction (14 seconds ago)
-- c1ea06a refactor+test: extract affiliate tier logic to a module + guard the commission boundaries (31 seconds ago)
+- ba04567 test(credits): deterministic guard for credit-ledger abuse invariants (20 seconds ago)
+- 405f41b chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
+- 402a245 docs: log affiliate tier-boundary guard + module extraction (6 minutes ago)
+- c1ea06a refactor+test: extract affiliate tier logic to a module + guard the commission boundaries (6 minutes ago)
 - b14263c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 039a600 docs: log verified finding — Free daily quota not enforced on serverless (in-memory only) (2 hours ago)
 - 4c92648 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - 82518e9 docs: consolidate the owner-decision backlog (5 gated items) blocking the next wave (3 hours ago)
-- e67b7e2 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 760c005 docs: log PDPA unsubscribe/erasure test coverage (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3052,7 +3056,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.0",
+  "memory_mb": "19.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3205,7 +3209,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `auth.js` | 190 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
-| `credits.js` | 202 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
+| `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
 | `disputes.js` | 284 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
