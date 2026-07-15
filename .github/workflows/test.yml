@@ -56,6 +56,7 @@ jobs:
         run: |
           npm run test:disputes
           npm run test:portal-leads
+          npm run test:affiliate-tiers
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage

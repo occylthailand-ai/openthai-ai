@@ -24,6 +24,7 @@ import {
   SUBSCRIPTION_PLANS,
 } from './omise-payment.js';
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
+import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
@@ -7361,14 +7362,8 @@ function grantEntitlement(email, plan, { source = 'payment', subscription_id = n
 // เรียกได้จากทั้ง webhook และ status-poll — ป้องกันเครดิตซ้ำด้วย flag firstTime ฝั่งผู้เรียก
 // เลื่อน Tier อัตโนมัติตามจำนวนดีลสะสม — ยิ่งขายยิ่งได้ค่าคอมเพิ่ม
 // starter 20% (0-9) → pro 30% (10-49) → elite 40% (50+)
-const AFFILIATE_TIERS = [
-  { tier: 'elite',   min: 50, rate: 0.40 },
-  { tier: 'pro',     min: 10, rate: 0.30 },
-  { tier: 'starter', min: 0,  rate: 0.20 },
-];
-function tierForSales(sales) {
-  return AFFILIATE_TIERS.find(t => (sales || 0) >= t.min) || AFFILIATE_TIERS[AFFILIATE_TIERS.length - 1];
-}
+// AFFILIATE_TIERS + tierForSales are now in ./affiliate-tiers.js (imported at top)
+// so the money-critical tier boundaries can be unit-tested (test-affiliate-tiers.mjs).
 
 function creditAffiliateSale(refCode, amountThb, { charge_id = null, source = null } = {}) {
   if (!refCode || !(amountThb > 0)) return null;
