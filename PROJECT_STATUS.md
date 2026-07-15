@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T11:14:28.559Z · branch `claude/daily-reporter-improvements-8vc9ct` (314 commit(s) ahead of main)
+Generated: 2026-07-15T12:15:00.640Z · branch `claude/daily-reporter-improvements-8vc9ct` (316 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 524 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 526 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop (cross-repo: smart-e): first automated regression guard (auth + order validation + phantom-stock)
+
+smart-e had **no tests at all** (just an empty `test.txt`), yet this branch shipped a stack of live-verified fixes (auth gate, malformed-body crash class, data-integrity, and the phantom-stock inventory bug from the previous round) — any of which could silently regress. Added the first automated guard. Made `DB_PATH`/`PORT` env-overridable (`SMART_E_DB`/`PORT`, defaults unchanged — also helps real deploys with a custom data dir) so the test runs against a throwaway db on an alt port without touching `~/smart_e.db` or port 8000. `test_server.py` (pure stdlib, no framework) boots the real server and asserts **15 invariants**: auth (no/ wrong key → 401, correct → 200); order validation (items-not-a-list, non-numeric qty, qty<1, negative price → 400); the phantom-stock guard (oversell → 400 stock-unchanged; valid order deducts; cancel restores symmetrically; duplicate line items summing over stock → 400); nonexistent-payment confirm → 404. **Verified real guard:** 15/15 pass; deleting the stock-availability check fails it 6/15. smart-e commit `358630a` (full detail in the commit message per standing-order #6); covered by its open PR #1. (CI wiring is a possible follow-up — smart-e has no GitHub Actions workflow yet.)
 
 ### 2026-07-15 — Hourly loop (cross-repo: smart-e): fixed a phantom-stock inventory bug (oversell + cancel inflated stock)
 
@@ -2984,14 +2988,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 0fe2b5b docs: log cross-repo smart-e phantom-stock inventory fix (17 seconds ago)
-- ce746ab chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- c6a7900 docs: log cross-repo all-platform-files mobile/SEO fix (217 roadmap guides) + generator-drift flag (60 minutes ago)
-- 2efa7f9 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 2b255e2 docs: log cross-repo otop-ai-landing SEO/perf polish + flag domain-gated SEO items (2 hours ago)
-- f6c78b3 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- d79cdf9 docs: log frontend plan-price consistency guard (3 hours ago)
-- eebcdd7 test(pricing): guard frontend plan-price consistency so money drift can't ship silently (3 hours ago)
+- 3a1c0f0 docs: log cross-repo smart-e regression guard (first automated test) (21 seconds ago)
+- e4646ac chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 0fe2b5b docs: log cross-repo smart-e phantom-stock inventory fix (61 minutes ago)
+- ce746ab chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- c6a7900 docs: log cross-repo all-platform-files mobile/SEO fix (217 roadmap guides) + generator-drift flag (2 hours ago)
+- 2efa7f9 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 2b255e2 docs: log cross-repo otop-ai-landing SEO/perf polish + flag domain-gated SEO items (3 hours ago)
+- f6c78b3 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3013,8 +3017,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 144,
-  "memory_mb": "21.8",
+  "uptime_sec": 0,
+  "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
