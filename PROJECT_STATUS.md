@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T07:14:27.998Z · branch `claude/daily-reporter-improvements-8vc9ct` (305 commit(s) ahead of main)
+Generated: 2026-07-15T08:11:47.252Z · branch `claude/daily-reporter-improvements-8vc9ct` (308 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 515 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 518 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: guard against frontend plan-price drift (locks in both money fixes from this session)
+
+Both money bugs fixed earlier today (stale ฿20/฿30 Pro/Premier prices; unpurchasable Enterprise) shared one root cause: the frontend duplicates the canonical plan set (backend `SUBSCRIPTION_PLANS` = free/pro/premier/enterprise at 0/299/599/1299 THB) across **three** hand-maintained arrays — `PaymentPage.PLANS` (checkout), `PricingPage.PP_META` (/pricing cards routed to /payment), `LandingPage.PLAN_META` (marketing) — with nothing tying them together, so one drifting shipped a silent money bug. Rather than the larger refactor of collapsing them to one shared source (scope-broad — left for owner), added a deterministic guard: `frontend/src/__tests__/planPricingConsistency.test.js` asserts (1) every source lists exactly the canonical plan keys, (2) each source prices every plan at the canonical THB amount, (3) every plan advertised on /pricing exists in checkout (the advertised-but-unpurchasable guard). Only page change is adding `export` to the existing const arrays (default exports/behaviour untouched). **Verified real guard:** 74/74 frontend tests + build pass; mutating a price (599→20) fails it 1/3 and removing the enterprise checkout entry fails it 3/3, then restored to green. `eebcdd7`.
 
 ### 2026-07-15 — Hourly loop: fixed a live money-funnel gap — the Enterprise ฿1,299 tier couldn't actually be purchased
 
@@ -2966,14 +2970,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- aa62487 docs: log Enterprise checkout gap-fix (฿1,299 tier was unpurchasable) (14 seconds ago)
-- 9e523ec fix(payment): add missing Enterprise tier to checkout so the ฿1,299 plan can actually be bought (32 seconds ago)
-- c6b5124 chore: sync PROJECT_STATUS.md [skip ci] (52 minutes ago)
-- 01577fe docs: log PR #79 Copilot review fixes (snapshot shape / i18n title / plan prices) (52 minutes ago)
-- 4e3c4a8 chore: sync PROJECT_STATUS.md [skip ci] (52 minutes ago)
-- 6415306 fix: address Copilot review — stable progress snapshot shape, live-i18n dispute title, correct Pro/Premier prices (53 minutes ago)
-- b04139b chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- 80fb2e2 docs: log portal-lead PDPA consent-gate deterministic guard + CI wiring (63 minutes ago)
+- d79cdf9 docs: log frontend plan-price consistency guard (21 seconds ago)
+- eebcdd7 test(pricing): guard frontend plan-price consistency so money drift can't ship silently (38 seconds ago)
+- 4ab03fe chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- aa62487 docs: log Enterprise checkout gap-fix (฿1,299 tier was unpurchasable) (58 minutes ago)
+- 9e523ec fix(payment): add missing Enterprise tier to checkout so the ฿1,299 plan can actually be bought (58 minutes ago)
+- c6b5124 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 01577fe docs: log PR #79 Copilot review fixes (snapshot shape / i18n title / plan prices) (2 hours ago)
+- 4e3c4a8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2995,8 +2999,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 882,
-  "memory_mb": "20.7",
+  "uptime_sec": 1006,
+  "memory_mb": "19.9",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
