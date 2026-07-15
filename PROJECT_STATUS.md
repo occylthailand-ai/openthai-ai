@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T13:11:42.750Z · branch `claude/daily-reporter-improvements-8vc9ct` (318 commit(s) ahead of main)
+Generated: 2026-07-15T16:12:07.756Z · branch `claude/daily-reporter-improvements-8vc9ct` (320 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 528 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 530 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -35,6 +35,10 @@ smart-e had **no tests at all** (just an empty `test.txt`), yet this branch ship
 ### 2026-07-15 — Hourly loop (cross-repo: smart-e): fixed a phantom-stock inventory bug (oversell + cancel inflated stock)
 
 First **verified the /portals funnel in openthai-ai is healthy** (all 9 role routes have components + internal links; the bare `/portals` hub `PortalHubPage` surfaces all 9 roles) — audited clean, no diff manufactured there. Then diversified to `smart-e` (Python store server) and found a real inventory-integrity bug by code scan + live repro: `_create_order` deducts stock with `MAX(0, stock-qty)` (clamps to 0 on oversell) while `_update_order_status` restores a cancelled order with an unclamped `stock+qty`. So **ordering more than is in stock and cancelling conjures stock from nothing**: 5 → order qty 10 → `MAX(0,5-10)=0` → cancel → `0+10=10` (+5 phantom) — the mirror of the negative-qty attack the file already defends against. Reproduced live (5→0→10). Fixed by validating stock availability before accepting an order (qty summed per `product_id` so duplicate line items can't oversell in aggregate; missing product or `qty > stock` → 400, nothing written), making deduct/restore always symmetric. **Verified live** (ADMIN_KEY set, fresh db, restored after): oversell qty10/stock5 → 400 (stays 5); valid qty3 → 201 (5→2); cancel → 2→5 (symmetric); two qty-3 line items of one product vs stock5 → 400 (stays 5). smart-e commit `df4d3d4` (no DECISIONS_LOG there — full detail in commit message per standing-order #6); covered by its open PR #1.
+
+### 2026-07-15 — Hourly loop (cross-repo: all-platform-files): finished the mobile/SEO batch — 13 standalone product-catalog pages
+
+Follow-through on the roadmap-guides fix: the sibling **13 `OpenThaiAI_*Products_Catalog.html`** standalone docs had the identical malformed head (`<html><head><meta charset><style>` — no doctype/lang/viewport/title) and were fixed in place the same way (doctype, `lang="th"`, viewport, `<title>` from `<h1>`, description). **Verified before scoping:** the other catalog set `products-*-catalog.html` was left untouched — 10 are already properly formed, and the 3 anomalies (`products-{indonesia,oceania,vietnam}-catalog.html`) are `<section>` **fragments**, not standalone pages (wrapping them would be wrong; they're also unreferenced, part of the same generator-drift/duplicate mess already flagged for owner reconciliation). **Verified:** 13/13 now have doctype+viewport+title; git shows exactly 13 files changed and 0 others; served one → 200 with tags present and the Thai description meta intact; the indonesia fragment stayed a bare `<section>`. all-platform-files commit `1f19277`; covered by its open PR #1.
 
 ### 2026-07-15 — Hourly loop (cross-repo: all-platform-files): mobile/SEO fix for 217 standalone roadmap guides + flagged generator drift
 
@@ -2992,14 +2996,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- d5078ba docs: log smart-e CI wiring for the regression guard (19 seconds ago)
-- 665d92a chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- 3a1c0f0 docs: log cross-repo smart-e regression guard (first automated test) (57 minutes ago)
-- e4646ac chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 0fe2b5b docs: log cross-repo smart-e phantom-stock inventory fix (2 hours ago)
-- ce746ab chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- c6a7900 docs: log cross-repo all-platform-files mobile/SEO fix (217 roadmap guides) + generator-drift flag (3 hours ago)
-- 2efa7f9 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 9fca279 docs: log all-platform-files catalog mobile/SEO fix (13 pages) (35 seconds ago)
+- 45e2154 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- d5078ba docs: log smart-e CI wiring for the regression guard (3 hours ago)
+- 665d92a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 3a1c0f0 docs: log cross-repo smart-e regression guard (first automated test) (4 hours ago)
+- e4646ac chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 0fe2b5b docs: log cross-repo smart-e phantom-stock inventory fix (5 hours ago)
+- ce746ab chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3021,8 +3025,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 424,
-  "memory_mb": "20.0",
+  "uptime_sec": 1,
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
