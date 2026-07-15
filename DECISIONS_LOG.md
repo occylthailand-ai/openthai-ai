@@ -9,6 +9,10 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-15 — Hourly loop: deterministic guard for the portal-lead PDPA consent gate (standing-order #3, the legal foundation of the funnel)
+
+The `/portals/*` registration funnel exists **only** because of the standing rule that no real producer/consumer/creator is contacted without their consent — so the server-side gate in `backend/portal-leads.js` `submit()` (`if (input?.consent !== true) return { ok:false, ... PDPA }`) is the single most legally load-bearing line in the funnel, and it had **no test**. Added `backend/scripts/test-portal-leads.mjs` + `test:portal-leads` npm script (pure/deterministic — a `mkdtemp` file store, no Supabase or network) pinning the contract: missing consent / `consent:false` / `consent:'true'` (string, not boolean) are **all** rejected and **nothing is persisted or notified**; consent-but-no-name/email rejected; a valid consenting lead is saved carrying `consent:true` (auditable proof) with email lowercased, string form fields kept, non-string fields dropped, and appears in `all()`; name falls back to agency when absent. Wired into the backend CI job's "Unit tests (deterministic, no server)" step alongside `test:disputes`. **Verified real guard:** 12/12 pass (exit 0); loosening the strict `consent !== true` to a truthy `!consent` test fails it 2/12 (exit 1) — i.e. it actually catches a weakening of the consent boundary. `7c422fd`.
+
 ### 2026-07-11 — Hourly loop: verified CI green + registry-consistency clean; added a guard for the consent-funnel honest-feedback helper (standing-order #1)
 
 First verified the prior round: `test.yml` run for `f2cb210` (the self-contained `test:ai-usage` step) = **completed/success** — so all three money/cost guards (#9/#10/#11) now run green in CI. Also ran `generate-project-status.mjs` → **exit 0** (every backend env var documented, route/skill/migration registries agree — no drift after this session's many changes).
