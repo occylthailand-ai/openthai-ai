@@ -26,7 +26,8 @@ export default function DisputeTrackPage() {
     finally { setBusy(false); }
   };
 
-  useEffect(() => { document.title = t('mk.dispute.title') + ' — Openthai.ai'; if (sp.get('id') && sp.get('contact')) check(); }, []); // eslint-disable-line
+  useEffect(() => { document.title = t('mk.dispute.title') + ' — Openthai.ai'; }, [t]);
+  useEffect(() => { if (sp.get('id') && sp.get('contact')) check(); }, []); // eslint-disable-line — auto-check once on mount
 
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif" }}>

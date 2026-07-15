@@ -15,7 +15,7 @@ const PLANS = [
   {
     key: 'pro',
     name: 'Pro',
-    price: 20,
+    price: 299,
     color: '#6366f1',
     popular: true,
     features: ['สร้างคอนเทนต์ไม่จำกัด', 'AI Generator ทุกฟีเจอร์', 'ทุกแพลตฟอร์ม 241+', 'AI Critic เต็มรูปแบบ', 'แฮชแท็ก 20+ อัน', 'ประวัติคอนเทนต์ 30 วัน', 'Priority Support'],
@@ -24,7 +24,7 @@ const PLANS = [
   {
     key: 'premier',
     name: 'Premier',
-    price: 30,
+    price: 599,
     color: '#f59e0b',
     features: ['ทุกอย่างใน Pro', 'ทีม 5 คน', 'API Access + SDK', 'White-label Solution', 'AI Video Generator', 'Dedicated Manager', 'SLA 99.9%'],
     limits: 'Team + API',

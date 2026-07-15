@@ -98,21 +98,21 @@ export function createProgressTracker(dataDir, deps = {}) {
       const prods = await producers?.list?.() ?? [];
       live.producers = prods.length;
       live.producers_approved = prods.filter(p => p.status === 'approved').length;
-    } catch (e) { console.error('[progress] producers.list failed:', e.message); live.producers = 0; }
+    } catch (e) { console.error('[progress] producers.list failed:', e.message); live.producers = 0; live.producers_approved = 0; }
 
     try {
       const ords = await orders?.list?.() ?? [];
       live.orders_total = ords.length;
       live.orders_shipped = ords.filter(o => o.status === 'shipped' || o.status === 'delivered').length ?? 0;
       live.revenue_thb = ords.reduce((s, o) => s + (Number(o.amount) || 0), 0);
-    } catch (e) { console.error('[progress] orders.list failed:', e.message); live.orders_total = 0; live.revenue_thb = 0; }
+    } catch (e) { console.error('[progress] orders.list failed:', e.message); live.orders_total = 0; live.orders_shipped = 0; live.revenue_thb = 0; }
 
     try {
       const invSummary = await inventory?.summary?.() ?? {};
       live.products_live = invSummary.active ?? 0;
       live.products_total = invSummary.products ?? 0;
       live.units_sold = invSummary.unitsSold ?? 0;
-    } catch (e) { console.error('[progress] inventory.summary failed:', e.message); live.products_live = 0; }
+    } catch (e) { console.error('[progress] inventory.summary failed:', e.message); live.products_live = 0; live.products_total = 0; live.units_sold = 0; }
 
     try {
       const leads = await portalLeads?.all?.() ?? [];
