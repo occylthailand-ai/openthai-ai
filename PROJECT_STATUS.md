@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T22:13:48.638Z · branch `claude/daily-reporter-improvements-8vc9ct` (334 commit(s) ahead of main)
+Generated: 2026-07-15T23:15:08.102Z · branch `claude/daily-reporter-improvements-8vc9ct` (336 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 544 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 546 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: shop checkout ignored a failed stock deduction after a successful charge (paid-but-unfulfilled → wrong commission + silent oversell)
+
+Code scan of the money path in `/api/shop/checkout`. `inventory.adjust(id, -qty, 'sale', …)` correctly refuses to go negative (`inventory.js:101` → returns `{ok:false, error:'สต๊อกไม่พอ'}`), **but both places that call it after a payment has already succeeded ignored that return value**: (a) the card/mock `finalizePaid` (`server.js:~678`) and (b) the PromptPay Omise-webhook finalize (`server.js:~7889`). The pre-check at request time (`server.js:671`) reads stock and passes, but there's an `await orders.place()` yield between it and the actual deduction, so a **concurrent order can exhaust stock in between**. When that happens the customer's charge is already captured, yet the old code marked the order `confirmed`, **credited affiliate commission on a sale that never shipped**, and returned `success:true` — a silent "paid, no stock deducted, wrong commission paid" corruption. **Fix:** both call sites now capture the result; on `!ok` they set the order to `cancelled` with a "ต้องคืนเงิน" note, **skip the affiliate credit**, log an `OVERSOLD` error for the admin to action, and (card path) return `{paid:true, fulfilled:false, refund_pending:true, message:…}` instead of a fake success. Happy path now also returns `fulfilled:true` and reports `stock_left` from the real post-deduct value (`adj.stock`) instead of a stale recompute. **The automated *refund itself* is intentionally NOT implemented — that's a money-movement business decision for the owner (standing-order #8); the fix's job is to stop the silent corruption and surface it. Owner: do you want an automated Omise refund on this race, or keep it manual (admin sees the cancelled+flagged order)?** **Verified by running:** booted server (mock mode), created a stock=1 product, fired 5 then 50 concurrent card checkouts → **exactly 1 `fulfilled:true`, final stock 0 (never negative), zero oversell**; the per-IP shop rate-limit (12/10min) + fast serialization kept the race window closed so the losers were caught at the pre-check (409) rather than the new branch — so I separately verified the exact `{ok:false}` contract the new branch keys on via the admin adjust endpoint (`adjust(-5,'sale')` → `400 สต๊อกไม่พอ`, stock unchanged at 2). `node --check` clean.
 
 ### 2026-07-15 — Hourly loop: stop search engines from indexing the /admin console (robots.txt gap + regression guard)
 
@@ -3030,14 +3034,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- cdae6a0 seo: disallow /admin from crawlers + pin sensitive routes stay excluded (20 seconds ago)
-- a432f9b chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
-- ba04567 test(credits): deterministic guard for credit-ledger abuse invariants (56 minutes ago)
-- 405f41b chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- 402a245 docs: log affiliate tier-boundary guard + module extraction (62 minutes ago)
-- c1ea06a refactor+test: extract affiliate tier logic to a module + guard the commission boundaries (62 minutes ago)
-- b14263c chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 039a600 docs: log verified finding — Free daily quota not enforced on serverless (in-memory only) (3 hours ago)
+- d4fbdd3 fix(shop): handle failed stock deduction after a successful charge (18 seconds ago)
+- 68868b5 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- cdae6a0 seo: disallow /admin from crawlers + pin sensitive routes stay excluded (62 minutes ago)
+- a432f9b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- ba04567 test(credits): deterministic guard for credit-ledger abuse invariants (2 hours ago)
+- 405f41b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 402a245 docs: log affiliate tier-boundary guard + module extraction (2 hours ago)
+- c1ea06a refactor+test: extract affiliate tier logic to a module + guard the commission boundaries (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3059,8 +3063,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 386,
-  "memory_mb": "21.3",
+  "uptime_sec": 0,
+  "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3227,7 +3231,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8688 | Vercel serverless detection |
+| `server.js` | 8706 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
