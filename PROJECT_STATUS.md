@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T18:10:21.881Z · branch `claude/daily-reporter-improvements-8vc9ct` (325 commit(s) ahead of main)
+Generated: 2026-07-15T19:11:21.043Z · branch `claude/daily-reporter-improvements-8vc9ct` (327 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 535 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 537 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,12 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — 🔎 Verified finding (needs owner go-ahead): Free daily quota isn't enforced on the serverless backend
+
+Code scan of the quota path found a real **revenue/fairness leak in production**. The backend runs serverless on Vercel (`IS_VERCEL` gates `app.listen` — it exports the app per-request). Paid status is durable: `getEntitlement()` reads `entitlements` which is **loaded from Supabase `/entitlements` on every boot** (+ file fallback), so Pro/Premier/Enterprise correctly resolve to unlimited on any instance. **But the Free daily counter is `const _usage = new Map()` — in-memory only, never persisted** (the `ai_usage_log` table is cost logging, not the quota counter). On serverless, each cold start / concurrent instance has its own empty Map, so the advertised **Free = 3/day (FREE_DAILY_LIMIT, shown on the Pricing page)** resets constantly and a Free user can generate well past 3/day. This directly undercuts the paid tier (why buy Pro "unlimited" if Free is effectively unlimited?). Verified by reading the code, not guessing: confirmed serverless export gating, `_usage` is the only quota store, and entitlements (paid) ARE Supabase-backed for contrast.
+
+**Why flagged, not shipped (standing-order #8 — money-sensitive + needs a prod migration):** the correct fix is to persist the daily counter like entitlements — a `usage_daily(key, day, count)` table with an **atomic** increment (a Postgres RPC / upsert-returning-count, because a REST read-then-write races across concurrent instances and would over- or under-count a money-gating limit), keeping the in-memory Map as a fast-path cache and the sole path when `!_useSB`. That needs (a) a new migration the **owner must apply to the real DB** (I can't), and (b) money-sensitive atomicity I can only verify against a mock, not real concurrent serverless load. So: **owner go-ahead requested** before I implement — approve the approach (new migration + Supabase-backed atomic quota) and I'll ship it with a mock-Supabase regression test in the `test-ai-usage.mjs` style. Added as item 6 in the backlog below.
 
 ### 2026-07-15 — ⏸️ Consolidated OWNER-DECISION backlog (blocks the next wave before the 30 Jul deadline)
 
@@ -3012,14 +3018,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 82518e9 docs: consolidate the owner-decision backlog (5 gated items) blocking the next wave (17 seconds ago)
-- e67b7e2 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- 760c005 docs: log PDPA unsubscribe/erasure test coverage (58 minutes ago)
-- 7081432 test(portals): guard the PDPA data-subject-rights helpers (unsubscribe + erasure) (58 minutes ago)
-- 15096b9 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 9fca279 docs: log all-platform-files catalog mobile/SEO fix (13 pages) (2 hours ago)
-- 45e2154 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- d5078ba docs: log smart-e CI wiring for the regression guard (5 hours ago)
+- 039a600 docs: log verified finding — Free daily quota not enforced on serverless (in-memory only) (20 seconds ago)
+- 4c92648 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 82518e9 docs: consolidate the owner-decision backlog (5 gated items) blocking the next wave (61 minutes ago)
+- e67b7e2 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 760c005 docs: log PDPA unsubscribe/erasure test coverage (2 hours ago)
+- 7081432 test(portals): guard the PDPA data-subject-rights helpers (unsubscribe + erasure) (2 hours ago)
+- 15096b9 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 9fca279 docs: log all-platform-files catalog mobile/SEO fix (13 pages) (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3041,8 +3047,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.3",
+  "uptime_sec": 0,
+  "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
