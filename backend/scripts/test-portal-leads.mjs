@@ -58,5 +58,37 @@ console.log('\n=== name falls back to agency/org/contact when no explicit name =
   ok(notified[0]?.name === 'มูลนิธิเพื่อสังคม', 'name derived from agency when name absent');
 }
 
+console.log('\n=== PDPA: unsubscribe(email, type) — withdraw consent for future digests ===');
+{
+  const { pl } = make();
+  await pl.submit({ type: 'consumer', consent: true, email: 'Buyer@Example.com', name: 'ผู้ซื้อ' });
+  await pl.submit({ type: 'consumer', consent: true, email: 'buyer@example.com', name: 'ผู้ซื้อ2' }); // same email, same type
+  await pl.submit({ type: 'producer', consent: true, email: 'buyer@example.com', name: 'คนละบทบาท' }); // same email, different type
+  const bad = await pl.unsubscribe('', 'consumer');
+  ok(bad.ok === false && /invalid email/.test(bad.error || ''), `empty email → rejected: ${bad.error}`);
+  const r = await pl.unsubscribe('BUYER@example.com', 'consumer'); // input case-insensitive
+  ok(r.ok === true && r.matched === 2, `both consumer leads for the email marked unsubscribed (matched=${r.matched})`);
+  const list = await pl.all();
+  const consumers = list.filter((x) => x.type === 'consumer' && x.email === 'buyer@example.com');
+  ok(consumers.length === 2 && consumers.every((x) => x.unsubscribed === true), 'consumer leads carry unsubscribed:true');
+  const producer = list.find((x) => x.type === 'producer');
+  ok(producer && producer.unsubscribed !== true, 'the different-type lead is untouched (unsubscribe is scoped by type)');
+}
+
+console.log('\n=== PDPA: eraseByEmail(email) — right to erasure (มาตรา 33), all types ===');
+{
+  const { pl } = make();
+  await pl.submit({ type: 'consumer', consent: true, email: 'Gone@Example.com', name: 'ลบฉัน' });
+  await pl.submit({ type: 'producer', consent: true, email: 'gone@example.com', name: 'ลบฉันด้วย' });
+  await pl.submit({ type: 'creator', consent: true, email: 'stay@example.com', name: 'อยู่ต่อ' });
+  const bad = await pl.eraseByEmail('not-an-email');
+  ok(bad.ok === false && bad.removed === 0, 'non-email input → { ok:false, removed:0 }, nothing deleted');
+  const r = await pl.eraseByEmail('GONE@example.com'); // case-insensitive, spans every type
+  ok(r.ok === true && r.removed === 2, `both leads for the erased email removed across all types (removed=${r.removed})`);
+  const list = await pl.all();
+  ok(!list.some((x) => (x.email || '').toLowerCase() === 'gone@example.com'), 'no trace of the erased email remains in all()');
+  ok(list.some((x) => x.email === 'stay@example.com'), 'a different person’s lead is left intact');
+}
+
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
