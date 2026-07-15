@@ -9,6 +9,12 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-15 — Hourly loop: fixed a live money-funnel gap — the Enterprise ฿1,299 tier couldn't actually be purchased
+
+Code-scan gap-fix (standing-order category 2), verified against 4 sources before touching anything. `/pricing` advertises 4 plans incl. **Enterprise ฿1,299** and its CTA routes to `/payment?plan=enterprise` (`PricingPage.jsx:88`); the backend `SUBSCRIPTION_PLANS.enterprise` (฿1299) + `index.html` JSON-LD + i18n `plans.enterprise`/`pp.plans.enterprise` (TH/EN/ZH) all define it — **but `PaymentPage`'s hardcoded `PLANS` only had free/pro/premier.** The unknown-plan fallback (`PLANS.some(...) ? param : 'pro'`) therefore silently loaded the **฿299 Pro** checkout for anyone who selected Enterprise: the highest-value tier was clickable across the whole site but impossible to buy, and the funnel silently downgraded the customer with no error. Added the Enterprise entry to `PaymentPage.PLANS` at ฿1,299 with the canonical features/colour already defined in i18n + PricingPage. The charge amount is **server-authoritative** (`/api/payment/create` derives it from `SUBSCRIPTION_PLANS.price_thb`), so this only unblocks the frontend selection — it can't set a wrong price.
+
+**Verified end-to-end against a booted server:** `POST /api/payment/create` `plan=enterprise` → `amount_thb 1299` / `plan "enterprise"`; `plan=pro` → 299 (baseline intact); an unknown plan still → HTTP 400 Invalid plan. Frontend 71/71 tests + build pass. `9e523ec`.
+
 ### 2026-07-15 — PR #79: addressed 5 Copilot review findings (verified each against real code first)
 
 Copilot left a `commented` (non-blocking) review with 5 inline findings on PR #79. **Verified all 5 against the actual source before touching anything** (per the verify-before-build rule) — all real:
