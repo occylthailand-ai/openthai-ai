@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T06:22:13.758Z · branch `claude/daily-reporter-improvements-8vc9ct` (300 commit(s) ahead of main)
+Generated: 2026-07-15T06:22:41.381Z · branch `claude/daily-reporter-improvements-8vc9ct` (302 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 510 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 512 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,15 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — PR #79: addressed 5 Copilot review findings (verified each against real code first)
+
+Copilot left a `commented` (non-blocking) review with 5 inline findings on PR #79. **Verified all 5 against the actual source before touching anything** (per the verify-before-build rule) — all real:
+- **`progress-tracker.js` ×3** — `collectLiveData()` catch blocks only reset *some* siblings, leaving `producers_approved` / `orders_shipped` / `products_total` / `units_sold` `undefined` on a subsystem failure. `JSON.stringify` **drops** undefined fields, so a failed collection silently changed the snapshot schema and could blank downstream UI. Fixed by zeroing every related counter in each catch. **Verified** by driving `buildSnapshot()` with all four subsystems throwing: all 9 KPI counters come back `0` and survive a JSON round-trip (none dropped) — before the fix, 4 were dropped.
+- **`DisputeTrackPage.jsx`** — the `document.title` effect read `t()` but had `[]` deps, so the tab title never updated on a language switch. Split into two effects (title → `[t]`; auto-check-once-on-mount stays `[]`).
+- **`PaymentPage.jsx`** — `PLANS` still carried placeholder prices (Pro `20`, Premier `30`) while the backend `SUBSCRIPTION_PLANS`, `index.html` JSON-LD offers, and this log all use the canonical **299 / 599 THB** — and `plan.price` is the amount actually charged, so this was a **live user-facing money discrepancy**. Aligned the frontend to the canonical prices. (Note: adding an Enterprise tier to the payment UI is a separate product decision, left out of this fix.)
+
+**Verified:** frontend 71/71 tests pass + build OK; backend `node --check` + the failure-path snapshot-shape assertion pass. `6415306`.
 
 ### 2026-07-15 — Hourly loop: deterministic guard for the portal-lead PDPA consent gate (standing-order #3, the legal foundation of the funnel)
 
@@ -2951,14 +2960,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 6415306 fix: address Copilot review — stable progress snapshot shape, live-i18n dispute title, correct Pro/Premier prices (21 seconds ago)
-- b04139b chore: sync PROJECT_STATUS.md [skip ci] (10 minutes ago)
+- 01577fe docs: log PR #79 Copilot review fixes (snapshot shape / i18n title / plan prices) (19 seconds ago)
+- 4e3c4a8 chore: sync PROJECT_STATUS.md [skip ci] (26 seconds ago)
+- 6415306 fix: address Copilot review — stable progress snapshot shape, live-i18n dispute title, correct Pro/Premier prices (48 seconds ago)
+- b04139b chore: sync PROJECT_STATUS.md [skip ci] (11 minutes ago)
 - 80fb2e2 docs: log portal-lead PDPA consent-gate deterministic guard + CI wiring (11 minutes ago)
 - 2c0f8e7 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
 - 7c422fd test(portals): deterministic guard for the PDPA consent gate (standing-order #3) (3 days ago)
 - ecc8318 chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
-- afef0ff docs: log submitLead consent-funnel guard + CI/consistency verification (3 days ago)
-- 384f53c chore: sync PROJECT_STATUS.md [skip ci] (3 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2980,8 +2989,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 276,
-  "memory_mb": "21.9",
+  "uptime_sec": 304,
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
