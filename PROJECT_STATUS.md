@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T19:11:21.043Z · branch `claude/daily-reporter-improvements-8vc9ct` (327 commit(s) ahead of main)
+Generated: 2026-07-15T21:12:17.129Z · branch `claude/daily-reporter-improvements-8vc9ct` (330 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 537 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 540 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: guard the affiliate commission tier boundaries (extracted to a testable module)
+
+Reviewed the affiliate commission core (`creditAffiliateSale` + `tierForSales`) — logic is correct (current deal uses the old rate, promotion is upgrade-only, affects the next deal) but the money-critical tier boundaries lived inline in the 8500-line `server.js` with **no deterministic test**: a wrong `min` or a reordered `AFFILIATE_TIERS` array would silently pay the wrong commission. Extracted the pure `AFFILIATE_TIERS` + `tierForSales` to `backend/affiliate-tiers.js` (imported back; both call sites — the credit path and the "next tier" hint at line 1443 — use the import) and added `backend/scripts/test-affiliate-tiers.mjs` pinning: starter 0–9→20%, pro 10–49→30%, elite 50+→40% (inclusive), undefined/null/negative→starter (no crash), rate monotonic non-decreasing 0..60 (never demoted), each tier selected at its own min. Wired into the deterministic backend CI step. **Verified:** 10/10 pass; shifting the pro boundary 10→20 fails it 1/10; `server.js` `node --check` + boots to `/api/health` 200 after the extraction (no import break). `c1ea06a`.
 
 ### 2026-07-15 — 🔎 Verified finding (needs owner go-ahead): Free daily quota isn't enforced on the serverless backend
 
@@ -3018,14 +3022,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 039a600 docs: log verified finding — Free daily quota not enforced on serverless (in-memory only) (20 seconds ago)
-- 4c92648 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 82518e9 docs: consolidate the owner-decision backlog (5 gated items) blocking the next wave (61 minutes ago)
-- e67b7e2 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 760c005 docs: log PDPA unsubscribe/erasure test coverage (2 hours ago)
-- 7081432 test(portals): guard the PDPA data-subject-rights helpers (unsubscribe + erasure) (2 hours ago)
-- 15096b9 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 9fca279 docs: log all-platform-files catalog mobile/SEO fix (13 pages) (3 hours ago)
+- 402a245 docs: log affiliate tier-boundary guard + module extraction (14 seconds ago)
+- c1ea06a refactor+test: extract affiliate tier logic to a module + guard the commission boundaries (31 seconds ago)
+- b14263c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 039a600 docs: log verified finding — Free daily quota not enforced on serverless (in-memory only) (2 hours ago)
+- 4c92648 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 82518e9 docs: consolidate the owner-decision backlog (5 gated items) blocking the next wave (3 hours ago)
+- e67b7e2 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 760c005 docs: log PDPA unsubscribe/erasure test coverage (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3048,7 +3052,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.7",
+  "memory_mb": "19.0",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3194,9 +3198,10 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 24 files)
+## Backend modules (backend/*.js — 25 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
+| `affiliate-tiers.js` | 18 | Affiliate commission tiers — extracted from server.js so the money-critical |
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `auth.js` | 190 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
@@ -3214,7 +3219,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8693 | Vercel serverless detection |
+| `server.js` | 8688 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
