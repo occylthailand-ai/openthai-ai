@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T17:12:25.760Z · branch `claude/daily-reporter-improvements-8vc9ct` (323 commit(s) ahead of main)
+Generated: 2026-07-15T18:10:21.881Z · branch `claude/daily-reporter-improvements-8vc9ct` (325 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 533 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 535 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — ⏸️ Consolidated OWNER-DECISION backlog (blocks the next wave before the 30 Jul deadline)
+
+After a long series of autonomous rounds this session shipped verified work across **all 5 repos** — openthai-ai (Enterprise-checkout gap, ฿20/฿30 price drift, dispute-split money safety, ai-usage logging, shop-commission crediting, plan-price consistency guard, PDPA consent + unsubscribe + erasure test guards, funnel/SEO audit), otop-ai-landing (preconnect + social-card SEO), all-platform-files (mobile/SEO on 217 roadmap + 13 catalog pages), smart-e (phantom-stock inventory fix + first regression test + CI). The readily-available, *verifiable, unblocked* work is now largely done or audited-clean. What remains is genuinely **owner-gated** (standing-order #8) — verified real, but each needs a decision I must not guess:
+
+1. **otop-ai-landing production domain** — canonical `<link>`, absolute `og:image`/`og:url`, and a sitemap are ready to add but need the site's own deployed domain, which appears **nowhere in the repo**. Matters because `vercel.json` routes every path to index.html, so without a canonical any URL under the domain is an indexable duplicate. → *What is the production domain?*
+2. **all-platform-files generator reconcile** — the 217+13 standalone pages were fixed **in place**; their generators (`create_*.js` in openthai-ai) still emit the malformed head AND have drifted to a different output filename/branding (`Openthai.ai_*` vs committed `OpenThaiAI_*`), so re-running them makes differently-named duplicates. → *Reconcile generators + filename/branding, or freeze the generators and keep editing output in place?*
+3. **OpenThai-AI-v9.0** — real code exists (`app/api/monitor/health`, `app/affiliate-hub`) but there is **no `package.json`/`tsconfig`**, so nothing there is buildable/verifiable (can't satisfy standing-order #4). README parks it to Q2-2026. → *Activate v9.0 now (add build tooling) or keep parked?*
+4. **PDPA erasure scope for affiliate withdrawals** — `/api/privacy/erasure/confirm` intentionally **keeps** `withdrawals` (financial transaction records) while deleting all other PII, per legal-retention exception. → *Confirm this is the intended scope.*
+5. **`/api/skills/*` free-quota policy** — the ~30 skill tools currently do **not** count against the Free 3/day limit (only `/api/generate*` does). → *Intended, or should skills also consume quota?*
+
+No code diff this round — this is the disciplined outcome (CLAUDE.md: don't manufacture a low-value diff). Once any of the above is answered I can proceed immediately with a verified change.
 
 ### 2026-07-15 — Hourly loop (cross-repo: smart-e): wired the regression guard into CI so it actually runs
 
@@ -3000,14 +3012,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 760c005 docs: log PDPA unsubscribe/erasure test coverage (16 seconds ago)
-- 7081432 test(portals): guard the PDPA data-subject-rights helpers (unsubscribe + erasure) (34 seconds ago)
-- 15096b9 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 9fca279 docs: log all-platform-files catalog mobile/SEO fix (13 pages) (61 minutes ago)
-- 45e2154 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- d5078ba docs: log smart-e CI wiring for the regression guard (4 hours ago)
-- 665d92a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 3a1c0f0 docs: log cross-repo smart-e regression guard (first automated test) (5 hours ago)
+- 82518e9 docs: consolidate the owner-decision backlog (5 gated items) blocking the next wave (17 seconds ago)
+- e67b7e2 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 760c005 docs: log PDPA unsubscribe/erasure test coverage (58 minutes ago)
+- 7081432 test(portals): guard the PDPA data-subject-rights helpers (unsubscribe + erasure) (58 minutes ago)
+- 15096b9 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 9fca279 docs: log all-platform-files catalog mobile/SEO fix (13 pages) (2 hours ago)
+- 45e2154 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- d5078ba docs: log smart-e CI wiring for the regression guard (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3029,8 +3041,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 429,
-  "memory_mb": "19.5",
+  "uptime_sec": 1,
+  "memory_mb": "19.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
