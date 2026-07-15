@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T10:14:28.476Z · branch `claude/daily-reporter-improvements-8vc9ct` (312 commit(s) ahead of main)
+Generated: 2026-07-15T11:14:28.559Z · branch `claude/daily-reporter-improvements-8vc9ct` (314 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 522 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 524 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop (cross-repo: smart-e): fixed a phantom-stock inventory bug (oversell + cancel inflated stock)
+
+First **verified the /portals funnel in openthai-ai is healthy** (all 9 role routes have components + internal links; the bare `/portals` hub `PortalHubPage` surfaces all 9 roles) — audited clean, no diff manufactured there. Then diversified to `smart-e` (Python store server) and found a real inventory-integrity bug by code scan + live repro: `_create_order` deducts stock with `MAX(0, stock-qty)` (clamps to 0 on oversell) while `_update_order_status` restores a cancelled order with an unclamped `stock+qty`. So **ordering more than is in stock and cancelling conjures stock from nothing**: 5 → order qty 10 → `MAX(0,5-10)=0` → cancel → `0+10=10` (+5 phantom) — the mirror of the negative-qty attack the file already defends against. Reproduced live (5→0→10). Fixed by validating stock availability before accepting an order (qty summed per `product_id` so duplicate line items can't oversell in aggregate; missing product or `qty > stock` → 400, nothing written), making deduct/restore always symmetric. **Verified live** (ADMIN_KEY set, fresh db, restored after): oversell qty10/stock5 → 400 (stays 5); valid qty3 → 201 (5→2); cancel → 2→5 (symmetric); two qty-3 line items of one product vs stock5 → 400 (stays 5). smart-e commit `df4d3d4` (no DECISIONS_LOG there — full detail in commit message per standing-order #6); covered by its open PR #1.
 
 ### 2026-07-15 — Hourly loop (cross-repo: all-platform-files): mobile/SEO fix for 217 standalone roadmap guides + flagged generator drift
 
@@ -2980,14 +2984,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c6a7900 docs: log cross-repo all-platform-files mobile/SEO fix (217 roadmap guides) + generator-drift flag (16 seconds ago)
-- 2efa7f9 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 2b255e2 docs: log cross-repo otop-ai-landing SEO/perf polish + flag domain-gated SEO items (61 minutes ago)
-- f6c78b3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- d79cdf9 docs: log frontend plan-price consistency guard (2 hours ago)
-- eebcdd7 test(pricing): guard frontend plan-price consistency so money drift can't ship silently (2 hours ago)
-- 4ab03fe chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- aa62487 docs: log Enterprise checkout gap-fix (฿1,299 tier was unpurchasable) (3 hours ago)
+- 0fe2b5b docs: log cross-repo smart-e phantom-stock inventory fix (17 seconds ago)
+- ce746ab chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- c6a7900 docs: log cross-repo all-platform-files mobile/SEO fix (217 roadmap guides) + generator-drift flag (60 minutes ago)
+- 2efa7f9 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 2b255e2 docs: log cross-repo otop-ai-landing SEO/perf polish + flag domain-gated SEO items (2 hours ago)
+- f6c78b3 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- d79cdf9 docs: log frontend plan-price consistency guard (3 hours ago)
+- eebcdd7 test(pricing): guard frontend plan-price consistency so money drift can't ship silently (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3009,8 +3013,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
+  "uptime_sec": 144,
+  "memory_mb": "21.8",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
