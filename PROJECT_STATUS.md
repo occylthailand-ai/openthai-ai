@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T08:11:47.252Z · branch `claude/daily-reporter-improvements-8vc9ct` (308 commit(s) ahead of main)
+Generated: 2026-07-15T09:13:28.140Z · branch `claude/daily-reporter-improvements-8vc9ct` (310 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 518 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 520 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop (cross-repo: otop-ai-landing): SEO/perf polish on the funnel front-door + flagged the domain-gated items
+
+Diversified to `otop-ai-landing` (the OTOP-AI marketing landing that feeds the /portals funnel). **Verified first:** og-image.png is genuinely 1200×655 (declared dims correct — no bug), and prior commits already added Twitter cards/robots/theme-color. Real remaining wins split in two: (a) **domain-independent, shipped** — added `preconnect`+`dns-prefetch` to `https://www.openthai-ai.com` (every CTA on the page hands off there, so the handshake starts while the user reads), plus `og:site_name` and `og:image:alt`/`twitter:image:alt` for better+accessible social cards. **Verified by serving locally:** GET / → 200, all 5 new tags present in served HTML, og-image.png still 200. otop-ai-landing commit `31d3d73` (that repo has no DECISIONS_LOG — full detail is in the commit message per standing-order #6); already covered by its open PR #1. (b) **domain-gated, deliberately NOT guessed** (standing-order #8) — `rel=canonical`, absolute `og:image`/`og:url`, and a sitemap all need the landing site's own production domain, which appears nowhere in the repo. This matters because `vercel.json` routes every path to index.html, so without a canonical any URL under the domain is an indexable duplicate. **Owner input needed:** what is otop-ai-landing's production domain? Ready to finish the SEO the moment it's confirmed.
 
 ### 2026-07-15 — Hourly loop: guard against frontend plan-price drift (locks in both money fixes from this session)
 
@@ -2970,14 +2974,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- d79cdf9 docs: log frontend plan-price consistency guard (21 seconds ago)
-- eebcdd7 test(pricing): guard frontend plan-price consistency so money drift can't ship silently (38 seconds ago)
-- 4ab03fe chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- aa62487 docs: log Enterprise checkout gap-fix (฿1,299 tier was unpurchasable) (58 minutes ago)
-- 9e523ec fix(payment): add missing Enterprise tier to checkout so the ฿1,299 plan can actually be bought (58 minutes ago)
-- c6b5124 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 01577fe docs: log PR #79 Copilot review fixes (snapshot shape / i18n title / plan prices) (2 hours ago)
-- 4e3c4a8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 2b255e2 docs: log cross-repo otop-ai-landing SEO/perf polish + flag domain-gated SEO items (15 seconds ago)
+- f6c78b3 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- d79cdf9 docs: log frontend plan-price consistency guard (62 minutes ago)
+- eebcdd7 test(pricing): guard frontend plan-price consistency so money drift can't ship silently (62 minutes ago)
+- 4ab03fe chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- aa62487 docs: log Enterprise checkout gap-fix (฿1,299 tier was unpurchasable) (2 hours ago)
+- 9e523ec fix(payment): add missing Enterprise tier to checkout so the ฿1,299 plan can actually be bought (2 hours ago)
+- c6b5124 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -2999,8 +3003,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 1006,
-  "memory_mb": "19.9",
+  "uptime_sec": 0,
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
