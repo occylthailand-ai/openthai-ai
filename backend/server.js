@@ -2768,9 +2768,14 @@ function savePatterns(data) {
 
 app.post('/api/skills/learning/rate', generateLimiter, (req, res) => {
   const { content_type, platform, tone, rating, output_snippet = '' } = req.body || {};
-  if (!content_type || !rating || rating < 1 || rating > 5) return res.status(400).json({ error: 'content_type and rating (1-5) required' });
+  // Coerce THEN validate: the old check ran `rating < 1 || rating > 5` before Number(),
+  // so a non-numeric rating like "abc" passed (NaN comparisons are false) and then
+  // Number("abc")=NaN poisoned p.sum/p.avg for that pattern permanently (avg_rating → NaN,
+  // corrupting /learning/patterns and the enhance context that reads it).
+  const ratingNum = Number(rating);
+  if (!content_type || !Number.isFinite(ratingNum) || ratingNum < 1 || ratingNum > 5) return res.status(400).json({ error: 'content_type and rating (1-5) required' });
   const data = loadPatterns();
-  const entry = { content_type, platform: platform || 'ทั่วไป', tone: tone || 'ทั่วไป', rating: Number(rating), snippet: output_snippet.slice(0, 200), ts: Date.now() };
+  const entry = { content_type, platform: platform || 'ทั่วไป', tone: tone || 'ทั่วไป', rating: ratingNum, snippet: output_snippet.slice(0, 200), ts: Date.now() };
   data.ratings.push(entry);
   data.total = (data.total || 0) + 1;
   const key = `${content_type}|${platform || 'ทั่วไป'}`;
