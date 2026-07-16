@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-15T23:15:08.102Z · branch `claude/daily-reporter-improvements-8vc9ct` (336 commit(s) ahead of main)
+Generated: 2026-07-16T02:10:23.724Z · branch `claude/daily-reporter-improvements-8vc9ct` (338 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 546 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 548 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: deterministic guard for the inventory ledger's never-oversell invariant (inventory.js)
+
+Follow-up that locks the exact contract the previous round's shop-checkout fix depends on. `inventory.js` (first-party stock ledger — sales, movements, affiliate attribution) had **no test**, yet `/api/shop/checkout` charges the customer and only THEN calls `adjust(id,-qty,'sale')`; the whole oversell-safety rests on `adjust` refusing to go below zero and returning `{ok:false, error:'สต๊อกไม่พอ', stock:before}` (inventory.js:101) so the paid-but-no-stock branch fires. Added `backend/scripts/test-inventory.mjs` (18 assertions, file-store temp dir, no Supabase) pinning: sale never goes negative (oversell → refused, stock unchanged, no partial deduct; exact-to-zero ok; sale at 0 refused), zero-delta/unknown-id/fractional guards, restock raises stock + `low` flag tracks the threshold, **type `adjust` is NOT the guarded path — it clamps to 0** (only `type:sale` returns the error — locked so nobody assumes otherwise), and sale attribution feeds affiliate reporting (`productSales.byPlatform['ref:AFF1']`, `salesReport.totalSold`, `summary.unitsSold`). Wired `test:inventory` into the deterministic backend CI step. **Verified by running:** 18/18 pass; **mutation-tested** — removing the `type==='sale' && before+d<0` guard fails it, restored to green.
 
 ### 2026-07-15 — Hourly loop: shop checkout ignored a failed stock deduction after a successful charge (paid-but-unfulfilled → wrong commission + silent oversell)
 
@@ -3034,14 +3038,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- d4fbdd3 fix(shop): handle failed stock deduction after a successful charge (18 seconds ago)
-- 68868b5 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- cdae6a0 seo: disallow /admin from crawlers + pin sensitive routes stay excluded (62 minutes ago)
-- a432f9b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- ba04567 test(credits): deterministic guard for credit-ledger abuse invariants (2 hours ago)
-- 405f41b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 402a245 docs: log affiliate tier-boundary guard + module extraction (2 hours ago)
-- c1ea06a refactor+test: extract affiliate tier logic to a module + guard the commission boundaries (2 hours ago)
+- 418ded5 test(inventory): guard the never-oversell invariant of the stock ledger (20 seconds ago)
+- 8eb8abb chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- d4fbdd3 fix(shop): handle failed stock deduction after a successful charge (3 hours ago)
+- 68868b5 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- cdae6a0 seo: disallow /admin from crawlers + pin sensitive routes stay excluded (4 hours ago)
+- a432f9b chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- ba04567 test(credits): deterministic guard for credit-ledger abuse invariants (5 hours ago)
+- 405f41b chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3064,7 +3068,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.1",
+  "memory_mb": "19.4",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
