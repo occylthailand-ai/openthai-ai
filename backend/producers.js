@@ -208,6 +208,13 @@ export function createProducers(dataDir, opts = {}) {
   }));
 
   // ค้นหาผู้ผลิต (เฉพาะที่อนุมัติแล้ว) — q (ชื่อ/สินค้า/รายละเอียด) + category
+  // หมายเหตุความเป็นส่วนตัว: endpoint นี้เป็น public (ไม่มี auth) — เดิม map คืน p.email ของผู้ผลิต
+  // ออกไปด้วย ทั้งที่หน้า directory (ProducerDirectoryPage) ใช้ email แค่เป็น React key เท่านั้น
+  // ไม่เคยแสดงผลหรือใช้ติดต่อ ผลคือใครก็ยิง /api/producers/search แบบ q ว่างเพื่อ harvest อีเมล
+  // ผู้ผลิตทั้งหมดที่อนุมัติแล้วได้ทันที (PDPA: เปิดเผยข้อมูลติดต่อส่วนบุคคลสู่สาธารณะโดยไม่จำเป็น)
+  // จึงตัด email ออกจาก response นี้ — การสั่งซื้อไปที่ผู้ผลิตทำผ่าน /api/catalog + /api/orders อยู่แล้ว
+  // (catalog ยังต้องคืน email เพราะ CatalogPage ส่ง producer_email กลับมาเป็นตัวระบุผู้ผลิตตอนสั่งซื้อ —
+  // การเปลี่ยนไปใช้ id ทึบแทน email เป็น refactor ที่ใหญ่กว่า ค้างไว้เป็นข้อเสนอแยก)
   router.get('/api/producers/search', wrap(async (req, res) => {
     const q = (req.query.q || '').toString().trim().toLowerCase();
     const cat = (req.query.category || '').toString().trim();
@@ -216,7 +223,7 @@ export function createProducers(dataDir, opts = {}) {
       if (cat && cat !== 'ทั้งหมด' && p.category !== cat) return false;
       if (!q) return true;
       return [p.company, p.product_name, p.description, p.category].some((f) => (f || '').toString().toLowerCase().includes(q));
-    }).map((p) => ({ company: p.company, category: p.category, product_name: p.product_name, price: p.price, description: p.description, website: p.website, email: p.email, stock: (p.stock == null ? null : p.stock) }));
+    }).map((p) => ({ company: p.company, category: p.category, product_name: p.product_name, price: p.price, description: p.description, website: p.website, stock: (p.stock == null ? null : p.stock) }));
     res.json({ success: true, count: matched.length, producers: matched });
   }));
 

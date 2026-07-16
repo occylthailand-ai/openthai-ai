@@ -83,7 +83,7 @@ export default function ProducerDirectoryPage() {
         {items && items.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 16 }}>
             {items.map((p, i) => (
-              <div key={p.email + i} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
+              <div key={(p.company || 'p') + i} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category || 'สินค้าไทย'}</div>
                 <div style={{ fontWeight: 800, fontSize: 16 }}>{p.company}</div>
                 <div style={{ fontSize: 13, color: '#cbd5e1', marginTop: 2 }}>{p.product_name}</div>
