@@ -24,7 +24,7 @@ export const DOMAIN = 'https://www.openthai-ai.com';
 export const ROUTES = [
   { path: '/portals', title: 'ประตูสู่ OpenThai.ai', desc: 'เลือกประเภทของท่านเพื่อเข้าร่วมเป็นส่วนหนึ่งของระบบนิเวศ AI ไทย — ผู้ผลิต ผู้บริโภค คนกลาง ครีเอเตอร์ Affiliate หน่วยงานรัฐ องค์กรระหว่างประเทศ และมูลนิธิ' },
   { path: '/portals/producer', title: 'ทางเข้าผู้ผลิต', desc: 'เชื่อมต่อสินค้าของคุณกับตลาด AI ไทยและทั่วโลก — ขายผ่าน AI-powered store, เข้าถึงผู้ซื้อทั่วโลก, ระบบ inventory อัตโนมัติ' },
-  { path: '/portals/affiliate', title: 'ทางเข้าผู้ขาย / Affiliate', desc: 'ขายสินค้าจาก OpenThai.ai และรับค่าคอมมิชชั่นสูงสุด 30% ต่อการขาย พร้อม Dashboard ติดตาม real-time' },
+  { path: '/portals/affiliate', title: 'ทางเข้าผู้ขาย / Affiliate', desc: 'ขายสินค้าจาก OpenThai.ai และรับค่าคอมมิชชั่นสูงสุด 40% ต่อการขาย พร้อม Dashboard ติดตาม real-time' },
   { path: '/portals/creator', title: 'ทางเข้าผู้ร่วมสร้างคอนเทนต์', desc: 'ร่วมสร้างคอนเทนต์ AI จากทุกแพลตฟอร์ม TikTok / IG / YouTube ไม่จำกัดประเทศ' },
   { path: '/portals/consumer', title: 'ทางเข้าผู้บริโภค', desc: 'สมัครรับสิทธิพิเศษ ส่วนลด และสินค้าใหม่จากผู้ผลิตไทยก่อนใคร พร้อมคำแนะนำเฉพาะตัวจาก AI' },
   { path: '/portals/middleman', title: 'ทางเข้าคนกลาง / ตัวแทนจำหน่าย', desc: 'ตัวแทนจำหน่าย ผู้ค้าส่ง นายหน้า และคนกลางทุกประเภท เข้าร่วมเครือข่ายกระจายสินค้า OpenThaiAi' },

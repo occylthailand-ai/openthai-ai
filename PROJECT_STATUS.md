@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T21:14:29.926Z · branch `claude/daily-reporter-improvements-8vc9ct` (384 commit(s) ahead of main)
+Generated: 2026-07-16T21:19:56.344Z · branch `claude/daily-reporter-improvements-8vc9ct` (385 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 594 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 468 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Hourly loop: fix — /portals/affiliate showed the WRONG commission tiers (10/20/30% at ฿ thresholds; real code pays 20/30/40% at sales counts)
+
+Follow-up to the previous round's flagged "30% vs 40%" inconsistency — resolved against the **code source of truth**, not a guess. `backend/affiliate-tiers.js` (`AFFILIATE_TIERS`, consumed by `creditAffiliateSale()`/`tierForSales()`) is the real ladder: **starter 20% @ 0 sales, pro 30% @ 10 sales, elite 40% @ 50 sales**, and `total_sales` is a **count** (`aff.total_sales = (aff.total_sales||0)+1` per sale). The affiliate recruitment landing page `AffiliatePortalPage.jsx` advertised a completely different, hand-written table: **Starter 10% / Pro 20% / Elite 30%** at **฿0 / ฿50,000 / ฿200,000** thresholds — every rate understated by 10 points AND the unit wrong (baht spent vs. sales count). Its subtitle/benefits also promised "สูงสุด 30%" while the rest of the site (`/affiliate`, `i18n/affiliate.js`, `i18n/index.jsx`) and the code say 40%. A recruit saw one deal on the sign-up page and would be paid another — a real trust/dispute risk on the money-critical funnel the standing order prioritizes.
+
+**Fix:** corrected the tier table in all three languages (th/en/zh) to the real **20/30/40% at 0/10/50 sales**, fixed the subtitle + first benefit from "สูงสุด 30%"→"สูงสุด 40%" (and en/zh equivalents), and updated the `/portals/affiliate` SEO description in `frontend/scripts/seo-routes.mjs` (30%→40%). The tier card renders `ยอดขาย {min}+`, so `min` is now the bare count (0/10/50) — was "0 ฿ / 50,000 ฿ / 200,000 ฿", which had rendered the nonsensical "ยอดขาย 50,000 ฿+". Note this correction moves the advertised max **up** (30→40%), matching what the code already pays — no overstatement risk. Files: `frontend/src/pages/portals/AffiliatePortalPage.jsx`, `frontend/scripts/seo-routes.mjs`.
+
+**Verified by running:** added `frontend/src/__tests__/affiliatePortalTiers.test.js` — imports `AFFILIATE_TIERS` from the backend and asserts the page's displayed rates (20/30/40%) and thresholds (0/10/50) match it in all three language blocks, that the stale `rate:'10%'` is gone, and that no "สูงสุด/up to/高达/最高 30%" max-claim remains → **9/9**; **mutation-tested** — reverting one tier to `rate:'30%'` makes the guard fail (2/9), restored to green. Full frontend suite **138/138** (was 129); `npm run build` clean; and checked against the actual production output — `dist/portals/affiliate/index.html` meta now reads "ค่าคอมมิชชั่นสูงสุด 40%" and the wrong "200,000 ฿" threshold has 0 occurrences in `dist/assets/*.js`. Runs in the existing frontend CI.
 
 ### 2026-07-16 — Hourly loop: honesty/legal fix — removed the false "1,200+ creators already using it" claim (real count: 0 affiliates / 1 producer)
 
@@ -3136,54 +3144,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- ab271cd fix(content): remove false "1,200+ creators already using" claim (real: 0 affiliates / 1 producer) (26 seconds ago)
-- 47341ad chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 697cb45 fix(portals): capture producer category so the consumer digest can actually match (60 minutes ago)
+- 538be00 chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
+- ab271cd fix(content): remove false "1,200+ creators already using" claim (real: 0 affiliates / 1 producer) (6 minutes ago)
+- 47341ad chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
+- 697cb45 fix(portals): capture producer category so the consumer digest can actually match (65 minutes ago)
 - 56af28d chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - dc934b9 test(portals): pin honest-failure handling on every /portals/* page (4 hours ago)
 - 3990bb8 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 35c78a7 fix(affiliate): enforce ref_code uniqueness (stop commission hijacking) (4 hours ago)
-- 1d16bdc chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
