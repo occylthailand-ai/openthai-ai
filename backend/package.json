@@ -16,6 +16,7 @@
     "test:shop-commission": "node scripts/test-shop-commission.mjs",
     "test:ai-usage": "node scripts/test-ai-usage.mjs",
     "test:affiliate-tiers": "node scripts/test-affiliate-tiers.mjs",
+    "test:affiliate-payout": "node scripts/test-affiliate-payout.mjs",
     "test:credits": "node scripts/test-credits.mjs",
     "test:inventory": "node scripts/test-inventory.mjs",
     "test:producers": "node scripts/test-producers.mjs"

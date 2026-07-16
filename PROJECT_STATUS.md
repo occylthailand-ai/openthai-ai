@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T22:15:02.153Z · branch `claude/daily-reporter-improvements-8vc9ct` (388 commit(s) ahead of main)
+Generated: 2026-07-16T23:17:39.854Z · branch `claude/daily-reporter-improvements-8vc9ct` (389 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 598 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 472 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Hourly loop: fix — affiliate "paid" admin action could push paid_out past total_earned (double-pay of real commission)
+
+Audited the money-OUT path (`/api/affiliate/withdraw` → email-confirm → admin approve/reject/paid). The request/confirm side is solid: `reservedFor()` (sum of `pending`+`approved` withdrawals) is subtracted in `affPending()`, and `finalizeWithdraw()` re-checks the balance, so you can't stack pending requests beyond the balance. **But the admin `paid` action (server.js ~1720) added `paid_out += wd.amount` with no balance check.** Because `reservedFor()` only counts `pending`/`approved`, a `rejected` (or already-`paid`) request isn't reserved — so this sequence over-pays: reject request A → request + PAY request B up to the full balance (`paid_out = total_earned`) → then resurrect A (`rejected → approve → paid`). Nothing stopped the second pay, and `paid_out` silently exceeded `total_earned` — real commission paid twice. The `wd.status === 'paid'` guard only blocks re-paying the *same* record, not this cross-record path.
+
+**Fix:** extracted the invariant into a pure module `backend/affiliate-payout.js` — `payoutRemaining(aff) = max(0, total_earned − paid_out)` and `canPayout(aff, amount)` — same "extract money logic so it's deterministically unit-testable" rationale the repo already used for `affiliate-tiers.js`. The `paid` branch now returns **409** when `!canPayout(aff, wd.amount)` instead of blindly increasing `paid_out`; legitimate payments (amount ≤ remaining) are unchanged.
+
+**Verified by running (both the unit invariant AND the live endpoint):** new `scripts/test-affiliate-payout.mjs` → **14/14** (covers the full-balance/partial/zero/negative/float-drift cases and the exact resurrected-request over-pay scenario); **mutation-tested** — forcing `canPayout` to `true` fails 5 assertions, restored to green. Then **booted the real server** and hit the actual admin endpoint against seeded data: a resurrected 2000-baht request for a fully-paid affiliate (remaining 0) → **409** ("จ่ายไม่ได้: ยอดค้างจ่ายคงเหลือ ฿0…"), while a legit 500-baht request for an affiliate with 2000 remaining → **200, status `paid`, paid_out updated** (seeded via `backend/data`, then `git checkout` restored). `node --check` clean; `test:affiliate-tiers` still green (no regression); wired `test:affiliate-payout` into `package.json` + the CI `test.yml` unit-test step so it runs on every push.
 
 ### 2026-07-16 — Hourly loop (cross-repo: smart-e): fix — cancelling an order restored stock but never returned the customer's spend (total_spent inflated forever)
 
@@ -3150,54 +3158,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b5dd7d5 docs(decisions): log cross-repo smart-e fix (customer spend returned on cancel) (18 seconds ago)
-- 4d00de6 chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
-- 62715cf fix(affiliate): correct /portals/affiliate tier table to match real rates (20/30/40% at 0/10/50 sales) (55 minutes ago)
-- 538be00 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- ab271cd fix(content): remove false "1,200+ creators already using" claim (real: 0 affiliates / 1 producer) (61 minutes ago)
-- 47341ad chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 697cb45 fix(portals): capture producer category so the consumer digest can actually match (2 hours ago)
-- 56af28d chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 9109bde chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- b5dd7d5 docs(decisions): log cross-repo smart-e fix (customer spend returned on cancel) (63 minutes ago)
+- 4d00de6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 62715cf fix(affiliate): correct /portals/affiliate tier table to match real rates (20/30/40% at 0/10/50 sales) (2 hours ago)
+- 538be00 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- ab271cd fix(content): remove false "1,200+ creators already using" claim (real: 0 affiliates / 1 producer) (2 hours ago)
+- 47341ad chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 697cb45 fix(portals): capture producer category so the consumer digest can actually match (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3326,9 +3296,10 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 25 files)
+## Backend modules (backend/*.js — 26 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
+| `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
 | `affiliate-tiers.js` | 18 | Affiliate commission tiers — extracted from server.js so the money-critical |
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `auth.js` | 190 | JWT |
@@ -3347,7 +3318,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8808 | Vercel serverless detection |
+| `server.js` | 8817 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

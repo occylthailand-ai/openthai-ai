@@ -25,6 +25,7 @@ import {
 } from './omise-payment.js';
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
+import { payoutRemaining, canPayout } from './affiliate-payout.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
@@ -1719,6 +1720,14 @@ app.post('/api/affiliate/withdrawals/admin/:id', adminLimiter, (req, res) => {
   else if (action === 'reject') { wd.status = 'rejected'; wd.note = (req.body?.note || '').toString().slice(0, 200); }
   else if (action === 'paid') {
     const aff = affiliates.find(a => a.ref_code === wd.ref_code);
+    // จ่ายจริงต้องไม่ทำให้ paid_out เกิน total_earned — เดิม 'paid' บวก paid_out ทันทีโดยไม่เช็ค
+    // ยอดคงเหลือ ทำให้จ่ายเกินได้ผ่านลำดับ: reject คำขอหนึ่ง → ขอ+จ่ายคำขอใหม่จนเต็มยอด →
+    // แล้วชุบชีวิตคำขอเดิม (rejected → approve → paid) ซึ่ง reservedFor ดักไม่ได้เพราะสถานะ
+    // 'rejected'/'paid' ไม่นับใน reservedFor คำขอที่ยืนยันตอน finalize ก็ผ่านมาแล้วด้วยยอด ณ ตอนนั้น
+    // เช็คยอดค้างจ่ายจริง (canPayout) ตอนจ่ายจริงเป็นด่านสุดท้ายกันจ่ายซ้ำ/จ่ายเกิน
+    if (aff && !canPayout(aff, wd.amount)) {
+      return res.status(409).json({ success: false, error: `จ่ายไม่ได้: ยอดค้างจ่ายคงเหลือ ฿${payoutRemaining(aff)} ไม่พอกับคำขอ ฿${wd.amount} (อาจจ่ายคำขออื่นไปแล้ว)` });
+    }
     if (aff) { aff.paid_out = +((aff.paid_out || 0) + wd.amount).toFixed(2); saveAffiliate(aff).catch(() => {}); }
     wd.status = 'paid'; wd.paid_at = new Date().toISOString();
   }
