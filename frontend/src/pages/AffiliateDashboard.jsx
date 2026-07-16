@@ -437,7 +437,7 @@ export default function AffiliateDashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 16 }}>
             {[
               { icon: '📱', title: 'สคริปต์ TikTok 10 แบบ', text: `สร้างคอนเทนต์ TikTok ปัง ๆ ด้วย AI ไทยแท้ ใน 10 วินาที ⚡\nไม่ต้องคิดสคริปต์ ไม่ต้องเขียนแคปชั่น!\nทดลองฟรีที่ ${refLink}\n#Openthai.ai #AIไทยแท้ #TikTokContent`, key: 'script' },
-              { icon: '📘', title: 'Facebook Caption', text: `🚀 AI ไทยแท้ ช่วยสร้างคอนเทนต์ครบเซ็ตใน 10 วินาที!\n✅ สคริปต์ ✅ แคปชั่น ✅ แฮชแท็ก\nคนไทยกว่า 1,200 คนใช้แล้ว คอนเทนต์โตไวขึ้น 3 เท่า 📈\nทดลองใช้ฟรีที่ ${refLink}`, key: 'fb' },
+              { icon: '📘', title: 'Facebook Caption', text: `🚀 AI ไทยแท้ ช่วยสร้างคอนเทนต์ครบเซ็ตใน 10 วินาที!\n✅ สคริปต์ ✅ แคปชั่น ✅ แฮชแท็ก\nทดลองใช้ฟรี ไม่ต้องผูกบัตร ที่ ${refLink}`, key: 'fb' },
               { icon: '🐦', title: 'Twitter/X', text: `AI ไทยแท้ สร้างคอนเทนต์ TikTok ใน 10 วินาที 🤯\nใช้ฟรี ไม่ต้องสมัคร 👇\n${refLink}\n#AI #Thailand #Creator`, key: 'tw' },
               { icon: '💬', title: 'LINE Message', text: `สวัสดีครับ/ค่ะ 👋\nแนะนำ Openthai.ai — สร้างคอนเทนต์ TikTok ปังด้วย AI ไทยแท้ ใน 10 วิ!\nลองฟรีได้เลยที่ 👉 ${refLink}`, key: 'line' },
             ].map((k) => (
