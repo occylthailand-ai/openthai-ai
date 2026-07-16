@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T16:39:14.693Z · branch `claude/daily-reporter-improvements-8vc9ct` (376 commit(s) ahead of main)
+Generated: 2026-07-16T17:09:23.441Z · branch `claude/daily-reporter-improvements-8vc9ct` (378 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 586 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 588 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,12 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Hourly loop: fix — duplicate affiliate ref_code let one affiliate hijack another's commissions (revenue-critical)
+
+Option-1 real work, aligned with the standing order's "revenue first / B2B / recruit affiliates via the consent funnel". Audited the affiliate recruitment path and found a **money-attribution bug**: `registerAffiliateCore()` dedups only on **email**, but a signup can **propose its own `ref_code`** (`/api/affiliate/apply` accepts `ref_code`, sanitized to `[A-Za-z0-9_-]`). Nothing enforced ref_code uniqueness — so two affiliates (different emails) could hold the **same** `ref_code`. Every credit/withdrawal/dashboard path resolves an affiliate with `affiliates.find(a => a.ref_code === ref)` (**first match**): `creditAffiliateSale` (server.js:7435), `affPending`/`reservedFor`, the withdraw-confirm (1632/1709), and the dashboard (1451/1501/1587/1684). Result: a later affiliate who reuses an existing code has **all their referred sales credited to the first holder**, and can never be paid — a silent revenue theft / support nightmare. **Fix:** in `registerAffiliateCore`, after the email-dedup, enforce ref_code uniqueness — a **proposed** code that's already taken → `409 duplicate_code` ("รหัสแนะนำนี้ถูกใช้ไปแล้ว กรุณาเลือกรหัสอื่น"); an **auto-generated** code that collides (rare) → regenerate with a random suffix until unique. **Verified by running:** A proposes `COOL123` → 200; B (different email) proposes `COOL123` → **409**; C (no code) → unique `AFF######`. Added a permanent guard to `test-affiliate-flow.mjs` (a 2nd apply with a different email but the same `ref_code` must be 409) → **28/28** (was 27); **mutation-tested** — removing the uniqueness check makes the hijack return 200 and the guard fails (27/28), restored to green. `test:affiliate-tiers` 10/10, `node --check` clean, local `backend/data` restored. Runs in the existing affiliate E2E CI step.
+
+**Governance (same round):** recorded the owner's 2026-07-03 standing-order update (re-sent 2026-07-16) into `COLLABORATION_ROOM.md` — the 4-party Thai conversation (owner + Claude + Gemini + Grok) alongside the 6-platform room, the priority order (revenue→real→automation→extras, B2B-first, money-verification may stay human), and the explicit reading of "ค้นหา…เข้าสังกัด" as **improving the consent-based registration funnel, NOT scraping** (rule #3). **Verify-before-build:** the update's status claims — "v14.5 Hyper-Localization / Geo-IP 24/7", "Unified Algorithmic Core / Polymorphic+JSONB+Auto-Matching", "Chaos Engineering on prod", "100% Production Ready — Baseline Locked" — were grepped across all repos and return **0 matches**, so they are goals, not shipped state; flagged as such in the room (do not count as done without real, tested code).
 
 ### 2026-07-16 — Hourly loop: fix — public producer directory leaked every approved producer's email (PDPA / harvest vector)
 
@@ -3110,14 +3116,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 8e74df3 fix(privacy): stop the public producer directory from leaking producer emails (18 seconds ago)
-- 33b0239 chore: sync PROJECT_STATUS.md [skip ci] (17 minutes ago)
-- 1d51c32 fix(security): rate-limit the remaining 11 admin-key endpoints (close the whole class) (17 minutes ago)
-- 6765b08 chore: sync PROJECT_STATUS.md [skip ci] (28 minutes ago)
-- dce3067 fix(security): rate-limit the order-admin endpoints (customer PII, admin-key brute force) (28 minutes ago)
-- e259d3b chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- 494c245 docs(collab): record War Room round 1 — verified ETDA/v15.0 agenda has no basis in any repo; rejected scraping item (58 minutes ago)
-- b358cb4 chore: sync PROJECT_STATUS.md [skip ci] (66 minutes ago)
+- 35c78a7 fix(affiliate): enforce ref_code uniqueness (stop commission hijacking) (20 seconds ago)
+- 1d16bdc chore: sync PROJECT_STATUS.md [skip ci] (30 minutes ago)
+- 8e74df3 fix(privacy): stop the public producer directory from leaking producer emails (30 minutes ago)
+- 33b0239 chore: sync PROJECT_STATUS.md [skip ci] (47 minutes ago)
+- 1d51c32 fix(security): rate-limit the remaining 11 admin-key endpoints (close the whole class) (47 minutes ago)
+- 6765b08 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- dce3067 fix(security): rate-limit the order-admin endpoints (customer PII, admin-key brute force) (59 minutes ago)
+- e259d3b chore: sync PROJECT_STATUS.md [skip ci] (88 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3139,8 +3145,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
+  "uptime_sec": 177,
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3307,7 +3313,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8796 | Vercel serverless detection |
+| `server.js` | 8808 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
