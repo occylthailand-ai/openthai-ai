@@ -44,6 +44,23 @@ describe('PDPA consent wiring on every /portals/* page', () => {
       it('disables the submit button until consent is given', () => {
         expect(/disabled=\{\s*!consent\b/.test(src)).toBe(true);
       });
+      it('shows a real error on a failed submit — never a fake success', () => {
+        // submitLead() returns {ok:false,...} on a 400/429/500/network failure (fetch
+        // does not throw on 4xx/5xx). Each page must guard on that result and bail out
+        // BEFORE showing the success screen — otherwise a consenting applicant is told
+        // "we'll email you" while no lead was saved (the exact bug submitLead.js fixed).
+        // Pin: (1) the result is captured, (2) there's an `if (!<result>.ok) { … return }`
+        // guard, and (3) the success call setSent(true) appears only AFTER that guard.
+        const m = src.match(/(?:const|let)\s+(\w+)\s*=\s*await\s+submitLead\(/);
+        expect(m, 'captures the submitLead(...) result in a variable').toBeTruthy();
+        const v = m[1];
+        const guard = new RegExp(`if\\s*\\(\\s*!\\s*${v}\\.ok\\b[\\s\\S]{0,80}?return`);
+        expect(guard.test(src), `has an "if (!${v}.ok) … return" guard`).toBe(true);
+        const guardIdx = src.search(guard);
+        const successIdx = src.search(/setSent\(\s*true\s*\)/);
+        expect(successIdx, 'shows a success state via setSent(true)').toBeGreaterThan(-1);
+        expect(guardIdx, 'the !ok guard comes before setSent(true)').toBeLessThan(successIdx);
+      });
     });
   }
 });
