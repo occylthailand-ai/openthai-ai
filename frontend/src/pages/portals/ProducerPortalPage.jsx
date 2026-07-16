@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
+import { PORTAL_CATEGORIES as CATEGORIES } from '../../data/portalCategories';
 
 const T = {
-  th: { title:'ทางเข้าผู้ผลิต', sub:'เชื่อมต่อสินค้าของคุณกับตลาด AI ไทยและทั่วโลก', benefits:['ขายสินค้าผ่าน AI-powered store','เข้าถึงผู้ซื้อทั่วโลก','ระบบ inventory อัตโนมัติ','รายงานยอดขายแบบ real-time'], form:{ name:'ชื่อบริษัท/ผู้ผลิต', country:'ประเทศ', product:'ประเภทสินค้า/บริการ', email:'อีเมลติดต่อ', phone:'เบอร์โทร', submit:'ลงทะเบียนผู้ผลิต', ok:'ส่งคำขอเรียบร้อย! ทีมงานจะติดต่อกลับภายใน 24 ชม.' } },
-  en: { title:'Producer Portal', sub:'Connect your products to the Thai AI market and beyond', benefits:['Sell via AI-powered store','Reach global buyers','Automated inventory system','Real-time sales reports'], form:{ name:'Company / Producer Name', country:'Country', product:'Product / Service Type', email:'Contact Email', phone:'Phone Number', submit:'Register as Producer', ok:'Request received! Our team will contact you within 24 hours.' } },
-  zh: { title:'生产商门户', sub:'将您的产品连接到泰国AI市场及全球', benefits:['通过AI驱动的商店销售','接触全球买家','自动库存系统','实时销售报告'], form:{ name:'公司/生产商名称', country:'国家', product:'产品/服务类型', email:'联系邮箱', phone:'电话号码', submit:'注册为生产商', ok:'申请已收到！我们的团队将在24小时内与您联系。' } },
+  th: { title:'ทางเข้าผู้ผลิต', sub:'เชื่อมต่อสินค้าของคุณกับตลาด AI ไทยและทั่วโลก', benefits:['ขายสินค้าผ่าน AI-powered store','เข้าถึงผู้ซื้อทั่วโลก','ระบบ inventory อัตโนมัติ','รายงานยอดขายแบบ real-time'], form:{ name:'ชื่อบริษัท/ผู้ผลิต', country:'ประเทศ', product:'ประเภทสินค้า/บริการ', category:'หมวดสินค้า', email:'อีเมลติดต่อ', phone:'เบอร์โทร', submit:'ลงทะเบียนผู้ผลิต', ok:'ส่งคำขอเรียบร้อย! ทีมงานจะติดต่อกลับภายใน 24 ชม.' } },
+  en: { title:'Producer Portal', sub:'Connect your products to the Thai AI market and beyond', benefits:['Sell via AI-powered store','Reach global buyers','Automated inventory system','Real-time sales reports'], form:{ name:'Company / Producer Name', country:'Country', product:'Product / Service Type', category:'Product Category', email:'Contact Email', phone:'Phone Number', submit:'Register as Producer', ok:'Request received! Our team will contact you within 24 hours.' } },
+  zh: { title:'生产商门户', sub:'将您的产品连接到泰国AI市场及全球', benefits:['通过AI驱动的商店销售','接触全球买家','自动库存系统','实时销售报告'], form:{ name:'公司/生产商名称', country:'国家', product:'产品/服务类型', category:'产品类别', email:'联系邮箱', phone:'电话号码', submit:'注册为生产商', ok:'申请已收到！我们的团队将在24小时内与您联系。' } },
 };
 
 const CONSENT_TEXT = {
@@ -16,7 +17,7 @@ const CONSENT_TEXT = {
 
 export default function ProducerPortalPage() {
   const [lang, setLang] = useState('th');
-  const [form, setForm] = useState({ name:'', country:'', product:'', email:'', phone:'' });
+  const [form, setForm] = useState({ name:'', country:'', product:'', category:'OTOP', email:'', phone:'' });
   const [sent, setSent] = useState(false);
   const [consent, setConsent] = useState(false);
   const [err, setErr] = useState('');
@@ -56,7 +57,19 @@ export default function ProducerPortalPage() {
           <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #6366f133' }}>
             {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
             <form onSubmit={submit}>
-              {[['name',t.form.name],['country',t.form.country],['product',t.form.product],['email',t.form.email],['phone',t.form.phone]].map(([k,label]) => (
+              {[['name',t.form.name],['country',t.form.country],['product',t.form.product]].map(([k,label]) => (
+                <div key={k} style={{ marginBottom:16 }}>
+                  <label htmlFor={k} style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
+                  <input id={k} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                </div>
+              ))}
+              <div style={{ marginBottom:16 }}>
+                <label htmlFor="category" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.category}</label>
+                <select id="category" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              {[['email',t.form.email],['phone',t.form.phone]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:16 }}>
                   <label htmlFor={k} style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
                   <input id={k} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />

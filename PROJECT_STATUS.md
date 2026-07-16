@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T17:13:32.180Z · branch `claude/daily-reporter-improvements-8vc9ct` (380 commit(s) ahead of main)
+Generated: 2026-07-16T20:14:20.692Z · branch `claude/daily-reporter-improvements-8vc9ct` (381 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 590 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 464 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Hourly loop: fix — producer portal never captured a category, so the consumer digest could never match a portal-registered producer (silent engagement/revenue gap)
+
+Option-1 real work (consent funnel), aligned with "recruit producers + serve consumers". Traced the consumer digest end-to-end and found a **broken match at the core of the value prop**: `sendConsumerDigest()` (server.js:1206) recommends products with a strict `catalog.filter((p) => p.category === category)`, where `category` is the consumer's chosen interest. But the producer side of the funnel never supplied a category: `/portals/producer` (`ProducerPortalPage.jsx`) collected only name/country/product/email/phone, and `handleNewPortalLead()` auto-registered the producer **without passing `category`** — so `producers.register()` clamped every portal-registered producer to its fallback bucket **`'อื่นๆ'`** (producers.js:60). Net effect: a consumer who signs up saying "I'm interested in อาหาร" is promised "we'll email you matched products" but is counted `skipped_no_match` forever, because the only producers coming through the funnel all sit in `'อื่นๆ'`. **Fix (full path):** (1) added a category `<select>` to `ProducerPortalPage.jsx` (default `OTOP`, tri-lingual label); (2) passed `category: fd.category` through `handleNewPortalLead()` into `producers.register()` (register already whitelists it against `CATEGORIES`, so an unknown value still safely falls back to `'อื่นๆ'` — no new trust surface); (3) extracted the category list to a single source of truth `frontend/src/data/portalCategories.js` (`PORTAL_CATEGORIES`) and pointed both `ConsumerPortalPage.jsx` and `ProducerPortalPage.jsx` at it, since the two pages had **hand-duplicated** the list and the backend keeps its own copy — three places that must agree or the strict `===` silently breaks. **Verified by running:** focused end-to-end harness (portal-leads.submit → onNewLead → producers.register → catalog): producer submitted with `category:'สมุนไพร'` lands in catalog as `'สมุนไพร'` (was `'อื่นๆ'`), a producer with no category still falls back to `'อื่นๆ'`, and a consumer picking `'สมุนไพร'` now matches 1 approved producer in the digest → **5/5**. Added `frontend/src/__tests__/portalCategories.test.js` (drift guard: parses `CATEGORIES` from `backend/producers.js` and asserts strict deep-equality with `PORTAL_CATEGORIES`, and that both portal pages import the shared list rather than redeclaring their own) → **4/4**; full frontend suite **129/129** (was 125), `portalConsent.test.js` still **46/46** (form restructure didn't touch consent wiring), `npm run build` clean, backend `test-producers.mjs` 21/21 + `test-portal-leads.mjs` 20/20 unchanged. Runs in the existing frontend + backend CI.
 
 ### 2026-07-16 — Hourly loop: guard — pin honest-failure handling on every /portals/* page (no fake "signed up" on a rejected lead)
 
@@ -3120,54 +3124,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- dc934b9 test(portals): pin honest-failure handling on every /portals/* page (20 seconds ago)
-- 3990bb8 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- 35c78a7 fix(affiliate): enforce ref_code uniqueness (stop commission hijacking) (4 minutes ago)
-- 1d16bdc chore: sync PROJECT_STATUS.md [skip ci] (34 minutes ago)
-- 8e74df3 fix(privacy): stop the public producer directory from leaking producer emails (35 minutes ago)
-- 33b0239 chore: sync PROJECT_STATUS.md [skip ci] (51 minutes ago)
-- 1d51c32 fix(security): rate-limit the remaining 11 admin-key endpoints (close the whole class) (51 minutes ago)
-- 6765b08 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 56af28d chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- dc934b9 test(portals): pin honest-failure handling on every /portals/* page (3 hours ago)
+- 3990bb8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 35c78a7 fix(affiliate): enforce ref_code uniqueness (stop commission hijacking) (3 hours ago)
+- 1d16bdc chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 8e74df3 fix(privacy): stop the public producer directory from leaking producer emails (4 hours ago)
+- 33b0239 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 1d51c32 fix(security): rate-limit the remaining 11 admin-key endpoints (close the whole class) (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 426,
-  "memory_mb": "20.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

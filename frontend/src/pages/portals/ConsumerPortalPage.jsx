@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
-
-const CATEGORIES = ['OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อาหารสัตว์เลี้ยง', 'สินค้าดิจิทัล', 'อื่นๆ'];
+import { PORTAL_CATEGORIES as CATEGORIES } from '../../data/portalCategories';
 
 const T = {
   th: { title:'ทางเข้าผู้บริโภค', sub:'สมัครรับสิทธิพิเศษ ส่วนลด และสินค้าใหม่จากผู้ผลิตไทยก่อนใคร', benefits:['ส่วนลดพิเศษเฉพาะสมาชิก','แจ้งเตือนสินค้าใหม่ก่อนใคร','คำแนะนำสินค้าตรงใจด้วย AI','เข้าถึงร้านค้า/ผู้ผลิตที่ผ่านการรับรอง'], form:{ name:'ชื่อ', country:'ประเทศ', category:'หมวดสินค้าที่สนใจ', email:'อีเมล', submit:'สมัครเป็นผู้บริโภค', ok:'ยินดีต้อนรับ! เราจะแจ้งสินค้าและโปรโมชั่นที่ตรงใจให้ทางอีเมล' } },

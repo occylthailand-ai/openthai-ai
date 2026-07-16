@@ -1257,7 +1257,7 @@ async function handleNewPortalLead(lead) {
       // producers.register() (บังคับ consent เหมือนกันตั้งแต่ run 42) ไม่ใช่การเลี่ยงเช็ค
       const r = await producers.register({
         company: fd.name, contact_name: fd.name, email: lead.email,
-        phone: fd.phone, product_name: fd.product, consent: true,
+        phone: fd.phone, product_name: fd.product, category: fd.category, consent: true,
       });
       if (r.ok) console.log(`✅ Portal lead (producer) auto-registered เป็นใบสมัครผู้ผลิตจริง: ${lead.email}`);
       else console.warn(`[portal-leads] producer auto-register ไม่ผ่าน: ${r.error}`);
