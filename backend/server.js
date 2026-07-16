@@ -507,19 +507,19 @@ app.post('/api/producers/admin/update', adminLimiter, async (req, res) => {
 });
 
 // GET /api/orders/admin/summary + /list, POST /api/orders/admin/status (Admin Key)
-app.get('/api/orders/admin/summary', async (req, res) => {
+app.get('/api/orders/admin/summary', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, ...(await orders.summary()) }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.get('/api/orders/admin/list', async (req, res) => {
+app.get('/api/orders/admin/list', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, orders: await orders.all() }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.post('/api/orders/admin/status', async (req, res) => {
+app.post('/api/orders/admin/status', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await orders.setStatus(req.body?.id, req.body?.status, req.body?.note);
@@ -527,7 +527,7 @@ app.post('/api/orders/admin/status', async (req, res) => {
   res.json({ success: true, ...r });
 });
 // POST /api/orders/admin/ship — บันทึกเลขพัสดุ + ขนส่ง (Admin Key)
-app.post('/api/orders/admin/ship', async (req, res) => {
+app.post('/api/orders/admin/ship', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await orders.ship(req.body?.id, req.body || {});
@@ -535,7 +535,7 @@ app.post('/api/orders/admin/ship', async (req, res) => {
   res.json({ success: true, ...r });
 });
 // POST /api/orders/admin/deliver — ยืนยันถึงปลายทาง + หลักฐาน (เซ็นรับ/จุดฝาก) (Admin Key)
-app.post('/api/orders/admin/deliver', async (req, res) => {
+app.post('/api/orders/admin/deliver', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await orders.deliver(req.body?.id, req.body || {});
