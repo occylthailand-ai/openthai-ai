@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T10:12:32.049Z · branch `claude/daily-reporter-improvements-8vc9ct` (352 commit(s) ahead of main)
+Generated: 2026-07-16T11:14:24.228Z · branch `claude/daily-reporter-improvements-8vc9ct` (354 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 562 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 564 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: fix — PDPA erasure deleted user data on a bare GET (email link-scanners could auto-delete before the user clicks)
+
+Continuing the confirm-link audit: `GET /api/privacy/erasure/confirm?email&token` performed the **irreversible PDPA deletion immediately on GET** (waitlist, consents, producers, portal leads, affiliates). Destructive state change on GET is unsafe — corporate email link-scanners/prefetchers (Proofpoint, Microsoft Safe Links, Barracuda, etc.) fetch every link in an inbound email, so a user's data could be **deleted the moment the confirmation email arrives, before they read or click it** — irreversible, and PDPA erasure must be the user's deliberate act. (The affiliate-withdraw confirm has the same GET shape but is low-harm — it only creates an admin-reviewed *request*, is idempotent via splice-before-process — so left as-is this round; noted for a follow-up.) **Fix:** extracted the deletion into `performErasure(sanitized)`; `GET` now only renders a confirm **interstitial** (validates token, no side effect — safe for scanners) whose button `fetch()`es `POST /api/privacy/erasure/confirm?email&token`; the new `POST` handler re-validates the token and performs the deletion. Bots that only GET can't trigger it. Same token/scope preserved (withdrawals still not deleted). **Verified by running:** booted, seeded a consented producer, then: `GET` valid token → interstitial HTML, record NOT deleted (proven — the later `POST` returned `removed:1`); `GET` bad token → 403; `POST` valid → `{success,removed:1}`; `POST` again → `removed:0` (idempotent); `POST`/`GET` bad token → 403; `node --check` clean.
 
 ### 2026-07-15 — Hourly loop: warn in prod when JWT_SECRET is unset (security-token confirm links use a public fallback) — ⚠️ owner action
 
@@ -3066,14 +3070,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- fe24aa9 security: warn in prod when JWT_SECRET is unset (confirm-token fallback is public) (18 seconds ago)
-- f4a0f2f chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 1d72a5c test(pricing): guard index.html JSON-LD offer prices against drift (60 minutes ago)
-- 3d6c00d chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- dbc13be fix(learning): reject non-numeric ratings that corrupted pattern averages (2 hours ago)
-- c848d49 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- a041ce7 docs: log verified cross-repo domain inconsistency (owner decision needed) (4 hours ago)
-- 0c52435 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- ff0d226 fix(pdpa): don't delete user data on a bare GET (email scanners could auto-delete) (23 seconds ago)
+- 08d07c3 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- fe24aa9 security: warn in prod when JWT_SECRET is unset (confirm-token fallback is public) (62 minutes ago)
+- f4a0f2f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 1d72a5c test(pricing): guard index.html JSON-LD offer prices against drift (2 hours ago)
+- 3d6c00d chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- dbc13be fix(learning): reject non-numeric ratings that corrupted pattern averages (3 hours ago)
+- c848d49 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3095,8 +3099,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
+  "uptime_sec": 1,
+  "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3263,7 +3267,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8719 | Vercel serverless detection |
+| `server.js` | 8738 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
