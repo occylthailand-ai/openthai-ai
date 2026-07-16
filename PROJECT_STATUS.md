@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T16:22:31.242Z · branch `claude/daily-reporter-improvements-8vc9ct` (374 commit(s) ahead of main)
+Generated: 2026-07-16T16:39:14.693Z · branch `claude/daily-reporter-improvements-8vc9ct` (376 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 584 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 586 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Hourly loop: fix — public producer directory leaked every approved producer's email (PDPA / harvest vector)
+
+Option-1 real work (owner asked why defer — so did it this round, no deferral). Audited the B2B/OTOP discovery surface and found a PII leak: `GET /api/producers/search` — a **public, unauthenticated** endpoint powering `/find-producers` — returned each approved producer's raw **`email`** in its JSON. Anyone could `GET /api/producers/search?q=` (empty query) and **harvest the email of every approved producer** in one call — publishing personal contact data to the world with no gate (a PDPA concern, and the platform doing exactly the kind of bulk contact-harvesting the standing order forbids *us* from doing). **Verified it was pure over-exposure before removing:** `ProducerDirectoryPage.jsx` used `p.email` **only as a React key** (`key={p.email + i}`) — never displayed, no mailto/contact uses it. **Fix:** dropped `email` from the `/api/producers/search` response `.map(...)`, and changed the frontend key to `(p.company || 'p') + i` so it no longer depends on the removed field. **Left `/api/catalog` as-is on purpose** — its `email` IS functional: `CatalogPage` sends `producer_email` back to `POST /api/orders` to identify the producer at checkout, so removing it there would break ordering; switching that to an opaque producer id is a larger refactor, flagged in a code comment for a separate proposal. **Verified by running:** booted with `ADMIN_KEY`, applied a consented producer + product via `POST /api/producers/apply`, approved via `/api/producers/admin/status`, then: `GET /api/producers/search?q=` → 1 result with **no `email` field** (keys: category/company/description/price/product_name/stock/website); `GET /api/catalog` → **still** exposes the producer email (order flow intact). Frontend suite 116/116, `npm run build` clean, `node --check` clean; local `backend/data` restored after the boot. No test asserted the search-route email shape (existing producer tests assert on `catalog()`, unchanged).
 
 ### 2026-07-16 — Hourly loop: fix — close the brute-force-limit gap on the remaining 11 admin-key endpoints (systemic, not just orders)
 
@@ -3106,14 +3110,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 1d51c32 fix(security): rate-limit the remaining 11 admin-key endpoints (close the whole class) (19 seconds ago)
-- 6765b08 chore: sync PROJECT_STATUS.md [skip ci] (11 minutes ago)
-- dce3067 fix(security): rate-limit the order-admin endpoints (customer PII, admin-key brute force) (12 minutes ago)
-- e259d3b chore: sync PROJECT_STATUS.md [skip ci] (41 minutes ago)
-- 494c245 docs(collab): record War Room round 1 — verified ETDA/v15.0 agenda has no basis in any repo; rejected scraping item (41 minutes ago)
-- b358cb4 chore: sync PROJECT_STATUS.md [skip ci] (49 minutes ago)
-- 46e3548 docs(collab): add 6-platform collaboration room with Claude as maintainer (50 minutes ago)
-- 1dd6e14 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- 8e74df3 fix(privacy): stop the public producer directory from leaking producer emails (18 seconds ago)
+- 33b0239 chore: sync PROJECT_STATUS.md [skip ci] (17 minutes ago)
+- 1d51c32 fix(security): rate-limit the remaining 11 admin-key endpoints (close the whole class) (17 minutes ago)
+- 6765b08 chore: sync PROJECT_STATUS.md [skip ci] (28 minutes ago)
+- dce3067 fix(security): rate-limit the order-admin endpoints (customer PII, admin-key brute force) (28 minutes ago)
+- e259d3b chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 494c245 docs(collab): record War Room round 1 — verified ETDA/v15.0 agenda has no basis in any repo; rejected scraping item (58 minutes ago)
+- b358cb4 chore: sync PROJECT_STATUS.md [skip ci] (66 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3135,8 +3139,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 180,
-  "memory_mb": "21.9",
+  "uptime_sec": 0,
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3300,7 +3304,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `portal-leads.js` | 148 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `server.js` | 8796 | Vercel serverless detection |
