@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T04:11:46.447Z · branch `claude/daily-reporter-improvements-8vc9ct` (342 commit(s) ahead of main)
+Generated: 2026-07-16T05:11:53.337Z · branch `claude/daily-reporter-improvements-8vc9ct` (344 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 552 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 554 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: frontend guard that every /portals/* page keeps its PDPA consent wiring
+
+The nine `/portals/*` pages are the consent funnel's UI. Their backend (`/api/leads/submit` → portal-leads.js:71) **hard-rejects any lead without `consent:true`**, so if a page loses its consent wiring a real applicant who ticks the box is silently 400'd — the page shows only a generic error and nobody realizes the checkbox is the cause. The affiliate E2E rotted this exact way (consent requirement added, caller never updated). All nine pages are currently uniform (consent state, payload field, checkbox, submit gate) but **nothing guarded that uniformity**. Added `frontend/src/__tests__/portalConsent.test.js` (37 assertions — structural, over page source, same approach as `seoInvariants.test.js`) pinning on every `*PortalPage.jsx`: (1) `const [consent,setConsent]=useState(false)` — defaults false so the applicant must actively opt in; (2) `consent` is included in the `submitLead({...})` payload (so the server actually receives it); (3) a checkbox bound to the state (`type=checkbox` + `checked={consent}` + `onChange…setConsent`); (4) submit button `disabled={!consent…}` so an un-consented lead can't be sent. **Verified by running:** 37/37 pass, full frontend suite 112/112; **mutation-tested** — dropping `consent` from a page's submitLead payload fails it, and removing the `disabled={!consent}` gate fails it, both restored to green. Runs automatically in the existing frontend CI (`npm test -- --run`) — no workflow change.
 
 ### 2026-07-15 — Hourly loop: deterministic guard for the producer registration funnel (producers.js — main funnel + PDPA)
 
@@ -3046,14 +3050,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 2ae5884 test(producers): guard the registration funnel — consent, catalog safety, PDPA (21 seconds ago)
-- dc5bf73 chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
-- 5328389 test(affiliate): revive broken E2E guard, wire into CI, pin tier-promotion rate timing (56 minutes ago)
-- 349417e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 418ded5 test(inventory): guard the never-oversell invariant of the stock ledger (2 hours ago)
-- 8eb8abb chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- d4fbdd3 fix(shop): handle failed stock deduction after a successful charge (5 hours ago)
-- 68868b5 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- f8d6dee test(portals): guard PDPA consent wiring on all nine /portals/* pages (21 seconds ago)
+- f4a2c8f chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- 2ae5884 test(producers): guard the registration funnel — consent, catalog safety, PDPA (60 minutes ago)
+- dc5bf73 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 5328389 test(affiliate): revive broken E2E guard, wire into CI, pin tier-promotion rate timing (2 hours ago)
+- 349417e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 418ded5 test(inventory): guard the never-oversell invariant of the stock ledger (3 hours ago)
+- 8eb8abb chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3075,8 +3079,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 314,
-  "memory_mb": "20.7",
+  "uptime_sec": 795,
+  "memory_mb": "20.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
