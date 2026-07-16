@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { PLANS } from '../pages/PaymentPage';       // checkout tiers (what actually charges)
 import { PP_META } from '../pages/PricingPage';      // /pricing cards → route to /payment?plan=<id>
 import { PLAN_META } from '../pages/LandingPage';    // marketing landing pricing cards
@@ -32,6 +35,26 @@ describe('plan pricing consistency across the frontend', () => {
       expect(paymentPrice[key], `PaymentPage ${key}`).toBe(thb);
       expect(pricingPrice[key], `PricingPage ${key}`).toBe(thb);
       expect(landingPrice[key], `LandingPage ${key}`).toBe(thb);
+    }
+  });
+
+  it('index.html JSON-LD Offer prices match canon (what Google shows in rich results)', () => {
+    // The structured-data offers in index.html are the ONE pricing source not covered
+    // above — and they are hand-maintained. If they drift, Google advertises a price
+    // that no longer matches checkout (a trust/SEO defect: rich-result price ≠ what we
+    // charge). Parse the ld+json @graph and pin the SoftwareApplication offers to canon.
+    const here = dirname(fileURLToPath(import.meta.url));
+    const html = readFileSync(join(here, '..', '..', 'index.html'), 'utf8');
+    const m = html.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
+    expect(m, 'index.html has a ld+json block').toBeTruthy();
+    const graph = JSON.parse(m[1])['@graph'];
+    const app = graph.find((n) => n['@type'] === 'SoftwareApplication');
+    expect(app?.offers, 'SoftwareApplication has offers').toBeTruthy();
+    const offerPrice = Object.fromEntries(app.offers.map((o) => [String(o.name).toLowerCase(), num(o.price)]));
+    expect(Object.keys(offerPrice).sort()).toEqual(Object.keys(CANON).sort());
+    for (const [key, thb] of Object.entries(CANON)) {
+      expect(offerPrice[key], `JSON-LD Offer ${key}`).toBe(thb);
+      expect(app.offers.find((o) => String(o.name).toLowerCase() === key)?.priceCurrency, `JSON-LD Offer ${key} currency`).toBe('THB');
     }
   });
 
