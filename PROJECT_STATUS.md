@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T12:16:16.131Z · branch `claude/daily-reporter-improvements-8vc9ct` (356 commit(s) ahead of main)
+Generated: 2026-07-16T12:22:52.533Z · branch `claude/daily-reporter-improvements-8vc9ct` (358 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 566 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 568 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Hourly loop: fix — a bare GET cancelled a paying customer's subscription (the confirm-link thread was NOT actually complete)
+
+Re-swept every state-changing `GET /api/*...confirm` and found the confirm-link hardening thread had a **missed third instance** — and the highest-harm one. Last round's log claimed the thread was "complete (erasure + withdraw)", but `GET /api/payment/cancel/confirm` still **cancelled the subscription immediately on GET**: it flipped `entitlements[email].status='cancelled'`, saved, **and called `cancelSubscription()` against Omise**. Same anti-pattern, worse blast radius: an email link-scanner/prefetch (Proofpoint, MS Safe Links, Barracuda) hitting the confirmation link would **cancel a live, paying customer's subscription at the payment processor before they ever click** — silent revenue loss + a broken customer, with no undo. (The two-step email→confirm flow had been added run-14, but the confirm step itself was still a destructive GET.) `GET /api/privacy/access/confirm` was re-checked this round and is **read-only** (data export) — safe, left as-is. **Fix (same pattern as erasure/withdraw):** extracted the cancel into `async performPaymentCancel(sanitized)` returning `{ok, code, error}` or `{ok:true, plan, expires_at}`; `GET` now only renders a confirm **interstitial** (validates token, reads the entitlement to show plan + expiry, **no side effect**) whose button `POST`s; the new `POST` handler re-validates the token and calls `performPaymentCancel`. Not-found→404 / already-cancelled→400 preserved. **Verified by running:** seeded an `active` `pro` entitlement, then 14 assertions: `GET` valid → interstitial, **status stays `active`**; `GET` bad token → 403; **repeat GET → still `active`** (no side effect); `POST` bad token → 403 (still active); `POST` valid → `{success, plan:'pro'}` + status → `cancelled`; `POST` again → 400 `ยกเลิกไปแล้ว` (idempotent); `GET` after cancel → "already cancelled" page; unknown email `POST` → 404. **Mutation-tested** — reintroducing the cancel on GET fails 5 assertions (the "still active" ones), restored to green; `node --check` clean; local `backend/data` restored after the boot. **This time the sweep was exhaustive:** the remaining GET confirms — `/api/leads/unsubscribe`, `/api/broadcast/unsubscribe` (set a suppression flag, PDPA-favourable, non-destructive), `/api/privacy/access/confirm` (read-only export), `/api/auth/verify` (read-only) — carry no destructive side effect, so the confirm-link hardening is genuinely complete now.
 
 ### 2026-07-15 — Hourly loop: same GET→POST hardening for the affiliate-withdraw confirm (the follow-up noted last round)
 
@@ -3074,14 +3078,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- df91e37 fix(affiliate): don't create a withdrawal request on a bare GET (prefetch-safe) (23 seconds ago)
-- dd834e5 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- ff0d226 fix(pdpa): don't delete user data on a bare GET (email scanners could auto-delete) (62 minutes ago)
+- e44fe75 fix(payment): don't cancel a subscription on a bare GET (prefetch-safe) (20 seconds ago)
+- 64d7d15 chore: sync PROJECT_STATUS.md [skip ci] (7 minutes ago)
+- df91e37 fix(affiliate): don't create a withdrawal request on a bare GET (prefetch-safe) (7 minutes ago)
+- dd834e5 chore: sync PROJECT_STATUS.md [skip ci] (68 minutes ago)
+- ff0d226 fix(pdpa): don't delete user data on a bare GET (email scanners could auto-delete) (69 minutes ago)
 - 08d07c3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - fe24aa9 security: warn in prod when JWT_SECRET is unset (confirm-token fallback is public) (2 hours ago)
 - f4a0f2f chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 1d72a5c test(pricing): guard index.html JSON-LD offer prices against drift (3 hours ago)
-- 3d6c00d chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3102,9 +3106,9 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "elevenlabs": false,
   "watchdog": "idle",
   "last_watchdog": null,
-  "system_logs": 3,
-  "uptime_sec": 797,
-  "memory_mb": "19.9",
+  "system_logs": 2,
+  "uptime_sec": 0,
+  "memory_mb": "19.0",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3271,7 +3275,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8763 | Vercel serverless detection |
+| `server.js` | 8796 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
