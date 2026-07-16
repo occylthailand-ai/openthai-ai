@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T06:14:32.603Z · branch `claude/daily-reporter-improvements-8vc9ct` (346 commit(s) ahead of main)
+Generated: 2026-07-16T08:12:07.529Z · branch `claude/daily-reporter-improvements-8vc9ct` (348 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 556 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 558 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: fix — a non-numeric rating corrupted the learning-patterns feedback averages (NaN poisoning)
+
+Code scan of the in-system feedback loop (`/api/skills/learning/rate` → aggregated into `/api/skills/learning/patterns`, which also feeds the `/learning/enhance` prompt context). Real bug: the handler validated `rating < 1 || rating > 5` **before** coercing to a number, so a non-numeric `rating` such as `"abc"` slipped through (both comparisons are `false` against NaN), and then `Number("abc")=NaN` was added to `p.sum` → the pattern's `avg` became NaN **permanently** (serialized as `null`), corrupting `avg_rating` in the patterns report and the "learning from real users" context the enhance endpoint injects. **Reproduced live** before fixing: POST `rating:"abc"` returned HTTP 200 and the pattern's `avg_rating` flipped to `null`. **Fix:** coerce first (`const ratingNum = Number(rating)`) then validate `Number.isFinite(ratingNum) && 1 ≤ ratingNum ≤ 5`, and store `ratingNum`. **Verified by running:** after the fix, `rating:"abc"` → 400, `rating:0`/`6` → 400, valid `5` and numeric-string `"4"` → 200 with a correct numeric avg (4.5); `node --check` clean. Prevention-only — it stops new corruption; any already-NaN pattern from before would need a manual reset (noted, not auto-healed to keep the fix minimal).
 
 ### 2026-07-15 — ⏸️ Verified finding (OWNER DECISION): all-platform-files links users to a DIFFERENT domain than the rest of the ecosystem
 
@@ -3054,14 +3058,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- a041ce7 docs: log verified cross-repo domain inconsistency (owner decision needed) (26 seconds ago)
-- 0c52435 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- f8d6dee test(portals): guard PDPA consent wiring on all nine /portals/* pages (63 minutes ago)
-- f4a2c8f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 2ae5884 test(producers): guard the registration funnel — consent, catalog safety, PDPA (2 hours ago)
-- dc5bf73 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 5328389 test(affiliate): revive broken E2E guard, wire into CI, pin tier-promotion rate timing (3 hours ago)
-- 349417e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- dbc13be fix(learning): reject non-numeric ratings that corrupted pattern averages (20 seconds ago)
+- c848d49 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- a041ce7 docs: log verified cross-repo domain inconsistency (owner decision needed) (2 hours ago)
+- 0c52435 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- f8d6dee test(portals): guard PDPA consent wiring on all nine /portals/* pages (3 hours ago)
+- f4a2c8f chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 2ae5884 test(producers): guard the registration funnel — consent, catalog safety, PDPA (4 hours ago)
+- dc5bf73 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3083,8 +3087,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 1365,
-  "memory_mb": "20.7",
+  "uptime_sec": 226,
+  "memory_mb": "19.4",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3251,7 +3255,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 276 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8706 | Vercel serverless detection |
+| `server.js` | 8711 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
