@@ -6315,28 +6315,17 @@ app.post('/api/privacy/erasure', rateLimit({ windowMs: 3600000, max: 5 }), async
   res.json({ success: true, message: 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันการลบข้อมูลภายใน 30 วันตาม PDPA' });
 });
 
-app.get('/api/privacy/erasure/confirm', unsubLimiter, async (req, res) => {
-  const { email, token } = req.query;
-  if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
-  const sanitized = String(email).toLowerCase().trim();
-  if (token !== unsubToken(sanitized, 'erasure')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
-
-  // PDPA มาตรา 33 — ต้องลบข้อมูลส่วนบุคคลให้ครบทุกที่ที่ funnel เก็บไว้จริง เดิมลบแค่ waitlist +
-  // consents ทำให้คนที่สมัครเป็นผู้ผลิต/พันธมิตร หรือส่งฟอร์ม /portals/* ถูกแจ้งว่า "ลบข้อมูลแล้ว"
-  // ทั้งที่ชื่อ/อีเมล/เบอร์ (และเลขพร้อมเพย์ของ affiliate) ยังอยู่ครบ — คำยืนยันเป็นเท็จและผิด PDPA
+// PDPA มาตรา 33 — ลบข้อมูลส่วนบุคคลให้ครบทุกที่ที่ funnel เก็บไว้จริง (เดิมลบแค่ waitlist + consents
+// ทำให้ผู้ผลิต/พันธมิตร/ลีด portal ถูกแจ้งว่า "ลบแล้ว" ทั้งที่ยังอยู่ครบ) หมายเหตุ: ประวัติการถอนเงิน
+// (withdrawals) เป็นบันทึกธุรกรรมการเงิน จึงไม่ลบที่นี่ตามข้อยกเว้นเก็บตามกฎหมาย (ให้เจ้าของตัดสิน scope)
+async function performErasure(sanitized) {
   let removed = 0;
   const wIdx = waitlist.findIndex(w => w.email === sanitized);
   if (wIdx >= 0) { waitlist.splice(wIdx, 1); saveWaitlist(waitlist); removed++; }
   const cIdx = consents.findIndex(c => c.email === sanitized);
   if (cIdx >= 0) { consents.splice(cIdx, 1); saveConsents(consents); removed++; }
-
-  // ผู้ผลิต + portal leads (โมดูล dual-mode Supabase/ไฟล์)
   try { removed += (await producers.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] producers:', e.message); }
   try { removed += (await portalLeads.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] portalLeads:', e.message); }
-
-  // พันธมิตร (affiliate) — ระเบียนเก็บชื่อ/อีเมล/เบอร์ ลบทั้งไฟล์และ Supabase
-  // หมายเหตุ: ประวัติการถอนเงิน (withdrawals) เป็นบันทึกธุรกรรมการเงิน จึง "ไม่ลบ" ที่นี่ — PDPA
-  // ยกเว้นข้อมูลที่ต้องเก็บตามกฎหมายอื่น (บัญชี/ภาษี); ให้เจ้าของตัดสินใจ scope นี้ (ดู DECISIONS_LOG)
   const affBefore = affiliates.length;
   for (let i = affiliates.length - 1; i >= 0; i--) {
     if ((affiliates[i].email || '').toLowerCase() === sanitized) affiliates.splice(i, 1);
@@ -6349,9 +6338,39 @@ app.get('/api/privacy/erasure/confirm', unsubLimiter, async (req, res) => {
     }
     removed += (affBefore - affiliates.length);
   }
+  return removed;
+}
 
+// GET = หน้ายืนยันเท่านั้น ไม่ลบข้อมูล — destructive action ต้องไม่เกิดบน GET เพราะ email
+// link-scanner/prefetch (Proofpoint, MS Safe Links ฯลฯ) ยิง GET ลิงก์ในอีเมลอัตโนมัติ จะลบข้อมูลผู้ใช้
+// อย่างถาวรก่อนเจ้าตัวจะกดจริง การลบจริงเกิดเฉพาะตอนกดปุ่ม → POST (bot ที่ทำแต่ GET จะไม่ทริกเกอร์)
+app.get('/api/privacy/erasure/confirm', unsubLimiter, (req, res) => {
+  const { email, token } = req.query;
+  if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const sanitized = String(email).toLowerCase().trim();
+  if (token !== unsubToken(sanitized, 'erasure')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  const qs = `email=${encodeURIComponent(sanitized)}&token=${encodeURIComponent(String(token))}`;
+  res.send(`<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><body style="background:#0f0f1a;color:#f8fafc;"><div style="font-family:Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;line-height:1.7;padding:0 20px;">
+    <h2 style="color:#ef4444;">ยืนยันการลบข้อมูล</h2>
+    <p>คุณกำลังจะลบข้อมูลส่วนบุคคลทั้งหมดของ <strong>${escapeHtml(sanitized)}</strong> อย่างถาวรตาม PDPA — การกระทำนี้ย้อนกลับไม่ได้</p>
+    <button id="go" style="background:#ef4444;color:#fff;border:none;padding:12px 26px;border-radius:999px;font-size:16px;font-weight:700;cursor:pointer;">ยืนยันลบข้อมูลถาวร</button>
+    <p id="out" style="margin-top:18px;color:#94a3b8;"></p>
+    <script>
+      document.getElementById('go').onclick=function(){var b=this,o=document.getElementById('out');b.disabled=true;b.textContent='กำลังลบ...';fetch('/api/privacy/erasure/confirm?${qs}',{method:'POST'}).then(function(r){return r.json();}).then(function(d){if(d.success){b.style.display='none';o.textContent='✅ ลบข้อมูลเรียบร้อยแล้ว ('+d.removed+' รายการ)';}else{o.textContent='เกิดข้อผิดพลาด: '+(d.message||'');b.disabled=false;b.textContent='ยืนยันลบข้อมูลถาวร';}}).catch(function(){o.textContent='เชื่อมต่อไม่สำเร็จ ลองใหม่';b.disabled=false;b.textContent='ยืนยันลบข้อมูลถาวร';});};
+    </script>
+  </div></body></html>`);
+});
+
+// POST = ลบจริง (ต้องกดปุ่มบนหน้ายืนยันก่อน)
+app.post('/api/privacy/erasure/confirm', unsubLimiter, async (req, res) => {
+  const email = req.query.email || req.body?.email;
+  const token = req.query.token || req.body?.token;
+  if (!email || !token) return res.status(400).json({ success: false, message: 'ลิงก์ไม่ถูกต้อง' });
+  const sanitized = String(email).toLowerCase().trim();
+  if (token !== unsubToken(sanitized, 'erasure')) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
+  const removed = await performErasure(sanitized);
   addLog('info', 'PDPA', `🗑️ Erasure ยืนยันแล้ว: ${sanitized} — ลบแล้ว ${removed} รายการ`);
-  res.send(`<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยืนยันและลบข้อมูลเรียบร้อยแล้ว (${removed} รายการ)</div>`);
+  res.json({ success: true, removed });
 });
 
 // POST /api/privacy/access — สิทธิ์ขอเข้าถึง/ขอสำเนาข้อมูลส่วนบุคคล (PDPA มาตรา 30)
