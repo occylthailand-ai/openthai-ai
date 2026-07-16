@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T03:15:52.034Z · branch `claude/daily-reporter-improvements-8vc9ct` (340 commit(s) ahead of main)
+Generated: 2026-07-16T04:11:46.447Z · branch `claude/daily-reporter-improvements-8vc9ct` (342 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 550 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 552 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: deterministic guard for the producer registration funnel (producers.js — main funnel + PDPA)
+
+`producers.js` is the platform's **main onboarding funnel** and PDPA-critical, but had no dedicated test. Added `backend/scripts/test-producers.mjs` (21 assertions, file-store temp dir, no Supabase) pinning the invariants that matter for consent, public safety, and data-subject rights: (1) **consent gate** — `register` without `consent:true` is refused (PDPA); (2) required fields (company/contact/email); (3) field normalization (unknown category → `อื่นๆ`, price ≤0 → null, negative stock → 0); (4) **public catalog shows ONLY `approved` producers that actually have a `product_name`** — a pending/rejected applicant's product, or an approved producer with no product, must never be publicly listed (real safety property — unvetted goods must not appear in `/api/catalog`); (5) **re-applying with an already-approved/suspended email is refused (`already_registered`) and does NOT reset it to pending** — otherwise a duplicate application would silently pull a live product offline; re-apply while pending/rejected IS allowed (resets to pending); (6) `setStatus` rejects invalid statuses/unknown emails; (7) **PDPA erasure (มาตรา 33)** — `eraseByEmail` removes the record from `all()` and the catalog. Wired `test:producers` into the deterministic backend CI step. **Verified by running:** 21/21 pass; **mutation-tested** — removing the consent gate fails it, and letting the catalog filter drop the `status==='approved'` check (leaking unapproved producers publicly) fails it, both restored to green; `node --check` clean.
 
 ### 2026-07-15 — Hourly loop: revive the affiliate E2E guard (was silently broken + never in CI) + pin the tier-promotion rate-timing invariant
 
@@ -3042,14 +3046,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 5328389 test(affiliate): revive broken E2E guard, wire into CI, pin tier-promotion rate timing (20 seconds ago)
-- 349417e chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
-- 418ded5 test(inventory): guard the never-oversell invariant of the stock ledger (66 minutes ago)
-- 8eb8abb chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- d4fbdd3 fix(shop): handle failed stock deduction after a successful charge (4 hours ago)
-- 68868b5 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- cdae6a0 seo: disallow /admin from crawlers + pin sensitive routes stay excluded (5 hours ago)
-- a432f9b chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 2ae5884 test(producers): guard the registration funnel — consent, catalog safety, PDPA (21 seconds ago)
+- dc5bf73 chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
+- 5328389 test(affiliate): revive broken E2E guard, wire into CI, pin tier-promotion rate timing (56 minutes ago)
+- 349417e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 418ded5 test(inventory): guard the never-oversell invariant of the stock ledger (2 hours ago)
+- 8eb8abb chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- d4fbdd3 fix(shop): handle failed stock deduction after a successful charge (5 hours ago)
+- 68868b5 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3071,8 +3075,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 719,
-  "memory_mb": "19.8",
+  "uptime_sec": 314,
+  "memory_mb": "20.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
