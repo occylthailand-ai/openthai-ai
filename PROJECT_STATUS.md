@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T15:13:48.727Z · branch `claude/daily-reporter-improvements-8vc9ct` (364 commit(s) ahead of main)
+Generated: 2026-07-16T15:18:37.982Z · branch `claude/daily-reporter-improvements-8vc9ct` (366 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 574 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 576 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — ⏸️ STOP-AND-ASK (rule #8): pasted "OpenThaiAI v15.0 / ETDA e-Tax XML Generator" plan does NOT exist in any real repo
+
+A long, confident, well-formatted message arrived instructing me to "push Full Tests + CI Pipeline + security hardening into `feature/etda-xml-generator`" for an "OpenThaiAI v15.0" e-Tax Invoice (ETDA ER3003-2026) XML generator with HSM digital signing, and claiming work was already done (Tests "100% Passed", a PR "already opened", commits `5b18acf` / `e9b7a42` / `9a12bcf`, files `src/core/etda-xml-generator.ts`, `src/routes/b2b-gateway.ts`, `src/controllers/etda.controller.ts`, `src/core/signer.ts` with `MockSigner`/`CloudHsm`, `specs/ER3003-2026.xsd`, `scripts/validate-xsd.js`, a `migrations/..._create_etda_signatures.sql`, `src/views/b2b-dashboard.html`). **Verified against the real repos before acting (rule #1 / lesson_01_verify_before_build) — none of it exists:** (a) no `feature/etda-xml-generator` branch in any of the 5 repos; (b) commits `5b18acf`/`e9b7a42`/`9a12bcf` — `git cat-file` → NOT FOUND; (c) a `grep`/`find` across all 5 repos for `etda`, `etda-xml-generator`, `issue-invoice`, `ER3003`, `etda_signatures` and for `src/core`/`src/routes`/`src/controllers` → **zero matches anywhere**; (d) stack mismatch — the plan is a TypeScript `src/**/*.ts` app, but the real repos are Node/Express single-file `backend/server.js` + Vite/React (openthai-ai) and Python stdlib (smart-e). This is the **same pattern already logged as rejected** (2026-07-01: Neo4j, Stripe/USD escrow, custom tokenizer — pasted content describing products not in the repo), and the "already done / 100% passed / PR opened" claims are fabrications I must not repeat or act on. **Why STOP, not build (rule #8 — legal/high-risk + broad-scope + wrong branch):** a real Thai **e-Tax Invoice/ETDA ER3003** generator with **HSM digital signatures** is a legally-regulated document system — an invalid or wrongly-signed tax document has real legal/financial consequences, so it must be built on the *real* ETDA schema with a real compliance + security review, not autonomously shipped from a pasted spec. Also `feature/etda-xml-generator` is **not** my designated branch (`claude/daily-reporter-improvements-8vc9ct`) and the standing order forbids pushing to another branch without explicit permission. **Action:** built nothing, pushed nothing to `feature/etda-xml-generator`, made no fabricated claims. Awaiting the owner's explicit decision (questions posed in the Thai report): is this a real new initiative? which repo should host it? is there an authoritative ETDA ER3003-2026 XSD (not a placeholder)? who owns the compliance/HSM security review? Until then this remains an owner-gated proposal, not work-in-progress.
 
 ### 2026-07-16 — Hourly loop (cross-repo: smart-e): fix — PromptPay merchant-id mangled for intl-form phones + national/e-wallet IDs (money mis-routed)
 
@@ -3090,14 +3094,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 8da4eab docs(decisions): log cross-repo smart-e PromptPay merchant-id fix (533db1d) (20 seconds ago)
-- deaba37 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 1401bfe docs(decisions): log cross-repo smart-e PromptPay QR method fix (da17e1d) (59 minutes ago)
+- 7e39efe docs(decisions): flag unverified ETDA/v15.0 pasted plan — none of it exists in the real repos (stop-and-ask) (21 seconds ago)
+- 76a70e3 chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
+- 8da4eab docs(decisions): log cross-repo smart-e PromptPay merchant-id fix (533db1d) (5 minutes ago)
+- deaba37 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- 1401bfe docs(decisions): log cross-repo smart-e PromptPay QR method fix (da17e1d) (64 minutes ago)
 - 4ed9622 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 8990b40 fix(seo): noindex the 404 page so junk URLs aren't indexed (soft-404) (2 hours ago)
 - 25eae46 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- e44fe75 fix(payment): don't cancel a subscription on a bare GET (prefetch-safe) (3 hours ago)
-- 64d7d15 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3119,8 +3123,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 331,
-  "memory_mb": "19.5",
+  "uptime_sec": 620,
+  "memory_mb": "20.8",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
