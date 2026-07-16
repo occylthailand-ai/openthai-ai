@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T12:22:52.533Z · branch `claude/daily-reporter-improvements-8vc9ct` (358 commit(s) ahead of main)
+Generated: 2026-07-16T13:16:21.550Z · branch `claude/daily-reporter-improvements-8vc9ct` (360 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 568 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 570 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Hourly loop: fix — the 404 page was a crawlable soft-404 (every junk URL indexable, hurting market reach)
+
+Scanned the SEO surface for market-reach gaps (a standing-order priority). The advertised-routes side is well-guarded (`seoInvariants.test.js`: sitemap == robots Allow, every advertised path is real+public, sensitive routes Disallowed) and every public homepage-footer marketing link (`/pricing /store /catalog /find-producers /affiliate /join /about /privacy /terms`) is already in the sitemap — no missing-page gap this round. **Real defect found instead:** the SPA is served from Vercel, so **every unknown URL returns HTTP 200 with `index.html`**, whose `index.html:12` ships `<meta name="robots" content="index, follow">` — i.e. every mistyped/spam-crawled/bot-probed URL (`/wp-admin`, `/random-junk`, …) is explicitly advertised as **indexable**. Googlebot renders the JS, lands on `NotFoundPage`, and can index the 404 as a real thin/duplicate page — a classic **soft-404** that pollutes the index under the domain and wastes crawl budget (Search Console flags these). `NotFoundPage` set a `document.title` but did **nothing** about robots. **Fix:** `NotFoundPage` now flips `<meta name="robots">` to `noindex, follow` on mount and **restores the original value on unmount** (SPA navigation doesn't reload `index.html`, so a real route must get `index, follow` back — otherwise visiting 404 then navigating home would leave the whole app noindexed). Defensive: if no robots meta exists it creates one and removes it on unmount. **Verified by running:** new `frontend/src/__tests__/notFoundNoindex.test.jsx` (3 tests) renders the real component in jsdom and observes the meta flip: baseline `index, follow` → mounted `noindex, follow` → unmounted back to `index, follow`; plus the no-preexisting-meta create/cleanup path. **Mutation-tested** — neutering the fix (setting `index` instead of `noindex`) fails all 3, restored to green. Full frontend suite 116/116 (was 113), `npm run build` clean (sitemap still 22 urls). Runs in existing frontend CI (`npm test -- --run`) — no workflow change.
 
 ### 2026-07-16 — Hourly loop: fix — a bare GET cancelled a paying customer's subscription (the confirm-link thread was NOT actually complete)
 
@@ -3078,14 +3082,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- e44fe75 fix(payment): don't cancel a subscription on a bare GET (prefetch-safe) (20 seconds ago)
-- 64d7d15 chore: sync PROJECT_STATUS.md [skip ci] (7 minutes ago)
-- df91e37 fix(affiliate): don't create a withdrawal request on a bare GET (prefetch-safe) (7 minutes ago)
-- dd834e5 chore: sync PROJECT_STATUS.md [skip ci] (68 minutes ago)
-- ff0d226 fix(pdpa): don't delete user data on a bare GET (email scanners could auto-delete) (69 minutes ago)
-- 08d07c3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- fe24aa9 security: warn in prod when JWT_SECRET is unset (confirm-token fallback is public) (2 hours ago)
-- f4a0f2f chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 8990b40 fix(seo): noindex the 404 page so junk URLs aren't indexed (soft-404) (18 seconds ago)
+- 25eae46 chore: sync PROJECT_STATUS.md [skip ci] (53 minutes ago)
+- e44fe75 fix(payment): don't cancel a subscription on a bare GET (prefetch-safe) (54 minutes ago)
+- 64d7d15 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- df91e37 fix(affiliate): don't create a withdrawal request on a bare GET (prefetch-safe) (60 minutes ago)
+- dd834e5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- ff0d226 fix(pdpa): don't delete user data on a bare GET (email scanners could auto-delete) (2 hours ago)
+- 08d07c3 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3108,7 +3112,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.0",
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
