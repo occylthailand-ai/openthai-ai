@@ -95,6 +95,20 @@ jobs:
           kill $SP 2>/dev/null || true
           if [ "$RC" != "0" ]; then echo "─── shop-server.log ───"; cat /tmp/shop-server.log; fi
           exit $RC
+      - name: E2E — affiliate commission flow (signup→quickpay→webhook→credit→tier promotion)
+        working-directory: backend
+        run: |
+          OMISE_WEBHOOK_SECRET=testsecret ADMIN_KEY=ci-admin PORT=8897 node server.js > /tmp/aff-server.log 2>&1 &
+          SP=$!
+          for i in $(seq 1 20); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8897/api/health || echo 000)" = "200" ] && break
+            sleep 1
+          done
+          TEST_BASE=http://127.0.0.1:8897 OMISE_WEBHOOK_SECRET=testsecret node scripts/test-affiliate-flow.mjs
+          RC=$?
+          kill $SP 2>/dev/null || true
+          if [ "$RC" != "0" ]; then echo "─── aff-server.log ───"; cat /tmp/aff-server.log; fi
+          exit $RC
 
   # ── Quality: ตรวจ hardcoded secrets ────────────────────────────────────────
   quality:
