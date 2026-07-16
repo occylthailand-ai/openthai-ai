@@ -551,7 +551,7 @@ app.get('/api/disputes/admin/summary', adminLimiter, async (req, res) => {
   try { res.json({ success: true, ...(await disputes.summary()) }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.get('/api/disputes/admin/list', async (req, res) => {
+app.get('/api/disputes/admin/list', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, disputes: await disputes.all() }); }
@@ -716,7 +716,7 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
 });
 
 // GET /api/leads/admin/search — รวมลูกค้า/ลีดทุกแหล่ง (waitlist + affiliate + order) + ค้นหา/กรอง
-app.get('/api/leads/admin/search', async (req, res) => {
+app.get('/api/leads/admin/search', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try {
@@ -1687,14 +1687,14 @@ app.get('/api/affiliate/withdrawals', affReadLimiter, (req, res) => {
 });
 
 // ─── Admin: รายการ + อนุมัติ/ปฏิเสธ/จ่ายแล้ว (x-admin-key) ────────────────────
-app.get('/api/affiliate/withdrawals/admin', (req, res) => {
+app.get('/api/affiliate/withdrawals/admin', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const status = (req.query.status || '').toString();
   const list = status ? withdrawals.filter(w => w.status === status) : withdrawals;
   res.json({ success: true, count: list.length, withdrawals: list });
 });
-app.post('/api/affiliate/withdrawals/admin/:id', (req, res) => {
+app.post('/api/affiliate/withdrawals/admin/:id', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const wd = withdrawals.find(w => w.id === req.params.id);
@@ -1718,7 +1718,7 @@ app.post('/api/affiliate/withdrawals/admin/:id', (req, res) => {
 });
 
 // ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
-app.get('/api/affiliate/list', (req, res) => {
+app.get('/api/affiliate/list', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) {
     return res.status(401).json({ success: false, message: adminDenyMessage() });
@@ -6657,7 +6657,7 @@ app.delete('/api/memory', memoryLimiter, (req, res) => {
 // stored back into the same vector memory as type:'feedback', linked by metadata.reviewed_item_id.
 // This is the real version of "HITL validation": no separate system, reuses what's already deployed.
 // GET /api/memory/admin/review-queue — list content items + whether they've been reviewed (Admin Key)
-app.get('/api/memory/admin/review-queue', (req, res) => {
+app.get('/api/memory/admin/review-queue', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const tenantId = req.query.tenantId || 'global';
@@ -6677,7 +6677,7 @@ app.get('/api/memory/admin/review-queue', (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 // POST /api/memory/admin/review — submit a human rating/correction on a content item (Admin Key)
-app.post('/api/memory/admin/review', async (req, res) => {
+app.post('/api/memory/admin/review', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const { tenantId = 'global', item_id, human_rating, note, corrected_text, reviewed_by } = req.body || {};
@@ -6735,7 +6735,7 @@ app.get('/api/webhooks', (req, res) => {
 });
 
 // DELETE /api/webhooks/:id — unregister (Admin Key — ไม่มีหน้า UI เรียกอยู่ในปัจจุบัน จึงล็อกได้โดยไม่กระทบของเดิม)
-app.delete('/api/webhooks/:id', (req, res) => {
+app.delete('/api/webhooks/:id', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const result = webhooks.remove(req.params.id);
@@ -7832,7 +7832,7 @@ app.get('/api/payment/history', requireAuth, (req, res) => {
 });
 
 // GET /api/admin/stats — overview stats จริงสำหรับ Admin Panel
-app.get('/api/admin/stats', (req, res) => {
+app.get('/api/admin/stats', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
 
@@ -7857,7 +7857,7 @@ app.get('/api/admin/stats', (req, res) => {
 });
 
 // GET /api/payment/admin/summary — สรุปยอดขาย (ใช้ Admin Key header เหมือน affiliate)
-app.get('/api/payment/admin/summary', (req, res) => {
+app.get('/api/payment/admin/summary', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
 
@@ -8507,7 +8507,7 @@ app.post('/api/scheduler/execute/:id', (req, res) => {
 });
 
 // ลบโพสต์ในคิว Scheduler (Admin Key) — ต่างจาก /api/scheduler/process ที่ต้องเปิดไว้ให้ Vercel Cron ยิงได้
-app.delete('/api/scheduler/:id', (req, res) => {
+app.delete('/api/scheduler/:id', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const idx = schedulerStore.posts.findIndex(p => p.id === req.params.id);
