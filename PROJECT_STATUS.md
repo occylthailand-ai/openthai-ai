@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T17:09:23.441Z · branch `claude/daily-reporter-improvements-8vc9ct` (378 commit(s) ahead of main)
+Generated: 2026-07-16T17:13:32.180Z · branch `claude/daily-reporter-improvements-8vc9ct` (380 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 588 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 590 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Hourly loop: guard — pin honest-failure handling on every /portals/* page (no fake "signed up" on a rejected lead)
+
+Consent-funnel scan (priority #1). Verified the whole `/portals/*` submit path is currently honest: `submitLead.js` checks `res.ok && data.success` (fetch doesn't throw on 4xx/5xx) and returns `{ok:false,…}`, and all nine `*PortalPage.jsx` guard on it (`if (!r.ok) { setErr(…); return; } setSent(true)`). But **only the consent wiring was test-guarded** (`portalConsent.test.js`), not the honest-failure handling — even though the fake-success bug (showing "✅ we'll email you" while the backend rejected the lead with 400/429/500) actually shipped before and is exactly what `submitLead.js` was written to fix. A future page/refactor could drop the `!r.ok` guard and silently regress: a consenting applicant told they're signed up while **no lead is saved** — a direct hit to the recruitment funnel the standing order prioritizes. **Change:** added a 5th assertion per page to `portalConsent.test.js` (structural, same style) — the page must (1) capture the `await submitLead(...)` result, (2) have an `if (!<result>.ok) … return` guard, and (3) call `setSent(true)` **only after** that guard (source-order check). **Verified by running:** 46/46 in that file (was 37), full frontend suite **125/125** (was 116); **mutation-tested** — making one page call `setSent(true)` unconditionally fails its new assertion (1/46), restored to green. Test-only change; runs in the existing frontend CI. No product code touched (the funnel was already correct — this locks it).
 
 ### 2026-07-16 — Hourly loop: fix — duplicate affiliate ref_code let one affiliate hijack another's commissions (revenue-critical)
 
@@ -3116,14 +3120,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 35c78a7 fix(affiliate): enforce ref_code uniqueness (stop commission hijacking) (20 seconds ago)
-- 1d16bdc chore: sync PROJECT_STATUS.md [skip ci] (30 minutes ago)
-- 8e74df3 fix(privacy): stop the public producer directory from leaking producer emails (30 minutes ago)
-- 33b0239 chore: sync PROJECT_STATUS.md [skip ci] (47 minutes ago)
-- 1d51c32 fix(security): rate-limit the remaining 11 admin-key endpoints (close the whole class) (47 minutes ago)
-- 6765b08 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- dce3067 fix(security): rate-limit the order-admin endpoints (customer PII, admin-key brute force) (59 minutes ago)
-- e259d3b chore: sync PROJECT_STATUS.md [skip ci] (88 minutes ago)
+- dc934b9 test(portals): pin honest-failure handling on every /portals/* page (20 seconds ago)
+- 3990bb8 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- 35c78a7 fix(affiliate): enforce ref_code uniqueness (stop commission hijacking) (4 minutes ago)
+- 1d16bdc chore: sync PROJECT_STATUS.md [skip ci] (34 minutes ago)
+- 8e74df3 fix(privacy): stop the public producer directory from leaking producer emails (35 minutes ago)
+- 33b0239 chore: sync PROJECT_STATUS.md [skip ci] (51 minutes ago)
+- 1d51c32 fix(security): rate-limit the remaining 11 admin-key endpoints (close the whole class) (51 minutes ago)
+- 6765b08 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3145,8 +3149,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 177,
-  "memory_mb": "19.5",
+  "uptime_sec": 426,
+  "memory_mb": "20.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
