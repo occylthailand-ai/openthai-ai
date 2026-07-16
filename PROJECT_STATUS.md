@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T16:11:16.593Z · branch `claude/daily-reporter-improvements-8vc9ct` (372 commit(s) ahead of main)
+Generated: 2026-07-16T16:22:31.242Z · branch `claude/daily-reporter-improvements-8vc9ct` (374 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 582 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 584 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Hourly loop: fix — close the brute-force-limit gap on the remaining 11 admin-key endpoints (systemic, not just orders)
+
+Continued option 1. Last round fixed the 5 order-admin routes; this round swept **every** admin-key-gated endpoint and found the gap was systemic — **11 more admin routes had no rate limiter at all** (no `adminLimiter`, and there is no global `/api` limiter), so the `x-admin-key` could be brute-forced against them without throttle. They cover the app's most sensitive data: **PII** (`/api/leads/admin/search`, `/api/affiliate/list`, `/api/disputes/admin/list`, `/api/memory/admin/review-queue`, `/api/memory/admin/review`), **money** (`/api/affiliate/withdrawals/admin`, `/api/affiliate/withdrawals/admin/:id` — the withdrawal approve/reject endpoint, `/api/payment/admin/summary`, `/api/admin/stats`), and **destructive deletes** (`/api/webhooks/:id`, `/api/scheduler/:id`). **Fix:** added the existing `adminLimiter` (30 req/15 min per IP) to all 11 — the same middleware/instance the producer- and order-admin routes already use, no new config. Routes that already had their own limiter (`broadcastLimiter`, `memoryLimiter`) were left as-is. **Verified by running:** booted with `ADMIN_KEY=testkey`; `/api/leads/admin/search` no key → 401, `/api/affiliate/withdrawals/admin` valid key → 200 (auth intact); 35 wrong-key requests to the withdrawals (money) endpoint → **429** kicks in (limiter throttles guessing, was unlimited before). Re-scanned after the change: **0 admin-key-gated endpoints remain without a limiter** (whole class closed). `node --check` clean; local `backend/data` restored.
 
 ### 2026-07-16 — Hourly loop: fix — the order-admin endpoints (customer PII) had no brute-force rate limit, unlike every other admin route
 
@@ -3102,14 +3106,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- dce3067 fix(security): rate-limit the order-admin endpoints (customer PII, admin-key brute force) (26 seconds ago)
-- e259d3b chore: sync PROJECT_STATUS.md [skip ci] (30 minutes ago)
-- 494c245 docs(collab): record War Room round 1 — verified ETDA/v15.0 agenda has no basis in any repo; rejected scraping item (30 minutes ago)
-- b358cb4 chore: sync PROJECT_STATUS.md [skip ci] (38 minutes ago)
-- 46e3548 docs(collab): add 6-platform collaboration room with Claude as maintainer (39 minutes ago)
-- 1dd6e14 chore: sync PROJECT_STATUS.md [skip ci] (53 minutes ago)
-- 7e39efe docs(decisions): flag unverified ETDA/v15.0 pasted plan — none of it exists in the real repos (stop-and-ask) (53 minutes ago)
-- 76a70e3 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- 1d51c32 fix(security): rate-limit the remaining 11 admin-key endpoints (close the whole class) (19 seconds ago)
+- 6765b08 chore: sync PROJECT_STATUS.md [skip ci] (11 minutes ago)
+- dce3067 fix(security): rate-limit the order-admin endpoints (customer PII, admin-key brute force) (12 minutes ago)
+- e259d3b chore: sync PROJECT_STATUS.md [skip ci] (41 minutes ago)
+- 494c245 docs(collab): record War Room round 1 — verified ETDA/v15.0 agenda has no basis in any repo; rejected scraping item (41 minutes ago)
+- b358cb4 chore: sync PROJECT_STATUS.md [skip ci] (49 minutes ago)
+- 46e3548 docs(collab): add 6-platform collaboration room with Claude as maintainer (50 minutes ago)
+- 1dd6e14 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3131,8 +3135,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
+  "uptime_sec": 180,
+  "memory_mb": "21.9",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
