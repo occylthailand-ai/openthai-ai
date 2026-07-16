@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T02:10:23.724Z · branch `claude/daily-reporter-improvements-8vc9ct` (338 commit(s) ahead of main)
+Generated: 2026-07-16T03:15:52.034Z · branch `claude/daily-reporter-improvements-8vc9ct` (340 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 548 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 550 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-15 — Hourly loop: revive the affiliate E2E guard (was silently broken + never in CI) + pin the tier-promotion rate-timing invariant
+
+Found that `scripts/test-affiliate-flow.mjs` — the E2E money guard for affiliate signup→QuickPay→webhook→commission — **was not wired into CI at all** (only the pure `test:affiliate-tiers` unit test was), and when run it **failed 13/22**: STEP 1 signup broke because `/api/affiliate/apply` now enforces PDPA consent (`registerAffiliateCore`: `if (consent !== true) return 400`, added a later run) but the test never sent `consent:true`. So a whole affiliate money E2E existed but protected nothing and had rotted. Fixed the test (send `consent:true` — exercising the real consent gate, not bypassing it) and **wired it into the deterministic-ish backend CI as a booted-server E2E step** (own port 8897 + `OMISE_WEBHOOK_SECRET=testsecret` so the signed-webhook path is real), mirroring the shop-commission step. Also added **STEP 9** pinning the subtle rate-timing invariant that had no coverage: `creditAffiliateSale` computes commission at the **current** rate *before* the tier bump, so a promotion applies to the NEXT deal, not the one that triggers it (a 2-line reorder would silently overpay a just-promoted affiliate). Drives the affiliate across the starter→pro boundary (10 deals) and asserts by exact money math: 10 deals × 20% = ฿2,000 (promotion NOT retroactive), tier now pro/30%, then the 11th deal → +฿300 = ฿2,300 (new rate applies to the next deal). **Verified by running:** 27/27 pass against a booted server; **mutation-tested** — making the commission use the post-sale tier rate yields ฿2,100/฿2,400 and fails STEP 9, restored to green; `node --check` clean. Now every push/PR runs the full affiliate money path, including double-credit idempotency (STEP 8) and signature rejection (STEP 6) that were previously unguarded in CI.
 
 ### 2026-07-15 — Hourly loop: deterministic guard for the inventory ledger's never-oversell invariant (inventory.js)
 
@@ -3038,14 +3042,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 418ded5 test(inventory): guard the never-oversell invariant of the stock ledger (20 seconds ago)
-- 8eb8abb chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- d4fbdd3 fix(shop): handle failed stock deduction after a successful charge (3 hours ago)
-- 68868b5 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- cdae6a0 seo: disallow /admin from crawlers + pin sensitive routes stay excluded (4 hours ago)
-- a432f9b chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- ba04567 test(credits): deterministic guard for credit-ledger abuse invariants (5 hours ago)
-- 405f41b chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 5328389 test(affiliate): revive broken E2E guard, wire into CI, pin tier-promotion rate timing (20 seconds ago)
+- 349417e chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
+- 418ded5 test(inventory): guard the never-oversell invariant of the stock ledger (66 minutes ago)
+- 8eb8abb chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- d4fbdd3 fix(shop): handle failed stock deduction after a successful charge (4 hours ago)
+- 68868b5 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- cdae6a0 seo: disallow /admin from crawlers + pin sensitive routes stay excluded (5 hours ago)
+- a432f9b chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3067,8 +3071,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "uptime_sec": 719,
+  "memory_mb": "19.8",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
