@@ -29,6 +29,12 @@ ok(r.status === 200 && r.data?.success, `สมัคร affiliate (${REF})`);
 ok(r.data?.data?.ref_code === REF, `ได้ ref_code ตรง: ${r.data?.data?.ref_code}`);
 ok(Math.abs((r.data?.data?.commission_rate ?? 0) - 0.20) < 1e-9, `ค่าคอม 20%`);
 
+// ref_code ต้อง unique: ถ้าคนอื่น (email ต่างกัน) เสนอ ref_code เดียวกัน ต้องถูกปฏิเสธ —
+// ไม่งั้นทุกจุดที่ credit ยอด/ถอนเงินใช้ affiliates.find(a => a.ref_code === ref) จะเข้าคนแรกหมด
+// และยอดขายของคนหลังจะถูกยึดไปทั้งหมด (แก้แล้ว: registerAffiliateCore เช็ค ref_code ซ้ำ → 409)
+const dup = await j('POST', '/api/affiliate/apply', { name: 'Ref Hijacker', email: `dup_${EMAIL}`, platform: 'TikTok', ref_code: REF, consent: true });
+ok(dup.status === 409 && dup.data?.success === false, `ref_code ซ้ำถูกปฏิเสธ (409) — กันการยึด ref ของคนอื่น (got ${dup.status})`);
+
 console.log('\n=== STEP 2: นับคลิกลิงก์ ref ===');
 r = await j('POST', '/api/affiliate/click', { ref: REF });
 ok(r.status === 200 && r.data?.success, 'นับคลิกสำเร็จ');

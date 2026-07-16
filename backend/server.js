@@ -1370,7 +1370,19 @@ async function registerAffiliateCore(input) {
     return { ok: false, status: 409, message: 'อีเมลนี้สมัครไปแล้ว', duplicate: true };
   }
 
-  const finalCode = proposedCode || `AFF${Date.now().toString().slice(-6)}`;
+  // ref_code ต้องไม่ซ้ำ: ทุกจุดที่เครดิตยอดขาย/คิดค่าคอม/ถอนเงิน (creditAffiliateSale, affPending,
+  // reservedFor, withdraw confirm, dashboard) ค้นด้วย affiliates.find(a => a.ref_code === ref) ซึ่ง
+  // คืน "ตัวแรก" ที่เจอ เดิม dedup แค่ email — ผู้ใช้เสนอ ref_code เองได้ ถ้าซ้ำกับคนอื่น ยอดขายที่เข้ามา
+  // ทาง ?ref=CODE ของ affiliate คนหลังจะไปเข้าคนแรกทั้งหมด และคนหลังจะไม่มีวันได้รับเครดิต/ถอนเงินเลย
+  const codeTaken = (c) => affiliates.some((a) => a.ref_code === c);
+  let finalCode = proposedCode || `AFF${Date.now().toString().slice(-6)}`;
+  if (codeTaken(finalCode)) {
+    if (proposedCode) {
+      return { ok: false, status: 409, message: 'รหัสแนะนำ (ref code) นี้ถูกใช้ไปแล้ว กรุณาเลือกรหัสอื่น', duplicate_code: true };
+    }
+    // auto-gen ชนกันเอง (หายากแต่เป็นไปได้) → เติมสุ่มท้ายจนกว่าจะไม่ซ้ำ
+    do { finalCode = `AFF${Date.now().toString().slice(-6)}${Math.random().toString(36).slice(2, 5)}`; } while (codeTaken(finalCode));
+  }
   const record = {
     id: Date.now().toString(),
     name: String(name).trim().slice(0, 100),
