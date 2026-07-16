@@ -16,7 +16,8 @@
     "test:shop-commission": "node scripts/test-shop-commission.mjs",
     "test:ai-usage": "node scripts/test-ai-usage.mjs",
     "test:affiliate-tiers": "node scripts/test-affiliate-tiers.mjs",
-    "test:credits": "node scripts/test-credits.mjs"
+    "test:credits": "node scripts/test-credits.mjs",
+    "test:inventory": "node scripts/test-inventory.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
