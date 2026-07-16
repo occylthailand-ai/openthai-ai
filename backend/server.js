@@ -1182,6 +1182,14 @@ async function sendProducerApproval(to, company, product_name) {
 // ใช้ secret เดียวกับที่ tenant-manager.js ใช้อยู่แล้ว (fallback คงที่ ไม่ใช้ crypto.randomBytes
 // แบบ auth.js เพราะ token นี้ถูกส่งออกไปในอีเมลจริง ต้องยังใช้ได้แม้เซิร์ฟเวอร์ restart)
 const UNSUB_SECRET = process.env.JWT_SECRET || 'openthai-jwt-secret-2026';
+// unsubToken() signs security-sensitive one-click confirm links — unsubscribe,
+// PDPA data-erasure (/api/privacy/erasure/confirm) and affiliate withdrawals. If
+// JWT_SECRET is unset in production the fallback above is a PUBLIC, source-visible
+// constant, so anyone with repo access could forge those links (incl. deleting
+// another user's data). Warn loudly in the prod (Vercel) logs so it gets set.
+if (!process.env.JWT_SECRET && IS_VERCEL) {
+  console.warn('[SECURITY] JWT_SECRET is not set in production — unsubscribe / PDPA-erasure / affiliate-withdraw confirm tokens are derived from a public fallback secret and can be forged. Set JWT_SECRET in the Vercel environment.');
+}
 function unsubToken(email, type) {
   return createHmac('sha256', UNSUB_SECRET).update(`${email}:${type}`).digest('hex').slice(0, 16);
 }
