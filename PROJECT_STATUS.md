@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T15:32:09.792Z · branch `claude/daily-reporter-improvements-8vc9ct` (367 commit(s) ahead of main)
+Generated: 2026-07-16T15:33:05.171Z · branch `claude/daily-reporter-improvements-8vc9ct` (368 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 450 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 578 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Owner request: set up the 6-platform "collaboration room" (Claude as maintainer) — built honestly on the existing relay mechanism
+
+Owner instruction: add to `CLAUDE.md` a standing directive creating a "chat room" between six platforms (Microsoft Copilot + Claude + Gemini + Grok + GitHub + Vercel) to make OpenThaiAi genuinely usable + revenue-generating within one month, with **Claude as the room's maintainer**. **Honored the achievable, honest core of the request; did not fabricate a capability that doesn't exist.** Technical reality (already stated in `CLAUDE.md` "What that does NOT mean" and repeatedly in this log): there is **no live channel between the separate AI vendors** — no shared memory, no API. So a literal always-on multi-agent chat where Copilot/Gemini/Grok/Claude talk to each other automatically is not something that exists; claiming it would misrepresent real capability and (worse) let one AI's hallucination flow into real code unchecked — exactly the failure mode this log already records (Neo4j, Stripe escrow, the ETDA v15.0 plan). **What I built instead — a real, useful artifact:** `docs/ai-memory/COLLABORATION_ROOM.md`, a shared "room" document on the *same async, human-relayed mechanism* `core-philosophy.json` + `PROJECT_STATUS.md` already use (owner pastes the shared files into each AI, pastes replies back into the room). It defines the shared mission, each platform's real role (GitHub/Vercel connect automatically via API; the AI advisors are async + owner-relayed), the ground rules (verify-before-build, no "done" without running, consent policy, no off-branch pushes / no auto-merge, stop-and-ask on legal/high-risk, Thai + log everything), a current real-state snapshot, the open owner-gated decisions (incl. the ETDA question), and a per-round contribution template that Claude verifies against the real repo before acting. Added a concise `CLAUDE.md` section designating Claude as maintainer and stating plainly what the room is/ isn't. **Verified by running:** `node scripts/generate-project-status.mjs` → exit 0 (repo still consistent); files present; docs-only change (no runtime surface). Committed to the assigned branch, PR #79, no auto-merge.
 
 ### 2026-07-16 — ⏸️ STOP-AND-ASK (rule #8): pasted "OpenThaiAI v15.0 / ETDA e-Tax XML Generator" plan does NOT exist in any real repo
 
@@ -3094,16 +3098,54 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
+- 46e3548 docs(collab): add 6-platform collaboration room with Claude as maintainer (24 seconds ago)
 - 1dd6e14 chore: sync PROJECT_STATUS.md [skip ci] (14 minutes ago)
-- 7e39efe docs(decisions): flag unverified ETDA/v15.0 pasted plan — none of it exists in the real repos (stop-and-ask) (14 minutes ago)
-- 76a70e3 chore: sync PROJECT_STATUS.md [skip ci] (18 minutes ago)
-- 8da4eab docs(decisions): log cross-repo smart-e PromptPay merchant-id fix (533db1d) (19 minutes ago)
-- deaba37 chore: sync PROJECT_STATUS.md [skip ci] (77 minutes ago)
-- 1401bfe docs(decisions): log cross-repo smart-e PromptPay QR method fix (da17e1d) (77 minutes ago)
+- 7e39efe docs(decisions): flag unverified ETDA/v15.0 pasted plan — none of it exists in the real repos (stop-and-ask) (15 minutes ago)
+- 76a70e3 chore: sync PROJECT_STATUS.md [skip ci] (19 minutes ago)
+- 8da4eab docs(decisions): log cross-repo smart-e PromptPay merchant-id fix (533db1d) (20 minutes ago)
+- deaba37 chore: sync PROJECT_STATUS.md [skip ci] (78 minutes ago)
+- 1401bfe docs(decisions): log cross-repo smart-e PromptPay QR method fix (da17e1d) (78 minutes ago)
 - 4ed9622 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 8990b40 fix(seo): noindex the 404 page so junk URLs aren't indexed (soft-404) (2 hours ago)
 
-## Production health (⚠️ HTTP 403)
+## Production health (✅ reachable)
+```json
+{
+  "status": "ok",
+  "version": "2.1.0",
+  "charter_version": 2,
+  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "ai_primary": "✅ Claude Haiku",
+  "ai_fallback": "✅ Gemini Flash Latest",
+  "ai_active": "claude-haiku-4-5-20251001",
+  "google_oauth": true,
+  "affiliates": 0,
+  "waitlist": 0,
+  "agents": 0,
+  "active_agents": 0,
+  "line_oa": true,
+  "elevenlabs": false,
+  "watchdog": "idle",
+  "last_watchdog": null,
+  "system_logs": 2,
+  "uptime_sec": 0,
+  "memory_mb": "19.2",
+  "services": {
+    "news_rag": "✅ Active",
+    "news_rag_refresh": "✅ Auto cache clear every 4h",
+    "competitor_analysis": "✅ Active",
+    "tts": "⚠️ No API Key",
+    "line_oa": "✅ Active",
+    "auto_heal": "✅ Active (every 30 min)",
+    "agent_cron": "✅ Active (every hour)",
+    "watchdog": "✅ Active",
+    "diagnostics": "✅ Active",
+    "persistence": "✅ system_log + agents.json + agent_checkpoint",
+    "vector_memory": "✅ Active (semantic long-term memory)",
+    "webhook_system": "✅ Active (0 registered)",
+    "multi_tenant": "✅ Active (0 tenants)"
+  }
+}
+```
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
