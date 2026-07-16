@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-16T14:15:08.373Z · branch `claude/daily-reporter-improvements-8vc9ct` (362 commit(s) ahead of main)
+Generated: 2026-07-16T15:13:48.727Z · branch `claude/daily-reporter-improvements-8vc9ct` (364 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 572 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 574 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-16 — Hourly loop (cross-repo: smart-e): fix — PromptPay merchant-id mangled for intl-form phones + national/e-wallet IDs (money mis-routed)
+
+Continued the smart-e PromptPay audit from last round (the tag-01 method fix). Found a second, money-critical bug in the SAME function: the merchant identifier inside tag 29 — **the account the payment actually goes to** — was resolved wrong. `generate_promptpay_payload()` always used sub-tag 01 and blindly prefixed `"0066"`, so (a) a mobile already in international form (`"66..."` or `"+66..."`, how many Thai systems store E.164 numbers) became `"006666..."` — an **invalid PromptPay id that points at no real account, so the merchant never receives the money**; and (b) a 13-digit **national/tax id** (how a business/OTOP shop usually registers PromptPay) was mangled into sub-tag 01 instead of the correct sub-tag 02. **Reproduced by running** before fixing: `66812345678` → `006666812345678`. **Fix (smart-e `server.py`):** added `_resolve_promptpay_target()` — normalises a mobile in any local/intl/punctuated form to `("01", "0066"+9 digits)`, maps a 13-digit id to `("02", as-is)` and a 15-digit e-wallet to `("03", as-is)`; the canonical `0066`+9 (13-char) form is matched before the 13-digit national-id branch it would collide with. **Verified by running:** extended `test_server.py` (12 assertions, 34→46) driving `POST /api/payments/qr` with local/intl/punctuated mobiles + a national id + an e-wallet id, asserting the resolved tag-29 sub-field and a valid CRC-16 each; **mutation-tested** — restoring the blind `0066` prefix reproduces `006666...` and fails the intl-form assertions, restored to green; full suite 46/46; `ast.parse` clean. Committed to smart-e branch `claude/daily-reporter-improvements-8vc9ct` (`533db1d`, full detail in the commit message since smart-e has no DECISIONS_LOG) — on the open smart-e PR #1, no auto-merge.
 
 ### 2026-07-16 — Hourly loop (cross-repo: smart-e): fix — PromptPay QR used the wrong EMVCo method for reusable/no-amount codes
 
@@ -3086,14 +3090,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 1401bfe docs(decisions): log cross-repo smart-e PromptPay QR method fix (da17e1d) (17 seconds ago)
-- 4ed9622 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 8990b40 fix(seo): noindex the 404 page so junk URLs aren't indexed (soft-404) (59 minutes ago)
-- 25eae46 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- e44fe75 fix(payment): don't cancel a subscription on a bare GET (prefetch-safe) (2 hours ago)
-- 64d7d15 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- df91e37 fix(affiliate): don't create a withdrawal request on a bare GET (prefetch-safe) (2 hours ago)
-- dd834e5 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 8da4eab docs(decisions): log cross-repo smart-e PromptPay merchant-id fix (533db1d) (20 seconds ago)
+- deaba37 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 1401bfe docs(decisions): log cross-repo smart-e PromptPay QR method fix (da17e1d) (59 minutes ago)
+- 4ed9622 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 8990b40 fix(seo): noindex the 404 page so junk URLs aren't indexed (soft-404) (2 hours ago)
+- 25eae46 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- e44fe75 fix(payment): don't cancel a subscription on a bare GET (prefetch-safe) (3 hours ago)
+- 64d7d15 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3115,8 +3119,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.3",
+  "uptime_sec": 331,
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
