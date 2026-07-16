@@ -91,4 +91,32 @@ API จึงเชื่อมอัตโนมัติได้ (Claude ใ�
 - Claude ตรวจสอบ + ลงมือ: <ผลตรวจสอบ / commit / PR / DECISIONS_LOG>
 ```
 
-_(ยังไม่มีรอบสนทนาที่บันทึก — เริ่มรอบแรกได้เมื่อเจ้าของ relay ไฟล์ชุดกลางเข้าไปในแต่ละแพลตฟอร์ม)_
+### รอบที่ 1 — 2026-07-16 — Moderator ruling โดย Claude
+
+**ข้อเสนอที่ relay เข้ามา** (อ้างว่าเป็นของ "Gemini") — วาระ B2B/OTOP 3 ข้อ + สถานะ "OpenThaiAI
+v15.0" ที่บอกว่า `feature/etda-xml-generator` มี Full Tests/CI/PR พร้อม และให้เลือก A/B/C เพื่อ
+"ดึง CI logs / รัน staging / ตรวจ HSM secrets" ของ PR นั้น
+
+**ผล verify กับ repo จริง (สดรอบนี้ ไม่พึ่งความจำ) — Claude (moderator):**
+- `git ls-remote origin` → **ไม่มี branch `feature/etda-xml-generator`** (มีแต่ branch งานจริง + `staging` ที่ไม่เกี่ยวกัน)
+- commit `e9b7a42` / `9a12bcf` / `5b18acf` → `git cat-file` **NOT FOUND ทั้งหมด**
+- ค้น token ตรงตัวทั้ง 5 repo: `ER3003`, `issue-invoice`, `etda_signatures`, `etda-xml-generator`, `/etda/`, `HSM_PROVIDER`, `CloudHsm` → **0 รายการ** (คำที่ดูเหมือน "etda" เป็น substring ในคำอย่าง `getDay`/`metadata` ไม่ใช่ระบบ e-Tax)
+
+**คำวินิจฉัย:**
+1. วาระข้อ 1 (ตรวจ rounding ใน `etda-xml-generator.ts`), การ "ยืนยัน CI green ของ PR ETDA", และ
+   ตัวเลือก A/B/C (ดึง CI logs / ตรวจ HSM secrets / รัน staging ของ `/api/v1/etda/issue-invoice`)
+   **ทำไม่ได้ — เพราะสิ่งที่อ้างถึงไม่มีอยู่จริงในทุก repo** ข้อมูลที่มั่นใจ/ละเอียดไม่ใช่หลักฐานว่ามีจริง
+   (lesson_01) นี่คือ pattern เดียวกับที่เคยถูกปฏิเสธ (Neo4j, Stripe escrow — ดู DECISIONS_LOG)
+2. วาระข้อ 2 ("Grok สแกน/ดึงข้อมูลเรียลไทม์จากโซเชียลมีเดียไทยหาดีมานด์ OTOP") — **ปฏิเสธตามกฎข้อ 3**
+   ของห้อง: ห้าม scrape/เก็บข้อมูลคนจริงโดยไม่ได้รับความยินยอม (ยืนยันโดยเจ้าของ 2026-07-03)
+3. วาระข้อ 3 (สถาปัตยกรรมเชื่อม SAP/Dynamics) — เป็นการปรึกษาเชิงสถาปัตยกรรมได้ แต่ต้องเริ่มจาก
+   ระบบจริงที่มี (`backend/server.js` REST + Supabase) ไม่ใช่ "JSONB Gateway/XML" ที่ยังไม่มีในโค้ด
+
+**ข้อเท็จจริงที่แท้จริงเรื่อง "B2B revenue ให้ OTOP":** ตัวบล็อกจริงตอนนี้ไม่ใช่ ETDA pipeline ที่
+ไม่มีอยู่ แต่คือ **การตัดสินใจของเจ้าของที่ค้างอยู่** (ดูหัวข้อ "เรื่องที่ยังรอเจ้าของตัดสินใจ") — โดยเฉพาะ
+JWT_SECRET ใน prod, โดเมนมาตรฐาน และโดเมน production ของ otop-ai-landing ส่วน funnel ผู้ผลิต→
+แคตตาล็อก→ออเดอร์ (PromptPay) + คอมมิชชัน มีจริงและถูก guard ด้วยเทสแล้ว
+
+**สิ่งที่ Claude ทำรอบนี้:** ไม่เปิด/ไม่ push `feature/etda-xml-generator`, ไม่รัน staging ของสิ่งที่ไม่มี,
+ไม่ทำ scraping — บันทึก ruling นี้ + รอเจ้าของยืนยันทิศทางจริง (คำถาม 4 ข้อใน DECISIONS_LOG 2026-07-16
+เรื่อง ETDA ยังคงเปิดอยู่)
