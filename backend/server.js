@@ -7728,8 +7728,26 @@ app.post('/api/payment/cancel', paymentCancelLimiter, async (req, res) => {
   res.json({ success: true, message: 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันการยกเลิก' });
 });
 
-// GET /api/payment/cancel/confirm — ยืนยันผ่านลิงก์ในอีเมล แล้วค่อยยกเลิกจริง (pattern เดียวกับ erasure)
-app.get('/api/payment/cancel/confirm', unsubLimiter, async (req, res) => {
+// ยกเลิก subscription จริง — เรียกจาก POST เท่านั้น (คืน {ok, code, error} หรือ {ok:true, plan, expires_at})
+async function performPaymentCancel(sanitized) {
+  const ent = entitlements[sanitized];
+  if (!ent) return { ok: false, code: 404, error: 'ไม่พบสิทธิ์การใช้งานสำหรับอีเมลนี้' };
+  if (ent.status === 'cancelled') return { ok: false, code: 400, error: 'ยกเลิกไปแล้ว' };
+  if (ent.subscription_id && process.env.OMISE_SECRET_KEY) {
+    await cancelSubscription(ent.subscription_id);
+  }
+  ent.status = 'cancelled';
+  ent.updated_at = new Date().toISOString();
+  saveEntitlements(entitlements);
+  addLog('info', 'Entitlement', `✅ ยกเลิก subscription ยืนยันแล้ว: ${sanitized}`);
+  return { ok: true, plan: ent.plan, expires_at: ent.expires_at };
+}
+
+// GET = หน้ายืนยันเท่านั้น ไม่ยกเลิกจริง — destructive action ต้องไม่เกิดบน GET เพราะ email
+// link-scanner/prefetch (Proofpoint, MS Safe Links ฯลฯ) ยิง GET ลิงก์ในอีเมลอัตโนมัติ จะยกเลิก
+// subscription ของลูกค้าที่จ่ายเงินจริงก่อนเจ้าตัวจะกดจริง (และไปยกเลิกที่ Omise ด้วย) การยกเลิก
+// จริงเกิดเฉพาะตอนกดปุ่ม → POST (bot ที่ทำแต่ GET จะไม่ทริกเกอร์) — pattern เดียวกับ erasure
+app.get('/api/payment/cancel/confirm', unsubLimiter, (req, res) => {
   const { email, token } = req.query;
   if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
   const sanitized = String(email).toLowerCase().trim();
@@ -7737,19 +7755,34 @@ app.get('/api/payment/cancel/confirm', unsubLimiter, async (req, res) => {
   const ent = entitlements[sanitized];
   if (!ent) return res.status(404).send('ไม่พบสิทธิ์การใช้งานสำหรับอีเมลนี้');
   if (ent.status === 'cancelled') return res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">ยกเลิกไปแล้วก่อนหน้านี้</div>');
+  const qs = `email=${encodeURIComponent(sanitized)}&token=${encodeURIComponent(String(token))}`;
+  const until = ent.expires_at ? new Date(ent.expires_at).toLocaleDateString('th-TH') : '-';
+  res.send(`<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><body style="background:#0f0f1a;color:#f8fafc;"><div style="font-family:Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;line-height:1.7;padding:0 20px;">
+    <h2 style="color:#ef4444;">ยืนยันการยกเลิก subscription</h2>
+    <p>คุณกำลังจะยกเลิก subscription แผน <strong>${escapeHtml(String(ent.plan || ''))}</strong> สำหรับ <strong>${escapeHtml(sanitized)}</strong> — ยังใช้งานได้จนถึง <strong>${escapeHtml(until)}</strong></p>
+    <button id="go" style="background:#ef4444;color:#fff;border:none;padding:12px 26px;border-radius:999px;font-size:16px;font-weight:700;cursor:pointer;">ยืนยันการยกเลิก</button>
+    <p id="out" style="margin-top:18px;color:#94a3b8;"></p>
+    <script>
+      document.getElementById('go').onclick=function(){var b=this,o=document.getElementById('out');b.disabled=true;b.textContent='กำลังยกเลิก...';fetch('/api/payment/cancel/confirm?${qs}',{method:'POST'}).then(function(r){return r.json();}).then(function(d){if(d.success){b.style.display='none';o.textContent='✅ ยืนยันและยกเลิกเรียบร้อยแล้ว — ใช้งานแผน '+(d.plan||'')+' ได้จนถึง '+(d.until||'');}else{o.textContent='เกิดข้อผิดพลาด: '+(d.message||'');b.disabled=false;b.textContent='ยืนยันการยกเลิก';}}).catch(function(){o.textContent='เชื่อมต่อไม่สำเร็จ ลองใหม่';b.disabled=false;b.textContent='ยืนยันการยกเลิก';});};
+    </script>
+  </div></body></html>`);
+});
 
+// POST = ยกเลิกจริง (ต้องกดปุ่มบนหน้ายืนยันก่อน)
+app.post('/api/payment/cancel/confirm', unsubLimiter, async (req, res) => {
+  const email = req.query.email || req.body?.email;
+  const token = req.query.token || req.body?.token;
+  if (!email || !token) return res.status(400).json({ success: false, message: 'ลิงก์ไม่ถูกต้อง' });
+  const sanitized = String(email).toLowerCase().trim();
+  if (token !== unsubToken(sanitized, 'payment-cancel')) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
   try {
-    if (ent.subscription_id && process.env.OMISE_SECRET_KEY) {
-      await cancelSubscription(ent.subscription_id);
-    }
-    ent.status = 'cancelled';
-    ent.updated_at = new Date().toISOString();
-    saveEntitlements(entitlements);
-    addLog('info', 'Entitlement', `✅ ยกเลิก subscription ยืนยันแล้ว: ${sanitized}`);
-    res.send(`<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยืนยันและยกเลิกเรียบร้อยแล้ว — ใช้งานแผน ${ent.plan} ได้จนถึง ${new Date(ent.expires_at).toLocaleDateString('th-TH')}</div>`);
+    const r = await performPaymentCancel(sanitized);
+    if (!r.ok) return res.status(r.code).json({ success: false, message: r.error });
+    const until = r.expires_at ? new Date(r.expires_at).toLocaleDateString('th-TH') : '-';
+    res.json({ success: true, plan: r.plan, until });
   } catch (e) {
     addLog('error', 'Payment', `Cancel confirm failed: ${e.message}`);
-    res.status(500).send('เกิดข้อผิดพลาด กรุณาลองใหม่');
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่' });
   }
 });
 
