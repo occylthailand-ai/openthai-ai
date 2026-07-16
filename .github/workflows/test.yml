@@ -59,6 +59,7 @@ jobs:
           npm run test:affiliate-tiers
           npm run test:credits
           npm run test:inventory
+          npm run test:producers
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage
