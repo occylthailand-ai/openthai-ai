@@ -16,6 +16,29 @@ const DISPUTE_STATUS = ['open', 'ai_reviewed', 'resolved_supplier', 'resolved_bu
 const DECISIONS = ['favor_supplier', 'favor_buyer', 'refund'];
 const clip = (s, n = 800) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 
+// Party-facing projection of a dispute for the public /api/disputes/:id/track endpoint.
+// The stored dispute carries admin-only artifacts that must NOT reach the two disputing
+// parties: `ai_suggestion` is the AI arbitration draft written *for the human admin to
+// decide on* ("ไม่ใช่ตัดสินเอง") — its recommendation / confidence / reasoning and
+// especially `missing_evidence` (which literally spells out what proof would swing the
+// ruling) would let a party game the arbitration or dispute the human's final call; and
+// the admin's `resolution.note` + `resolved_by` are the internal rationale + which staffer
+// ruled. The resolved-notification email only ever reveals the `decision`, so the public
+// view matches that: parties see the reason, each other's counter_response, the status,
+// and the final decision + when — never the AI draft or the admin's internal note/identity.
+// Pure + exported for deterministic unit testing (same pattern as orders.publicOrderView).
+export function publicDisputeView(d) {
+  if (!d) return null;
+  const resolution = d.resolution
+    ? { decision: d.resolution.decision, resolved_at: d.resolution.resolved_at }
+    : null;
+  return {
+    id: d.id, order_id: d.order_id, opened_by: d.opened_by, reason: d.reason,
+    status: d.status, counter_response: d.counter_response, resolution,
+    created_at: d.created_at,
+  };
+}
+
 export function createDisputes(dataDir, opts = {}) {
   const { orders, callAI, parseAIJson, notify } = opts;
   const SB_URL = process.env.SUPABASE_URL;
@@ -145,14 +168,8 @@ export function createDisputes(dataDir, opts = {}) {
     if (!c || (c !== d.opener_contact && c !== otherPartyContact)) {
       return { ok: false, error: 'ช่องทางติดต่อไม่ตรงกับข้อพิพาทนี้' };
     }
-    return {
-      ok: true,
-      dispute: {
-        id: d.id, order_id: d.order_id, opened_by: d.opened_by, reason: d.reason, status: d.status,
-        ai_suggestion: d.ai_suggestion, counter_response: d.counter_response, resolution: d.resolution,
-        created_at: d.created_at,
-      },
-    };
+    // party-facing view — never leaks the admin-only AI arbitration draft or the admin's internal resolution note/identity
+    return { ok: true, dispute: publicDisputeView(d) };
   }
 
   // AI-assist — เสนอความเห็นให้ admin พิจารณา (ไม่ auto-resolve เงินจริง)

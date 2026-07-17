@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T13:17:13.242Z · branch `claude/daily-reporter-improvements-8vc9ct` (411 commit(s) ahead of main)
+Generated: 2026-07-17T14:14:15.194Z · branch `claude/daily-reporter-improvements-8vc9ct` (412 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 621 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 495 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop: fairness fix — the public dispute-tracking endpoint leaked the ADMIN-ONLY AI arbitration draft (recommendation + "what proof would win") to both parties
+
+Same class of leak as the order-track fix, in the escrow-dispute flow the buyer/producer reach from the delivered/cancelled emails. **Verified against the code:** `GET /api/disputes/:id/track` returned `ai_suggestion: d.ai_suggestion` and the full `resolution` object to whichever party's contact matched. But `ai_suggestion` is the AI arbitration draft written **for the human admin to decide on** — the module header says so explicitly ("การตัดสินเป็นหน้าที่ของ admin เสมอ — AI เป็นแค่ผู้ช่วยเสนอความเห็น … ไม่ auto-resolve"). It contains `recommendation` (favor_supplier/favor_buyer/refund), `confidence`, `reasoning`, and — worst — `missing_evidence`, which literally lists *what proof would swing the ruling*. Handing that to the two disputing parties lets a party game the arbitration (submit exactly the missing item) or contest the human's final call ("the AI said I should win"). The `resolution` object also carried the admin's internal `note` (rationale) and `resolved_by` (which staffer ruled) — while the resolved-notification email only ever reveals the `decision`. The frontend `DisputeTrackPage.jsx` happens to render only `counter_response.note` + `resolution.decision`, but that is **not** protection — the full `ai_suggestion`/note/identity were on the wire for anyone inspecting the response.
+
+**Fix:** extracted a pure `publicDisputeView(d)` in `backend/disputes.js` (module-level export, same pattern as `orders.publicOrderView`) and switched `track()` to it. The party-facing view keeps `id, order_id, opened_by, reason, status, counter_response, resolution{decision, resolved_at}, created_at` and **drops `ai_suggestion` entirely**, plus the admin's `resolution.note` + `resolved_by` and `opener_contact`. Matches exactly what the resolved email reveals (the decision). Admin endpoints (`/api/disputes/admin/list|summary`) still use `all()`/`summary()` and see everything. No frontend change (it already only uses the two preserved fields).
+
+**Verified by running BOTH unit + live endpoint:** extended `scripts/test-disputes.mjs` → **22/22** (was 10) — feeds a dispute with a fully-populated `ai_suggestion` (recommendation/confidence/reasoning/missing_evidence) + an internal `resolution.note`/`resolved_by`, and pins that none of it (nor `opener_contact`) survives the projection, while `reason`/`status`/`counter_response`/the final `decision`+`resolved_at` do (+ null/unresolved don't throw). Then **booted the real server**, created an order, had the buyer open a dispute via `POST /api/disputes`, and hit the **public** `/track`: the response keys were exactly `id,order_id,opened_by,reason,status,counter_response,resolution,created_at` with **`has ai_suggestion? false` / `leak missing_evidence? false`** — proving the endpoint routes through the projection (a populated suggestion structurally cannot leak, per the unit test). `node --check` clean; `test:disputes` already runs in CI; `backend/data` git-restored.
 
 ### 2026-07-17 — Hourly loop: privacy fix — the public order-tracking page leaked INTERNAL history notes to the buyer (Omise charge id, "race", admin remarks)
 
@@ -3226,54 +3234,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 00c8c16 fix(orders): stop leaking internal history notes to buyers on the public track page (20 seconds ago)
-- cad12c5 chore: sync PROJECT_STATUS.md [skip ci] (51 minutes ago)
-- a1e67b5 feat(shop): email the customer when their order is cancelled (incl. paid-but-oversold refund) (52 minutes ago)
-- ae3d3e8 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 7d7748f feat(shop): email the customer when their order is delivered (completes receipt→shipped→delivered) (60 minutes ago)
-- ce3d0b7 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 15b8260 feat(shop): email the customer when their order ships (tracking number + carrier) (6 hours ago)
-- 0666897 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 291293b chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- 00c8c16 fix(orders): stop leaking internal history notes to buyers on the public track page (57 minutes ago)
+- cad12c5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- a1e67b5 feat(shop): email the customer when their order is cancelled (incl. paid-but-oversold refund) (2 hours ago)
+- ae3d3e8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 7d7748f feat(shop): email the customer when their order is delivered (completes receipt→shipped→delivered) (2 hours ago)
+- ce3d0b7 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 15b8260 feat(shop): email the customer when their order ships (tracking number + carrier) (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.7",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3411,7 +3381,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `auth.js` | 190 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
-| `disputes.js` | 284 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
+| `disputes.js` | 301 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |

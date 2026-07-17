@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createDisputes } from '../disputes.js';
+import { createDisputes, publicDisputeView } from '../disputes.js';
 
 // Regression test — dispute resolution escrow mapping (money-safety).
 // Guards the fix that removed the "split" decision: it used to release the FULL
@@ -69,6 +69,33 @@ console.log('\n=== an already-resolved dispute cannot be re-resolved ===');
   await d.resolve(id, { decision: 'favor_supplier', note: '', resolved_by: 'admin' });
   const again = await d.resolve(id, { decision: 'favor_buyer', note: '', resolved_by: 'admin' });
   ok(again.ok === false, `re-resolve blocked: ${again.error}`);
+}
+
+console.log('\n=== publicDisputeView hides admin-only artifacts from the parties (the /track projection) ===');
+{
+  const internal = {
+    id: 'dsp_1', order_id: 'o1', opened_by: 'buyer', reason: 'ของไม่ตรงปก',
+    opener_contact: 'buyer@x.com', evidence: 'รูปสินค้า', status: 'resolved_buyer',
+    ai_suggestion: { recommendation: 'favor_buyer', confidence: 0.82, reasoning: 'หลักฐานฝั่งผู้ซื้อชัดกว่า', missing_evidence: ['ใบส่งของของผู้ผลิต'], source: 'ai' },
+    counter_response: { note: 'ส่งถูกต้องแล้ว', evidence: 'เลขพัสดุ', responded_at: '2026-07-17T00:00:00Z' },
+    resolution: { decision: 'favor_buyer', note: 'ผู้ผลิตรับปากจะปรับปรุง — internal', resolved_by: 'admin_jane', resolved_at: '2026-07-17T01:00:00Z' },
+    created_at: '2026-07-17T00:00:00Z',
+  };
+  const v = publicDisputeView(internal);
+  const asText = JSON.stringify(v);
+  ok(!('ai_suggestion' in v), 'the AI arbitration draft is NOT in the party-facing view');
+  ok(!asText.includes('favor_buyer') || !asText.includes('missing_evidence'), 'missing_evidence / AI recommendation not leaked');
+  ok(!asText.includes('ใบส่งของของผู้ผลิต'), 'the AI missing_evidence hint (what proof would win) is not leaked');
+  ok(!asText.includes('resolved_by') && !asText.includes('admin_jane'), 'which admin resolved it is not exposed');
+  ok(!asText.includes('internal'), "the admin's internal resolution note is not exposed");
+  ok(!('opener_contact' in v) && !asText.includes('buyer@x.com'), 'opener contact is not echoed back');
+  // ...but the legitimate party-facing content survives
+  ok(v.reason === 'ของไม่ตรงปก' && v.status === 'resolved_buyer', 'reason + status preserved');
+  ok(v.counter_response?.note === 'ส่งถูกต้องแล้ว', 'the other side’s counter_response is preserved (due process)');
+  ok(v.resolution?.decision === 'favor_buyer' && v.resolution?.resolved_at === '2026-07-17T01:00:00Z', 'final decision + when preserved (the outcome)');
+  ok(!('note' in (v.resolution || {})) && !('resolved_by' in (v.resolution || {})), 'resolution keeps only decision + resolved_at');
+  ok(publicDisputeView(null) === null, 'null → null (no crash)');
+  ok(publicDisputeView({ id: 'd', status: 'open' }).resolution === null, 'unresolved dispute → resolution null (no crash)');
 }
 
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
