@@ -26,6 +26,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
+import { isReceiptEmail, buildShopReceipt } from './shop-receipt.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
@@ -693,6 +694,8 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
       // เหมือน subscription/quickpay) เดิมร้านค้าเก็บ ref ไว้แค่ attribution ช่องทาง ไม่จ่ายคอมมิชชัน
       // เส้นบัตร/mock finalize ทันทีที่นี่ครั้งเดียว (PromptPay เครดิตใน webhook แทน — ไม่ซ้ำ)
       if (ref) creditAffiliateSale(String(ref).slice(0, 40), amount, { charge_id: charge?.charge_id || null, source: platform || 'shop' });
+      // ใบยืนยันคำสั่งซื้อถึงลูกค้า (ถ้า contact เป็นอีเมล) — เดิมลูกค้าร้านค้าไม่เคยได้อีเมลยืนยัน
+      sendShopReceipt({ contact, customer_name, product_name: p.name, qty, amount, order_id: orderId });
       return res.json({ success: true, paid: true, fulfilled: true, order_id: orderId, amount, stock_left: adj.stock, ...(charge || {}) });
     };
 
@@ -926,6 +929,20 @@ async function sendPaymentReceipt(to, { plan, amount_thb, charge_id, paid_at, me
     console.log(`📧 Receipt email ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
     console.error('Receipt email error:', err.message);
+  }
+}
+
+// ใบยืนยันคำสั่งซื้อสำหรับลูกค้าร้านค้า (/api/shop/checkout) — เดิมมีแต่อีเมลแจ้ง "เจ้าของร้าน"
+// ลูกค้าที่จ่ายเงินจริงไม่เคยได้ใบยืนยันเลย (ต่างจาก subscription ที่มี sendPaymentReceipt)
+// ส่งเฉพาะเมื่อ contact เป็นอีเมล (checkout รับเบอร์/LINE ได้ด้วย ซึ่งส่งอีเมลไม่ได้) best-effort
+async function sendShopReceipt(order) {
+  if (!mailer || !isReceiptEmail(order?.contact)) return;
+  const { subject, html } = buildShopReceipt(order);
+  try {
+    await mailer.sendMail({ from: `"Openthai Store" <${process.env.SMTP_USER}>`, to: order.contact, subject, html });
+    console.log(`📧 Shop receipt ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
+  } catch (err) {
+    console.error('Shop receipt email error:', err.message);
   }
 }
 
@@ -8039,6 +8056,8 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
                 // guard ด้วย status==='new' ด้านบนแล้ว → idempotent จ่ายครั้งเดียว (เส้นบัตรจ่ายใน finalizePaid)
                 const shopRef = shopChannel.startsWith('ref:') ? shopChannel.slice(4) : null;
                 if (shopRef) creditAffiliateSale(shopRef, data.amount / 100, { charge_id: data.id, source: 'shop' });
+                // ใบยืนยันคำสั่งซื้อถึงลูกค้า (เส้น PromptPay) — เหมือนเส้นบัตรใน finalizePaid
+                sendShopReceipt({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, qty: q, amount: data.amount / 100, order_id: shopOrderId });
                 addLog('info', 'OmiseWebhook', `Shop order finalized: ${shopOrderId} (stock -${q})`);
               }
             }

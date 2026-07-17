@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T06:12:40.562Z · branch `claude/daily-reporter-improvements-8vc9ct` (401 commit(s) ahead of main)
+Generated: 2026-07-17T06:21:20.243Z · branch `claude/daily-reporter-improvements-8vc9ct` (402 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 611 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 485 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop: gap fix — shop customers got NO purchase confirmation email (only the shop owner was notified)
+
+Revenue-path scan. **Verified the gap against the code:** `sendPaymentReceipt` is sent to the buyer only for subscription/plan payments (4 call sites), and the order-placed email (`to: order.producer_email || ORDER_NOTIFY_EMAIL`) goes to the shop **owner** — so a customer who pays via `/api/shop/checkout` (card or PromptPay) received **no confirmation of their own** (the `isEmailLike(order.contact)` recipient at server.js:987 is inside `sendDisputeNotification`, a different flow). A paying customer getting silence is a real trust gap on the store funnel.
+
+**Fix:** added a customer-facing receipt. Extracted the pure logic to `backend/shop-receipt.js` (`isReceiptEmail` + `buildShopReceipt` → {subject, html}; self-contained HTML-escaping) — same extract-for-testability pattern as affiliate-tiers/affiliate-payout. Added `sendShopReceipt(order)` in server.js (best-effort, emails only when the buyer's `contact` is an email — checkout also accepts phone/LINE which can't be emailed) and called it at **both** finalize points: the sync card/mock path in `finalizePaid`, and the PromptPay path in the Omise webhook shop-finalize. Fire-and-forget like `creditAffiliateSale`, so a mail failure never affects the purchase.
+
+**Verified by running BOTH the unit logic and the live endpoint:** `scripts/test-shop-receipt.mjs` (deterministic, no server) → **15/15** — receipt only for email contacts (phone/LINE/empty/undefined → false, no crash), body carries order id / product×qty / grouped ฿ total / customer name, and user fields are HTML-escaped (`<script>`, `&`, quotes) so nothing injects into the email. Then **booted the real server** (SMTP pointed at a fail-fast sink) and hit `/api/shop/checkout`: an **email** contact → a `Shop receipt` send is attempted (1 log line), a **phone** contact → **0** (correctly gated out); both checkouts still returned 200 (receipt never blocks the sale). `node --check` clean; wired `test:shop-receipt` into `package.json` + CI `test.yml`; `backend/data` git-restored after the boot.
 
 ### 2026-07-17 — Hourly loop: security fix — `/api/system/news-rag-clear` was also world-callable (cache-thrash); locked to cron/admin
 
@@ -3192,54 +3200,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 721f44a fix(security): require cron/admin auth on /api/system/news-rag-clear (was world-callable) (19 seconds ago)
+- 177cc8f chore: sync PROJECT_STATUS.md [skip ci] (9 minutes ago)
+- 721f44a fix(security): require cron/admin auth on /api/system/news-rag-clear (was world-callable) (9 minutes ago)
 - 464841c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 5e8a6c6 fix(security): require cron/admin auth on /api/autopost/process (was world-callable) (2 hours ago)
 - 69824cf chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - 8c7d9da test(portals): guard that every /portals/* lead type has a welcome email (no silent dead-end) (3 hours ago)
 - 58b83da chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 3062868 docs(decisions): log smart-e product-delete guard fix (4 hours ago)
-- 3f836de chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 691,
-  "memory_mb": "20.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3368,7 +3338,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 26 files)
+## Backend modules (backend/*.js — 27 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -3390,7 +3360,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8836 | Vercel serverless detection |
+| `server.js` | 8855 | Vercel serverless detection |
+| `shop-receipt.js` | 40 | Openthai Store purchase receipt — extracted so the "does this buyer get a receipt, |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
