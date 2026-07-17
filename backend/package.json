@@ -18,6 +18,7 @@
     "test:ai-usage": "node scripts/test-ai-usage.mjs",
     "test:affiliate-tiers": "node scripts/test-affiliate-tiers.mjs",
     "test:affiliate-payout": "node scripts/test-affiliate-payout.mjs",
+    "test:affiliate-public": "node scripts/test-affiliate-public.mjs",
     "test:shop-receipt": "node scripts/test-shop-receipt.mjs",
     "test:orders-track": "node scripts/test-orders-track.mjs",
     "test:credits": "node scripts/test-credits.mjs",

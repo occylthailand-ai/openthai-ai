@@ -26,6 +26,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
+import { publicAffiliateSales } from './affiliate-public.js';
 import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice, buildCancelledNotice } from './shop-receipt.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
@@ -1572,7 +1573,7 @@ app.get('/api/affiliate/stats/:ref_code', affReadLimiter, (req, res) => {
       conversions:     aff.total_sales     || 0,
       conversion_rate: aff.clicks > 0 ? +((aff.total_sales / aff.clicks) * 100).toFixed(1) : 0,
       monthly:         aff.monthly         || [],
-      recent_sales:    aff.recent_sales    || [],
+      recent_sales:    publicAffiliateSales(aff.recent_sales), // redact the buyer's Omise charge_id — this endpoint is public (ref_code-gated only)
       next_payout_date: nextPayout,
       joined_at:       aff.joined_at,
       status:          aff.status,

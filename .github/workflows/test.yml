@@ -59,6 +59,7 @@ jobs:
           npm run test:portal-welcome
           npm run test:affiliate-tiers
           npm run test:affiliate-payout
+          npm run test:affiliate-public
           npm run test:shop-receipt
           npm run test:orders-track
           npm run test:credits

@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T14:14:37.568Z · branch `claude/daily-reporter-improvements-8vc9ct` (413 commit(s) ahead of main)
+Generated: 2026-07-17T15:15:56.016Z · branch `claude/daily-reporter-improvements-8vc9ct` (414 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 623 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 497 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop: leak fix (3rd public-projection audit) — the unauthenticated affiliate stats endpoint exposed the referred buyer's Omise charge_id
+
+Third pass of the "what does a public endpoint actually put on the wire" audit (after orders-track and disputes-track). **Verified against the code:** `GET /api/affiliate/stats/:ref_code` has **no auth** — the ref_code is the only gate, and a ref_code travels in the affiliate's shareable links (a buyer who clicks an affiliate link sees `?ref=CODE` in the URL), so the code is effectively public. Its `recent_sales` came straight from `aff.recent_sales`, whose entries `creditAffiliateSale` stores as `{ amount_thb, commission, charge_id, source, at }` (server.js ~7561) — i.e. the **Omise `charge_id` of the referred buyer's transaction** was handed to anyone holding the ref link. The frontend `AffiliateDashboard.jsx` never renders it (it reads `id/plan/commission/date/status`), so the charge_id was pure wire-leak. **(Side finding, flagged not fixed — needs owner input:** that same `AffiliateDashboard` recent-sales table reads `s.id`/`s.plan`/`s.date`/`s.status`, none of which the stored record provides, so the Order-ID / package / date / status columns render blank/"pending" today. Populating them truthfully needs a product decision on what an affiliate sale's "Order ID" and "package" are, and likely enriching the stored record at credit time — out of scope for a leak fix, so left for the owner.)
+
+**Fix:** new pure module `backend/affiliate-public.js` — `publicAffiliateSale(sale)` / `publicAffiliateSales(list)` project each sale down to `{ amount_thb, commission, source, at, date:at }` and **drop `charge_id`** (same extract-for-testability pattern as `orders.publicOrderView` / `disputes.publicDisputeView`). The stats endpoint now maps `recent_sales` through it. The charge_id is **not deleted** — it stays in the stored `aff.recent_sales` for admin reconciliation; it just isn't exposed on the public endpoint. Also mirrors `at`→`date` so the dashboard's date column has the field it reads (a truthful, zero-guess bonus). No frontend change.
+
+**Verified by running BOTH unit + live endpoint:** new `scripts/test-affiliate-public.mjs` → **16/16** — feeds the exact stored shape (with `charge_id: 'ch_test_…'`) and pins that neither the key nor the id string survives, while amount/commission/source/at/date do, plus null/empty/non-object defenses and the list mapper. Then **booted the real server** (mock mode + `OMISE_WEBHOOK_SECRET`), ran the real credit path — `POST /api/affiliate/apply` → `POST /api/quickpay/create` (charge_id `mock_qp_…`) → signed `charge.complete` webhook → `GET /api/affiliate/stats/:ref` — and observed `recent_sales = [{amount_thb:1000, commission:200, source, at, date}]` with **`any sale carries charge_id key? false` / `response contains the charge id string? false`**, commission 200 intact. `node --check` clean; wired `test:affiliate-public` into `package.json` + CI `test.yml`; `backend/data` git-restored.
 
 ### 2026-07-17 — Hourly loop: fairness fix — the public dispute-tracking endpoint leaked the ADMIN-ONLY AI arbitration draft (recommendation + "what proof would win") to both parties
 
@@ -3234,54 +3242,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b57bbe6 fix(disputes): stop leaking the admin-only AI arbitration draft to the parties on public track (20 seconds ago)
-- 291293b chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- 00c8c16 fix(orders): stop leaking internal history notes to buyers on the public track page (58 minutes ago)
-- cad12c5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- a1e67b5 feat(shop): email the customer when their order is cancelled (incl. paid-but-oversold refund) (2 hours ago)
-- ae3d3e8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 7d7748f feat(shop): email the customer when their order is delivered (completes receipt→shipped→delivered) (2 hours ago)
-- ce3d0b7 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 1de177e chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- b57bbe6 fix(disputes): stop leaking the admin-only AI arbitration draft to the parties on public track (62 minutes ago)
+- 291293b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 00c8c16 fix(orders): stop leaking internal history notes to buyers on the public track page (2 hours ago)
+- cad12c5 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- a1e67b5 feat(shop): email the customer when their order is cancelled (incl. paid-but-oversold refund) (3 hours ago)
+- ae3d3e8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 7d7748f feat(shop): email the customer when their order is delivered (completes receipt→shipped→delivered) (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3410,10 +3380,11 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 27 files)
+## Backend modules (backend/*.js — 28 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
+| `affiliate-public.js` | 29 | Public-exposure boundary for the affiliate stats endpoint — extracted so the |
 | `affiliate-tiers.js` | 18 | Affiliate commission tiers — extracted from server.js so the money-critical |
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `auth.js` | 190 | JWT |
@@ -3432,7 +3403,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8918 | Vercel serverless detection |
+| `server.js` | 8919 | Vercel serverless detection |
 | `shop-receipt.js` | 98 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
