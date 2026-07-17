@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T01:15:35.049Z · branch `claude/daily-reporter-improvements-8vc9ct` (393 commit(s) ahead of main)
+Generated: 2026-07-17T02:12:24.324Z · branch `claude/daily-reporter-improvements-8vc9ct` (395 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 603 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 605 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,12 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop (cross-repo: smart-e): fix — product deletion faked success + destroyed sales history (orphaned order_items, lost reports)
+
+Continued the smart-e scan (openthai-ai's own money/dispute paths re-verified as solid — e.g. `disputes.js` `open()`/`respond()` contact gates are correct, and `order.producer_email` is always a clipped string so no `.toLowerCase()` crash; verified before assuming a bug). Found a real data-integrity issue in `_delete_product()`: it ran a bare `DELETE FROM products` and **always returned `{success:true}`** — even for a nonexistent id (UI shows "deleted" when nothing was) — and, because SQLite runs with **foreign keys off** (no `PRAGMA foreign_keys=ON`), hard-deleting a product referenced by `order_items` **silently orphaned those rows and erased the product's past sales from every report** (the top-products queries `INNER JOIN products` and drop orphaned rows, so historical revenue for a deleted product just vanishes).
+
+**Fix:** `_delete_product()` now returns **404** when the id doesn't exist (no fake success), and **409** when the product has any `order_items` (sales history) — deleting it would orphan them and lose the sales from reports; the owner can set stock to 0 to hide it from the storefront (`/api/shop/products` already filters `in_stock`) instead of destroying history. A never-sold product still deletes normally (200). **Verified by running** (real server + HTTP): never-sold product → 200 then GET 404; nonexistent id → 404; a product with one order → 409 refused and still present → **59/59** (was 54); **mutation-tested** — reverting to the bare delete fails the missing/sold/preserved assertions (56/59), restored; `py_compile` clean. Full detail in commit `23dbd50` (smart-e PR #1).
 
 ### 2026-07-17 — Hourly loop (cross-repo: smart-e): fix — /api/analytics top-products had the SAME cancelled-order leak (second copy of the dashboard bug)
 
@@ -3168,14 +3174,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- e28495b docs(decisions): log smart-e analytics top-products cancel-filter fix (16 seconds ago)
-- a875023 chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
-- d7f9ef8 docs(decisions): log cross-repo smart-e fix (top-products excludes cancelled orders) (3 minutes ago)
-- e9b16da fix(affiliate): block admin "paid" from pushing paid_out past total_earned (double-pay guard) (2 hours ago)
-- 9109bde chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- b5dd7d5 docs(decisions): log cross-repo smart-e fix (customer spend returned on cancel) (3 hours ago)
-- 4d00de6 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 62715cf fix(affiliate): correct /portals/affiliate tier table to match real rates (20/30/40% at 0/10/50 sales) (4 hours ago)
+- 3062868 docs(decisions): log smart-e product-delete guard fix (16 seconds ago)
+- 3f836de chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- e28495b docs(decisions): log smart-e analytics top-products cancel-filter fix (57 minutes ago)
+- a875023 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- d7f9ef8 docs(decisions): log cross-repo smart-e fix (top-products excludes cancelled orders) (60 minutes ago)
+- e9b16da fix(affiliate): block admin "paid" from pushing paid_out past total_earned (double-pay guard) (3 hours ago)
+- 9109bde chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- b5dd7d5 docs(decisions): log cross-repo smart-e fix (customer spend returned on cancel) (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3197,8 +3203,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 160,
-  "memory_mb": "20.2",
+  "uptime_sec": 0,
+  "memory_mb": "19.8",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
