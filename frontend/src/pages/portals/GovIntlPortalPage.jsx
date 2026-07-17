@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { consentLabel } from './consentLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 
@@ -8,11 +9,6 @@ const T = {
   zh: { title:'外国政府机构门户', sub:'面向全球政府的AI合作，无国家限制', services:['双边AI合作协议','政府间（G2G）项目','AI政策咨询','安全数据交换系统','多语言AI服务'], form:{ agency:'机构/部门名称', country:'国家', name:'联系人', position:'职务/职位', email:'官方邮箱', phone:'电话/WhatsApp', need:'感兴趣的合作领域', submit:'提交G2G申请', ok:'谢谢！我们的国际关系团队将在48小时内与您联系。' } },
 };
 
-const CONSENT_TEXT = {
-  th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#93c5fd' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
-  en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#93c5fd' }}>Privacy Policy (PDPA)</a></>,
-  zh: <>同意根据<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#93c5fd' }}>隐私政策（PDPA）</a>收集和使用我的数据</>,
-};
 
 export default function GovIntlPortalPage() {
   const [lang, setLang] = useState('en');
@@ -72,7 +68,7 @@ export default function GovIntlPortalPage() {
               </div>
               <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:14, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>
                 <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
-                <span>{CONSENT_TEXT[lang]}</span>
+                <span>{consentLabel(lang, '#93c5fd')}</span>
               </label>
               {err && <div role="alert" style={{ background:'#3a1618', border:'1px solid #ef4444', color:'#fca5a5', padding:'10px 14px', borderRadius:8, fontSize:13, marginBottom:12 }}>⚠️ {err}</div>}
               <button type="submit" disabled={!consent || busy} style={{ width:'100%', background:'#3b82f6', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: (consent && !busy) ? 'pointer' : 'not-allowed', opacity: (consent && !busy) ? 1 : 0.5 }}>{busy ? '...' : t.form.submit}</button>

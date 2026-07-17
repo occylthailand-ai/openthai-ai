@@ -25,6 +25,18 @@ describe('PDPA consent wiring on every /portals/* page', () => {
     expect(pages.length).toBe(9);
   });
 
+  it('the shared consentLabel() defines the label in all three languages (th/en/zh)', () => {
+    // The single source of truth for the PDPA consent copy. If a language goes missing here,
+    // consentLabel() falls back to Thai — but a zh/en visitor would then silently get Thai
+    // consent text instead of their own. Pin all three are present at the source.
+    const shared = readFileSync(join(portalsDir, 'consentLabel.jsx'), 'utf8');
+    const map = shared.match(/const\s+MAP\s*=\s*\{[\s\S]*?\n\s*\};/);
+    expect(map, 'consentLabel MAP present').toBeTruthy();
+    for (const lang of ['th', 'en', 'zh']) {
+      expect(new RegExp(`\\b${lang}\\s*:`).test(map[0]), `consentLabel MAP has a "${lang}" entry`).toBe(true);
+    }
+  });
+
   for (const file of pages) {
     const src = readFileSync(join(portalsDir, file), 'utf8');
     describe(file, () => {
@@ -44,17 +56,16 @@ describe('PDPA consent wiring on every /portals/* page', () => {
       it('disables the submit button until consent is given', () => {
         expect(/disabled=\{\s*!consent\b/.test(src)).toBe(true);
       });
-      it('has a consent LABEL in all three languages (th/en/zh)', () => {
-        // The checkbox label comes from a per-page CONSENT_TEXT map keyed by lang, rendered
-        // as <span>{CONSENT_TEXT[lang]}</span>. GovThaiPortalPage had lost its `zh` entry, so
-        // a Chinese-language visitor saw a consent box with a BLANK label — an un-informed
-        // consent (PDPA needs it informed) and a broken UI. The four checks above pass with a
-        // missing translation, so pin the label copy itself: every page must define th/en/zh.
-        const block = src.match(/const\s+CONSENT_TEXT\s*=\s*\{[\s\S]*?\n\};/);
-        expect(block, 'CONSENT_TEXT map present').toBeTruthy();
-        for (const lang of ['th', 'en', 'zh']) {
-          expect(new RegExp(`\\b${lang}\\s*:`).test(block[0]), `CONSENT_TEXT has a "${lang}" label`).toBe(true);
-        }
+      it('renders the checkbox label from the shared consentLabel() helper', () => {
+        // The label copy used to be a per-page CONSENT_TEXT map — nine near-identical copies
+        // that drifted (GovThai lost its `zh`, so a Chinese visitor saw a BLANK consent label:
+        // un-informed consent + broken UI). It now lives in one place (consentLabel.jsx). Pin
+        // that every page pulls the label from there and no stray per-page CONSENT_TEXT map
+        // has crept back in (which could silently drift again).
+        expect(/import\s*\{\s*consentLabel\s*\}\s*from\s*['"]\.\/consentLabel['"]/.test(src),
+          'imports consentLabel from ./consentLabel').toBe(true);
+        expect(/\bconsentLabel\(\s*lang\b/.test(src), 'renders consentLabel(lang, …)').toBe(true);
+        expect(/const\s+CONSENT_TEXT\s*=/.test(src), 'no per-page CONSENT_TEXT map remains').toBe(false);
       });
       it('shows a real error on a failed submit — never a fake success', () => {
         // submitLead() returns {ok:false,...} on a 400/429/500/network failure (fetch

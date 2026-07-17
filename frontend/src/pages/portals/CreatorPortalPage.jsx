@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { consentLabel } from './consentLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 
@@ -8,11 +9,6 @@ const T = {
   zh: { title:'内容创作者门户', sub:'利用AI跨平台创作内容，面向全球', platforms:['TikTok','Instagram','YouTube','Facebook','X (Twitter)','LinkedIn','Twitch','其他'], benefits:['免费AI内容创作工具','实时热点分析','自动排期系统','创作者计划收入'], form:{ name:'姓名/频道名', country:'国家', platform:'主要平台', followers:'粉丝数量（大约）', email:'邮箱', submit:'加入创作者计划', ok:'欢迎！请查看您的邮件获取访问详情。' } },
 };
 
-const CONSENT_TEXT = {
-  th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#f9a8d4' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
-  en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#f9a8d4' }}>Privacy Policy (PDPA)</a></>,
-  zh: <>同意根据<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#f9a8d4' }}>隐私政策（PDPA）</a>收集和使用我的数据</>,
-};
 
 export default function CreatorPortalPage() {
   const [lang, setLang] = useState('th');
@@ -74,7 +70,7 @@ export default function CreatorPortalPage() {
               </div>
               <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:16, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>
                 <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
-                <span>{CONSENT_TEXT[lang]}</span>
+                <span>{consentLabel(lang, '#f9a8d4')}</span>
               </label>
               {err && <div role="alert" style={{ background:'#3a1618', border:'1px solid #ef4444', color:'#fca5a5', padding:'10px 14px', borderRadius:8, fontSize:13, marginBottom:12 }}>⚠️ {err}</div>}
               <button type="submit" disabled={!consent || busy} style={{ width:'100%', background:'#ec4899', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: (consent && !busy) ? 'pointer' : 'not-allowed', opacity: (consent && !busy) ? 1 : 0.5, marginTop:8 }}>{busy ? '...' : t.form.submit}</button>

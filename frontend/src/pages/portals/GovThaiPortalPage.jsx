@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { consentLabel } from './consentLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 
@@ -7,11 +8,6 @@ const T = {
   en: { title:'Thai Government Agency Portal', sub:'Integrate AI into Thai public services for citizens', services:['AI systems for public services','Big data analytics','Automated chatbot responses','Government reports & dashboards','Cross-border translation system'], form:{ agency:'Agency Name', ministry:'Ministry / Department', name:'Contact Person', position:'Position / Title', email:'Official Email', phone:'Phone', need:'Primary Need', submit:'Submit Cooperation Request', ok:'Thank you! Our Government Relations team will contact you within 48 hours.' } },
 };
 
-const CONSENT_TEXT = {
-  th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#6ee7b7' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
-  en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#6ee7b7' }}>Privacy Policy (PDPA)</a></>,
-  zh: <>同意根据<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#6ee7b7' }}>隐私政策（PDPA）</a>收集和使用我的数据</>,
-};
 
 export default function GovThaiPortalPage() {
   const [lang, setLang] = useState('th');
@@ -71,7 +67,7 @@ export default function GovThaiPortalPage() {
               </div>
               <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:14, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>
                 <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
-                <span>{CONSENT_TEXT[lang] || CONSENT_TEXT.th}</span>
+                <span>{consentLabel(lang, '#6ee7b7')}</span>
               </label>
               {err && <div role="alert" style={{ background:'#3a1618', border:'1px solid #ef4444', color:'#fca5a5', padding:'10px 14px', borderRadius:8, fontSize:13, marginBottom:12 }}>⚠️ {err}</div>}
               <button type="submit" disabled={!consent || busy} style={{ width:'100%', background:'#10b981', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: (consent && !busy) ? 'pointer' : 'not-allowed', opacity: (consent && !busy) ? 1 : 0.5 }}>{busy ? '...' : t.form.submit}</button>

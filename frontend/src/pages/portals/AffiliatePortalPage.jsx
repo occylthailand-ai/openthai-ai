@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { consentLabel } from './consentLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 
@@ -8,11 +9,6 @@ const T = {
   zh: { title:'卖家/联盟门户', sub:'销售OpenThai.ai产品，赚取高达40%的佣金', benefits:['每次销售最高40%佣金','实时追踪仪表板','专属推荐链接','自动结算'], tiers:[{name:'入门级',rate:'20%',min:'0'},{name:'专业级',rate:'30%',min:'10'},{name:'精英级',rate:'40%',min:'50'}], form:{ name:'姓名', country:'国家', platform:'推广平台', email:'邮箱', submit:'申请联盟', ok:'申请已收到！您的联盟链接将发送到您的邮箱。' } },
 };
 
-const CONSENT_TEXT = {
-  th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#fcd34d' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
-  en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#fcd34d' }}>Privacy Policy (PDPA)</a></>,
-  zh: <>同意根据<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#fcd34d' }}>隐私政策（PDPA）</a>收集和使用我的数据</>,
-};
 
 export default function AffiliatePortalPage() {
   const [lang, setLang] = useState('th');
@@ -74,7 +70,7 @@ export default function AffiliatePortalPage() {
               ))}
               <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:16, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>
                 <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
-                <span>{CONSENT_TEXT[lang]}</span>
+                <span>{consentLabel(lang, '#fcd34d')}</span>
               </label>
               {err && <div role="alert" style={{ background:'#3a1618', border:'1px solid #ef4444', color:'#fca5a5', padding:'10px 14px', borderRadius:8, fontSize:13, marginBottom:12 }}>⚠️ {err}</div>}
               <button type="submit" disabled={!consent || busy} style={{ width:'100%', background:'#f59e0b', color:'#000', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: (consent && !busy) ? 'pointer' : 'not-allowed', opacity: (consent && !busy) ? 1 : 0.5, marginTop:8 }}>{busy ? '...' : t.form.submit}</button>

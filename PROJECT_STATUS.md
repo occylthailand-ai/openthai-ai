@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T21:11:25.754Z · branch `claude/daily-reporter-improvements-8vc9ct` (419 commit(s) ahead of main)
+Generated: 2026-07-17T22:11:50.748Z · branch `claude/daily-reporter-improvements-8vc9ct` (420 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 629 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 503 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop: refactor — collapsed the 9 duplicated portal consent-label maps into one shared source (kills the drift class behind the zh bug)
+
+Follow-up to the previous entry, doing what it flagged: the missing-`zh` consent bug was possible only because the PDPA consent label was **copy-pasted as a per-page `CONSENT_TEXT` map in all 9 `/portals/*` pages** — nine copies of legally-significant, translated copy whose only real difference was the privacy-link accent color. Patching one page and adding a language guard treated the symptom; the root cause was the duplication. **Fix:** extracted `frontend/src/pages/portals/consentLabel.jsx` — `consentLabel(lang, color)` returns the th/en/zh label JSX (link color parameterized, Thai fallback for an unknown lang so the box is never blank), plus `CONSENT_LANGS`. Replaced every page's `const CONSENT_TEXT = {…}` + `<span>{CONSENT_TEXT[lang]}</span>` with an import and `<span>{consentLabel(lang, '<page-color>')}</span>` (each page's exact prior color preserved: producer `#a5b4fc`, affiliate `#fcd34d`, consumer `#67e8f9`, creator `#f9a8d4`, middleman `#fdba74`, foundation/gov-thai `#6ee7b7`, gov-intl `#93c5fd`, intl-org `#c4b5fd`). The copy itself is byte-identical to what each page rendered before — only the storage moved. Net −25 lines. Also normalized Gov-Thai's lone `{CONSENT_TEXT[lang] || CONSENT_TEXT.th}` (the others had no fallback) — the shared helper now does the Thai fallback for all nine.
+
+**Guard updated** (`portalConsent.test.js`): the per-page "has all three languages" assertion (which read each page's now-removed `CONSENT_TEXT`) became "imports + renders `consentLabel(lang, …)` and no stray per-page `CONSENT_TEXT` map has crept back", plus one new top-level assertion that the shared `consentLabel.jsx` MAP defines th/en/zh. So a future dropped translation now fails at the single source, and a page re-inlining its own map also fails.
+
+**Verified by running:** `npx vitest portalConsent.test.js` → **56/56**; full `npm test` → **148/148** (was 147); `npm run build` (vite) clean — all 9 pages compile and prerender. Frontend-only; no backend/API/behaviour change (identical rendered label, same colors).
 
 ### 2026-07-17 — Hourly loop: PDPA/i18n fix — the Gov-Thai portal's consent checkbox had a BLANK label in Chinese (missing `zh` translation)
 
@@ -3256,54 +3264,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- a582adf fix(portals): restore the Chinese consent label on the Gov-Thai portal + guard it (25 seconds ago)
-- a04fe5a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- f43cafc fix(affiliate-ui): show real data in the sales-history table (was blank columns) (3 hours ago)
-- 9def958 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- c34942b fix(affiliate): stop leaking the referred buyer's Omise charge_id on the public stats endpoint (6 hours ago)
-- 1de177e chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
-- b57bbe6 fix(disputes): stop leaking the admin-only AI arbitration draft to the parties on public track (7 hours ago)
-- 291293b chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- 432d929 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- a582adf fix(portals): restore the Chinese consent label on the Gov-Thai portal + guard it (61 minutes ago)
+- a04fe5a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- f43cafc fix(affiliate-ui): show real data in the sales-history table (was blank columns) (4 hours ago)
+- 9def958 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- c34942b fix(affiliate): stop leaking the referred buyer's Omise charge_id on the public stats endpoint (7 hours ago)
+- 1de177e chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- b57bbe6 fix(disputes): stop leaking the admin-only AI arbitration draft to the parties on public track (8 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.7",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
