@@ -6159,6 +6159,15 @@ app.post('/api/system/auto-heal', async (req, res) => {
 
 // ── 4b. GET /api/system/news-rag-clear — Vercel Cron trigger (ทุก 4 ชม.) ─────
 app.get('/api/system/news-rag-clear', (req, res) => {
+  // Cron-or-admin auth (same shape as daily-report / consumer-digest / autopost-process).
+  // It was world-callable; the impact is small (it just clears a cache) but an open endpoint
+  // still lets anyone thrash the news cache and force repeated external re-fetches. Cron hits
+  // it with GET + Authorization: Bearer $CRON_SECRET. No frontend/internal caller — cron-only.
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const adminOk = checkAdminKey(req.headers['x-admin-key'] || req.query.key);
+  const cronOk  = !!process.env.CRON_SECRET && bearerToken === process.env.CRON_SECRET;
+  if (!adminOk && !cronOk) return res.status(401).json({ success: false, message: adminDenyMessage() });
   newsCache.data = null;
   newsCache.ts   = 0;
   addLog('info', 'Scheduler', '📰 News RAG cache cleared via cron — ข้อมูลสด');
