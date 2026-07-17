@@ -37,3 +37,31 @@ export function buildShopReceipt({ customer_name, product_name, qty, amount, ord
   </div>`;
   return { subject, html };
 }
+
+// Pure: build the {subject, html} of the "your order shipped" notice for the buyer.
+// Sent when an admin records a tracking number (/api/orders/admin/ship) — previously the
+// customer was never told their order shipped or given the tracking number.
+export function buildShippedNotice({ customer_name, product_name, tracking_no, carrier, order_id } = {}) {
+  const subject = `📦 คำสั่งซื้อ ${order_id || ''} จัดส่งแล้ว — Openthai Store`.trim();
+  const trackingRow = tracking_no
+    ? `<tr><td style="padding:8px 0;border-top:1px solid rgba(255,255,255,0.08);color:#94a3b8;">เลขพัสดุ</td><td style="padding:8px 0;border-top:1px solid rgba(255,255,255,0.08);text-align:right;font-weight:800;color:#60a5fa;">${esc(tracking_no)}</td></tr>`
+    : '';
+  const carrierRow = carrier
+    ? `<tr><td style="padding:8px 0;border-top:1px solid rgba(255,255,255,0.08);color:#94a3b8;">ขนส่ง</td><td style="padding:8px 0;border-top:1px solid rgba(255,255,255,0.08);text-align:right;">${esc(carrier)}</td></tr>`
+    : '';
+  const html = `
+  <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
+    <div style="background:linear-gradient(135deg,#3b82f6,#6366f1);padding:26px;text-align:center;"><h1 style="margin:0;font-size:20px;">📦 คำสั่งซื้อของคุณจัดส่งแล้ว</h1></div>
+    <div style="padding:24px;font-size:14px;line-height:1.7;">
+      <p style="margin:0 0 14px;">สวัสดีคุณ${esc(customer_name || '')} คำสั่งซื้อของคุณถูกจัดส่งแล้ว รายละเอียดการติดตามพัสดุ:</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px 0;color:#94a3b8;">เลขคำสั่งซื้อ</td><td style="padding:8px 0;text-align:right;font-weight:700;">${esc(order_id || '-')}</td></tr>
+        <tr><td style="padding:8px 0;border-top:1px solid rgba(255,255,255,0.08);color:#94a3b8;">สินค้า</td><td style="padding:8px 0;border-top:1px solid rgba(255,255,255,0.08);text-align:right;">${esc(product_name || '-')}</td></tr>
+        ${carrierRow}${trackingRow}
+      </table>
+      <p style="margin:16px 0 0;color:#94a3b8;font-size:13px;">ติดตามสถานะพัสดุได้จากเลขที่ให้ไว้ หากมีคำถามตอบกลับอีเมลนี้ได้เลย</p>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai Store · openthai-ai.com</div>
+  </div>`;
+  return { subject, html };
+}

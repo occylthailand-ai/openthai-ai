@@ -2,7 +2,7 @@
 // Deterministic, no server/SMTP. Pins: (1) a receipt is only emailable when the buyer's
 // contact is an email (checkout also accepts phone/LINE); (2) the receipt body carries the
 // real order id / product / qty / amount and HTML-escapes user-supplied fields.
-import { isReceiptEmail, buildShopReceipt } from '../shop-receipt.js';
+import { isReceiptEmail, buildShopReceipt, buildShippedNotice } from '../shop-receipt.js';
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; console.log(`  ✅ ${msg}`); } else { fail++; console.log(`  ❌ ${msg}`); } };
@@ -31,6 +31,18 @@ ok(x.html.includes('A &amp; B &quot;C&quot;'), 'product name & and quotes escape
 console.log('\n=== defensive: missing/odd fields do not throw ===');
 ok(!!buildShopReceipt({}).subject, 'empty order still builds a subject (no crash)');
 ok(buildShopReceipt({ qty: 0, amount: -5 }).html.includes('× 1'), 'qty<1 clamps to 1');
+
+console.log('\n=== buildShippedNotice content ===');
+const s = buildShippedNotice({ customer_name: 'สมชาย', product_name: 'ครีมทดสอบ', tracking_no: 'TH12345', carrier: 'Flash', order_id: 'ord_9' });
+ok(s.subject.includes('ord_9') && s.subject.includes('จัดส่ง'), `shipped subject carries order id + จัดส่ง (${s.subject})`);
+ok(s.html.includes('TH12345'), 'shipped body shows the tracking number');
+ok(s.html.includes('Flash'), 'shipped body shows the carrier');
+ok(s.html.includes('ครีมทดสอบ') && s.html.includes('ord_9'), 'shipped body shows product + order id');
+const s2 = buildShippedNotice({ product_name: 'X', order_id: 'ord_10' });
+ok(!!s2.subject && !s2.html.includes('undefined'), 'no tracking/carrier → still builds, no "undefined" leaks');
+const sx = buildShippedNotice({ tracking_no: '<b>x</b>', carrier: 'A&B', order_id: 'o' });
+ok(!sx.html.includes('<b>x</b>') && sx.html.includes('&lt;b&gt;'), 'tracking number is HTML-escaped');
+ok(sx.html.includes('A&amp;B'), 'carrier is HTML-escaped');
 
 console.log(`\n${'='.repeat(48)}`);
 console.log(`ผลทดสอบ: ✅ ${pass} ผ่าน · ❌ ${fail} ไม่ผ่าน`);

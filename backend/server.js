@@ -26,7 +26,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
-import { isReceiptEmail, buildShopReceipt } from './shop-receipt.js';
+import { isReceiptEmail, buildShopReceipt, buildShippedNotice } from './shop-receipt.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
@@ -534,6 +534,11 @@ app.post('/api/orders/admin/ship', adminLimiter, async (req, res) => {
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await orders.ship(req.body?.id, req.body || {});
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  // แจ้งลูกค้าว่าจัดส่งแล้ว + เลขพัสดุ (เดิมลูกค้าไม่เคยได้รับแจ้ง)
+  try {
+    const ord = await orders.getOne(req.body?.id);
+    if (ord) sendShopShipped({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, tracking_no: ord.tracking_no, carrier: ord.carrier, order_id: ord.id });
+  } catch (_) { /* best-effort */ }
   res.json({ success: true, ...r });
 });
 // POST /api/orders/admin/deliver — ยืนยันถึงปลายทาง + หลักฐาน (เซ็นรับ/จุดฝาก) (Admin Key)
@@ -943,6 +948,20 @@ async function sendShopReceipt(order) {
     console.log(`📧 Shop receipt ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
   } catch (err) {
     console.error('Shop receipt email error:', err.message);
+  }
+}
+
+// แจ้งลูกค้าเมื่อออเดอร์ถูกจัดส่ง (บันทึกเลขพัสดุผ่าน /api/orders/admin/ship) — เดิม ship()
+// อัปเดตแค่ในฐานข้อมูล ลูกค้าไม่เคยรู้ว่าของถูกส่งแล้วหรือเลขพัสดุคืออะไร ส่งเฉพาะเมื่อ contact
+// เป็นอีเมล best-effort (เหมือน sendShopReceipt)
+async function sendShopShipped(order) {
+  if (!mailer || !isReceiptEmail(order?.contact)) return;
+  const { subject, html } = buildShippedNotice(order);
+  try {
+    await mailer.sendMail({ from: `"Openthai Store" <${process.env.SMTP_USER}>`, to: order.contact, subject, html });
+    console.log(`📦 Shipped notice ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
+  } catch (err) {
+    console.error('Shipped notice email error:', err.message);
   }
 }
 
