@@ -44,6 +44,18 @@ describe('PDPA consent wiring on every /portals/* page', () => {
       it('disables the submit button until consent is given', () => {
         expect(/disabled=\{\s*!consent\b/.test(src)).toBe(true);
       });
+      it('has a consent LABEL in all three languages (th/en/zh)', () => {
+        // The checkbox label comes from a per-page CONSENT_TEXT map keyed by lang, rendered
+        // as <span>{CONSENT_TEXT[lang]}</span>. GovThaiPortalPage had lost its `zh` entry, so
+        // a Chinese-language visitor saw a consent box with a BLANK label — an un-informed
+        // consent (PDPA needs it informed) and a broken UI. The four checks above pass with a
+        // missing translation, so pin the label copy itself: every page must define th/en/zh.
+        const block = src.match(/const\s+CONSENT_TEXT\s*=\s*\{[\s\S]*?\n\};/);
+        expect(block, 'CONSENT_TEXT map present').toBeTruthy();
+        for (const lang of ['th', 'en', 'zh']) {
+          expect(new RegExp(`\\b${lang}\\s*:`).test(block[0]), `CONSENT_TEXT has a "${lang}" label`).toBe(true);
+        }
+      });
       it('shows a real error on a failed submit — never a fake success', () => {
         // submitLead() returns {ok:false,...} on a 400/429/500/network failure (fetch
         // does not throw on 4xx/5xx). Each page must guard on that result and bail out

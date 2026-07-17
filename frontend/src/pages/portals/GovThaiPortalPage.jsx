@@ -10,6 +10,7 @@ const T = {
 const CONSENT_TEXT = {
   th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#6ee7b7' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
   en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#6ee7b7' }}>Privacy Policy (PDPA)</a></>,
+  zh: <>同意根据<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#6ee7b7' }}>隐私政策（PDPA）</a>收集和使用我的数据</>,
 };
 
 export default function GovThaiPortalPage() {

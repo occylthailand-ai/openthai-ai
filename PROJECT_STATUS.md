@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T18:13:38.556Z · branch `claude/daily-reporter-improvements-8vc9ct` (417 commit(s) ahead of main)
+Generated: 2026-07-17T21:10:59.457Z · branch `claude/daily-reporter-improvements-8vc9ct` (418 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 627 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 501 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop: PDPA/i18n fix — the Gov-Thai portal's consent checkbox had a BLANK label in Chinese (missing `zh` translation)
+
+Found auditing the consent funnel (standing-order priority #1). **Verified against the code:** all 9 `/portals/*` pages render the consent-checkbox label from a per-page `CONSENT_TEXT` map keyed by language (`<span>{CONSENT_TEXT[lang]}</span>`). Eight pages define `th`/`en`/`zh`; **`GovThaiPortalPage.jsx` defined only `th`/`en`** — so a visitor viewing that portal in Chinese got `CONSENT_TEXT['zh'] === undefined`, i.e. a consent checkbox with **no text at all** next to it. That's both a broken UI and a real PDPA problem: consent must be *informed*, and a blank label is not informed consent (the box still gates submit, so the zh user is asked to tick something unexplained). The existing `portalConsent.test.js` guard checked the four wiring pieces (default-false state, `consent` in the payload, the checkbox, the disabled-until-consent button) but **not the label copy**, so this drift passed CI.
+
+**Fix:** (1) added the missing `zh` line to `GovThaiPortalPage.jsx` `CONSENT_TEXT`, matching the other 8 pages' wording (`同意根据…隐私政策（PDPA）…`) and the page's own link color `#6ee7b7`. (2) **extended the guard** — `portalConsent.test.js` now also asserts every page's `CONSENT_TEXT` block defines all three languages (`th`/`en`/`zh`), closing the drift class that let this through.
+
+**Verified by running:** `npx vitest portalConsent.test.js` → **55/55** (was 46; +9, one per page for the new label-language check). **Mutation-tested** — deleting the restored `zh` line makes the guard fail exactly `GovThaiPortalPage.jsx > has a consent LABEL in all three languages` and nothing else, then restored to green. Full suite `npm test` → **147/147** (was 138), and `npm run build` (vite) clean. Frontend-only; no backend/API change. (The 9 near-identical `CONSENT_TEXT` copies remain a drift risk worth a future shared-module extraction — the new guard now catches language drift in the meantime; not extracted this round to keep the fix tight.)
 
 ### 2026-07-17 — Hourly loop: UX fix — the affiliate "ประวัติยอดขาย" table rendered blank columns (read fields the API never sends); now shows the real data
 
@@ -3248,54 +3256,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- f43cafc fix(affiliate-ui): show real data in the sales-history table (was blank columns) (25 seconds ago)
-- 9def958 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- c34942b fix(affiliate): stop leaking the referred buyer's Omise charge_id on the public stats endpoint (3 hours ago)
-- 1de177e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- b57bbe6 fix(disputes): stop leaking the admin-only AI arbitration draft to the parties on public track (4 hours ago)
-- 291293b chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 00c8c16 fix(orders): stop leaking internal history notes to buyers on the public track page (5 hours ago)
-- cad12c5 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- a04fe5a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- f43cafc fix(affiliate-ui): show real data in the sales-history table (was blank columns) (3 hours ago)
+- 9def958 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- c34942b fix(affiliate): stop leaking the referred buyer's Omise charge_id on the public stats endpoint (6 hours ago)
+- 1de177e chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- b57bbe6 fix(disputes): stop leaking the admin-only AI arbitration draft to the parties on public track (7 hours ago)
+- 291293b chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- 00c8c16 fix(orders): stop leaking internal history notes to buyers on the public track page (8 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
