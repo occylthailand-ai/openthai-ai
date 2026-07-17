@@ -27,7 +27,7 @@ import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
 import { publicAffiliateSales } from './affiliate-public.js';
-import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice, buildCancelledNotice } from './shop-receipt.js';
+import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice, buildCancelledNotice, buildQuickpayReceipt } from './shop-receipt.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
@@ -949,6 +949,22 @@ async function sendPaymentReceipt(to, { plan, amount_thb, charge_id, paid_at, me
     console.log(`📧 Receipt email ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
     console.error('Receipt email error:', err.message);
+  }
+}
+
+// ใบเสร็จสำหรับผู้ซื้อ QuickPay (/api/quickpay/create — ขายแพ็กเกจ/สินค้าชิ้นเดียว) เดิมไม่มี
+// เลย: sendPaymentReceipt เป็น template ของ subscription (บอกว่า "อัพเกรดแผนรายเดือน") และยิง
+// เฉพาะเมื่อ rec.plan มีค่า แต่ QuickPay เก็บ plan:null + อีเมลผู้ซื้อใน buyer_email → ผู้จ่ายเงิน
+// จริงไม่เคยได้ใบเสร็จ ส่งเฉพาะเมื่อ buyer_email เป็นอีเมล best-effort (เหมือน sendShopReceipt)
+async function sendQuickpayReceipt(rec, { amount_thb, charge_id, paid_at } = {}) {
+  const to = rec?.buyer_email;
+  if (!mailer || !isReceiptEmail(to)) return;
+  const { subject, html } = buildQuickpayReceipt({ buyer: rec.buyer, label: rec.label, amount: amount_thb, charge_id, paid_at });
+  try {
+    await mailer.sendMail({ from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to, subject, html });
+    console.log(`🧾 QuickPay receipt ส่งให้ผู้ซื้อ ${to} (${charge_id})`);
+  } catch (err) {
+    console.error('QuickPay receipt email error:', err.message);
   }
 }
 
@@ -7922,6 +7938,10 @@ app.get('/api/payment/status/:chargeId', async (req, res) => {
         grantEntitlement(rec.email, rec.plan, { source: rec.method || 'promptpay' });
         sendPaymentReceipt(rec.email, { plan: rec.plan, amount_thb: status.amount_thb, charge_id: req.params.chargeId, paid_at: status.paid_at, method: rec.method });
       }
+      // QuickPay (plan:null, อีเมลผู้ซื้ออยู่ใน buyer_email) — ใบเสร็จซื้อครั้งเดียว ไม่ใช่ template subscription
+      if (firstTime && rec?.kind === 'quickpay') {
+        sendQuickpayReceipt(rec, { amount_thb: status.amount_thb, charge_id: req.params.chargeId, paid_at: status.paid_at });
+      }
       // เครดิตค่าคอม affiliate (เฉพาะครั้งแรก — รองรับ quickpay ที่จ่ายผ่าน ref link)
       if (firstTime) creditAffiliateSale(rec?.ref_code, status.amount_thb, { charge_id: req.params.chargeId, source: rec?.source });
     }
@@ -8083,6 +8103,10 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
         if (email && rec.plan) {
           grantEntitlement(email, rec.plan, { source: 'webhook' });
           sendPaymentReceipt(email, { plan: rec.plan, amount_thb: amountThb, charge_id: data.id, paid_at: data.paid_at, method: rec.method });
+        }
+        // QuickPay (plan:null, อีเมลผู้ซื้ออยู่ใน buyer_email) — ใบเสร็จซื้อครั้งเดียว
+        if (rec.kind === 'quickpay') {
+          sendQuickpayReceipt(rec, { amount_thb: amountThb, charge_id: data.id, paid_at: data.paid_at });
         }
         // เครดิต affiliate ถ้าชำระผ่าน ref link (รองรับทั้ง plan + quickpay) — firstTime แล้วจาก !rec.paid_at
         creditAffiliateSale(rec.ref_code || data.metadata?.ref_code, amountThb, { charge_id: data.id, source: rec.source || data.metadata?.source });

@@ -40,6 +40,29 @@ export function buildShopReceipt({ customer_name, product_name, qty, amount, ord
   return { subject, html: shell('#10b981,#059669', '🧾 ขอบคุณสำหรับการสั่งซื้อ', inner) };
 }
 
+// Pure: receipt for a QuickPay one-time purchase (POST /api/quickpay/create — sell a
+// package / single item, NOT a subscription). The subscription receipt (sendPaymentReceipt)
+// says "your account was upgraded to the X monthly plan", which is wrong for a QuickPay buyer,
+// and it fires only when rec.plan is set — QuickPay stores plan:null + the buyer's address in
+// `buyer_email`, so a paying QuickPay customer got no confirmation at all. This is that
+// confirmation: a one-time purchase receipt with the item label, amount, date and reference.
+export function buildQuickpayReceipt({ buyer, label, amount, charge_id, paid_at } = {}) {
+  const total = Number(amount) > 0 ? Number(amount) : 0;
+  const baht = `฿${Number(total).toLocaleString('th-TH')}`;
+  const when = paid_at ? new Date(paid_at).toLocaleString('th-TH') : new Date().toLocaleString('th-TH');
+  const subject = `🧾 ใบเสร็จการชำระเงิน — ${label || 'Openthai.ai'}`.trim();
+  const inner = `
+      <p style="margin:0 0 14px;">สวัสดีคุณ${esc(buyer || '')} เราได้รับการชำระเงินของคุณเรียบร้อยแล้ว นี่คือใบเสร็จ</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        ${row('รายการ', esc(label || '-'))}
+        ${row('ยอดที่ชำระ', baht, 'font-weight:800;color:#34d399;')}
+        ${row('วันที่ชำระเงิน', esc(when))}
+        <tr><td style="padding:8px 0;border-top:1px solid rgba(255,255,255,0.08);color:#94a3b8;">เลขที่รายการ</td><td style="padding:8px 0;border-top:1px solid rgba(255,255,255,0.08);text-align:right;font-family:monospace;font-size:12px;">${esc(charge_id || '-')}</td></tr>
+      </table>
+      <p style="margin:16px 0 0;color:#94a3b8;font-size:13px;">เก็บอีเมลนี้ไว้เป็นหลักฐานการชำระเงิน หากมีคำถามตอบกลับอีเมลนี้ได้เลย</p>`;
+  return { subject, html: shell('#10b981,#059669', '🧾 ขอบคุณสำหรับการชำระเงิน', inner) };
+}
+
 // Pure: "your order shipped" notice — sent when an admin records a tracking number.
 export function buildShippedNotice({ customer_name, product_name, tracking_no, carrier, order_id } = {}) {
   const subject = `📦 คำสั่งซื้อ ${order_id || ''} จัดส่งแล้ว — Openthai Store`.trim();

@@ -2,7 +2,7 @@
 // Deterministic, no server/SMTP. Pins: (1) a receipt is only emailable when the buyer's
 // contact is an email (checkout also accepts phone/LINE); (2) the receipt body carries the
 // real order id / product / qty / amount and HTML-escapes user-supplied fields.
-import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice, buildCancelledNotice } from '../shop-receipt.js';
+import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice, buildCancelledNotice, buildQuickpayReceipt } from '../shop-receipt.js';
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; console.log(`  ✅ ${msg}`); } else { fail++; console.log(`  ❌ ${msg}`); } };
@@ -70,6 +70,20 @@ ok(c3.html.includes('การคืนเงิน') && c3.html.includes('฿50
 const cx = buildCancelledNotice({ order_id: 'o', reason: '<script>x</script>', customer_name: 'A&B' });
 ok(!cx.html.includes('<script>x</script>') && cx.html.includes('&lt;script&gt;'), 'reason is HTML-escaped');
 ok(cx.html.includes('A&amp;B'), 'customer name is HTML-escaped');
+
+console.log('\n=== buildQuickpayReceipt content (one-time purchase, NOT subscription) ===');
+const qp = buildQuickpayReceipt({ buyer: 'สมชาย', label: 'แพ็กเกจโปรโมชัน', amount: 1500, charge_id: 'chrg_qp_1', paid_at: '2026-07-17T10:00:00Z' });
+ok(qp.subject.includes('แพ็กเกจโปรโมชัน'), `quickpay subject carries the label (${qp.subject})`);
+ok(qp.html.includes('แพ็กเกจโปรโมชัน') && qp.html.includes('chrg_qp_1'), 'body shows label + charge reference');
+ok(qp.html.includes('฿1,500'), 'body shows the THB total, grouped');
+ok(qp.html.includes('สมชาย'), 'body greets the buyer by name');
+ok(!/แผน|subscription|รายเดือน|อัพเกรด/i.test(qp.html), 'no subscription/plan/upgrade wording (it is a one-time buy)');
+const qp2 = buildQuickpayReceipt({ label: 'X', amount: 0 });
+ok(!!qp2.subject && !qp2.html.includes('undefined'), 'missing buyer/charge/amount → still builds, no "undefined" leak');
+const qpx = buildQuickpayReceipt({ buyer: '<b>x</b>', label: 'A & B', amount: 50, charge_id: '<i>c</i>' });
+ok(!qpx.html.includes('<b>x</b>') && qpx.html.includes('&lt;b&gt;'), 'buyer name is HTML-escaped');
+ok(qpx.html.includes('A &amp; B'), 'label is HTML-escaped');
+ok(!qpx.html.includes('<i>c</i>') && qpx.html.includes('&lt;i&gt;'), 'charge reference is HTML-escaped');
 
 console.log(`\n${'='.repeat(48)}`);
 console.log(`ผลทดสอบ: ✅ ${pass} ผ่าน · ❌ ${fail} ไม่ผ่าน`);

@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T22:12:17.295Z · branch `claude/daily-reporter-improvements-8vc9ct` (421 commit(s) ahead of main)
+Generated: 2026-07-17T23:13:37.890Z · branch `claude/daily-reporter-improvements-8vc9ct` (422 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 631 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 505 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop: gap fix — a QuickPay buyer who paid (and gave an email) got NO receipt
+
+Found auditing the payment/money paths. **Verified against the code:** both charge-finalize paths — the webhook (`/api/payment/webhook`, `charge.complete`) and the status poll (`/api/payment/status/:chargeId`) — only email a receipt via `sendPaymentReceipt` when `rec.plan` is set (webhook: `if (email && rec.plan)`) / `rec.email` is set (poll: `if (firstTime && rec?.email)`). But a **QuickPay** charge (`POST /api/quickpay/create` — sell a package / single item) stores `plan: null` and `email: null`, keeping the buyer's address in `buyer_email`. So the plan branch is skipped and a paying QuickPay customer received nothing. Reusing `sendPaymentReceipt` would have been wrong anyway — it's subscription copy ("บัญชีของคุณถูกอัพเกรดเป็นแผน X … รายเดือน"), which misdescribes a one-time buy.
+
+**Fix:** added `buildQuickpayReceipt({buyer, label, amount, charge_id, paid_at})` to `backend/shop-receipt.js` (one-time-purchase wording — label / amount / date / reference, no plan/subscription/upgrade language; reuses the shared `shell()`/`row()`/`esc()`), and `sendQuickpayReceipt(rec, {amount_thb, charge_id, paid_at})` in server.js (best-effort, gated on `isReceiptEmail(rec.buyer_email)` — QuickPay never validated the buyer email at capture). Wired into **both** finalize paths, right after the plan-receipt branch, guarded by `rec.kind === 'quickpay'` (+ `firstTime` on the poll path, matching the existing idempotency). Affiliate commission crediting on the same charge is untouched.
+
+**Verified by running BOTH unit + live endpoints:** extended `scripts/test-shop-receipt.mjs` → **46/46** (was 37) — the receipt carries label / grouped ฿ total / buyer name / charge reference, **contains no subscription/plan/upgrade wording**, degrades with no `undefined` leak, and HTML-escapes buyer/label/charge. Then **booted the real server** (mock Omise + `OMISE_WEBHOOK_SECRET`, SMTP → fail-fast sink): created a QuickPay with an **email** buyer and one with a **phone**-as-email buyer, paid each via a signed `charge.complete` webhook — the email buyer → a `QuickPay receipt` send is attempted (+1 log line), the phone buyer → **0** (gated out); both webhooks 200. Re-ran the **affiliate-flow E2E** (quickpay→webhook→credit→tier) → **28/28**, confirming the webhook edit didn't disturb commission crediting. `node --check` clean; `test:shop-receipt` already in CI; `backend/data` git-restored. The paying-customer receipt is now complete across shop checkout, subscription plans, **and** QuickPay.
 
 ### 2026-07-17 — Hourly loop: refactor — collapsed the 9 duplicated portal consent-label maps into one shared source (kills the drift class behind the zh bug)
 
@@ -3264,54 +3272,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 75fc754 refactor(portals): one shared consentLabel() instead of 9 duplicated CONSENT_TEXT maps (25 seconds ago)
-- 432d929 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- a582adf fix(portals): restore the Chinese consent label on the Gov-Thai portal + guard it (61 minutes ago)
-- a04fe5a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- f43cafc fix(affiliate-ui): show real data in the sales-history table (was blank columns) (4 hours ago)
-- 9def958 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
-- c34942b fix(affiliate): stop leaking the referred buyer's Omise charge_id on the public stats endpoint (7 hours ago)
-- 1de177e chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- 3b693ac chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 75fc754 refactor(portals): one shared consentLabel() instead of 9 duplicated CONSENT_TEXT maps (62 minutes ago)
+- 432d929 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- a582adf fix(portals): restore the Chinese consent label on the Gov-Thai portal + guard it (2 hours ago)
+- a04fe5a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- f43cafc fix(affiliate-ui): show real data in the sales-history table (was blank columns) (5 hours ago)
+- 9def958 chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- c34942b fix(affiliate): stop leaking the referred buyer's Omise charge_id on the public stats endpoint (8 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3463,8 +3433,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8919 | Vercel serverless detection |
-| `shop-receipt.js` | 98 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
+| `server.js` | 8943 | Vercel serverless detection |
+| `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
