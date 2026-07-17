@@ -19,6 +19,7 @@
     "test:affiliate-tiers": "node scripts/test-affiliate-tiers.mjs",
     "test:affiliate-payout": "node scripts/test-affiliate-payout.mjs",
     "test:shop-receipt": "node scripts/test-shop-receipt.mjs",
+    "test:orders-track": "node scripts/test-orders-track.mjs",
     "test:credits": "node scripts/test-credits.mjs",
     "test:inventory": "node scripts/test-inventory.mjs",
     "test:producers": "node scripts/test-producers.mjs"

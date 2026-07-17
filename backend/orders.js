@@ -9,6 +9,26 @@ import { join } from 'path';
 const ORDER_STATUS = ['new', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
 const clip = (s, n = 300) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 
+// Buyer-facing projection of an order for the public /api/orders/track endpoint.
+// The internal order carries free-text history notes written for admins/the system:
+// the oversold "race" refund note (which embeds the Omise charge id), escrow:* state
+// strings, "ชำระเงินสำเร็จ", and whatever an admin typed when cancelling (possibly an
+// internal remark not meant for the buyer). None of that belongs in the buyer's public
+// timeline — and the details that ARE buyer-facing (carrier / tracking no / delivery
+// proof) are already returned as dedicated fields and rendered separately on the Track
+// page. So the public history keeps only { status, at } (the progression + when) and
+// drops the raw note. Pure + exported for deterministic unit testing.
+export function publicOrderView(o) {
+  if (!o) return null;
+  return {
+    id: o.id, product_name: o.product_name, qty: o.qty, amount: o.amount,
+    status: o.status, tracking_no: o.tracking_no, carrier: o.carrier,
+    delivered_at: o.delivered_at, received_by: o.received_by, drop_off: o.drop_off,
+    history: (Array.isArray(o.history) ? o.history : []).map((h) => ({ status: h.status, at: h.at })),
+    created_at: o.created_at,
+  };
+}
+
 export function createOrders(dataDir, opts = {}) {
   const SB_URL = process.env.SUPABASE_URL;
   const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -142,12 +162,8 @@ export function createOrders(dataDir, opts = {}) {
     if (!o) return { ok: false, error: 'ไม่พบคำสั่งซื้อนี้' };
     const c = (contact || '').toString().trim().toLowerCase();
     if (!c || o.contact.toLowerCase() !== c) return { ok: false, error: 'ช่องทางติดต่อไม่ตรงกับคำสั่งซื้อ' };
-    return { ok: true, order: {
-      id: o.id, product_name: o.product_name, qty: o.qty, amount: o.amount,
-      status: o.status, tracking_no: o.tracking_no, carrier: o.carrier,
-      delivered_at: o.delivered_at, received_by: o.received_by, drop_off: o.drop_off,
-      history: o.history || [], created_at: o.created_at,
-    } };
+    // sanitized buyer-facing view — never leaks internal history notes (charge id / escrow / admin remarks)
+    return { ok: true, order: publicOrderView(o) };
   }
 
   async function summary() {

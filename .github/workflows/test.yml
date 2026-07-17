@@ -60,6 +60,7 @@ jobs:
           npm run test:affiliate-tiers
           npm run test:affiliate-payout
           npm run test:shop-receipt
+          npm run test:orders-track
           npm run test:credits
           npm run test:inventory
           npm run test:producers

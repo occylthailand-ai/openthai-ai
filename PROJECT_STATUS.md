@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T12:25:49.912Z · branch `claude/daily-reporter-improvements-8vc9ct` (409 commit(s) ahead of main)
+Generated: 2026-07-17T13:16:40.082Z · branch `claude/daily-reporter-improvements-8vc9ct` (410 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 619 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 493 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop: privacy fix — the public order-tracking page leaked INTERNAL history notes to the buyer (Omise charge id, "race", admin remarks)
+
+Found by scanning the order-tracking flow the cancelled-notice email points buyers to. **Verified against the code:** the public `GET /api/orders/track?id=&contact=` returned `history: o.history` **verbatim**, and `TrackOrderPage.jsx` (line ~125) renders each entry's free-text `note` straight to the buyer. But those notes are written for admins/the system, not the buyer: the oversold auto-cancel writes `"ชำระเงินสำเร็จแต่สต๊อกหมดพอดี (race) — ต้องคืนเงินลูกค้า · charge ch_xxx"` (embeds the Omise **charge id** + the internal word "race"), `setEscrowStatus` writes `escrow:held`/`escrow:released`, and `/api/orders/admin/status` stores **whatever the admin typed** as the cancel reason — which can be an internal remark (e.g. "สงสัยฉ้อโกง / fraud suspected"). All of it was visible to anyone with the order id + contact (the buyer). Meanwhile every buyer-facing detail (carrier, tracking no, delivery proof `received_by`/`drop_off`, `delivered_at`) is **already** returned as dedicated fields and rendered separately on the Track page — so the raw note in the timeline added nothing legitimate and leaked plenty.
+
+**Fix:** extracted a pure `publicOrderView(o)` in `backend/orders.js` (module-level export, same extract-for-testability pattern as shop-receipt/affiliate-payout) and switched `track()` to return it. The public history now keeps only `{ status, at }` (the progression + when) and **drops the free-text note entirely**; internal-only fields (`contact`, `address`, `producer_email`) are likewise not echoed. Backend-authoritative — can't be bypassed by a frontend that forgets to hide it. No frontend change needed: `TrackOrderPage.jsx` already guards `{h.note ? … : ''}`, so a note-less entry just shows the status label + timestamp.
+
+**Verified by running BOTH unit + live endpoint:** new `scripts/test-orders-track.mjs` → **15/15** — pins that the charge id, the "(race)" wording, and an admin "ฉ้อโกง" remark are all absent from the projection, that no history entry carries a `note` field, yet every timeline step (status+at), carrier/tracking, delivery proof, id/product/qty/amount/status survive, and that `contact`/`address`/`producer_email` are never echoed (+ null/missing-history don't throw). Then **booted the real server**, created an order, had the admin cancel it with an internal note `"สงสัยฉ้อโกง internal charge ch_secret_123"`, and hit the **public** track endpoint: history came back as `[{status,at},{status,at}]` with **`leak charge id? false` / `leak ฉ้อโกง? false`**, status still `cancelled`. `node --check` clean (server.js + orders.js); wired `test:orders-track` into `package.json` + CI `test.yml`; `backend/data` git-restored.
 
 ### 2026-07-17 — Hourly loop: gap fix — a CANCELLED order emailed the customer nothing (worst when they'd already paid + a refund was owed)
 
@@ -3218,54 +3226,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- a1e67b5 feat(shop): email the customer when their order is cancelled (incl. paid-but-oversold refund) (22 seconds ago)
-- ae3d3e8 chore: sync PROJECT_STATUS.md [skip ci] (9 minutes ago)
-- 7d7748f feat(shop): email the customer when their order is delivered (completes receipt→shipped→delivered) (9 minutes ago)
-- ce3d0b7 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 15b8260 feat(shop): email the customer when their order ships (tracking number + carrier) (5 hours ago)
-- 0666897 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 0c67aaf feat(shop): email a purchase confirmation to the customer on shop checkout (6 hours ago)
-- 177cc8f chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- cad12c5 chore: sync PROJECT_STATUS.md [skip ci] (51 minutes ago)
+- a1e67b5 feat(shop): email the customer when their order is cancelled (incl. paid-but-oversold refund) (51 minutes ago)
+- ae3d3e8 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- 7d7748f feat(shop): email the customer when their order is delivered (completes receipt→shipped→delivered) (60 minutes ago)
+- ce3d0b7 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 15b8260 feat(shop): email the customer when their order ships (tracking number + carrier) (6 hours ago)
+- 0666897 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 0c67aaf feat(shop): email a purchase confirmation to the customer on shop checkout (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3409,7 +3379,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 180 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
-| `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `orders.js` | 200 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 148 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
