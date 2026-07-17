@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T01:12:55.556Z · branch `claude/daily-reporter-improvements-8vc9ct` (391 commit(s) ahead of main)
+Generated: 2026-07-17T01:15:35.049Z · branch `claude/daily-reporter-improvements-8vc9ct` (393 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 601 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 603 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,10 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop (cross-repo: smart-e): fix — /api/analytics top-products had the SAME cancelled-order leak (second copy of the dashboard bug)
+
+Follow-up scan of `smart-e` after fixing the dashboard top-products query — found the identical bug in a **second place**: `_get_analytics()` has its own top-products query that also summed `qty`/`revenue` from `order_items` with **no join to `orders`**, so it counted cancelled orders, while every other query in that same endpoint (`revenue_trend`, `by_channel`, `total_revenue`, `total_orders`) filters `status!='cancelled'`. A cancelled-only product still ranked as a best-seller in the analytics view too. **Fix:** same as the dashboard — `JOIN orders o ON o.id=oi.order_id WHERE o.status!='cancelled'`. **Verified by running:** extended the top-products test block to also assert `/api/analytics` (kept qty-2 order → sold 2 / rev 200; cancelled qty-5 excluded → still 2 / 200, not 7 / 700) → **54/54** (was 53); **mutation-tested** reverting only the analytics join → that product leaks back to 7 / 700 and the new assertion fails (53/54), restored; `py_compile` clean. Full detail in commit `dc2c66b` (smart-e PR #1).
 
 ### 2026-07-17 — Hourly loop (cross-repo: smart-e): fix — dashboard "Top products" counted cancelled orders (best-seller list inflated)
 
@@ -3164,14 +3168,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- d7f9ef8 docs(decisions): log cross-repo smart-e fix (top-products excludes cancelled orders) (21 seconds ago)
+- e28495b docs(decisions): log smart-e analytics top-products cancel-filter fix (16 seconds ago)
+- a875023 chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
+- d7f9ef8 docs(decisions): log cross-repo smart-e fix (top-products excludes cancelled orders) (3 minutes ago)
 - e9b16da fix(affiliate): block admin "paid" from pushing paid_out past total_earned (double-pay guard) (2 hours ago)
 - 9109bde chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - b5dd7d5 docs(decisions): log cross-repo smart-e fix (customer spend returned on cancel) (3 hours ago)
 - 4d00de6 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 62715cf fix(affiliate): correct /portals/affiliate tier table to match real rates (20/30/40% at 0/10/50 sales) (4 hours ago)
-- 538be00 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- ab271cd fix(content): remove false "1,200+ creators already using" claim (real: 0 affiliates / 1 producer) (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3193,8 +3197,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
+  "uptime_sec": 160,
+  "memory_mb": "20.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
