@@ -2,7 +2,7 @@
 // Deterministic, no server/SMTP. Pins: (1) a receipt is only emailable when the buyer's
 // contact is an email (checkout also accepts phone/LINE); (2) the receipt body carries the
 // real order id / product / qty / amount and HTML-escapes user-supplied fields.
-import { isReceiptEmail, buildShopReceipt, buildShippedNotice } from '../shop-receipt.js';
+import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice } from '../shop-receipt.js';
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; console.log(`  ✅ ${msg}`); } else { fail++; console.log(`  ❌ ${msg}`); } };
@@ -43,6 +43,18 @@ ok(!!s2.subject && !s2.html.includes('undefined'), 'no tracking/carrier → stil
 const sx = buildShippedNotice({ tracking_no: '<b>x</b>', carrier: 'A&B', order_id: 'o' });
 ok(!sx.html.includes('<b>x</b>') && sx.html.includes('&lt;b&gt;'), 'tracking number is HTML-escaped');
 ok(sx.html.includes('A&amp;B'), 'carrier is HTML-escaped');
+
+console.log('\n=== buildDeliveredNotice content ===');
+const d = buildDeliveredNotice({ customer_name: 'สมชาย', product_name: 'ครีมทดสอบ', order_id: 'ord_d', received_by: 'คุณแม่บ้าน' });
+ok(d.subject.includes('ord_d') && d.subject.includes('ถึงแล้ว'), `delivered subject carries order id + ถึงแล้ว (${d.subject})`);
+ok(d.html.includes('เซ็นรับโดย คุณแม่บ้าน'), 'delivered body shows received_by proof');
+ok(d.html.includes('ครีมทดสอบ') && d.html.includes('ord_d'), 'delivered body shows product + order id');
+const d2 = buildDeliveredNotice({ order_id: 'o', drop_off: 'หน้าบ้าน' });
+ok(d2.html.includes('ฝากไว้ที่ หน้าบ้าน'), 'drop_off proof used when no received_by');
+const d3 = buildDeliveredNotice({ order_id: 'o' });
+ok(d3.html.includes('จัดส่งสำเร็จ') && !d3.html.includes('undefined'), 'no proof → "จัดส่งสำเร็จ", no undefined leak');
+const dx = buildDeliveredNotice({ order_id: 'o', received_by: '<img src=x>' });
+ok(!dx.html.includes('<img src=x>') && dx.html.includes('&lt;img'), 'received_by is HTML-escaped');
 
 console.log(`\n${'='.repeat(48)}`);
 console.log(`ผลทดสอบ: ✅ ${pass} ผ่าน · ❌ ${fail} ไม่ผ่าน`);

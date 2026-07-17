@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T07:16:01.927Z · branch `claude/daily-reporter-improvements-8vc9ct` (405 commit(s) ahead of main)
+Generated: 2026-07-17T12:16:47.607Z · branch `claude/daily-reporter-improvements-8vc9ct` (406 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 615 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 489 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,12 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop: gap fix — no delivery-confirmation email to the customer (completes the receipt→shipped→delivered trilogy)
+
+The natural follow-up flagged in the previous entry. **Verified against the code:** `/api/orders/admin/deliver` calls `orders.deliver()` (records `received_by`/`drop_off`/`delivered_at`, status → `delivered`) but sent **no email** — so a customer was never told their parcel arrived, and the delivery-proof (signature / drop-off point) was recorded only for the admin. **Fix:** added `buildDeliveredNotice({customer_name, product_name, order_id, received_by, drop_off})` to `backend/shop-receipt.js` and `sendShopDelivered(order)` in server.js, wired into `/api/orders/admin/deliver` after a successful `deliver()` (emails the customer only when `contact` is an email; best-effort). Also **refactored `shop-receipt.js`** to share a `shell()`/`row()` helper across all three notices (receipt/shipped/delivered) — less duplicated HTML, same output (the existing 22 assertions stayed green through the refactor). The delivered notice invites the buyer to reply-to-dispute if they didn't actually receive it, tying into the escrow flow.
+
+**Verified by running BOTH unit + live endpoint:** `scripts/test-shop-receipt.mjs` → **28/28** (was 22) — delivered notice carries order id + product, shows the `received_by` signature (or the `drop_off` location, or a plain "จัดส่งสำเร็จ" fallback with no `undefined` leak), and HTML-escapes `received_by`. Then **booted the real server** (SMTP → fail-fast sink), created two orders, hit `/api/orders/admin/deliver`: the **email**-contact order → a `Delivered notice` send is attempted (+1 log line), the **phone**-contact order → **0** (gated out); both deliver calls still returned 200. `node --check` clean; `test:shop-receipt` already runs in CI; `backend/data` git-restored. Shop fulfilment notifications to the customer are now complete: purchase receipt → shipped (+ tracking) → delivered.
 
 ### 2026-07-17 — Hourly loop: gap fix — customers got NO "your order shipped + tracking number" email
 
@@ -3206,54 +3212,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 15b8260 feat(shop): email the customer when their order ships (tracking number + carrier) (18 seconds ago)
-- 0666897 chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
-- 0c67aaf feat(shop): email a purchase confirmation to the customer on shop checkout (55 minutes ago)
-- 177cc8f chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 721f44a fix(security): require cron/admin auth on /api/system/news-rag-clear (was world-callable) (64 minutes ago)
-- 464841c chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 5e8a6c6 fix(security): require cron/admin auth on /api/autopost/process (was world-callable) (3 hours ago)
-- 69824cf chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- ce3d0b7 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 15b8260 feat(shop): email the customer when their order ships (tracking number + carrier) (5 hours ago)
+- 0666897 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 0c67aaf feat(shop): email a purchase confirmation to the customer on shop checkout (6 hours ago)
+- 177cc8f chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 721f44a fix(security): require cron/admin auth on /api/system/news-rag-clear (was world-callable) (6 hours ago)
+- 464841c chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- 5e8a6c6 fix(security): require cron/admin auth on /api/autopost/process (was world-callable) (8 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3404,8 +3372,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8874 | Vercel serverless detection |
-| `shop-receipt.js` | 68 | Openthai Store purchase receipt — extracted so the "does this buyer get a receipt, |
+| `server.js` | 8892 | Vercel serverless detection |
+| `shop-receipt.js` | 73 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

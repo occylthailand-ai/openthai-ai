@@ -26,7 +26,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
-import { isReceiptEmail, buildShopReceipt, buildShippedNotice } from './shop-receipt.js';
+import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice } from './shop-receipt.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
@@ -547,6 +547,11 @@ app.post('/api/orders/admin/deliver', adminLimiter, async (req, res) => {
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await orders.deliver(req.body?.id, req.body || {});
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  // แจ้งลูกค้าว่าพัสดุถึงปลายทางแล้ว (เดิมลูกค้าไม่เคยได้รับแจ้ง)
+  try {
+    const ord = await orders.getOne(req.body?.id);
+    if (ord) sendShopDelivered({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, order_id: ord.id, received_by: ord.received_by, drop_off: ord.drop_off });
+  } catch (_) { /* best-effort */ }
   res.json({ success: true, ...r });
 });
 
@@ -962,6 +967,19 @@ async function sendShopShipped(order) {
     console.log(`📦 Shipped notice ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
   } catch (err) {
     console.error('Shipped notice email error:', err.message);
+  }
+}
+
+// แจ้งลูกค้าเมื่อพัสดุถึงปลายทาง (ยืนยันผ่าน /api/orders/admin/deliver) — ปิดไตรภาคการแจ้ง
+// ลูกค้า (ใบเสร็จ → จัดส่ง → ถึงปลายทาง) ส่งเฉพาะเมื่อ contact เป็นอีเมล best-effort
+async function sendShopDelivered(order) {
+  if (!mailer || !isReceiptEmail(order?.contact)) return;
+  const { subject, html } = buildDeliveredNotice(order);
+  try {
+    await mailer.sendMail({ from: `"Openthai Store" <${process.env.SMTP_USER}>`, to: order.contact, subject, html });
+    console.log(`✅ Delivered notice ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
+  } catch (err) {
+    console.error('Delivered notice email error:', err.message);
   }
 }
 
