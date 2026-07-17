@@ -26,7 +26,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
-import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice } from './shop-receipt.js';
+import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice, buildCancelledNotice } from './shop-receipt.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
@@ -526,6 +526,13 @@ app.post('/api/orders/admin/status', adminLimiter, async (req, res) => {
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await orders.setStatus(req.body?.id, req.body?.status, req.body?.note);
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  // แจ้งลูกค้าเมื่อ admin ยกเลิกออเดอร์ (เดิมลูกค้าที่จ่ายเงินไปแล้วไม่เคยรู้ว่าถูกยกเลิก)
+  if (req.body?.status === 'cancelled') {
+    try {
+      const ord = await orders.getOne(req.body?.id);
+      if (ord) sendShopCancelled({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, order_id: ord.id, amount: ord.amount, reason: req.body?.note });
+    } catch (_) { /* best-effort */ }
+  }
   res.json({ success: true, ...r });
 });
 // POST /api/orders/admin/ship — บันทึกเลขพัสดุ + ขนส่ง (Admin Key)
@@ -697,6 +704,8 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
       if (!adj.ok) {
         await orders.setStatus(orderId, 'cancelled', `ชำระเงินสำเร็จแต่สต๊อกหมดพอดี (race) — ต้องคืนเงินลูกค้า · charge ${charge?.charge_id || '-'}`);
         addLog('error', 'Shop', `OVERSOLD: ออเดอร์ ${orderId} จ่ายแล้วแต่สต๊อก ${product_id} หมด — ต้องคืนเงิน (charge ${charge?.charge_id || '-'})`);
+        // ลูกค้าจ่ายเงินแล้วแต่ระบบต้องยกเลิก — แจ้ง + ยืนยันว่ากำลังคืนเงิน (เหตุผลแบบสะอาด ไม่ส่ง charge id ภายในให้ลูกค้า)
+        sendShopCancelled({ contact, customer_name, product_name: p.name, order_id: orderId, amount, reason: 'สินค้าหมดสต๊อกพอดีหลังชำระเงิน', refund_pending: true });
         return res.status(200).json({ success: true, paid: true, fulfilled: false, refund_pending: true, order_id: orderId, amount, charge_id: charge?.charge_id || null, message: 'ชำระเงินสำเร็จ แต่สินค้าหมดสต๊อกพอดี ทีมงานจะติดต่อคืนเงินให้โดยเร็ว' });
       }
       await orders.setStatus(orderId, 'confirmed', 'ชำระเงินสำเร็จ');
@@ -980,6 +989,21 @@ async function sendShopDelivered(order) {
     console.log(`✅ Delivered notice ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
   } catch (err) {
     console.error('Delivered notice email error:', err.message);
+  }
+}
+
+// แจ้งลูกค้าเมื่อคำสั่งซื้อถูกยกเลิก — ทั้งกรณี admin ยกเลิกเอง (/api/orders/admin/status)
+// และกรณี "จ่ายเงินแล้วแต่สต๊อกหมด (race)" ที่ระบบยกเลิกอัตโนมัติ (finalizePaid / PromptPay
+// webhook) เดิมลูกค้าที่จ่ายเงินไปแล้วไม่เคยได้รับแจ้งว่าออเดอร์ถูกยกเลิก/กำลังคืนเงิน ส่งเฉพาะ
+// เมื่อ contact เป็นอีเมล best-effort (เหมือน sendShopReceipt)
+async function sendShopCancelled(order) {
+  if (!mailer || !isReceiptEmail(order?.contact)) return;
+  const { subject, html } = buildCancelledNotice(order);
+  try {
+    await mailer.sendMail({ from: `"Openthai Store" <${process.env.SMTP_USER}>`, to: order.contact, subject, html });
+    console.log(`❌ Cancelled notice ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
+  } catch (err) {
+    console.error('Cancelled notice email error:', err.message);
   }
 }
 
@@ -8087,6 +8111,8 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
               if (!adj.ok) {
                 await orders.setStatus(shopOrderId, 'cancelled', `ชำระ PromptPay สำเร็จแต่สต๊อกหมดพอดี — ต้องคืนเงินลูกค้า · charge ${data.id}`);
                 addLog('error', 'OmiseWebhook', `OVERSOLD: ออเดอร์ ${shopOrderId} จ่าย PromptPay แล้วแต่สต๊อก ${shopProductId} หมด — ต้องคืนเงิน (charge ${data.id})`);
+                // ลูกค้าจ่าย PromptPay แล้วแต่ระบบต้องยกเลิก — แจ้ง + ยืนยันว่ากำลังคืนเงิน
+                sendShopCancelled({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, order_id: shopOrderId, amount: data.amount / 100, reason: 'สินค้าหมดสต๊อกพอดีหลังชำระเงิน', refund_pending: true });
               } else {
                 await orders.setStatus(shopOrderId, 'confirmed', 'ชำระเงินผ่าน PromptPay สำเร็จ');
                 // #9 — เครดิตคอมมิชชัน affiliate สำหรับร้านค้าจ่ายผ่าน PromptPay (channel = 'ref:CODE')

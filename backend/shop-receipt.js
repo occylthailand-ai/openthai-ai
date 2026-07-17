@@ -55,6 +55,31 @@ export function buildShippedNotice({ customer_name, product_name, tracking_no, c
   return { subject, html: shell('#3b82f6,#6366f1', '📦 คำสั่งซื้อของคุณจัดส่งแล้ว', inner) };
 }
 
+// Pure: "your order was cancelled" notice. Sent when an order moves to `cancelled`
+// (admin cancels, or the paid-but-oversold race auto-cancels). When the buyer already
+// paid (refund_pending / amount > 0) it must say a refund is being processed back to the
+// original channel — the money case is exactly why the customer needs to hear from us.
+export function buildCancelledNotice({ customer_name, product_name, order_id, amount, reason, refund_pending } = {}) {
+  const paid = refund_pending || Number(amount) > 0;
+  const subject = `❌ คำสั่งซื้อ ${order_id || ''} ถูกยกเลิก — Openthai Store`.trim();
+  const reasonRow = reason ? row('เหตุผล', esc(reason)) : '';
+  const refundBlock = paid
+    ? `<div style="margin:16px 0 0;padding:14px;border-radius:10px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.25);">
+         <p style="margin:0;color:#34d399;font-weight:700;">💰 การคืนเงิน</p>
+         <p style="margin:6px 0 0;color:#cbd5e1;">ยอดที่ชำระ${Number(amount) > 0 ? ` ฿${Number(amount).toLocaleString('th-TH')}` : ''} กำลังดำเนินการคืนกลับช่องทางที่คุณชำระมา ทีมงานจะติดต่อกลับเพื่อยืนยันโดยเร็ว</p>
+       </div>`
+    : '';
+  const inner = `
+      <p style="margin:0 0 14px;">สวัสดีคุณ${esc(customer_name || '')} คำสั่งซื้อของคุณถูกยกเลิก รายละเอียดด้านล่าง</p>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <tr><td style="padding:8px 0;color:#94a3b8;">เลขคำสั่งซื้อ</td><td style="padding:8px 0;text-align:right;font-weight:700;">${esc(order_id || '-')}</td></tr>
+        ${row('สินค้า', esc(product_name || '-'))}${reasonRow}
+      </table>
+      ${refundBlock}
+      <p style="margin:16px 0 0;color:#94a3b8;font-size:13px;">หากมีคำถามหรือต้องการเปิดข้อพิพาท ตอบกลับอีเมลนี้ได้ทันที</p>`;
+  return { subject, html: shell('#ef4444,#f97316', '❌ คำสั่งซื้อถูกยกเลิก', inner) };
+}
+
 // Pure: "delivered" confirmation — sent when an admin confirms delivery with proof
 // (received_by signature or drop_off location).
 export function buildDeliveredNotice({ customer_name, product_name, order_id, received_by, drop_off } = {}) {

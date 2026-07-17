@@ -2,7 +2,7 @@
 // Deterministic, no server/SMTP. Pins: (1) a receipt is only emailable when the buyer's
 // contact is an email (checkout also accepts phone/LINE); (2) the receipt body carries the
 // real order id / product / qty / amount and HTML-escapes user-supplied fields.
-import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice } from '../shop-receipt.js';
+import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice, buildCancelledNotice } from '../shop-receipt.js';
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; console.log(`  ✅ ${msg}`); } else { fail++; console.log(`  ❌ ${msg}`); } };
@@ -55,6 +55,21 @@ const d3 = buildDeliveredNotice({ order_id: 'o' });
 ok(d3.html.includes('จัดส่งสำเร็จ') && !d3.html.includes('undefined'), 'no proof → "จัดส่งสำเร็จ", no undefined leak');
 const dx = buildDeliveredNotice({ order_id: 'o', received_by: '<img src=x>' });
 ok(!dx.html.includes('<img src=x>') && dx.html.includes('&lt;img'), 'received_by is HTML-escaped');
+
+console.log('\n=== buildCancelledNotice content ===');
+const c = buildCancelledNotice({ customer_name: 'สมชาย', product_name: 'ครีมทดสอบ', order_id: 'ord_c', amount: 1000, reason: 'สินค้าหมดสต๊อก', refund_pending: true });
+ok(c.subject.includes('ord_c') && c.subject.includes('ยกเลิก'), `cancelled subject carries order id + ยกเลิก (${c.subject})`);
+ok(c.html.includes('ครีมทดสอบ') && c.html.includes('ord_c'), 'cancelled body shows product + order id');
+ok(c.html.includes('สินค้าหมดสต๊อก'), 'cancelled body shows the reason when given');
+ok(c.html.includes('การคืนเงิน') && c.html.includes('฿1,000'), 'paid order → refund block with the THB amount');
+const c2 = buildCancelledNotice({ order_id: 'ord_free', product_name: 'X' });
+ok(!c2.html.includes('การคืนเงิน'), 'unpaid order (no amount) → no refund block');
+ok(!c2.html.includes('เหตุผล'), 'no reason given → no reason row (no empty label)');
+const c3 = buildCancelledNotice({ order_id: 'o', amount: 500 });
+ok(c3.html.includes('การคืนเงิน') && c3.html.includes('฿500'), 'amount>0 alone triggers refund block (refund_pending implied)');
+const cx = buildCancelledNotice({ order_id: 'o', reason: '<script>x</script>', customer_name: 'A&B' });
+ok(!cx.html.includes('<script>x</script>') && cx.html.includes('&lt;script&gt;'), 'reason is HTML-escaped');
+ok(cx.html.includes('A&amp;B'), 'customer name is HTML-escaped');
 
 console.log(`\n${'='.repeat(48)}`);
 console.log(`ผลทดสอบ: ✅ ${pass} ผ่าน · ❌ ${fail} ไม่ผ่าน`);
