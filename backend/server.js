@@ -7269,6 +7269,16 @@ if (!IS_VERCEL) {
 
 // ── Vercel Cron trigger: GET /api/autopost/process ────────────────────────────
 app.get('/api/autopost/process', async (req, res) => {
+  // Same auth shape as the daily-report / consumer-digest cron routes: this endpoint
+  // DISPATCHES queued social posts (dispatchAutoPost — real outbound actions), so it must
+  // not be world-callable. It had no auth at all, letting anyone force-send the whole queue.
+  // Vercel Cron hits it with GET + Authorization: Bearer $CRON_SECRET; admin panel may use
+  // x-admin-key. (No frontend/internal caller relies on it being open — cron-only.)
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const adminOk = checkAdminKey(req.headers['x-admin-key'] || req.query.key);
+  const cronOk  = !!process.env.CRON_SECRET && bearerToken === process.env.CRON_SECRET;
+  if (!adminOk && !cronOk) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const now = Date.now();
   const pending = autopostQueue.filter(i => i.status === 'queued' && new Date(i.schedule_at).getTime() <= now);
   let processed = 0;
