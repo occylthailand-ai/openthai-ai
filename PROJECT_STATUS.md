@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-17T15:16:22.370Z · branch `claude/daily-reporter-improvements-8vc9ct` (415 commit(s) ahead of main)
+Generated: 2026-07-17T18:13:11.446Z · branch `claude/daily-reporter-improvements-8vc9ct` (416 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 625 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 499 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,12 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-17 — Hourly loop: UX fix — the affiliate "ประวัติยอดขาย" table rendered blank columns (read fields the API never sends); now shows the real data
+
+Closes the side-finding flagged in the previous (charge_id) entry, in the safe direction. **Verified against the code:** `AffiliateDashboard.jsx`'s recent-sales table read `s.id` (Order ID), `s.plan` (แพ็กเกจ) and `s.status`, but a stored recent_sale is `{ amount_thb, commission, source, at }` (server.js `creditAffiliateSale`) — it has **none** of those. So every row showed a blank Order ID + blank package and, because `STATUS_STYLE[undefined]` fell back to `pending`, a permanent "⏳ รอ" status — misleading for sales whose commission was already credited. The genuinely useful data the affiliate wants (which channel drove the sale, the sale value, the commission, the date) was all present but unshown. **Fix (frontend only, no invented semantics — show the fields that exist, drop the ones that never did):** columns are now **ช่องทาง · มูลค่าขาย · คอมมิชชั่น · วันที่** — `source` via a small friendly label map (`shop`/`store`→ร้านค้า, `direct`/`landing`→ลิงก์ตรง, else the raw platform), `amount_thb` and `commission` grouped in ฿, and `at` formatted as a Thai date. Removed the now-dead `STATUS_STYLE` (the invented status column) and the `Order ID`/`แพ็กเกจ` columns. This pairs with the prior entry where the API side of the same record stopped leaking `charge_id`.
+
+**Verified by running:** `npm run build` (vite) clean — prerender + sitemap all wrote; `npm test` → **138/138** frontend tests pass. The fields the table now reads (`s.source`, `s.amount_thb`, `s.commission`, `s.at`) match exactly the live `recent_sales` shape captured last round against the real server (`{amount_thb:1000, commission:200, source:'direct', at, date}`), so the once-blank columns now render real values. Frontend-only change; no backend/API change.
 
 ### 2026-07-17 — Hourly loop: leak fix (3rd public-projection audit) — the unauthenticated affiliate stats endpoint exposed the referred buyer's Omise charge_id
 
@@ -3242,54 +3248,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c34942b fix(affiliate): stop leaking the referred buyer's Omise charge_id on the public stats endpoint (24 seconds ago)
-- 1de177e chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- b57bbe6 fix(disputes): stop leaking the admin-only AI arbitration draft to the parties on public track (62 minutes ago)
-- 291293b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 00c8c16 fix(orders): stop leaking internal history notes to buyers on the public track page (2 hours ago)
-- cad12c5 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- a1e67b5 feat(shop): email the customer when their order is cancelled (incl. paid-but-oversold refund) (3 hours ago)
-- ae3d3e8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 9def958 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- c34942b fix(affiliate): stop leaking the referred buyer's Omise charge_id on the public stats endpoint (3 hours ago)
+- 1de177e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- b57bbe6 fix(disputes): stop leaking the admin-only AI arbitration draft to the parties on public track (4 hours ago)
+- 291293b chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 00c8c16 fix(orders): stop leaking internal history notes to buyers on the public track page (5 hours ago)
+- cad12c5 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- a1e67b5 feat(shop): email the customer when their order is cancelled (incl. paid-but-oversold refund) (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

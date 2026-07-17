@@ -4,11 +4,13 @@ import { useToast } from '../components/ToastContext';
 import { apiUrl } from '../apiBase';
 
 const TIER_COLOR = { starter: '#10b981', pro: '#6366f1', elite: '#f59e0b' };
-const STATUS_STYLE = {
-  confirmed: { bg: 'rgba(99,102,241,0.15)', color: '#a5b4fc', label: '✅ ยืนยัน' },
-  paid: { bg: 'rgba(16,185,129,0.15)', color: '#6ee7b7', label: '💸 จ่ายแล้ว' },
-  pending: { bg: 'rgba(245,158,11,0.15)', color: '#fcd34d', label: '⏳ รอ' },
-};
+// ป้ายช่องทางที่มาของยอดขาย (source ที่ creditAffiliateSale บันทึกจริง: 'shop'/'store'/
+// 'direct' หรือชื่อแพลตฟอร์ม) — เดิมตารางนี้อ่าน s.id/s.plan/s.status ที่ API ไม่เคยส่งมา
+// เลย (recent_sale = {amount_thb, commission, source, at}) จึงโชว์ Order ID/แพ็กเกจ ว่าง
+// และ "รอ" ทุกแถว ตอนนี้แสดงข้อมูลจริงที่มี: ช่องทาง · มูลค่าขาย · คอมมิชชั่น · วันที่
+const SOURCE_LABEL = { shop: '🛍️ ร้านค้า', store: '🛍️ ร้านค้า', direct: '🔗 ลิงก์ตรง', landing: '🔗 ลิงก์ตรง' };
+const srcLabel = (s) => SOURCE_LABEL[s] || (s ? `📣 ${s}` : '🔗 ลิงก์ตรง');
+const fmtSaleDate = (at) => { const d = at ? new Date(at) : null; return d && !isNaN(d) ? d.toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'; };
 
 function useCopy(toast) {
   const [copied, setCopied] = useState('');
@@ -346,26 +348,20 @@ export default function AffiliateDashboard() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                   <thead>
                     <tr style={{ color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                      {['Order ID', 'แพ็กเกจ', 'คอมมิชชั่น', 'วันที่', 'สถานะ'].map((h) => (
+                      {['ช่องทาง', 'มูลค่าขาย', 'คอมมิชชั่น', 'วันที่'].map((h) => (
                         <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, fontSize: 12 }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {data.recent_sales.map((s) => {
-                      const st = STATUS_STYLE[s.status] || STATUS_STYLE.pending;
-                      return (
-                        <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                          <td style={{ padding: '10px 12px', color: '#94a3b8' }}>{s.id}</td>
-                          <td style={{ padding: '10px 12px' }}>{s.plan}</td>
-                          <td style={{ padding: '10px 12px', color: '#10b981', fontWeight: 700 }}>+฿{s.commission}</td>
-                          <td style={{ padding: '10px 12px', color: '#94a3b8', fontSize: 12 }}>{s.date}</td>
-                          <td style={{ padding: '10px 12px' }}>
-                            <span style={{ background: st.bg, color: st.color, borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 600 }}>{st.label}</span>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {data.recent_sales.map((s, i) => (
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '10px 12px' }}>{srcLabel(s.source)}</td>
+                        <td style={{ padding: '10px 12px', color: '#94a3b8' }}>฿{Number(s.amount_thb || 0).toLocaleString('th-TH')}</td>
+                        <td style={{ padding: '10px 12px', color: '#10b981', fontWeight: 700 }}>+฿{Number(s.commission || 0).toLocaleString('th-TH')}</td>
+                        <td style={{ padding: '10px 12px', color: '#94a3b8', fontSize: 12 }}>{fmtSaleDate(s.at || s.date)}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
