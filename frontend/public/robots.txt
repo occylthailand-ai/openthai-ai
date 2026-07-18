@@ -33,5 +33,28 @@ Disallow: /tiktok
 Disallow: /facebook
 Disallow: /login
 Disallow: /api/
+# Login-gated consoles (redirect to /login for anonymous visitors) — no SEO value,
+# keep crawlers off them so crawl budget goes to the public funnel pages above.
+# /corporate and /skills are prefixes covering their sub-routes.
+Disallow: /agent
+Disallow: /analytics-pro
+Disallow: /assistant
+Disallow: /benchmark
+Disallow: /catalog-ai
+Disallow: /corporate
+Disallow: /daily-pr
+Disallow: /global-pr
+Disallow: /image-prompt
+Disallow: /integrations
+Disallow: /kol-brief
+Disallow: /pitch
+Disallow: /promo-engine
+Disallow: /scheduler
+Disallow: /skills
+Disallow: /starter
+Disallow: /strategy
+Disallow: /supply-chain
+Disallow: /ultra-promo
+Disallow: /video
 
 Sitemap: https://www.openthai-ai.com/sitemap.xml

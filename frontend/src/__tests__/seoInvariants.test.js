@@ -68,6 +68,20 @@ describe('SEO route invariants', () => {
     expect(leaked).toEqual([]);
   });
 
+  it('every login-gated route in App.jsx is covered by a robots.txt Disallow', () => {
+    // The mustDisallow check above pins a hand-picked few. This one is exhaustive and
+    // self-maintaining: EVERY route that redirects anonymous visitors to /login
+    // (element={isAuthenticated ? <X/> : <Navigate to="/login"/>}) is a private console
+    // with no SEO value and must be excluded, or a crawler wastes budget indexing a
+    // /login redirect. Any new auth-gated dashboard that isn't added to robots.txt fails
+    // here. Disallow uses prefix matching, so `/corporate` covers `/corporate/board` etc.
+    const authRoutes = [...appJsx.matchAll(/<Route\s+path="([^"]+)"\s+element=\{[^\n]*?Navigate to="\/login"/g)]
+      .map((m) => m[1]);
+    expect(authRoutes.length, 'found auth-gated routes to check').toBeGreaterThan(0);
+    const uncovered = authRoutes.filter((p) => !disallowPaths.some((d) => p === d || p.startsWith(d)));
+    expect(uncovered).toEqual([]);
+  });
+
   it('every route has a non-empty title and description for meta/OG tags', () => {
     const bad = ROUTES.filter((r) => !r.title?.trim() || !r.desc?.trim()).map((r) => r.path);
     expect(bad).toEqual([]);
