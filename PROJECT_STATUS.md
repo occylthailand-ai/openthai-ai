@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-18T00:14:56.603Z · branch `claude/daily-reporter-improvements-8vc9ct` (425 commit(s) ahead of main)
+Generated: 2026-07-18T04:14:06.721Z · branch `claude/daily-reporter-improvements-8vc9ct` (426 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 635 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 509 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-18 — Hourly loop: a11y fix — the public order/dispute tracking forms had labels not associated with their inputs
+
+Found verifying the two customer-facing forms reached straight from a transactional email — `TrackOrderPage` (order id + contact, and the "open a dispute" reason/evidence) and `DisputeTrackPage` (dispute id + contact). **Verified against the code:** all six `<label style={lab}>` were styled text with **no `htmlFor`**, and the paired `<input>`/`<textarea>` had **no `id`** — so the label wasn't programmatically tied to its field (WCAG 1.3.1 / 4.1.2). Concrete effects: tapping the label didn't focus the input (worse on mobile, where the tap target matters), and a screen reader announced the field with no name. The portal funnel pages already do this correctly (`<label htmlFor>` + `<input id>`); these two public pages had drifted.
+
+**Fix:** associated every label with its field on both pages — `dt-id`/`dt-contact` (DisputeTrack), `tk-id`/`tk-contact` and `dispute-reason`/`dispute-evidence` (TrackOrder). Attributes only; no layout/logic/behaviour change. Added `src/__tests__/trackFormsA11y.test.js` — a structural guard (same no-render approach as seoInvariants/portalConsent) asserting every `<label>` in these files carries an `htmlFor` and every `htmlFor` points at a real `id` in the same file, so a new unassociated label fails CI.
+
+**Verified by running:** `npx vitest trackFormsA11y.test.js` → **4/4**. **Mutation-tested** — dropping one `htmlFor` makes the guard fail exactly `DisputeTrackPage > every <label> has an htmlFor`, restored to green. Full `npm test` → **153/153** (was 149); `npm run build` (vite) clean. Frontend-only; no backend/behaviour change.
 
 ### 2026-07-18 — Hourly loop: SEO/crawl-hygiene fix — ~30 login-gated console routes were crawlable (not in robots.txt Disallow) + added a self-maintaining guard
 
@@ -3280,54 +3288,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 7ab455d seo(robots): exclude the ~30 login-gated console routes from crawling + guard it (20 seconds ago)
-- 280b378 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 32ccd32 feat(quickpay): email a receipt to the buyer when a QuickPay charge is paid (61 minutes ago)
-- 3b693ac chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 75fc754 refactor(portals): one shared consentLabel() instead of 9 duplicated CONSENT_TEXT maps (2 hours ago)
-- 432d929 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- a582adf fix(portals): restore the Chinese consent label on the Gov-Thai portal + guard it (3 hours ago)
-- a04fe5a chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 009e572 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 7ab455d seo(robots): exclude the ~30 login-gated console routes from crawling + guard it (4 hours ago)
+- 280b378 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 32ccd32 feat(quickpay): email a receipt to the buyer when a QuickPay charge is paid (5 hours ago)
+- 3b693ac chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 75fc754 refactor(portals): one shared consentLabel() instead of 9 duplicated CONSENT_TEXT maps (6 hours ago)
+- 432d929 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- a582adf fix(portals): restore the Chinese consent label on the Gov-Thai portal + guard it (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 218,
-  "memory_mb": "19.7",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

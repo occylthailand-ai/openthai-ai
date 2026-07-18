@@ -76,10 +76,10 @@ export default function TrackOrderPage() {
 
       <section style={{ maxWidth: 560, margin: '0 auto', padding: '0 5% 30px' }}>
         <form onSubmit={track} style={card}>
-          <label style={lab}>{t('mk.track.id')}</label>
-          <input style={inp} value={id} onChange={(e) => setId(e.target.value)} placeholder="ord_..." />
-          <label style={lab}>{t('mk.track.contact')}</label>
-          <input style={inp} value={contact} onChange={(e) => setContact(e.target.value)} placeholder="@line / email / 08x" />
+          <label htmlFor="tk-id" style={lab}>{t('mk.track.id')}</label>
+          <input id="tk-id" style={inp} value={id} onChange={(e) => setId(e.target.value)} placeholder="ord_..." />
+          <label htmlFor="tk-contact" style={lab}>{t('mk.track.contact')}</label>
+          <input id="tk-contact" style={inp} value={contact} onChange={(e) => setContact(e.target.value)} placeholder="@line / email / 08x" />
           {err && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 10 }}>⚠️ {err}</div>}
           <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', marginTop: 14, opacity: busy ? 0.7 : 1 }}>{busy ? t('mk.track.searching') : t('mk.track.btn')}</button>
         </form>
@@ -138,10 +138,10 @@ export default function TrackOrderPage() {
                 </div>
               ) : showDisputeForm ? (
                 <form onSubmit={openDispute}>
-                  <label style={lab}>{t('mk.dispute.open.reason')}</label>
-                  <textarea style={{ ...inp, minHeight: 70, resize: 'vertical' }} value={disputeReason} onChange={(e) => setDisputeReason(e.target.value)} placeholder={t('mk.dispute.open.reason.ph')} />
-                  <label style={lab}>{t('mk.dispute.open.evidence')}</label>
-                  <textarea style={{ ...inp, minHeight: 50, resize: 'vertical' }} value={disputeEvidence} onChange={(e) => setDisputeEvidence(e.target.value)} placeholder={t('mk.dispute.open.evidence.ph')} />
+                  <label htmlFor="dispute-reason" style={lab}>{t('mk.dispute.open.reason')}</label>
+                  <textarea id="dispute-reason" style={{ ...inp, minHeight: 70, resize: 'vertical' }} value={disputeReason} onChange={(e) => setDisputeReason(e.target.value)} placeholder={t('mk.dispute.open.reason.ph')} />
+                  <label htmlFor="dispute-evidence" style={lab}>{t('mk.dispute.open.evidence')}</label>
+                  <textarea id="dispute-evidence" style={{ ...inp, minHeight: 50, resize: 'vertical' }} value={disputeEvidence} onChange={(e) => setDisputeEvidence(e.target.value)} placeholder={t('mk.dispute.open.evidence.ph')} />
                   {disputeErr && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 8 }}>⚠️ {disputeErr}</div>}
                   <button type="submit" disabled={disputeBusy || !disputeReason.trim()} style={{ ...primaryBtn, width: '100%', marginTop: 12, opacity: disputeBusy || !disputeReason.trim() ? 0.6 : 1 }}>
                     {disputeBusy ? t('mk.dispute.open.submitting') : t('mk.dispute.open.submit')}

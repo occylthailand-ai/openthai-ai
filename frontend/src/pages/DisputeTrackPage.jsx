@@ -46,10 +46,10 @@ export default function DisputeTrackPage() {
 
       <section style={{ maxWidth: 560, margin: '0 auto', padding: '0 5% 30px' }}>
         <form onSubmit={check} style={card}>
-          <label style={lab}>{t('mk.dispute.id')}</label>
-          <input style={inp} value={id} onChange={(e) => setId(e.target.value)} placeholder={t('mk.dispute.id.ph')} />
-          <label style={lab}>{t('mk.dispute.contact')}</label>
-          <input style={inp} value={contact} onChange={(e) => setContact(e.target.value)} placeholder="@line / email / 08x" />
+          <label htmlFor="dt-id" style={lab}>{t('mk.dispute.id')}</label>
+          <input id="dt-id" style={inp} value={id} onChange={(e) => setId(e.target.value)} placeholder={t('mk.dispute.id.ph')} />
+          <label htmlFor="dt-contact" style={lab}>{t('mk.dispute.contact')}</label>
+          <input id="dt-contact" style={inp} value={contact} onChange={(e) => setContact(e.target.value)} placeholder="@line / email / 08x" />
           {err && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 10 }}>⚠️ {err}</div>}
           <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', marginTop: 14, opacity: busy ? 0.7 : 1 }}>{busy ? t('mk.dispute.searching') : t('mk.dispute.btn')}</button>
         </form>
