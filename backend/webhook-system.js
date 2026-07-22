@@ -202,6 +202,10 @@ export function createWebhookSystem(writeDir) {
             attempt:    result.attempt,
             failed:     !!result.failed,
           });
+          // Cap the IN-MEMORY log too — flushLog() only slices what it writes to disk, so
+          // without this the deliveries array grew unbounded on a long-running server (one
+          // entry per delivery, forever) even though the file stayed at MAX_DELIVERIES.
+          if (deliveries.length > MAX_DELIVERIES) deliveries.length = MAX_DELIVERIES;
           flushLog();
         })();
       });

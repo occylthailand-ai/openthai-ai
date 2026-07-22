@@ -51,5 +51,16 @@ const r = wh.dispatch('nobody.listening', {});
 ok(typeof r?.then === 'function', 'dispatch() returns a thenable');
 ok(Array.isArray(await r), 'dispatch with no matching active hook resolves to an array (no throw)');
 
+console.log('\n=== the in-memory delivery log is bounded (no unbounded growth) ===');
+// flushLog() only slices what it WRITES to disk; the in-memory `deliveries` array was never
+// trimmed, so a long-running server accumulated one entry per delivery forever. Re-register a
+// fresh active hook (the earlier one was auto-disabled) and fire well past the 200 cap.
+nextOk = true;
+const reg2 = wh.register({ url: 'https://example.com/hook2', events: ['*'] });
+for (let i = 0; i < 260; i++) await wh.dispatch('spam.event', { i });
+const allLogs = wh.logs({ limit: 100000 }); // limit huge → returns the whole in-memory array
+ok(allLogs.length <= 200, `in-memory delivery log capped at MAX_DELIVERIES=200 after 260 dispatches (got ${allLogs.length})`);
+ok(allLogs.length === 200, `exactly 200 kept (most recent), older entries dropped (got ${allLogs.length})`);
+
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

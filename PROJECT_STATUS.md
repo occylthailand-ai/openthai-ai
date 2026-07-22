@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-22T20:21:14.138Z · branch `claude/daily-reporter-improvements-8vc9ct` (445 commit(s) ahead of main)
+Generated: 2026-07-22T22:13:53.888Z · branch `HEAD` (446 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 655 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 529 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-22 — Hourly loop: bug fix — webhook delivery log grew UNBOUNDED in memory (only the on-disk copy was capped)
+
+Follow-up audit of the same file (`backend/webhook-system.js`). **Verified against the code:** `MAX_DELIVERIES = 200` is enforced *only* on the disk write — `flushLog()` saves `deliveries.slice(0, MAX_DELIVERIES)` — but the in-memory `deliveries` array itself is only ever `unshift`'d (one entry per delivery, in `dispatch()`) and **never trimmed**. So on a long-running server process every webhook delivery permanently added an entry to the in-memory array; the file stayed at 200 but RAM grew without limit. On restart it reloads only the capped-200 file, which is exactly why the leak was easy to miss — it only manifests on a process that stays up (the standalone `node server.js`, not per-invocation serverless). `logs()` returns `deliveries.slice(0, limit)`, so the API output looked fine while memory quietly climbed.
+
+**Fix (1 line):** after the `unshift`, `if (deliveries.length > MAX_DELIVERIES) deliveries.length = MAX_DELIVERIES;` — the in-memory log is now bounded to the same 200 most-recent entries as the file. No API/behaviour change (callers already only ever read the first `limit`).
+
+**Verified by running + mutation-tested:** extended `backend/scripts/test-webhook-retry.mjs` — registers a fresh hook and fires **260** dispatches, then asserts `logs({limit: 100000}).length` (huge limit → the whole in-memory array) is `=== 200`, not 260+. Ran green **10/10** via `npm run test:webhook-retry`. **Mutation:** commenting out the cap makes the in-memory array grow to **313** and fails exactly the two new "delivery log is bounded" assertions (8 passed / 2 failed), restored to green. `node --check` clean. Test already wired into `package.json` + CI from the previous entry. Backend-only.
 
 ### 2026-07-22 — Hourly loop: bug fix — webhook auto-disable counted CUMULATIVE lifetime failures, not "20 consecutive" as its comment promised
 
@@ -3512,54 +3520,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- dd339d7 fix(webhooks): reset failCount on success so auto-disable means 20 CONSECUTIVE failures (5 minutes ago)
-- 3ed60be chore: sync PROJECT_STATUS.md [skip ci] (67 minutes ago)
-- 110f64b fix(affiliate): guard promptpay mask against a null value in withdrawals list (67 minutes ago)
-- b44780c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 0e6b3c6 fix(orders): track() no longer crashes on a stored order with a null contact (2 hours ago)
-- 79dfbf4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 372fd1d fix(disputes): respond() no longer crashes when the order has no producer_email (2 hours ago)
-- 365e928 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 1d7b02b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- dd339d7 fix(webhooks): reset failCount on success so auto-disable means 20 CONSECUTIVE failures (2 hours ago)
+- 3ed60be chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 110f64b fix(affiliate): guard promptpay mask against a null value in withdrawals list (3 hours ago)
+- b44780c chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 0e6b3c6 fix(orders): track() no longer crashes on a stored order with a null contact (4 hours ago)
+- 79dfbf4 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 372fd1d fix(disputes): respond() no longer crashes when the order has no producer_email (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3719,7 +3689,7 @@ the backend.
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
 | `video-generator.js` | 204 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
 | `voice-commander.js` | 259 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
-| `webhook-system.js` | 236 | Push events to registered subscriber endpoints instead of polling. |
+| `webhook-system.js` | 240 | Push events to registered subscriber endpoints instead of polling. |
 
 ## Admin panel tabs (frontend/src/i18n/admin.js)
 - 📊 ภาพรวม
