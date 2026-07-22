@@ -63,6 +63,37 @@ try {
   const s2 = await C.spin('e:g@x.com');
   ok(s2.already === true && s2.prize === s1.prize, 'second spin → already:true, same prize (locked in)');
   ok(await bal('e:g@x.com') === balAfter, 'second spin awards nothing further (balance unchanged)');
+
+  console.log('\n=== spin discount is one-time-use (it cuts the REAL charge at payment) ===');
+  // The payment route calls consumeDiscount() and reduces the Omise charge by that pct, so a
+  // "% off" spin prize MUST apply exactly once — if consumeDiscount ever returned it again the
+  // user would get 30–50% off every payment forever. spin's prize is server-random; stub
+  // Math.random to land squarely on the first "% off" prize (robust to prize reordering).
+  const realRandom = Math.random;
+  const discIdx = C.SPIN_PRIZES.findIndex((p) => p.discount);
+  const discPct = C.SPIN_PRIZES[discIdx].discount;
+  Math.random = () => (discIdx + 0.5) / C.SPIN_PRIZES.length;
+  try {
+    const sd = await C.spin('e:disc@x.com');
+    ok(sd.discount === discPct && sd.prize === C.SPIN_PRIZES[discIdx].label, `forced spin lands on the ${discPct}% off prize`);
+    ok(await C.peekDiscount('e:disc@x.com') === discPct, `peekDiscount shows ${discPct}% before it is used`);
+    ok(await C.consumeDiscount('e:disc@x.com') === discPct, 'consumeDiscount returns the pct the FIRST time');
+    ok(await C.consumeDiscount('e:disc@x.com') === 0, 'consumeDiscount returns 0 the SECOND time (one-time-use)');
+    ok(await C.peekDiscount('e:disc@x.com') === 0, 'peekDiscount is 0 after the discount was consumed');
+  } finally {
+    Math.random = realRandom;
+  }
+
+  console.log('\n=== a credits prize leaves no phantom discount ===');
+  const credIdx = C.SPIN_PRIZES.findIndex((p) => (p.credits || 0) > 0);
+  Math.random = () => (credIdx + 0.5) / C.SPIN_PRIZES.length;
+  try {
+    const sc = await C.spin('e:cred@x.com');
+    ok((sc.credits || 0) > 0 && (sc.discount || 0) === 0, 'forced spin lands on a credits prize (no discount)');
+    ok(await C.peekDiscount('e:cred@x.com') === 0, 'a credits (non-discount) prize → peekDiscount 0 (nothing to consume at payment)');
+  } finally {
+    Math.random = realRandom;
+  }
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }

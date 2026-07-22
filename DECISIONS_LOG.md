@@ -3368,3 +3368,27 @@ affiliate-withdraw-confirm / PDPA-erasure-confirm / leads-unsubscribe with a bog
 array token → 403 (not 500). Restored test-dirtied data afterwards. No behaviour
 change on valid/invalid tokens; only the comparison is now constant-time and
 crash-proof against odd query-param shapes.
+
+### 2026-07-22 — Test: pin the spin-discount one-time-use invariant (money path)
+The spin wheel can award a "30% off" / "50% off" prize (credits.js), stored as
+`claims._discount = {pct, used:false}`. The card/PromptPay payment route
+(/api/payment/... in server.js) calls `credits.consumeDiscount()` and cuts the
+real Omise charge by that percentage. So the discount MUST apply exactly once —
+if `consumeDiscount()` ever returned the pct a second time, the user would get
+30–50% off *every* payment forever (a direct revenue leak). The behaviour was
+correct (it marks `used:true`) but nothing pinned it: test-credits.mjs covered
+add/clamp/consume/checkin/spin-once but never the discount lifecycle.
+
+Added a discount block to scripts/test-credits.mjs. spin's prize is server-random,
+so it stubs `Math.random` to land squarely on the first "% off" prize (found via
+`SPIN_PRIZES.findIndex`, robust to prize reordering), then asserts: the forced spin
+yields that discount; `peekDiscount` shows it; `consumeDiscount` returns the pct the
+first time and 0 the second; `peekDiscount` is 0 afterwards; and a credits (non-
+discount) prize leaves `peekDiscount` 0. Restores `Math.random` in a finally.
+
+Verified by running: `node scripts/test-credits.mjs` → 25 passed, 0 failed (was
+~18). Mutation-tested: dropping the `d.used = true` line (discount stays claimable)
+makes the second `consumeDiscount` return the pct again and fails exactly the two
+new one-time-use assertions. No production code changed — this locks in an existing
+money invariant so a future refactor can't silently reopen the leak. CI already runs
+test:credits (.github/workflows/test.yml).
