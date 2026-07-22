@@ -161,7 +161,10 @@ export function createOrders(dataDir, opts = {}) {
     const o = await getOne(id);
     if (!o) return { ok: false, error: 'ไม่พบคำสั่งซื้อนี้' };
     const c = (contact || '').toString().trim().toLowerCase();
-    if (!c || o.contact.toLowerCase() !== c) return { ok: false, error: 'ช่องทางติดต่อไม่ตรงกับคำสั่งซื้อ' };
+    // orders created via place() always carry a non-empty string contact, but a row read back
+    // from Supabase could have a null contact column — o.contact.toLowerCase() would then throw
+    // (a 500) instead of the clean mismatch below. Guard it like the input side already is.
+    if (!c || (o.contact || '').toLowerCase() !== c) return { ok: false, error: 'ช่องทางติดต่อไม่ตรงกับคำสั่งซื้อ' };
     // sanitized buyer-facing view — never leaks internal history notes (charge id / escrow / admin remarks)
     return { ok: true, order: publicOrderView(o) };
   }

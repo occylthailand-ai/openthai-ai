@@ -3435,3 +3435,22 @@ is rejected. Verified by running: node scripts/test-disputes.mjs → 25 passed, 
 failed (was 22). Mutation-tested: restoring the bare producer_email makes respond()
 throw `TypeError: Cannot read properties of undefined (reading 'toLowerCase')` and the
 run exits 1. CI already runs test:disputes (.github/workflows/test.yml).
+
+### 2026-07-22 — Fix: orders.track() crash when a stored order has a null contact
+orders.js `track()` gates the public /api/orders/track endpoint on the caller's
+contact matching the order's: `if (!c || o.contact.toLowerCase() !== c)`. The input
+side `c` is null-guarded (`(contact || '')…`) but `o.contact` was not. Orders created
+via place() always carry a non-empty string contact, but a row read back from Supabase
+can have a null `contact` column — `o.contact.toLowerCase()` then throws a TypeError
+(a 500) instead of the intended clean "contact doesn't match" rejection. Same null-
+safety class as the disputes.respond() fix earlier today.
+
+Fix: `(o.contact || '').toLowerCase()`. scripts/test-orders-track.mjs now also
+exercises track() (it previously only unit-tested the pure publicOrderView): +4
+assertions seeding the file store with a null-contact order and a normal one — the
+null-contact order tracks to a clean {ok:false} (no crash), a wrong contact is
+rejected, the correct contact (case-insensitive) returns the sanitized view with no
+`contact` echoed back, and an empty contact can't bypass the gate. Verified by
+running: node scripts/test-orders-track.mjs → 19 passed, 0 failed (was 15). Mutation-
+tested: restoring the unguarded o.contact.toLowerCase() throws "Cannot read properties
+of null (reading 'toLowerCase')" and the run exits 1. CI already runs test:orders-track.

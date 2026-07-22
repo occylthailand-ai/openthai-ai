@@ -4,7 +4,10 @@
 // Omise charge id), escrow:* state strings, or whatever an admin typed when cancelling.
 // The buyer-facing details (carrier / tracking no / delivery proof) still come through
 // as dedicated fields; the timeline keeps only { status, at }.
-import { publicOrderView } from '../orders.js';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { publicOrderView, createOrders } from '../orders.js';
 
 let pass = 0, fail = 0;
 const ok = (cond, msg) => { if (cond) { pass++; console.log(`  ✅ ${msg}`); } else { fail++; console.log(`  ❌ ${msg}`); } };
@@ -48,6 +51,29 @@ ok(delivered.received_by === 'คุณแม่บ้าน' && delivered.drop_
 console.log('\n=== defensive: odd inputs do not throw ===');
 ok(publicOrderView(null) === null, 'null order → null (no crash)');
 ok(Array.isArray(publicOrderView({ id: 'o' }).history) && publicOrderView({ id: 'o' }).history.length === 0, 'missing history → [] (no crash)');
+
+console.log('\n=== track() contact gate is crash-safe for a stored order with a null contact ===');
+// orders placed via place() always have a string contact, but a row read back from Supabase
+// can have a null contact column. track() compared o.contact.toLowerCase() unguarded, so
+// tracking such an order threw (a 500) instead of the clean mismatch rejection.
+{
+  delete process.env.SUPABASE_URL; delete process.env.SUPABASE_SERVICE_KEY; // force file store
+  const dir = mkdtempSync(join(tmpdir(), 'orders-track-'));
+  // seed the file store directly with an order whose contact is null (as a Supabase row could be)
+  writeFileSync(join(dir, 'orders.json'), JSON.stringify({
+    ord_null: { id: 'ord_null', product_name: 'x', qty: 1, amount: 10, status: 'new', contact: null, history: [] },
+    ord_ok: { id: 'ord_ok', product_name: 'y', qty: 1, amount: 20, status: 'new', contact: 'Buyer@Test.com', history: [] },
+  }));
+  const o = createOrders(dir, {});
+  const rNull = await o.track('ord_null', 'someone@x.com');
+  ok(rNull.ok === false && /ไม่ตรง/.test(rNull.error || ''), `null-contact order → clean {ok:false} (no crash): ${rNull.error}`);
+  const rWrong = await o.track('ord_ok', 'nope@x.com');
+  ok(rWrong.ok === false, 'wrong contact on a normal order → rejected');
+  const rGood = await o.track('ord_ok', 'buyer@test.com');
+  ok(rGood.ok === true && rGood.order.id === 'ord_ok' && !('contact' in rGood.order), 'correct contact (case-insensitive) → ok + sanitized view');
+  const rMissing = await o.track('ord_ok', '');
+  ok(rMissing.ok === false, 'empty contact → rejected (no bypass)');
+}
 
 console.log(`\n${'='.repeat(48)}`);
 console.log(`ผลทดสอบ: ✅ ${pass} ผ่าน · ❌ ${fail} ไม่ผ่าน`);
