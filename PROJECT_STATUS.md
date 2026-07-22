@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-18T04:14:24.111Z · branch `claude/daily-reporter-improvements-8vc9ct` (427 commit(s) ahead of main)
+Generated: 2026-07-22T06:24:42.782Z · branch `claude/daily-reporter-improvements-8vc9ct` (429 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 637 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 639 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -3279,6 +3279,45 @@ endpoints, missing route components, duplicate IDs) and fails CI
   Omise for payments. `README.md` needs a rewrite; until then, trust
   `PROJECT_STATUS.md` over it for anything about the current architecture.
 
+### 2026-07-22 — PR review triage across smart-e#1, otop-ai-landing#1, openthai-ai#79
+Worked the three open PR review queues (CI was already green on all three —
+Vercel deploys only; no test CI on these repos). Verified every finding against
+the real code before acting.
+
+- **smart-e#1** (fixed, commit 48a0c4a on `claude/daily-reporter-improvements-8vc9ct`):
+  (1) `read_body()` returned any parsed JSON, so a valid-but-non-object body
+  (`[]`, `"x"`, `5`) slipped past the `is None` guard and later hit
+  `body.get(...)` → AttributeError → `_guard` turned a client mistake into a
+  500 (PUT even fell through to 200). Now returns the same `None` sentinel the
+  POST/PUT dispatchers map to a clean 400 — one fix covers every
+  object-expecting endpoint. (2) `toast()` inserted `data.error` via
+  `innerHTML`; some server errors interpolate DB-backed values (e.g. a product
+  name in "สต๊อกไม่พอสำหรับ …"), an XSS path — now escaped with the existing
+  `escapeHtml()`. `test_server.py` +6 assertions → 83 passed / 0 failed;
+  mutation-tested (removing the isinstance guard reproduced the exact 500/200).
+  The reviewer's third ask (require `product_id` on every order item) was
+  **declined by design**: a product_id-less item is an intentional ad-hoc/custom
+  line (total still = price×qty; no catalog stock to touch) — requiring it would
+  break a legit POS case. Replied on-thread with the rationale.
+
+- **otop-ai-landing#1** (fixed, commit 41b80b3): the real bug was `vercel.json`
+  building only `index.html`, so `og-image.png`/`logo.webp`/`robots.txt` were
+  never in the deploy output — the `filesystem` route missed them and the
+  `/(.*) → /index.html` rewrite served HTML for those paths (broken favicon,
+  broken social image, robots.txt returning HTML). Added each asset to `builds`.
+  Also: made og:image/twitter:image/favicon + the two logo `<img>` srcs
+  root-relative (not absolute — no production domain hard-coded, so no deindex
+  risk), added `type="image/webp"` to the favicon, added a
+  `prefers-reduced-motion: reduce` override (WCAG 2.3.3), and marked the 9
+  decorative `.icon` emoji divs `aria-hidden="true"`. All 9 review threads
+  resolved; all 4 Vercel previews redeployed Ready.
+
+- **openthai-ai#79** (no code change): the flagged plan-price mismatch
+  (backend ฿299/599/1299 vs. a claimed frontend ฿20/฿30) was **already resolved**
+  on this branch — `PaymentPage.jsx` `PLANS` matches the backend and
+  `planPricingConsistency.test.js` guards it. Other four threads were already
+  auto-marked outdated. Resolved the price thread with a note; nothing to build.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -3288,14 +3327,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 747a0da a11y(track): associate form labels with their inputs on the public track pages (16 seconds ago)
-- 009e572 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 7ab455d seo(robots): exclude the ~30 login-gated console routes from crawling + guard it (4 hours ago)
-- 280b378 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 32ccd32 feat(quickpay): email a receipt to the buyer when a QuickPay charge is paid (5 hours ago)
-- 3b693ac chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 75fc754 refactor(portals): one shared consentLabel() instead of 9 duplicated CONSENT_TEXT maps (6 hours ago)
-- 432d929 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- a9c38a5 docs(log): record 2026-07-22 PR-review triage (smart-e#1, otop-ai-landing#1, openthai-ai#79) (21 seconds ago)
+- e7da108 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
+- 747a0da a11y(track): associate form labels with their inputs on the public track pages (4 days ago)
+- 009e572 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
+- 7ab455d seo(robots): exclude the ~30 login-gated console routes from crawling + guard it (4 days ago)
+- 280b378 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
+- 32ccd32 feat(quickpay): email a receipt to the buyer when a QuickPay charge is paid (4 days ago)
+- 3b693ac chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3317,8 +3356,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
+  "uptime_sec": 851,
+  "memory_mb": "20.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
