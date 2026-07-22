@@ -29,6 +29,14 @@ async function freshOpenDispute() {
   return { d, escrow, id: o.id, openOk: o.ok };
 }
 
+// same but the stub order carries a producer_email, so the producer (the other party
+// to a buyer-opened dispute) can post a counter-response
+function makeDisputesWithProducer() {
+  const orders = { async getOne() { return { id: 'o1', amount: 100, contact: 'buyer@x.com', producer_email: 'seller@x.com' }; }, async setEscrowStatus() {} };
+  const dir = mkdtempSync(join(tmpdir(), 'disp-test-'));
+  return createDisputes(dir, { orders, notify: {} });
+}
+
 console.log('\n=== disputes: DECISIONS no longer includes split ===');
 {
   const { d } = makeDisputes();
@@ -96,6 +104,25 @@ console.log('\n=== publicDisputeView hides admin-only artifacts from the parties
   ok(!('note' in (v.resolution || {})) && !('resolved_by' in (v.resolution || {})), 'resolution keeps only decision + resolved_at');
   ok(publicDisputeView(null) === null, 'null → null (no crash)');
   ok(publicDisputeView({ id: 'd', status: 'open' }).resolution === null, 'unresolved dispute → resolution null (no crash)');
+}
+
+console.log('\n=== respond(): the other party posts a counter-response (contact-gated, crash-safe) ===');
+{
+  // crash-safety: a buyer-opened dispute on an order with NO producer_email. respond()
+  // computes the "other party" as order.producer_email; the `? :` binds looser than `||`,
+  // so the buyer branch used to be a bare order.producer_email (undefined) and .toLowerCase()
+  // threw a TypeError → 500. It must instead cleanly reject the mismatched contact.
+  const { d, id } = await freshOpenDispute();
+  const r = await d.respond(id, { contact: 'seller@x.com', note: 'ส่งของแล้ว', evidence: 'tracking#' });
+  ok(r.ok === false && /ไม่ตรง/.test(r.error || ''), `respond to an order with no producer_email → clean {ok:false} (no crash): ${r.error}`);
+
+  // happy path: order HAS producer_email → the producer's matching contact is accepted
+  const d2 = makeDisputesWithProducer();
+  const opened = await d2.open({ order_id: 'o1', opened_by: 'buyer', contact: 'buyer@x.com', reason: 'ของชำรุด' });
+  const good = await d2.respond(opened.id, { contact: 'SELLER@x.com', note: 'ขอส่งหลักฐาน', evidence: 'รูปสินค้า' });
+  ok(good.ok === true, 'the producer (matching producer_email, case-insensitive) can post a counter-response');
+  const wrong = await d2.respond(opened.id, { contact: 'someone-else@x.com', note: 'ไม่ใช่คู่กรณี', evidence: '' });
+  ok(wrong.ok === false, 'a third party whose contact matches neither side is rejected');
 }
 
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);

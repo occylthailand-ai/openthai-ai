@@ -3415,3 +3415,23 @@ still see a single product). Verified by running: node scripts/test-inventory.mj
 → 25 passed, 0 failed (was 18). Mutation-tested: dropping the guard lets the
 negatives persist and fails the new assertions. CI already runs test:inventory
 (.github/workflows/test.yml).
+
+### 2026-07-22 — Fix: dispute respond() crash when the order has no producer_email
+disputes.js `respond()` computes the "other party" a counter-response must come
+from. The line was `(d.opened_by === 'buyer' ? order.producer_email : order.contact
+|| '').toLowerCase()`. `?:` binds looser than `||`, so the buyer-opened branch was a
+bare `order.producer_email` with no `|| ''` fallback (only the producer-opened branch
+got one). On an order with no producer_email, that branch is `undefined` and
+`.toLowerCase()` throws a TypeError — a 500 — instead of the intended clean "contact
+doesn't match the other party" rejection. `open()` already guards both sides
+(`(order.producer_email || '')` / `(order.contact || '')`); `respond()` just missed it.
+
+Fix: `(d.opened_by === 'buyer' ? (order.producer_email || '') : (order.contact || '')).toLowerCase()`
+— null-guarded on both sides, matching open(). scripts/test-disputes.mjs +3
+assertions: a buyer-opened dispute on an order with no producer_email → respond()
+returns a clean {ok:false} (no crash); with a producer_email present the producer's
+matching contact (case-insensitive) is accepted; a third party matching neither side
+is rejected. Verified by running: node scripts/test-disputes.mjs → 25 passed, 0
+failed (was 22). Mutation-tested: restoring the bare producer_email makes respond()
+throw `TypeError: Cannot read properties of undefined (reading 'toLowerCase')` and the
+run exits 1. CI already runs test:disputes (.github/workflows/test.yml).

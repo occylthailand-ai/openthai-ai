@@ -147,7 +147,10 @@ export function createDisputes(dataDir, opts = {}) {
     const order = await orders.getOne(d.order_id);
     if (!order) return { ok: false, error: 'ไม่พบคำสั่งซื้อนี้' };
     // ผู้ตอบต้องเป็น "อีกฝ่าย" ที่ไม่ใช่คนเปิดข้อพิพาท
-    const otherPartyContact = (d.opened_by === 'buyer' ? order.producer_email : order.contact || '').toLowerCase();
+    // ?: ผูกหลวมกว่า || เดิมฝั่ง buyer เป็น order.producer_email เฉยๆ (ไม่มี || '') ต่างจาก open()
+    // ที่กัน null ทั้งสองฝั่ง — ออเดอร์ที่ไม่มี producer_email (เช่นบางช่องทาง) จะทำให้ .toLowerCase()
+    // โยน TypeError กลายเป็น 500 แทนที่จะเป็น error "ช่องทางไม่ตรง" ที่อ่านได้ กัน null ทั้งสองฝั่งให้ตรงกับ open()
+    const otherPartyContact = (d.opened_by === 'buyer' ? (order.producer_email || '') : (order.contact || '')).toLowerCase();
     if (!otherPartyContact || otherPartyContact !== contact) {
       return { ok: false, error: 'ช่องทางติดต่อไม่ตรงกับอีกฝ่ายของคำสั่งซื้อนี้' };
     }
