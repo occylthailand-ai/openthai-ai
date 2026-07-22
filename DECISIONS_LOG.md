@@ -3392,3 +3392,26 @@ makes the second `consumeDiscount` return the pct again and fails exactly the tw
 new one-time-use assertions. No production code changed — this locks in an existing
 money invariant so a future refactor can't silently reopen the leak. CI already runs
 test:credits (.github/workflows/test.yml).
+
+### 2026-07-22 — Fix: inventory.upsert rejects negative price/cost/stock/low_stock
+inventory.js `upsert()` (behind POST /api/inventory/admin/upsert) validated the
+product name but ran price/stock/cost/low_stock through `num()`, which passes a
+negative straight through (`num(-50, …)` → -50). So an admin typo like price -50
+persisted a negative-priced product. That is a money bug, not just cosmetic:
+`/api/shop/checkout` computes the Omise charge as `(p.price||0) * qty` directly
+from the stored product, so a negative price makes a negative charge, and
+`/api/shop/products` lists the product publicly with that negative price. The
+sibling smart-e fix (2026-07-22, _create_product) closed the same class of gap on
+that repo; this is the openthai-ai equivalent, at the single write path (upsert is
+the only way products are created/edited).
+
+Fix: after the name check, reject when any of price/cost/stock/low_stock is < 0
+(`{ok:false}` → the route returns 400). price 0 / stock 0 stay valid (free sample /
+out of stock). scripts/test-inventory.mjs +7 assertions (each negative field
+rejected; price 0/stock 0 accepted; nothing negative ever persisted; an edit that
+would push an existing product negative is refused and leaves it unchanged; the
+temp free-sample product is removed afterward so the downstream summary asserts
+still see a single product). Verified by running: node scripts/test-inventory.mjs
+→ 25 passed, 0 failed (was 18). Mutation-tested: dropping the guard lets the
+negatives persist and fails the new assertions. CI already runs test:inventory
+(.github/workflows/test.yml).

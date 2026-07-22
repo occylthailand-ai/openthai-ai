@@ -25,6 +25,21 @@ try {
   const id = up.product.id;
   const stockOf = async () => (await inv.get(id)).stock;
 
+  console.log('\n=== upsert rejects negative price/cost/stock/low_stock (money: checkout uses price) ===');
+  // /api/shop/checkout computes the Omise charge as price*qty straight from the stored product,
+  // and /api/shop/products lists it publicly — a negative price (admin typo) makes a negative
+  // charge and a broken listing. num() lets negatives through, so upsert must reject them.
+  ok((await inv.upsert({ name: 'Bad', price: -50, stock: 5 })).ok === false, 'negative price → {ok:false}');
+  ok((await inv.upsert({ name: 'Bad', price: 10, stock: -3 })).ok === false, 'negative stock → {ok:false}');
+  ok((await inv.upsert({ name: 'Bad', price: 10, cost: -1 })).ok === false, 'negative cost → {ok:false}');
+  ok((await inv.upsert({ name: 'Bad', price: 10, low_stock: -1 })).ok === false, 'negative low_stock → {ok:false}');
+  const free = await inv.upsert({ name: 'Free sample', price: 0, stock: 0, low_stock: 0 });
+  ok(free.ok && free.product.price === 0, 'price 0 / stock 0 stays valid (free sample / out of stock)');
+  ok((await inv.list()).every((p) => p.price >= 0 && p.stock >= 0), 'no negative-priced/stocked product was ever persisted');
+  // an edit that tries to push an existing product negative is refused too (product unchanged)
+  ok((await inv.upsert({ id, price: -1 })).ok === false && (await inv.get(id)).price === 100, 'editing an existing product to a negative price is refused (still 100)');
+  await inv.remove(free.product.id); // keep the store at the single T1 product the downstream asserts expect
+
   console.log('\n=== adjust sale: NEVER goes negative (the invariant shop checkout relies on) ===');
   const s1 = await inv.adjust(id, -3, 'sale', 'order A', 'oid1', 'ref:AFF1');
   ok(s1.ok && s1.stock === 2, 'sale of 3 from 5 → ok, stock 2');
