@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-22T18:16:31.623Z · branch `claude/daily-reporter-improvements-8vc9ct` (441 commit(s) ahead of main)
+Generated: 2026-07-22T19:14:21.452Z · branch `claude/daily-reporter-improvements-8vc9ct` (443 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 651 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 653 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -3470,6 +3470,31 @@ running: node scripts/test-orders-track.mjs → 19 passed, 0 failed (was 15). Mu
 tested: restoring the unguarded o.contact.toLowerCase() throws "Cannot read properties
 of null (reading 'toLowerCase')" and the run exits 1. CI already runs test:orders-track.
 
+### 2026-07-22 — Null-safety sweep: string methods on record fields (+1 fix)
+Follow-up to the disputes.respond() and orders.track() fixes earlier today (both
+were `x.toLowerCase()` on a value that a Supabase row can return null). Swept the
+whole backend for the same crash class — string methods (toLowerCase/trim/split/
+replace/…) called on a record field without a null guard:
+- `.toLowerCase()` on record fields: the only remaining hits are server.js:819–821
+  (broadcast recipient set), each already gated by `if (isEmail(...))`, so they only
+  run on a validated string — safe.
+- `.replace()` on record fields: server.js:371 `form.product.replace(...)` in
+  mockGenerate — every content route validates `product?.trim()` before calling it
+  (30+ call sites checked), so it's not reachable with a null product; left as-is.
+- server.js:1794 `w.promptpay.replace(...)` in GET /api/affiliate/withdrawals — this
+  one IS reachable: withdrawals persist to a JSON file across restarts, and a legacy/
+  hand-edited row lacking promptpay makes the mask throw, 500-ing an affiliate's whole
+  withdrawals page. Fixed with `(w.promptpay || '').replace(...)`.
+
+Verified by running the real server (PORT=8795): seeded data/withdrawals.json with a
+withdrawal whose promptpay is null and hit /api/affiliate/withdrawals?ref_code=… →
+HTTP 200 with promptpay masked to "" (was a 500). Mutation-tested: reverting to the
+unguarded `w.promptpay.replace(...)` returns HTTP 500 on the same request. (The seed
+file is gitignored local scratch — file mode; production withdrawals live in Supabase
+— and was reset to [] afterward.) No dedicated unit test added; this is a one-line
+route guard verified live. Sweep conclusion: this null-crash class is now clean across
+the backend.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -3479,14 +3504,14 @@ of null (reading 'toLowerCase')" and the run exits 1. CI already runs test:order
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 0e6b3c6 fix(orders): track() no longer crashes on a stored order with a null contact (22 seconds ago)
-- 79dfbf4 chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
-- 372fd1d fix(disputes): respond() no longer crashes when the order has no producer_email (3 minutes ago)
-- 365e928 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 42f3189 fix(inventory): reject negative price/cost/stock/low_stock in upsert (2 hours ago)
-- e3a190e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 18e6d5e test(credits): pin spin-discount one-time-use (revenue invariant) (4 hours ago)
-- b6ea287 chore: sync PROJECT_STATUS.md [skip ci] (11 hours ago)
+- 110f64b fix(affiliate): guard promptpay mask against a null value in withdrawals list (17 seconds ago)
+- b44780c chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 0e6b3c6 fix(orders): track() no longer crashes on a stored order with a null contact (58 minutes ago)
+- 79dfbf4 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 372fd1d fix(disputes): respond() no longer crashes when the order has no producer_email (61 minutes ago)
+- 365e928 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 42f3189 fix(inventory): reject negative price/cost/stock/low_stock in upsert (3 hours ago)
+- e3a190e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3508,8 +3533,8 @@ of null (reading 'toLowerCase')" and the run exits 1. CI already runs test:order
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 172,
-  "memory_mb": "19.7",
+  "uptime_sec": 626,
+  "memory_mb": "20.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3678,7 +3703,7 @@ of null (reading 'toLowerCase')" and the run exits 1. CI already runs test:order
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8944 | Vercel serverless detection |
+| `server.js` | 8946 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
