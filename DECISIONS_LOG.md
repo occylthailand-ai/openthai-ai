@@ -3302,3 +3302,35 @@ the real code before acting.
   on this branch — `PaymentPage.jsx` `PLANS` matches the backend and
   `planPricingConsistency.test.js` guards it. Other four threads were already
   auto-marked outdated. Resolved the price thread with a note; nothing to build.
+
+### 2026-07-22 — Hardened: per-route SEO prerender now fails loudly on template drift
+The prerender step (`frontend/scripts/prerender-meta.mjs`) rewrites the homepage's
+`<title>`/OG/canonical/Twitter tags into per-route copies so LINE/Facebook link
+previews of every `/portals/*` + funnel page show that page (not the homepage's
+TikTok pitch) — this is the app's main acquisition surface. It did this with a set
+of `String.replace(regex, …)` calls against the built `dist/index.html`. Verified by
+running a real `npm run build`: the transform currently works (Vite preserves the
+` />` tag format, so all replaces match — canonical/og:url/description/breadcrumb are
+correct per route). **But** `String.replace` silently returns the input unchanged on
+a miss, so a future base-template format drift (a Vite upgrade reordering attributes,
+dropping the space before `/>`, etc.) would make every funnel page quietly fall back
+to serving the homepage's preview again — the exact bug this step exists to prevent —
+and it would ship green. This was the one step in an otherwise fail-loud SEO system
+(the PROJECT_STATUS generator and `seoInvariants.test.js` both fail loudly) that
+degraded silently.
+
+Change: extracted the transform into a pure, side-effect-free `frontend/scripts/
+route-meta.mjs` (`applyRouteMeta` + `breadcrumbJsonLd` + `escapeAttr`) where each
+replacement now throws a descriptive error naming the missing tag if its pattern
+doesn't match. `prerender-meta.mjs` imports it (output byte-identical when the
+template is correct — proven with md5sum before/after across producer/contact/sitemap).
+Added `frontend/src/__tests__/routeMeta.test.js` (11 tests): rewrites the real
+`frontend/index.html` base, asserts per-route title/canonical/og swap with no
+cross-contamination, one emitted BreadcrumbList, 3-level vs 2-level crumb trails,
+"<"-escaping in JSON-LD, and — the point — that a base missing canonical/og:url/
+description makes `applyRouteMeta` throw. Full frontend suite 164 passed (was 153;
++11). End-to-end mutation proof: dropping the space before `/>` on the base canonical
+tag and running the real prerender now exits 1 with
+`[route-meta] /portals: expected canonical link not found …`, instead of silently
+emitting the homepage canonical. No behaviour change on the happy path; a real future
+regression now blocks the build.

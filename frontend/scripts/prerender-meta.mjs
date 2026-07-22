@@ -22,61 +22,28 @@ import { fileURLToPath } from 'url';
 // test (src/__tests__/seoInvariants.test.js) can import the exact same list this
 // build script uses, without triggering the dist/index.html read below.
 import { DOMAIN, ROUTES } from './seo-routes.mjs';
+// The per-route HTML transform (title/OG/canonical swap + BreadcrumbList) lives in
+// its own side-effect-free module too, so a unit test (routeMeta.test.js) can prove
+// it both rewrites correctly and THROWS when the base template's tag format drifts.
+// The base index.html already carries the Organization + WebSite + SoftwareApplication
+// @graph (copied onto every route); applyRouteMeta adds the per-page BreadcrumbList so
+// Google can show a "หน้าแรก › พอร์ทัล › <page>" trail instead of a bare URL.
+import { applyRouteMeta } from './route-meta.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST = join(__dirname, '..', 'dist');
 
-function escapeAttr(s) {
-  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-}
-
-// Per-route BreadcrumbList JSON-LD. The base index.html already carries the
-// Organization + WebSite + SoftwareApplication @graph (copied onto every route),
-// but breadcrumbs are the one structured-data piece that must differ per page —
-// they make Google show a "หน้าแรก › พอร์ทัล › <page>" trail in the SERP instead
-// of a bare URL. Hierarchy is derived from the real path: child portals
-// (/portals/producer …) sit under /portals; everything else is one level below
-// home. Names come from the same ROUTES titles used for <title>/OG, so the crumb
-// matches the page. JSON.stringify handles value escaping; we additionally escape
-// "<" so the serialized JSON can never break out of the <script> element.
-const byPath = Object.fromEntries(ROUTES.map((r) => [r.path, r.title]));
-function breadcrumbJsonLd(path, title) {
-  const crumbs = [{ name: 'หน้าแรก', url: DOMAIN + '/' }];
-  if (path.startsWith('/portals/')) {
-    crumbs.push({ name: byPath['/portals'] || 'Portals', url: DOMAIN + '/portals' });
-  }
-  crumbs.push({ name: title, url: DOMAIN + path });
-  const data = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: crumbs.map((c, i) => ({
-      '@type': 'ListItem', position: i + 1, name: c.name, item: c.url,
-    })),
-  };
-  return JSON.stringify(data).replace(/</g, '\\u003c');
-}
-
 const base = readFileSync(join(DIST, 'index.html'), 'utf8');
+const portalsTitle = ROUTES.find((r) => r.path === '/portals')?.title || 'Portals';
 
-for (const { path, title, desc } of ROUTES) {
-  const url = DOMAIN + path;
-  const fullTitle = `${title} — Openthai.ai`;
-  let html = base;
-  html = html.replace(/<title>.*?<\/title>/, `<title>${escapeAttr(fullTitle)}</title>`);
-  html = html.replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${escapeAttr(desc)}" />`);
-  html = html.replace(/<link rel="canonical" href=".*?" \/>/, `<link rel="canonical" href="${url}" />`);
-  html = html.replace(/<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${url}" />`);
-  html = html.replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${escapeAttr(fullTitle)}" />`);
-  html = html.replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${escapeAttr(desc)}" />`);
-  html = html.replace(/<meta name="twitter:title" content=".*?" \/>/, `<meta name="twitter:title" content="${escapeAttr(fullTitle)}" />`);
-  html = html.replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${escapeAttr(desc)}" />`);
-  // Add the page-specific BreadcrumbList alongside the inherited @graph block.
-  html = html.replace('</head>', `  <script type="application/ld+json">${breadcrumbJsonLd(path, title)}</script>\n  </head>`);
-
-  const outDir = join(DIST, path.replace(/^\//, ''));
+for (const route of ROUTES) {
+  // Throws (failing the build) if any target meta tag is missing from `base` — a
+  // silently-unmatched replace would re-serve the homepage's preview on this page.
+  const html = applyRouteMeta(base, route, DOMAIN, { portalsTitle });
+  const outDir = join(DIST, route.path.replace(/^\//, ''));
   mkdirSync(outDir, { recursive: true });
   writeFileSync(join(outDir, 'index.html'), html, 'utf8');
-  console.log(`[prerender-meta] wrote ${path}/index.html — "${fullTitle}"`);
+  console.log(`[prerender-meta] wrote ${route.path}/index.html — "${route.title} — Openthai.ai"`);
 }
 
 // ── sitemap.xml (generated from the same ROUTES list) ────────────────────────
