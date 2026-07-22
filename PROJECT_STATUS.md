@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-22T19:14:21.452Z · branch `claude/daily-reporter-improvements-8vc9ct` (443 commit(s) ahead of main)
+Generated: 2026-07-22T20:21:14.138Z · branch `claude/daily-reporter-improvements-8vc9ct` (445 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 653 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 655 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-22 — Hourly loop: bug fix — webhook auto-disable counted CUMULATIVE lifetime failures, not "20 consecutive" as its comment promised
+
+Found auditing the webhook delivery path (`backend/webhook-system.js`). **Verified against the code:** the dispatch loop auto-disables a hook when `hook.failCount > 20`, and the surrounding code documents that threshold as **"20 consecutive failures"**. But `failCount` was only ever `++`'d on a failed delivery and **never reset on a successful one** — so it accumulated *lifetime* failures. A perfectly healthy webhook that merely blips occasionally (a transient network error now and then over weeks) would eventually cross 20 total failures and get silently `active = false`'d, even though it was mostly working and never failed 20 times in a row. The intended safety feature (drop a genuinely dead endpoint) was quietly mutating into "drop any endpoint that's been alive long enough to accumulate 21 blips".
+
+**Fix (3 edits, all non-breaking):** (1) `else hook.failCount = 0;` — a successful delivery now resets the consecutive-failure counter, making the field mean what the auto-disable check and comment already assumed. (2) `RETRY_DELAYS` is now overridable via a `WEBHOOK_RETRY_DELAYS` JSON-array env var (read once at load) so a test can make the 0→5s→30s retry backoff instant; **production default `[0, 5000, 30000]` is unchanged**. (3) `dispatch()` now returns `Promise.all(jobs)` instead of nothing — it was already fire-and-forget for every production caller (all ignore the return), but returning the promise lets a test `await` the background deliveries deterministically instead of racing them. No caller passes the return anywhere, so this is additive.
+
+**Verified by running + mutation-tested:** added `backend/scripts/test-webhook-retry.mjs` (8 assertions, stubs `global.fetch`, drives real `dispatch()` calls): 15 failures → `failCount 15`, still active; then 1 success → **`failCount` back to 0**; 30 lifetime failures but only 15 consecutive → **stays active** (the exact bug); 21 *consecutive* failures → **auto-disabled** (the feature is intact); `dispatch()` with no matching hook resolves to `[]` without throwing. Ran green **8/8** via `npm run test:webhook-retry`. **Mutation:** removing `else hook.failCount = 0;` fails exactly the reset + "occasional failures do NOT auto-disable" assertions (5 passed / 3 failed), restored to green. `node --check webhook-system.js` clean. Wired `test:webhook-retry` into `backend/package.json` and the CI "Unit tests" step in `.github/workflows/test.yml`. Backend-only; no route/behaviour change for callers.
 
 ### 2026-07-18 — Hourly loop: a11y fix — the public order/dispute tracking forms had labels not associated with their inputs
 
@@ -3504,14 +3512,14 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 110f64b fix(affiliate): guard promptpay mask against a null value in withdrawals list (17 seconds ago)
-- b44780c chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- 0e6b3c6 fix(orders): track() no longer crashes on a stored order with a null contact (58 minutes ago)
-- 79dfbf4 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 372fd1d fix(disputes): respond() no longer crashes when the order has no producer_email (61 minutes ago)
-- 365e928 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 42f3189 fix(inventory): reject negative price/cost/stock/low_stock in upsert (3 hours ago)
-- e3a190e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- dd339d7 fix(webhooks): reset failCount on success so auto-disable means 20 CONSECUTIVE failures (5 minutes ago)
+- 3ed60be chore: sync PROJECT_STATUS.md [skip ci] (67 minutes ago)
+- 110f64b fix(affiliate): guard promptpay mask against a null value in withdrawals list (67 minutes ago)
+- b44780c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 0e6b3c6 fix(orders): track() no longer crashes on a stored order with a null contact (2 hours ago)
+- 79dfbf4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 372fd1d fix(disputes): respond() no longer crashes when the order has no producer_email (2 hours ago)
+- 365e928 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3533,8 +3541,8 @@ the backend.
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 626,
-  "memory_mb": "20.6",
+  "uptime_sec": 0,
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3711,7 +3719,7 @@ the backend.
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
 | `video-generator.js` | 204 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
 | `voice-commander.js` | 259 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
-| `webhook-system.js` | 223 | Push events to registered subscriber endpoints instead of polling. |
+| `webhook-system.js` | 236 | Push events to registered subscriber endpoints instead of polling. |
 
 ## Admin panel tabs (frontend/src/i18n/admin.js)
 - 📊 ภาพรวม
@@ -3739,8 +3747,9 @@ the backend.
 - `0 9 * * *` → /api/scheduler/process
 - `0 2 * * 1` → /api/portals/consumer-digest
 
-## Environment variables (58 referenced in backend code, 59 documented in .env.example)
-✅ every env var referenced in backend code is documented in `.env.example`
+## Environment variables (59 referenced in backend code, 59 documented in .env.example)
+⚠️ Referenced in code but missing from `backend/.env.example`:
+- WEBHOOK_RETRY_DELAYS
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.
