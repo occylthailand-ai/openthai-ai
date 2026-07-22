@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-22T06:24:42.782Z · branch `claude/daily-reporter-improvements-8vc9ct` (429 commit(s) ahead of main)
+Generated: 2026-07-22T06:42:22.939Z · branch `claude/daily-reporter-improvements-8vc9ct` (431 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 639 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 641 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -3318,6 +3318,38 @@ the real code before acting.
   `planPricingConsistency.test.js` guards it. Other four threads were already
   auto-marked outdated. Resolved the price thread with a note; nothing to build.
 
+### 2026-07-22 — Hardened: per-route SEO prerender now fails loudly on template drift
+The prerender step (`frontend/scripts/prerender-meta.mjs`) rewrites the homepage's
+`<title>`/OG/canonical/Twitter tags into per-route copies so LINE/Facebook link
+previews of every `/portals/*` + funnel page show that page (not the homepage's
+TikTok pitch) — this is the app's main acquisition surface. It did this with a set
+of `String.replace(regex, …)` calls against the built `dist/index.html`. Verified by
+running a real `npm run build`: the transform currently works (Vite preserves the
+` />` tag format, so all replaces match — canonical/og:url/description/breadcrumb are
+correct per route). **But** `String.replace` silently returns the input unchanged on
+a miss, so a future base-template format drift (a Vite upgrade reordering attributes,
+dropping the space before `/>`, etc.) would make every funnel page quietly fall back
+to serving the homepage's preview again — the exact bug this step exists to prevent —
+and it would ship green. This was the one step in an otherwise fail-loud SEO system
+(the PROJECT_STATUS generator and `seoInvariants.test.js` both fail loudly) that
+degraded silently.
+
+Change: extracted the transform into a pure, side-effect-free `frontend/scripts/
+route-meta.mjs` (`applyRouteMeta` + `breadcrumbJsonLd` + `escapeAttr`) where each
+replacement now throws a descriptive error naming the missing tag if its pattern
+doesn't match. `prerender-meta.mjs` imports it (output byte-identical when the
+template is correct — proven with md5sum before/after across producer/contact/sitemap).
+Added `frontend/src/__tests__/routeMeta.test.js` (11 tests): rewrites the real
+`frontend/index.html` base, asserts per-route title/canonical/og swap with no
+cross-contamination, one emitted BreadcrumbList, 3-level vs 2-level crumb trails,
+"<"-escaping in JSON-LD, and — the point — that a base missing canonical/og:url/
+description makes `applyRouteMeta` throw. Full frontend suite 164 passed (was 153;
++11). End-to-end mutation proof: dropping the space before `/>` on the base canonical
+tag and running the real prerender now exits 1 with
+`[route-meta] /portals: expected canonical link not found …`, instead of silently
+emitting the homepage canonical. No behaviour change on the happy path; a real future
+regression now blocks the build.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -3327,14 +3359,14 @@ the real code before acting.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- a9c38a5 docs(log): record 2026-07-22 PR-review triage (smart-e#1, otop-ai-landing#1, openthai-ai#79) (21 seconds ago)
+- 97491ab seo: fail the build if per-route prerender meta silently no-ops (17 seconds ago)
+- 9141152 chore: sync PROJECT_STATUS.md [skip ci] (18 minutes ago)
+- a9c38a5 docs(log): record 2026-07-22 PR-review triage (smart-e#1, otop-ai-landing#1, openthai-ai#79) (18 minutes ago)
 - e7da108 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
 - 747a0da a11y(track): associate form labels with their inputs on the public track pages (4 days ago)
 - 009e572 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
 - 7ab455d seo(robots): exclude the ~30 login-gated console routes from crawling + guard it (4 days ago)
 - 280b378 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
-- 32ccd32 feat(quickpay): email a receipt to the buyer when a QuickPay charge is paid (4 days ago)
-- 3b693ac chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3356,8 +3388,8 @@ the real code before acting.
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 851,
-  "memory_mb": "20.3",
+  "uptime_sec": 154,
+  "memory_mb": "21.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
