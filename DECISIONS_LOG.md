@@ -3263,3 +3263,42 @@ endpoints, missing route components, duplicate IDs) and fails CI
   Supabase Postgres (accessed via REST, not an ORM), React + Vite frontend,
   Omise for payments. `README.md` needs a rewrite; until then, trust
   `PROJECT_STATUS.md` over it for anything about the current architecture.
+
+### 2026-07-22 — PR review triage across smart-e#1, otop-ai-landing#1, openthai-ai#79
+Worked the three open PR review queues (CI was already green on all three —
+Vercel deploys only; no test CI on these repos). Verified every finding against
+the real code before acting.
+
+- **smart-e#1** (fixed, commit 48a0c4a on `claude/daily-reporter-improvements-8vc9ct`):
+  (1) `read_body()` returned any parsed JSON, so a valid-but-non-object body
+  (`[]`, `"x"`, `5`) slipped past the `is None` guard and later hit
+  `body.get(...)` → AttributeError → `_guard` turned a client mistake into a
+  500 (PUT even fell through to 200). Now returns the same `None` sentinel the
+  POST/PUT dispatchers map to a clean 400 — one fix covers every
+  object-expecting endpoint. (2) `toast()` inserted `data.error` via
+  `innerHTML`; some server errors interpolate DB-backed values (e.g. a product
+  name in "สต๊อกไม่พอสำหรับ …"), an XSS path — now escaped with the existing
+  `escapeHtml()`. `test_server.py` +6 assertions → 83 passed / 0 failed;
+  mutation-tested (removing the isinstance guard reproduced the exact 500/200).
+  The reviewer's third ask (require `product_id` on every order item) was
+  **declined by design**: a product_id-less item is an intentional ad-hoc/custom
+  line (total still = price×qty; no catalog stock to touch) — requiring it would
+  break a legit POS case. Replied on-thread with the rationale.
+
+- **otop-ai-landing#1** (fixed, commit 41b80b3): the real bug was `vercel.json`
+  building only `index.html`, so `og-image.png`/`logo.webp`/`robots.txt` were
+  never in the deploy output — the `filesystem` route missed them and the
+  `/(.*) → /index.html` rewrite served HTML for those paths (broken favicon,
+  broken social image, robots.txt returning HTML). Added each asset to `builds`.
+  Also: made og:image/twitter:image/favicon + the two logo `<img>` srcs
+  root-relative (not absolute — no production domain hard-coded, so no deindex
+  risk), added `type="image/webp"` to the favicon, added a
+  `prefers-reduced-motion: reduce` override (WCAG 2.3.3), and marked the 9
+  decorative `.icon` emoji divs `aria-hidden="true"`. All 9 review threads
+  resolved; all 4 Vercel previews redeployed Ready.
+
+- **openthai-ai#79** (no code change): the flagged plan-price mismatch
+  (backend ฿299/599/1299 vs. a claimed frontend ฿20/฿30) was **already resolved**
+  on this branch — `PaymentPage.jsx` `PLANS` matches the backend and
+  `planPricingConsistency.test.js` guards it. Other four threads were already
+  auto-marked outdated. Resolved the price thread with a note; nothing to build.
