@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-22T06:42:22.939Z · branch `claude/daily-reporter-improvements-8vc9ct` (431 commit(s) ahead of main)
+Generated: 2026-07-22T07:18:40.428Z · branch `claude/daily-reporter-improvements-8vc9ct` (433 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 641 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 643 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -3350,6 +3350,40 @@ tag and running the real prerender now exits 1 with
 emitting the homepage canonical. No behaviour change on the happy path; a real future
 regression now blocks the build.
 
+### 2026-07-22 — Hardened: constant-time comparison for one-click confirm-link tokens
+Every security-sensitive one-click link in server.js (unsubscribe, broadcast
+unsubscribe, affiliate-withdraw confirm GET+POST, PDPA data-erasure confirm
+GET+POST, PDPA data-access confirm, payment-cancel confirm GET+POST — 9 sites)
+verified its HMAC token with a plain `token !== unsubToken(...)`. A `!==` string
+compare short-circuits at the first differing character — the textbook
+non-constant-time secret comparison every security linter flags. The tokens are
+16-hex-char truncated HMACs delivered in URLs, so a remote timing attack is
+impractical, but several of these links move money (withdraw) or delete a user's
+data (PDPA erasure), so comparing them in constant time is the correct
+defence-in-depth. `timingSafeEqual` was already imported and used for the LINE
+webhook signature, just not for these.
+
+Change: added a pure `backend/token-verify.js` exporting `safeTokenEqual(provided,
+expected)` — `crypto.timingSafeEqual` with a length guard, because `timingSafeEqual`
+THROWS `ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH` on unequal-length buffers (a wrong-length
+`?token=` would otherwise become a 500 on these links) and `provided` comes straight
+off a query param so it can be undefined or an array (`?token=a&token=b`). Migrated all
+9 comparison sites to `!safeTokenEqual(token, unsubToken(...))`. Added
+`backend/scripts/test-token-verify.mjs` (14 assertions: accepts the exact token,
+rejects wrong email/type/flipped-char, and never throws on undefined/null/array/
+empty/wrong-length/number inputs), wired into `package.json` (`test:token-verify`)
+and the CI unit-test list in `.github/workflows/test.yml`.
+
+Verified by running: `node --check server.js` clean; the 14-assertion unit test
+passes; mutation proof that the length guard is load-bearing (raw `timingSafeEqual`
+on a length mismatch throws `ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH`). Booted the real
+server (PORT=8791) and hit the live endpoints: broadcast-unsubscribe with the correct
+HMAC → 200, wrong token → 403, missing → 400, array token → 403 (not 500);
+affiliate-withdraw-confirm / PDPA-erasure-confirm / leads-unsubscribe with a bogus or
+array token → 403 (not 500). Restored test-dirtied data afterwards. No behaviour
+change on valid/invalid tokens; only the comparison is now constant-time and
+crash-proof against odd query-param shapes.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -3359,14 +3393,14 @@ regression now blocks the build.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 97491ab seo: fail the build if per-route prerender meta silently no-ops (17 seconds ago)
-- 9141152 chore: sync PROJECT_STATUS.md [skip ci] (18 minutes ago)
-- a9c38a5 docs(log): record 2026-07-22 PR-review triage (smart-e#1, otop-ai-landing#1, openthai-ai#79) (18 minutes ago)
+- 23a8245 security: constant-time comparison for one-click confirm-link tokens (18 seconds ago)
+- 89a68dd chore: sync PROJECT_STATUS.md [skip ci] (36 minutes ago)
+- 97491ab seo: fail the build if per-route prerender meta silently no-ops (37 minutes ago)
+- 9141152 chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
+- a9c38a5 docs(log): record 2026-07-22 PR-review triage (smart-e#1, otop-ai-landing#1, openthai-ai#79) (54 minutes ago)
 - e7da108 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
 - 747a0da a11y(track): associate form labels with their inputs on the public track pages (4 days ago)
 - 009e572 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
-- 7ab455d seo(robots): exclude the ~30 login-gated console routes from crawling + guard it (4 days ago)
-- 280b378 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3388,8 +3422,8 @@ regression now blocks the build.
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 154,
-  "memory_mb": "21.6",
+  "uptime_sec": 2332,
+  "memory_mb": "21.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3535,7 +3569,7 @@ regression now blocks the build.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 28 files)
+## Backend modules (backend/*.js — 29 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -3558,9 +3592,10 @@ regression now blocks the build.
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8943 | Vercel serverless detection |
+| `server.js` | 8944 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
+| `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
 | `video-generator.js` | 204 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
