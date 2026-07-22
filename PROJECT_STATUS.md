@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-22T07:18:40.428Z · branch `claude/daily-reporter-improvements-8vc9ct` (433 commit(s) ahead of main)
+Generated: 2026-07-22T14:16:36.683Z · branch `claude/daily-reporter-improvements-8vc9ct` (435 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 643 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 645 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -3384,6 +3384,30 @@ array token → 403 (not 500). Restored test-dirtied data afterwards. No behavio
 change on valid/invalid tokens; only the comparison is now constant-time and
 crash-proof against odd query-param shapes.
 
+### 2026-07-22 — Test: pin the spin-discount one-time-use invariant (money path)
+The spin wheel can award a "30% off" / "50% off" prize (credits.js), stored as
+`claims._discount = {pct, used:false}`. The card/PromptPay payment route
+(/api/payment/... in server.js) calls `credits.consumeDiscount()` and cuts the
+real Omise charge by that percentage. So the discount MUST apply exactly once —
+if `consumeDiscount()` ever returned the pct a second time, the user would get
+30–50% off *every* payment forever (a direct revenue leak). The behaviour was
+correct (it marks `used:true`) but nothing pinned it: test-credits.mjs covered
+add/clamp/consume/checkin/spin-once but never the discount lifecycle.
+
+Added a discount block to scripts/test-credits.mjs. spin's prize is server-random,
+so it stubs `Math.random` to land squarely on the first "% off" prize (found via
+`SPIN_PRIZES.findIndex`, robust to prize reordering), then asserts: the forced spin
+yields that discount; `peekDiscount` shows it; `consumeDiscount` returns the pct the
+first time and 0 the second; `peekDiscount` is 0 afterwards; and a credits (non-
+discount) prize leaves `peekDiscount` 0. Restores `Math.random` in a finally.
+
+Verified by running: `node scripts/test-credits.mjs` → 25 passed, 0 failed (was
+~18). Mutation-tested: dropping the `d.used = true` line (discount stays claimable)
+makes the second `consumeDiscount` return the pct again and fails exactly the two
+new one-time-use assertions. No production code changed — this locks in an existing
+money invariant so a future refactor can't silently reopen the leak. CI already runs
+test:credits (.github/workflows/test.yml).
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -3393,14 +3417,14 @@ crash-proof against odd query-param shapes.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 23a8245 security: constant-time comparison for one-click confirm-link tokens (18 seconds ago)
-- 89a68dd chore: sync PROJECT_STATUS.md [skip ci] (36 minutes ago)
-- 97491ab seo: fail the build if per-route prerender meta silently no-ops (37 minutes ago)
-- 9141152 chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
-- a9c38a5 docs(log): record 2026-07-22 PR-review triage (smart-e#1, otop-ai-landing#1, openthai-ai#79) (54 minutes ago)
+- 18e6d5e test(credits): pin spin-discount one-time-use (revenue invariant) (23 seconds ago)
+- b6ea287 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 23a8245 security: constant-time comparison for one-click confirm-link tokens (7 hours ago)
+- 89a68dd chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- 97491ab seo: fail the build if per-route prerender meta silently no-ops (8 hours ago)
+- 9141152 chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- a9c38a5 docs(log): record 2026-07-22 PR-review triage (smart-e#1, otop-ai-landing#1, openthai-ai#79) (8 hours ago)
 - e7da108 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
-- 747a0da a11y(track): associate form labels with their inputs on the public track pages (4 days ago)
-- 009e572 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3422,8 +3446,8 @@ crash-proof against odd query-param shapes.
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 2332,
-  "memory_mb": "21.5",
+  "uptime_sec": 0,
+  "memory_mb": "19.4",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
