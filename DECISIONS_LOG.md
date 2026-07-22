@@ -3454,3 +3454,28 @@ rejected, the correct contact (case-insensitive) returns the sanitized view with
 running: node scripts/test-orders-track.mjs → 19 passed, 0 failed (was 15). Mutation-
 tested: restoring the unguarded o.contact.toLowerCase() throws "Cannot read properties
 of null (reading 'toLowerCase')" and the run exits 1. CI already runs test:orders-track.
+
+### 2026-07-22 — Null-safety sweep: string methods on record fields (+1 fix)
+Follow-up to the disputes.respond() and orders.track() fixes earlier today (both
+were `x.toLowerCase()` on a value that a Supabase row can return null). Swept the
+whole backend for the same crash class — string methods (toLowerCase/trim/split/
+replace/…) called on a record field without a null guard:
+- `.toLowerCase()` on record fields: the only remaining hits are server.js:819–821
+  (broadcast recipient set), each already gated by `if (isEmail(...))`, so they only
+  run on a validated string — safe.
+- `.replace()` on record fields: server.js:371 `form.product.replace(...)` in
+  mockGenerate — every content route validates `product?.trim()` before calling it
+  (30+ call sites checked), so it's not reachable with a null product; left as-is.
+- server.js:1794 `w.promptpay.replace(...)` in GET /api/affiliate/withdrawals — this
+  one IS reachable: withdrawals persist to a JSON file across restarts, and a legacy/
+  hand-edited row lacking promptpay makes the mask throw, 500-ing an affiliate's whole
+  withdrawals page. Fixed with `(w.promptpay || '').replace(...)`.
+
+Verified by running the real server (PORT=8795): seeded data/withdrawals.json with a
+withdrawal whose promptpay is null and hit /api/affiliate/withdrawals?ref_code=… →
+HTTP 200 with promptpay masked to "" (was a 500). Mutation-tested: reverting to the
+unguarded `w.promptpay.replace(...)` returns HTTP 500 on the same request. (The seed
+file is gitignored local scratch — file mode; production withdrawals live in Supabase
+— and was reset to [] afterward.) No dedicated unit test added; this is a one-line
+route guard verified live. Sweep conclusion: this null-crash class is now clean across
+the backend.

@@ -1791,7 +1791,9 @@ app.get('/api/affiliate/withdrawals', affReadLimiter, (req, res) => {
   const ref = (req.query.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   if (!ref) return res.status(400).json({ success: false, error: 'ต้องการ ref_code' });
   const aff = affiliates.find(a => a.ref_code === ref);
-  const list = withdrawals.filter(w => w.ref_code === ref).map(w => ({ ...w, promptpay: w.promptpay.replace(/(\d{3})\d+(\d{2})/, '$1****$2') }));
+  // withdrawals persist to a JSON file across restarts; a legacy/hand-edited row could lack
+  // promptpay, and w.promptpay.replace(...) would then 500 the whole page. Guard the mask.
+  const list = withdrawals.filter(w => w.ref_code === ref).map(w => ({ ...w, promptpay: (w.promptpay || '').replace(/(\d{3})\d+(\d{2})/, '$1****$2') }));
   res.json({ success: true, withdrawals: list, pending_balance: aff ? affPending(aff) : 0, total_earned: aff?.total_earned || 0, paid_out: aff?.paid_out || 0 });
 });
 
