@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-22T14:16:36.683Z · branch `claude/daily-reporter-improvements-8vc9ct` (435 commit(s) ahead of main)
+Generated: 2026-07-22T16:15:18.552Z · branch `claude/daily-reporter-improvements-8vc9ct` (437 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 645 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 647 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -3408,6 +3408,29 @@ new one-time-use assertions. No production code changed — this locks in an exi
 money invariant so a future refactor can't silently reopen the leak. CI already runs
 test:credits (.github/workflows/test.yml).
 
+### 2026-07-22 — Fix: inventory.upsert rejects negative price/cost/stock/low_stock
+inventory.js `upsert()` (behind POST /api/inventory/admin/upsert) validated the
+product name but ran price/stock/cost/low_stock through `num()`, which passes a
+negative straight through (`num(-50, …)` → -50). So an admin typo like price -50
+persisted a negative-priced product. That is a money bug, not just cosmetic:
+`/api/shop/checkout` computes the Omise charge as `(p.price||0) * qty` directly
+from the stored product, so a negative price makes a negative charge, and
+`/api/shop/products` lists the product publicly with that negative price. The
+sibling smart-e fix (2026-07-22, _create_product) closed the same class of gap on
+that repo; this is the openthai-ai equivalent, at the single write path (upsert is
+the only way products are created/edited).
+
+Fix: after the name check, reject when any of price/cost/stock/low_stock is < 0
+(`{ok:false}` → the route returns 400). price 0 / stock 0 stay valid (free sample /
+out of stock). scripts/test-inventory.mjs +7 assertions (each negative field
+rejected; price 0/stock 0 accepted; nothing negative ever persisted; an edit that
+would push an existing product negative is refused and leaves it unchanged; the
+temp free-sample product is removed afterward so the downstream summary asserts
+still see a single product). Verified by running: node scripts/test-inventory.mjs
+→ 25 passed, 0 failed (was 18). Mutation-tested: dropping the guard lets the
+negatives persist and fails the new assertions. CI already runs test:inventory
+(.github/workflows/test.yml).
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -3417,14 +3440,14 @@ test:credits (.github/workflows/test.yml).
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 18e6d5e test(credits): pin spin-discount one-time-use (revenue invariant) (23 seconds ago)
-- b6ea287 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
-- 23a8245 security: constant-time comparison for one-click confirm-link tokens (7 hours ago)
-- 89a68dd chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
-- 97491ab seo: fail the build if per-route prerender meta silently no-ops (8 hours ago)
-- 9141152 chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
-- a9c38a5 docs(log): record 2026-07-22 PR-review triage (smart-e#1, otop-ai-landing#1, openthai-ai#79) (8 hours ago)
-- e7da108 chore: sync PROJECT_STATUS.md [skip ci] (4 days ago)
+- 42f3189 fix(inventory): reject negative price/cost/stock/low_stock in upsert (21 seconds ago)
+- e3a190e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 18e6d5e test(credits): pin spin-discount one-time-use (revenue invariant) (2 hours ago)
+- b6ea287 chore: sync PROJECT_STATUS.md [skip ci] (9 hours ago)
+- 23a8245 security: constant-time comparison for one-click confirm-link tokens (9 hours ago)
+- 89a68dd chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
+- 97491ab seo: fail the build if per-route prerender meta silently no-ops (10 hours ago)
+- 9141152 chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3446,8 +3469,8 @@ test:credits (.github/workflows/test.yml).
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "uptime_sec": 14,
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3605,7 +3628,7 @@ test:credits (.github/workflows/test.yml).
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
 | `disputes.js` | 301 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
-| `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
+| `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 180 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
