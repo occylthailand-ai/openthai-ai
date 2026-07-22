@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-22T18:13:42.769Z · branch `claude/daily-reporter-improvements-8vc9ct` (439 commit(s) ahead of main)
+Generated: 2026-07-22T18:16:31.623Z · branch `claude/daily-reporter-improvements-8vc9ct` (441 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 649 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 651 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -3451,6 +3451,25 @@ failed (was 22). Mutation-tested: restoring the bare producer_email makes respon
 throw `TypeError: Cannot read properties of undefined (reading 'toLowerCase')` and the
 run exits 1. CI already runs test:disputes (.github/workflows/test.yml).
 
+### 2026-07-22 — Fix: orders.track() crash when a stored order has a null contact
+orders.js `track()` gates the public /api/orders/track endpoint on the caller's
+contact matching the order's: `if (!c || o.contact.toLowerCase() !== c)`. The input
+side `c` is null-guarded (`(contact || '')…`) but `o.contact` was not. Orders created
+via place() always carry a non-empty string contact, but a row read back from Supabase
+can have a null `contact` column — `o.contact.toLowerCase()` then throws a TypeError
+(a 500) instead of the intended clean "contact doesn't match" rejection. Same null-
+safety class as the disputes.respond() fix earlier today.
+
+Fix: `(o.contact || '').toLowerCase()`. scripts/test-orders-track.mjs now also
+exercises track() (it previously only unit-tested the pure publicOrderView): +4
+assertions seeding the file store with a null-contact order and a normal one — the
+null-contact order tracks to a clean {ok:false} (no crash), a wrong contact is
+rejected, the correct contact (case-insensitive) returns the sanitized view with no
+`contact` echoed back, and an empty contact can't bypass the gate. Verified by
+running: node scripts/test-orders-track.mjs → 19 passed, 0 failed (was 15). Mutation-
+tested: restoring the unguarded o.contact.toLowerCase() throws "Cannot read properties
+of null (reading 'toLowerCase')" and the run exits 1. CI already runs test:orders-track.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -3460,14 +3479,14 @@ run exits 1. CI already runs test:disputes (.github/workflows/test.yml).
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 372fd1d fix(disputes): respond() no longer crashes when the order has no producer_email (19 seconds ago)
+- 0e6b3c6 fix(orders): track() no longer crashes on a stored order with a null contact (22 seconds ago)
+- 79dfbf4 chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
+- 372fd1d fix(disputes): respond() no longer crashes when the order has no producer_email (3 minutes ago)
 - 365e928 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 42f3189 fix(inventory): reject negative price/cost/stock/low_stock in upsert (2 hours ago)
 - e3a190e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 18e6d5e test(credits): pin spin-discount one-time-use (revenue invariant) (4 hours ago)
 - b6ea287 chore: sync PROJECT_STATUS.md [skip ci] (11 hours ago)
-- 23a8245 security: constant-time comparison for one-click confirm-link tokens (11 hours ago)
-- 89a68dd chore: sync PROJECT_STATUS.md [skip ci] (12 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3489,8 +3508,8 @@ run exits 1. CI already runs test:disputes (.github/workflows/test.yml).
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 4,
-  "memory_mb": "21.8",
+  "uptime_sec": 172,
+  "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3652,7 +3671,7 @@ run exits 1. CI already runs test:disputes (.github/workflows/test.yml).
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 180 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
-| `orders.js` | 200 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `orders.js` | 203 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 148 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
