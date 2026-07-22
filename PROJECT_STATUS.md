@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-22T16:15:18.552Z · branch `claude/daily-reporter-improvements-8vc9ct` (437 commit(s) ahead of main)
+Generated: 2026-07-22T18:13:42.769Z · branch `claude/daily-reporter-improvements-8vc9ct` (439 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 647 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 649 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -3431,6 +3431,26 @@ still see a single product). Verified by running: node scripts/test-inventory.mj
 negatives persist and fails the new assertions. CI already runs test:inventory
 (.github/workflows/test.yml).
 
+### 2026-07-22 — Fix: dispute respond() crash when the order has no producer_email
+disputes.js `respond()` computes the "other party" a counter-response must come
+from. The line was `(d.opened_by === 'buyer' ? order.producer_email : order.contact
+|| '').toLowerCase()`. `?:` binds looser than `||`, so the buyer-opened branch was a
+bare `order.producer_email` with no `|| ''` fallback (only the producer-opened branch
+got one). On an order with no producer_email, that branch is `undefined` and
+`.toLowerCase()` throws a TypeError — a 500 — instead of the intended clean "contact
+doesn't match the other party" rejection. `open()` already guards both sides
+(`(order.producer_email || '')` / `(order.contact || '')`); `respond()` just missed it.
+
+Fix: `(d.opened_by === 'buyer' ? (order.producer_email || '') : (order.contact || '')).toLowerCase()`
+— null-guarded on both sides, matching open(). scripts/test-disputes.mjs +3
+assertions: a buyer-opened dispute on an order with no producer_email → respond()
+returns a clean {ok:false} (no crash); with a producer_email present the producer's
+matching contact (case-insensitive) is accepted; a third party matching neither side
+is rejected. Verified by running: node scripts/test-disputes.mjs → 25 passed, 0
+failed (was 22). Mutation-tested: restoring the bare producer_email makes respond()
+throw `TypeError: Cannot read properties of undefined (reading 'toLowerCase')` and the
+run exits 1. CI already runs test:disputes (.github/workflows/test.yml).
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -3440,14 +3460,14 @@ negatives persist and fails the new assertions. CI already runs test:inventory
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 42f3189 fix(inventory): reject negative price/cost/stock/low_stock in upsert (21 seconds ago)
-- e3a190e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 18e6d5e test(credits): pin spin-discount one-time-use (revenue invariant) (2 hours ago)
-- b6ea287 chore: sync PROJECT_STATUS.md [skip ci] (9 hours ago)
-- 23a8245 security: constant-time comparison for one-click confirm-link tokens (9 hours ago)
-- 89a68dd chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
-- 97491ab seo: fail the build if per-route prerender meta silently no-ops (10 hours ago)
-- 9141152 chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
+- 372fd1d fix(disputes): respond() no longer crashes when the order has no producer_email (19 seconds ago)
+- 365e928 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 42f3189 fix(inventory): reject negative price/cost/stock/low_stock in upsert (2 hours ago)
+- e3a190e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 18e6d5e test(credits): pin spin-discount one-time-use (revenue invariant) (4 hours ago)
+- b6ea287 chore: sync PROJECT_STATUS.md [skip ci] (11 hours ago)
+- 23a8245 security: constant-time comparison for one-click confirm-link tokens (11 hours ago)
+- 89a68dd chore: sync PROJECT_STATUS.md [skip ci] (12 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3469,8 +3489,8 @@ negatives persist and fails the new assertions. CI already runs test:inventory
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 14,
-  "memory_mb": "19.5",
+  "uptime_sec": 4,
+  "memory_mb": "21.8",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3626,7 +3646,7 @@ negatives persist and fails the new assertions. CI already runs test:inventory
 | `auth.js` | 190 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
-| `disputes.js` | 301 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
+| `disputes.js` | 304 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
