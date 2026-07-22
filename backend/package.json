@@ -24,7 +24,8 @@
     "test:credits": "node scripts/test-credits.mjs",
     "test:inventory": "node scripts/test-inventory.mjs",
     "test:producers": "node scripts/test-producers.mjs",
-    "test:token-verify": "node scripts/test-token-verify.mjs"
+    "test:token-verify": "node scripts/test-token-verify.mjs",
+    "test:webhook-retry": "node scripts/test-webhook-retry.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

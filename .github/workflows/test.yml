@@ -66,6 +66,7 @@ jobs:
           npm run test:inventory
           npm run test:producers
           npm run test:token-verify
+          npm run test:webhook-retry
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage
