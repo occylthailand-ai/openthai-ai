@@ -3334,3 +3334,37 @@ tag and running the real prerender now exits 1 with
 `[route-meta] /portals: expected canonical link not found …`, instead of silently
 emitting the homepage canonical. No behaviour change on the happy path; a real future
 regression now blocks the build.
+
+### 2026-07-22 — Hardened: constant-time comparison for one-click confirm-link tokens
+Every security-sensitive one-click link in server.js (unsubscribe, broadcast
+unsubscribe, affiliate-withdraw confirm GET+POST, PDPA data-erasure confirm
+GET+POST, PDPA data-access confirm, payment-cancel confirm GET+POST — 9 sites)
+verified its HMAC token with a plain `token !== unsubToken(...)`. A `!==` string
+compare short-circuits at the first differing character — the textbook
+non-constant-time secret comparison every security linter flags. The tokens are
+16-hex-char truncated HMACs delivered in URLs, so a remote timing attack is
+impractical, but several of these links move money (withdraw) or delete a user's
+data (PDPA erasure), so comparing them in constant time is the correct
+defence-in-depth. `timingSafeEqual` was already imported and used for the LINE
+webhook signature, just not for these.
+
+Change: added a pure `backend/token-verify.js` exporting `safeTokenEqual(provided,
+expected)` — `crypto.timingSafeEqual` with a length guard, because `timingSafeEqual`
+THROWS `ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH` on unequal-length buffers (a wrong-length
+`?token=` would otherwise become a 500 on these links) and `provided` comes straight
+off a query param so it can be undefined or an array (`?token=a&token=b`). Migrated all
+9 comparison sites to `!safeTokenEqual(token, unsubToken(...))`. Added
+`backend/scripts/test-token-verify.mjs` (14 assertions: accepts the exact token,
+rejects wrong email/type/flipped-char, and never throws on undefined/null/array/
+empty/wrong-length/number inputs), wired into `package.json` (`test:token-verify`)
+and the CI unit-test list in `.github/workflows/test.yml`.
+
+Verified by running: `node --check server.js` clean; the 14-assertion unit test
+passes; mutation proof that the length guard is load-bearing (raw `timingSafeEqual`
+on a length mismatch throws `ERR_CRYPTO_TIMING_SAFE_EQUAL_LENGTH`). Booted the real
+server (PORT=8791) and hit the live endpoints: broadcast-unsubscribe with the correct
+HMAC → 200, wrong token → 403, missing → 400, array token → 403 (not 500);
+affiliate-withdraw-confirm / PDPA-erasure-confirm / leads-unsubscribe with a bogus or
+array token → 403 (not 500). Restored test-dirtied data afterwards. No behaviour
+change on valid/invalid tokens; only the comparison is now constant-time and
+crash-proof against odd query-param shapes.

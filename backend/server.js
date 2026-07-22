@@ -26,6 +26,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
+import { safeTokenEqual } from './token-verify.js';
 import { publicAffiliateSales } from './affiliate-public.js';
 import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice, buildCancelledNotice, buildQuickpayReceipt } from './shop-receipt.js';
 import { createPRSystem } from './pr-communications.js';
@@ -214,7 +215,7 @@ app.get('/api/leads/unsubscribe', unsubLimiter, async (req, res) => {
   const { email, type, token } = req.query;
   if (!email || !type || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
   const expected = unsubToken(String(email).toLowerCase(), String(type));
-  if (token !== expected) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  if (!safeTokenEqual(token, expected)) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
   const r = await portalLeads.unsubscribe(email, type);
   if (!r.ok) return res.status(400).send(r.error || 'ยกเลิกไม่สำเร็จ');
   res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยกเลิกรับอีเมลเรียบร้อยแล้ว</div>');
@@ -799,7 +800,7 @@ app.get('/api/broadcast/unsubscribe', unsubLimiter, (req, res) => {
   const { email, token } = req.query;
   if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
   const e = String(email).toLowerCase();
-  if (token !== unsubToken(e, 'broadcast')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  if (!safeTokenEqual(token, unsubToken(e, 'broadcast'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
   broadcastUnsubscribed.add(e);
   saveBroadcastUnsub(broadcastUnsubscribed);
   res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยกเลิกรับอีเมลข่าวสารเรียบร้อยแล้ว</div>');
@@ -1759,7 +1760,7 @@ function finalizeWithdraw(id) {
 app.get('/api/affiliate/withdraw/confirm', unsubLimiter, (req, res) => {
   const { id, token } = req.query;
   if (!id || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
-  if (token !== unsubToken(String(id), 'affiliate-withdraw')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  if (!safeTokenEqual(token, unsubToken(String(id), 'affiliate-withdraw'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
   const pending = withdrawConfirmations.find(p => p.id === id);
   if (!pending) return res.status(404).send('ไม่พบคำขอนี้ หรือถูกยืนยันไปแล้ว');
   const qs = `id=${encodeURIComponent(String(id))}&token=${encodeURIComponent(String(token))}`;
@@ -1779,7 +1780,7 @@ app.post('/api/affiliate/withdraw/confirm', unsubLimiter, (req, res) => {
   const id = req.query.id || req.body?.id;
   const token = req.query.token || req.body?.token;
   if (!id || !token) return res.status(400).json({ success: false, message: 'ลิงก์ไม่ถูกต้อง' });
-  if (token !== unsubToken(String(id), 'affiliate-withdraw')) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
+  if (!safeTokenEqual(token, unsubToken(String(id), 'affiliate-withdraw'))) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
   const r = finalizeWithdraw(String(id));
   if (!r.ok) return res.status(r.code || 400).json({ success: false, message: r.error });
   res.json({ success: true, amount: r.wd.amount, id: r.wd.id });
@@ -6498,7 +6499,7 @@ app.get('/api/privacy/erasure/confirm', unsubLimiter, (req, res) => {
   const { email, token } = req.query;
   if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
   const sanitized = String(email).toLowerCase().trim();
-  if (token !== unsubToken(sanitized, 'erasure')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  if (!safeTokenEqual(token, unsubToken(sanitized, 'erasure'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
   const qs = `email=${encodeURIComponent(sanitized)}&token=${encodeURIComponent(String(token))}`;
   res.send(`<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><body style="background:#0f0f1a;color:#f8fafc;"><div style="font-family:Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;line-height:1.7;padding:0 20px;">
     <h2 style="color:#ef4444;">ยืนยันการลบข้อมูล</h2>
@@ -6517,7 +6518,7 @@ app.post('/api/privacy/erasure/confirm', unsubLimiter, async (req, res) => {
   const token = req.query.token || req.body?.token;
   if (!email || !token) return res.status(400).json({ success: false, message: 'ลิงก์ไม่ถูกต้อง' });
   const sanitized = String(email).toLowerCase().trim();
-  if (token !== unsubToken(sanitized, 'erasure')) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
+  if (!safeTokenEqual(token, unsubToken(sanitized, 'erasure'))) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
   const removed = await performErasure(sanitized);
   addLog('info', 'PDPA', `🗑️ Erasure ยืนยันแล้ว: ${sanitized} — ลบแล้ว ${removed} รายการ`);
   res.json({ success: true, removed });
@@ -6561,7 +6562,7 @@ app.get('/api/privacy/access/confirm', unsubLimiter, async (req, res) => {
   const { email, token } = req.query;
   if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
   const sanitized = String(email).toLowerCase().trim();
-  if (token !== unsubToken(sanitized, 'access')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  if (!safeTokenEqual(token, unsubToken(sanitized, 'access'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
 
   const records = {};
   records.waitlist = waitlist.filter(w => (w.email || '').toLowerCase() === sanitized);
@@ -7886,7 +7887,7 @@ app.get('/api/payment/cancel/confirm', unsubLimiter, (req, res) => {
   const { email, token } = req.query;
   if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
   const sanitized = String(email).toLowerCase().trim();
-  if (token !== unsubToken(sanitized, 'payment-cancel')) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  if (!safeTokenEqual(token, unsubToken(sanitized, 'payment-cancel'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
   const ent = entitlements[sanitized];
   if (!ent) return res.status(404).send('ไม่พบสิทธิ์การใช้งานสำหรับอีเมลนี้');
   if (ent.status === 'cancelled') return res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">ยกเลิกไปแล้วก่อนหน้านี้</div>');
@@ -7909,7 +7910,7 @@ app.post('/api/payment/cancel/confirm', unsubLimiter, async (req, res) => {
   const token = req.query.token || req.body?.token;
   if (!email || !token) return res.status(400).json({ success: false, message: 'ลิงก์ไม่ถูกต้อง' });
   const sanitized = String(email).toLowerCase().trim();
-  if (token !== unsubToken(sanitized, 'payment-cancel')) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
+  if (!safeTokenEqual(token, unsubToken(sanitized, 'payment-cancel'))) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
   try {
     const r = await performPaymentCancel(sanitized);
     if (!r.ok) return res.status(r.code).json({ success: false, message: r.error });
