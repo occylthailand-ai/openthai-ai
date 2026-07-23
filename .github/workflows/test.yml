@@ -71,6 +71,9 @@ jobs:
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage
+      - name: Discount-charge test (self-contained — spin discount burned only on a real charge)
+        working-directory: backend
+        run: npm run test:discount-charge
       - name: Boot + health smoke test
         working-directory: backend
         run: |

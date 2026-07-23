@@ -7684,12 +7684,17 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
   if (planDef.price_thb === 0) return res.json({ success: true, plan, status: 'free', message: 'ไม่ต้องชำระเงิน' });
 
   // ส่วนลดจากรางวัลวงล้อ (spin "X% off") — ใช้ได้กับ one-time charge (ไม่รวม subscription)
+  // PEEK เท่านั้นตอนนี้ (ไม่ mark used) แล้ว consume เฉพาะเมื่อสร้าง charge สำเร็จจริง — เดิม consume
+  // ทิ้งตั้งแต่ต้น ถ้า Omise throw หรือบัตรถูกปฏิเสธ ส่วนลด spin ครั้งเดียวจะหายฟรีทั้งที่ยังไม่ได้จ่าย
+  const creditId = credits.identityFrom(req);
   let amount = planDef.price_thb;
   let discountPct = 0;
   if (method !== 'subscription') {
-    discountPct = await credits.consumeDiscount(credits.identityFrom(req));
+    discountPct = await credits.peekDiscount(creditId);
     if (discountPct > 0) amount = Math.max(1, Math.round(planDef.price_thb * (100 - discountPct) / 100));
   }
+  // ทำเครื่องหมายว่าใช้ส่วนลดแล้ว — เรียกเฉพาะบน success path (charge ออกจริง/บัตรไม่ถูกปฏิเสธ)
+  const burnDiscount = async () => { if (discountPct > 0) await credits.consumeDiscount(creditId); };
 
   if (!process.env.OMISE_SECRET_KEY) {
     // Mock mode — Omise ยังไม่ได้ตั้ง (dev/staging only). ห้ามใช้ใน production จริง
@@ -7712,6 +7717,7 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
     const validEmail = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.toLowerCase() : null;
     payments.unshift({ ...mock, method, email: validEmail, paid_at: isCard ? new Date().toISOString() : null, createdAt: new Date().toISOString() });
     savePayments(payments);
+    await burnDiscount(); // mock charge issued → the discount is now used (parity with prod)
     if (isCard && validEmail) grantEntitlement(validEmail, plan, { source: 'mock-card' });
     return res.json({ success: true, ...mock });
   }
@@ -7725,6 +7731,7 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       });
       payments.unshift({ ...charge, plan, method, email: email || null, createdAt: new Date().toISOString() });
       savePayments(payments);
+      await burnDiscount(); // PromptPay QR issued at the discounted amount → consume the discount
       return res.json({ success: true, ...charge, plan, original_thb: planDef.price_thb, discount_pct: discountPct });
     }
 
@@ -7741,8 +7748,10 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       payments.unshift({ ...charge, plan, method, email: email || null, paid_at: paidAt, createdAt: new Date().toISOString() });
       savePayments(payments);
       if (charge.status === 'failed') {
+        // บัตรถูกปฏิเสธ = ไม่มีการจ่ายเงิน → อย่าเผาส่วนลด ผู้ใช้ลองบัตรใหม่ได้ในราคาส่วนลดเดิม
         return res.status(402).json({ error: charge.failure_message || 'บัตรถูกปฏิเสธ กรุณาลองบัตรอื่น', charge_id: charge.charge_id });
       }
+      await burnDiscount(); // charge accepted (paid หรือรอ 3-D Secure) → consume the discount
       // ชำระสำเร็จทันที (ไม่ต้องทำ 3-D Secure) → ส่งใบเสร็จ + dispatch webhook
       if (charge.paid) {
         grantEntitlement(email, plan, { source: 'card' });

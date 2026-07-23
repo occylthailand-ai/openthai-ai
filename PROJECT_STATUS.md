@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T04:12:01.492Z · branch `claude/daily-reporter-improvements-8vc9ct` (455 commit(s) ahead of main)
+Generated: 2026-07-23T05:17:13.681Z · branch `claude/daily-reporter-improvements-8vc9ct` (456 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 665 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 539 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: bug fix — a spin discount was burned even when the payment request failed before any charge (money/revenue path)
+
+Found auditing the payment path (`/api/payment/create`, server.js). **Verified against the code:** the route called `credits.consumeDiscount(identity)` at the very top — marking the one-time spin "X% off" reward `used: true` — and only *then* tried to create the Omise charge. So any path that failed **before** a charge existed still ate the discount with no payment made: a `card` request with a missing token 400s at the token check (before the charge), a thrown Omise error hits the catch → 500, and a declined card returns 402 — in every case `consumeDiscount` had already run, so on retry the user paid **full price**. A declined card / client glitch is common on the revenue path, so this silently overcharged real paying customers.
+
+**Fix:** peek the discount to compute the discounted amount (`credits.peekDiscount`, which does NOT mark it used), and consume it (`burnDiscount()` → `consumeDiscount`) only on a genuine success path — the mock charge, a PromptPay QR actually issued, and a card charge that is not declined. The catch (thrown Omise error), the missing-token 400, and the card-declined 402 now leave the discount intact. Subscription charges never touch the discount (unchanged). `peekDiscount`/`consumeDiscount` return the same pct, so the amount and the later consume agree.
+
+**Verified by running + mutation-tested:** new self-booting `scripts/test-discount-charge.mjs` (mock Supabase backs the credits store — seeds an unused 30%-off discount, no real Omise, doesn't touch `backend/data`). Scenario A: with `OMISE_SECRET_KEY` set, a `card` create with no token → 400, and `GET /api/credits` shows the discount **still 30%** (not burned). Scenario B: in mock-payment mode a PromptPay charge is issued at the 30%-off amount (`209` of `299`) and the discount is then **consumed** (→ 0). **8/8** via `npm run test:discount-charge`. **Mutation:** restoring the top-of-route `consumeDiscount` makes Scenario A show the discount burned to 0 on the 400 (7/1), restored to green. `node --check` clean; wired `test:discount-charge` into `package.json` + a self-contained CI step; `backend/data` git-restored. Backend-only.
 
 ### 2026-07-23 — Hourly loop: bug fix — dispute track() crashed (500) on an order with no producer_email; the opener couldn't even see their own dispute
 
@@ -3552,54 +3560,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b97d272 fix(disputes): track() no longer 500s on an order with no producer_email (22 seconds ago)
-- b159dd8 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- c51b78a test(inventory): pin the upsert create-vs-edit contract (same id on edit, new id on create) (57 minutes ago)
-- 84e62b2 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- d8ad6cb test(affiliate): pin the withdraw-request reservation invariant (extract math for testability) (3 hours ago)
-- 1f56167 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 924b9db fix(portals): stop dropping Intl-Org 'Organization Type' on submit (form field 'type' collided with portal discriminator) (4 hours ago)
-- 3da237a chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 003976f chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
+- b97d272 fix(disputes): track() no longer 500s on an order with no producer_email (66 minutes ago)
+- b159dd8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- c51b78a test(inventory): pin the upsert create-vs-edit contract (same id on edit, new id on create) (2 hours ago)
+- 84e62b2 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- d8ad6cb test(affiliate): pin the withdraw-request reservation invariant (extract math for testability) (4 hours ago)
+- 1f56167 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 924b9db fix(portals): stop dropping Intl-Org 'Organization Type' on submit (form field 'type' collided with portal discriminator) (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3752,7 +3722,7 @@ the backend.
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8950 | Vercel serverless detection |
+| `server.js` | 8959 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
