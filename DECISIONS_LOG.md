@@ -9,6 +9,14 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-23 — Hourly loop: SECURITY — every corporate GET route was public while its PATCH required login (internal-data disclosure) 🔴
+
+Found continuing the security-surface audit (`corporate-system.js` + its routes in server.js). **Verified against the code:** all the corporate *mutations* are properly gated — `app.patch('/api/corporate/*', requireAuth, corpLimiter, …)` (board / finance / hr / esg / ir / compliance / global / pr-releases / pr-contacts / pr-campaigns / pr-kols / tasks / kpis). But every corresponding **GET** was mounted with **no auth** — `app.get('/api/corporate/board', (req,res) => res.json({ data: corporate.getBoard() }))`, and the same for finance, hr, esg, ir, compliance, global, overview, and the PR sub-routes. So anyone unauthenticated could read internal governance data: the board roster (incl. the real Chairman/CEO name), finance, HR, investor-relations, ESG, compliance filing status, and — most sensitively — **PR media contacts** (journalist names/emails → PDPA personal data). The React corporate pages sit behind a client-side login guard, but the API itself was open. Same client-side-only-authorization shape as the video/integrations fixes, but read-side.
+
+**Fix:** `requireAuth` on **all 16** corporate GET routes, matching their PATCH counterparts. The corporate pages already send `Authorization: Bearer <auth_token>` on their PATCH calls; their GET loads did not (the routes were public), so I added the same header to the 15 GET fetches across the 9 corporate pages (BoardPage, FinancePage, HRPage, ESGPage, InvestorRelationsPage, CompliancePage, GlobalOpsPage, CommandCenterPage, PRCommsPage), using `localStorage.getItem('auth_token')` uniformly (a couple of read-only pages had no `token` var). No data model change.
+
+**Verified + mutation-tested:** new self-booting `scripts/test-corporate-auth.mjs` (spawns the real server with a known `JWT_SECRET`, signs a Bearer token): the sensitive reads (finance / hr / board / ir / pr/contacts / overview) all return **401** without a token and **200** with a valid one. **9/9** via `npm run test:corporate-auth`. **Mutation:** ungating one route (`/api/corporate/finance`) makes it readable unauthenticated → that assertion fails, restored to green. `node --check` clean; **frontend `npm run build` clean** (all 15 GET fetches updated, PATCH calls untouched — verified no bare corporate GET remains). Wired into `package.json` + a self-contained CI step.
+
 ### 2026-07-23 — Hourly loop: SECURITY — /api/video/generate was unauthenticated (paid-video budget drain) + a mock-provider 500 bug 🔴
 
 Found continuing the security-surface audit (`video-generator.js` + its routes in server.js). **Two real issues, verified against the code:**

@@ -11,7 +11,7 @@ const BoardPage = () => {
   ]);
 
   useEffect(() => {
-    fetch(apiUrl('/api/corporate/board')).then(r => r.json()).then(d => setMembers(d.data || [])).catch(() => {});
+    fetch(apiUrl('/api/corporate/board'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setMembers(d.data || [])).catch(() => {});
   }, []);
 
   const typeColor = t => ({ executive: '#6366f1', independent: '#10b981', non_executive: '#f59e0b' }[t] || '#6b7280');

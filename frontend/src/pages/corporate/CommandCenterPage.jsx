@@ -22,8 +22,8 @@ const CommandCenterPage = () => {
   const [saving, setSaving] = useState(null);
 
   useEffect(() => {
-    fetch(apiUrl('/api/corporate/tasks')).then(r => r.json()).then(d => setTasks(d.data || [])).catch(() => {});
-    fetch(apiUrl('/api/corporate/kpis')).then(r => r.json()).then(d => setKpis(d.data)).catch(() => {});
+    fetch(apiUrl('/api/corporate/tasks'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setTasks(d.data || [])).catch(() => {});
+    fetch(apiUrl('/api/corporate/kpis'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setKpis(d.data)).catch(() => {});
   }, []);
 
   const updateTask = async (id, status) => {

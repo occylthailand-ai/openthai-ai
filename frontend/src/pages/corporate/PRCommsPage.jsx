@@ -17,12 +17,12 @@ const PRCommsPage = () => {
   const [newsletters, setNewsletters] = useState(null);
 
   useEffect(() => {
-    fetch(apiUrl('/api/corporate/pr/releases')).then(r => r.json()).then(d => setReleases(d.data || [])).catch(() => {});
-    fetch(apiUrl('/api/corporate/pr/contacts')).then(r => r.json()).then(d => setContacts(d.data || [])).catch(() => {});
-    fetch(apiUrl('/api/corporate/pr/campaigns')).then(r => r.json()).then(d => setCampaigns(d.data || [])).catch(() => {});
-    fetch(apiUrl('/api/corporate/pr/kols')).then(r => r.json()).then(d => setKols(d.data || [])).catch(() => {});
-    fetch(apiUrl('/api/corporate/pr/crisis')).then(r => r.json()).then(d => setCrisis(d.data)).catch(() => {});
-    fetch(apiUrl('/api/corporate/pr/newsletters')).then(r => r.json()).then(d => setNewsletters(d.data)).catch(() => {});
+    fetch(apiUrl('/api/corporate/pr/releases'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setReleases(d.data || [])).catch(() => {});
+    fetch(apiUrl('/api/corporate/pr/contacts'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setContacts(d.data || [])).catch(() => {});
+    fetch(apiUrl('/api/corporate/pr/campaigns'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setCampaigns(d.data || [])).catch(() => {});
+    fetch(apiUrl('/api/corporate/pr/kols'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setKols(d.data || [])).catch(() => {});
+    fetch(apiUrl('/api/corporate/pr/crisis'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setCrisis(d.data)).catch(() => {});
+    fetch(apiUrl('/api/corporate/pr/newsletters'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setNewsletters(d.data)).catch(() => {});
   }, []);
 
   const card = (style = {}) => ({

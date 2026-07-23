@@ -9,7 +9,7 @@ const HRPage = () => {
   const [tab, setTab] = useState('overview');
 
   useEffect(() => {
-    fetch(apiUrl('/api/corporate/hr')).then(r => r.json()).then(d => setData(d.data)).catch(() => {});
+    fetch(apiUrl('/api/corporate/hr'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setData(d.data)).catch(() => {});
   }, []);
 
   if (!data) return <CorporateLayout title="👥 Human Resources" subtitle="Talent · Culture · Policy"><div style={{ color: '#6b7280', textAlign: 'center', paddingTop: '60px' }}>⏳ Loading...</div></CorporateLayout>;

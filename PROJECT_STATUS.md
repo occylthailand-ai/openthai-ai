@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T22:18:03.410Z · branch `claude/daily-reporter-improvements-8vc9ct` (481 commit(s) ahead of main)
+Generated: 2026-07-23T23:14:56.873Z · branch `claude/daily-reporter-improvements-8vc9ct` (482 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 691 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 565 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: SECURITY — every corporate GET route was public while its PATCH required login (internal-data disclosure) 🔴
+
+Found continuing the security-surface audit (`corporate-system.js` + its routes in server.js). **Verified against the code:** all the corporate *mutations* are properly gated — `app.patch('/api/corporate/*', requireAuth, corpLimiter, …)` (board / finance / hr / esg / ir / compliance / global / pr-releases / pr-contacts / pr-campaigns / pr-kols / tasks / kpis). But every corresponding **GET** was mounted with **no auth** — `app.get('/api/corporate/board', (req,res) => res.json({ data: corporate.getBoard() }))`, and the same for finance, hr, esg, ir, compliance, global, overview, and the PR sub-routes. So anyone unauthenticated could read internal governance data: the board roster (incl. the real Chairman/CEO name), finance, HR, investor-relations, ESG, compliance filing status, and — most sensitively — **PR media contacts** (journalist names/emails → PDPA personal data). The React corporate pages sit behind a client-side login guard, but the API itself was open. Same client-side-only-authorization shape as the video/integrations fixes, but read-side.
+
+**Fix:** `requireAuth` on **all 16** corporate GET routes, matching their PATCH counterparts. The corporate pages already send `Authorization: Bearer <auth_token>` on their PATCH calls; their GET loads did not (the routes were public), so I added the same header to the 15 GET fetches across the 9 corporate pages (BoardPage, FinancePage, HRPage, ESGPage, InvestorRelationsPage, CompliancePage, GlobalOpsPage, CommandCenterPage, PRCommsPage), using `localStorage.getItem('auth_token')` uniformly (a couple of read-only pages had no `token` var). No data model change.
+
+**Verified + mutation-tested:** new self-booting `scripts/test-corporate-auth.mjs` (spawns the real server with a known `JWT_SECRET`, signs a Bearer token): the sensitive reads (finance / hr / board / ir / pr/contacts / overview) all return **401** without a token and **200** with a valid one. **9/9** via `npm run test:corporate-auth`. **Mutation:** ungating one route (`/api/corporate/finance`) makes it readable unauthenticated → that assertion fails, restored to green. `node --check` clean; **frontend `npm run build` clean** (all 15 GET fetches updated, PATCH calls untouched — verified no bare corporate GET remains). Wired into `package.json` + a self-contained CI step.
 
 ### 2026-07-23 — Hourly loop: SECURITY — /api/video/generate was unauthenticated (paid-video budget drain) + a mock-provider 500 bug 🔴
 
@@ -3668,54 +3676,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b238100 security(video): require login for /api/video/generate; fix mock-provider 500 (48 seconds ago)
-- 924334c chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 740433d security(integrations): require admin key for publish/test/canva-export (64 minutes ago)
-- 6cf2f36 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 6324a7b harden(mcp): cap JSON-RPC batch size to prevent cost-amplification (2 hours ago)
-- 2f843c0 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 3f7ca9b security(tenant): require API key for login — close email-only auth bypass (3 hours ago)
-- 19cf083 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- d54432b chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- b238100 security(video): require login for /api/video/generate; fix mock-provider 500 (58 minutes ago)
+- 924334c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 740433d security(integrations): require admin key for publish/test/canva-export (2 hours ago)
+- 6cf2f36 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 6324a7b harden(mcp): cap JSON-RPC batch size to prevent cost-amplification (3 hours ago)
+- 2f843c0 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 3f7ca9b security(tenant): require API key for login — close email-only auth bypass (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

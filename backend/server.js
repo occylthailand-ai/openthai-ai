@@ -8269,19 +8269,19 @@ app.get('/api/n8n/status', (req, res) => {
 const corpLimiter = rateLimit({ windowMs: 60000, max: 30, message: { error: 'Corporate API rate limit' } });
 
 // GET /api/corporate/overview
-app.get('/api/corporate/overview', (req, res) => {
+app.get('/api/corporate/overview', requireAuth, (req, res) => {
   res.json({ success: true, departments: DEPARTMENTS, ts: new Date().toISOString() });
 });
 
 // Board
-app.get('/api/corporate/board',   (req, res) => res.json({ success: true, data: corporate.getBoard() }));
+app.get('/api/corporate/board', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getBoard() }));
 app.patch('/api/corporate/board', requireAuth, corpLimiter, (req, res) => {
   corporate.saveBoard(req.body);
   res.json({ success: true });
 });
 
 // Compliance
-app.get('/api/corporate/compliance',   (req, res) => res.json({ success: true, data: corporate.getCompliance() }));
+app.get('/api/corporate/compliance', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getCompliance() }));
 app.patch('/api/corporate/compliance', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getCompliance();
   corporate.saveCompliance({ ...current, ...req.body });
@@ -8289,7 +8289,7 @@ app.patch('/api/corporate/compliance', requireAuth, corpLimiter, (req, res) => {
 });
 
 // IR
-app.get('/api/corporate/ir',   (req, res) => res.json({ success: true, data: corporate.getIR() }));
+app.get('/api/corporate/ir', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getIR() }));
 app.patch('/api/corporate/ir', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getIR();
   corporate.saveIR({ ...current, ...req.body });
@@ -8297,7 +8297,7 @@ app.patch('/api/corporate/ir', requireAuth, corpLimiter, (req, res) => {
 });
 
 // HR
-app.get('/api/corporate/hr',   (req, res) => res.json({ success: true, data: corporate.getHR() }));
+app.get('/api/corporate/hr', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getHR() }));
 app.patch('/api/corporate/hr', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getHR();
   corporate.saveHR({ ...current, ...req.body });
@@ -8305,7 +8305,7 @@ app.patch('/api/corporate/hr', requireAuth, corpLimiter, (req, res) => {
 });
 
 // ESG
-app.get('/api/corporate/esg',   (req, res) => res.json({ success: true, data: corporate.getESG() }));
+app.get('/api/corporate/esg', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getESG() }));
 app.patch('/api/corporate/esg', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getESG();
   corporate.saveESG({ ...current, ...req.body });
@@ -8313,7 +8313,7 @@ app.patch('/api/corporate/esg', requireAuth, corpLimiter, (req, res) => {
 });
 
 // Finance
-app.get('/api/corporate/finance',   (req, res) => res.json({ success: true, data: corporate.getFinance() }));
+app.get('/api/corporate/finance', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getFinance() }));
 app.patch('/api/corporate/finance', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getFinance();
   corporate.saveFinance({ ...current, ...req.body });
@@ -8321,7 +8321,7 @@ app.patch('/api/corporate/finance', requireAuth, corpLimiter, (req, res) => {
 });
 
 // Global Operations
-app.get('/api/corporate/global',   (req, res) => res.json({ success: true, data: corporate.getGlobalOps() }));
+app.get('/api/corporate/global', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getGlobalOps() }));
 app.patch('/api/corporate/global', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getGlobalOps();
   corporate.saveGlobalOps({ ...current, ...req.body });
@@ -8329,36 +8329,36 @@ app.patch('/api/corporate/global', requireAuth, corpLimiter, (req, res) => {
 });
 
 // ── PR & Global Communications ────────────────────────────────────────────────
-app.get('/api/corporate/pr/releases',   (req, res) => res.json({ success: true, data: pr.getPressReleases() }));
+app.get('/api/corporate/pr/releases', requireAuth,   (req, res) => res.json({ success: true, data: pr.getPressReleases() }));
 app.patch('/api/corporate/pr/releases', requireAuth, corpLimiter, (req, res) => {
   pr.savePressReleases(req.body); res.json({ success: true });
 });
 
-app.get('/api/corporate/pr/contacts',   (req, res) => res.json({ success: true, data: pr.getMediaContacts() }));
+app.get('/api/corporate/pr/contacts', requireAuth,   (req, res) => res.json({ success: true, data: pr.getMediaContacts() }));
 app.patch('/api/corporate/pr/contacts', requireAuth, corpLimiter, (req, res) => {
   pr.saveMediaContacts(req.body); res.json({ success: true });
 });
 
-app.get('/api/corporate/pr/campaigns',   (req, res) => res.json({ success: true, data: pr.getCampaigns() }));
+app.get('/api/corporate/pr/campaigns', requireAuth,   (req, res) => res.json({ success: true, data: pr.getCampaigns() }));
 app.patch('/api/corporate/pr/campaigns', requireAuth, corpLimiter, (req, res) => {
   pr.saveCampaigns(req.body); res.json({ success: true });
 });
 
-app.get('/api/corporate/pr/kols',   (req, res) => res.json({ success: true, data: pr.getKOLs() }));
+app.get('/api/corporate/pr/kols', requireAuth,   (req, res) => res.json({ success: true, data: pr.getKOLs() }));
 app.patch('/api/corporate/pr/kols', requireAuth, corpLimiter, (req, res) => {
   pr.saveKOLs(req.body); res.json({ success: true });
 });
 
-app.get('/api/corporate/pr/crisis',   (req, res) => res.json({ success: true, data: pr.getCrisisPlan() }));
-app.get('/api/corporate/pr/newsletters', (req, res) => res.json({ success: true, data: pr.getNewsletters() }));
+app.get('/api/corporate/pr/crisis', requireAuth,   (req, res) => res.json({ success: true, data: pr.getCrisisPlan() }));
+app.get('/api/corporate/pr/newsletters', requireAuth, (req, res) => res.json({ success: true, data: pr.getNewsletters() }));
 
 // Command Center — Team Tasks + KPIs
-app.get('/api/corporate/tasks',   (req, res) => res.json({ success: true, data: pr.getTasks() }));
+app.get('/api/corporate/tasks', requireAuth,   (req, res) => res.json({ success: true, data: pr.getTasks() }));
 app.patch('/api/corporate/tasks', requireAuth, corpLimiter, (req, res) => {
   pr.saveTasks(req.body); res.json({ success: true });
 });
 
-app.get('/api/corporate/kpis',   (req, res) => res.json({ success: true, data: pr.getKPIs() }));
+app.get('/api/corporate/kpis', requireAuth,   (req, res) => res.json({ success: true, data: pr.getKPIs() }));
 app.patch('/api/corporate/kpis', requireAuth, corpLimiter, (req, res) => {
   pr.saveKPIs(req.body); res.json({ success: true });
 });

@@ -90,6 +90,9 @@ jobs:
       - name: Video auth test (self-contained — video generation requires login; mock provider ok)
         working-directory: backend
         run: npm run test:video-auth
+      - name: Corporate auth test (self-contained — internal corporate reads require login)
+        working-directory: backend
+        run: npm run test:corporate-auth
       - name: Boot + health smoke test
         working-directory: backend
         run: |

@@ -8,7 +8,7 @@ const InvestorRelationsPage = () => {
   const [fin, setFin] = useState({});
 
   useEffect(() => {
-    fetch(apiUrl('/api/corporate/ir')).then(r => r.json()).then(d => { setIR(d.data); setFin(d.data?.financials || {}); }).catch(() => {});
+    fetch(apiUrl('/api/corporate/ir'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => { setIR(d.data); setFin(d.data?.financials || {}); }).catch(() => {});
   }, []);
 
   const save = async () => {
