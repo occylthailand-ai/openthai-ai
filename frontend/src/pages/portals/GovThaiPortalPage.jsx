@@ -53,7 +53,7 @@ export default function GovThaiPortalPage() {
             </div>
           </div>
           <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #10b98133' }}>
-            {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
+            {sent ? <div role="status" style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
             <form onSubmit={submit}>
               {[['agency',t.form.agency],['ministry',t.form.ministry],['name',t.form.name],['position',t.form.position],['email',t.form.email],['phone',t.form.phone]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:14 }}>

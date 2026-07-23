@@ -60,7 +60,7 @@ export default function AffiliatePortalPage() {
             {t.benefits.map((b,i) => <div key={i} style={{ display:'flex', gap:12, marginBottom:14, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#f59e0b' }}>✓</span><span style={{ color:'#ddd' }}>{b}</span></div>)}
           </div>
           <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #f59e0b33' }}>
-            {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
+            {sent ? <div role="status" style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
             <form onSubmit={submit}>
               {[['name',t.form.name],['country',t.form.country],['platform',t.form.platform],['email',t.form.email]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:16 }}>

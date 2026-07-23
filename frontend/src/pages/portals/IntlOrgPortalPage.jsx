@@ -59,7 +59,7 @@ export default function IntlOrgPortalPage() {
             {t.services.map((s,i) => <div key={i} style={{ display:'flex', gap:12, marginBottom:14, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#8b5cf6' }}>▸</span><span style={{ color:'#ddd' }}>{s}</span></div>)}
           </div>
           <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #8b5cf633' }}>
-            {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
+            {sent ? <div role="status" style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
             <form onSubmit={submit}>
               <div style={{ marginBottom:14 }}>
                 <label htmlFor="org" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.org}</label>

@@ -51,7 +51,7 @@ export default function ProducerPortalPage() {
             {t.benefits.map((b,i) => <div key={i} style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#6366f1', fontSize:20 }}>✓</span><span style={{ color:'#ddd' }}>{b}</span></div>)}
           </div>
           <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #6366f133' }}>
-            {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
+            {sent ? <div role="status" style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
             <form onSubmit={submit}>
               {[['name',t.form.name],['country',t.form.country],['product',t.form.product]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:16 }}>

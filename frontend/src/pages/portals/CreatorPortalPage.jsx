@@ -54,7 +54,7 @@ export default function CreatorPortalPage() {
             </div>
           </div>
           <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #ec489933' }}>
-            {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
+            {sent ? <div role="status" style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
             <form onSubmit={submit}>
               {[['name',t.form.name,'text'],['country',t.form.country,'text'],['followers',t.form.followers,'number'],['email',t.form.email,'email']].map(([k,label,type]) => (
                 <div key={k} style={{ marginBottom:16 }}>

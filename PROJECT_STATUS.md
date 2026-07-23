@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T08:22:08.565Z · branch `claude/daily-reporter-improvements-8vc9ct` (461 commit(s) ahead of main)
+Generated: 2026-07-23T08:24:39.258Z · branch `claude/daily-reporter-improvements-8vc9ct` (463 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 671 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 546 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: a11y — the consent-based signup confirmation was silent to screen readers on all 9 /portals/* pages (WCAG 4.1.3)
+
+Found auditing the /portals/* signup funnel (the producer/consumer/middleman/affiliate/creator/foundation/gov/intl-org consent forms in rule #2's scope). **Verified against the code:** every portal renders `sent ? <success div> : <form>`. On submit, React swaps the whole `<form>` out for the success div ("ส่งคำขอเรียบร้อย! ทีมงานจะติดต่อกลับ…"). The submit button that had focus is now gone, so a **screen-reader user gets no announcement that their signup succeeded** — a silent visual-only change. The *error* path was already correct (`{err && <div role="alert">…}` — an assertive live region that announces), so the two outcomes were announced asymmetrically: failures spoke, successes were silent. That's a WCAG 2.2 **4.1.3 Status Messages** failure on the platform's primary onboarding surface — the exact users rule #2 is meant to serve.
+
+**Fix (mirror the working error idiom):** the success container now carries `role="status"` — an implicit `aria-live="polite"` + `aria-atomic` region — on all 9 pages. This mirrors the error's `role="alert"`, the same conditionally-rendered live-region pattern already proven to announce on these pages, so it needs no structural rework and no always-mounted wrapper. Frontend-only, no behaviour change for sighted users.
+
+**Verified by running + mutation-tested:** new `frontend/src/__tests__/portalStatusRegion.test.js` — a source-structural drift guard (same no-render approach as portalConsent / portalFieldCollision / trackFormsA11y) asserting, for each of the 9 portals, that the `sent ? <div …>` success container has `role="status"` AND the error region keeps `role="alert"`. **19/19** (1 count + 9×2). **Mutation:** stripping `role="status"` from one portal fails exactly that portal's success-container assertion (18 pass / 1 fail), restored to green. Full frontend suite **202/202** across 20 files; `npm run build` clean (prerender + sitemap intact). Vitest auto-discovers `src/__tests__/*` so CI's existing `npm test -- --run` runs it — no workflow change needed.
 
 ### 2026-07-23 — Hourly loop: bug fix — the Omise webhook receiver re-fired 'payment.completed' on every redelivery of a charge.complete event (idempotency)
 
@@ -3576,54 +3584,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 751160e fix(payment): fire payment.completed once per webhook charge, not per redelivery (5 minutes ago)
+- 8434d06 a11y(portals): announce signup success to screen readers (role=status) (13 seconds ago)
+- 668e54c chore: sync PROJECT_STATUS.md [skip ci] (2 minutes ago)
+- 751160e fix(payment): fire payment.completed once per webhook charge, not per redelivery (8 minutes ago)
 - cf23487 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - a35a3d0 fix(payment): fire payment.completed once per payment, not on every status poll (2 hours ago)
 - 66384c8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - 485bd2e fix(payment): burn a spin discount only on a real charge, not on a request that fails first (3 hours ago)
 - 003976f chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- b97d272 fix(disputes): track() no longer 500s on an order with no producer_email (4 hours ago)
-- b159dd8 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 987,
-  "memory_mb": "21.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
