@@ -13,3 +13,4 @@ data/stock_movements.json
 data/memory_*.json
 data/portal_leads.json
 .used-recovery-codes.json
+data/video_jobs.json

@@ -7421,7 +7421,12 @@ const videoJobs = loadVideoJobs();
 const videoLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'Video API rate limit — 10/min' } });
 
 // POST /api/video/generate — สร้าง Script + ส่งไป Video API
-app.post('/api/video/generate', videoLimiter, async (req, res) => {
+// Auth-gated: this submits a real job to a paid video provider (Runway/Pika/Kling/Luma/Veo) using
+// the PLATFORM's API keys — expensive per clip. The /video page is behind a client-side login
+// guard and already sends the Bearer login token, but the API itself was public (rate-limited
+// only), so anyone bypassing the SPA could drain the platform's video budget. requireAuth enforces
+// the same login the page already performs.
+app.post('/api/video/generate', requireAuth, videoLimiter, async (req, res) => {
   const form = req.body || {};
   if (!form.product?.trim()) return res.status(400).json({ error: 'product required' });
 
@@ -7456,14 +7461,14 @@ app.post('/api/video/generate', videoLimiter, async (req, res) => {
   }
 });
 
-// GET /api/video/jobs — รายการ jobs
-app.get('/api/video/jobs', (req, res) => {
+// GET /api/video/jobs — รายการ jobs (exposes every job's product + generated script → auth-gated)
+app.get('/api/video/jobs', requireAuth, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 20, 100);
   res.json({ success: true, data: videoJobs.slice(0, limit) });
 });
 
 // GET /api/video/jobs/:id/status — poll provider status
-app.get('/api/video/jobs/:id/status', async (req, res) => {
+app.get('/api/video/jobs/:id/status', requireAuth, async (req, res) => {
   const entry = videoJobs.find(j => j.id === req.params.id);
   if (!entry) return res.status(404).json({ error: 'job not found' });
 

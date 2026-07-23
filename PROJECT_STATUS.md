@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T21:14:52.155Z · branch `claude/daily-reporter-improvements-8vc9ct` (479 commit(s) ahead of main)
+Generated: 2026-07-23T22:16:52.446Z · branch `claude/daily-reporter-improvements-8vc9ct` (480 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 689 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 563 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: SECURITY — /api/video/generate was unauthenticated (paid-video budget drain) + a mock-provider 500 bug 🔴
+
+Found continuing the security-surface audit (`video-generator.js` + its routes in server.js). **Two real issues, verified against the code:**
+
+**(1) Auth — the money one.** `POST /api/video/generate` submits a real job to a paid video provider (Runway / Pika / Kling / Luma / Veo) using the **platform's own** API keys (`process.env.RUNWAY_API_KEY`, …) — video generation is expensive per clip. The route had only `videoLimiter` (10/min), no auth. The `/video` React page is behind a client-side login guard (`isAuthenticated ? … : <Navigate to="/login">`) and already sends the Bearer login token, but the API itself was public — so anyone bypassing the SPA could `POST /api/video/generate` up to 10/min and bill the platform's video budget (also `GET /api/video/jobs` leaked every job's product + generated script, and `/jobs/:id/status` polled providers with the platform key). Same client-side-only-authorization shape as the integrations fix. **Fix:** `requireAuth` middleware on all three routes (`generate`, `jobs`, `jobs/:id/status`) — it verifies the Bearer login JWT the page already sends, so no frontend change and no legit flow breaks. (Chose `requireAuth` over the `x-admin-key` gate here specifically because this page authenticates with the Bearer token, unlike the integrations page.)
+
+**(2) Bug found while testing (1) — the default path 500'd.** The route defaults `provider` to `'mock'` when the caller doesn't pick one, but `submitToVideoAPI` did `const p = VIDEO_PROVIDERS[provider]; if (!p) throw` — and `'mock'` is **not** in `VIDEO_PROVIDERS`, so the script-only/mock path (the common default) **always threw → 500**. Writing the auth test surfaced it (an authorized call 500'd instead of returning the script). **Fix:** check `provider === 'mock' || !apiKey` FIRST and return the queued mock job, then validate a real provider — so script-only mode works and a genuinely unknown provider still errors.
+
+**Verified + mutation-tested:** new self-booting `scripts/test-video-auth.mjs` (spawns the real server with a known `JWT_SECRET`, signs a Bearer token, no provider keys / no external calls): generate without a token → **401**, invalid token → **401**, valid token → **200 + script** (mock provider), `GET /api/video/jobs` → 401 without / 200 with. **6/6** via `npm run test:video-auth`. **Mutations:** dropping `requireAuth` makes the unauthenticated generate return 200 (auth assertions fail); reverting the mock-provider fix makes the authorized generate 500 again — each restored to green. `node --check` clean (server.js + video-generator.js); no frontend change. Wired into `package.json` + a self-contained CI step. Also confirmed **voice-commander.js is safe** this round: its `run_agent` / `memory_search` actions are advertised in the intent prompt but not implemented in the executor switch (they fall through to "unknown"), and the only costly action (`generate_content`) is rate-limited.
 
 ### 2026-07-23 — Hourly loop: SECURITY — the integration publish/test endpoints were unauthenticated (broadcast-spam vector) 🔴
 
@@ -3658,54 +3668,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 740433d security(integrations): require admin key for publish/test/canva-export (25 seconds ago)
-- 6cf2f36 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 6324a7b harden(mcp): cap JSON-RPC batch size to prevent cost-amplification (62 minutes ago)
-- 2f843c0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 3f7ca9b security(tenant): require API key for login — close email-only auth bypass (2 hours ago)
-- 19cf083 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 6a601bd fix(auth): non-string recovery code returns false, not a 500 (2 hours ago)
-- dcd1895 chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- 924334c chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 740433d security(integrations): require admin key for publish/test/canva-export (62 minutes ago)
+- 6cf2f36 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 6324a7b harden(mcp): cap JSON-RPC batch size to prevent cost-amplification (2 hours ago)
+- 2f843c0 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 3f7ca9b security(tenant): require API key for login — close email-only auth bypass (3 hours ago)
+- 19cf083 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 6a601bd fix(auth): non-string recovery code returns false, not a 500 (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3859,13 +3831,13 @@ the backend.
 | `producers.js` | 288 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8978 | Vercel serverless detection |
+| `server.js` | 8983 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 257 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
-| `video-generator.js` | 204 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
+| `video-generator.js` | 208 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
 | `voice-commander.js` | 259 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
 | `webhook-system.js` | 240 | Push events to registered subscriber endpoints instead of polling. |
 

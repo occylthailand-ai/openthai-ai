@@ -119,17 +119,21 @@ function mockVideoScript(form) {
 // ── Submit to Video Generation API ────────────────────────────────────────────
 export async function submitToVideoAPI(script, provider = 'runway', apiKey = '') {
   const p = VIDEO_PROVIDERS[provider];
-  if (!p) throw new Error(`Unknown provider: ${provider}`);
-  if (!apiKey) {
+  // Script-only / mock mode: the route defaults provider to 'mock' when the caller doesn't pick a
+  // real one, and 'mock' is not in VIDEO_PROVIDERS. Return a queued mock job for that (or for any
+  // provider with no API key configured). Previously provider='mock' hit `if (!p) throw` first and
+  // 500'd, so the default script-only path — the common case — was broken.
+  if (provider === 'mock' || !apiKey) {
     return {
       job_id: `mock_${Date.now()}`,
       status: 'queued',
       provider: 'mock',
       eta_seconds: 60,
-      message: `API key for ${p.name} not configured — script ready, submit manually`,
+      message: `${p ? `API key for ${p.name} not configured — ` : ''}script ready, submit manually`,
       preview_url: null,
     };
   }
+  if (!p) throw new Error(`Unknown provider: ${provider}`);
 
   const payload = buildProviderPayload(provider, script);
   const headers = {
