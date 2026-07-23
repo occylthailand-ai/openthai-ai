@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T10:16:01.186Z · branch `claude/daily-reporter-improvements-8vc9ct` (467 commit(s) ahead of main)
+Generated: 2026-07-23T13:25:17.415Z · branch `claude/daily-reporter-improvements-8vc9ct` (469 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 677 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 552 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: a11y — /portals/* didn't update <html lang> when switching language (WCAG 3.1.1 / 3.1.2)
+
+Found auditing the multilingual consent funnel. **Verified against the code:** the global i18n already does the right thing — `i18n/index.jsx` sets `document.documentElement.lang = lang` whenever its language changes. But each `/portals/*` page manages its **own local** `lang` useState (it does not use the global `useLang()`), and its mount effect set only `document.title`, never `document.documentElement.lang`. So a visitor who opened `/portals/producer` and switched to English or 中文 saw English/Chinese copy under a stale `<html lang="th">`, and a screen reader applied **Thai** pronunciation rules to non-Thai text (WCAG 3.1.2 Language of Parts). The two English-default portals (`gov-intl`, `intl-org`) were even wrong on first paint — English content under `lang="th"`. Same "the global does it right, the inline portals regressed it" shape as the aria-pressed and role=status fixes.
+
+**Fix:** each portal's existing title effect now also runs `document.documentElement.lang = lang` and lists `lang` in its deps — matching the global i18n pattern (same raw codes th/en/zh, so it stays consistent with what the global sets). No visual change.
+
+**Verified by running + mutation-tested:** new `frontend/src/__tests__/portalHtmlLang.test.jsx` — a real **render** test (not a source scan): it mounts each of the 9 portals in a MemoryRouter, asserts `document.documentElement.lang` equals the portal's default language on mount, then fires the English / ไทย switch buttons and asserts the attribute updates live. **27/27** (9 × 3). **Mutation:** reverting one portal's effect back to `}, [t.title])` fails exactly that portal's 3 assertions (24/3), restored to green. Full frontend suite **249/249** across 22 files; `npm run build` clean (22-URL sitemap intact). CI runs it via the existing `npm test -- --run`.
+
+**Also flagged to the owner (rule #8, awaiting decision):** `otop-ai-landing/index.html` ships `og:image`/`twitter:image` as root-relative URLs (`/og-image.png`), which Facebook/LINE/X cannot resolve → the share preview image is broken; the page also has no `<link rel="canonical">` and no `og:url`. All three need that site's own production domain, which is **not** determinable from the repo (robots.txt has no Sitemap/Host, the HTML has no self-referential absolute URL, the JSON-LD points only at the parent openthai-ai.com). Guessing the domain would be worse than the status quo (a wrong absolute URL fails 100% of the time; a relative one at least sometimes resolves), so this stays **deferred** pending the owner confirming the otop-ai-landing domain — not fixed this round.
 
 ### 2026-07-23 — Hourly loop: bug fix — an approved producer editing their listing could silently lose their category (self-serve funnel, file-store only)
 
@@ -3602,54 +3612,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- f4b9598 fix(producers): don't wipe an approved producer's category on self-update (36 seconds ago)
-- b6cda5c chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 6a380ff a11y(portals): expose active language to assistive tech (aria-pressed) (61 minutes ago)
-- 86f0512 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 21ccfb2 a11y(portals): announce signup success to screen readers (role=status) (2 hours ago)
-- 668e54c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 751160e fix(payment): fire payment.completed once per webhook charge, not per redelivery (2 hours ago)
-- cf23487 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 2803d01 a11y(portals): sync <html lang> with the selected language (12 seconds ago)
+- 53f6458 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- f4b9598 fix(producers): don't wipe an approved producer's category on self-update (3 hours ago)
+- b6cda5c chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 6a380ff a11y(portals): expose active language to assistive tech (aria-pressed) (4 hours ago)
+- 86f0512 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 21ccfb2 a11y(portals): announce signup success to screen readers (role=status) (5 hours ago)
+- 668e54c chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

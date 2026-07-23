@@ -19,7 +19,7 @@ export default function GovIntlPortalPage() {
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
   const t = T[lang];
-  useEffect(() => { document.title = t.title + ' — Openthai.ai'; }, [t.title]);
+  useEffect(() => { document.title = t.title + ' — Openthai.ai'; document.documentElement.lang = lang; }, [t.title, lang]);
 
   const submit = async e => {
     e.preventDefault();
