@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T13:33:20.807Z · branch `claude/daily-reporter-improvements-8vc9ct` (471 commit(s) ahead of main)
+Generated: 2026-07-23T19:12:05.292Z · branch `claude/daily-reporter-improvements-8vc9ct` (472 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 681 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 555 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: bug fix — a malformed `code` on POST /api/auth/recovery crashed with a 500 instead of a clean auth rejection
+
+Found auditing `auth.js` (previously untested). **Verified against the code AND by running:** `useRecoveryCode(inputCode)` does `inputCode.trim()` after the `RECOVERY_CODES` presence check. The `/api/auth/recovery` route guards `if (!code)`, which blocks a *falsy* code — but a **truthy non-string** body value like `{"code":123}`, `{"code":{}}`, or `{"code":["x"]}` (all valid JSON) sails past `!code` and hits `.trim()` → **`TypeError: inputCode.trim is not a function`** → an unhandled **500** on an authentication endpoint. Reproduced directly against the exported function (RECOVERY_CODES set, feeding a number / object / array → all threw). Same "malformed input → clean rejection, not a 500" contract the rest of the codebase enforces (smart-e's non-object-body 400, the null-safety fixes).
+
+**Fix (guard at the function boundary):** `if (typeof inputCode !== 'string') return false;` at the top of `useRecoveryCode` — a non-string code is simply invalid, so the route returns its normal 401 instead of crashing. Also added `.used-recovery-codes.json` (the runtime one-time-code state file written next to auth.js) to `backend/.gitignore` — it's per-deploy state like the other gitignored `data/*.json` files and must not be tracked.
+
+**Verified + mutation-tested:** new `scripts/test-recovery-code.mjs` (hermetic — snapshots/restores `.used-recovery-codes.json` so it never leaks state): non-string inputs (number/object/array/undefined/null) all return false without throwing; no configured codes → always false; a valid code works exactly once and is case-insensitive; a reused or never-issued code → false. **11/11** via `npm run test:recovery-code`. **Mutation:** removing the `typeof` guard makes the five non-string cases throw again (**5 fail**), restored to green; hermetic restore confirmed (no stray state file). `node --check` clean; **boot smoke** `/api/health` 200 with auth.js in the graph. Wired into `package.json` + the CI Unit-tests step. Backend-only.
 
 ### 2026-07-23 — Hourly loop: robustness — the OpenRouter AI wrapper threw a cryptic TypeError on a malformed/content-filtered response
 
@@ -3620,54 +3628,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- bd4edf6 fix(ai): OpenRouter wrapper throws a clear error on a malformed/filtered response (30 seconds ago)
-- 66bad35 chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
-- a8bf984 a11y(portals): sync <html lang> with the selected language (8 minutes ago)
-- 53f6458 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- f4b9598 fix(producers): don't wipe an approved producer's category on self-update (3 hours ago)
-- b6cda5c chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 6a380ff a11y(portals): expose active language to assistive tech (aria-pressed) (4 hours ago)
-- 86f0512 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- dcd1895 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- bd4edf6 fix(ai): OpenRouter wrapper throws a clear error on a malformed/filtered response (6 hours ago)
+- 66bad35 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- a8bf984 a11y(portals): sync <html lang> with the selected language (6 hours ago)
+- 53f6458 chore: sync PROJECT_STATUS.md [skip ci] (9 hours ago)
+- f4b9598 fix(producers): don't wipe an approved producer's category on self-update (9 hours ago)
+- b6cda5c chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
+- 6a380ff a11y(portals): expose active language to assistive tech (aria-pressed) (10 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "20.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3804,7 +3774,7 @@ the backend.
 | `affiliate-tiers.js` | 18 | Affiliate commission tiers — extracted from server.js so the money-critical |
 | `affiliate-withdraw-math.js` | 32 | Affiliate withdraw-request math — the money-integrity rules for how much an |
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
-| `auth.js` | 190 | JWT |
+| `auth.js` | 196 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
 | `disputes.js` | 307 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |

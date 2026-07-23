@@ -131,6 +131,12 @@ export function generateRecoveryCodes(count = 8) {
 }
 
 export function useRecoveryCode(inputCode) {
+  // A non-string code (e.g. a JSON number/object/array in the request body) is simply invalid —
+  // return false instead of throwing. The /api/auth/recovery route guards `!code`, but a *truthy*
+  // non-string like {"code":123} or {"code":{}} slipped past that and hit inputCode.trim() below,
+  // turning a malformed request into an unhandled 500 on an auth endpoint. Same "bad input → clean
+  // rejection, not a 500" contract the rest of the codebase enforces.
+  if (typeof inputCode !== 'string') return false;
   const codesRaw = process.env.RECOVERY_CODES || '';
   const validCodes = codesRaw.split(',').map(c => c.trim()).filter(Boolean);
 
