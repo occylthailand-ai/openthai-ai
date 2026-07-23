@@ -125,5 +125,26 @@ console.log('\n=== respond(): the other party posts a counter-response (contact-
   ok(wrong.ok === false, 'a third party whose contact matches neither side is rejected');
 }
 
+console.log('\n=== track(): contact-gated status check, crash-safe on an order with no producer_email ===');
+{
+  // Same `?:`/`||` precedence crash as respond(), but track() computes otherPartyContact BEFORE
+  // the contact check — so a buyer-opened dispute on an order with NO producer_email used to throw
+  // (500) for EVERY caller, including the dispute's own opener who just wants to see its status.
+  const { d, id } = await freshOpenDispute(); // makeDisputes() order has no producer_email
+  const self = await d.track(id, 'buyer@x.com');
+  ok(self.ok === true && self.dispute?.id === id, `the opener can track their own dispute even when the order has no producer_email (no crash): ok=${self.ok}`);
+  ok(!('opener_contact' in (self.dispute || {})) && !('ai_suggestion' in (self.dispute || {})), 'track returns the sanitized party-facing view (no opener_contact / AI draft)');
+  const stranger = await d.track(id, 'nobody@x.com');
+  ok(stranger.ok === false && /ไม่ตรง/.test(stranger.error || ''), `a non-party contact → clean {ok:false} (no crash): ${stranger.error}`);
+  const missing = await d.track(id, '');
+  ok(missing.ok === false, 'empty contact → rejected (no bypass)');
+
+  // with a producer_email present, the producer (the other party) can also track
+  const d2 = makeDisputesWithProducer();
+  const opened = await d2.open({ order_id: 'o1', opened_by: 'buyer', contact: 'buyer@x.com', reason: 'ของชำรุด' });
+  const byProducer = await d2.track(opened.id, 'SELLER@x.com');
+  ok(byProducer.ok === true, 'the producer (matching producer_email, case-insensitive) can also track');
+}
+
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

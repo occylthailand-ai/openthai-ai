@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T03:15:15.253Z · branch `claude/daily-reporter-improvements-8vc9ct` (453 commit(s) ahead of main)
+Generated: 2026-07-23T04:11:26.903Z · branch `claude/daily-reporter-improvements-8vc9ct` (454 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 663 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 537 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: bug fix — dispute track() crashed (500) on an order with no producer_email; the opener couldn't even see their own dispute
+
+Found auditing `disputes.js` (escrow/arbitration money path). **Verified against the code:** `track()` (the public `GET /api/disputes/:id/track` both parties use) computed the other party's contact as `(d.opened_by === 'buyer' ? order.producer_email : order.contact || '').toLowerCase()`. `||` binds tighter than `?:`, so this parsed as `(buyer ? order.producer_email : (order.contact || '')).toLowerCase()` — the **buyer branch `order.producer_email` had no `|| ''` guard**. This is the exact class the `respond()` fix already closed (run 10), but `track()` was missed. Worse than respond(): `track()` computes this value *before* the contact check, so a buyer-opened dispute on an order with a null `producer_email` (some order channels never set it) threw a `TypeError` → the route's wrap turned it into a 500 for **every** caller — the dispute's own opener couldn't even see its status, and neither could anyone else. A stored order read back from Supabase can also carry a null column.
+
+**Fix (1 char class):** guard both branches — `(d.opened_by === 'buyer' ? (order.producer_email || '') : (order.contact || '')).toLowerCase()`, mirroring `respond()` (disputes.js:153). Now a mismatched/absent producer contact cleanly rejects with "ช่องทางติดต่อไม่ตรง…" and the opener can always track. No other behaviour change.
+
+**Verified by running + mutation-tested:** extended `scripts/test-disputes.mjs` (+5, reusing the existing `makeDisputes()` stub whose order has no `producer_email`): the opener can now `track()` their own dispute without a crash and gets the sanitized party-facing view (no `opener_contact`/AI draft); a non-party contact and an empty contact are cleanly rejected; and with a `producer_email` present the producer can also track. **30/30** via `npm run test:disputes` (was 25). **Mutation:** restoring the bare `order.producer_email` makes `track()` throw `TypeError: Cannot read properties of undefined (reading 'toLowerCase')` (the 500), exactly the assertion the fix protects, then restored to green. `node --check` clean. Backend-only.
 
 ### 2026-07-23 — Hourly loop: test — pin the inventory upsert create-vs-edit contract (no code change)
 
@@ -3544,54 +3552,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- c51b78a test(inventory): pin the upsert create-vs-edit contract (same id on edit, new id on create) (22 seconds ago)
-- 84e62b2 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- d8ad6cb test(affiliate): pin the withdraw-request reservation invariant (extract math for testability) (2 hours ago)
-- 1f56167 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 924b9db fix(portals): stop dropping Intl-Org 'Organization Type' on submit (form field 'type' collided with portal discriminator) (3 hours ago)
-- 3da237a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- b4adfda fix(webhooks): bound the in-memory delivery log (was unbounded; only disk copy capped) (5 hours ago)
-- 1d7b02b chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- b159dd8 chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
+- c51b78a test(inventory): pin the upsert create-vs-edit contract (same id on edit, new id on create) (57 minutes ago)
+- 84e62b2 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- d8ad6cb test(affiliate): pin the withdraw-request reservation invariant (extract math for testability) (3 hours ago)
+- 1f56167 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 924b9db fix(portals): stop dropping Intl-Org 'Organization Type' on submit (form field 'type' collided with portal discriminator) (4 hours ago)
+- 3da237a chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- b4adfda fix(webhooks): bound the in-memory delivery log (was unbounded; only disk copy capped) (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 1054,
-  "memory_mb": "21.8",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3731,7 +3701,7 @@ the backend.
 | `auth.js` | 190 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
-| `disputes.js` | 304 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
+| `disputes.js` | 307 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |

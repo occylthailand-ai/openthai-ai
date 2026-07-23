@@ -167,7 +167,10 @@ export function createDisputes(dataDir, opts = {}) {
     if (!d) return { ok: false, error: 'ไม่พบข้อพิพาทนี้' };
     const c = (contact || '').toString().trim().toLowerCase();
     const order = orders ? await orders.getOne(d.order_id) : null;
-    const otherPartyContact = order ? (d.opened_by === 'buyer' ? order.producer_email : order.contact || '').toLowerCase() : '';
+    // Same `?:`-binds-looser-than-`||` crash the respond() fix addressed: the buyer branch was a
+    // bare order.producer_email, so an order with no producer_email made this .toLowerCase() throw
+    // (a 500) for EVERY caller — even the dispute's own opener couldn't track it. Guard both branches.
+    const otherPartyContact = order ? (d.opened_by === 'buyer' ? (order.producer_email || '') : (order.contact || '')).toLowerCase() : '';
     if (!c || (c !== d.opener_contact && c !== otherPartyContact)) {
       return { ok: false, error: 'ช่องทางติดต่อไม่ตรงกับข้อพิพาทนี้' };
     }
