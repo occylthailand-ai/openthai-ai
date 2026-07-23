@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-23 — Hourly loop: SECURITY — tenant login accepted an email with no secret (full authentication bypass) 🔴
+
+**Highest-severity finding of the session — flagging explicitly for the owner.** Found auditing `tenant-manager.js` (multi-tenant system, previously untested). **Verified against the code AND the live route:** `POST /api/tenants/login` forwards `{email, apiKey}` straight to `tenants.login()`, whose old body was:
+```
+if (apiKey) tenant = verifyApiKey(apiKey);
+else if (email) tenant = tenants.find(t => t.email === email…);   // ← no secret checked
+… const token = signTenantToken(tenant);   // 30-day JWT
+```
+The tenant system has **no password** — the API key (shown once at register, stored only as a sha256 hash) is the *only* credential, and email is not secret. So `POST /api/tenants/login {"email":"victim@shop.co"}` returned a **valid 30-day tenant JWT for that tenant with no credential at all** — a complete authentication bypass. With that token an attacker could `GET/PATCH /api/tenants/me` (read + overwrite the victim's brand settings), **`POST /api/tenants/:id/rotate-key`** (rotate the victim's API key, locking them out), and burn their plan quota. Email addresses are semi-public and are the register input, so this is trivially exploitable.
+
+**Fix:** `login()` now REQUIRES a valid API key (`const tenant = apiKey ? verifyApiKey(apiKey) : null; if (!tenant) throw`). Email, if supplied, is only an optional consistency check (`tenant.email !== email` → throw), never an auth path. No frontend used email-only login (grep of `frontend/src` for `tenants/login` is empty), so nothing legitimate breaks. **Note for the owner:** if you want an account-recovery path for a tenant who lost their API key, it needs a *real* verified mechanism (emailed magic-link / OTP) — not an unauthenticated email lookup. Not building that unprompted (rule #8); the bypass itself had to be closed now.
+
+**Verified + mutation-tested:** new `scripts/test-tenant-login.mjs` (hermetic — temp `writeDir`, no state leak): email-only / email+empty-key / no-credential / wrong-key all **throw** (no token); a valid key issues a token that resolves back to the tenant; a matching email is fine (case-insensitive); a valid key + mismatched email throws. **10/10** via `npm run test:tenant-login`. **Mutation:** re-adding the `else … email` fallback makes the two email-only-bypass assertions fail (8/2), restored to green. `node --check` clean; **boot smoke** `/api/health` 200. Wired into `package.json` + the CI Unit-tests step. Backend-only.
+
 ### 2026-07-23 — Hourly loop: bug fix — a malformed `code` on POST /api/auth/recovery crashed with a 500 instead of a clean auth rejection
 
 Found auditing `auth.js` (previously untested). **Verified against the code AND by running:** `useRecoveryCode(inputCode)` does `inputCode.trim()` after the `RECOVERY_CODES` presence check. The `/api/auth/recovery` route guards `if (!code)`, which blocks a *falsy* code — but a **truthy non-string** body value like `{"code":123}`, `{"code":{}}`, or `{"code":["x"]}` (all valid JSON) sails past `!code` and hits `.trim()` → **`TypeError: inputCode.trim is not a function`** → an unhandled **500** on an authentication endpoint. Reproduced directly against the exported function (RECOVERY_CODES set, feeding a number / object / array → all threw). Same "malformed input → clean rejection, not a 500" contract the rest of the codebase enforces (smart-e's non-object-body 400, the null-safety fixes).

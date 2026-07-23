@@ -138,15 +138,18 @@ export function createTenantManager(writeDir) {
       return tenants.find(t => t.id === payload.tenantId && t.active) || null;
     },
 
-    // Login → JWT
+    // Login → JWT.
+    // SECURITY: the API key is the ONLY tenant credential (register returns it once; email is not
+    // secret). The old code had an `else if (email)` branch that issued a valid 30-day JWT for ANY
+    // tenant given just its email and no secret at all — a full authentication bypass (impersonate,
+    // read/patch settings, rotate the victim's API key, burn their quota). Login now REQUIRES a
+    // valid API key; email, if supplied, is only an optional consistency check, never an auth path.
     login({ email, apiKey }) {
-      let tenant = null;
-      if (apiKey) {
-        tenant = mgr.verifyApiKey(apiKey);
-      } else if (email) {
-        tenant = tenants.find(t => t.email === email.toLowerCase().trim() && t.active);
+      const tenant = apiKey ? mgr.verifyApiKey(apiKey) : null;
+      if (!tenant) throw new Error('ต้องระบุ API key ที่ถูกต้องเพื่อเข้าสู่ระบบ');
+      if (email && tenant.email !== email.toLowerCase().trim()) {
+        throw new Error('อีเมลไม่ตรงกับ API key');
       }
-      if (!tenant) throw new Error('ไม่พบ Tenant หรือ API key ไม่ถูกต้อง');
       const token = signTenantToken(tenant);
       return { token, tenant: mgr.safeView(tenant) };
     },

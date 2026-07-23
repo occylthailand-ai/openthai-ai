@@ -70,6 +70,7 @@ jobs:
           npm run test:affiliate-withdraw-math
           npm run test:openrouter-map
           npm run test:recovery-code
+          npm run test:tenant-login
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage

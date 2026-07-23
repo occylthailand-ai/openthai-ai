@@ -31,7 +31,8 @@
     "test:payment-status-idempotent": "node scripts/test-payment-status-idempotent.mjs",
     "test:webhook-idempotent": "node scripts/test-webhook-idempotent.mjs",
     "test:openrouter-map": "node scripts/test-openrouter-map.mjs",
-    "test:recovery-code": "node scripts/test-recovery-code.mjs"
+    "test:recovery-code": "node scripts/test-recovery-code.mjs",
+    "test:tenant-login": "node scripts/test-tenant-login.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

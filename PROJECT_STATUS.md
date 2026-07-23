@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T19:12:48.519Z · branch `claude/daily-reporter-improvements-8vc9ct` (473 commit(s) ahead of main)
+Generated: 2026-07-23T19:16:12.339Z · branch `claude/daily-reporter-improvements-8vc9ct` (474 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 683 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 557 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: SECURITY — tenant login accepted an email with no secret (full authentication bypass) 🔴
+
+**Highest-severity finding of the session — flagging explicitly for the owner.** Found auditing `tenant-manager.js` (multi-tenant system, previously untested). **Verified against the code AND the live route:** `POST /api/tenants/login` forwards `{email, apiKey}` straight to `tenants.login()`, whose old body was:
+```
+if (apiKey) tenant = verifyApiKey(apiKey);
+else if (email) tenant = tenants.find(t => t.email === email…);   // ← no secret checked
+… const token = signTenantToken(tenant);   // 30-day JWT
+```
+The tenant system has **no password** — the API key (shown once at register, stored only as a sha256 hash) is the *only* credential, and email is not secret. So `POST /api/tenants/login {"email":"victim@shop.co"}` returned a **valid 30-day tenant JWT for that tenant with no credential at all** — a complete authentication bypass. With that token an attacker could `GET/PATCH /api/tenants/me` (read + overwrite the victim's brand settings), **`POST /api/tenants/:id/rotate-key`** (rotate the victim's API key, locking them out), and burn their plan quota. Email addresses are semi-public and are the register input, so this is trivially exploitable.
+
+**Fix:** `login()` now REQUIRES a valid API key (`const tenant = apiKey ? verifyApiKey(apiKey) : null; if (!tenant) throw`). Email, if supplied, is only an optional consistency check (`tenant.email !== email` → throw), never an auth path. No frontend used email-only login (grep of `frontend/src` for `tenants/login` is empty), so nothing legitimate breaks. **Note for the owner:** if you want an account-recovery path for a tenant who lost their API key, it needs a *real* verified mechanism (emailed magic-link / OTP) — not an unauthenticated email lookup. Not building that unprompted (rule #8); the bypass itself had to be closed now.
+
+**Verified + mutation-tested:** new `scripts/test-tenant-login.mjs` (hermetic — temp `writeDir`, no state leak): email-only / email+empty-key / no-credential / wrong-key all **throw** (no token); a valid key issues a token that resolves back to the tenant; a matching email is fine (case-insensitive); a valid key + mismatched email throws. **10/10** via `npm run test:tenant-login`. **Mutation:** re-adding the `else … email` fallback makes the two email-only-bypass assertions fail (8/2), restored to green. `node --check` clean; **boot smoke** `/api/health` 200. Wired into `package.json` + the CI Unit-tests step. Backend-only.
 
 ### 2026-07-23 — Hourly loop: bug fix — a malformed `code` on POST /api/auth/recovery crashed with a 500 instead of a clean auth rejection
 
@@ -3628,54 +3642,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 6a601bd fix(auth): non-string recovery code returns false, not a 500 (31 seconds ago)
+- 19cf083 chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
+- 6a601bd fix(auth): non-string recovery code returns false, not a 500 (4 minutes ago)
 - dcd1895 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 - bd4edf6 fix(ai): OpenRouter wrapper throws a clear error on a malformed/filtered response (6 hours ago)
 - 66bad35 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 - a8bf984 a11y(portals): sync <html lang> with the selected language (6 hours ago)
 - 53f6458 chore: sync PROJECT_STATUS.md [skip ci] (9 hours ago)
 - f4b9598 fix(producers): don't wipe an approved producer's category on self-update (9 hours ago)
-- b6cda5c chore: sync PROJECT_STATUS.md [skip ci] (10 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3831,7 +3807,7 @@ the backend.
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `server.js` | 8978 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
-| `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
+| `tenant-manager.js` | 257 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
