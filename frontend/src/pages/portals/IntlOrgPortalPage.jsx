@@ -41,7 +41,7 @@ export default function IntlOrgPortalPage() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 32px', borderBottom:'1px solid #1e1e2e' }}>
         <button onClick={() => navigate('/portals')} style={{ background:'none', border:'1px solid #333', color:'#aaa', padding:'8px 16px', borderRadius:8, cursor:'pointer' }}>← Back</button>
         <div style={{ display:'flex', gap:8 }}>
-          {['en','th','zh'].map(l => <button key={l} onClick={() => setLang(l)} style={{ background:lang===l?'#8452f5':'none', border:'1px solid #333', color:'#fff', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:13 }}>{l==='th'?'ไทย':l==='en'?'English':'中文'}</button>)}
+          {['en','th','zh'].map(l => <button key={l} onClick={() => setLang(l)} type="button" aria-pressed={lang===l} style={{ background:lang===l?'#8452f5':'none', border:'1px solid #333', color:'#fff', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:13 }}>{l==='th'?'ไทย':l==='en'?'English':'中文'}</button>)}
         </div>
       </div>
       <div style={{ maxWidth:960, margin:'0 auto', padding:'48px 32px' }}>

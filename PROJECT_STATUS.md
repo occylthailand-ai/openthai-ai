@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T08:25:03.295Z · branch `claude/daily-reporter-improvements-8vc9ct` (463 commit(s) ahead of main)
+Generated: 2026-07-23T09:14:29.655Z · branch `claude/daily-reporter-improvements-8vc9ct` (464 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 673 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 547 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: a11y — the /portals/* language switcher exposed the active language by colour only (WCAG 1.4.1 / 4.1.2)
+
+Found continuing the /portals/* funnel audit. **Verified against the code:** each of the 9 portal pages and the `/portals` hub renders its own inline language switcher — `['th','en','zh'].map(l => <button onClick={() => setLang(l)} style={{ background: lang===l ? '#…' : 'none' }}>ไทย/English/中文</button>)`. The currently-selected language was signalled **only by the button's background colour**: a screen-reader user tabbing across the three buttons heard "ไทย / English / 中文" as three identical plain buttons with no indication which was active, and a colour-blind user couldn't tell either. That's a **WCAG 1.4.1 (Use of Color)** + **4.1.2 (Name, Role, Value — toggle state not exposed)** failure on the platform's main onboarding surface. Notably the project **already ships the correct pattern** in `components/LanguageSwitcher.jsx` (`role="group"` + `aria-pressed`, and it varies `fontWeight` so state isn't colour-only) — these 10 inline copies had silently regressed it.
+
+**Fix:** each inline switcher button now carries `aria-pressed={lang===l}` (a toggle-button state assistive tech announces as "pressed/selected") plus `type="button"`, matching the shared component. Colour still conveys the same state for sighted users — no visual change. Frontend-only.
+
+**Verified by running + mutation-tested:** new `frontend/src/__tests__/portalLangSwitcherA11y.test.js` — source-structural drift guard (same no-render approach as portalStatusRegion / portalConsent / trackFormsA11y) over the 9 portals + the hub: every `<button …setLang(l)…>` must expose `aria-pressed`. Matched **line-wise** on purpose — a `<button[^>]*>` regex breaks because the `=>` in `onClick={() => setLang(l)}` contains a `>` that ends the match early (caught this while writing the test: the first version reported 0 buttons; fixed the matcher, re-confirmed it finds all 10). **20/20** (10 files × 2). **Mutation:** stripping `aria-pressed` from one portal fails exactly that portal's assertion (19 pass / 1 fail), restored to green. Full frontend suite **222/222** across 21 files; `npm run build` clean (prerender + 22-URL sitemap intact). CI runs it via the existing `npm test -- --run` (vitest auto-discovers `src/__tests__/*`).
 
 ### 2026-07-23 — Hourly loop: a11y — the consent-based signup confirmation was silent to screen readers on all 9 /portals/* pages (WCAG 4.1.3)
 
@@ -3584,54 +3592,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 21ccfb2 a11y(portals): announce signup success to screen readers (role=status) (36 seconds ago)
-- 668e54c chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
-- 751160e fix(payment): fire payment.completed once per webhook charge, not per redelivery (8 minutes ago)
-- cf23487 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- a35a3d0 fix(payment): fire payment.completed once per payment, not on every status poll (2 hours ago)
-- 66384c8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 485bd2e fix(payment): burn a spin discount only on a real charge, not on a request that fails first (3 hours ago)
-- 003976f chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 86f0512 chore: sync PROJECT_STATUS.md [skip ci] (49 minutes ago)
+- 21ccfb2 a11y(portals): announce signup success to screen readers (role=status) (50 minutes ago)
+- 668e54c chore: sync PROJECT_STATUS.md [skip ci] (52 minutes ago)
+- 751160e fix(payment): fire payment.completed once per webhook charge, not per redelivery (57 minutes ago)
+- cf23487 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- a35a3d0 fix(payment): fire payment.completed once per payment, not on every status poll (3 hours ago)
+- 66384c8 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 485bd2e fix(payment): burn a spin discount only on a real charge, not on a request that fails first (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 1161,
-  "memory_mb": "21.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
