@@ -27,7 +27,8 @@
     "test:token-verify": "node scripts/test-token-verify.mjs",
     "test:webhook-retry": "node scripts/test-webhook-retry.mjs",
     "test:affiliate-withdraw-math": "node scripts/test-affiliate-withdraw-math.mjs",
-    "test:discount-charge": "node scripts/test-discount-charge.mjs"
+    "test:discount-charge": "node scripts/test-discount-charge.mjs",
+    "test:payment-status-idempotent": "node scripts/test-payment-status-idempotent.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

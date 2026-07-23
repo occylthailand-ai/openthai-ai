@@ -7948,8 +7948,13 @@ app.get('/api/payment/status/:chargeId', async (req, res) => {
     // If paid → update payment record (ส่งใบเสร็จเฉพาะครั้งแรกที่เปลี่ยนเป็น paid)
     if (status.paid) {
       const firstTime = rec && !rec.paid_at;
-      if (firstTime) { rec.paid_at = status.paid_at; rec.status = 'successful'; savePayments(payments); }
-      webhooks.dispatch('payment.completed', { charge_id: req.params.chargeId, amount_thb: status.amount_thb, plan: rec?.plan }, null);
+      // ทุกอย่างใต้ if(firstTime) ทำครั้งเดียวตอนเปลี่ยนเป็น paid ครั้งแรก — รวม dispatch ด้วย
+      // เดิม dispatch อยู่นอก guard: client poll สถานะซ้ำ (frontend poll จนจ่าย + refresh) ทำให้
+      // subscriber ภายนอกได้ event 'payment.completed' ซ้ำต่อการจ่าย 1 ครั้ง (อาจ fulfill/แจ้งซ้ำ)
+      if (firstTime) {
+        rec.paid_at = status.paid_at; rec.status = 'successful'; savePayments(payments);
+        webhooks.dispatch('payment.completed', { charge_id: req.params.chargeId, amount_thb: status.amount_thb, plan: rec?.plan }, null);
+      }
       if (firstTime && rec?.email) {
         grantEntitlement(rec.email, rec.plan, { source: rec.method || 'promptpay' });
         sendPaymentReceipt(rec.email, { plan: rec.plan, amount_thb: status.amount_thb, charge_id: req.params.chargeId, paid_at: status.paid_at, method: rec.method });

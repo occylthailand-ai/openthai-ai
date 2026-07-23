@@ -4,7 +4,9 @@
 
 import { createHmac, timingSafeEqual } from 'crypto';
 
-const OMISE_API_URL = 'https://api.omise.co';
+// Overridable so a test can point the Omise REST calls at a local stub and exercise
+// the paid-charge / status-poll paths offline; production default is unchanged.
+const OMISE_API_URL = process.env.OMISE_API_URL || 'https://api.omise.co';
 
 // ── Omise REST helper ─────────────────────────────────────────────────────────
 async function omise(method, path, body = null, usePublicKey = false) {

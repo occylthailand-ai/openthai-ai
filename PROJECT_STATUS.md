@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T05:17:52.436Z · branch `claude/daily-reporter-improvements-8vc9ct` (457 commit(s) ahead of main)
+Generated: 2026-07-23T06:21:46.412Z · branch `claude/daily-reporter-improvements-8vc9ct` (458 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 667 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 541 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: bug fix — the payment status poll re-fired the 'payment.completed' webhook on every poll after a charge was paid (idempotency)
+
+Found auditing `/api/payment/status/:chargeId` (server.js). **Verified against the code:** when a polled charge is paid, everything that must happen once — marking the record paid, granting the entitlement, sending the receipt, crediting the affiliate — is guarded by `firstTime = rec && !rec.paid_at`. But `webhooks.dispatch('payment.completed', …)` sat **outside** that guard, so it fired on *every* poll where `status.paid` was true. The frontend polls this endpoint every few seconds until paid (and a page refresh re-polls an already-paid charge), so external subscribers to `payment.completed` received the event multiple times for a single payment — a real idempotency defect that can drive double-fulfillment / double-notification in whatever a tenant wires the webhook to. (The signed Omise webhook path already does all of this inside a `!rec.paid_at` guard; only the poll path leaked.)
+
+**Fix (move one line):** the `payment.completed` dispatch now lives inside the `if (firstTime)` block alongside the other once-only side effects, so it fires exactly once — on the first transition to paid. No behaviour change for the first poll; later polls just return status. Also made `OMISE_API_URL` env-overridable in `omise-payment.js` (production default `https://api.omise.co` unchanged) so the paid-charge path can be driven by a local stub in a test.
+
+**Verified by running + mutation-tested:** new self-booting `scripts/test-payment-status-idempotent.mjs` — a stub Omise returns a paid charge on the status GET, and a local collector is registered as a real `payment.completed` webhook subscriber; the test creates a PromptPay charge and polls the status endpoint **twice**, asserting the subscriber receives `payment.completed` **exactly once**. It is hermetic (snapshots + clears the gitignored `webhooks.json`/`payments.json` before boot and restores them after — otherwise stale subscribers from a prior run inflate the count). **6/6** via `npm run test:payment-status-idempotent`, stable across re-runs. **Mutation:** moving the dispatch back outside `if (firstTime)` makes two polls deliver the event **twice** (fails the exactly-once assertion), restored to green. `node --check` clean on both files; wired into `package.json` + a self-contained CI step; `backend/data` git-restored. Backend-only.
 
 ### 2026-07-23 — Hourly loop: bug fix — a spin discount was burned even when the payment request failed before any charge (money/revenue path)
 
@@ -3560,54 +3568,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 485bd2e fix(payment): burn a spin discount only on a real charge, not on a request that fails first (24 seconds ago)
-- 003976f chore: sync PROJECT_STATUS.md [skip ci] (66 minutes ago)
-- b97d272 fix(disputes): track() no longer 500s on an order with no producer_email (66 minutes ago)
-- b159dd8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- c51b78a test(inventory): pin the upsert create-vs-edit contract (same id on edit, new id on create) (2 hours ago)
-- 84e62b2 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- d8ad6cb test(affiliate): pin the withdraw-request reservation invariant (extract math for testability) (4 hours ago)
-- 1f56167 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 66384c8 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- 485bd2e fix(payment): burn a spin discount only on a real charge, not on a request that fails first (64 minutes ago)
+- 003976f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- b97d272 fix(disputes): track() no longer 500s on an order with no producer_email (2 hours ago)
+- b159dd8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- c51b78a test(inventory): pin the upsert create-vs-edit contract (same id on edit, new id on create) (3 hours ago)
+- 84e62b2 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- d8ad6cb test(affiliate): pin the withdraw-request reservation invariant (extract math for testability) (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 683,
-  "memory_mb": "21.9",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3751,7 +3721,7 @@ the backend.
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
-| `omise-payment.js` | 180 | PromptPay QR · Credit Card · Subscription Billing |
+| `omise-payment.js` | 182 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `orders.js` | 203 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 148 | Portal Leads — captures submissions from the /portals/* landing pages |
@@ -3760,7 +3730,7 @@ the backend.
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8959 | Vercel serverless detection |
+| `server.js` | 8964 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
@@ -3796,8 +3766,9 @@ the backend.
 - `0 9 * * *` → /api/scheduler/process
 - `0 2 * * 1` → /api/portals/consumer-digest
 
-## Environment variables (59 referenced in backend code, 59 documented in .env.example)
+## Environment variables (60 referenced in backend code, 59 documented in .env.example)
 ⚠️ Referenced in code but missing from `backend/.env.example`:
+- OMISE_API_URL
 - WEBHOOK_RETRY_DELAYS
 
 ## Migration files present (backend/migrations/)
