@@ -14,7 +14,11 @@ const T = {
 
 export default function IntlOrgPortalPage() {
   const [lang, setLang] = useState('en');
-  const [form, setForm] = useState({ org:'', type:'United Nations (UN)', country:'', name:'', position:'', email:'', focus:'' });
+  // NOTE: the org-type field is `org_type`, NOT `type`. The submit below sends
+  // `{ ...form, type:'intl-org' }`, and a form field literally named `type` would be
+  // silently overwritten by that portal discriminator on spread — so the organization
+  // type the applicant picked (UN / World Bank / WHO …) never reached the backend.
+  const [form, setForm] = useState({ org:'', org_type:'United Nations (UN)', country:'', name:'', position:'', email:'', focus:'' });
   const [sent, setSent] = useState(false);
   const [consent, setConsent] = useState(false);
   const [err, setErr] = useState('');
@@ -62,8 +66,8 @@ export default function IntlOrgPortalPage() {
                 <input id="org" required value={form.org} onChange={e=>setForm({...form,org:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
               </div>
               <div style={{ marginBottom:14 }}>
-                <label htmlFor="type" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.type}</label>
-                <select id="type" value={form.type} onChange={e=>setForm({...form,type:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
+                <label htmlFor="org_type" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.type}</label>
+                <select id="org_type" value={form.org_type} onChange={e=>setForm({...form,org_type:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
                   {ORGS.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>

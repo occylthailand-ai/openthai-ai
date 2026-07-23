@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-22T22:14:23.718Z · branch `claude/daily-reporter-improvements-8vc9ct` (447 commit(s) ahead of main)
+Generated: 2026-07-23T00:17:51.036Z · branch `claude/daily-reporter-improvements-8vc9ct` (448 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 657 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 531 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: data-loss fix — the Intl-Org portal's "Organization Type" was silently dropped on submit (form field named `type` collided with the portal discriminator)
+
+Found auditing the consent funnel (standing-order priority #1): verified each `/portals/*` page submits the `type` value the backend expects (all 9 match `portal-leads.js` `KNOWN_TYPES`), and in doing so found a real data-loss bug in **`IntlOrgPortalPage.jsx`**. Every portal submits with `submitLead({ ...form, type:'<portal>', lang, consent })` — spread the form, then append `type`/`lang`/`consent`. Object-spread order means those appended keys OVERWRITE any same-named field in `form`. IntlOrg's form had a field literally named **`type`** (the "Organization Type" dropdown — UN / World Bank / WHO / ASEAN / ADB …), so `type:'intl-org'` clobbered it on every submit: the applicant's chosen organization type was **never sent to the backend** and never stored in the lead's `form_data`. The Partnerships team receiving the lead couldn't tell a UN agency from a development bank. (The other 8 pages were clean — Middleman uses `business_type`, not `type`.)
+
+**Fix:** renamed that one field `type` → `org_type` (state key + the `<select>`'s `value`/`onChange` + its `id`/`htmlFor` so the label stays associated). The i18n label text (`t.form.type`, "Organization Type") is unchanged. Now the submit payload carries `org_type:'World Bank'` alongside the portal `type:'intl-org'`, and `portal-leads.js submit()` stores `org_type` in `form_data` like any other string field. Frontend-only; no backend/API change.
+
+**Verified by running + mutation-tested:** added `src/__tests__/portalFieldCollision.test.js` — a structural guard (same no-render approach as portalConsent/seoInvariants) that, for all 9 pages, parses the `useState({...})` form object and asserts it declares no field named `type`/`lang`/`consent` (the keys the submit call appends), plus that each page appends a non-empty literal portal `type`. **19/19** via `npx vitest run portalFieldCollision`. **Mutation:** restoring the `type` field name makes the guard fail exactly `IntlOrgPortalPage.jsx … form field(s) type collide … would be dropped` and nothing else (1 failed / 18 passed), then restored to green. Full `npm test` → **183/183**; `npm run build` (vite prerender + sitemap) clean.
 
 ### 2026-07-22 — Hourly loop: bug fix — webhook delivery log grew UNBOUNDED in memory (only the on-disk copy was capped)
 
@@ -3520,54 +3528,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b4adfda fix(webhooks): bound the in-memory delivery log (was unbounded; only disk copy capped) (85 seconds ago)
-- 1d7b02b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- dd339d7 fix(webhooks): reset failCount on success so auto-disable means 20 CONSECUTIVE failures (2 hours ago)
-- 3ed60be chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 110f64b fix(affiliate): guard promptpay mask against a null value in withdrawals list (3 hours ago)
-- b44780c chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 0e6b3c6 fix(orders): track() no longer crashes on a stored order with a null contact (4 hours ago)
-- 79dfbf4 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 3da237a chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- b4adfda fix(webhooks): bound the in-memory delivery log (was unbounded; only disk copy capped) (2 hours ago)
+- 1d7b02b chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- dd339d7 fix(webhooks): reset failCount on success so auto-disable means 20 CONSECUTIVE failures (4 hours ago)
+- 3ed60be chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 110f64b fix(affiliate): guard promptpay mask against a null value in withdrawals list (5 hours ago)
+- b44780c chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 0e6b3c6 fix(orders): track() no longer crashes on a stored order with a null contact (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
