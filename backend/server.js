@@ -8961,7 +8961,7 @@ USP: ${usp || 'คุณภาพไทยระดับส่งออก'}
 // Integration Hub  /api/integrations/*  — Priority #3-7 (LINE·FB·TikTok·Canva·Analytics)
 // Adapters เรียก Platform API จริงเมื่อมี credentials (env var) — ดู backend/integrations.js
 // ══════════════════════════════════════════════════════════════════════════════
-const integrations = createIntegrations({ addLog, limiter: generateLimiter });
+const integrations = createIntegrations({ addLog, limiter: generateLimiter, requireAdmin: invAuth });
 app.use(integrations.router);
 
 // ── Export app สำหรับ Vercel Serverless (api/index.js import ไปใช้) ──────────

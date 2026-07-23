@@ -84,6 +84,9 @@ jobs:
       - name: Webhook idempotency test (self-contained — payment.completed fires once per redelivered charge.complete)
         working-directory: backend
         run: npm run test:webhook-idempotent
+      - name: Integrations auth test (self-contained — publish/test require the admin key)
+        working-directory: backend
+        run: npm run test:integrations-auth
       - name: Boot + health smoke test
         working-directory: backend
         run: |

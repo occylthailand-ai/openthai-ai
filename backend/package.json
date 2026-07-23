@@ -33,7 +33,8 @@
     "test:openrouter-map": "node scripts/test-openrouter-map.mjs",
     "test:recovery-code": "node scripts/test-recovery-code.mjs",
     "test:tenant-login": "node scripts/test-tenant-login.mjs",
-    "test:mcp-batch": "node scripts/test-mcp-batch.mjs"
+    "test:mcp-batch": "node scripts/test-mcp-batch.mjs",
+    "test:integrations-auth": "node scripts/test-integrations-auth.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T20:13:34.827Z · branch `claude/daily-reporter-improvements-8vc9ct` (477 commit(s) ahead of main)
+Generated: 2026-07-23T21:14:12.846Z · branch `claude/daily-reporter-improvements-8vc9ct` (478 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 687 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 561 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: SECURITY — the integration publish/test endpoints were unauthenticated (broadcast-spam vector) 🔴
+
+Found continuing the security-surface audit (`integrations.js`, mounted at server.js `app.use(integrations.router)` with **no auth middleware**). **Verified against the code + the frontend:** `POST /api/integrations/:id/publish` acts with the platform's OWN server-side social tokens — for LINE it calls `https://api.line.me/v2/bot/message/broadcast`, i.e. a message to **every follower** of the OA; for Facebook it posts to the page feed. The route had only `generateLimiter` (rate limit), no authentication. The React page (`/integrations`) is behind a client-side login guard (`isAuthenticated ? … : <Navigate to="/login">`), but the API itself was public — so anyone bypassing the SPA could `POST /api/integrations/line/publish {"content":"spam"}` and broadcast to all followers using the platform's token (reputational damage, LINE OA / FB page ban, spam to real users). `:id/test` and `canva/export` were likewise open (both use the tokens/keys). Classic client-side-only authorization.
+
+**Fix:** `createIntegrations` now takes a `requireAdmin` guard and enforces it on the three state-changing / token-using routes (`:id/test`, `:id/publish`, `canva/export`), using the SAME `x-admin-key` / `checkAdminKey` gate every `/api/*/admin/*` route already uses (server.js passes `invAuth`). The read-only status list (`GET /api/integrations`) and `analytics/live` stay public (used on page load; they expose only aggregate/connection state — a lower-priority hardening noted for later). Frontend: `IntegrationHubPage.jsx` now sends `x-admin-key` on test/publish the same way `AdminPage.jsx` does (`sessionStorage.admin_key` → build-time default for dev) — the page was already login-gated, so no legit flow breaks. Dev default key unchanged; on Vercel `ADMIN_KEY` must be set (no public fallback, per resolveAdminKey).
+
+**Verified + mutation-tested:** new self-booting `scripts/test-integrations-auth.mjs` (spawns the real server with a known `ADMIN_KEY`, no external services): publish without the key → **401**, wrong key → **401**, correct key → **200 queued** (LINE has no token in-env, so an authorized publish is accepted+queued, proving it passed auth); `test` → 401 without / 200 with; `GET /api/integrations` still **200** public. **7/7** via `npm run test:integrations-auth`. **Mutation:** dropping `requireAdmin: invAuth` from the server.js wiring makes the unauthenticated publish/test return 200 → 3 assertions fail, restored to green. `node --check` clean (integrations.js + server.js); frontend `npm run build` clean + suite **249/249**. Wired into `package.json` + a self-contained CI step.
 
 ### 2026-07-23 — Hourly loop: hardening — the MCP endpoint had no batch-size cap (cost-amplification / resource exhaustion)
 
@@ -3650,54 +3658,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 6324a7b harden(mcp): cap JSON-RPC batch size to prevent cost-amplification (27 seconds ago)
-- 2f843c0 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- 3f7ca9b security(tenant): require API key for login — close email-only auth bypass (57 minutes ago)
-- 19cf083 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 6a601bd fix(auth): non-string recovery code returns false, not a 500 (61 minutes ago)
-- dcd1895 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
-- bd4edf6 fix(ai): OpenRouter wrapper throws a clear error on a malformed/filtered response (7 hours ago)
-- 66bad35 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 6cf2f36 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 6324a7b harden(mcp): cap JSON-RPC batch size to prevent cost-amplification (61 minutes ago)
+- 2f843c0 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 3f7ca9b security(tenant): require API key for login — close email-only auth bypass (2 hours ago)
+- 19cf083 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 6a601bd fix(auth): non-string recovery code returns false, not a 500 (2 hours ago)
+- dcd1895 chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- bd4edf6 fix(ai): OpenRouter wrapper throws a clear error on a malformed/filtered response (8 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.8",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3838,7 +3808,7 @@ the backend.
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
 | `disputes.js` | 307 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
-| `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
+| `integrations.js` | 259 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 264 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 182 | PromptPay QR · Credit Card · Subscription Billing |

@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { apiUrl } from '../apiBase';
 
+// The publish/test routes act with the platform's own social tokens, so the backend now requires
+// the admin key on them (they were previously public). Send it the same way AdminPage does — from
+// the admin session, falling back to the build-time default for local dev.
+const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY || 'openthai-admin-2026';
+const adminKey = () => sessionStorage.getItem('admin_key') || ADMIN_KEY;
+
 const CAT_LABEL = {
   social: { label: '📱 Social Media', color: '#6366f1' },
   commerce: { label: '🛒 E-Commerce', color: '#f59e0b' },
@@ -43,7 +49,7 @@ export default function IntegrationHubPage() {
   const testConnection = async (id) => {
     setTesting(id);
     try {
-      const r = await fetch(apiUrl(`/api/integrations/${id}/test`), { method: 'POST' });
+      const r = await fetch(apiUrl(`/api/integrations/${id}/test`), { method: 'POST', headers: { 'x-admin-key': adminKey() } });
       const d = await r.json();
       setTestResults(prev => ({ ...prev, [id]: d.result }));
     } catch (_) {
@@ -65,7 +71,7 @@ export default function IntegrationHubPage() {
       try {
         const r = await fetch(apiUrl(`/api/integrations/${id}/publish`), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() },
           body: JSON.stringify({ content: composeContent, link: composeLink || undefined }),
         });
         results[id] = await r.json();
