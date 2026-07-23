@@ -38,6 +38,20 @@ try {
   ok((await inv.list()).every((p) => p.price >= 0 && p.stock >= 0), 'no negative-priced/stocked product was ever persisted');
   // an edit that tries to push an existing product negative is refused too (product unchanged)
   ok((await inv.upsert({ id, price: -1 })).ok === false && (await inv.get(id)).price === 100, 'editing an existing product to a negative price is refused (still 100)');
+
+  console.log('\n=== upsert contract: an id EDITS in place (same id, no duplicate); no id CREATES a new id ===');
+  // The single /api/inventory/admin/upsert route handles both create and edit; it tells them
+  // apart by whether the body carries an id (upsert() keeps existing?.id, else mints a new one).
+  // Pin that so a refactor can't turn an edit into a duplicate or a create into an overwrite.
+  const before = (await inv.list()).length;
+  const edited = await inv.upsert({ id, name: 'Test (แก้ชื่อ)', price: 120, stock: 5, low_stock: 2 });
+  ok(edited.ok && edited.product.id === id, 'editing by id returns the SAME product id (not a fresh one)');
+  ok(edited.product.name === 'Test (แก้ชื่อ)' && (await inv.get(id)).price === 120, 'the edited name/price persist to the same record');
+  ok((await inv.list()).length === before, 'the edit did NOT create a duplicate (product count unchanged)');
+  const created = await inv.upsert({ name: 'ของใหม่ชั่วคราว', price: 5, stock: 1 });
+  ok(created.ok && created.product.id !== id, 'upsert WITHOUT an id mints a NEW distinct product (create path)');
+  await inv.remove(created.product.id); // restore the store for the downstream single-product asserts
+
   await inv.remove(free.product.id); // keep the store at the single T1 product the downstream asserts expect
 
   console.log('\n=== adjust sale: NEVER goes negative (the invariant shop checkout relies on) ===');

@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T01:17:15.106Z · branch `claude/daily-reporter-improvements-8vc9ct` (451 commit(s) ahead of main)
+Generated: 2026-07-23T03:14:44.941Z · branch `claude/daily-reporter-improvements-8vc9ct` (452 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 661 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 535 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: test — pin the inventory upsert create-vs-edit contract (no code change)
+
+Audit round: verified the money paths are solid and, rather than force a change into hardened code, closed a real TEST gap. The single `POST /api/inventory/admin/upsert` route (server.js:677) handles BOTH create and edit of a shop product; `inventory.upsert()` tells them apart purely by whether the body carries an `id` (`id: existing?.id || <mint new>`). That create-vs-edit branch is money-adjacent (the shop lists/charges from these records) but `test-inventory.mjs` only pinned the negative-value rejection and the adjust/oversell ledger — not that **editing by id updates in place (same id, no duplicate)** and **a body with no id mints a new product**. A refactor of that one line could silently turn every edit into a duplicate (or a create into an overwrite) and no test would catch it.
+
+**Considered but did NOT change** (logged so it isn't re-proposed): `upsert` given an `id` that doesn't exist mints a *new random* id (silent duplicate with a mismatched id) instead of erroring. Tempting to reject unknown ids, but in Supabase-primary mode `get(id)` falls back to the local file store on a transient SB error and can false-null an existing row — so a naive reject would drop legitimate edits during an SB outage. Low-probability edge (admin UI only ever edits ids from the list) + real regression risk ⇒ left as-is; only the correct-path contract is pinned.
+
+**Verified by running + mutation-tested:** extended `scripts/test-inventory.mjs` (+5 asserts, carefully create-then-remove so the downstream single-product/`unitsSold` counts are undisturbed): editing by id returns the SAME id, the edited name/price persist to that record, the product count is unchanged (no duplicate), and an id-less upsert mints a new distinct id. **29/29** via `npm run test:inventory` (was 24). **Mutation:** forcing `upsert` to always mint a fresh id fails exactly the "same id" + "no duplicate" assertions (25/4), restored to green. Test-only; no production code touched.
 
 ### 2026-07-23 — Hourly loop: test — pin the affiliate withdraw-REQUEST reservation invariant (money-out; extracted the math for testability)
 
@@ -3536,54 +3544,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- d8ad6cb test(affiliate): pin the withdraw-request reservation invariant (extract math for testability) (21 seconds ago)
-- 1f56167 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 924b9db fix(portals): stop dropping Intl-Org 'Organization Type' on submit (form field 'type' collided with portal discriminator) (59 minutes ago)
-- 3da237a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- b4adfda fix(webhooks): bound the in-memory delivery log (was unbounded; only disk copy capped) (3 hours ago)
-- 1d7b02b chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- dd339d7 fix(webhooks): reset failCount on success so auto-disable means 20 CONSECUTIVE failures (5 hours ago)
-- 3ed60be chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 84e62b2 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- d8ad6cb test(affiliate): pin the withdraw-request reservation invariant (extract math for testability) (2 hours ago)
+- 1f56167 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 924b9db fix(portals): stop dropping Intl-Org 'Organization Type' on submit (form field 'type' collided with portal discriminator) (3 hours ago)
+- 3da237a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- b4adfda fix(webhooks): bound the in-memory delivery log (was unbounded; only disk copy capped) (5 hours ago)
+- 1d7b02b chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- dd339d7 fix(webhooks): reset failCount on success so auto-disable means 20 CONSECUTIVE failures (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 477,
-  "memory_mb": "20.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
