@@ -138,7 +138,12 @@ export function createProducers(dataDir, opts = {}) {
     if (fields.price !== undefined) patch.price = Number(fields.price) > 0 ? Number(fields.price) : null;
     if (fields.stock !== undefined) patch.stock = (fields.stock === '' || fields.stock == null) ? null : Math.max(0, parseInt(fields.stock, 10) || 0);
     if (fields.description !== undefined) patch.description = clip(fields.description, 500);
-    if (fields.category !== undefined) patch.category = CATEGORIES.includes(fields.category) ? fields.category : undefined;
+    // อัปเดตแบบ partial: หมวดที่ไม่รู้จัก (เช่นหมวดเก่าที่ถูกเปลี่ยนชื่อ/ลบ ถูกส่งมาพร้อมการแก้ราคา)
+    // ต้อง "ข้าม" ไม่ใช่เขียนทับด้วย undefined — เดิม patch.category=undefined ทำให้ file-store
+    // (store[e] = {...store[e], ...patch}) ลบหมวดเดิมที่ valid ของผู้ผลิตหายเป็น undefined เงียบๆ
+    // (หลุดจาก /api/producers/search?category=... ทันที) ทั้งที่ผู้ผลิตแค่จะแก้ราคา ฝั่ง Supabase
+    // ไม่โดนเพราะ JSON ตัด key ที่เป็น undefined ทิ้ง — fix นี้ทำให้ file-mode ตรงกับ SB-mode
+    if (fields.category !== undefined && CATEGORIES.includes(fields.category)) patch.category = fields.category;
     if (Object.keys(patch).length === 0) return { ok: false, error: 'no fields to update' };
 
     if (useSB) {

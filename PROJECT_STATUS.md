@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T09:15:13.160Z · branch `claude/daily-reporter-improvements-8vc9ct` (465 commit(s) ahead of main)
+Generated: 2026-07-23T10:15:36.212Z · branch `claude/daily-reporter-improvements-8vc9ct` (467 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 675 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 550 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: bug fix — an approved producer editing their listing could silently lose their category (self-serve funnel, file-store only)
+
+Found auditing the producer self-serve path (`producers.js` — the "manage my own listing" funnel an approved producer reaches via `/api/producers/update-listing`, rule #2's producer/product scope). **Verified against the code AND by running:** `updateListing()` builds a partial patch, and its category line was `if (fields.category !== undefined) patch.category = CATEGORIES.includes(fields.category) ? fields.category : undefined;`. When a producer edits (say) only their **price** but the client also submits a category that is no longer in `CATEGORIES` (a renamed/removed category, or a stale value), `patch.category` became `undefined` — and the file-store apply `store[e] = { ...store[e], ...patch }` then **overwrote the producer's existing valid category with `undefined`**, silently dropping them out of `/api/producers/search?category=…`. It was invisible in the API response too: the returned `{ ...patch }` has `category: undefined`, which `JSON.stringify` omits, so the response looked clean. **This was also a file-vs-Supabase inconsistency:** in SB mode the same `undefined` is dropped by `JSON.stringify` before the PATCH, so Supabase left the category unchanged — only the file fallback wiped it. Notably `register()` already normalises an unknown category to `'อื่นๆ'` (never `undefined`), so the two paths disagreed.
+
+**Reproduced before fixing** (temp file-store): register `category:'OTOP'` → approve → `updateListing({ price:120, category:'<invalid>' })` → category became `undefined`. **Fix:** treat an invalid category on a *partial* update as "leave the current one" — `if (fields.category !== undefined && CATEGORIES.includes(fields.category)) patch.category = fields.category;`. A valid category still changes; an unknown one is ignored instead of wiping. This makes file-mode match SB-mode. **Re-ran the repro → category preserved.**
+
+**Considered but did NOT do (rule #8):** PR #79 queued "self-serve product listing for approved producers". On inspection the producer self-serve path already exists end-to-end (`/api/producers/apply` → `/my-status` → `/update-listing`, email-match identity like disputes.js, approved-only via `selfUpdate`). The remaining "gap" is that `inventory.js` **shop** products (the real-money `/api/shop/checkout` catalog) are a *separate* admin-only system from the producer catalog — merging them, or letting arbitrary approved producers inject real-money public shop products, is a moderation/consumer-protection **policy** decision on a real-money public surface. Not building that unilaterally; flagging it for the owner instead. Fixed the concrete, verifiable bug in the existing funnel this round.
+
+**Verified + mutation-tested:** extended `scripts/test-producers.mjs` (deterministic file-store, no Supabase) with an `updateListing`/self-manage block: valid category change persists; an unknown category alongside a price edit is ignored and the existing category is preserved (not wiped); price ≤ 0 → null and negative stock → 0 on the self-serve path (same money guards `inventory.js` enforces); unknown-email update refused. **28/28** via `npm run test:producers`. **Mutation:** restoring the old `… : undefined` line fails exactly the "existing category preserved" assertion (27/1), restored to green. `node --check` clean on producers.js + server.js; `test:credits` / `test:inventory` still green. Backend-only, already wired in CI (`npm run test:producers`).
 
 ### 2026-07-23 — Hourly loop: a11y — the /portals/* language switcher exposed the active language by colour only (WCAG 1.4.1 / 4.1.2)
 
@@ -3592,54 +3602,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 6a380ff a11y(portals): expose active language to assistive tech (aria-pressed) (33 seconds ago)
-- 86f0512 chore: sync PROJECT_STATUS.md [skip ci] (50 minutes ago)
-- 21ccfb2 a11y(portals): announce signup success to screen readers (role=status) (51 minutes ago)
-- 668e54c chore: sync PROJECT_STATUS.md [skip ci] (53 minutes ago)
-- 751160e fix(payment): fire payment.completed once per webhook charge, not per redelivery (58 minutes ago)
-- cf23487 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- a35a3d0 fix(payment): fire payment.completed once per payment, not on every status poll (3 hours ago)
-- 66384c8 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 1123401 fix(producers): don't wipe an approved producer's category on self-update (12 seconds ago)
+- b6cda5c chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- 6a380ff a11y(portals): expose active language to assistive tech (aria-pressed) (61 minutes ago)
+- 86f0512 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 21ccfb2 a11y(portals): announce signup success to screen readers (role=status) (2 hours ago)
+- 668e54c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 751160e fix(payment): fire payment.completed once per webhook charge, not per redelivery (2 hours ago)
+- cf23487 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 832,
-  "memory_mb": "20.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3789,7 +3761,7 @@ the backend.
 | `portal-leads.js` | 148 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 288 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `server.js` | 8978 | Vercel serverless detection |

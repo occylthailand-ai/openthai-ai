@@ -68,6 +68,25 @@ try {
   ok((await P.setStatus('p1@x.com', 'bogus')).ok === false, 'invalid status → refused');
   ok((await P.setStatus('nobody@x.com', 'approved')).ok === false, 'unknown email → refused');
 
+  console.log('\n=== approved producer self-manages own listing (updateListing / selfUpdate) ===');
+  // a valid category change applies
+  ok((await P.updateListing('p1@x.com', { category: 'ความงาม' })).ok === true, 'valid category update → ok');
+  ok((await P.all()).find((p) => p.email === 'p1@x.com').category === 'ความงาม', 'valid category persisted');
+  // an unknown category (e.g. a renamed/removed one) sent ALONGSIDE a price edit must be ignored,
+  // NOT wipe the producer's current valid category — otherwise they silently drop out of
+  // /api/producers/search?category=... while only meaning to change their price
+  await P.updateListing('p1@x.com', { price: 250, category: 'หมวดที่ถูกลบไปแล้ว' });
+  const afterUpd = (await P.all()).find((p) => p.email === 'p1@x.com');
+  ok(afterUpd.category === 'ความงาม', 'unknown category is ignored — existing category preserved (not wiped to undefined)');
+  ok(afterUpd.price === 250, 'the valid price still updates alongside the ignored category');
+  // money guards on the self-serve path (same class inventory.js guards): no negative price/stock
+  await P.updateListing('p1@x.com', { price: -10, stock: -4 });
+  const guarded = (await P.all()).find((p) => p.email === 'p1@x.com');
+  ok(guarded.price === null, 'price ≤ 0 on self-update → null (never a negative charge in catalog)');
+  ok(guarded.stock === 0, 'negative stock on self-update → clamped to 0');
+  // updateListing on an email that has no record → refused
+  ok((await P.updateListing('nobody@x.com', { price: 300 })).ok === false, 'updateListing on unknown email → refused');
+
   console.log('\n=== PDPA erasure (มาตรา 33) removes the producer record ===');
   const er = await P.eraseByEmail('p1@x.com');
   ok(er.ok === true && er.removed === 1, 'eraseByEmail removes 1 record');
