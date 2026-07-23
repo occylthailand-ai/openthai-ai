@@ -77,6 +77,9 @@ jobs:
       - name: Payment-status idempotency test (self-contained — payment.completed fires once per poll-to-paid)
         working-directory: backend
         run: npm run test:payment-status-idempotent
+      - name: Webhook idempotency test (self-contained — payment.completed fires once per redelivered charge.complete)
+        working-directory: backend
+        run: npm run test:webhook-idempotent
       - name: Boot + health smoke test
         working-directory: backend
         run: |

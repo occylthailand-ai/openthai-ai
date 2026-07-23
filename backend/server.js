@@ -8117,7 +8117,11 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
     addLog('info', 'OmiseWebhook', `Event: ${key} — charge: ${data?.id}`);
     if (key === 'charge.complete' && data?.paid) {
       const rec = payments.find(p => p.charge_id === data.id);
-      if (rec && !rec.paid_at) {
+      // Omise ส่ง webhook แบบ at-least-once (redeliver ได้) — dispatch 'payment.completed' ต้องยิง
+      // ครั้งเดียวต่อการจ่าย ไม่งั้น subscriber ภายนอก process ซ้ำ เดิม dispatch อยู่ท้ายบล็อกแบบไม่ guard
+      // เลย จึงยิงซ้ำทุกครั้งที่ webhook เดิมถูกส่งมาใหม่ ตอนนี้ยิงใน 3 จุดตาม anchor กันซ้ำของแต่ละเคส
+      const recFirstPaid = rec && !rec.paid_at;
+      if (recFirstPaid) {
         rec.status = 'successful'; rec.paid_at = data.paid_at; savePayments(payments);
         const email = rec.email || data.metadata?.email;
         const amountThb = data.amount / 100;
@@ -8131,6 +8135,8 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
         }
         // เครดิต affiliate ถ้าชำระผ่าน ref link (รองรับทั้ง plan + quickpay) — firstTime แล้วจาก !rec.paid_at
         creditAffiliateSale(rec.ref_code || data.metadata?.ref_code, amountThb, { charge_id: data.id, source: rec.source || data.metadata?.source });
+        // จุดที่ 1 (plan/quickpay/subscription-แรก ที่มี payments record) — anchor คือ paid_at
+        webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: amountThb, plan: rec.plan }, null);
       }
       // ร้านค้า (/api/shop/checkout): จ่ายด้วยบัตรจะ finalize ทันทีตอน checkout แต่ PromptPay
       // จะจ่ายทีหลังผ่าน QR แล้วยืนยันมาที่ webhook นี้ เดิม handler เช็คเฉพาะ payments[]
@@ -8169,11 +8175,19 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
                 sendShopReceipt({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, qty: q, amount: data.amount / 100, order_id: shopOrderId });
                 addLog('info', 'OmiseWebhook', `Shop order finalized: ${shopOrderId} (stock -${q})`);
               }
+              // จุดที่ 2 (ร้านค้า) — anchor คือ guard status==='new' ด้านบน จ่ายจริงแล้วทั้งสองสาขา
+              // (ยืนยัน/oversold-cancel) → charge ถูกจ่ายจริง จึงยิง payment.completed ครั้งเดียวที่นี่
+              webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
             }
           } catch (e) { addLog('warn', 'OmiseWebhook', `shop finalize ${shopOrderId}: ${e.message}`); }
         })();
       }
-      webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
+      // จุดที่ 3 — charge ที่ไม่มีทั้ง payments record และ shop order (เช่น รอบเรียกเก็บ subscription
+      // ที่เกิดซ้ำทุกเดือน — charge_id ต่างกันทุกงวดและไม่ถูกเก็บใน payments[]) ไม่มี anchor ให้ dedup
+      // จึงคง at-least-once ตามเดิม (พฤติกรรมเดิมของเคสนี้ไม่เปลี่ยน) — rec/shop มี anchor แล้วด้านบน
+      if (!rec && !shopOrderId) {
+        webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
+      }
     }
     res.json({ received: true });
   } catch (e) {

@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T06:22:25.589Z · branch `claude/daily-reporter-improvements-8vc9ct` (459 commit(s) ahead of main)
+Generated: 2026-07-23T08:16:57.777Z · branch `claude/daily-reporter-improvements-8vc9ct` (460 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 669 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 543 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: bug fix — the Omise webhook receiver re-fired 'payment.completed' on every redelivery of a charge.complete event (idempotency)
+
+Same class as the status-poll fix below, but on the `POST /api/payment/webhook` receiver. **Verified against the code:** inside `if (key === 'charge.complete' && data?.paid)`, the once-only work is properly guarded — the entitlement / receipt / affiliate-credit by `rec && !rec.paid_at`, the shop-order finalize by `ord.status === 'new'` — but `webhooks.dispatch('payment.completed', …)` sat **unguarded at the end of the block**, so it fired on *every* delivery. Omise webhooks are **at-least-once** (Omise retries and can resend the same event), so a redelivery re-emitted `payment.completed` to external subscribers, who then double-processed one payment.
+
+**Why the naive fix was wrong (and what I did instead):** simply gating the dispatch on `rec && !rec.paid_at` would have DROPPED `payment.completed` for **recurring subscription cycles** — each monthly charge has its own `charge_id` that is never stored in `payments[]` (the record holds the `subscription_id`), so those events have no local record and no dedup anchor. Instead I anchored the dispatch to each case's existing dedup state: (1) inside the `rec && !rec.paid_at` block (plan/quickpay/first subscription charge — anchor: `paid_at`), (2) inside the shop finalize's `status === 'new'` guard (anchor: order status; fires on both the confirmed and the oversold-refund branch, since the charge was paid either way), and (3) for a charge with **neither** a record nor a shop order (a recurring cycle) it stays unconditional — at-least-once, behaviour deliberately unchanged since it can't be deduped locally.
+
+**Also made `OMISE_API_URL` env-overridable** — already done in the status-poll commit; reused here. **Verified by running + mutation-tested:** new self-booting `scripts/test-webhook-idempotent.mjs` (mock-payment mode so quickpay stores a record without real Omise; `OMISE_WEBHOOK_SECRET` signs the event; a local collector is the registered `payment.completed` subscriber; hermetic clear of the gitignored `webhooks.json`/`payments.json`). A quickpay charge whose signed `charge.complete` is **delivered twice** yields `payment.completed` **exactly once**; an anchorless (recurring) charge delivered twice still yields **two** (unchanged). **7/7** via `npm run test:webhook-idempotent`. **Mutation:** making the anchorless dispatch unconditional makes the quickpay charge fire **three** times (fails exactly-once), restored to green. Also re-ran the **affiliate-flow E2E** (signup→quickpay→webhook→credit→tier) → **28/28**, confirming the credit path through this handler is intact. `node --check` clean; wired into `package.json` + a self-contained CI step. Backend-only.
 
 ### 2026-07-23 — Hourly loop: bug fix — the payment status poll re-fired the 'payment.completed' webhook on every poll after a charge was paid (idempotency)
 
@@ -3568,54 +3576,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- a35a3d0 fix(payment): fire payment.completed once per payment, not on every status poll (26 seconds ago)
-- 66384c8 chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
-- 485bd2e fix(payment): burn a spin discount only on a real charge, not on a request that fails first (65 minutes ago)
-- 003976f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- b97d272 fix(disputes): track() no longer 500s on an order with no producer_email (2 hours ago)
-- b159dd8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- c51b78a test(inventory): pin the upsert create-vs-edit contract (same id on edit, new id on create) (3 hours ago)
-- 84e62b2 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- cf23487 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- a35a3d0 fix(payment): fire payment.completed once per payment, not on every status poll (2 hours ago)
+- 66384c8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 485bd2e fix(payment): burn a spin discount only on a real charge, not on a request that fails first (3 hours ago)
+- 003976f chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- b97d272 fix(disputes): track() no longer 500s on an order with no producer_email (4 hours ago)
+- b159dd8 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- c51b78a test(inventory): pin the upsert create-vs-edit contract (same id on edit, new id on create) (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3768,7 +3738,7 @@ the backend.
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8964 | Vercel serverless detection |
+| `server.js` | 8978 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
