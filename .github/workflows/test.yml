@@ -71,6 +71,7 @@ jobs:
           npm run test:openrouter-map
           npm run test:recovery-code
           npm run test:tenant-login
+          npm run test:mcp-batch
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage

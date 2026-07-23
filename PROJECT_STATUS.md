@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T19:16:47.751Z · branch `claude/daily-reporter-improvements-8vc9ct` (475 commit(s) ahead of main)
+Generated: 2026-07-23T20:12:54.237Z · branch `claude/daily-reporter-improvements-8vc9ct` (476 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 685 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 559 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: hardening — the MCP endpoint had no batch-size cap (cost-amplification / resource exhaustion)
+
+Found continuing the security-surface audit (`mcp-handler.js`, the `POST /mcp` JSON-RPC endpoint that lets external AI agents call Openthai.ai tools). **Verified against the code:** `handleMcp` supports JSON-RPC batches via `Promise.all(body.map(processOne))` with **no cap on `body.length`**. Several tools (`generate_content`, `generate_ab_test`, `analyze_image`, `competitor_analyze`) proxy to a real, **paid** AI call (Claude/Gemini). The route's `mcpLimiter` is `60 requests/min` — but it counts *requests*, not the tool calls *inside* a batch, so a single request carrying a 10,000-element array fanned out to 10,000 concurrent AI calls (real cost + event-loop / provider-quota exhaustion), entirely under the request limit. **Checked the two things that would have made it worse and found them OK:** `/mcp` *is* rate-limited (not unauthenticated-unlimited), and the internal `X-MCP-Client: mcp-internal` header is **not** trusted anywhere (`grep` across the backend is empty), so it's not an auth-bypass — the gap is purely the unbounded batch.
+
+**Fix:** cap the batch at `MAX_BATCH = 20` (MCP clients like Claude Desktop send one request at a time; a real batch is tiny) and reject it **before** any element is processed — plus reject an empty `[]` batch, which JSON-RPC 2.0 defines as invalid. Both return a single `-32600` JSON-RPC error with HTTP 400. Non-batch requests and in-limit batches are unchanged.
+
+**Verified + mutation-tested:** new `scripts/test-mcp-batch.mjs` drives `handleMcp` with a mock req/res using only local methods (`initialize` / `tools/list`, so nothing hits the network): a 21-element batch → 400 + a single `-32600` error (not a processed array); an empty batch → 400; a 20-element batch → an array of 20 real results; a 2-element batch and a single request still work. **9/9** via `npm run test:mcp-batch`. **Mutation:** disabling the size check lets the 21-element batch through (200, processed) → the three over-size assertions fail, restored to green. `node --check` clean on mcp-handler.js + server.js; **boot smoke** `/api/health` 200. Wired into `package.json` + the CI Unit-tests step. Backend-only.
 
 ### 2026-07-23 — Hourly loop: SECURITY — tenant login accepted an email with no secret (full authentication bypass) 🔴
 
@@ -3642,54 +3650,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 3f7ca9b security(tenant): require API key for login — close email-only auth bypass (24 seconds ago)
-- 19cf083 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- 6a601bd fix(auth): non-string recovery code returns false, not a 500 (5 minutes ago)
-- dcd1895 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- bd4edf6 fix(ai): OpenRouter wrapper throws a clear error on a malformed/filtered response (6 hours ago)
-- 66bad35 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- a8bf984 a11y(portals): sync <html lang> with the selected language (6 hours ago)
-- 53f6458 chore: sync PROJECT_STATUS.md [skip ci] (9 hours ago)
+- 2f843c0 chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
+- 3f7ca9b security(tenant): require API key for login — close email-only auth bypass (57 minutes ago)
+- 19cf083 chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- 6a601bd fix(auth): non-string recovery code returns false, not a 500 (61 minutes ago)
+- dcd1895 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- bd4edf6 fix(ai): OpenRouter wrapper throws a clear error on a malformed/filtered response (7 hours ago)
+- 66bad35 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- a8bf984 a11y(portals): sync <html lang> with the selected language (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 240,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3832,7 +3802,7 @@ the backend.
 | `disputes.js` | 307 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
-| `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
+| `mcp-handler.js` | 264 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 182 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |

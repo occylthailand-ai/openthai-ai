@@ -9,6 +9,14 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-23 — Hourly loop: hardening — the MCP endpoint had no batch-size cap (cost-amplification / resource exhaustion)
+
+Found continuing the security-surface audit (`mcp-handler.js`, the `POST /mcp` JSON-RPC endpoint that lets external AI agents call Openthai.ai tools). **Verified against the code:** `handleMcp` supports JSON-RPC batches via `Promise.all(body.map(processOne))` with **no cap on `body.length`**. Several tools (`generate_content`, `generate_ab_test`, `analyze_image`, `competitor_analyze`) proxy to a real, **paid** AI call (Claude/Gemini). The route's `mcpLimiter` is `60 requests/min` — but it counts *requests*, not the tool calls *inside* a batch, so a single request carrying a 10,000-element array fanned out to 10,000 concurrent AI calls (real cost + event-loop / provider-quota exhaustion), entirely under the request limit. **Checked the two things that would have made it worse and found them OK:** `/mcp` *is* rate-limited (not unauthenticated-unlimited), and the internal `X-MCP-Client: mcp-internal` header is **not** trusted anywhere (`grep` across the backend is empty), so it's not an auth-bypass — the gap is purely the unbounded batch.
+
+**Fix:** cap the batch at `MAX_BATCH = 20` (MCP clients like Claude Desktop send one request at a time; a real batch is tiny) and reject it **before** any element is processed — plus reject an empty `[]` batch, which JSON-RPC 2.0 defines as invalid. Both return a single `-32600` JSON-RPC error with HTTP 400. Non-batch requests and in-limit batches are unchanged.
+
+**Verified + mutation-tested:** new `scripts/test-mcp-batch.mjs` drives `handleMcp` with a mock req/res using only local methods (`initialize` / `tools/list`, so nothing hits the network): a 21-element batch → 400 + a single `-32600` error (not a processed array); an empty batch → 400; a 20-element batch → an array of 20 real results; a 2-element batch and a single request still work. **9/9** via `npm run test:mcp-batch`. **Mutation:** disabling the size check lets the 21-element batch through (200, processed) → the three over-size assertions fail, restored to green. `node --check` clean on mcp-handler.js + server.js; **boot smoke** `/api/health` 200. Wired into `package.json` + the CI Unit-tests step. Backend-only.
+
 ### 2026-07-23 — Hourly loop: SECURITY — tenant login accepted an email with no secret (full authentication bypass) 🔴
 
 **Highest-severity finding of the session — flagging explicitly for the owner.** Found auditing `tenant-manager.js` (multi-tenant system, previously untested). **Verified against the code AND the live route:** `POST /api/tenants/login` forwards `{email, apiKey}` straight to `tenants.login()`, whose old body was:

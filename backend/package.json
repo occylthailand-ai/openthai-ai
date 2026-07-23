@@ -32,7 +32,8 @@
     "test:webhook-idempotent": "node scripts/test-webhook-idempotent.mjs",
     "test:openrouter-map": "node scripts/test-openrouter-map.mjs",
     "test:recovery-code": "node scripts/test-recovery-code.mjs",
-    "test:tenant-login": "node scripts/test-tenant-login.mjs"
+    "test:tenant-login": "node scripts/test-tenant-login.mjs",
+    "test:mcp-batch": "node scripts/test-mcp-batch.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
