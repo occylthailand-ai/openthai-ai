@@ -306,7 +306,7 @@ ${live.supabase_ok ? '✅' : '❌'} Supabase  |  ${live.omise_configured ? '✅'
   async function updateManualKpi(guildId, kpiKey, value) {
     const snapshot = loadSnapshot() || await buildSnapshot();
     if (!snapshot.guilds[guildId]) return { ok: false, error: 'ไม่พบ guild' };
-    if (!snapshot.guilds[guildId].kpis[kpiKey] === undefined) return { ok: false, error: 'ไม่พบ KPI' };
+    if (snapshot.guilds[guildId].kpis[kpiKey] === undefined) return { ok: false, error: 'ไม่พบ KPI' };
     snapshot.guilds[guildId].kpis[kpiKey].value = value;
     snapshot.guilds[guildId].kpis[kpiKey].manual = true;
     saveSnapshot(snapshot);
