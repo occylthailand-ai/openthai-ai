@@ -68,6 +68,7 @@ jobs:
           npm run test:token-verify
           npm run test:webhook-retry
           npm run test:affiliate-withdraw-math
+          npm run test:openrouter-map
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage

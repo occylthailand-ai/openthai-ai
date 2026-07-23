@@ -29,7 +29,8 @@
     "test:affiliate-withdraw-math": "node scripts/test-affiliate-withdraw-math.mjs",
     "test:discount-charge": "node scripts/test-discount-charge.mjs",
     "test:payment-status-idempotent": "node scripts/test-payment-status-idempotent.mjs",
-    "test:webhook-idempotent": "node scripts/test-webhook-idempotent.mjs"
+    "test:webhook-idempotent": "node scripts/test-webhook-idempotent.mjs",
+    "test:openrouter-map": "node scripts/test-openrouter-map.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

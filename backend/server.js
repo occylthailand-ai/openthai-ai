@@ -26,6 +26,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
+import { mapModel, extractText } from './openrouter-map.js';
 import { reservedFor as reservedForPure, affAvailable } from './affiliate-withdraw-math.js';
 import { safeTokenEqual } from './token-verify.js';
 import { publicAffiliateSales } from './affiliate-public.js';
@@ -270,14 +271,13 @@ const anthropic = (() => {
               'X-Title': 'Openthai.ai',
             },
             body: JSON.stringify({
-              model: ({'claude-haiku-4-5-20251001':'anthropic/claude-haiku-4-5','claude-haiku-4-5':'anthropic/claude-haiku-4-5','claude-sonnet-4-5':'anthropic/claude-sonnet-4-5','claude-3-haiku-20240307':'anthropic/claude-3-haiku'})[model] || (model.startsWith('claude') ? `anthropic/${model}` : model),
+              model: mapModel(model),
               max_tokens,
               messages: msgs,
             }),
           });
           const data = await res.json();
-          if (data.error) throw new Error(data.error.message || 'OpenRouter error');
-          return { content: [{ text: data.choices[0].message.content }] };
+          return extractText(data);
         },
       },
     };

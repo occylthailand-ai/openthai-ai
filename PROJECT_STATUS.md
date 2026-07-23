@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T13:25:41.438Z · branch `claude/daily-reporter-improvements-8vc9ct` (469 commit(s) ahead of main)
+Generated: 2026-07-23T13:32:38.711Z · branch `claude/daily-reporter-improvements-8vc9ct` (470 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 679 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 553 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: robustness — the OpenRouter AI wrapper threw a cryptic TypeError on a malformed/content-filtered response
+
+Found auditing the AI client selection in `server.js` (the Claude-via-OpenRouter fallback used when `OPENROUTER_API_KEY` is set). **Verified against the code:** the wrapper ended with `return { content: [{ text: data.choices[0].message.content }] }` — completely unguarded. Real OpenRouter failure shapes that don't populate `data.error` break it: an empty/omitted `choices` array → `data.choices[0]` is `undefined` → **`TypeError: Cannot read properties of undefined (reading '0')`**; and a **content-filtered** completion returns `message.content: null`, which the old code passed straight through as `{ text: null }` — later string handling (`.trim()`, etc.) then blew up somewhere less obvious. Either way the platform's hybrid AI fallback (Claude → Gemini → mock) still catches the throw, so users aren't hard-broken, but the error is cryptic and a content-filter is indistinguishable from an outage in the logs.
+
+**Fix (extract pure logic + guard):** pulled the request/response mapping into `backend/openrouter-map.js` — `mapModel(model)` (the Anthropic→OpenRouter model-id map, previously an inline ternary) and `extractText(data)` (maps the OpenRouter chat-completions body to the Anthropic `{ content:[{text}] }` shape, and throws a **clear** Error on an error body / missing choices / empty choices / non-string content). server.js now calls those two. Same "pure logic in a module for deterministic unit testing" pattern as affiliate-payout.js / affiliate-withdraw-math.js. Behaviour on a valid response is unchanged; malformed responses now fail cleanly so the fallback logs something actionable.
+
+**Verified by running + mutation-tested:** new `scripts/test-openrouter-map.mjs` (no network — pure functions): model-id mapping (known ids, unknown `claude-*` namespaced, non-claude passthrough, non-string no-throw) and `extractText` (good response → text; empty-string content valid; error body → its message; missing/empty choices → clear "no message content"; content-filtered `null` → throws not silent; null body → "empty response"). **14/14** via `npm run test:openrouter-map`. **Mutation:** deleting the `typeof text !== 'string'` guard makes the missing-/empty-choices/null-content cases stop throwing → **3 fail**, restored to green. `node --check` clean on server.js + the new module; **boot smoke** — server still answers `/api/health` 200 with the new import. Wired into `package.json` + the CI Unit-tests step. Backend-only.
 
 ### 2026-07-23 — Hourly loop: a11y — /portals/* didn't update <html lang> when switching language (WCAG 3.1.1 / 3.1.2)
 
@@ -3612,54 +3620,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- a8bf984 a11y(portals): sync <html lang> with the selected language (34 seconds ago)
+- 66bad35 chore: sync PROJECT_STATUS.md [skip ci] (7 minutes ago)
+- a8bf984 a11y(portals): sync <html lang> with the selected language (8 minutes ago)
 - 53f6458 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - f4b9598 fix(producers): don't wipe an approved producer's category on self-update (3 hours ago)
 - b6cda5c chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 6a380ff a11y(portals): expose active language to assistive tech (aria-pressed) (4 hours ago)
 - 86f0512 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 21ccfb2 a11y(portals): announce signup success to screen readers (role=status) (5 hours ago)
-- 668e54c chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3788,7 +3758,7 @@ the backend.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 30 files)
+## Backend modules (backend/*.js — 31 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -3805,6 +3775,7 @@ the backend.
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 182 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
+| `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |
 | `orders.js` | 203 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 148 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
