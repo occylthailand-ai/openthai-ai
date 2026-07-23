@@ -26,6 +26,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
+import { reservedFor as reservedForPure, affAvailable } from './affiliate-withdraw-math.js';
 import { safeTokenEqual } from './token-verify.js';
 import { publicAffiliateSales } from './affiliate-public.js';
 import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice, buildCancelledNotice, buildQuickpayReceipt } from './shop-receipt.js';
@@ -1522,8 +1523,11 @@ function saveWithdrawals() {
 }
 const WD_MIN = 100;  // ยอดถอนขั้นต่ำ (บาท)
 // ยอดที่ "จองไว้" = คำขอถอนที่ยังไม่จบ (pending/approved) — กันถอนซ้ำเกินยอดจริง
-const reservedFor = (ref) => withdrawals.filter(w => w.ref_code === ref && ['pending', 'approved'].includes(w.status)).reduce((s, w) => s + (w.amount || 0), 0);
-const affPending = (a) => +((a.total_earned || 0) - (a.paid_out || 0) - reservedFor(a.ref_code)).toFixed(2);
+// reservedFor/affPending math lives in affiliate-withdraw-math.js (pure + unit-tested);
+// these thin closures bind it to the module-level `withdrawals` array so all call sites
+// (withdraw request / finalize / dashboard) stay unchanged.
+const reservedFor = (ref) => reservedForPure(withdrawals, ref);
+const affPending = (a) => affAvailable(a, withdrawals);
 
 // ─── POST /api/affiliate/apply — รับสมัคร Affiliate ──────────────────────────
 

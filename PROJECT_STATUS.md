@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T00:18:24.787Z · branch `claude/daily-reporter-improvements-8vc9ct` (449 commit(s) ahead of main)
+Generated: 2026-07-23T01:16:53.230Z · branch `claude/daily-reporter-improvements-8vc9ct` (450 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 659 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 533 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-23 — Hourly loop: test — pin the affiliate withdraw-REQUEST reservation invariant (money-out; extracted the math for testability)
+
+Audited the money-out path and found it correct but **untested on the request side**. `test-affiliate-payout.mjs` covers the admin PAY side (`payoutRemaining`/`canPayout`), but the withdraw-REQUEST math in `server.js` — `reservedFor` / `affPending` (lines ~1525) — had no unit test. That math is a real money invariant: `POST /api/affiliate/withdraw` rejects `amount > affPending(aff)`, where `affPending = earned − paid − reservedFor(ref)` and `reservedFor` sums the affiliate's still-open (`pending`/`approved`) requests. Without the `reservedFor` term an affiliate could fire several requests that each fit the earned balance but together exceed it, and the platform would owe more than was earned.
+
+**What I did (behaviour-preserving extraction + test, no logic change):** moved the two inline functions into a new pure module `backend/affiliate-withdraw-math.js` (`reservedFor(withdrawals, ref)`, `affAvailable(aff, withdrawals)`) — byte-for-byte the same computation, including the deliberate *no clamp at 0* (server treats `amount > available` as a rejection, so a negative available just rejects everything — the safe direction). `server.js` now imports them and keeps two one-line closures binding the module-level `withdrawals` array, so all three call sites (withdraw request / finalize / dashboard) are unchanged. This follows the same extract-for-testability pattern already used for `affiliate-payout.js`.
+
+**Verified by running + mutation-tested:** new `scripts/test-affiliate-withdraw-math.mjs` — 13 assertions: only `pending`/`approved` reserve (a `paid` request must not double-reserve on top of `paid_out`; `rejected` frees funds; reservation scoped per `ref_code`); `affAvailable = earned − paid − reserved`; the exact double-request over-withdraw scenario (a pending full-balance request drops available to 0 so any positive second request is refused); empty/undefined defensiveness; satang rounding. **13/13** via `npm run test:affiliate-withdraw-math`. **Mutation:** making `reservedFor` also count `paid` fails exactly the reservation + availability assertions (9/4), restored to green. `node --check` clean on both files; **booted the real server** (`/api/health` → 200) confirming the import + closures load; re-ran `test-affiliate-payout` (still green). Wired `test:affiliate-withdraw-math` into `package.json` + CI unit-tests. `backend/data` git-restored.
 
 ### 2026-07-23 — Hourly loop: data-loss fix — the Intl-Org portal's "Organization Type" was silently dropped on submit (form field named `type` collided with the portal discriminator)
 
@@ -3528,54 +3536,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 924b9db fix(portals): stop dropping Intl-Org 'Organization Type' on submit (form field 'type' collided with portal discriminator) (24 seconds ago)
-- 3da237a chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- b4adfda fix(webhooks): bound the in-memory delivery log (was unbounded; only disk copy capped) (2 hours ago)
-- 1d7b02b chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- dd339d7 fix(webhooks): reset failCount on success so auto-disable means 20 CONSECUTIVE failures (4 hours ago)
-- 3ed60be chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 110f64b fix(affiliate): guard promptpay mask against a null value in withdrawals list (5 hours ago)
-- b44780c chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 1f56167 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 924b9db fix(portals): stop dropping Intl-Org 'Organization Type' on submit (form field 'type' collided with portal discriminator) (59 minutes ago)
+- 3da237a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- b4adfda fix(webhooks): bound the in-memory delivery log (was unbounded; only disk copy capped) (3 hours ago)
+- 1d7b02b chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- dd339d7 fix(webhooks): reset failCount on success so auto-disable means 20 CONSECUTIVE failures (5 hours ago)
+- 3ed60be chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 110f64b fix(affiliate): guard promptpay mask against a null value in withdrawals list (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 1172,
-  "memory_mb": "20.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3704,12 +3674,13 @@ the backend.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 29 files)
+## Backend modules (backend/*.js — 30 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
 | `affiliate-public.js` | 29 | Public-exposure boundary for the affiliate stats endpoint — extracted so the |
 | `affiliate-tiers.js` | 18 | Affiliate commission tiers — extracted from server.js so the money-critical |
+| `affiliate-withdraw-math.js` | 32 | Affiliate withdraw-request math — the money-integrity rules for how much an |
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `auth.js` | 190 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
@@ -3727,7 +3698,7 @@ the backend.
 | `producers.js` | 283 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8946 | Vercel serverless detection |
+| `server.js` | 8950 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
