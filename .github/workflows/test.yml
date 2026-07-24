@@ -81,6 +81,7 @@ jobs:
           npm run test:sb-column-fallback
           npm run test:portal-leads-fallback
           npm run test:seasonal
+          npm run test:dept-officers
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage
@@ -114,6 +115,9 @@ jobs:
       - name: PDPA consent durability test (self-contained — spawns server + mock Supabase; the proof-of-consent record survives a /tmp wipe)
         working-directory: backend
         run: npm run test:consent-durability
+      - name: AI department-officer endpoint test (self-contained — auth gate, professional disclaimer, offline fallback)
+        working-directory: backend
+        run: npm run test:dept-officer-endpoint
       - name: Skills smoke test (self-contained — every /api/skills endpoint returns 200 on the mock AI path)
         working-directory: backend
         run: npm run test:smoke

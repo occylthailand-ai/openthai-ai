@@ -24,6 +24,7 @@ import {
   SUBSCRIPTION_PLANS,
 } from './omise-payment.js';
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
+import { officerFor, buildPrompt as buildOfficerPrompt, needsProfessionalDisclaimer, DISCLAIMER } from './dept-officers.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
 import { mapModel, extractText } from './openrouter-map.js';
@@ -8353,6 +8354,33 @@ const corpLimiter = rateLimit({ windowMs: 60000, max: 30, message: { error: 'Cor
 // GET /api/corporate/overview
 app.get('/api/corporate/overview', requireAuth, (req, res) => {
   res.json({ success: true, departments: DEPARTMENTS, ts: new Date().toISOString() });
+});
+
+// ── AI Department Officers (เจ้าหน้าที่ AI ประจำฝ่าย) ─────────────────────────────
+// ทีมชั่วคราวจนกว่าจะจ้างคนจริง: แต่ละฝ่ายมีผู้ช่วย AI ที่ตอบในขอบเขตของฝ่ายนั้น
+// ฝ่ายวิชาชีพ (กฎหมาย/การเงิน/ตรวจสอบ ฯลฯ) จะแนบ disclaimer เสมอ — ไม่สวมรอยเป็นผู้เชี่ยวชาญ
+// มีใบอนุญาต และตอบได้แม้ไม่ได้ตั้ง AI key (ใช้ fallback เชิงกำหนดได้)
+app.get('/api/corporate/officers', requireAuth, (req, res) => {
+  res.json({ success: true, officers: Object.keys(DEPARTMENTS).map(officerFor) });
+});
+app.post('/api/corporate/officer/:dept', requireAuth, corpLimiter, async (req, res) => {
+  const dept = String(req.params.dept || '');
+  const question = req.body?.question;
+  if (!question || !String(question).trim()) return res.status(400).json({ success: false, error: 'ต้องระบุคำถาม (question)' });
+  const built = buildOfficerPrompt(dept, question);
+  if (!built) return res.status(400).json({ success: false, error: 'ไม่พบฝ่ายนี้' });
+  const o = officerFor(dept);
+  let answer = built.fallback, ai_used = 'none';
+  try {
+    const r = await callAI(built.prompt, 800);
+    if (r && r.ok && r.text) { answer = r.text; ai_used = r.provider || 'ai'; }
+  } catch (e) { addLog('warn', 'DeptOfficer', `${dept}: ${e.message}`); }
+  res.json({
+    success: true,
+    department: o.department, role: o.role, scope: o.scope,
+    ai_used, answer,
+    disclaimer: needsProfessionalDisclaimer(dept) ? DISCLAIMER : null,
+  });
 });
 
 // Board
