@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T08:14:52.974Z · branch `claude/daily-reporter-improvements-8vc9ct` (501 commit(s) ahead of main)
+Generated: 2026-07-24T09:22:06.737Z · branch `claude/daily-reporter-improvements-8vc9ct` (503 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 711 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 713 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,21 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Hourly loop: PDPA — the erasure (ม.33) + access (ม.30) data-subject-rights flow missed the tenant account + cloud-sync stores; completed the coverage
+
+Audited every store that holds personal data against what the two PDPA endpoints actually reach. The erasure comment claims it deletes "ทุกที่ที่ funnel เก็บไว้จริง" and the access comment claims it returns "everything we hold about you, financial records included" — but both were built before some stores existed and silently missed them:
+
+- **`tenants` (business-account funnel)** — `tenant-manager.js` stores real PII (`name`, `email`, `contactPhone`, `businessType`, `brand_name`) in `tenants.json`, but exposed no way to find/delete by email (only `getById`/`verifyApiKey`/`verifyToken`). So `performErasure` never touched it and `/api/privacy/access/confirm` never returned it: a tenant who exercised their rights got **"removed 0 / here's your data"** while their whole account sat untouched — the exact class the erasure code says it fixed for producers/portal-leads, just missed because tenants is a separate module.
+- **`user_sync` (cloud-sync blob keyed by email)** — never erased, never surfaced in access.
+- **`payments` + `entitlements`** — email-bearing financial records that the access endpoint's own contract says it includes ("financial records included"), yet it returned neither.
+
+**Change (finish the job the two functions started, following their existing patterns):**
+- `tenant-manager.js` — added `findByEmail(email)` (returns the **safeView**, so an access export never leaks `apiKeyHash`) and `eraseByEmail(email)` (`{ removed }`, same shape as `producers.eraseByEmail`).
+- `performErasure()` — now also erases `tenants` (personal account) and the email-keyed `user_sync` blob (file + Supabase DELETE, mirroring the affiliates path). `withdrawals`/`payments`/`entitlements` stay **retained** (financial/contractual legal-retention exception) but are now visible via access — updated the function comment to say so.
+- `/api/privacy/access/confirm` — now also returns `tenants` (safeView), `payments`, `entitlements`, and the `cloud_sync` blob (via `syncRead`, so it works in both Supabase and file mode).
+
+**Verified + mutation-tested + booted:** new hermetic self-boot test `scripts/test-pdpa-tenant-erasure.mjs` (16/16) — snapshots `tenants.json`/`user_sync.json`, boots the real server with a known `JWT_SECRET` (so it computes the same HMAC access/erasure tokens), registers two tenants + seeds a cloud blob, and asserts: access returns the tenant account + blob and **never** the `apiKeyHash`; the erasure-confirm HMAC gate 403s a forged token on GET and POST; a valid POST erases the tenant + blob (`removed ≥ 2`) and a follow-up access shows them gone; and the erasure is **targeted** — a second tenant survives intact. **Mutation:** disabling the erasure line → the "removed count" + "tenant gone" assertions fail (`removed 1`, account still present); disabling the access line → the "access returns the tenant" assertions fail; restored to green both times. Confirmed `tenant-login` still 10/10 (the new methods didn't disturb auth), `node --check` clean, and `data/*.json` show no git diff after (CI wrapper also runs `git checkout -- data/`). Wired `test:pdpa-tenant` into `package.json` + a self-contained CI step in `test.yml` alongside the other self-boot tests. NOTE: `user_sync` blobs keyed by a **username** (not the email) belong to a different identity and are erased under that identity's own request — documented in the code.
 
 ### 2026-07-24 — Hourly loop: CI coverage — un-rotted the revenue-system E2E and wired it in (the dedicated rewrite flagged last round)
 
@@ -3763,14 +3778,14 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 90d1c66 test(revenue): un-rot the revenue-system E2E and wire it into CI (27 seconds ago)
-- ce739d6 chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
-- 3234e6d ci: wire the skills smoke test (all 35 /api/skills endpoints) into CI (55 minutes ago)
-- ab34a6b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 98decff test(seo): guard the hand-maintained homepage JSON-LD @graph (brand entity, copied to every page) (2 hours ago)
-- 46fd3c1 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 285b9b2 test(withdraw): add self-boot regression guard for the affiliate withdraw-confirm money-out flow (3 hours ago)
-- 1118f6f chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- f36cec1 feat(pdpa): erasure + access now cover the tenant account and cloud-sync stores (24 seconds ago)
+- a38aad7 chore: sync PROJECT_STATUS.md [skip ci] (67 minutes ago)
+- 90d1c66 test(revenue): un-rot the revenue-system E2E and wire it into CI (68 minutes ago)
+- ce739d6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 3234e6d ci: wire the skills smoke test (all 35 /api/skills endpoints) into CI (2 hours ago)
+- ab34a6b chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 98decff test(seo): guard the hand-maintained homepage JSON-LD @graph (brand entity, copied to every page) (3 hours ago)
+- 46fd3c1 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3793,7 +3808,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.3",
+  "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3966,9 +3981,9 @@ the backend.
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8986 | Vercel serverless detection |
+| `server.js` | 9008 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
-| `tenant-manager.js` | 257 | Each tenant (store/business) gets: |
+| `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
