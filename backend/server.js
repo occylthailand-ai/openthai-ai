@@ -6434,6 +6434,17 @@ function saveConsents(data) {
   } catch (e) { console.error('Save consents error:', e.message); }
 }
 const consents = loadConsents();
+// Durable proof-of-consent: the record file lives in /tmp on Vercel and is wiped on every redeploy,
+// so a file-only store loses EVERY recorded consent each time we ship — and then we can't prove
+// anyone consented, the exact thing GAP-001 exists to guarantee (and both access + erasure read
+// this store). On boot, if Supabase is configured, hydrate the in-memory list from pdpa_consents
+// (restoring it after a /tmp wipe). If the table doesn't exist yet (owner hasn't run migration 009)
+// this fails quietly and we stay file-only — no regression; it becomes durable the moment 009 runs.
+if (_useSB) {
+  _sbReq('GET', '/pdpa_consents', { params: { select: '*' } })
+    .then((rows) => { if (Array.isArray(rows)) for (const r of rows) { if (!r?.email) continue; const i = consents.findIndex(c => c.email === r.email); if (i >= 0) consents[i] = r; else consents.push(r); } })
+    .catch((e) => console.warn('[pdpa-consents] Supabase hydrate failed, file-only:', e.message));
+}
 
 // GAP-001: บันทึก Consent ตาม PDPA มาตรา 19
 app.post('/api/privacy/consent', (req, res) => {
@@ -6454,6 +6465,11 @@ app.post('/api/privacy/consent', (req, res) => {
   const idx = consents.findIndex(c => c.email === record.email);
   if (idx >= 0) { consents[idx] = record; } else { consents.push(record); }
   saveConsents(consents);
+  // Persist to Supabase too, so the consent proof survives the next /tmp wipe (see boot hydrate).
+  if (_useSB) {
+    _sbReq('POST', '/pdpa_consents', { body: record, prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch((err) => console.warn('[pdpa-consents] Supabase upsert failed, file-only:', err.message));
+  }
   addLog('info', 'PDPA', `✅ Consent บันทึก: ${record.email} | purposes: ${record.purposes.join(',')}`);
   res.json({ success: true, message: 'บันทึกความยินยอมเรียบร้อย', id: record.id });
 });
@@ -6502,7 +6518,10 @@ async function performErasure(sanitized) {
   const wIdx = waitlist.findIndex(w => w.email === sanitized);
   if (wIdx >= 0) { waitlist.splice(wIdx, 1); saveWaitlist(waitlist); removed++; }
   const cIdx = consents.findIndex(c => c.email === sanitized);
-  if (cIdx >= 0) { consents.splice(cIdx, 1); saveConsents(consents); removed++; }
+  if (cIdx >= 0) {
+    consents.splice(cIdx, 1); saveConsents(consents); removed++;
+    if (_useSB) { try { await _sbReq('DELETE', '/pdpa_consents', { params: { email: `eq.${sanitized}` }, prefer: 'return=minimal' }); } catch (e) { console.error('[erasure] pdpa_consents SB:', e.message); } }
+  }
   try { removed += (await producers.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] producers:', e.message); }
   try { removed += (await portalLeads.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] portalLeads:', e.message); }
   try { removed += (tenants.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] tenants:', e.message); }

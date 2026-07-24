@@ -110,6 +110,9 @@ jobs:
       - name: Broadcast opt-out durability test (self-contained — spawns server + mock Supabase; the newsletter unsubscribe list survives a /tmp wipe)
         working-directory: backend
         run: npm run test:broadcast-unsub
+      - name: PDPA consent durability test (self-contained — spawns server + mock Supabase; the proof-of-consent record survives a /tmp wipe)
+        working-directory: backend
+        run: npm run test:consent-durability
       - name: Skills smoke test (self-contained — every /api/skills endpoint returns 200 on the mock AI path)
         working-directory: backend
         run: npm run test:smoke
