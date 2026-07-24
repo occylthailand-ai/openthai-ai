@@ -9,6 +9,21 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-24 — Hourly loop: PDPA — the erasure (ม.33) + access (ม.30) data-subject-rights flow missed the tenant account + cloud-sync stores; completed the coverage
+
+Audited every store that holds personal data against what the two PDPA endpoints actually reach. The erasure comment claims it deletes "ทุกที่ที่ funnel เก็บไว้จริง" and the access comment claims it returns "everything we hold about you, financial records included" — but both were built before some stores existed and silently missed them:
+
+- **`tenants` (business-account funnel)** — `tenant-manager.js` stores real PII (`name`, `email`, `contactPhone`, `businessType`, `brand_name`) in `tenants.json`, but exposed no way to find/delete by email (only `getById`/`verifyApiKey`/`verifyToken`). So `performErasure` never touched it and `/api/privacy/access/confirm` never returned it: a tenant who exercised their rights got **"removed 0 / here's your data"** while their whole account sat untouched — the exact class the erasure code says it fixed for producers/portal-leads, just missed because tenants is a separate module.
+- **`user_sync` (cloud-sync blob keyed by email)** — never erased, never surfaced in access.
+- **`payments` + `entitlements`** — email-bearing financial records that the access endpoint's own contract says it includes ("financial records included"), yet it returned neither.
+
+**Change (finish the job the two functions started, following their existing patterns):**
+- `tenant-manager.js` — added `findByEmail(email)` (returns the **safeView**, so an access export never leaks `apiKeyHash`) and `eraseByEmail(email)` (`{ removed }`, same shape as `producers.eraseByEmail`).
+- `performErasure()` — now also erases `tenants` (personal account) and the email-keyed `user_sync` blob (file + Supabase DELETE, mirroring the affiliates path). `withdrawals`/`payments`/`entitlements` stay **retained** (financial/contractual legal-retention exception) but are now visible via access — updated the function comment to say so.
+- `/api/privacy/access/confirm` — now also returns `tenants` (safeView), `payments`, `entitlements`, and the `cloud_sync` blob (via `syncRead`, so it works in both Supabase and file mode).
+
+**Verified + mutation-tested + booted:** new hermetic self-boot test `scripts/test-pdpa-tenant-erasure.mjs` (16/16) — snapshots `tenants.json`/`user_sync.json`, boots the real server with a known `JWT_SECRET` (so it computes the same HMAC access/erasure tokens), registers two tenants + seeds a cloud blob, and asserts: access returns the tenant account + blob and **never** the `apiKeyHash`; the erasure-confirm HMAC gate 403s a forged token on GET and POST; a valid POST erases the tenant + blob (`removed ≥ 2`) and a follow-up access shows them gone; and the erasure is **targeted** — a second tenant survives intact. **Mutation:** disabling the erasure line → the "removed count" + "tenant gone" assertions fail (`removed 1`, account still present); disabling the access line → the "access returns the tenant" assertions fail; restored to green both times. Confirmed `tenant-login` still 10/10 (the new methods didn't disturb auth), `node --check` clean, and `data/*.json` show no git diff after (CI wrapper also runs `git checkout -- data/`). Wired `test:pdpa-tenant` into `package.json` + a self-contained CI step in `test.yml` alongside the other self-boot tests. NOTE: `user_sync` blobs keyed by a **username** (not the email) belong to a different identity and are erased under that identity's own request — documented in the code.
+
 ### 2026-07-24 — Hourly loop: CI coverage — un-rotted the revenue-system E2E and wired it in (the dedicated rewrite flagged last round)
 
 Last round found `test-revenue-system.mjs` (the broad money/revenue E2E — captions, model-router, council, affiliate attribution/tiers, leaderboard, scheduler, webhook-signature) was stale against two post-write flow changes and therefore unwired. Did the rewrite this round:

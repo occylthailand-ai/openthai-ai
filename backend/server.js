@@ -6476,8 +6476,11 @@ app.post('/api/privacy/erasure', rateLimit({ windowMs: 3600000, max: 5 }), async
 });
 
 // PDPA มาตรา 33 — ลบข้อมูลส่วนบุคคลให้ครบทุกที่ที่ funnel เก็บไว้จริง (เดิมลบแค่ waitlist + consents
-// ทำให้ผู้ผลิต/พันธมิตร/ลีด portal ถูกแจ้งว่า "ลบแล้ว" ทั้งที่ยังอยู่ครบ) หมายเหตุ: ประวัติการถอนเงิน
-// (withdrawals) เป็นบันทึกธุรกรรมการเงิน จึงไม่ลบที่นี่ตามข้อยกเว้นเก็บตามกฎหมาย (ให้เจ้าของตัดสิน scope)
+// ทำให้ผู้ผลิต/พันธมิตร/ลีด portal ถูกแจ้งว่า "ลบแล้ว" ทั้งที่ยังอยู่ครบ) รอบนี้เพิ่ม tenants (บัญชี
+// ธุรกิจ — เก็บ name/email/contactPhone) และ user_sync (blob ที่ key เป็นอีเมล) ที่ยังตกหล่นอยู่
+// หมายเหตุ: ประวัติการถอนเงิน (withdrawals) การชำระเงิน (payments) และสิทธิ์แพ็กเกจ (entitlements)
+// เป็นบันทึกธุรกรรม/สัญญาการเงิน จึงไม่ลบที่นี่ตามข้อยกเว้นเก็บตามกฎหมาย — แต่ยังแสดงให้เจ้าของ
+// ข้อมูลเห็นได้ผ่านสิทธิ์ขอเข้าถึง (/api/privacy/access) (ให้เจ้าของตัดสิน scope การเก็บ)
 async function performErasure(sanitized) {
   let removed = 0;
   const wIdx = waitlist.findIndex(w => w.email === sanitized);
@@ -6486,6 +6489,7 @@ async function performErasure(sanitized) {
   if (cIdx >= 0) { consents.splice(cIdx, 1); saveConsents(consents); removed++; }
   try { removed += (await producers.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] producers:', e.message); }
   try { removed += (await portalLeads.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] portalLeads:', e.message); }
+  try { removed += (tenants.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] tenants:', e.message); }
   const affBefore = affiliates.length;
   for (let i = affiliates.length - 1; i >= 0; i--) {
     if ((affiliates[i].email || '').toLowerCase() === sanitized) affiliates.splice(i, 1);
@@ -6498,6 +6502,15 @@ async function performErasure(sanitized) {
     }
     removed += (affBefore - affiliates.length);
   }
+  // user_sync — cloud blob keyed by the user's email (blobs keyed by a username belong to a
+  // different identity and are erased under that identity's own request). Delete in both stores.
+  try {
+    if (_useSB) {
+      try { await _sbReq('DELETE', '/user_sync', { params: { user_key: `eq.${sanitized}` }, prefer: 'return=minimal' }); }
+      catch (e) { console.error('[erasure] user_sync SB:', e.message); }
+    }
+    if (_syncStore[sanitized]) { delete _syncStore[sanitized]; saveSyncFile(); removed++; }
+  } catch (e) { console.error('[erasure] user_sync:', e.message); }
   return removed;
 }
 
@@ -6583,6 +6596,15 @@ app.get('/api/privacy/access/confirm', unsubLimiter, async (req, res) => {
   const myRefs = new Set(myAff.map(a => a.ref_code));
   records.withdrawals = withdrawals.filter(w => myRefs.has(w.ref_code));
   try { records.orders = (await orders.all()).filter(o => (o.contact || '').toLowerCase() === sanitized); } catch (e) { console.error('[access] orders:', e.message); records.orders = []; }
+  // Stores the access export previously missed even though this endpoint's contract is "everything
+  // we hold about you, financial records included": tenant business account (safeView strips the
+  // API-key hash), payments + plan entitlement (financial — retained past erasure but the subject
+  // still has the right to see them), and the cloud-sync blob keyed by this email.
+  try { records.tenants = tenants.findByEmail(sanitized); } catch (e) { console.error('[access] tenants:', e.message); records.tenants = []; }
+  records.payments = payments.filter(p => (p.email || '').toLowerCase() === sanitized);
+  const myEnt = entitlements[sanitized];
+  records.entitlements = myEnt ? [myEnt] : [];
+  try { const sd = await syncRead(sanitized); records.cloud_sync = (sd && Object.keys(sd).length) ? [sd] : []; } catch (e) { console.error('[access] cloud_sync:', e.message); records.cloud_sync = []; }
 
   const total = Object.values(records).reduce((n, arr) => n + (Array.isArray(arr) ? arr.length : 0), 0);
   addLog('info', 'PDPA', `📋 Access ยืนยันแล้ว: ${sanitized} — ส่งข้อมูล ${total} รายการ`);

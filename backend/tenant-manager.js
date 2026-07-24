@@ -221,6 +221,27 @@ export function createTenantManager(writeDir) {
     listAll() {
       return tenants.map(t => mgr.safeView(t));
     },
+
+    // PDPA (ม.30 access / ม.33 erasure) — a tenant account holds real personal data
+    // (name, email, contactPhone, businessType, brand_name), but the data-subject-rights
+    // flow in server.js only knew about waitlist/consents/producers/portalLeads/affiliates,
+    // so a tenant who asked to see or delete their data got "0 records / removed 0" while the
+    // account sat untouched in tenants.json. These two give that flow a way to reach tenants.
+    // findByEmail returns the SAFE view (apiKeyHash stripped) so an access export never leaks
+    // the key hash.
+    findByEmail(email) {
+      const e = String(email || '').toLowerCase().trim();
+      return tenants.filter(t => (t.email || '').toLowerCase() === e).map(t => mgr.safeView(t));
+    },
+    eraseByEmail(email) {
+      const e = String(email || '').toLowerCase().trim();
+      let removed = 0;
+      for (let i = tenants.length - 1; i >= 0; i--) {
+        if ((tenants[i].email || '').toLowerCase() === e) { tenants.splice(i, 1); removed++; }
+      }
+      if (removed) flush();
+      return { removed };
+    },
   };
 
   return mgr;
