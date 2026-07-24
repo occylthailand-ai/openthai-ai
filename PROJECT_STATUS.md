@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T11:16:49.976Z · branch `claude/daily-reporter-improvements-8vc9ct` (507 commit(s) ahead of main)
+Generated: 2026-07-24T12:12:39.377Z · branch `claude/daily-reporter-improvements-8vc9ct` (509 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 717 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 719 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,17 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Owner request: seasonal demand engine — 24 solar terms (节气) × climate zone → product categories (brick 1 of the owner's "right product / right region / right people" vision)
+
+The owner asked for a big vision: match products to the region/season/people who actually need them, anchored to the Chinese 24 solar terms + weather + global trends, so all five groups earn. **Stopped and scoped it (rule #8)** rather than lunging at the whole thing: refused the "scrape all the world's advertising data" part outright (rule #3 — non-consensual collection, rejected 3× before; also copyright/PDPA), and declined to promise "everyone earns income" (code can't guarantee outcomes). Asked the owner to confirm the concrete first brick via AskUserQuestion; they chose the **24-solar-terms → product-category engine** (then said "1-3" = wants the whole set), so I built brick 1 for real + tested, and documented bricks 2–3 as a grounded roadmap instead of shipping them half-done.
+
+**Built (deterministic, NOT LLM-dependent, NO scraping):**
+- `backend/seasonal-engine.js` — a pure module. `solarTermFor(date)` (the 24 terms on their standard Gregorian dates, ±1 day, offline, with the Jan 1–5 wrap back to the prior 冬至); `localSeasonFor(date, zone)` encoding **the core insight — the same term is a different LOCAL season per climate zone**: `north_temperate` = the term's own season, `south_temperate` = **inverted** (北 midsummer = 南 midwinter), `tropical` (ไทย/อาเซียน) = hot-dry / rainy / cool-dry by month while still surfacing the term as the China-facing export hook; and `recommend({date, zone})` returning in-demand categories (each `key/th/en/why`), a one-line action for **all five groups**, and the next term + day-countdown so sellers stock up before the peak. Category lists are common seasonal-demand patterns framed as guidance — not fabricated stats.
+- `server.js` — `GET /api/seasonal/recommend?zone=&date=` + `GET /api/seasonal/zones` (deterministic, no auth, answers instantly even if every AI provider is down).
+- `docs/SEASONAL_DEMAND_ENGINE.md` — the honest roadmap: brick 1 (built), brick 2 (trend-direction overlay on the existing `/api/skills/trend`, legally-open signals only, next round), brick 3 (real per-region weather API — needs an owner key/network decision, flagged not guessed), and the explicit out-of-scope list.
+
+**Verified + booted:** `scripts/test-seasonal-engine.mjs` (24/24) pins the term-by-date table incl. the Jan wrap, the hemisphere **inversion** (same date → `summer` in the north, `winter` in the south, `rainy` in the tropics), zone-appropriate + well-formed recommendations, the 5-group actions, the next-term countdown incl. the year wrap, and the safe fallbacks (unknown zone → tropical, bad date → now, never throws). Then **booted the real server** and curled the endpoints: `2026-07-24` tropical → 大暑 / rainy / rain-gear with a real affiliate action string; `2026-12-22` south_temperate → 冬至 but **local summer → cooling/sun-protection** (inversion correct end-to-end); `/api/seasonal/zones` lists the three zones. `node --check` clean, `data/*.json` no git diff after. Wired `test:seasonal` into the CI no-server unit block.
 
 ### 2026-07-24 — Hourly loop: PDPA — the proof-of-consent record (GAP-001) was file-only (wiped every Vercel redeploy → all consent proof lost); made it durable
 
@@ -3798,14 +3809,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 2f8f5dd fix(pdpa): make the proof-of-consent record durable (was file-only, wiped every redeploy) (24 seconds ago)
-- a0994b4 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 26eb80d fix(broadcast): make the newsletter opt-out list durable (was file-only, wiped every redeploy) (60 minutes ago)
-- 8b186bf chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- f36cec1 feat(pdpa): erasure + access now cover the tenant account and cloud-sync stores (2 hours ago)
-- a38aad7 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 90d1c66 test(revenue): un-rot the revenue-system E2E and wire it into CI (3 hours ago)
-- ce739d6 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- ca4c4fe feat(seasonal): 24 solar terms (jieqi) x climate zone -> product-category demand engine (66 seconds ago)
+- d6b50f5 chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
+- 2f8f5dd fix(pdpa): make the proof-of-consent record durable (was file-only, wiped every redeploy) (56 minutes ago)
+- a0994b4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 26eb80d fix(broadcast): make the newsletter opt-out list durable (was file-only, wiped every redeploy) (2 hours ago)
+- 8b186bf chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- f36cec1 feat(pdpa): erasure + access now cover the tenant account and cloud-sync stores (3 hours ago)
+- a38aad7 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3828,7 +3839,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.2",
+  "memory_mb": "19.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3974,7 +3985,7 @@ the backend.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 33 files)
+## Backend modules (backend/*.js — 34 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -4001,7 +4012,8 @@ the backend.
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 9043 | Vercel serverless detection |
+| `seasonal-engine.js` | 200 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
+| `server.js` | 9057 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
