@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T12:51:49.529Z · branch `claude/daily-reporter-improvements-8vc9ct` (513 commit(s) ahead of main)
+Generated: 2026-07-24T13:17:42.161Z · branch `claude/daily-reporter-improvements-8vc9ct` (515 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 723 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 725 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Owner request: AI department officers — a scoped AI specialist per corporate department (temporary team until real hires)
+
+The owner asked to staff the org with **AI officers that have domain skill per department** now, and add real people once the platform grows. Built on the existing `corporate-system.js` `DEPARTMENTS` registry (15 depts) rather than inventing a parallel structure.
+
+**Safety was the design driver** (do-no-harm + verify-before-build): an AI officer must never pose as a licensed professional giving binding advice. So for the high-stakes departments (compliance/legal, finance, audit, risk, board, IR, company-secretary, HR) the officer is flagged `professional`, its prompt explicitly **forbids binding rulings and tells the model to defer to licensed experts**, and every answer carries a mandatory Thai disclaimer. It is also **not LLM-dependent**: with no AI key configured the endpoint returns a deterministic scope-based fallback (honest `ai_used: "none"`), so it works offline and in CI.
+
+**Change:**
+- `backend/dept-officers.js` (pure module) — `officerFor(deptId)` (role + one-line scope + `professional` flag), `needsProfessionalDisclaimer(deptId)`, `buildPrompt(deptId, question)` → `{ prompt, fallback, professional }` (the prompt injects the scope + guardrail + caps the question at 2000 chars; the fallback answers offline), and the `DISCLAIMER` text.
+- `server.js` — `GET /api/corporate/officers` (roster, `requireAuth`) and `POST /api/corporate/officer/:dept` (`requireAuth` + `corpLimiter`): validates the dept + a non-empty question, calls `callAI` (falls back to the deterministic message on `!ok`/throw), and attaches the disclaimer for professional depts. Imported `buildPrompt` **aliased** as `buildOfficerPrompt` to avoid colliding with server.js's existing `buildPrompt(form)`.
+
+**Verified + mutation-tested + booted:** `scripts/test-dept-officers.mjs` (14/14, no-server) — every dept has a scoped officer, unknown → null, the professional set is exactly the 8 high-stakes depts, the disclaimer names "licensed professional", the professional prompt forbids binding advice, every officer has a non-empty offline fallback, and a 5000-char question is capped. `scripts/test-dept-officer-endpoint.mjs` (11/11, self-boot with a known `JWT_SECRET`, **no AI keys** → fallback path) — auth required (401 without a token), 15 officers listed, a compliance answer carries the disclaimer with `ai_used:"none"`, a marketing answer has `disclaimer:null`, and unknown-dept / missing-question → 400. **Mutation:** forcing `needsProfessionalDisclaimer` to return false fails BOTH the unit ("all need the disclaimer") and the endpoint ("compliance carries the disclaimer") — the safety guard is genuinely enforced end-to-end; restored to green. `corporate-auth` still 9/9, `node --check` clean, `data/*.json` no git diff after. Wired `test:dept-officers` into the no-server CI block and `test:dept-officer-endpoint` as a self-boot CI step. (Honest scope note kept from the stakeholder discussion: these AI officers substitute for *some* functions but are not a staffed org; real people still needed for licensed legal/finance/support work.)
 
 ### 2026-07-24 — Owner request (cont.): surface the seasonal engine in the portals — "first encounter → real value in 10 seconds"
 
@@ -3832,14 +3844,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 4df53cc feat(portals): surface the seasonal engine in every portal — value in 10 seconds (26 seconds ago)
-- 6248837 chore: sync PROJECT_STATUS.md [skip ci] (31 minutes ago)
-- 1661edc feat(seasonal): brick 2 — trend-direction overlay -> concrete product angles (32 minutes ago)
-- 94897c4 chore: sync PROJECT_STATUS.md [skip ci] (39 minutes ago)
-- ca4c4fe feat(seasonal): 24 solar terms (jieqi) x climate zone -> product-category demand engine (40 minutes ago)
+- 92e3ddd feat(corporate): AI department officers — a scoped AI specialist per department (20 seconds ago)
+- 8ec5ee2 chore: sync PROJECT_STATUS.md [skip ci] (26 minutes ago)
+- 4df53cc feat(portals): surface the seasonal engine in every portal — value in 10 seconds (26 minutes ago)
+- 6248837 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- 1661edc feat(seasonal): brick 2 — trend-direction overlay -> concrete product angles (58 minutes ago)
+- 94897c4 chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
+- ca4c4fe feat(seasonal): 24 solar terms (jieqi) x climate zone -> product-category demand engine (66 minutes ago)
 - d6b50f5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 2f8f5dd fix(pdpa): make the proof-of-consent record durable (was file-only, wiped every redeploy) (2 hours ago)
-- a0994b4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3861,8 +3873,8 @@ the backend.
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 207,
-  "memory_mb": "19.4",
+  "uptime_sec": 0,
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -4008,7 +4020,7 @@ the backend.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 34 files)
+## Backend modules (backend/*.js — 35 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -4020,6 +4032,7 @@ the backend.
 | `auth.js` | 196 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
+| `dept-officers.js` | 85 | Openthai.ai — AI Department Officers (เจ้าหน้าที่ AI ประจำฝ่าย) |
 | `disputes.js` | 319 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 259 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
@@ -4036,7 +4049,7 @@ the backend.
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 259 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9065 | Vercel serverless detection |
+| `server.js` | 9093 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
