@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T09:22:06.737Z · branch `claude/daily-reporter-improvements-8vc9ct` (503 commit(s) ahead of main)
+Generated: 2026-07-24T10:17:31.525Z · branch `claude/daily-reporter-improvements-8vc9ct` (505 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 713 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 715 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Hourly loop: opt-out durability — the newsletter-broadcast unsubscribe list was file-only (wiped every Vercel redeploy → re-subscribes everyone who opted out); made it durable
+
+Scanned the two marketing-email paths for opt-out handling. Both **honor** unsubscribe correctly at send time — `sendConsumerDigest()` filters `!l.unsubscribed` (portal_leads, which persists `unsubscribed` to Supabase) and `/api/leads/admin/broadcast` filters `!broadcastUnsubscribed.has(email)` — so no logic bug. **But the broadcast suppression list itself is stored file-only** in `broadcast_unsubscribed.json`, with no Supabase copy. On Vercel that file is under `/tmp` and is **wiped on every redeploy** (and Vercel redeploys on every push), so the moment we ship, everyone who clicked "ยกเลิกรับข่าวสาร" is silently re-subscribed and the next broadcast emails them again — a **legally-required opt-out** (PDPA ม.19 withdrawal of consent / anti-spam) that we were dropping. Same ephemeral-`/tmp` class the affiliate-consent / portal_leads rounds fixed, but higher-stakes because it's a mandatory opt-out, not just a provable-consent record. (`portalLeads.unsubscribe()` was already durable via a Supabase PATCH; only this separate broadcast list — whose recipients come from waitlist/affiliate/order, not portal leads — was file-only.)
+
+**Change (dual-mode + graceful degradation, same shape as prior rounds):**
+- New migration `008_broadcast_unsubscribes.sql` — `create table if not exists public.broadcast_unsubscribes (email text primary key, created_at timestamptz default now())`, idempotent, RLS enabled.
+- `server.js` — on boot, if Supabase is configured, hydrate the in-memory `broadcastUnsubscribed` set from `broadcast_unsubscribes` (restores the list after a `/tmp` wipe). On each `/api/broadcast/unsubscribe`, besides writing the file, upsert the email to Supabase (`resolution=merge-duplicates`). If the table doesn't exist yet (owner hasn't run 008), both calls fail quietly and it stays file-only — **no regression**; it becomes durable the instant the migration runs.
+
+**Verified + mutation-tested + booted:** new self-contained test `scripts/test-broadcast-unsub-durability.mjs` (7/7) — spins up a **mock Supabase** + spawns the real server pointed at it with a known `JWT_SECRET`. Pre-seeds the mock with an email that "unsubscribed in a prior deploy" while the **local file starts empty**, so the only way it can be suppressed is the Supabase hydrate = proof it survives the `/tmp` wipe. Asserts: boot hydrate suppresses the prior opt-out (broadcast audience of 2 → 1 recipient); a forged unsubscribe token → 403; a valid unsubscribe → 200 **and** issues a POST upsert to Supabase (captured by the mock); and end-to-end both opt-outs leave 0 recipients. **Mutation:** disabling the boot hydrate → the "prior opt-out survives" + "0 recipients" assertions fail (audience back to 2); disabling the upsert → the "POSTed to Supabase" assertion fails; restored to green both times. `node --check` clean, `data/*.json` no git diff after. Wired `test:broadcast-unsub` into `package.json` + a self-contained CI step in `test.yml` (mirrors the ai-usage "spawns server + mock Supabase" step). NOTE unchanged: the owner should run `008` so the list is actually durable in production; until then the fallback keeps today's (file-only) behavior.
 
 ### 2026-07-24 — Hourly loop: PDPA — the erasure (ม.33) + access (ม.30) data-subject-rights flow missed the tenant account + cloud-sync stores; completed the coverage
 
@@ -3775,17 +3785,17 @@ the backend.
 - ✅ **Route components exist on disk** — all 84 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
-- ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
+- ℹ️ **9 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql
 
 ## Recent commits
-- f36cec1 feat(pdpa): erasure + access now cover the tenant account and cloud-sync stores (24 seconds ago)
-- a38aad7 chore: sync PROJECT_STATUS.md [skip ci] (67 minutes ago)
-- 90d1c66 test(revenue): un-rot the revenue-system E2E and wire it into CI (68 minutes ago)
-- ce739d6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 3234e6d ci: wire the skills smoke test (all 35 /api/skills endpoints) into CI (2 hours ago)
-- ab34a6b chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 98decff test(seo): guard the hand-maintained homepage JSON-LD @graph (brand entity, copied to every page) (3 hours ago)
-- 46fd3c1 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 26eb80d fix(broadcast): make the newsletter opt-out list durable (was file-only, wiped every redeploy) (23 seconds ago)
+- 8b186bf chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
+- f36cec1 feat(pdpa): erasure + access now cover the tenant account and cloud-sync stores (56 minutes ago)
+- a38aad7 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 90d1c66 test(revenue): un-rot the revenue-system E2E and wire it into CI (2 hours ago)
+- ce739d6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 3234e6d ci: wire the skills smoke test (all 35 /api/skills endpoints) into CI (3 hours ago)
+- ab34a6b chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3981,7 +3991,7 @@ the backend.
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 9008 | Vercel serverless detection |
+| `server.js` | 9024 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
@@ -4036,6 +4046,7 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 005_user_sync.sql
 - 006_order_disputes.sql
 - 007_portal_leads.sql
+- 008_broadcast_unsubscribes.sql
 - FULL-MIGRATION.sql
 - credits-schema.sql
 - orders-schema.sql
