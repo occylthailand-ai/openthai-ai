@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T12:12:39.377Z · branch `claude/daily-reporter-improvements-8vc9ct` (509 commit(s) ahead of main)
+Generated: 2026-07-24T12:20:21.520Z · branch `claude/daily-reporter-improvements-8vc9ct` (511 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 719 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 721 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,19 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Owner request (cont.): seasonal engine brick 2 — trend-direction overlay → concrete product angles
+
+The owner said "1-3" (wants the whole seasonal set), so continued from brick 1 to the documented brick 2. Built the **trend-direction overlay** that fuses the seasonal categories with a small set of **structural macro consumer trends** (`value` / `digital` / `health` / `eco` / `local`) to produce concrete **product angles** + a play for each of the five groups — still deterministic, still no LLM, still no scraping.
+
+**Honesty guardrail (important):** the trends are *durable, common-knowledge* directions, **not** scraped real-time data and **not** invented statistics — the code comment + the API `note` say so plainly. The output shape is stable so a later round can layer a real, owner-authorized trend API (legally-open signals only) on top without changing the contract. This keeps the verify-before-build discipline: I did not fabricate a "live global ad-trend feed," I encoded well-known macro trends as a labelled knowledge layer.
+
+**Change:**
+- `backend/seasonal-engine.js` — `productAngles({date, zone})`: for each of the top-3 seasonal categories, emit 3 angles (value + digital are near-universal; the third is health/local/eco chosen by the category's nature via a keyword rule), each with `category/trend/angle/why`; plus `group_plays` for all five groups. Exposed `_trends`.
+- `server.js` — `GET /api/seasonal/angles?zone=&date=` (mirrors `/recommend`).
+- `docs/SEASONAL_DEMAND_ENGINE.md` — brick 2 moved to BUILT & VERIFIED.
+
+**Verified + booted:** extended `scripts/test-seasonal-engine.mjs` — **33/33** (was 24; +9 brick-2 assertions): 3 categories × 3 trends = 9 angles, each well-formed and referencing a defined trend; the meaningful fusion (rain-gear × eco → reusable/recyclable in tropical July); value+digital apply to every top category; a health-ish winter category picks up `health` as its third; all 5 group_plays present; the note stays honest (mentions not-scraped/not-LLM). Then **booted the real server** and curled `GET /api/seasonal/angles` → `success:true`, 大暑 / rainy / 9 angles with a real producer play string. `node --check` clean, `data/*.json` no git diff after. No new CI wiring needed — the brick-2 assertions live in the already-wired `test:seasonal`.
 
 ### 2026-07-24 — Owner request: seasonal demand engine — 24 solar terms (节气) × climate zone → product categories (brick 1 of the owner's "right product / right region / right people" vision)
 
@@ -3809,14 +3822,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- ca4c4fe feat(seasonal): 24 solar terms (jieqi) x climate zone -> product-category demand engine (66 seconds ago)
-- d6b50f5 chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
-- 2f8f5dd fix(pdpa): make the proof-of-consent record durable (was file-only, wiped every redeploy) (56 minutes ago)
+- 1661edc feat(seasonal): brick 2 — trend-direction overlay -> concrete product angles (29 seconds ago)
+- 94897c4 chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
+- ca4c4fe feat(seasonal): 24 solar terms (jieqi) x climate zone -> product-category demand engine (9 minutes ago)
+- d6b50f5 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- 2f8f5dd fix(pdpa): make the proof-of-consent record durable (was file-only, wiped every redeploy) (64 minutes ago)
 - a0994b4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 26eb80d fix(broadcast): make the newsletter opt-out list durable (was file-only, wiped every redeploy) (2 hours ago)
 - 8b186bf chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- f36cec1 feat(pdpa): erasure + access now cover the tenant account and cloud-sync stores (3 hours ago)
-- a38aad7 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3839,7 +3852,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.3",
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -4012,8 +4025,8 @@ the backend.
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `seasonal-engine.js` | 200 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9057 | Vercel serverless detection |
+| `seasonal-engine.js` | 259 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
+| `server.js` | 9065 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
