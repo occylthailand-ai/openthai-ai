@@ -30,6 +30,7 @@ const StorePage = lazy(() => import('./pages/StorePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const ShowcasePage = lazy(() => import('./pages/ShowcasePage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
@@ -189,6 +190,7 @@ function App() {
             <Route path="/affiliate" element={<AffiliatePage />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/showcase" element={<ShowcasePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/contact" element={<ContactPage />} />

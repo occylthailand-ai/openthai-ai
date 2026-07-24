@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
+Allow: /showcase
 Allow: /pricing
 Allow: /affiliate
 Allow: /portals

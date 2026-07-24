@@ -22,6 +22,7 @@ export const DOMAIN = 'https://www.openthai-ai.com';
 // load. Privacy/Terms/Contact don't have an i18n "sub" string for their hero, so their descriptions
 // are a plain factual restatement of the page's real, verified purpose — not marketing copy.
 export const ROUTES = [
+  { path: '/showcase', title: 'มาชมสิ่งที่เราสร้างจริง', desc: 'ทัวร์นำชม OpenThaiAi — ตัวอย่างสดการแนะนำสินค้าตามฤดูกาล, เครื่องมือ AI, สิทธิความเป็นส่วนตัว และจุดเด่นที่เล่นกับคนอย่างตรงไปตรงมา (consent-first, ไม่ scrape, ทำงานได้แม้ AI ล่ม)' },
   { path: '/portals', title: 'ประตูสู่ OpenThai.ai', desc: 'เลือกประเภทของท่านเพื่อเข้าร่วมเป็นส่วนหนึ่งของระบบนิเวศ AI ไทย — ผู้ผลิต ผู้บริโภค คนกลาง ครีเอเตอร์ Affiliate หน่วยงานรัฐ องค์กรระหว่างประเทศ และมูลนิธิ' },
   { path: '/portals/producer', title: 'ทางเข้าผู้ผลิต', desc: 'เชื่อมต่อสินค้าของคุณกับตลาด AI ไทยและทั่วโลก — ขายผ่าน AI-powered store, เข้าถึงผู้ซื้อทั่วโลก, ระบบ inventory อัตโนมัติ' },
   { path: '/portals/affiliate', title: 'ทางเข้าผู้ขาย / Affiliate', desc: 'ขายสินค้าจาก OpenThai.ai และรับค่าคอมมิชชั่นสูงสุด 40% ต่อการขาย พร้อม Dashboard ติดตาม real-time' },

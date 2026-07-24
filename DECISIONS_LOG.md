@@ -9,6 +9,17 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-24 — Owner request: public /showcase tour page — "come see what we built", honestly
+
+The owner asked for a single page a fan could bring people to — one that surfaces the real highlights and makes visitors like the platform more. Built `/showcase` as a public, indexable tour, and — per the owner's explicit steer — turned the three honest caveats (pending migrations, v9.0 scaffold, small-team-+-AI) into an on-page **"ready now vs in progress"** section, so transparency is a feature rather than fine print.
+
+**Change (frontend):**
+- `frontend/src/pages/ShowcasePage.jsx` — th/en/zh. Hero → a **live** seasonal highlight (reuses `SeasonalAnglesPanel`, fetches `/api/seasonal/angles`) → four trust differentiators (consent-first / no-scraping / works-without-LLM / transparent decision log) → an "explore" grid linking to real routes (SPA `<Link>` to `/portals`, `/privacy`; real `<a>` to the backend-served `/tool`, `/api-docs`) → the honest ready/in-progress roadmap → a CTA to `/portals`. Every link points at a real, working route/endpoint; nothing invented.
+- `App.jsx` — lazy import + `<Route path="/showcase" element={<ShowcasePage />} />` (public, not auth-gated).
+- **SEO integration done correctly** (the `seoInvariants` test enforces robots.txt `Allow` == `ROUTES` == a real public App route): added `/showcase` to `scripts/seo-routes.mjs` **and** `public/robots.txt` Allow, so the page is prerendered with its own social meta and listed in the sitemap.
+
+**Verified:** new `frontend/src/__tests__/showcasePage.test.jsx` (5/5) — hero + the four differentiators render, the explore links point at the real SPA and backend routes, the honest roadmap actually shows (asserts the `v9.0` + `migration` lines are present — so the transparency can't silently be dropped), the live seasonal block calls `/api/seasonal/angles`, and the language toggle works. `seoInvariants` stays green (proves the robots/ROUTES/App-route triple is consistent). Full frontend suite **264/264** (was 259; +5), `npm run build` succeeds — `ShowcasePage` bundles, `/showcase/index.html` prerenders with the right title, and the sitemap grows to **23 URLs**. No backend change (the endpoints it uses were booted+curled in prior rounds).
+
 ### 2026-07-24 — Hourly loop: API surface — advertise the seasonal endpoints in the OpenAPI spec + add the first guard for the hand-maintained spec
 
 The seasonal engine (a deterministic, market-facing set of endpoints built the last few rounds) was live but **not in the OpenAPI spec** served at `/api/openapi.json` / rendered by `/api-docs` Swagger UI — so external developers and agents couldn't discover it. The spec is a hand-maintained JS object in `openapi.js` and had **no test at all**: a malformed hand-edit could ship a broken spec that breaks every SDK/agent that reads it, with nothing catching it.
