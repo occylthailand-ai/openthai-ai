@@ -46,7 +46,8 @@
     "test:video-auth": "node scripts/test-video-auth.mjs",
     "test:corporate-auth": "node scripts/test-corporate-auth.mjs",
     "test:withdraw-confirm": "node scripts/test-affiliate-withdraw-confirm.mjs",
-    "test:pdpa-tenant": "node scripts/test-pdpa-tenant-erasure.mjs"
+    "test:pdpa-tenant": "node scripts/test-pdpa-tenant-erasure.mjs",
+    "test:broadcast-unsub": "node scripts/test-broadcast-unsub-durability.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

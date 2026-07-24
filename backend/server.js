@@ -795,6 +795,17 @@ function saveBroadcastUnsub(set) {
   } catch (e) { console.error('Save broadcast-unsubscribed error:', e.message); }
 }
 const broadcastUnsubscribed = loadBroadcastUnsub();
+// Durable opt-out: the JSON file lives in /tmp on Vercel and is wiped on every redeploy, so a
+// file-only suppression list silently re-subscribes everyone who unsubscribed each time we ship
+// — a legally-required opt-out (PDPA ม.19 / anti-spam) we must not drop. On boot, pull the
+// canonical list from Supabase and merge it into memory (restoring it after a redeploy). If the
+// table doesn't exist yet (owner hasn't run migration 008), this fails quietly and we stay
+// file-only — no regression; it becomes durable the moment the migration runs.
+if (_useSB) {
+  _sbReq('GET', '/broadcast_unsubscribes', { params: { select: 'email' } })
+    .then((rows) => { if (Array.isArray(rows)) for (const r of rows) if (r?.email) broadcastUnsubscribed.add(String(r.email).toLowerCase()); })
+    .catch((e) => console.warn('[broadcast-unsub] Supabase hydrate failed, file-only:', e.message));
+}
 
 // GET /api/broadcast/unsubscribe — เหมือนกับ /api/leads/unsubscribe แต่สำหรับรายชื่อ broadcast
 // ทั่วไปกลุ่มนี้โดยเฉพาะ (reuse unsubToken() ตัวเดียวกัน แค่ต่าง type string)
@@ -805,6 +816,11 @@ app.get('/api/broadcast/unsubscribe', unsubLimiter, (req, res) => {
   if (!safeTokenEqual(token, unsubToken(e, 'broadcast'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
   broadcastUnsubscribed.add(e);
   saveBroadcastUnsub(broadcastUnsubscribed);
+  // Persist the opt-out to Supabase too, so it survives the next /tmp wipe (see boot hydrate above).
+  if (_useSB) {
+    _sbReq('POST', '/broadcast_unsubscribes', { body: { email: e }, prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch((err) => console.warn('[broadcast-unsub] Supabase upsert failed, file-only:', err.message));
+  }
   res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยกเลิกรับอีเมลข่าวสารเรียบร้อยแล้ว</div>');
 });
 

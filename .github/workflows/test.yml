@@ -107,6 +107,9 @@ jobs:
       - name: PDPA tenant erasure/access test (self-contained — data-subject rights cover the tenant account + cloud-sync blob)
         working-directory: backend
         run: npm run test:pdpa-tenant
+      - name: Broadcast opt-out durability test (self-contained — spawns server + mock Supabase; the newsletter unsubscribe list survives a /tmp wipe)
+        working-directory: backend
+        run: npm run test:broadcast-unsub
       - name: Skills smoke test (self-contained — every /api/skills endpoint returns 200 on the mock AI path)
         working-directory: backend
         run: npm run test:smoke
