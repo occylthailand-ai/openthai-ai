@@ -9,6 +9,17 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-24 — Follow-up: make /showcase discoverable — link it from the homepage footer (it existed but nothing linked to it)
+
+Closed a gap the previous round introduced: `/showcase` was built + indexable (sitemap/robots) but **no page on the site linked to it**, so a visitor on the homepage couldn't find it — only someone handed the URL directly. Added a real footer entry point.
+
+**Change (frontend):**
+- `src/i18n/index.jsx` — new `footer.link.showcase` key in all three languages (th `🎬 ทัวร์นำชม`, en `🎬 Showcase tour`, zh `🎬 项目导览`).
+- `src/pages/LandingPage.jsx` — added `[t('footer.link.showcase'), '/showcase']` as the first item in the footer "info" column (appears on the homepage footer). Uses the same real-`<a href>` link pattern the footerNav a11y fix already enforces.
+- `src/__tests__/footerNavA11y.test.jsx` — added `/showcase` to `ROUTE_TARGETS` so the link is regression-guarded (must stay a real keyboard-focusable `<a href="/showcase">`).
+
+**Verified:** `footerNavA11y` 3/3 (the new link renders as a real focusable anchor), full frontend suite **264/264**, `npm run build` succeeds (sitemap still 23 URLs — the page was already listed; this only adds the on-site link). No backend change.
+
 ### 2026-07-24 — Owner request: public /showcase tour page — "come see what we built", honestly
 
 The owner asked for a single page a fan could bring people to — one that surfaces the real highlights and makes visitors like the platform more. Built `/showcase` as a public, indexable tour, and — per the owner's explicit steer — turned the three honest caveats (pending migrations, v9.0 scaffold, small-team-+-AI) into an on-page **"ready now vs in progress"** section, so transparency is a feature rather than fine print.
