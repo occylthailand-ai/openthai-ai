@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T13:55:05.632Z · branch `claude/daily-reporter-improvements-8vc9ct` (519 commit(s) ahead of main)
+Generated: 2026-07-24T14:16:14.205Z · branch `claude/daily-reporter-improvements-8vc9ct` (521 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 729 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 731 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,17 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Follow-up: make /showcase discoverable — link it from the homepage footer (it existed but nothing linked to it)
+
+Closed a gap the previous round introduced: `/showcase` was built + indexable (sitemap/robots) but **no page on the site linked to it**, so a visitor on the homepage couldn't find it — only someone handed the URL directly. Added a real footer entry point.
+
+**Change (frontend):**
+- `src/i18n/index.jsx` — new `footer.link.showcase` key in all three languages (th `🎬 ทัวร์นำชม`, en `🎬 Showcase tour`, zh `🎬 项目导览`).
+- `src/pages/LandingPage.jsx` — added `[t('footer.link.showcase'), '/showcase']` as the first item in the footer "info" column (appears on the homepage footer). Uses the same real-`<a href>` link pattern the footerNav a11y fix already enforces.
+- `src/__tests__/footerNavA11y.test.jsx` — added `/showcase` to `ROUTE_TARGETS` so the link is regression-guarded (must stay a real keyboard-focusable `<a href="/showcase">`).
+
+**Verified:** `footerNavA11y` 3/3 (the new link renders as a real focusable anchor), full frontend suite **264/264**, `npm run build` succeeds (sitemap still 23 URLs — the page was already listed; this only adds the on-site link). No backend change.
 
 ### 2026-07-24 — Owner request: public /showcase tour page — "come see what we built", honestly
 
@@ -3865,14 +3876,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 6f61c18 feat(showcase): public /showcase tour page — "come see what we built", honestly (26 seconds ago)
-- c63f6da chore: sync PROJECT_STATUS.md [skip ci] (33 minutes ago)
-- c8d0df6 docs(openapi): advertise the seasonal endpoints + add the first guard for the spec (33 minutes ago)
-- 305254b chore: sync PROJECT_STATUS.md [skip ci] (37 minutes ago)
-- 92e3ddd feat(corporate): AI department officers — a scoped AI specialist per department (38 minutes ago)
-- 8ec5ee2 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 4df53cc feat(portals): surface the seasonal engine in every portal — value in 10 seconds (64 minutes ago)
-- 6248837 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- e189ab0 feat(showcase): make /showcase discoverable — link it from the homepage footer (22 seconds ago)
+- e462947 chore: sync PROJECT_STATUS.md [skip ci] (21 minutes ago)
+- 6f61c18 feat(showcase): public /showcase tour page — "come see what we built", honestly (22 minutes ago)
+- c63f6da chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
+- c8d0df6 docs(openapi): advertise the seasonal endpoints + add the first guard for the spec (55 minutes ago)
+- 305254b chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 92e3ddd feat(corporate): AI department officers — a scoped AI specialist per department (59 minutes ago)
+- 8ec5ee2 chore: sync PROJECT_STATUS.md [skip ci] (84 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3895,7 +3906,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.3",
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
