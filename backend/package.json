@@ -48,7 +48,8 @@
     "test:withdraw-confirm": "node scripts/test-affiliate-withdraw-confirm.mjs",
     "test:pdpa-tenant": "node scripts/test-pdpa-tenant-erasure.mjs",
     "test:broadcast-unsub": "node scripts/test-broadcast-unsub-durability.mjs",
-    "test:consent-durability": "node scripts/test-pdpa-consent-durability.mjs"
+    "test:consent-durability": "node scripts/test-pdpa-consent-durability.mjs",
+    "test:seasonal": "node scripts/test-seasonal-engine.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

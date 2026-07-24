@@ -41,6 +41,7 @@ import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
+import { recommend as seasonalRecommend, _zones as seasonalZones } from './seasonal-engine.js';
 import { createIntegrations } from './integrations.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -2034,6 +2035,19 @@ app.post('/api/analyze-image', express.json({ limit: '5mb' }), generateLimiter, 
 
   return res.status(503).json({ success: false, error: 'ต้องตั้งค่า ANTHROPIC_API_KEY หรือ GEMINI_API_KEY' });
 });
+
+// ─── GET /api/seasonal/recommend — 24 solar terms (节气) × climate zone → หมวดสินค้าที่ดีมานด์ ─────
+// เครื่องมือ "ดันสินค้าที่ใช่ ให้พื้นที่/ฤดูกาลที่ใช่" ตามวิสัยทัศน์เจ้าของ (2026-07-24): เชิงกำหนดได้
+// จากปฏิทินสุริยคติ + ฤดูกาลของเขตภูมิอากาศ — ไม่ผูกกับ LLM และไม่ scrape ข้อมูลใคร ตอบทันทีแม้ AI ล่ม
+// query: ?zone=tropical|north_temperate|south_temperate (ดีฟอลต์ tropical) &date=YYYY-MM-DD (ดีฟอลต์วันนี้)
+app.get('/api/seasonal/recommend', (req, res) => {
+  const zone = String(req.query.zone || 'tropical');
+  const date = req.query.date ? new Date(String(req.query.date)) : new Date();
+  const data = seasonalRecommend({ date: isNaN(date.getTime()) ? new Date() : date, zone });
+  res.json({ success: true, ...data });
+});
+// GET /api/seasonal/zones — รายชื่อเขตภูมิอากาศที่รองรับ (ให้ frontend/skill รู้ตัวเลือก)
+app.get('/api/seasonal/zones', (req, res) => res.json({ success: true, zones: seasonalZones }));
 
 // ─── GET /api/trending — Trending Thai hashtags (cached 30 min) ───────────────
 const trendCache = { data: null, ts: 0 };
