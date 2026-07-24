@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T13:22:01.288Z · branch `claude/daily-reporter-improvements-8vc9ct` (517 commit(s) ahead of main)
+Generated: 2026-07-24T13:55:05.632Z · branch `claude/daily-reporter-improvements-8vc9ct` (519 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 727 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 729 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,17 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Owner request: public /showcase tour page — "come see what we built", honestly
+
+The owner asked for a single page a fan could bring people to — one that surfaces the real highlights and makes visitors like the platform more. Built `/showcase` as a public, indexable tour, and — per the owner's explicit steer — turned the three honest caveats (pending migrations, v9.0 scaffold, small-team-+-AI) into an on-page **"ready now vs in progress"** section, so transparency is a feature rather than fine print.
+
+**Change (frontend):**
+- `frontend/src/pages/ShowcasePage.jsx` — th/en/zh. Hero → a **live** seasonal highlight (reuses `SeasonalAnglesPanel`, fetches `/api/seasonal/angles`) → four trust differentiators (consent-first / no-scraping / works-without-LLM / transparent decision log) → an "explore" grid linking to real routes (SPA `<Link>` to `/portals`, `/privacy`; real `<a>` to the backend-served `/tool`, `/api-docs`) → the honest ready/in-progress roadmap → a CTA to `/portals`. Every link points at a real, working route/endpoint; nothing invented.
+- `App.jsx` — lazy import + `<Route path="/showcase" element={<ShowcasePage />} />` (public, not auth-gated).
+- **SEO integration done correctly** (the `seoInvariants` test enforces robots.txt `Allow` == `ROUTES` == a real public App route): added `/showcase` to `scripts/seo-routes.mjs` **and** `public/robots.txt` Allow, so the page is prerendered with its own social meta and listed in the sitemap.
+
+**Verified:** new `frontend/src/__tests__/showcasePage.test.jsx` (5/5) — hero + the four differentiators render, the explore links point at the real SPA and backend routes, the honest roadmap actually shows (asserts the `v9.0` + `migration` lines are present — so the transparency can't silently be dropped), the live seasonal block calls `/api/seasonal/angles`, and the language toggle works. `seoInvariants` stays green (proves the robots/ROUTES/App-route triple is consistent). Full frontend suite **264/264** (was 259; +5), `npm run build` succeeds — `ShowcasePage` bundles, `/showcase/index.html` prerenders with the right title, and the sitemap grows to **23 URLs**. No backend change (the endpoints it uses were booted+curled in prior rounds).
 
 ### 2026-07-24 — Hourly loop: API surface — advertise the seasonal endpoints in the OpenAPI spec + add the first guard for the hand-maintained spec
 
@@ -3848,20 +3859,20 @@ the backend.
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 84 route components resolved
+- ✅ **Route components exist on disk** — all 85 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- c8d0df6 docs(openapi): advertise the seasonal endpoints + add the first guard for the spec (24 seconds ago)
-- 305254b chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- 92e3ddd feat(corporate): AI department officers — a scoped AI specialist per department (5 minutes ago)
-- 8ec5ee2 chore: sync PROJECT_STATUS.md [skip ci] (30 minutes ago)
-- 4df53cc feat(portals): surface the seasonal engine in every portal — value in 10 seconds (31 minutes ago)
-- 6248837 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- 1661edc feat(seasonal): brick 2 — trend-direction overlay -> concrete product angles (62 minutes ago)
-- 94897c4 chore: sync PROJECT_STATUS.md [skip ci] (69 minutes ago)
+- 6f61c18 feat(showcase): public /showcase tour page — "come see what we built", honestly (26 seconds ago)
+- c63f6da chore: sync PROJECT_STATUS.md [skip ci] (33 minutes ago)
+- c8d0df6 docs(openapi): advertise the seasonal endpoints + add the first guard for the spec (33 minutes ago)
+- 305254b chore: sync PROJECT_STATUS.md [skip ci] (37 minutes ago)
+- 92e3ddd feat(corporate): AI department officers — a scoped AI specialist per department (38 minutes ago)
+- 8ec5ee2 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- 4df53cc feat(portals): surface the seasonal engine in every portal — value in 10 seconds (64 minutes ago)
+- 6248837 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3884,7 +3895,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.2",
+  "memory_mb": "19.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3942,7 +3953,7 @@ the backend.
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (84 routes)
+## Route map (85 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -3986,6 +3997,7 @@ the backend.
 | /affiliate | AffiliatePage | public |
 | /affiliate/dashboard | AffiliateDashboard | public |
 | /privacy | PrivacyPage | public |
+| /showcase | ShowcasePage | public |
 | /about | AboutPage | public |
 | /terms | TermsPage | public |
 | /contact | ContactPage | public |
