@@ -104,6 +104,9 @@ jobs:
       - name: Affiliate withdraw-confirm test (self-contained — HMAC gate + GET bot-safe + POST idempotent)
         working-directory: backend
         run: npm run test:withdraw-confirm
+      - name: Skills smoke test (self-contained — every /api/skills endpoint returns 200 on the mock AI path)
+        working-directory: backend
+        run: npm run test:smoke
       - name: Boot + health smoke test
         working-directory: backend
         run: |
