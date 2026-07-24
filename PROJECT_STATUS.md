@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T10:17:31.525Z · branch `claude/daily-reporter-improvements-8vc9ct` (505 commit(s) ahead of main)
+Generated: 2026-07-24T11:16:49.976Z · branch `claude/daily-reporter-improvements-8vc9ct` (507 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 715 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 717 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Hourly loop: PDPA — the proof-of-consent record (GAP-001) was file-only (wiped every Vercel redeploy → all consent proof lost); made it durable
+
+Continued the ephemeral-`/tmp` durability sweep onto the store that matters most for the platform's stated PDPA posture. `POST /api/privacy/consent` writes the record that **proves** a user consented (email, ip, purposes, version, ts) — and `/api/privacy/policy` publicly advertises "GAP-001: บันทึก consent record ✅" while both `/api/privacy/access` and `performErasure()` read it — **but it was stored file-only in `pdpa_consents.json`.** On Vercel that's `/tmp`, wiped on every redeploy (which happens on every push), so after any deploy **every recorded consent is gone** and the platform can no longer prove anyone consented — the exact thing GAP-001 exists to guarantee. Same class as the broadcast-opt-out / affiliate-consent rounds; this is the foundational consent record, so worth closing next. (The affiliate/producer/portal funnels store their own consent flag durably in their Supabase rows already; this is the separate general-purpose consent-log store, which had no Supabase copy.)
+
+**Change (dual-mode + graceful degradation, identical shape to the broadcast round):**
+- New migration `009_pdpa_consents.sql` — `create table if not exists public.pdpa_consents (email pk, id, ip, purposes jsonb, version, consented, ts)`, idempotent, RLS enabled; email PK matches the code's existing upsert-by-email ("latest consent per email").
+- `server.js` — on boot, if Supabase is configured, hydrate the in-memory `consents` list from `pdpa_consents` (restores it after a `/tmp` wipe). On `POST /api/privacy/consent`, upsert the record to Supabase in addition to the file. In `performErasure()`, when a consent row is removed, also DELETE it from Supabase (so erasure clears the durable copy, not just the file). If the table doesn't exist yet (owner hasn't run 009), all three fail quietly and it stays file-only — **no regression**; durable the moment 009 runs.
+
+**Verified + mutation-tested + booted:** new self-contained test `scripts/test-pdpa-consent-durability.mjs` (9/9) — spins up a **mock Supabase** + the real server (known `JWT_SECRET` for the access/erasure HMAC). Pre-seeds a consent that exists **only** in Supabase while the local file starts empty, so it can only appear via the boot hydrate = proof it survives the `/tmp` wipe (read back through `/api/privacy/access`). Asserts: the prior consent is restored on boot; a fresh `POST /api/privacy/consent` issues a Supabase upsert and is then readable via access; and erasure-confirm DELETEs the row from Supabase. **Mutation:** disabling the hydrate → the "restored" assertion fails (0 rows); disabling the upsert → the "POSTed to Supabase" assertion fails; disabling the erasure DELETE → the "DELETEd from Supabase" assertion fails; restored to green each time. Confirmed `test:pdpa-tenant` still 16/16 (the shared access/erasure paths still work in file mode), `node --check` clean, `data/*.json` no git diff after. Wired `test:consent-durability` into `package.json` + a self-contained CI step in `test.yml` (mirrors the broadcast + ai-usage "spawns server + mock Supabase" steps). NOTE unchanged: owner should run `009` so consent proof is durable in production; until then the fallback keeps today's file-only behavior.
 
 ### 2026-07-24 — Hourly loop: opt-out durability — the newsletter-broadcast unsubscribe list was file-only (wiped every Vercel redeploy → re-subscribes everyone who opted out); made it durable
 
@@ -3785,17 +3795,17 @@ the backend.
 - ✅ **Route components exist on disk** — all 84 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
-- ℹ️ **9 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql
+- ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 26eb80d fix(broadcast): make the newsletter opt-out list durable (was file-only, wiped every redeploy) (23 seconds ago)
-- 8b186bf chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
-- f36cec1 feat(pdpa): erasure + access now cover the tenant account and cloud-sync stores (56 minutes ago)
-- a38aad7 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 90d1c66 test(revenue): un-rot the revenue-system E2E and wire it into CI (2 hours ago)
-- ce739d6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 3234e6d ci: wire the skills smoke test (all 35 /api/skills endpoints) into CI (3 hours ago)
-- ab34a6b chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 2f8f5dd fix(pdpa): make the proof-of-consent record durable (was file-only, wiped every redeploy) (24 seconds ago)
+- a0994b4 chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 26eb80d fix(broadcast): make the newsletter opt-out list durable (was file-only, wiped every redeploy) (60 minutes ago)
+- 8b186bf chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- f36cec1 feat(pdpa): erasure + access now cover the tenant account and cloud-sync stores (2 hours ago)
+- a38aad7 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 90d1c66 test(revenue): un-rot the revenue-system E2E and wire it into CI (3 hours ago)
+- ce739d6 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3818,7 +3828,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.7",
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3991,7 +4001,7 @@ the backend.
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 9024 | Vercel serverless detection |
+| `server.js` | 9043 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
@@ -4047,6 +4057,7 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 006_order_disputes.sql
 - 007_portal_leads.sql
 - 008_broadcast_unsubscribes.sql
+- 009_pdpa_consents.sql
 - FULL-MIGRATION.sql
 - credits-schema.sql
 - orders-schema.sql
