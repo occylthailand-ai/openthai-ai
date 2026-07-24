@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T12:20:21.520Z · branch `claude/daily-reporter-improvements-8vc9ct` (511 commit(s) ahead of main)
+Generated: 2026-07-24T12:51:49.529Z · branch `claude/daily-reporter-improvements-8vc9ct` (513 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 721 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 723 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Owner request (cont.): surface the seasonal engine in the portals — "first encounter → real value in 10 seconds"
+
+After a stakeholder-POV reflection exercise, the owner approved wiring the (already-built, already-tested) seasonal engine into the front end so a first-time visitor from any of the four groups *sees* the value immediately instead of it living only behind an API. Built a reusable value panel and embedded it in each `/portals/*` page.
+
+**Change (frontend only):**
+- `frontend/src/pages/portals/SeasonalAnglesPanel.jsx` — a React panel that fetches `GET /api/seasonal/angles?zone=tropical` (the Thai/ASEAN audience these portals serve) and shows, for THIS group: the current solar term (节气) + local season, the group-specific **play** (`group_plays[group]`), and up to 6 product **angles** (trend tag + angle + why). Localized labels for th/en/zh (the angle text itself is Thai — the backend produces Thai; a later round can localize it). **Purely additive:** on any error/empty response it renders `null`, so it can never break the portal page it sits in.
+- Embedded it in `ProducerPortalPage` (`group="producer"`), `ConsumerPortalPage` (`consumer`), `MiddlemanPortalPage` (`middleman`), `AffiliatePortalPage` (`affiliate`) — right under each hero.
+
+**Verified:** new `frontend/src/__tests__/seasonalAnglesPanel.test.jsx` (5/5) mocks fetch with the **real** `/api/seasonal/angles` payload shape and asserts: it renders the season + the **group-specific** play (affiliate vs consumer pick different plays) + the angles/trend tags; it calls the endpoint with the given `zone`; and — the safety invariant — it renders **nothing** when the API returns no angles OR when fetch throws (never crashes the page). Full frontend suite **259/259** (was 254; +5) and `npm run build` succeeds (prerender + sitemap intact). The `/api/seasonal/angles` endpoint itself was already booted+curled last round; the component test drives its exact shape. No backend change.
 
 ### 2026-07-24 — Owner request (cont.): seasonal engine brick 2 — trend-direction overlay → concrete product angles
 
@@ -3822,14 +3832,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 1661edc feat(seasonal): brick 2 — trend-direction overlay -> concrete product angles (29 seconds ago)
-- 94897c4 chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
-- ca4c4fe feat(seasonal): 24 solar terms (jieqi) x climate zone -> product-category demand engine (9 minutes ago)
-- d6b50f5 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 2f8f5dd fix(pdpa): make the proof-of-consent record durable (was file-only, wiped every redeploy) (64 minutes ago)
-- a0994b4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 26eb80d fix(broadcast): make the newsletter opt-out list durable (was file-only, wiped every redeploy) (2 hours ago)
-- 8b186bf chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 4df53cc feat(portals): surface the seasonal engine in every portal — value in 10 seconds (26 seconds ago)
+- 6248837 chore: sync PROJECT_STATUS.md [skip ci] (31 minutes ago)
+- 1661edc feat(seasonal): brick 2 — trend-direction overlay -> concrete product angles (32 minutes ago)
+- 94897c4 chore: sync PROJECT_STATUS.md [skip ci] (39 minutes ago)
+- ca4c4fe feat(seasonal): 24 solar terms (jieqi) x climate zone -> product-category demand engine (40 minutes ago)
+- d6b50f5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 2f8f5dd fix(pdpa): make the proof-of-consent record durable (was file-only, wiped every redeploy) (2 hours ago)
+- a0994b4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3851,8 +3861,8 @@ the backend.
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
+  "uptime_sec": 207,
+  "memory_mb": "19.4",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
