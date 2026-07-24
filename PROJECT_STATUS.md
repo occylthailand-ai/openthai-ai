@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T07:20:02.361Z · branch `claude/daily-reporter-improvements-8vc9ct` (499 commit(s) ahead of main)
+Generated: 2026-07-24T08:14:23.029Z · branch `claude/daily-reporter-improvements-8vc9ct` (500 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 709 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 583 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,15 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Hourly loop: CI coverage — un-rotted the revenue-system E2E and wired it in (the dedicated rewrite flagged last round)
+
+Last round found `test-revenue-system.mjs` (the broad money/revenue E2E — captions, model-router, council, affiliate attribution/tiers, leaderboard, scheduler, webhook-signature) was stale against two post-write flow changes and therefore unwired. Did the rewrite this round:
+
+- **Consent drift:** its affiliate signup omitted `consent`, which `registerAffiliateCore` now hard-requires (a 400 otherwise) — added `consent: true`.
+- **Withdraw-flow drift:** its Withdrawals section asserted the **old synchronous** withdraw (`POST /api/affiliate/withdraw` → `data.withdrawal.id`, then admin approve/paid). The flow is now email-confirm-first (the route emails an HMAC link, returns only `pending_balance`, and **503s without a configured mailer** — CI has no SMTP), so those assertions can't run green. Removed them and kept only the two guards that don't need a mailer: the request route validates the PromptPay number **before** the mailer check (a bad number is a clean 400 even with no SMTP), and the admin list route is key-gated (no key → 401). No coverage lost: the full request→email→confirm→approve/paid money-out path is already guarded end-to-end by `test-affiliate-withdraw-confirm.mjs` (added earlier this session), so this de-duplicates rather than drops.
+
+**Verified + wired:** booted the real server (`OMISE_WEBHOOK_SECRET`/`ADMIN_KEY`, mock AI, no Supabase) and ran the whole E2E — **23/23 pass**, including the previously-unverified Scheduler and Webhook-signature-guard sections. Re-ran with the **exact CI invocation** (`ADMIN_KEY=ci-admin DISABLE_RATE_LIMIT=1`, boot→curl-health→run→exit) → 23/23, exit 0. Added a boot-server E2E step to `test.yml` mirroring the affiliate-flow step (own port 8896, dumps `rev-server.log` on failure). Confirmed the three `data/*.json` show no git diff after the run. This closes the last CI coverage gap on the revenue surface and clears the stale-test debt flagged in the previous entry — every `test:*` script is now either run by CI or (only `test:revenue` was the holdout) intentionally accounted for.
 
 ### 2026-07-24 — Hourly loop: CI coverage — the skills smoke test (all 35 /api/skills endpoints) existed but was never wired into CI; wired it. Full suite verified green.
 
@@ -3754,54 +3763,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 3234e6d ci: wire the skills smoke test (all 35 /api/skills endpoints) into CI (22 seconds ago)
-- ab34a6b chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 98decff test(seo): guard the hand-maintained homepage JSON-LD @graph (brand entity, copied to every page) (61 minutes ago)
-- 46fd3c1 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 285b9b2 test(withdraw): add self-boot regression guard for the affiliate withdraw-confirm money-out flow (2 hours ago)
-- 1118f6f chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 869f622 fix(persist): retry Supabase write without the missing column so pending-migration records aren't lost (4 hours ago)
-- ff580fb chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- ce739d6 chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
+- 3234e6d ci: wire the skills smoke test (all 35 /api/skills endpoints) into CI (55 minutes ago)
+- ab34a6b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 98decff test(seo): guard the hand-maintained homepage JSON-LD @graph (brand entity, copied to every page) (2 hours ago)
+- 46fd3c1 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 285b9b2 test(withdraw): add self-boot regression guard for the affiliate withdraw-confirm money-out flow (3 hours ago)
+- 1118f6f chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 869f622 fix(persist): retry Supabase write without the missing column so pending-migration records aren't lost (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

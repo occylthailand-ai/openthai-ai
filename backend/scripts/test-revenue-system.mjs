@@ -48,7 +48,7 @@ ok(r.data?.success && r.data.voices?.length === 3 && r.data.synthesis, 'council:
 ok((await j('POST', '/api/council', {})).status === 400, 'ไม่มี topic → 400');
 
 console.log('\n=== Affiliate + Sales/Clicks by Source + Tier ===');
-ok((await j('POST', '/api/affiliate/apply', { name: 'E2E Tester', email: `${REF}@t.com`, ref_code: REF })).data?.success, `สมัคร ${REF}`);
+ok((await j('POST', '/api/affiliate/apply', { name: 'E2E Tester', email: `${REF}@t.com`, ref_code: REF, consent: true })).data?.success, `สมัคร ${REF}`);
 await j('POST', '/api/affiliate/click', { ref: REF, source: 'tiktok' });
 await j('POST', '/api/affiliate/click', { ref: REF, source: 'facebook' });
 r = await j('POST', '/api/track/link', { url: 'openthai-ai.com/pay', source: 'TikTok!!', campaign: 'x', ref: REF });
@@ -69,13 +69,15 @@ console.log('\n=== Leaderboard ===');
 r = await j('GET', '/api/affiliate/leaderboard');
 ok(r.data?.success && r.data.leaderboard.some(x => x.total_sales >= 10), 'leaderboard มีรายการ + จัดอันดับ');
 
-console.log('\n=== Withdrawals ===');
-ok((await j('POST', '/api/affiliate/withdraw', { ref_code: REF, promptpay: '123' })).status === 400, 'พร้อมเพย์ผิด → 400');
-r = await j('POST', '/api/affiliate/withdraw', { ref_code: REF, promptpay: '0812345678' });
-ok(r.data?.success && r.data.pending_balance === 0, 'ขอถอน → จองยอด, pending=0');
-const wid = r.data.withdrawal.id;
-ok((await j('POST', '/api/affiliate/withdrawals/admin/' + wid, { action: 'approve' }, { 'x-admin-key': ADMIN })).data?.withdrawal.status === 'approved', 'admin approve');
-ok((await j('POST', '/api/affiliate/withdrawals/admin/' + wid, { action: 'paid' }, { 'x-admin-key': ADMIN })).data?.withdrawal.status === 'paid', 'admin paid');
+console.log('\n=== Withdrawals (guards that run without SMTP) ===');
+// The full request→email→confirm→admin-approve/paid money-out flow is covered end-to-end by
+// scripts/test-affiliate-withdraw-confirm.mjs (HMAC gate + GET bot-safety + POST idempotency).
+// Here we only assert the two guards that don't require a configured mailer: the request route
+// validates the PromptPay number BEFORE the mailer check (so a bad number is a clean 400 even
+// with no SMTP), and the admin list route is key-gated. The old synchronous-withdraw assertions
+// were removed — they tested a flow that no longer exists (withdraw now emails a confirm link and
+// returns only pending_balance; it 503s without SMTP, which CI has none of).
+ok((await j('POST', '/api/affiliate/withdraw', { ref_code: REF, promptpay: '123' })).status === 400, 'พร้อมเพย์ผิด → 400 (ตรวจก่อนส่งอีเมล)');
 ok((await j('GET', '/api/affiliate/withdrawals/admin')).status === 401, 'admin ไม่มี key → 401');
 
 console.log('\n=== Scheduler ===');

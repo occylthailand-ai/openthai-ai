@@ -9,6 +9,15 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-24 — Hourly loop: CI coverage — un-rotted the revenue-system E2E and wired it in (the dedicated rewrite flagged last round)
+
+Last round found `test-revenue-system.mjs` (the broad money/revenue E2E — captions, model-router, council, affiliate attribution/tiers, leaderboard, scheduler, webhook-signature) was stale against two post-write flow changes and therefore unwired. Did the rewrite this round:
+
+- **Consent drift:** its affiliate signup omitted `consent`, which `registerAffiliateCore` now hard-requires (a 400 otherwise) — added `consent: true`.
+- **Withdraw-flow drift:** its Withdrawals section asserted the **old synchronous** withdraw (`POST /api/affiliate/withdraw` → `data.withdrawal.id`, then admin approve/paid). The flow is now email-confirm-first (the route emails an HMAC link, returns only `pending_balance`, and **503s without a configured mailer** — CI has no SMTP), so those assertions can't run green. Removed them and kept only the two guards that don't need a mailer: the request route validates the PromptPay number **before** the mailer check (a bad number is a clean 400 even with no SMTP), and the admin list route is key-gated (no key → 401). No coverage lost: the full request→email→confirm→approve/paid money-out path is already guarded end-to-end by `test-affiliate-withdraw-confirm.mjs` (added earlier this session), so this de-duplicates rather than drops.
+
+**Verified + wired:** booted the real server (`OMISE_WEBHOOK_SECRET`/`ADMIN_KEY`, mock AI, no Supabase) and ran the whole E2E — **23/23 pass**, including the previously-unverified Scheduler and Webhook-signature-guard sections. Re-ran with the **exact CI invocation** (`ADMIN_KEY=ci-admin DISABLE_RATE_LIMIT=1`, boot→curl-health→run→exit) → 23/23, exit 0. Added a boot-server E2E step to `test.yml` mirroring the affiliate-flow step (own port 8896, dumps `rev-server.log` on failure). Confirmed the three `data/*.json` show no git diff after the run. This closes the last CI coverage gap on the revenue surface and clears the stale-test debt flagged in the previous entry — every `test:*` script is now either run by CI or (only `test:revenue` was the holdout) intentionally accounted for.
+
 ### 2026-07-24 — Hourly loop: CI coverage — the skills smoke test (all 35 /api/skills endpoints) existed but was never wired into CI; wired it. Full suite verified green.
 
 Ran the whole accumulated suite to confirm this session's many additions are coherent: **backend 12/12 no-server unit tests + 5/5 self-boot tests pass; frontend 254/254 (23 files) pass.** Then cross-checked every `test:*` script in `backend/package.json` (38 of them) against `.github/workflows/test.yml`. Three weren't invoked by `npm run`: `test:shop-commission` (a false positive — CI runs it by direct path in the E2E money-guard step), and genuinely-unwired `test:smoke` and `test:revenue`.
