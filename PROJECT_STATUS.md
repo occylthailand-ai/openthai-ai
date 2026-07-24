@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T13:17:42.161Z · branch `claude/daily-reporter-improvements-8vc9ct` (515 commit(s) ahead of main)
+Generated: 2026-07-24T13:22:01.288Z · branch `claude/daily-reporter-improvements-8vc9ct` (517 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 725 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 727 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Hourly loop: API surface — advertise the seasonal endpoints in the OpenAPI spec + add the first guard for the hand-maintained spec
+
+The seasonal engine (a deterministic, market-facing set of endpoints built the last few rounds) was live but **not in the OpenAPI spec** served at `/api/openapi.json` / rendered by `/api-docs` Swagger UI — so external developers and agents couldn't discover it. The spec is a hand-maintained JS object in `openapi.js` and had **no test at all**: a malformed hand-edit could ship a broken spec that breaks every SDK/agent that reads it, with nothing catching it.
+
+**Change:**
+- `openapi.js` — added `GET /api/seasonal/recommend`, `/api/seasonal/angles`, `/api/seasonal/zones` with accurate parameters (zone/date) + response schemas, tagged `Seasonal`, descriptions stating they are **deterministic** (honest — no scraped/LLM claim). Left the `/api/corporate/officer*` routes OUT — those are auth-gated internal corporate endpoints, not part of the public developer API. (29 paths total now.)
+- Added `scripts/test-openapi-spec.mjs` (`test:openapi`, no-server) that guards the whole spec: openapi 3.x + info.title present, the spec serializes to JSON without throwing, every path is rooted, **every operation has a summary + at least one response** (catches a malformed hand-edit anywhere in the spec), and the three seasonal endpoints are advertised with the documented `zone` param.
+
+**Verified + booted:** `npm run test:openapi` → **12/12**. Then **booted the real server** and curled `GET /api/openapi.json` → 29 served paths, all three seasonal endpoints present in the live spec. `node --check` clean on `openapi.js`, `data/*.json` no git diff after. Wired `test:openapi` into the no-server CI block. Same source-structural drift-guard family as the homepage JSON-LD guard.
 
 ### 2026-07-24 — Owner request: AI department officers — a scoped AI specialist per corporate department (temporary team until real hires)
 
@@ -3844,14 +3854,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 92e3ddd feat(corporate): AI department officers — a scoped AI specialist per department (20 seconds ago)
-- 8ec5ee2 chore: sync PROJECT_STATUS.md [skip ci] (26 minutes ago)
-- 4df53cc feat(portals): surface the seasonal engine in every portal — value in 10 seconds (26 minutes ago)
-- 6248837 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- 1661edc feat(seasonal): brick 2 — trend-direction overlay -> concrete product angles (58 minutes ago)
-- 94897c4 chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
-- ca4c4fe feat(seasonal): 24 solar terms (jieqi) x climate zone -> product-category demand engine (66 minutes ago)
-- d6b50f5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- c8d0df6 docs(openapi): advertise the seasonal endpoints + add the first guard for the spec (24 seconds ago)
+- 305254b chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- 92e3ddd feat(corporate): AI department officers — a scoped AI specialist per department (5 minutes ago)
+- 8ec5ee2 chore: sync PROJECT_STATUS.md [skip ci] (30 minutes ago)
+- 4df53cc feat(portals): surface the seasonal engine in every portal — value in 10 seconds (31 minutes ago)
+- 6248837 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 1661edc feat(seasonal): brick 2 — trend-direction overlay -> concrete product angles (62 minutes ago)
+- 94897c4 chore: sync PROJECT_STATUS.md [skip ci] (69 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -4038,7 +4048,7 @@ the backend.
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 264 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 182 | PromptPay QR · Credit Card · Subscription Billing |
-| `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
+| `openapi.js` | 763 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |
 | `orders.js` | 203 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 160 | Portal Leads — captures submissions from the /portals/* landing pages |
