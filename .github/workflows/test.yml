@@ -73,6 +73,7 @@ jobs:
           npm run test:tenant-login
           npm run test:mcp-batch
           npm run test:progress-kpi
+          npm run test:portal-leads-schema
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage

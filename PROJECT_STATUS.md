@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-23T23:21:47.705Z · branch `claude/daily-reporter-improvements-8vc9ct` (485 commit(s) ahead of main)
+Generated: 2026-07-24T00:17:37.137Z · branch `claude/daily-reporter-improvements-8vc9ct` (486 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 695 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 569 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Hourly loop: BUG — portal_leads Supabase migration was missing `consent` + `unsubscribed` → every lead silently failed the Supabase write (PDPA) 🔴
+
+Found auditing the consent-funnel end-to-end (the /portals/* → `submitLead` → `POST /api/leads/submit` → `portal-leads.js` → Supabase path). **Verified against the code:** `submit()` builds a record that includes `consent: true` (portal-leads.js:86) and `unsubscribe()` PATCHes `unsubscribed: true`; `sendConsumerDigest()` (server.js:1298) filters `!l.unsubscribed` before emailing. But `migrations/007_portal_leads.sql` created the table with only `id / type / lang / name / email / form_data / created_at` — **neither `consent` nor `unsubscribed` was ever a column.** PostgREST rejects any write that names a column not in its schema cache (PGRST204 / HTTP 400) — it does **not** silently drop the extra key. So on a Supabase-configured instance (production), the consent hardening that added `consent:true` to the record turned **every** `persist()` into a 400 → caught → fell back to the **ephemeral file store** (`/tmp` on Vercel, wiped on every redeploy) → portal leads silently lost. And `unsubscribe()`'s PATCH hit the same 400 → caught → fell through to the file loop, which matches nothing (the rows live in Supabase) → the user is shown "✅ ยกเลิกแล้ว" while the row is never marked → the weekly consumer digest keeps emailing someone who opted out (a real PDPA violation, not just data loss). This is the most impactful of the recent finds because it silently defeats the persistence + PDPA-unsubscribe the earlier consent work was built to guarantee.
+
+**Fix:** add both columns to the migration as **idempotent** alters — `alter table public.portal_leads add column if not exists consent boolean not null default false;` and the same for `unsubscribed` — so the schema matches exactly what the code writes/filters, and re-running the migration is safe. (Also refreshed the `type` comment to include the `consumer`/`middleman` portals added since.) SQL-only change; no code change needed — the code was already correct, the schema had drifted behind it. **Note:** a migration file in the repo does not mean it has been run against the live Supabase project (per `PROJECT_STATUS.md`) — the owner still needs to run this `alter` in the Supabase SQL editor for the production table; the file + test guarantee code and schema now agree.
+
+**Verified + mutation-tested:** new deterministic `scripts/test-portal-leads-schema.mjs` (no server, no DB) parses the migration's declared columns (create-table body + `add column` alters) and asserts every column the backend depends on is present — `consent` / `unsubscribed` included — plus that both were added as idempotent alters. **11/11** via `npm run test:portal-leads-schema`. **Mutation:** removing the two `add column` lines makes the four consent/unsubscribed assertions fail; restored to green. Wired into the no-server unit block in `package.json` + `test.yml`. Same source-structural drift-guard approach as `seoInvariants` / `portalCategories` / `portalConsent`. Also re-audited this round with **no change needed**: `pr-communications.js` (pure JSON getters/setters, hardcoded filenames — no path injection), the 9 `/portals/*` pages (all send `consent` in the `submitLead` body, gate submit on `!consent` — already guarded by `portalConsent.test.js`), `submitLead.js` (honest 4xx/5xx handling), the consumer-digest category matching (aligned across FE/BE, guarded by `portalCategories.test.js`), and the unsubscribe HMAC token flow (email is lowercased at storage so sign/verify agree).
 
 ### 2026-07-23 — Hourly loop: BUG — progress-tracker `updateManualKpi` guard was dead code → 500 + hung request on an unknown KPI key
 
@@ -3690,54 +3698,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- e6e5ecc fix(progress): repair dead-code guard in updateManualKpi (unknown KPI key threw) (22 seconds ago)
-- 1c0e1bb chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
-- 14713e0 security(corporate): require login to READ corporate data (was public) (7 minutes ago)
-- d54432b chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
-- b238100 security(video): require login for /api/video/generate; fix mock-provider 500 (65 minutes ago)
-- 924334c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 740433d security(integrations): require admin key for publish/test/canva-export (2 hours ago)
-- 6cf2f36 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 723323c chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
+- e6e5ecc fix(progress): repair dead-code guard in updateManualKpi (unknown KPI key threw) (56 minutes ago)
+- 1c0e1bb chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 14713e0 security(corporate): require login to READ corporate data (was public) (62 minutes ago)
+- d54432b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- b238100 security(video): require login for /api/video/generate; fix mock-provider 500 (2 hours ago)
+- 924334c chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 740433d security(integrations): require admin key for publish/test/canva-export (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.0",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
