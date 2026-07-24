@@ -9,6 +9,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { missingColumnFrom, stripColumn } from './sb-column-fallback.js';
 
 // ประเภท portal ที่รู้จัก — ยังรับ type อื่นได้ (กันเคส portal ใหม่ในอนาคตที่ลืมเพิ่มที่นี่)
 // แต่ log แจ้งเตือนถ้าเจอ type ที่ไม่รู้จัก
@@ -41,8 +42,19 @@ export function createPortalLeads(dataDir, opts = {}) {
 
   async function persist(rec) {
     if (useSB) {
-      try { await sbReq('POST', '/portal_leads', { body: [rec], params: { on_conflict: 'id' }, prefer: 'resolution=merge-duplicates,return=minimal' }); return; }
-      catch (e) { console.warn('[portal-leads] Supabase write failed, using file:', e.message); }
+      const opts = { params: { on_conflict: 'id' }, prefer: 'resolution=merge-duplicates,return=minimal' };
+      try { await sbReq('POST', '/portal_leads', { body: [rec], ...opts }); return; }
+      catch (e) {
+        // If the live table predates a column the record carries (a migration the owner
+        // hasn't run — e.g. consent/unsubscribed), retry once without it so the lead still
+        // persists durably to Supabase instead of only the ephemeral file store.
+        const col = missingColumnFrom(e.message);
+        const stripped = col && stripColumn([rec], col);
+        if (stripped) {
+          try { await sbReq('POST', '/portal_leads', { body: stripped, ...opts }); return; }
+          catch (e2) { console.warn(`[portal-leads] Supabase write failed after dropping "${col}", using file:`, e2.message); }
+        } else { console.warn('[portal-leads] Supabase write failed, using file:', e.message); }
+      }
     }
     store[rec.id] = rec; saveFile();
   }

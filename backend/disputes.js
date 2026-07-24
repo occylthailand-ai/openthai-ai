@@ -7,6 +7,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { missingColumnFrom, stripColumn } from './sb-column-fallback.js';
 
 const DISPUTE_STATUS = ['open', 'ai_reviewed', 'resolved_supplier', 'resolved_buyer', 'refunded'];
 // NB: no 'split' — the escrow model has no partial-amount field, so a 50/50 split
@@ -65,8 +66,19 @@ export function createDisputes(dataDir, opts = {}) {
 
   async function persist(rec) {
     if (useSB) {
-      try { await sbReq('POST', '/order_disputes', { body: [rec], params: { on_conflict: 'id' }, prefer: 'resolution=merge-duplicates,return=minimal' }); return; }
-      catch (e) { console.warn('[disputes] Supabase write failed, using file:', e.message); }
+      const opts = { params: { on_conflict: 'id' }, prefer: 'resolution=merge-duplicates,return=minimal' };
+      try { await sbReq('POST', '/order_disputes', { body: [rec], ...opts }); return; }
+      catch (e) {
+        // If the live table predates a column the record carries (e.g. counter_response —
+        // a migration the owner hasn't run), retry once without it so the dispute (which
+        // gates escrow) still persists durably to Supabase instead of only the file store.
+        const col = missingColumnFrom(e.message);
+        const stripped = col && stripColumn([rec], col);
+        if (stripped) {
+          try { await sbReq('POST', '/order_disputes', { body: stripped, ...opts }); return; }
+          catch (e2) { console.warn(`[disputes] Supabase write failed after dropping "${col}", using file:`, e2.message); }
+        } else { console.warn('[disputes] Supabase write failed, using file:', e.message); }
+      }
     }
     store[rec.id] = rec; saveFile();
   }

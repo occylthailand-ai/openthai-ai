@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T02:17:31.532Z · branch `claude/daily-reporter-improvements-8vc9ct` (491 commit(s) ahead of main)
+Generated: 2026-07-24T03:16:40.946Z · branch `claude/daily-reporter-improvements-8vc9ct` (492 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 701 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 575 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Hourly loop: resilience — generalize the affiliate "retry without the missing column" so the portal_leads / producers / disputes migration fixes stop losing records in production BEFORE the owner runs the alters
+
+The last three rounds added columns (`portal_leads.consent`/`unsubscribed`, `producers.consent`, `order_disputes.counter_response`) that the code already writes but the live Supabase tables lack. Those SQL changes only help **once the owner runs the alter by hand** — and until then the writes still fail PostgREST's PGRST204 (unknown column) and fall back to the **ephemeral file store** (`/tmp` on Vercel, wiped on redeploy), i.e. the records are still being lost in production right now. Only the affiliate path (previous round) had the graceful "strip the column and retry" fallback, so only it was actually safe pre-migration. This round generalizes that fallback to the other three dual-mode writers so they persist durably to Supabase **immediately**, without waiting on the manual migration.
+
+**Also completed the audit of the two remaining direct Supabase writers** (`ai_usage_log`, `user_sync` in server.js) — both write only columns their migrations declare, so no drift. Combined with earlier rounds, **every** dual-mode / direct Supabase writer in the repo is now accounted for: fixed (portal_leads, disputes, producers, affiliates) or verified clean (orders, inventory, credits, ai_usage_log, user_sync). Separately audited **smart-e** end-to-end this round (auth on every mutating route, symmetric stock/customer-spend on order cancel/uncancel with an idempotent guard, PromptPay QR sub-tag/CRC, broadcast + QR amount validation, analytics/dashboard consistently excluding cancelled orders) — 112/112 tests pass, **no change needed**.
+
+**Change:** new shared, pure module `sb-column-fallback.js` — `missingColumnFrom(message)` extracts the offending column from a PGRST204 / "column … does not exist" error (and returns null for anything else, so unrelated failures never trigger a strip), and `stripColumn(body, col)` returns a copy of the (array or single) row without that column (null when the column isn't present, to avoid a pointless retry, and it never mutates the original). `persist()` in `portal-leads.js` / `producers.js` / `disputes.js` now, on a write failure, retries **once** with the offending column stripped before giving up to the file store. Stripping is the safe direction: the row still persists; the missing value just takes the column default (e.g. `consent=false`), which under-claims rather than over-claims — and once the owner runs the alter, the full value persists with no code change. (`affiliate-row.js`'s consent-specific fallback from last round is left as-is; it already ships and passes.)
+
+**Verified + mutation-tested + booted:** `scripts/test-sb-column-fallback.mjs` (12/12 — column extraction is correct and narrow; strip is immutable and no-ops when absent). `scripts/test-portal-leads-fallback.mjs` (6/6 — an **integration** test that stubs `global.fetch` to emulate PostgREST rejecting `consent` on the first insert and accepting the stripped body on the retry, then drives the real `createPortalLeads().submit()`: two POSTs happen, the retry drops only `consent`, the core lead data survives, and the lead lands in "Supabase" — not the file store). **Mutation:** forcing `missingColumnFrom` to return null makes the integration test fall back to the file store with a single POST → 4 assertions fail; restored to green. **Boot smoke:** real server — portal-lead submit with consent → 200, without → 400 (the modified modules load and behave in file mode). `node --check` clean on all four. Wired both into the no-server unit block in `package.json` + `test.yml`. NOTE unchanged: the owner should still run the pending `alter`s so the columns' real values persist — the fallback just stops the core records from being lost in the meantime.
 
 ### 2026-07-24 — Hourly loop: PDPA — affiliate consent was enforced + kept in the file record but never persisted to Supabase (couldn't be proven in production)
 
@@ -3722,54 +3732,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 5ebd2f4 fix(affiliate): persist PDPA consent to Supabase safely (was enforced but never stored on the row) (24 seconds ago)
-- 04349a5 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 199460f fix(migrations): add columns the code writes but the schema lacked (order_disputes.counter_response, producers.consent) (64 minutes ago)
-- e178f7e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- b75cf1d fix(portal-leads): add missing consent + unsubscribed columns to Supabase migration (2 hours ago)
-- 723323c chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- e6e5ecc fix(progress): repair dead-code guard in updateManualKpi (unknown KPI key threw) (3 hours ago)
-- 1c0e1bb chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- ff580fb chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 5ebd2f4 fix(affiliate): persist PDPA consent to Supabase safely (was enforced but never stored on the row) (60 minutes ago)
+- 04349a5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 199460f fix(migrations): add columns the code writes but the schema lacked (order_disputes.counter_response, producers.consent) (2 hours ago)
+- e178f7e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- b75cf1d fix(portal-leads): add missing consent + unsubscribed columns to Supabase migration (3 hours ago)
+- 723323c chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- e6e5ecc fix(progress): repair dead-code guard in updateManualKpi (unknown KPI key threw) (4 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.7",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3898,7 +3870,7 @@ the backend.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 32 files)
+## Backend modules (backend/*.js — 33 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -3910,7 +3882,7 @@ the backend.
 | `auth.js` | 196 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
-| `disputes.js` | 307 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
+| `disputes.js` | 319 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 259 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 264 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
@@ -3918,11 +3890,12 @@ the backend.
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |
 | `orders.js` | 203 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
-| `portal-leads.js` | 148 | Portal Leads — captures submissions from the /portals/* landing pages |
+| `portal-leads.js` | 160 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 288 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 300 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
+| `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `server.js` | 8986 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |

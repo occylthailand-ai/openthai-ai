@@ -4,6 +4,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { missingColumnFrom, stripColumn } from './sb-column-fallback.js';
 
 // เดิมไม่มี 'อาหารสัตว์เลี้ยง'/'สินค้าดิจิทัล' ทั้งที่เพิ่มเข้า CATEGORIES ฝั่งผู้บริโภคแล้ว
 // (ConsumerPortalPage.jsx) — ทำให้ผู้ผลิตสินค้ากลุ่มนี้ที่สมัครผ่าน /join ไม่มีหมวดให้เลือกตรง
@@ -74,10 +75,21 @@ export function createProducers(dataDir, opts = {}) {
       return { ok: false, error: 'อีเมลนี้เป็นผู้ผลิตในระบบอยู่แล้ว หากต้องการแก้ไขสินค้าของคุณ ใช้หน้า "จัดการสินค้าของฉัน" (/producers/manage) แทน', already_registered: true };
     }
     if (useSB) {
+      const opts = { params: { on_conflict: 'email' }, prefer: 'resolution=merge-duplicates,return=minimal' };
       try {
-        await sbReq('POST', '/producers', { body: [rec], params: { on_conflict: 'email' }, prefer: 'resolution=merge-duplicates,return=minimal' });
+        await sbReq('POST', '/producers', { body: [rec], ...opts });
         return { ok: true, status: rec.status };
-      } catch (e) { console.warn('[producers] Supabase write failed, using file:', e.message); }
+      } catch (e) {
+        // If the live table predates a column the record carries (e.g. consent — a
+        // migration the owner hasn't run), retry once without it so the application
+        // still persists durably to Supabase instead of only the ephemeral file store.
+        const col = missingColumnFrom(e.message);
+        const stripped = col && stripColumn([rec], col);
+        if (stripped) {
+          try { await sbReq('POST', '/producers', { body: stripped, ...opts }); return { ok: true, status: rec.status }; }
+          catch (e2) { console.warn(`[producers] Supabase write failed after dropping "${col}", using file:`, e2.message); }
+        } else { console.warn('[producers] Supabase write failed, using file:', e.message); }
+      }
     }
     const existed = !!store[rec.email];
     store[rec.email] = { ...(store[rec.email] || {}), ...rec, created_at: store[rec.email]?.created_at || rec.created_at };
