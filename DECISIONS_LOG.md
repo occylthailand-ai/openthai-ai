@@ -9,6 +9,19 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-24 — Owner request (cont.): seasonal engine brick 2 — trend-direction overlay → concrete product angles
+
+The owner said "1-3" (wants the whole seasonal set), so continued from brick 1 to the documented brick 2. Built the **trend-direction overlay** that fuses the seasonal categories with a small set of **structural macro consumer trends** (`value` / `digital` / `health` / `eco` / `local`) to produce concrete **product angles** + a play for each of the five groups — still deterministic, still no LLM, still no scraping.
+
+**Honesty guardrail (important):** the trends are *durable, common-knowledge* directions, **not** scraped real-time data and **not** invented statistics — the code comment + the API `note` say so plainly. The output shape is stable so a later round can layer a real, owner-authorized trend API (legally-open signals only) on top without changing the contract. This keeps the verify-before-build discipline: I did not fabricate a "live global ad-trend feed," I encoded well-known macro trends as a labelled knowledge layer.
+
+**Change:**
+- `backend/seasonal-engine.js` — `productAngles({date, zone})`: for each of the top-3 seasonal categories, emit 3 angles (value + digital are near-universal; the third is health/local/eco chosen by the category's nature via a keyword rule), each with `category/trend/angle/why`; plus `group_plays` for all five groups. Exposed `_trends`.
+- `server.js` — `GET /api/seasonal/angles?zone=&date=` (mirrors `/recommend`).
+- `docs/SEASONAL_DEMAND_ENGINE.md` — brick 2 moved to BUILT & VERIFIED.
+
+**Verified + booted:** extended `scripts/test-seasonal-engine.mjs` — **33/33** (was 24; +9 brick-2 assertions): 3 categories × 3 trends = 9 angles, each well-formed and referencing a defined trend; the meaningful fusion (rain-gear × eco → reusable/recyclable in tropical July); value+digital apply to every top category; a health-ish winter category picks up `health` as its third; all 5 group_plays present; the note stays honest (mentions not-scraped/not-LLM). Then **booted the real server** and curled `GET /api/seasonal/angles` → `success:true`, 大暑 / rainy / 9 angles with a real producer play string. `node --check` clean, `data/*.json` no git diff after. No new CI wiring needed — the brick-2 assertions live in the already-wired `test:seasonal`.
+
 ### 2026-07-24 — Owner request: seasonal demand engine — 24 solar terms (节气) × climate zone → product categories (brick 1 of the owner's "right product / right region / right people" vision)
 
 The owner asked for a big vision: match products to the region/season/people who actually need them, anchored to the Chinese 24 solar terms + weather + global trends, so all five groups earn. **Stopped and scoped it (rule #8)** rather than lunging at the whole thing: refused the "scrape all the world's advertising data" part outright (rule #3 — non-consensual collection, rejected 3× before; also copyright/PDPA), and declined to promise "everyone earns income" (code can't guarantee outcomes). Asked the owner to confirm the concrete first brick via AskUserQuestion; they chose the **24-solar-terms → product-category engine** (then said "1-3" = wants the whole set), so I built brick 1 for real + tested, and documented bricks 2–3 as a grounded roadmap instead of shipping them half-done.

@@ -195,5 +195,64 @@ export function recommend({ date = new Date(), zone = 'tropical' } = {}) {
   };
 }
 
+// ── Brick 2: structural trend-direction overlay ──────────────────────────────────────────────────
+// These are DURABLE macro consumer trends (common knowledge), NOT scraped live data and NOT invented
+// statistics. Each carries a short "angle" modifier — how to position a seasonal product to ride that
+// trend. Fusing (seasonal category) × (rising trend) yields a concrete product ANGLE, deterministically,
+// with no LLM and no scraping. A future round can add a real, owner-authorized trend API on top; the
+// shape here stays the same.
+const TREND_DIRECTIONS = {
+  value:       { th: 'ความคุ้มค่า/ประหยัด',        modifier: 'จัดเป็นเซ็ต/ทนทาน/ใช้ได้หลายแบบ คุ้มราคา', why: 'กำลังซื้อรัดกุม คนมองความคุ้มเป็นหลัก' },
+  digital:     { th: 'ดิจิทัล/ไลฟ์สตรีมช้อป',       modifier: 'ขายผ่านไลฟ์/คลิปสั้น + รีวิวจากครีเอเตอร์', why: 'พฤติกรรมซื้อผ่านโซเชียล/ไลฟ์โตต่อเนื่อง' },
+  health:      { th: 'สุขภาพ/เวลเนส',              modifier: 'ชูจุดขายเพื่อสุขภาพ/ธรรมชาติ/น้ำตาลน้อย',  why: 'ผู้บริโภคใส่ใจสุขภาพมากขึ้นทุกปี' },
+  eco:         { th: 'ความยั่งยืน/รักษ์โลก',        modifier: 'ใช้ซ้ำได้/รีไซเคิล/เติมได้ ลดขยะ',        why: 'กระแสรักษ์โลกดันการเลือกซื้อ โดยเฉพาะคนรุ่นใหม่' },
+  local:       { th: 'ของแท้ท้องถิ่น/ชุมชน',        modifier: 'เล่าเรื่องต้นทาง/ชุมชน/OTOP ของแท้',      why: 'ผู้บริโภคให้คุณค่ากับที่มาและเรื่องราวของสินค้า' },
+};
+
+// Pick 3 relevant trend directions for a category: value + digital are near-universal for any product;
+// the third is chosen by the category's nature (health-ish / local-ish / else eco).
+function pickTrends(catKey) {
+  const k = catKey.toLowerCase();
+  const healthish = /skincare|hydration|immunity|health|allergy|insect|sun_protection|harvest_food|hot_food/.test(k);
+  const localish  = /gifts|harvest|travel|outdoor|food/.test(k);
+  const third = healthish ? 'health' : (localish ? 'local' : 'eco');
+  return ['value', 'digital', third];
+}
+
+// Fuse the seasonal recommendation with the trend overlay → concrete product angles + a play per group.
+export function productAngles({ date = new Date(), zone = 'tropical' } = {}) {
+  const base = recommend({ date, zone });
+  const top = base.categories.slice(0, 3);
+  const angles = [];
+  for (const cat of top) {
+    for (const tKey of pickTrends(cat.key)) {
+      const t = TREND_DIRECTIONS[tKey];
+      angles.push({
+        category: cat.key, category_th: cat.th,
+        trend: tKey, trend_th: t.th,
+        angle: `${cat.th} — ${t.modifier}`,
+        why: `${cat.why} + ${t.why}`,
+      });
+    }
+  }
+  const seasonTh = base.local_season.th;
+  return {
+    date: base.date, zone: base.zone, zone_th: base.zone_th,
+    solar_term: base.solar_term, local_season: base.local_season,
+    trends_used: Object.entries(TREND_DIRECTIONS).map(([k, v]) => ({ key: k, th: v.th })),
+    angles,
+    group_plays: {
+      producer:      `ผลิต/ปรับสินค้า${seasonTh}ให้เข้าเทรนด์: ${top.map(c => c.th).join(' · ')} — เพิ่มมุมคุ้มค่า/สุขภาพ/รักษ์โลกตามความเหมาะ`,
+      middleman:     `เลือกซัพพลายที่มีมุมเทรนด์ชัด (คุ้มค่า/ไลฟ์ขายง่าย) กระจายเข้า${base.zone_th}ช่วง${seasonTh}`,
+      affiliate:     `ทำคอนเทนต์ตาม "angle" ด้านล่าง — ไลฟ์/คลิปสั้นจับคู่ฤดูกาล×เทรนด์ โพสต์ก่อนพีค`,
+      partner_agent: `เสนอดีล B2B/B2G ที่มัดจุดขายเทรนด์ + จังหวะฤดูกาล ให้ผู้ซื้อวางแผนสต๊อกล่วงหน้า`,
+      consumer:      `ตัวเลือกที่คุ้มและตรงเทรนด์ช่วงนี้: ${top.map(c => c.th).join(' · ')}`,
+    },
+    note: 'เทรนด์ที่ใช้เป็น "เทรนด์เชิงโครงสร้าง" (ความรู้สาธารณะ) ไม่ใช่ข้อมูลเรียลไทม์ที่ scrape มา และไม่ต้องใช้ LLM. ' +
+          'ต่อยอดด้วย trend API จริงที่เจ้าของอนุญาต (สัญญาณเปิดถูกกฎหมาย) ได้ภายหลัง โดยรูปแบบผลลัพธ์คงเดิม.',
+  };
+}
+
 export const _zones = ZONES;
 export const _terms = TERMS;
+export const _trends = TREND_DIRECTIONS;

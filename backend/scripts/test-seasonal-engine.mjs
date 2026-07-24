@@ -2,7 +2,7 @@
 // Pins the behaviour that makes the tool "point the right way": correct term per date (incl. the
 // Jan 1–5 wrap to 冬至), and — the core insight — the SAME term maps to OPPOSITE local seasons in
 // the northern vs southern hemisphere, and to the tropical rainy/hot/cool cycle by month.
-import { recommend, solarTermFor, nextSolarTerm, localSeasonFor, _terms, _zones } from '../seasonal-engine.js';
+import { recommend, solarTermFor, nextSolarTerm, localSeasonFor, productAngles, _terms, _zones, _trends } from '../seasonal-engine.js';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -48,6 +48,22 @@ ok(_terms.length === 24, 'exactly 24 solar terms defined');
 ok(_zones.length === 3, 'three climate zones');
 ok(recommend({ date: dSummer, zone: 'bogus' }).zone === 'tropical', 'an unknown zone falls back to tropical (safe default)');
 ok(recommend({ date: 'not-a-date', zone: 'tropical' }).solar_term.cn.length > 0, 'a bad date falls back to "now" (never throws)');
+
+console.log('\n=== brick 2: trend-direction overlay → product angles (deterministic fusion) ===');
+const ang = productAngles({ date: dSummer, zone: 'tropical' }); // 大暑 tropical → rainy
+ok(ang.angles.length === 9, `3 top categories × 3 trends = 9 angles (got ${ang.angles.length})`);
+ok(ang.angles.every(a => a.category && a.trend && a.angle && a.why), 'every angle carries category+trend+angle+why');
+ok(ang.angles.every(a => _trends[a.trend]), 'every angle references a defined trend direction');
+ok(ang.angles.some(a => a.category === 'rain_gear' && a.trend === 'eco' && /ใช้ซ้ำ|รีไซเคิล/.test(a.angle)),
+  'rain-gear × eco → a reusable/recyclable angle (fusion is meaningful, tropical July)');
+ok(ang.angles.every(a => a.trend === 'value' || a.trend === 'digital' || a.trend === 'health' || a.trend === 'eco' || a.trend === 'local'),
+  'trends are drawn only from the structural set');
+ok(ang.angles.filter(a => a.trend === 'value').length === 3 && ang.angles.filter(a => a.trend === 'digital').length === 3,
+  'value + digital apply to every top category (near-universal trends)');
+const angHealth = productAngles({ date: D(2026, 12, 22), zone: 'north_temperate' }); // winter → hot_food/immunity present
+ok(angHealth.angles.some(a => a.trend === 'health'), 'a health-ish winter category picks up the health trend as its third');
+ok(Object.keys(ang.group_plays).length === 5, 'group_plays covers all 5 groups');
+ok(/scrape/.test(ang.note) && /LLM/.test(ang.note), 'note is honest: structural trends, not scraped/LLM');
 
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

@@ -41,7 +41,7 @@ import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
-import { recommend as seasonalRecommend, _zones as seasonalZones } from './seasonal-engine.js';
+import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, _zones as seasonalZones } from './seasonal-engine.js';
 import { createIntegrations } from './integrations.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -2048,6 +2048,14 @@ app.get('/api/seasonal/recommend', (req, res) => {
 });
 // GET /api/seasonal/zones — รายชื่อเขตภูมิอากาศที่รองรับ (ให้ frontend/skill รู้ตัวเลือก)
 app.get('/api/seasonal/zones', (req, res) => res.json({ success: true, zones: seasonalZones }));
+// GET /api/seasonal/angles — brick 2: fuse ฤดูกาล × เทรนด์เชิงโครงสร้าง → "มุมขายสินค้า" ที่จับต้องได้
+// (deterministic, ไม่ใช้ LLM, ไม่ scrape) query เหมือน /recommend: ?zone=&date=
+app.get('/api/seasonal/angles', (req, res) => {
+  const zone = String(req.query.zone || 'tropical');
+  const date = req.query.date ? new Date(String(req.query.date)) : new Date();
+  const data = seasonalProductAngles({ date: isNaN(date.getTime()) ? new Date() : date, zone });
+  res.json({ success: true, ...data });
+});
 
 // ─── GET /api/trending — Trending Thai hashtags (cached 30 min) ───────────────
 const trendCache = { data: null, ts: 0 };

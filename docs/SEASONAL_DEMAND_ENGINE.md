@@ -59,13 +59,23 @@ Same term, three genuinely different "what to push" answers — which is the who
 
 ---
 
-## ⏭️ Brick 2 — NEXT (documented, not yet built): trend-direction overlay
+## ✅ Brick 2 — BUILT & VERIFIED: trend-direction overlay → product angles
 
-Upgrade the existing `POST /api/skills/trend` / `GET /api/trending` so that, on top of the seasonal
-baseline, it answers *"global trend is moving in direction X → which product angle in this region
-right now."* Constraints: aggregate only **legally-open** signals (the platform's own opt-in data,
-public trend APIs the owner authorizes) — **never scraped** third-party ad/personal data. This is a
-separate, testable change; it will land in its own round with its own mutation-tested guard.
+**Module:** `productAngles({date, zone})` in `backend/seasonal-engine.js`.
+**API:** `GET /api/seasonal/angles?zone=<zone>&date=YYYY-MM-DD`.
+**Test:** the brick-2 block in `backend/scripts/test-seasonal-engine.mjs` (33/33 total, wired into CI).
+
+Fuses the brick-1 seasonal categories with a small set of **structural macro consumer trends**
+(`value` / `digital` / `health` / `eco` / `local`) → concrete **product angles** and a **play for each
+of the five groups**. For each of the top-3 seasonal categories it emits 3 angles (value + digital are
+near-universal; the third is health / local / eco by the category's nature), e.g. in tropical July
+(大暑 → rainy): *rain-gear × eco → "reusable / recyclable / refillable"*, *rain-gear × digital →
+"sell via livestream + creator reviews."*
+
+**Honesty guardrail:** the trends are *durable, common-knowledge* directions — **not** scraped
+real-time data and **not** invented percentages. The output shape is stable so a later round can layer
+a **real, owner-authorized trend API** (legally-open signals only) on top without changing the contract.
+It is deterministic and needs no LLM.
 
 ## ⏭️ Brick 3 — LATER (needs owner decision): real per-region weather layer
 
