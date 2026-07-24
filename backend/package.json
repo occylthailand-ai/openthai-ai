@@ -36,6 +36,8 @@
     "test:mcp-batch": "node scripts/test-mcp-batch.mjs",
     "test:progress-kpi": "node scripts/test-progress-kpi.mjs",
     "test:portal-leads-schema": "node scripts/test-portal-leads-schema.mjs",
+    "test:disputes-schema": "node scripts/test-disputes-schema.mjs",
+    "test:producers-schema": "node scripts/test-producers-schema.mjs",
     "test:integrations-auth": "node scripts/test-integrations-auth.mjs",
     "test:video-auth": "node scripts/test-video-auth.mjs",
     "test:corporate-auth": "node scripts/test-corporate-auth.mjs"
