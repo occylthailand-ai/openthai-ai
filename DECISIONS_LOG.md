@@ -9,6 +9,16 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-24 — Owner request (cont.): surface the seasonal engine in the portals — "first encounter → real value in 10 seconds"
+
+After a stakeholder-POV reflection exercise, the owner approved wiring the (already-built, already-tested) seasonal engine into the front end so a first-time visitor from any of the four groups *sees* the value immediately instead of it living only behind an API. Built a reusable value panel and embedded it in each `/portals/*` page.
+
+**Change (frontend only):**
+- `frontend/src/pages/portals/SeasonalAnglesPanel.jsx` — a React panel that fetches `GET /api/seasonal/angles?zone=tropical` (the Thai/ASEAN audience these portals serve) and shows, for THIS group: the current solar term (节气) + local season, the group-specific **play** (`group_plays[group]`), and up to 6 product **angles** (trend tag + angle + why). Localized labels for th/en/zh (the angle text itself is Thai — the backend produces Thai; a later round can localize it). **Purely additive:** on any error/empty response it renders `null`, so it can never break the portal page it sits in.
+- Embedded it in `ProducerPortalPage` (`group="producer"`), `ConsumerPortalPage` (`consumer`), `MiddlemanPortalPage` (`middleman`), `AffiliatePortalPage` (`affiliate`) — right under each hero.
+
+**Verified:** new `frontend/src/__tests__/seasonalAnglesPanel.test.jsx` (5/5) mocks fetch with the **real** `/api/seasonal/angles` payload shape and asserts: it renders the season + the **group-specific** play (affiliate vs consumer pick different plays) + the angles/trend tags; it calls the endpoint with the given `zone`; and — the safety invariant — it renders **nothing** when the API returns no angles OR when fetch throws (never crashes the page). Full frontend suite **259/259** (was 254; +5) and `npm run build` succeeds (prerender + sitemap intact). The `/api/seasonal/angles` endpoint itself was already booted+curled last round; the component test drives its exact shape. No backend change.
+
 ### 2026-07-24 — Owner request (cont.): seasonal engine brick 2 — trend-direction overlay → concrete product angles
 
 The owner said "1-3" (wants the whole seasonal set), so continued from brick 1 to the documented brick 2. Built the **trend-direction overlay** that fuses the seasonal categories with a small set of **structural macro consumer trends** (`value` / `digital` / `health` / `eco` / `local`) to produce concrete **product angles** + a play for each of the five groups — still deterministic, still no LLM, still no scraping.

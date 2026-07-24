@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { consentLabel } from './consentLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
+import SeasonalAnglesPanel from './SeasonalAnglesPanel';
 import { PORTAL_CATEGORIES as CATEGORIES } from '../../data/portalCategories';
 
 const T = {
@@ -45,6 +46,7 @@ export default function ConsumerPortalPage() {
           <h1 style={{ fontSize:36, fontWeight:800, color:'#06b6d4', margin:'0 0 12px' }}>{t.title}</h1>
           <p style={{ color:'#aaa', fontSize:18 }}>{t.sub}</p>
         </div>
+        <SeasonalAnglesPanel group="consumer" lang={lang} />
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:32 }}>
           <div>
             <h3 style={{ color:'#06b6d4', marginBottom:20 }}>สิทธิประโยชน์</h3>

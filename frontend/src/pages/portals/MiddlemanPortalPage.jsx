@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { consentLabel } from './consentLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
+import SeasonalAnglesPanel from './SeasonalAnglesPanel';
 
 const BUSINESS_TYPES = ['ตัวแทนจำหน่าย (Distributor)', 'ผู้ค้าส่ง (Wholesaler)', 'นายหน้า (Broker)', 'ตัวแทนขายต่อ (Reseller)', 'อื่นๆ'];
 
@@ -46,6 +47,7 @@ export default function MiddlemanPortalPage() {
           <h1 style={{ fontSize:36, fontWeight:800, color:'#f97316', margin:'0 0 12px' }}>{t.title}</h1>
           <p style={{ color:'#aaa', fontSize:18 }}>{t.sub}</p>
         </div>
+        <SeasonalAnglesPanel group="middleman" lang={lang} />
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1.2fr', gap:32 }}>
           <div>
             <h3 style={{ color:'#f97316', marginBottom:20 }}>สิทธิประโยชน์</h3>

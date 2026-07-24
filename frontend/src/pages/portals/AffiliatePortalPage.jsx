@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { consentLabel } from './consentLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
+import SeasonalAnglesPanel from './SeasonalAnglesPanel';
 
 const T = {
   th: { title:'ทางเข้าผู้ขาย / Affiliate', sub:'ขายสินค้าจาก OpenThai.ai และรับค่าคอมมิชชั่นสูงสุด 40%', benefits:['คอมมิชชั่นสูงสุด 40% ต่อการขาย','Dashboard ติดตาม real-time','ลิงก์ referral เฉพาะของคุณ','รับเงินผ่านระบบอัตโนมัติ'], tiers:[{name:'Starter',rate:'20%',min:'0'},{name:'Pro',rate:'30%',min:'10'},{name:'Elite',rate:'40%',min:'50'}], form:{ name:'ชื่อ-นามสกุล', country:'ประเทศ', platform:'แพลตฟอร์มที่ใช้โปรโมท', email:'อีเมล', submit:'สมัคร Affiliate', ok:'สมัครเรียบร้อย! ลิงก์ Affiliate จะส่งไปยังอีเมลของท่าน' } },
@@ -44,6 +45,7 @@ export default function AffiliatePortalPage() {
           <h1 style={{ fontSize:36, fontWeight:800, color:'#f59e0b', margin:'0 0 12px' }}>{t.title}</h1>
           <p style={{ color:'#aaa', fontSize:18 }}>{t.sub}</p>
         </div>
+        <SeasonalAnglesPanel group="affiliate" lang={lang} />
         {/* Tiers */}
         <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:16, marginBottom:40 }}>
           {t.tiers.map((tier,i) => (

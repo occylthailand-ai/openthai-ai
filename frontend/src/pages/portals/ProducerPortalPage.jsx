@@ -3,6 +3,7 @@ import { consentLabel } from './consentLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 import { PORTAL_CATEGORIES as CATEGORIES } from '../../data/portalCategories';
+import SeasonalAnglesPanel from './SeasonalAnglesPanel';
 
 const T = {
   th: { title:'ทางเข้าผู้ผลิต', sub:'เชื่อมต่อสินค้าของคุณกับตลาด AI ไทยและทั่วโลก', benefits:['ขายสินค้าผ่าน AI-powered store','เข้าถึงผู้ซื้อทั่วโลก','ระบบ inventory อัตโนมัติ','รายงานยอดขายแบบ real-time'], form:{ name:'ชื่อบริษัท/ผู้ผลิต', country:'ประเทศ', product:'ประเภทสินค้า/บริการ', category:'หมวดสินค้า', email:'อีเมลติดต่อ', phone:'เบอร์โทร', submit:'ลงทะเบียนผู้ผลิต', ok:'ส่งคำขอเรียบร้อย! ทีมงานจะติดต่อกลับภายใน 24 ชม.' } },
@@ -45,6 +46,7 @@ export default function ProducerPortalPage() {
           <h1 style={{ fontSize:36, fontWeight:800, color:'#6366f1', margin:'0 0 12px' }}>{t.title}</h1>
           <p style={{ color:'#aaa', fontSize:18 }}>{t.sub}</p>
         </div>
+        <SeasonalAnglesPanel group="producer" lang={lang} />
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:32 }}>
           <div>
             <h3 style={{ color:'#6366f1', marginBottom:20 }}>สิทธิประโยชน์</h3>
