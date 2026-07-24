@@ -27,6 +27,7 @@ import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
 import { payoutRemaining, canPayout } from './affiliate-payout.js';
 import { mapModel, extractText } from './openrouter-map.js';
+import { affToRow, rowWithoutConsent, isMissingConsentColumnError } from './affiliate-row.js';
 import { reservedFor as reservedForPure, affAvailable } from './affiliate-withdraw-math.js';
 import { safeTokenEqual } from './token-verify.js';
 import { publicAffiliateSales } from './affiliate-public.js';
@@ -1406,17 +1407,7 @@ function _affFileSave(data) {
     writeFileSync(AFF_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (e) { console.error('[affiliates] file save error:', e.message); }
 }
-const _affToRow = (r) => ({
-  ref_code: r.ref_code, name: r.name, email: r.email, phone: r.phone || '',
-  platform: r.platform || 'TikTok', followers: r.followers || '',
-  channel_url: r.channel_url || '', note: r.note || '', ref_link: r.ref_link || '',
-  tier: r.tier || 'starter', commission_rate: r.commission_rate ?? 0.20,
-  total_sales: r.total_sales || 0, total_earned: r.total_earned || 0,
-  pending_payout: (r.total_earned || 0) - (r.paid_out || 0),
-  status: r.status || 'active',
-  joined_at: r.joined_at || new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-});
+const _affToRow = affToRow;
 const _affFromRow = (r) => ({
   id: r.id, ref_code: r.ref_code, name: r.name, email: r.email,
   phone: r.phone || '', platform: r.platform || 'TikTok',
@@ -1426,6 +1417,7 @@ const _affFromRow = (r) => ({
   total_sales: r.total_sales || 0, total_earned: r.total_earned || 0,
   paid_out: 0, clicks: 0, monthly: [], recent_sales: [],
   status: r.status || 'active', joined_at: r.joined_at,
+  consent: r.consent === true,
 });
 let affiliates = [];
 try { if (existsSync(AFF_FILE)) affiliates = JSON.parse(readFileSync(AFF_FILE, 'utf8')); } catch (_) {}
@@ -1444,8 +1436,19 @@ if (_useSB) {
 async function saveAffiliate(record) {
   _affFileSave(affiliates);
   if (_useSB) {
-    try { await _sbReq('POST', '/affiliates', { body: [_affToRow(record)], params: { on_conflict: 'ref_code' }, prefer: 'resolution=merge-duplicates,return=minimal' }); }
-    catch (e) { console.warn('[affiliates] Supabase write failed:', e.message); }
+    const row = _affToRow(record);
+    const opts = { params: { on_conflict: 'ref_code' }, prefer: 'resolution=merge-duplicates,return=minimal' };
+    try { await _sbReq('POST', '/affiliates', { body: [row], ...opts }); }
+    catch (e) {
+      // If the live table predates the `consent` column (owner hasn't run the migration
+      // alter yet), retry once without it so a real signup still persists to Supabase —
+      // consent stays in the file record. Post-migration this branch never runs.
+      if (isMissingConsentColumnError(e.message)) {
+        try { await _sbReq('POST', '/affiliates', { body: [rowWithoutConsent(row)], ...opts }); return; }
+        catch (e2) { console.warn('[affiliates] Supabase write failed (retry without consent):', e2.message); return; }
+      }
+      console.warn('[affiliates] Supabase write failed:', e.message);
+    }
   }
 }
 

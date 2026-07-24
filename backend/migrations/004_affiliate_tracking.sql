@@ -59,6 +59,13 @@ CREATE TABLE IF NOT EXISTS public.affiliate_payouts (
   paid_at         TIMESTAMPTZ
 );
 
+-- 3b. consent — PDPA: registerAffiliateCore() บังคับ consent:true ทุกใบสมัครและเก็บลง record จริง
+--     แต่ตารางเดิมไม่มีคอลัมน์นี้ ทำให้ในโหมด Supabase ความยินยอมของ affiliate ไม่ถูกเก็บถาวรเลย
+--     (พิสูจน์ไม่ได้) เหมือน gap ที่เพิ่งแก้ใน portal_leads/producers. เพิ่มแบบ idempotent ให้ schema
+--     รองรับ — โค้ด (_affToRow) จะเริ่มเขียนคอลัมน์นี้เมื่อรัน alter แล้ว และมี fallback strip consent
+--     อัตโนมัติถ้ายังไม่ได้รัน (กัน 400 ทำ affiliate insert ตกไป file store เงียบๆ)
+ALTER TABLE public.affiliates ADD COLUMN IF NOT EXISTS consent BOOLEAN NOT NULL DEFAULT false;
+
 -- 4. Indexes
 CREATE INDEX IF NOT EXISTS idx_affiliates_ref_code      ON public.affiliates(ref_code);
 CREATE INDEX IF NOT EXISTS idx_affiliates_email         ON public.affiliates(email);

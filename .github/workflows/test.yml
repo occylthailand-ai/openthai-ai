@@ -76,6 +76,8 @@ jobs:
           npm run test:portal-leads-schema
           npm run test:disputes-schema
           npm run test:producers-schema
+          npm run test:affiliate-row
+          npm run test:affiliates-schema
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage

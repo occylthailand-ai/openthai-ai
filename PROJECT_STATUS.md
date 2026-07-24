@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T01:14:20.643Z · branch `claude/daily-reporter-improvements-8vc9ct` (489 commit(s) ahead of main)
+Generated: 2026-07-24T02:16:51.362Z · branch `claude/daily-reporter-improvements-8vc9ct` (490 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 699 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 573 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,17 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Hourly loop: PDPA — affiliate consent was enforced + kept in the file record but never persisted to Supabase (couldn't be proven in production)
+
+Finished the consent-durability audit across all signup funnels. `registerAffiliateCore()` enforces `consent:true` (400s otherwise) and stores it in the affiliate record, and `saveAffiliate()` writes the full record to the JSON file — **but the Supabase mapper `_affToRow()` never emitted `consent`, and neither affiliates-table migration (`004_affiliate_tracking.sql`, `FULL-MIGRATION.sql`) declared the column.** So in Supabase mode (production) an affiliate's consent was silently dropped at the row level — the exact "can't prove consent" gap the `producers` / `portal_leads` hardening was meant to close, still open for the affiliate funnel. (Unlike those two this was **not** a write-failure: because `_affToRow` omitted `consent`, the insert matched the schema and succeeded — it just persisted no consent. The file record has it, but `/tmp` on Vercel is wiped on redeploy and boot reloads from Supabase, so the durable copy has no consent.)
+
+**Why this needed care, not just "add the column to the mapper":** Vercel auto-deploys on every push, but the owner runs DB migrations by hand, so the code can start writing `consent` **before** the live table has the column. An unknown-column write is a PostgREST 400 (PGRST204) that fails the *whole* insert — which would have **regressed a currently-working signup funnel** into the ephemeral-file-store fallback (affiliate then lost on redeploy). So the fix is sequenced to be safe in either order:
+
+- **Schema:** idempotent `add column if not exists consent boolean not null default false` on the affiliates table — in `004_affiliate_tracking.sql` (the canonical numbered migration) and `FULL-MIGRATION.sql` (the all-in-one, which also carries a second affiliates-table definition — noted a pre-existing drift there: `004` uses a UUID `id` PK + `user_id` FK while `FULL-MIGRATION` uses `ref_code` as PK; both upsert fine on the unique `ref_code`, left as-is).
+- **Code:** extracted the mapper into a small testable module `affiliate-row.js` (`affToRow` now emits `consent: r.consent === true`, plus `rowWithoutConsent` and a narrow `isMissingConsentColumnError`), same pattern as `affiliate-payout.js` / `openrouter-map.js`. `saveAffiliate()` now retries the insert **once without `consent`** iff the write fails specifically because the `consent` column is missing — so pre-migration a real signup still persists to Supabase (consent stays in the file record), and post-migration consent persists with no second deploy. `_affFromRow()` reads `consent` back so a Supabase-loaded affiliate keeps the flag.
+
+**Verified + mutation-tested + booted:** new deterministic `scripts/test-affiliate-row.mjs` (12/12 — consent maps to a real boolean, `rowWithoutConsent` strips only consent, `isMissingConsentColumnError` matches PGRST204 for consent but not unrelated errors / other columns / empty) and `scripts/test-affiliates-schema.mjs` (19/19 — derives the required column set from `affToRow()` itself and asserts the migration union declares every one, incl. consent). **Mutations:** dropping `consent` from the mapper fails the row test; removing the `004` alter fails the schema test; both restored. **Boot smoke:** spawned the real server — `POST /api/affiliate/apply` without consent → 400, with consent → 200 + ref_code (refactor keeps the funnel working end-to-end). `node --check` clean. Wired both into the no-server unit block in `package.json` + `test.yml`. **NOTE (same as the migration rounds):** the owner still needs to run the `consent` alter in the Supabase SQL editor for the live affiliates table; until then the code's fallback keeps signups persisting (just without the consent column), and it upgrades automatically once the alter is run.
 
 ### 2026-07-24 — Hourly loop: BUG — two more Supabase migrations missing columns the code writes (order_disputes.counter_response, producers.consent) → silent write failure 🔴
 
@@ -3711,54 +3722,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 199460f fix(migrations): add columns the code writes but the schema lacked (order_disputes.counter_response, producers.consent) (28 seconds ago)
-- e178f7e chore: sync PROJECT_STATUS.md [skip ci] (56 minutes ago)
-- b75cf1d fix(portal-leads): add missing consent + unsubscribed columns to Supabase migration (57 minutes ago)
-- 723323c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- e6e5ecc fix(progress): repair dead-code guard in updateManualKpi (unknown KPI key threw) (2 hours ago)
-- 1c0e1bb chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 14713e0 security(corporate): require login to READ corporate data (was public) (2 hours ago)
-- d54432b chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 04349a5 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 199460f fix(migrations): add columns the code writes but the schema lacked (order_disputes.counter_response, producers.consent) (63 minutes ago)
+- e178f7e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- b75cf1d fix(portal-leads): add missing consent + unsubscribed columns to Supabase migration (2 hours ago)
+- 723323c chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- e6e5ecc fix(progress): repair dead-code guard in updateManualKpi (unknown KPI key threw) (3 hours ago)
+- 1c0e1bb chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 14713e0 security(corporate): require login to READ corporate data (was public) (3 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -3887,11 +3860,12 @@ the backend.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 31 files)
+## Backend modules (backend/*.js — 32 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
 | `affiliate-public.js` | 29 | Public-exposure boundary for the affiliate stats endpoint — extracted so the |
+| `affiliate-row.js` | 43 | Affiliate ↔ Supabase row mapping (extracted for deterministic unit testing) |
 | `affiliate-tiers.js` | 18 | Affiliate commission tiers — extracted from server.js so the money-critical |
 | `affiliate-withdraw-math.js` | 32 | Affiliate withdraw-request math — the money-integrity rules for how much an |
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
@@ -3912,7 +3886,7 @@ the backend.
 | `producers.js` | 288 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 8983 | Vercel serverless detection |
+| `server.js` | 8986 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 257 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
