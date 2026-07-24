@@ -51,7 +51,8 @@
     "test:consent-durability": "node scripts/test-pdpa-consent-durability.mjs",
     "test:seasonal": "node scripts/test-seasonal-engine.mjs",
     "test:dept-officers": "node scripts/test-dept-officers.mjs",
-    "test:dept-officer-endpoint": "node scripts/test-dept-officer-endpoint.mjs"
+    "test:dept-officer-endpoint": "node scripts/test-dept-officer-endpoint.mjs",
+    "test:openapi": "node scripts/test-openapi-spec.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

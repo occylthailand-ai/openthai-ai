@@ -202,6 +202,67 @@ export const openapiSpec = {
         },
       },
     },
+    '/api/seasonal/recommend': {
+      get: {
+        tags: ['Seasonal'],
+        summary: 'Seasonal product-category recommendation (24 solar terms × climate zone)',
+        description: 'Deterministic — no LLM, no scraping. Maps the Chinese 24 solar terms (节气) and the local season of a climate zone to in-demand product categories, with a one-line action for each of the five groups (producer / middleman / affiliate / partner-agent / consumer) and the next term + day countdown.',
+        parameters: [
+          { name: 'zone', in: 'query', required: false, schema: { type: 'string', enum: ['tropical', 'north_temperate', 'south_temperate'], default: 'tropical' }, description: 'Climate zone (default tropical — the Thai/ASEAN audience).' },
+          { name: 'date', in: 'query', required: false, schema: { type: 'string', format: 'date' }, description: 'Reference date YYYY-MM-DD (default: today).' },
+        ],
+        responses: {
+          200: {
+            description: 'Seasonal recommendation',
+            content: { 'application/json': { schema: { type: 'object', properties: {
+              success: { type: 'boolean' },
+              date: { type: 'string', format: 'date' },
+              zone: { type: 'string' },
+              solar_term: { type: 'object', properties: { cn: { type: 'string' }, th: { type: 'string' }, en: { type: 'string' }, season_north: { type: 'string' } } },
+              local_season: { type: 'object', properties: { key: { type: 'string' }, th: { type: 'string' } } },
+              categories: { type: 'array', items: { type: 'object', properties: { key: { type: 'string' }, th: { type: 'string' }, en: { type: 'string' }, why: { type: 'string' } } } },
+              group_actions: { type: 'object', properties: { producer: { type: 'string' }, middleman: { type: 'string' }, affiliate: { type: 'string' }, partner_agent: { type: 'string' }, consumer: { type: 'string' } } },
+              next_term: { type: 'object', properties: { cn: { type: 'string' }, th: { type: 'string' }, days_until: { type: 'integer' } } },
+            } } } },
+          },
+        },
+      },
+    },
+    '/api/seasonal/angles': {
+      get: {
+        tags: ['Seasonal'],
+        summary: 'Seasonal × trend-direction product angles',
+        description: 'Deterministic — no LLM, no scraping. Fuses the seasonal categories with structural macro consumer trends (value / digital / health / eco / local) to produce concrete product angles + a play for each of the five groups.',
+        parameters: [
+          { name: 'zone', in: 'query', required: false, schema: { type: 'string', enum: ['tropical', 'north_temperate', 'south_temperate'], default: 'tropical' } },
+          { name: 'date', in: 'query', required: false, schema: { type: 'string', format: 'date' } },
+        ],
+        responses: {
+          200: {
+            description: 'Product angles',
+            content: { 'application/json': { schema: { type: 'object', properties: {
+              success: { type: 'boolean' },
+              solar_term: { type: 'object' },
+              local_season: { type: 'object' },
+              angles: { type: 'array', items: { type: 'object', properties: { category: { type: 'string' }, category_th: { type: 'string' }, trend: { type: 'string' }, trend_th: { type: 'string' }, angle: { type: 'string' }, why: { type: 'string' } } } },
+              group_plays: { type: 'object' },
+            } } } },
+          },
+        },
+      },
+    },
+    '/api/seasonal/zones': {
+      get: {
+        tags: ['Seasonal'],
+        summary: 'List supported climate zones',
+        responses: {
+          200: {
+            description: 'Zone list',
+            content: { 'application/json': { schema: { type: 'object', properties: { success: { type: 'boolean' }, zones: { type: 'array', items: { type: 'string' } } } } } },
+          },
+        },
+      },
+    },
     '/api/news-rag': {
       get: {
         tags: ['Trending'],

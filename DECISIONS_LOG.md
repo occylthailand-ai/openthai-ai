@@ -9,6 +9,16 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-24 — Hourly loop: API surface — advertise the seasonal endpoints in the OpenAPI spec + add the first guard for the hand-maintained spec
+
+The seasonal engine (a deterministic, market-facing set of endpoints built the last few rounds) was live but **not in the OpenAPI spec** served at `/api/openapi.json` / rendered by `/api-docs` Swagger UI — so external developers and agents couldn't discover it. The spec is a hand-maintained JS object in `openapi.js` and had **no test at all**: a malformed hand-edit could ship a broken spec that breaks every SDK/agent that reads it, with nothing catching it.
+
+**Change:**
+- `openapi.js` — added `GET /api/seasonal/recommend`, `/api/seasonal/angles`, `/api/seasonal/zones` with accurate parameters (zone/date) + response schemas, tagged `Seasonal`, descriptions stating they are **deterministic** (honest — no scraped/LLM claim). Left the `/api/corporate/officer*` routes OUT — those are auth-gated internal corporate endpoints, not part of the public developer API. (29 paths total now.)
+- Added `scripts/test-openapi-spec.mjs` (`test:openapi`, no-server) that guards the whole spec: openapi 3.x + info.title present, the spec serializes to JSON without throwing, every path is rooted, **every operation has a summary + at least one response** (catches a malformed hand-edit anywhere in the spec), and the three seasonal endpoints are advertised with the documented `zone` param.
+
+**Verified + booted:** `npm run test:openapi` → **12/12**. Then **booted the real server** and curled `GET /api/openapi.json` → 29 served paths, all three seasonal endpoints present in the live spec. `node --check` clean on `openapi.js`, `data/*.json` no git diff after. Wired `test:openapi` into the no-server CI block. Same source-structural drift-guard family as the homepage JSON-LD guard.
+
 ### 2026-07-24 — Owner request: AI department officers — a scoped AI specialist per corporate department (temporary team until real hires)
 
 The owner asked to staff the org with **AI officers that have domain skill per department** now, and add real people once the platform grows. Built on the existing `corporate-system.js` `DEPARTMENTS` registry (15 depts) rather than inventing a parallel structure.

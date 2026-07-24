@@ -82,6 +82,7 @@ jobs:
           npm run test:portal-leads-fallback
           npm run test:seasonal
           npm run test:dept-officers
+          npm run test:openapi
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage
