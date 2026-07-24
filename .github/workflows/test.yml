@@ -101,6 +101,9 @@ jobs:
       - name: Corporate auth test (self-contained — internal corporate reads require login)
         working-directory: backend
         run: npm run test:corporate-auth
+      - name: Affiliate withdraw-confirm test (self-contained — HMAC gate + GET bot-safe + POST idempotent)
+        working-directory: backend
+        run: npm run test:withdraw-confirm
       - name: Boot + health smoke test
         working-directory: backend
         run: |

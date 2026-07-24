@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T03:17:17.466Z · branch `claude/daily-reporter-improvements-8vc9ct` (493 commit(s) ahead of main)
+Generated: 2026-07-24T05:14:39.682Z · branch `claude/daily-reporter-improvements-8vc9ct` (494 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 703 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 577 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,14 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-24 — Hourly loop: test coverage — the affiliate withdraw CONFIRM flow (money-out) had no HTTP test; added a self-boot regression guard. Also cross-repo audit: v9.0 CI YAML fix + all-platform-files verified (no PDPA gap)
+
+Audited the money-out path this round. `POST /api/affiliate/withdraw` emails an HMAC-signed confirm link; the actual withdrawal is created only when the affiliate presses the button (a **POST** to `/api/affiliate/withdraw/confirm`) — a plain **GET** on the link only renders the page, precisely so an email link-scanner/prefetch that auto-issues GETs can't trigger a payout. `finalizeWithdraw()` splices the pending record before creating the withdrawal, so it's idempotent (a double-click can't double-withdraw), and it re-checks the affiliate's available balance at finalize time. **The code is correct** — but the only existing test (`test-affiliate-withdraw-math.mjs`) covers just the reservedFor/affAvailable math; the HTTP confirm flow (HMAC gate, GET-safety, POST-idempotency) — the part that actually guards real money leaving the platform — had **no test**. Given how many money bugs a silent regression here would cause, that gap was worth closing.
+
+**Added:** `scripts/test-affiliate-withdraw-confirm.mjs` — a hermetic self-boot test (snapshots the three JSON state files, seeds a known pending confirmation + an affiliate with a ฿500 earned balance, boots the real server with a known `JWT_SECRET` so it can compute the same HMAC token, then restores the files byte-for-byte). Asserts: (1) a wrong/missing token → **403** on both GET and POST; (2) a valid **GET** → 200 page but **zero** withdrawals created (bot-safe); (3) a valid **POST** → 200 + creates exactly one withdrawal, and a **second** POST with the same token → **404** with still exactly one withdrawal (idempotent, no double-payout). **9/9 pass.** **Mutation:** removing the `splice` in `finalizeWithdraw` makes the second POST succeed and create a second withdrawal → the two idempotency assertions fail; restored to green. Verified the three `data/*.json` files show no git diff after the run. Wired into a self-contained CI step (`test:withdraw-confirm`) alongside the other self-boot tests.
+
+**Cross-repo audit this round (verify-before-build):** (a) **all-platform-files** — the 35 `*Onboarding.jsx` files looked like consent-collecting signup forms (a repo-wide `consent` search returned 0), but verifying the actual code shows they contain **no `fetch`/POST and no email/tel inputs — only `type="checkbox"` checklists**: they're interactive setup GUIDES, not PII-collecting forms, so there is **no PDPA gap** (the earlier `email`/`phone` grep hits were instructional text). No change — avoided manufacturing a fix from a false-positive. (b) **OpenThai-AI-v9.0** (separate PR #5) — fixed `.github/workflows/deploy.yml`, which was **invalid YAML** (a stray commit-message line inside the Deploy step's `with:` block made GitHub Actions fail to parse the whole workflow); verified it now parses. The `deploy` check still fails at `npm ci` because the repo is an incomplete Next.js scaffold (no `package.json`/lockfile), and `app/affiliate-hub/page.tsx` POSTs to a `/api/affiliate/apply` route that doesn't exist there — both need an owner architecture decision (standalone vs. proxy to the openthai-ai backend), flagged not guessed.
 
 ### 2026-07-24 — Hourly loop: resilience — generalize the affiliate "retry without the missing column" so the portal_leads / producers / disputes migration fixes stop losing records in production BEFORE the owner runs the alters
 
@@ -3732,54 +3740,16 @@ the backend.
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 869f622 fix(persist): retry Supabase write without the missing column so pending-migration records aren't lost (21 seconds ago)
-- ff580fb chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 5ebd2f4 fix(affiliate): persist PDPA consent to Supabase safely (was enforced but never stored on the row) (60 minutes ago)
-- 04349a5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 199460f fix(migrations): add columns the code writes but the schema lacked (order_disputes.counter_response, producers.consent) (2 hours ago)
-- e178f7e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- b75cf1d fix(portal-leads): add missing consent + unsubscribed columns to Supabase migration (3 hours ago)
-- 723323c chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 1118f6f chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 869f622 fix(persist): retry Supabase write without the missing column so pending-migration records aren't lost (2 hours ago)
+- ff580fb chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 5ebd2f4 fix(affiliate): persist PDPA consent to Supabase safely (was enforced but never stored on the row) (3 hours ago)
+- 04349a5 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 199460f fix(migrations): add columns the code writes but the schema lacked (order_disputes.counter_response, producers.consent) (4 hours ago)
+- e178f7e chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- b75cf1d fix(portal-leads): add missing consent + unsubscribed columns to Supabase migration (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
