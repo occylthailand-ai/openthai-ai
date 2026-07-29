@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T07:26:25.020Z · branch `claude/daily-reporter-improvements-8vc9ct` (523 commit(s) ahead of main)
+Generated: 2026-07-29T11:19:30.814Z · branch `claude/daily-reporter-improvements-8vc9ct` (525 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 733 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 735 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: expose the seasonal engine as an agent tool (`seasonal_recommend`) — the platform's own AI can now answer "what should I sell this season?" in th/en/zh
+
+**Follow-up to this morning's seasonal localization.** The deterministic seasonal engine is live, tested, and now trilingual — but the platform's conversational AI (`/api/agent/command`, native Claude/Gemini tool-use via `agent-tools.js`) could only `track_order` / `check_dispute_status` / `list_skills` / `trigger_automation`. It had **no way to surface the seasonal signal in chat**, so a producer/affiliate asking the assistant "ช่วงนี้ควรดันอะไร" got nothing, even though the answer already exists behind `/api/seasonal/angles`. Closed that gap by registering the engine as a fifth tool — squarely in the "make the platform genuinely useful / market-facing" lane.
+
+**Change:**
+- `backend/agent-tools.js` — added the `seasonal_recommend` tool (input: optional `group` [5-group enum] / `zone` [3-zone enum] / `lang` [th|en|zh] / `date`; **nothing required** — all have sensible defaults). Its `executeTool` case calls the injected seasonal engine's `productAngles` and returns a **compact, model-friendly slice** (date, zone, localized solar term + season labels, the play for THIS group, and the top ≤6 angles), not the whole payload. Honest tool description (names the 24 solar terms / 节气, deterministic, no scraping). Degrades cleanly (`{error}`) if the engine isn't in context, and a bad date/group falls back safely.
+- `backend/server.js` — one-line wiring: `toolContext()` now injects `seasonal: { productAngles, recommend }` alongside the existing `orders/disputes/webhooks` (same dependency-injection pattern the other tools use). `toGeminiTools()` picks up the new tool automatically.
+
+**Verified (run, not assumed):** new `scripts/test-agent-tools.mjs` (`test:agent-tools`, no-server) **26/26** — it injects the **real** seasonal engine as context (exactly the shape `toolContext()` builds) and asserts: the tool schema is well-formed (5-group/3-zone/th-en-zh enums, no required field); `executeTool` returns a compact 1–6-angle slice with the group-specific play; the **same call localizes** — th angle is Thai, en has no Thai chars, zh is CJK, and the season/term/zone labels localize; safe defaults (no group → producer, unknown group → producer, missing engine → clean error not a throw, bad date → "now"); Gemini adapter advertises it; existing tools still degrade cleanly. **Booted the real server**: `/api/health` ok, `/api/agent/command` loads and returns the expected 503 with no AI key (proves the new wiring doesn't crash module-load or route setup; the model-driven tool *selection* needs an API key, which CI/this env doesn't have — the deterministic test drives the exact `executeTool` path server.js calls instead). `test:seasonal` still 50/50, `test:openapi` 12/12 (agent tools are the internal function-calling surface, not the public REST spec, so — like `/api/corporate/officer*` — they're intentionally left out of OpenAPI). `node --check` clean on `agent-tools.js` + `server.js`; `data/*.json` no git diff after boot. Wired `test:agent-tools` into `package.json` + the no-server CI block.
 
 ### 2026-07-29 — Hourly loop: localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks to the en/zh markets, not just Thai
 
@@ -3893,14 +3903,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 6e38c37 feat(seasonal): localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks en/zh, not just Thai (32 seconds ago)
+- b8e70cf feat(agent-tools): expose the seasonal engine as a `seasonal_recommend` tool — the platform AI can answer "what should I sell this season?" in th/en/zh (2 minutes ago)
+- df10ad2 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 6e38c37 feat(seasonal): localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks en/zh, not just Thai (4 hours ago)
 - 3284900 chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
 - e189ab0 feat(showcase): make /showcase discoverable — link it from the homepage footer (5 days ago)
 - e462947 chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
 - 6f61c18 feat(showcase): public /showcase tour page — "come see what we built", honestly (5 days ago)
 - c63f6da chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
-- c8d0df6 docs(openapi): advertise the seasonal endpoints + add the first guard for the spec (5 days ago)
-- 305254b chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3923,7 +3933,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -4078,7 +4088,7 @@ the backend.
 | `affiliate-row.js` | 43 | Affiliate ↔ Supabase row mapping (extracted for deterministic unit testing) |
 | `affiliate-tiers.js` | 18 | Affiliate commission tiers — extracted from server.js so the money-critical |
 | `affiliate-withdraw-math.js` | 32 | Affiliate withdraw-request math — the money-integrity rules for how much an |
-| `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
+| `agent-tools.js` | 125 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `auth.js` | 196 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
