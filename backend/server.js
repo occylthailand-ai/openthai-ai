@@ -44,6 +44,7 @@ import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, zonesInfo as seasonalZonesInfo } from './seasonal-engine.js';
 import { selectDigestMatches } from './digest-match.js';
+import { buyerConfirmation } from './order-confirm.js';
 import { createIntegrations } from './integrations.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -167,7 +168,7 @@ const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR, {
   onApply: (rec) => sendPortalWelcomeEmail({ type: 'producer', email: rec.email, name: rec.company || rec.contact_name, lang: rec.lang || 'th' }),
 });
-const orders    = createOrders(WRITE_DATA_DIR, { getProducerStock: (email) => producers.getStock(email), onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
+const orders    = createOrders(WRITE_DATA_DIR, { getProducerStock: (email) => producers.getStock(email), onNewOrder: async (order) => { sendOrderNotification(order); sendBuyerOrderConfirmation(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
 const disputes  = createDisputes(WRITE_DATA_DIR, {
   orders, callAI, parseAIJson,
   notify: {
@@ -1091,6 +1092,46 @@ async function sendOrderNotification(order) {
     console.log(`📧 Order notification ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
     console.error('Order email error:', err.message);
+  }
+}
+
+// Transactional confirmation to the BUYER (only when they gave an email — many give a phone instead).
+// Gives them their order id + a one-click Track link so closing the tab doesn't lose the order.
+// Consent-safe: the buyer initiated this order and supplied the contact for it (see order-confirm.js).
+async function sendBuyerOrderConfirmation(order) {
+  const info = buyerConfirmation(order, DOMAIN_URL);
+  if (!mailer || !info) return; // no SMTP, or the buyer gave a phone (no email channel) → skip quietly
+  const baht = (n) => (n == null ? '-' : `฿${Number(n).toLocaleString('th-TH')}`);
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to: info.to,
+      subject: info.subject,
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#10b981,#3b82f6);padding:28px;text-align:center;">
+          <h1 style="margin:0;font-size:23px;">✅ ได้รับคำสั่งซื้อของคุณแล้ว</h1>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);">ผู้ผลิตจะติดต่อกลับเพื่อยืนยันและจัดส่ง</p>
+        </div>
+        <div style="padding:24px;">
+          <p style="margin:0 0 14px;font-size:14px;">สวัสดีคุณ${escapeHtml(order.customer_name || '')} ขอบคุณที่สั่งซื้อผ่าน Openthai.ai 🙏</p>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <tr><td style="padding:9px 0;color:#94a3b8;">สินค้า</td><td style="padding:9px 0;text-align:right;font-weight:700;">${escapeHtml(order.product_name)}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">จำนวน</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${order.qty}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ยอดรวม</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);color:#10b981;font-weight:700;">${baht(order.amount)}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เลขที่ออเดอร์</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-family:monospace;font-size:12px;color:#a5b4fc;">${order.id}</td></tr>
+          </table>
+          <div style="text-align:center;margin-top:22px;">
+            <a href="${info.trackUrl}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;font-size:14px;">ติดตามสถานะคำสั่งซื้อ</a>
+          </div>
+          <p style="margin:16px 0 0;font-size:12px;color:#64748b;text-align:center;">เก็บเลขที่ออเดอร์นี้ไว้ ใช้ติดตามสถานะได้ทุกเมื่อด้วยเลขออเดอร์ + ช่องทางติดต่อของคุณ</p>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai • <a href="${DOMAIN_URL}" style="color:#6366f1;">${DOMAIN_URL.replace(/^https?:\/\//, '')}</a></div>
+      </div>`,
+    });
+    console.log(`📧 Buyer confirmation ส่งให้ ${info.to} เรียบร้อย`);
+  } catch (err) {
+    console.error('Buyer confirmation email error:', err.message);
   }
 }
 

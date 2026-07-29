@@ -9,6 +9,18 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-29 — Hourly loop: funnel gap — the BUYER got no order-confirmation email (only an on-screen id that vanishes when the tab closes)
+
+Continuing through the order funnel. On a successful `POST /api/orders`, `sendOrderNotification` emails the **producer** (and CCs the owner), but the **buyer received nothing** — just the order id shown in the OrderModal. Close the tab and that id (which, with the contact, is the only way to track the order at `/track`) is gone. The dispute-notification path already learned to notify **both** parties (incl. the buyer via `order.contact` when it's an email); the order-placed path hadn't. Added a transactional buyer confirmation.
+
+**Consent note (checked against the standing order):** this is **not** the prohibited "contact people without consent". The buyer *initiated* the order and supplied this contact *for this order* — a one-off transactional receipt is exactly what they expect, and it carries no marketing. We email **only when the contact is an email** (many buyers give a phone → no email channel → we skip, no guessing/enrichment).
+
+**Change:**
+- `backend/order-confirm.js` (new, pure) — `buyerConfirmation(order, domainUrl)` returns `null` when the buyer gave no email (phone/blank/garbage), else `{ to, subject, trackUrl }`. The `trackUrl` is `<domain>/track?id=<id>&contact=<email>` with both params URL-encoded (so a weird id/contact can't break the link) and a trailing slash on the domain won't double up.
+- `backend/server.js` — new `sendBuyerOrderConfirmation(order)` uses that helper: on an email contact it sends a Thai transactional receipt (product/qty/total + the order id + a one-click **"ติดตามสถานะคำสั่งซื้อ"** button to the track link); skips quietly with no SMTP or no email contact. Wired into `onNewOrder` alongside the existing producer notification (fire-and-forget, so it never blocks the order or stock decrement).
+
+**Verified + booted:** new `scripts/test-order-confirm.mjs` (`test:order-confirm`, no-server) **11/11** — emails only on an email contact (phone/empty/garbage/`{}` → null, never throws), the track link encodes id+contact (special chars stay safe, trailing-slash domain doesn't double up), and the subject names the product + `×qty` (missing qty → `×1`). **Booted the real server** with a seeded in-stock producer and placed two real orders: an **email**-contact order → `success` (the new confirmation path runs, skipping the actual send only because this env has no SMTP), and a **phone**-contact order → `success` (buyer confirmation correctly skipped). No runtime error in the `onNewOrder` path (which now also calls the buyer confirmation). `node --check` clean on both files; `data/*.json` restored (no git diff) after the boot. Wired `test:order-confirm` into `package.json` + the no-server CI block.
+
 ### 2026-07-29 — Hourly loop: harden the order path — server-side stock guard in POST /api/orders (closes the direct-POST hole the previous round flagged)
 
 The previous round fixed the **UI** (CatalogPage no longer shows an order button for sold-out products) but explicitly noted the **backend still accepted** an out-of-stock order — a direct `POST /api/orders`, a stale catalog tab, or a race between two buyers could still place an order the producer can't fulfil (`place()` only validated name/contact and then `decrementStock`'d, flooring at 0). Closed that hole so the guarantee holds regardless of the client.
