@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T11:19:30.814Z · branch `claude/daily-reporter-improvements-8vc9ct` (525 commit(s) ahead of main)
+Generated: 2026-07-29T12:27:24.453Z · branch `claude/daily-reporter-improvements-8vc9ct` (527 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 735 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 737 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: public, indexable `/seasonal` content page — gives the richer `/api/seasonal/recommend` a real home + an evergreen SEO answer to "ช่วงนี้ขายอะไรดี"
+
+Third seasonal follow-up, this time in the **marketing/SEO/content** lane. The deterministic engine now speaks th/en/zh (round 1) and is callable by the platform AI (round 2), but its **fuller** endpoint — `/api/seasonal/recommend` (the current solar term, the local season, **all** demand categories with a "why", a concrete action for **each of the five groups**, and a countdown to the next 节气) — was only reachable via raw API. The per-portal `SeasonalAnglesPanel` shows a 6-angle teaser; `/showcase` is a general tour. Nothing was an **indexable, evergreen page** answering the recurring buyer/seller question "what's in demand this season?" — a real, high-intent search query this platform should own.
+
+**Change (frontend only — no backend change; the endpoint was built + booted in earlier rounds):**
+- `frontend/src/pages/SeasonalPage.jsx` (new, th/en/zh) — fetches `/api/seasonal/recommend?zone=tropical&lang=<ui lang>` (re-fetches on language switch) and renders the full localized recommendation: season + solar-term header, the **next-term countdown** ("ปักษ์ถัดไป … ในอีก N วัน"), every category with its localized "why", and a play for each of the five groups. Because it is a **standalone page** (not the additive panel), on a fetch error it still renders its chrome + a graceful "live data unavailable, it computes from the calendar so it always answers when connected" message — never a blank page. Funnels into `/portals` + `/showcase`.
+- `App.jsx` — lazy import + `<Route path="/seasonal">` (public, not auth-gated).
+- **SEO wired correctly** (the `seoInvariants` triple: robots `Allow` == `ROUTES` == a real public App route): added `/seasonal` to `scripts/seo-routes.mjs` **and** `public/robots.txt`, so it is prerendered with its own social meta + listed in the sitemap.
+- **On-site discoverability:** added a `footer.link.seasonal` i18n key (th `🌦️ สินค้าตามฤดูกาล`, en `🌦️ Seasonal demand`, zh `🌦️ 应季畅销`) and the `[..., '/seasonal']` entry to the homepage footer "info" column (same real-`<a href>` pattern the footer-a11y fix enforces), so it's reachable without knowing the URL — not just from search.
+
+**Verified (run, not assumed):** new `frontend/src/__tests__/seasonalPage.test.jsx` **6/6** — renders the localized season + next-term countdown + every category/why; shows a play for all five groups; requests the endpoint with `zone=tropical` **and** the current `lang`; on switching to English it **re-fetches with `lang=en`** and renders en content (both the client-side-localized category names and the server-localized group actions); funnels into `/portals` + `/showcase`; and **degrades gracefully** on a fetch reject (hero + offline message, no blank). `footerNavA11y` extended with `/seasonal` (keyboard-focusable real `<a href>` guaranteed). `seoInvariants` stays green (robots/ROUTES/App-route triple consistent). Full frontend suite **271/271** (was 265; +6). `npm run build` succeeds — `/seasonal/index.html` prerenders with the right title, **sitemap grows to 24 URLs**. **Booted the real server** and curled `/api/seasonal/recommend?zone=tropical&lang=th|en|zh` → season/term/**next_term**/5 categories/group_actions all correct and localized in every language (default still Thai). `data/*.json` no git diff after boot.
 
 ### 2026-07-29 — Hourly loop: expose the seasonal engine as an agent tool (`seasonal_recommend`) — the platform's own AI can now answer "what should I sell this season?" in th/en/zh
 
@@ -3897,20 +3909,20 @@ the backend.
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 85 route components resolved
+- ✅ **Route components exist on disk** — all 86 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- b8e70cf feat(agent-tools): expose the seasonal engine as a `seasonal_recommend` tool — the platform AI can answer "what should I sell this season?" in th/en/zh (2 minutes ago)
-- df10ad2 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 6e38c37 feat(seasonal): localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks en/zh, not just Thai (4 hours ago)
+- 8b0d1a8 feat(seo): public /seasonal content page — evergreen answer to "what's in demand this season" (th/en/zh) (24 seconds ago)
+- 4d63c7e chore: sync PROJECT_STATUS.md [skip ci] (68 minutes ago)
+- b8e70cf feat(agent-tools): expose the seasonal engine as a `seasonal_recommend` tool — the platform AI can answer "what should I sell this season?" in th/en/zh (70 minutes ago)
+- df10ad2 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 6e38c37 feat(seasonal): localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks en/zh, not just Thai (5 hours ago)
 - 3284900 chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
 - e189ab0 feat(showcase): make /showcase discoverable — link it from the homepage footer (5 days ago)
 - e462947 chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
-- 6f61c18 feat(showcase): public /showcase tour page — "come see what we built", honestly (5 days ago)
-- c63f6da chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3933,7 +3945,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.5",
+  "memory_mb": "19.8",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -3991,7 +4003,7 @@ the backend.
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (85 routes)
+## Route map (86 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -4036,6 +4048,7 @@ the backend.
 | /affiliate/dashboard | AffiliateDashboard | public |
 | /privacy | PrivacyPage | public |
 | /showcase | ShowcasePage | public |
+| /seasonal | SeasonalPage | public |
 | /about | AboutPage | public |
 | /terms | TermsPage | public |
 | /contact | ContactPage | public |
