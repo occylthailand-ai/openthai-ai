@@ -52,7 +52,8 @@
     "test:seasonal": "node scripts/test-seasonal-engine.mjs",
     "test:dept-officers": "node scripts/test-dept-officers.mjs",
     "test:dept-officer-endpoint": "node scripts/test-dept-officer-endpoint.mjs",
-    "test:openapi": "node scripts/test-openapi-spec.mjs"
+    "test:openapi": "node scripts/test-openapi-spec.mjs",
+    "test:agent-tools": "node scripts/test-agent-tools.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

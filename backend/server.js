@@ -2576,7 +2576,7 @@ ${context}
 // Uses Claude/Gemini's native tool-use APIs (see backend/agent-tools.js for the
 // schema + why this needs no fine-tuning). No mock fallback here — deciding
 // whether/which tool to call is a real model decision, not something safe to fake.
-const toolContext = () => ({ orders, disputes, skillsRegistry: SKILLS_REGISTRY, webhooks });
+const toolContext = () => ({ orders, disputes, skillsRegistry: SKILLS_REGISTRY, webhooks, seasonal: { productAngles: seasonalProductAngles, recommend: seasonalRecommend } });
 
 async function runAgentCommandClaude(message) {
   const first = await anthropic.messages.create({
