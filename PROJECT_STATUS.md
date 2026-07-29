@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T19:15:07.592Z · branch `claude/daily-reporter-improvements-8vc9ct` (541 commit(s) ahead of main)
+Generated: 2026-07-29T22:16:52.846Z · branch `claude/daily-reporter-improvements-8vc9ct` (543 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 751 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 753 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,15 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: enhancement — climate-zone selector on `/seasonal` (international visitors can see their own region), using existing engine capability
+
+Small, grounded enhancement rather than another new page. The `/seasonal` page hard-coded `zone=tropical`, but the deterministic engine already supports **three** climate zones (`tropical` / `north_temperate` / `south_temperate`) with the correct hemisphere inversion — capability that was live but unreachable from the UI. Added a zone selector so a visitor outside the tropics (the `/portals/gov-intl` + `/portals/intl-org` audiences, and anyone Google sends from a temperate country) sees the season/categories/plays for **their** region, matching the owner's worldwide-reach intent. (Verified first that the surrounding funnel is already sound and needed nothing — all 9 `/portals/*` pages are consent-gated via the shared `submitLead`, `portal-leads.submit` enforces `consent:true` server-side too, and `robots.txt` already carries the `Sitemap:` directive — so this was a real capability gap, not manufactured work.)
+
+**Change (frontend only; the endpoint already accepts `zone`):**
+- `frontend/src/pages/SeasonalPage.jsx` — added a `zone` state + a labelled `<select>` (tropical default, plus northern/southern temperate) with th/en/zh option labels; the fetch now uses the chosen zone and re-fetches on change (`useEffect` dep `[lang, zone]`). New `zonePick` i18n label in all three languages.
+
+**Verified + booted (all 3 zones, real distinct data):** updated `frontend/src/__tests__/seasonalPage.test.jsx` **7/7** (+1) — switching the selector to `north_temperate` re-fetches with `zone=north_temperate` while the initial load still requested `zone=tropical`. **Booted the real server** and curled `/api/seasonal/recommend` for all three zones (lang=en): `tropical → Rainy season · rain_gear/quick_dry/moisture_control`, `north_temperate → Summer · cooling/hydration/sun_protection`, `south_temperate → Winter · heating/warm_apparel/hot_food` — the same late-July date yields opposite temperate seasons (the hemisphere inversion is correct), confirming the selector surfaces genuinely different, right answers. Full frontend suite **288/288** (was 287; +1), `npm run build` ok (sitemap 26 urls intact). `data/*.json` no diff after boot. No backend change.
 
 ### 2026-07-29 — Hourly loop: SEO/content — a public, indexable general `/faq` (FAQPage rich-result eligible), grounded in what the platform actually does
 
@@ -3995,14 +4004,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 57c4d29 feat(seo): public, indexable general /faq — FAQPage rich-result eligible, grounded in what the platform does (26 seconds ago)
-- dc40a1a chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- 68260ac feat(seo): public, indexable "AI tools" page — the 35-skills headline you can see without signing in (60 minutes ago)
-- 92cfc3d chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- fd7de01 fix(orders): restore producer stock when an order is cancelled (2 hours ago)
-- e803a98 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 9d13ac7 feat(orders): send the buyer a transactional order-confirmation email (3 hours ago)
-- 8c6f1d8 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- d6aa663 feat(seasonal): climate-zone selector on /seasonal — international visitors see their own region (17 seconds ago)
+- d42243a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 57c4d29 feat(seo): public, indexable general /faq — FAQPage rich-result eligible, grounded in what the platform does (3 hours ago)
+- dc40a1a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 68260ac feat(seo): public, indexable "AI tools" page — the 35-skills headline you can see without signing in (4 hours ago)
+- 92cfc3d chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- fd7de01 fix(orders): restore producer stock when an order is cancelled (5 hours ago)
+- e803a98 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -4025,7 +4034,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.6",
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
