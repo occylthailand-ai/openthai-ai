@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T13:21:53.507Z · branch `claude/daily-reporter-improvements-8vc9ct` (529 commit(s) ahead of main)
+Generated: 2026-07-29T14:18:40.721Z · branch `claude/daily-reporter-improvements-8vc9ct` (531 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 739 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 741 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: bug fix (buyer-facing twin) — the public catalog let buyers "order" SOLD-OUT products
+
+Direct follow-up to the previous round's consumer-digest sold-out fix, closing the **buyer-facing** side of the same defect. `/api/catalog` already returns each product's `stock` (from `producers.catalog()`), but `CatalogPage.jsx` **ignored it entirely** — every product rendered an active "สั่งซื้อ" button regardless of stock, and the producer-catalog order path (`POST /api/orders`) doesn't reject out-of-stock (it only `decrementStock`s, flooring at 0, in the `onNewOrder` hook). So a buyer could open the order modal for a sold-out item and place an order the producer can't fulfil — a wasted order + a disappointed buyer, on the marketplace's core conversion surface.
+
+**Change (frontend only — the data was already on the wire):**
+- `frontend/src/pages/CatalogPage.jsx` — per product, `soldOut = p.stock != null && Number(p.stock) <= 0` (mirrors the digest rule: `stock == null` = producer doesn't track = always orderable; `> 0` = orderable; `<= 0` = sold out). A sold-out card is dimmed and shows a non-interactive **"สินค้าหมด"** badge in place of the order button, so it can't open the checkout modal.
+- `frontend/src/i18n/index.jsx` — new `mk.cat.soldout` key (th `สินค้าหมด`, en `Sold out`, zh `已售罄`).
+
+**Verified:** new `frontend/src/__tests__/catalogStock.test.jsx` **4/4** (mocks `/api/catalog`) — in-stock + untracked(null) products keep the order button (exact count), a `stock: 0` product shows "สินค้าหมด" and is **not** a button (can't open the modal), negative/garbage stock is also treated as sold out, and an all-untracked catalog stays fully orderable with no sold-out labels. `modalDialogA11y` (which imports `OrderModal` from this file) still 10/10. Full frontend suite **275/275** (was 271; +4), `npm run build` succeeds (prerender + sitemap 24 urls intact). Backend unchanged — `/api/catalog` already carried `stock`; the buyer UI just wasn't honouring it. (Noted for a possible later round: a server-side guard in `POST /api/orders` would harden against a direct out-of-stock POST, but the UX defect real buyers hit is the catalog button, which this fixes.)
 
 ### 2026-07-29 — Hourly loop: bug fix — the consumer digest featured SOLD-OUT products (funnel-quality defect in the real matching path)
 
@@ -3925,14 +3935,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- aae5ad9 fix(digest): don't feature sold-out products in the consumer category digest (25 seconds ago)
-- d718ac6 chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
-- 8b0d1a8 feat(seo): public /seasonal content page — evergreen answer to "what's in demand this season" (th/en/zh) (55 minutes ago)
-- 4d63c7e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- b8e70cf feat(agent-tools): expose the seasonal engine as a `seasonal_recommend` tool — the platform AI can answer "what should I sell this season?" in th/en/zh (2 hours ago)
-- df10ad2 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 6e38c37 feat(seasonal): localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks en/zh, not just Thai (6 hours ago)
-- 3284900 chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
+- c4370a9 fix(catalog): don't let buyers order sold-out products in the public catalog (28 seconds ago)
+- 31bc4f4 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- aae5ad9 fix(digest): don't feature sold-out products in the consumer category digest (57 minutes ago)
+- d718ac6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 8b0d1a8 feat(seo): public /seasonal content page — evergreen answer to "what's in demand this season" (th/en/zh) (2 hours ago)
+- 4d63c7e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- b8e70cf feat(agent-tools): expose the seasonal engine as a `seasonal_recommend` tool — the platform AI can answer "what should I sell this season?" in th/en/zh (3 hours ago)
+- df10ad2 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3955,7 +3965,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "18.9",
+  "memory_mb": "20.0",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
