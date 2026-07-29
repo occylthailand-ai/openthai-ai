@@ -279,6 +279,14 @@ export function createProducers(dataDir, opts = {}) {
     res.json({ success: true, ...r });
   }));
 
+  // อ่านสต๊อกปัจจุบันของผู้ผลิต (null = ไม่ได้ track = พร้อมขายเสมอ) — ใช้โดย order stock guard
+  async function getStock(email) {
+    const e = (email || '').toString().trim().toLowerCase();
+    if (!isEmail(e)) return null;
+    const rec = (await all()).find((p) => (p.email || '').toLowerCase() === e);
+    return rec ? (rec.stock == null ? null : rec.stock) : null;
+  }
+
   // ลดสต๊อกเมื่อมีออเดอร์ (เฉพาะผู้ผลิตที่ตั้งสต๊อกไว้ — stock != null)
   async function decrementStock(email, qty) {
     const e = (email || '').toString().trim().toLowerCase();
@@ -295,5 +303,5 @@ export function createProducers(dataDir, opts = {}) {
     if (store[e] && store[e].stock != null) { store[e].stock = Math.max(0, store[e].stock - n); saveFile(); }
   }
 
-  return { router, register, all, summary, setStatus, updateListing, catalog, decrementStock, eraseByEmail, CATEGORIES };
+  return { router, register, all, summary, setStatus, updateListing, catalog, decrementStock, getStock, eraseByEmail, CATEGORIES };
 }

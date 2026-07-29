@@ -94,6 +94,20 @@ export function createOrders(dataDir, opts = {}) {
     if (!rec.product_name || !rec.customer_name || !rec.contact) {
       return { ok: false, error: 'กรอกสินค้า ชื่อผู้สั่ง และช่องทางติดต่อให้ครบ' };
     }
+    // Server-side stock guard (companion to the CatalogPage "สินค้าหมด" UI): reject an order the
+    // producer can't fulfil, so a direct POST — or a stale catalog tab — can't place a doomed order.
+    // getProducerStock returns the producer's current stock, or null when they don't track stock
+    // (null = always orderable, matching /api/catalog + the digest selector). If the lookup throws,
+    // we do NOT block the order — degrade to the prior always-accept behaviour rather than lose a sale.
+    if (typeof opts.getProducerStock === 'function') {
+      try {
+        const stock = await opts.getProducerStock(rec.producer_email, rec.product_name);
+        if (stock != null && Number(stock) < qty) {
+          return { ok: false, out_of_stock: true, stock: Number(stock),
+            error: Number(stock) <= 0 ? 'สินค้าหมด' : `สต๊อกไม่พอ (เหลือ ${Number(stock)} ชิ้น)` };
+        }
+      } catch (e) { console.warn('[orders] stock guard skipped:', e.message); }
+    }
     await persist(rec);
     try { await opts.onNewOrder?.(rec); } catch (e) { console.warn('[orders] notify failed:', e.message); }
     return { ok: true, id: rec.id };

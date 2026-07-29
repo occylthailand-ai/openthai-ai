@@ -85,6 +85,7 @@ jobs:
           npm run test:openapi
           npm run test:agent-tools
           npm run test:digest-match
+          npm run test:order-stock-guard
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage
