@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T17:16:36.267Z · branch `claude/daily-reporter-improvements-8vc9ct` (537 commit(s) ahead of main)
+Generated: 2026-07-29T18:15:49.328Z · branch `claude/daily-reporter-improvements-8vc9ct` (539 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 747 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 749 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: SEO/marketing — a public, indexable "AI tools" page (the "35 skills" headline finally has a page you can see without signing in)
+
+Back to the marketing/SEO/content lane. The platform's headline selling point is its **35 AI skills**, but the only pages that list them — `/skills` and `/skills-catalog` — are **both auth-gated** (`isAuthenticated ? … : <Navigate to="/login" />`) and internal-facing (they expose each skill's endpoint/method and link into the dashboard). So a prospective user — or Google — literally **could not see what the tools are** without creating an account. That's a real top-of-funnel + SEO gap: no indexable proof of the product's core value.
+
+**Change (frontend only; reads the already-public `GET /api/skills`):**
+- `frontend/src/pages/AiSkillsPublicPage.jsx` (new, th/en/zh) — a marketing-only showcase: live `active/total` count badge, every skill's **name** grouped by **localized category** (31-category label map with icon, th/en/zh), a client-side search filter, and a CTA into the funnel (`/portals` + `/pricing`). It deliberately **omits the internal `endpoint`/`method`** the auth-gated catalog shows — this page sells, it doesn't document the API. Standalone-page resilience: on a fetch error it still renders its hero + a graceful "list unavailable" message. Execution stays behind login; this page only *shows* the catalog.
+- `App.jsx` — lazy `<Route path="/ai-skills">` (public, not auth-gated; distinct from the auth-gated `/skills` tool).
+- **SEO wired** (robots `Allow` == `ROUTES` == real public route, enforced by `seoInvariants`): added `/ai-skills` to `scripts/seo-routes.mjs` + `public/robots.txt` → prerendered social meta + sitemap.
+- **Discoverability:** `footer.link.aiskills` i18n (th `🧠 เครื่องมือ AI`, en `🧠 AI tools`, zh `🧠 AI工具`) + the `[..., '/ai-skills']` entry in the homepage footer info column.
+
+**Verified (run, not assumed):** confirmed `GET /api/skills` is **public** (booted the server, curled it with no token → 200, 35 skills, fields `id/name/category/endpoint/method/status`). New `frontend/src/__tests__/aiSkillsPublicPage.test.jsx` **6/6** — hero + live count + names grouped by localized category; **does NOT leak** `endpoint`/`method` (asserts `/api/generate` and `POST` are absent — the marketing/internal separation is guaranteed); search filters; funnels to `/portals` + `/pricing`; English toggle localizes the hero + category labels; graceful fetch-error state. `footerNavA11y` extended with `/ai-skills`; `seoInvariants` green. Full frontend suite **281/281** (was 275; +6). `npm run build` ok — `/ai-skills/index.html` prerenders with the right title, **sitemap 25 URLs**. No backend change.
 
 ### 2026-07-29 — Hourly loop: bug fix — cancelling an order didn't restore the producer's stock (leaked stock → false "สินค้าหมด")
 
@@ -3963,20 +3975,20 @@ the backend.
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 86 route components resolved
+- ✅ **Route components exist on disk** — all 87 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- fd7de01 fix(orders): restore producer stock when an order is cancelled (23 seconds ago)
-- e803a98 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 9d13ac7 feat(orders): send the buyer a transactional order-confirmation email (62 minutes ago)
-- 8c6f1d8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 206431a feat(orders): server-side stock guard in POST /api/orders (reject out-of-stock) (2 hours ago)
-- a761d18 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- c4370a9 fix(catalog): don't let buyers order sold-out products in the public catalog (3 hours ago)
-- 31bc4f4 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 68260ac feat(seo): public, indexable "AI tools" page — the 35-skills headline you can see without signing in (20 seconds ago)
+- 92cfc3d chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- fd7de01 fix(orders): restore producer stock when an order is cancelled (60 minutes ago)
+- e803a98 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 9d13ac7 feat(orders): send the buyer a transactional order-confirmation email (2 hours ago)
+- 8c6f1d8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 206431a feat(orders): server-side stock guard in POST /api/orders (reject out-of-stock) (3 hours ago)
+- a761d18 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3999,7 +4011,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.0",
+  "memory_mb": "19.7",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -4057,7 +4069,7 @@ the backend.
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (86 routes)
+## Route map (87 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -4103,6 +4115,7 @@ the backend.
 | /privacy | PrivacyPage | public |
 | /showcase | ShowcasePage | public |
 | /seasonal | SeasonalPage | public |
+| /ai-skills | AiSkillsPublicPage | public |
 | /about | AboutPage | public |
 | /terms | TermsPage | public |
 | /contact | ContactPage | public |
