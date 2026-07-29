@@ -63,6 +63,20 @@ describe('SeasonalPage', () => {
     expect(url).toMatch(/[?&]lang=th/);
   });
 
+  it('re-fetches for the chosen climate zone (international visitors can switch region)', async () => {
+    mockFetch(PAYLOAD);
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/ฤดูฝน \(เขตร้อน\)/)).toBeTruthy());
+    // switch the zone selector to the northern temperate zone
+    fireEvent.change(screen.getByLabelText(/เขตภูมิอากาศ/), { target: { value: 'north_temperate' } });
+    await waitFor(() => {
+      const urls = global.fetch.mock.calls.map((c) => String(c[0]));
+      expect(urls.some((u) => /zone=north_temperate/.test(u))).toBe(true);
+    });
+    // default tropical was requested first, the switch requested the new zone
+    expect(String(global.fetch.mock.calls[0][0])).toMatch(/zone=tropical/);
+  });
+
   it('re-fetches in English and localizes the content when the language switches', async () => {
     // First load (th), then switch to en: the component must refetch with lang=en and render en data.
     const EN = { ...PAYLOAD, lang: 'en', local_season: { key: 'rainy', th: 'ฤดูฝน', label: 'Rainy season (tropical)' },

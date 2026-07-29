@@ -15,6 +15,7 @@ const T = {
     title: 'สินค้ามาแรงตามฤดูกาล',
     sub: 'ช่วงนี้ควรผลิต ขาย หรือซื้ออะไร — อิงปฏิทิน 24 ฤดูกาลจีน (节气) + ฤดูกาลของพื้นที่ คำนวณสด ไม่ใช้ AI ไม่เก็บข้อมูลคุณ',
     now: 'ช่วงนี้',
+    zonePick: 'เขตภูมิอากาศ',
     nextTerm: 'ปักษ์ถัดไป',
     inDays: (n) => `ในอีก ${n} วัน`,
     catsHeading: 'หมวดสินค้าที่ดีมานด์ช่วงนี้',
@@ -32,6 +33,7 @@ const T = {
     title: 'What sells by season',
     sub: 'What to make, sell, or buy right now — from the 24 solar terms (节气) + your local season, computed live, no AI, no data collected.',
     now: 'Right now',
+    zonePick: 'Climate zone',
     nextTerm: 'Next term',
     inDays: (n) => `in ${n} day${n === 1 ? '' : 's'}`,
     catsHeading: 'In-demand categories this period',
@@ -49,6 +51,7 @@ const T = {
     title: '应季畅销品',
     sub: '当下该生产、销售或采购什么——基于二十四节气 + 本地季节实时计算，无AI、不采集数据。',
     now: '当前',
+    zonePick: '气候带',
     nextTerm: '下一节气',
     inDays: (n) => `还有 ${n} 天`,
     catsHeading: '本季高需求品类',
@@ -64,6 +67,14 @@ const T = {
   },
 };
 
+// The engine supports three climate zones (see backend/seasonal-engine.js). tropical is the default
+// for the Thai/ASEAN audience, but international visitors can switch to see their own region's season.
+const ZONE_OPTS = [
+  { key: 'tropical',        th: 'เขตร้อน (ไทย/อาเซียน)',       en: 'Tropical (Thailand/ASEAN)', zh: '热带（泰国/东盟）' },
+  { key: 'north_temperate', th: 'เขตอบอุ่นซีกโลกเหนือ',        en: 'Northern temperate',        zh: '北温带' },
+  { key: 'south_temperate', th: 'เขตอบอุ่นซีกโลกใต้',          en: 'Southern temperate',        zh: '南温带' },
+];
+
 const card = { background: '#111', border: '1px solid #6366f133', borderRadius: 14, padding: '18px 20px' };
 const catName = (c, lang) => (lang === 'en' ? c.en : lang === 'zh' ? c.zh : c.th);
 const catWhy = (c, lang) => (lang === 'en' ? c.why_en : lang === 'zh' ? c.why_zh : c.why) || c.why;
@@ -71,6 +82,7 @@ const termLabel = (nt, lang) => (lang === 'en' ? nt.en : lang === 'zh' ? nt.cn :
 
 export default function SeasonalPage() {
   const [lang, setLang] = useState('th');
+  const [zone, setZone] = useState('tropical');
   const [data, setData] = useState(null);
   const [failed, setFailed] = useState(false);
   const t = T[lang];
@@ -82,7 +94,7 @@ export default function SeasonalPage() {
     setData(null); setFailed(false);
     (async () => {
       try {
-        const res = await fetch(apiUrl(`/api/seasonal/recommend?zone=tropical&lang=${encodeURIComponent(lang)}`));
+        const res = await fetch(apiUrl(`/api/seasonal/recommend?zone=${encodeURIComponent(zone)}&lang=${encodeURIComponent(lang)}`));
         const json = await res.json();
         if (!alive) return;
         if (json && json.success && Array.isArray(json.categories)) setData(json);
@@ -92,7 +104,7 @@ export default function SeasonalPage() {
       }
     })();
     return () => { alive = false; };
-  }, [lang]);
+  }, [lang, zone]);
 
   const groupOrder = ['producer', 'middleman', 'affiliate', 'partner_agent', 'consumer'];
 
@@ -109,6 +121,13 @@ export default function SeasonalPage() {
           <div style={{ fontSize: 52, marginBottom: 12 }}>🌦️</div>
           <h1 style={{ fontSize: 32, fontWeight: 800, color: '#818cf8', margin: '0 0 12px' }}>{t.title}</h1>
           <p style={{ color: '#aaa', fontSize: 16, maxWidth: 640, margin: '0 auto', lineHeight: 1.6 }}>{t.sub}</p>
+          <div style={{ marginTop: 18 }}>
+            <label htmlFor="seasonal-zone" style={{ color: '#94a3b8', fontSize: 13, marginRight: 8 }}>{t.zonePick}:</label>
+            <select id="seasonal-zone" value={zone} onChange={(e) => setZone(e.target.value)}
+              style={{ background: '#111', border: '1px solid #333', color: '#fff', borderRadius: 8, padding: '8px 12px', fontSize: 14, outline: 'none', cursor: 'pointer' }}>
+              {ZONE_OPTS.map((z) => <option key={z.key} value={z.key}>{z[lang] || z.th}</option>)}
+            </select>
+          </div>
         </div>
 
         {!data && !failed && <p style={{ textAlign: 'center', color: '#94a3b8' }}>{t.loading}</p>}
