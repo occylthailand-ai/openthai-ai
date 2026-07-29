@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T18:15:49.328Z · branch `claude/daily-reporter-improvements-8vc9ct` (539 commit(s) ahead of main)
+Generated: 2026-07-29T19:15:07.592Z · branch `claude/daily-reporter-improvements-8vc9ct` (541 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 749 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 751 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,20 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: SEO/content — a public, indexable general `/faq` (FAQPage rich-result eligible), grounded in what the platform actually does
+
+Continuing the marketing/SEO/content lane. `/pricing` and `/affiliate` already carry topic-specific FAQs with `FAQPage` JSON-LD, but there was **no general FAQ** answering the broad top-of-funnel questions — "what is this / is my data safe / how do I pay / how do I track an order / what if there's a problem / how do sellers join / how do affiliates get paid". Those are exactly the queries a hesitant first-time visitor (and Google) searches. Built `/faq` reusing the site's existing FAQ pattern.
+
+**Honesty guardrail (the whole point):** every answer is grounded in what the platform **actually does** — consent-first funnels, **no scraping**, PromptPay + card in THB via Omise, PDPA access/erasure/unsubscribe, order tracking by id+contact, a dispute flow that holds funds in escrow and lets **both sides** submit evidence before an **admin** decides (AI only suggests, never moves money), producer apply→approve→self-restock, tier-based affiliate commission withdrawn to PromptPay with email confirmation, 35 AI skills, 3 languages. **No invented features** — a test asserts the answers never mention the repo's known-rejected phantoms (Neo4j / Stripe / USD / blockchain).
+
+**Change (frontend only):**
+- `frontend/src/pages/FaqPage.jsx` (new, th/en/zh) — 8 grounded Q&A in an accessible accordion (`role="button"` + `aria-expanded` + Enter/Space, matching the `/pricing` `/affiliate` a11y pattern), a CTA into `/portals` + `/privacy`, and **`FAQPage` JSON-LD derived from the SAME visible Q&A** (same client-side injection `/pricing` uses — Google renders the SPA and reads it, so the page is eligible for FAQ rich results and the schema can't drift from what's shown).
+- `App.jsx` — lazy `<Route path="/faq">` (public).
+- **SEO wired** (`seoInvariants` triple): `/faq` added to `scripts/seo-routes.mjs` + `public/robots.txt` → prerendered meta + sitemap.
+- **Discoverability:** `footer.link.faq` i18n (th `❓ คำถามที่พบบ่อย`, en `❓ FAQ`, zh `❓ 常见问题`) + the homepage footer entry.
+
+**Verified (run, not assumed):** new `frontend/src/__tests__/faqPage.test.jsx` **6/6** — renders the questions; emits **exactly one** valid `FAQPage` JSON-LD with 8 well-formed Question→Answer entries mirroring the visible Q&A; the answers are **honest** (contain consent/scrape/PromptPay/PDPA and do NOT contain Neo4j/Stripe/USD/blockchain); the accordion expands accessibly via keyboard (`aria-expanded` flips on Enter); funnels to `/portals` + `/privacy`; English toggle localizes both the page and the JSON-LD. `footerNavA11y` extended with `/faq`; `seoInvariants` green. Full frontend suite **287/287** (was 281; +6). `npm run build` ok — `/faq/index.html` prerenders with the right title, **sitemap 26 URLs**. No backend change.
 
 ### 2026-07-29 — Hourly loop: SEO/marketing — a public, indexable "AI tools" page (the "35 skills" headline finally has a page you can see without signing in)
 
@@ -3975,20 +3989,20 @@ the backend.
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 87 route components resolved
+- ✅ **Route components exist on disk** — all 88 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 68260ac feat(seo): public, indexable "AI tools" page — the 35-skills headline you can see without signing in (20 seconds ago)
-- 92cfc3d chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- fd7de01 fix(orders): restore producer stock when an order is cancelled (60 minutes ago)
-- e803a98 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 9d13ac7 feat(orders): send the buyer a transactional order-confirmation email (2 hours ago)
-- 8c6f1d8 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 206431a feat(orders): server-side stock guard in POST /api/orders (reject out-of-stock) (3 hours ago)
-- a761d18 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 57c4d29 feat(seo): public, indexable general /faq — FAQPage rich-result eligible, grounded in what the platform does (26 seconds ago)
+- dc40a1a chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 68260ac feat(seo): public, indexable "AI tools" page — the 35-skills headline you can see without signing in (60 minutes ago)
+- 92cfc3d chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- fd7de01 fix(orders): restore producer stock when an order is cancelled (2 hours ago)
+- e803a98 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 9d13ac7 feat(orders): send the buyer a transactional order-confirmation email (3 hours ago)
+- 8c6f1d8 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -4011,7 +4025,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.7",
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -4069,7 +4083,7 @@ the backend.
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (87 routes)
+## Route map (88 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -4116,6 +4130,7 @@ the backend.
 | /showcase | ShowcasePage | public |
 | /seasonal | SeasonalPage | public |
 | /ai-skills | AiSkillsPublicPage | public |
+| /faq | FaqPage | public |
 | /about | AboutPage | public |
 | /terms | TermsPage | public |
 | /contact | ContactPage | public |
