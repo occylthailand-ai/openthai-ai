@@ -43,6 +43,7 @@ import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, zonesInfo as seasonalZonesInfo } from './seasonal-engine.js';
+import { selectDigestMatches } from './digest-match.js';
 import { createIntegrations } from './integrations.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -1320,7 +1321,9 @@ async function sendConsumerDigest() {
 
   for (const lead of consumers) {
     const category = (lead.form_data || {}).category || '';
-    const matches = catalog.filter((p) => p.category === category).slice(0, 5);
+    // Exact-category match, excluding sold-out items (see digest-match.js) — a "new picks" promo
+    // that links to a product the consumer can't buy wastes the click and erodes trust.
+    const matches = selectDigestMatches(catalog, category, 5);
     if (matches.length === 0) { skipped++; continue; }
     const lang = lead.lang === 'en' ? 'en' : lead.lang === 'zh' ? 'zh' : 'th';
     const itemsHtml = matches.map((p) => `
