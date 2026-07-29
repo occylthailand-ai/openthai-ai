@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T14:18:40.721Z · branch `claude/daily-reporter-improvements-8vc9ct` (531 commit(s) ahead of main)
+Generated: 2026-07-29T15:19:34.976Z · branch `claude/daily-reporter-improvements-8vc9ct` (533 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 741 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 743 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,17 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: harden the order path — server-side stock guard in POST /api/orders (closes the direct-POST hole the previous round flagged)
+
+The previous round fixed the **UI** (CatalogPage no longer shows an order button for sold-out products) but explicitly noted the **backend still accepted** an out-of-stock order — a direct `POST /api/orders`, a stale catalog tab, or a race between two buyers could still place an order the producer can't fulfil (`place()` only validated name/contact and then `decrementStock`'d, flooring at 0). Closed that hole so the guarantee holds regardless of the client.
+
+**Change:**
+- `backend/orders.js` — `place()` now consults an injected `opts.getProducerStock(email)` after field validation, before persisting: if the producer's stock is tracked and `< qty`, it rejects with `{ ok:false, out_of_stock:true, stock, error }` (`สินค้าหมด` when 0, `สต๊อกไม่พอ (เหลือ N ชิ้น)` when partial). `stock == null` (untracked) stays always-orderable — same semantics as `/api/catalog` and the digest selector. **Graceful:** if the lookup throws, the order is NOT blocked (degrade to prior behaviour rather than lose a sale); if no hook is injected, behaviour is unchanged (backward compatible). The route already maps `!ok → 400 { error }`, which the CatalogPage OrderModal surfaces as-is.
+- `backend/producers.js` — added `getStock(email)` (returns current stock or `null` when untracked) + exported it.
+- `backend/server.js` — one-line wiring: `createOrders(..., { getProducerStock: (email) => producers.getStock(email), onNewOrder: … })`.
+
+**Verified + mutation-tested + booted end-to-end:** new `scripts/test-order-stock-guard.mjs` (`test:order-stock-guard`, no-server, file-store) **9/9** — stock 10/qty 3 accepted, untracked(null) always orderable, stock 0 → `out_of_stock` + `สินค้าหมด`, stock 2/qty 5 → `สต๊อกไม่พอ (เหลือ 2 ชิ้น)`, stock 2/qty 2 exactly-enough accepted, a throwing lookup does NOT block, no-hook stays backward compatible, and the guard runs only for well-formed orders (field validation still first). **Mutation:** neutering the `stock < qty` predicate flips the sold-out + insufficient assertions red; restored to 9/9. **Booted the real server** with a seeded approved producer at `stock:0` and one at `stock:5`: `POST /api/orders` for the sold-out one → `{"success":false,"error":"สินค้าหมด"}`, for the in-stock one (qty 2) → `{"success":true,...}`. `node --check` clean on all three files; `data/*.json` restored (no git diff) after the boot. Wired `test:order-stock-guard` into `package.json` + the no-server CI block.
 
 ### 2026-07-29 — Hourly loop: bug fix (buyer-facing twin) — the public catalog let buyers "order" SOLD-OUT products
 
@@ -3935,14 +3946,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- c4370a9 fix(catalog): don't let buyers order sold-out products in the public catalog (28 seconds ago)
-- 31bc4f4 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- aae5ad9 fix(digest): don't feature sold-out products in the consumer category digest (57 minutes ago)
-- d718ac6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 8b0d1a8 feat(seo): public /seasonal content page — evergreen answer to "what's in demand this season" (th/en/zh) (2 hours ago)
-- 4d63c7e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- b8e70cf feat(agent-tools): expose the seasonal engine as a `seasonal_recommend` tool — the platform AI can answer "what should I sell this season?" in th/en/zh (3 hours ago)
-- df10ad2 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 206431a feat(orders): server-side stock guard in POST /api/orders (reject out-of-stock) (25 seconds ago)
+- a761d18 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- c4370a9 fix(catalog): don't let buyers order sold-out products in the public catalog (61 minutes ago)
+- 31bc4f4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- aae5ad9 fix(digest): don't feature sold-out products in the consumer category digest (2 hours ago)
+- d718ac6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 8b0d1a8 feat(seo): public /seasonal content page — evergreen answer to "what's in demand this season" (th/en/zh) (3 hours ago)
+- 4d63c7e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3965,7 +3976,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "20.0",
+  "memory_mb": "19.5",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -4134,11 +4145,11 @@ the backend.
 | `omise-payment.js` | 182 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 772 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |
-| `orders.js` | 203 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `orders.js` | 217 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 160 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 300 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 308 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
