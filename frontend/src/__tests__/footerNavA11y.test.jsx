@@ -19,7 +19,7 @@ describe('LandingPage footer navigation accessibility', () => {
   }
 
   // These are the internal footer route targets (mailto is a separate <a> already).
-  const ROUTE_TARGETS = ['/ai-generator', '/pricing', '/store', '/catalog', '/find-producers', '/affiliate', '/join', '/showcase', '/seasonal', '/ai-skills', '/about', '/privacy', '/terms'];
+  const ROUTE_TARGETS = ['/ai-generator', '/pricing', '/store', '/catalog', '/find-producers', '/affiliate', '/join', '/showcase', '/seasonal', '/ai-skills', '/faq', '/about', '/privacy', '/terms'];
 
   it('renders footer internal nav items as real links with correct href', () => {
     renderPage();

@@ -9,6 +9,20 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-29 — Hourly loop: SEO/content — a public, indexable general `/faq` (FAQPage rich-result eligible), grounded in what the platform actually does
+
+Continuing the marketing/SEO/content lane. `/pricing` and `/affiliate` already carry topic-specific FAQs with `FAQPage` JSON-LD, but there was **no general FAQ** answering the broad top-of-funnel questions — "what is this / is my data safe / how do I pay / how do I track an order / what if there's a problem / how do sellers join / how do affiliates get paid". Those are exactly the queries a hesitant first-time visitor (and Google) searches. Built `/faq` reusing the site's existing FAQ pattern.
+
+**Honesty guardrail (the whole point):** every answer is grounded in what the platform **actually does** — consent-first funnels, **no scraping**, PromptPay + card in THB via Omise, PDPA access/erasure/unsubscribe, order tracking by id+contact, a dispute flow that holds funds in escrow and lets **both sides** submit evidence before an **admin** decides (AI only suggests, never moves money), producer apply→approve→self-restock, tier-based affiliate commission withdrawn to PromptPay with email confirmation, 35 AI skills, 3 languages. **No invented features** — a test asserts the answers never mention the repo's known-rejected phantoms (Neo4j / Stripe / USD / blockchain).
+
+**Change (frontend only):**
+- `frontend/src/pages/FaqPage.jsx` (new, th/en/zh) — 8 grounded Q&A in an accessible accordion (`role="button"` + `aria-expanded` + Enter/Space, matching the `/pricing` `/affiliate` a11y pattern), a CTA into `/portals` + `/privacy`, and **`FAQPage` JSON-LD derived from the SAME visible Q&A** (same client-side injection `/pricing` uses — Google renders the SPA and reads it, so the page is eligible for FAQ rich results and the schema can't drift from what's shown).
+- `App.jsx` — lazy `<Route path="/faq">` (public).
+- **SEO wired** (`seoInvariants` triple): `/faq` added to `scripts/seo-routes.mjs` + `public/robots.txt` → prerendered meta + sitemap.
+- **Discoverability:** `footer.link.faq` i18n (th `❓ คำถามที่พบบ่อย`, en `❓ FAQ`, zh `❓ 常见问题`) + the homepage footer entry.
+
+**Verified (run, not assumed):** new `frontend/src/__tests__/faqPage.test.jsx` **6/6** — renders the questions; emits **exactly one** valid `FAQPage` JSON-LD with 8 well-formed Question→Answer entries mirroring the visible Q&A; the answers are **honest** (contain consent/scrape/PromptPay/PDPA and do NOT contain Neo4j/Stripe/USD/blockchain); the accordion expands accessibly via keyboard (`aria-expanded` flips on Enter); funnels to `/portals` + `/privacy`; English toggle localizes both the page and the JSON-LD. `footerNavA11y` extended with `/faq`; `seoInvariants` green. Full frontend suite **287/287** (was 281; +6). `npm run build` ok — `/faq/index.html` prerenders with the right title, **sitemap 26 URLs**. No backend change.
+
 ### 2026-07-29 — Hourly loop: SEO/marketing — a public, indexable "AI tools" page (the "35 skills" headline finally has a page you can see without signing in)
 
 Back to the marketing/SEO/content lane. The platform's headline selling point is its **35 AI skills**, but the only pages that list them — `/skills` and `/skills-catalog` — are **both auth-gated** (`isAuthenticated ? … : <Navigate to="/login" />`) and internal-facing (they expose each skill's endpoint/method and link into the dashboard). So a prospective user — or Google — literally **could not see what the tools are** without creating an account. That's a real top-of-funnel + SEO gap: no indexable proof of the product's core value.
