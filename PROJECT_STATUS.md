@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T12:27:24.453Z · branch `claude/daily-reporter-improvements-8vc9ct` (527 commit(s) ahead of main)
+Generated: 2026-07-29T13:21:53.507Z · branch `claude/daily-reporter-improvements-8vc9ct` (529 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 737 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 739 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: bug fix — the consumer digest featured SOLD-OUT products (funnel-quality defect in the real matching path)
+
+Diversified off the seasonal thread to a real bug found by scanning the revenue-critical funnel. `sendConsumerDigest()` (the weekly category-matched "🛍️ new picks in your category" email) selected a consumer's products with `catalog.filter((p) => p.category === category).slice(0, 5)` — an **exact-category match that never checked stock**. `producers.catalog()` returns every approved producer with a `product_name`, **including ones whose `stock` is explicitly `0`**. So a consumer could be emailed "new picks in สมุนไพร", click through, and land on a sold-out product — a wasted click and a trust hit on the one proactive touch the funnel makes. (Audited the neighbours first and found them already sound: the `portal_leads` **unsubscribe is dual-mode** — PATCH Supabase + file fallback — so opt-outs are durable across redeploys; and the frontend/backend category whitelists are still identical + test-pinned. Not manufactured work — this was the one real defect.)
+
+**Change:**
+- `backend/digest-match.js` (new, pure) — `selectDigestMatches(catalog, category, limit=5)`: exact category match **and** exclude sold-out items — `stock === 0` (and negative/garbage) are dropped, while `stock == null` (producer doesn't track stock = always available) and any positive stock are kept. Null-safe (bad catalog / null entries never throw).
+- `backend/server.js` — `sendConsumerDigest` now calls `selectDigestMatches(catalog, category, 5)` instead of the inline stock-blind filter. If nothing available remains, the consumer is skipped (no email) exactly as the no-match path already did — never an empty or all-sold-out digest.
+
+**Verified + mutation-tested + booted:** new `scripts/test-digest-match.mjs` (`test:digest-match`, no-server) **14/14** — strict category match (other categories / empty category / no-producer category all excluded), in-stock + untracked(null) featured, `stock===0` and negative excluded, limit cap + a null catalog + null entries + zero-limit all safe. **Mutation:** dropping the stock predicate flips 3 assertions red (the two sold-out/negative exclusions + the exact-count) — the guard genuinely enforces it; restored to 14/14. **Booted the real server**: clean start, `/api/portals/consumer-digest` loads and enforces its cron/admin auth (proves the new import + wiring are intact; the actual send needs SMTP + auth, so the pure selector — the real logic — is what's unit+mutation-tested). `node --check` clean on both files; `data/*.json` no git diff after boot. Wired `test:digest-match` into `package.json` + the no-server CI block.
 
 ### 2026-07-29 — Hourly loop: public, indexable `/seasonal` content page — gives the richer `/api/seasonal/recommend` a real home + an evergreen SEO answer to "ช่วงนี้ขายอะไรดี"
 
@@ -3915,14 +3925,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 8b0d1a8 feat(seo): public /seasonal content page — evergreen answer to "what's in demand this season" (th/en/zh) (24 seconds ago)
-- 4d63c7e chore: sync PROJECT_STATUS.md [skip ci] (68 minutes ago)
-- b8e70cf feat(agent-tools): expose the seasonal engine as a `seasonal_recommend` tool — the platform AI can answer "what should I sell this season?" in th/en/zh (70 minutes ago)
-- df10ad2 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 6e38c37 feat(seasonal): localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks en/zh, not just Thai (5 hours ago)
+- aae5ad9 fix(digest): don't feature sold-out products in the consumer category digest (25 seconds ago)
+- d718ac6 chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
+- 8b0d1a8 feat(seo): public /seasonal content page — evergreen answer to "what's in demand this season" (th/en/zh) (55 minutes ago)
+- 4d63c7e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- b8e70cf feat(agent-tools): expose the seasonal engine as a `seasonal_recommend` tool — the platform AI can answer "what should I sell this season?" in th/en/zh (2 hours ago)
+- df10ad2 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 6e38c37 feat(seasonal): localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks en/zh, not just Thai (6 hours ago)
 - 3284900 chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
-- e189ab0 feat(showcase): make /showcase discoverable — link it from the homepage footer (5 days ago)
-- e462947 chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3945,7 +3955,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.8",
+  "memory_mb": "18.9",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -4093,7 +4103,7 @@ the backend.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 35 files)
+## Backend modules (backend/*.js — 36 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -4106,6 +4116,7 @@ the backend.
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
 | `dept-officers.js` | 85 | Openthai.ai — AI Department Officers (เจ้าหน้าที่ AI ประจำฝ่าย) |
+| `digest-match.js` | 22 | Pure, side-effect-free selector for the consumer category digest (sendConsumerDigest in server.js). |
 | `disputes.js` | 319 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 259 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
@@ -4122,7 +4133,7 @@ the backend.
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9096 | Vercel serverless detection |
+| `server.js` | 9099 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
