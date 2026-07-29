@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Allow: /showcase
 Allow: /seasonal
+Allow: /ai-skills
 Allow: /pricing
 Allow: /affiliate
 Allow: /portals

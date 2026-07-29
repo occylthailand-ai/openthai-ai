@@ -32,6 +32,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const ShowcasePage = lazy(() => import('./pages/ShowcasePage'));
 const SeasonalPage = lazy(() => import('./pages/SeasonalPage'));
+const AiSkillsPublicPage = lazy(() => import('./pages/AiSkillsPublicPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
@@ -193,6 +194,7 @@ function App() {
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/showcase" element={<ShowcasePage />} />
             <Route path="/seasonal" element={<SeasonalPage />} />
+            <Route path="/ai-skills" element={<AiSkillsPublicPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/contact" element={<ContactPage />} />
