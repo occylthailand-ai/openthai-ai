@@ -42,7 +42,7 @@ import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
-import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, _zones as seasonalZones } from './seasonal-engine.js';
+import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, zonesInfo as seasonalZonesInfo } from './seasonal-engine.js';
 import { createIntegrations } from './integrations.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -2041,20 +2041,23 @@ app.post('/api/analyze-image', express.json({ limit: '5mb' }), generateLimiter, 
 // เครื่องมือ "ดันสินค้าที่ใช่ ให้พื้นที่/ฤดูกาลที่ใช่" ตามวิสัยทัศน์เจ้าของ (2026-07-24): เชิงกำหนดได้
 // จากปฏิทินสุริยคติ + ฤดูกาลของเขตภูมิอากาศ — ไม่ผูกกับ LLM และไม่ scrape ข้อมูลใคร ตอบทันทีแม้ AI ล่ม
 // query: ?zone=tropical|north_temperate|south_temperate (ดีฟอลต์ tropical) &date=YYYY-MM-DD (ดีฟอลต์วันนี้)
+//        &lang=th|en|zh (ดีฟอลต์ th) — เนื้อหา (ฤดูกาล/หมวด/มุมขาย/คำแนะนำต่อกลุ่ม) เปลี่ยนตามภาษา
 app.get('/api/seasonal/recommend', (req, res) => {
   const zone = String(req.query.zone || 'tropical');
+  const lang = String(req.query.lang || 'th');
   const date = req.query.date ? new Date(String(req.query.date)) : new Date();
-  const data = seasonalRecommend({ date: isNaN(date.getTime()) ? new Date() : date, zone });
+  const data = seasonalRecommend({ date: isNaN(date.getTime()) ? new Date() : date, zone, lang });
   res.json({ success: true, ...data });
 });
-// GET /api/seasonal/zones — รายชื่อเขตภูมิอากาศที่รองรับ (ให้ frontend/skill รู้ตัวเลือก)
-app.get('/api/seasonal/zones', (req, res) => res.json({ success: true, zones: seasonalZones }));
+// GET /api/seasonal/zones — รายชื่อเขตภูมิอากาศที่รองรับ (ให้ frontend/skill รู้ตัวเลือก) &lang=th|en|zh
+app.get('/api/seasonal/zones', (req, res) => res.json({ success: true, zones: seasonalZonesInfo(String(req.query.lang || 'th')) }));
 // GET /api/seasonal/angles — brick 2: fuse ฤดูกาล × เทรนด์เชิงโครงสร้าง → "มุมขายสินค้า" ที่จับต้องได้
-// (deterministic, ไม่ใช้ LLM, ไม่ scrape) query เหมือน /recommend: ?zone=&date=
+// (deterministic, ไม่ใช้ LLM, ไม่ scrape) query เหมือน /recommend: ?zone=&date=&lang=
 app.get('/api/seasonal/angles', (req, res) => {
   const zone = String(req.query.zone || 'tropical');
+  const lang = String(req.query.lang || 'th');
   const date = req.query.date ? new Date(String(req.query.date)) : new Date();
-  const data = seasonalProductAngles({ date: isNaN(date.getTime()) ? new Date() : date, zone });
+  const data = seasonalProductAngles({ date: isNaN(date.getTime()) ? new Date() : date, zone, lang });
   res.json({ success: true, ...data });
 });
 

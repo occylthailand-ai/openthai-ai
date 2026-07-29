@@ -9,6 +9,23 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-29 — Hourly loop: localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks to the en/zh markets, not just Thai
+
+**Gap found by code scan (real, not spec-driven):** the deterministic seasonal engine (`seasonal-engine.js`) is the front-line "first encounter → real value in 10 seconds" hook — it's embedded in every `/portals/*` page **and** on `/showcase` via `SeasonalAnglesPanel`. But its output (`angle`, `why`, `group_plays`/`group_actions`, the season/zone/term display labels) was **Thai-only**, while the platform serves th/en/zh and the panel already had localized chrome (headings). So an en or zh visitor saw localized headings wrapped around Thai content they couldn't read — the hook was broken for two of the three supported markets. Fixing it is squarely in the "marketing/reach wider" lane of the standing order. Still deterministic — the translations are a static knowledge table, **no LLM, no scraping**.
+
+**Design — additive & backward-compatible (the contract rule):**
+- Fields suffixed `_th` / `.th` are, by contract, **always Thai** and were left byte-identical. Localized copies are offered next to them under neutral `label` / `*_label` names (`solar_term.label`, `local_season.label`, `zone_label`, `angle.category_label`, `angle.trend_label`, `zonesInfo().label`).
+- Un-suffixed prose fields (`angle`, `why`, `group_plays`, `group_actions`, `note`) are localized **in place** to the requested `lang`. `lang` defaults to `th`, so every existing caller sees exactly what it saw before — the original 33 unit assertions stayed green untouched.
+- Unknown language → safe fallback to `th` (never throws).
+
+**Change:**
+- `backend/seasonal-engine.js` — added zh names + en/zh `why` to all 35 category rows and en/zh label/modifier/why to the 5 trend directions; en/zh `SEASON_*` / `ZONE_*` tables; `recommend`/`productAngles` now take `lang` and emit the localized + `*_label` fields; new `zonesInfo(lang)` export (localized zone picker) + `_langs` export.
+- `backend/server.js` — `/api/seasonal/recommend|angles|zones` accept `?lang=th|en|zh`; `/zones` now returns `{key, th, label}` objects via `zonesInfo`.
+- `backend/openapi.js` — documented the `lang` param + the new localized/`*_label` response fields on all three seasonal paths.
+- `frontend/.../SeasonalAnglesPanel.jsx` — fetches `?lang=<current UI lang>` (re-fetches on language change) and renders the `*_label`/`.label` fields with a fall-back to the Thai `_th` fields. The four portal pages and `/showcase` already pass `lang={lang}`, so the whole chain is live end-to-end.
+
+**Verified (run, not assumed):** `test:seasonal` **50/50** (was 33; +17 localization assertions, incl. en has no Thai chars, zh is CJK, `_th`/`.th` stay Thai under `lang=en`, notes stay honest in every language, unknown-lang → th). **Mutation:** forcing `catName` to always return Thai flips 2 assertions red — the guard genuinely enforces the en/zh output; restored to 50/50. **Booted the real server** and curled `/api/seasonal/{zones,angles,recommend}` for th/en/zh — English & Chinese content served correctly, default (no `lang`) still Thai. `test:openapi` **12/12**. Frontend `SeasonalAnglesPanel` test file 6/6 (added an en-payload localization test + a `lang` reaches the URL test); full frontend suite **265/265** (was 264; +1). `npm run build` succeeds (prerender + sitemap 23 urls intact). `node --check` clean on all edited backend files; `data/*.json` no git diff after boot.
+
 ### 2026-07-24 — Follow-up: make /showcase discoverable — link it from the homepage footer (it existed but nothing linked to it)
 
 Closed a gap the previous round introduced: `/showcase` was built + indexable (sitemap/robots) but **no page on the site linked to it**, so a visitor on the homepage couldn't find it — only someone handed the URL directly. Added a real footer entry point.

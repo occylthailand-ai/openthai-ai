@@ -2,7 +2,7 @@
 // Pins the behaviour that makes the tool "point the right way": correct term per date (incl. the
 // Jan 1–5 wrap to 冬至), and — the core insight — the SAME term maps to OPPOSITE local seasons in
 // the northern vs southern hemisphere, and to the tropical rainy/hot/cool cycle by month.
-import { recommend, solarTermFor, nextSolarTerm, localSeasonFor, productAngles, _terms, _zones, _trends } from '../seasonal-engine.js';
+import { recommend, solarTermFor, nextSolarTerm, localSeasonFor, productAngles, zonesInfo, _terms, _zones, _trends, _langs } from '../seasonal-engine.js';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -64,6 +64,37 @@ const angHealth = productAngles({ date: D(2026, 12, 22), zone: 'north_temperate'
 ok(angHealth.angles.some(a => a.trend === 'health'), 'a health-ish winter category picks up the health trend as its third');
 ok(Object.keys(ang.group_plays).length === 5, 'group_plays covers all 5 groups');
 ok(/scrape/.test(ang.note) && /LLM/.test(ang.note), 'note is honest: structural trends, not scraped/LLM');
+
+console.log('\n=== localization: the platform serves th/en/zh, so the engine does too (deterministic, no LLM) ===');
+ok(_langs.length === 3 && _langs.includes('en') && _langs.includes('zh'), 'three languages supported (th/en/zh)');
+// default is th, and it must be byte-identical prose to before the localization change (backward compat)
+const angTh = productAngles({ date: dSummer, zone: 'tropical' });
+ok(angTh.lang === 'th', 'default lang is th');
+ok(/ร่ม|เสื้อกันฝน/.test(angTh.angles.find(a => a.category === 'rain_gear').angle), 'th angle text stays Thai (rain gear)');
+const angEn = productAngles({ date: dSummer, zone: 'tropical', lang: 'en' });
+const angZh = productAngles({ date: dSummer, zone: 'tropical', lang: 'zh' });
+ok(angEn.lang === 'en' && angZh.lang === 'zh', 'lang is echoed back');
+ok(angEn.angles.length === 9 && angZh.angles.length === 9, 'localization does not change the number of angles');
+const rgEn = angEn.angles.find(a => a.category === 'rain_gear' && a.trend === 'eco');
+ok(/Rain gear/.test(rgEn.category_label) && /Reusable|recyclable/i.test(rgEn.angle), 'en: rain-gear × eco angle is in English');
+ok(/[A-Za-z]/.test(rgEn.why) && !/[฀-๿]/.test(rgEn.why), 'en: the "why" has no Thai characters');
+const rgZh = angZh.angles.find(a => a.category === 'rain_gear' && a.trend === 'eco');
+ok(/雨伞|雨衣/.test(rgZh.category_label) && /[一-鿿]/.test(rgZh.angle), 'zh: rain-gear angle is in Chinese');
+// the always-Thai contract fields stay Thai even when lang=en
+ok(/[฀-๿]/.test(rgEn.category_th) && /[฀-๿]/.test(rgEn.trend_th), 'en: the _th fields remain Thai (backward-compat contract)');
+ok(/[฀-๿]/.test(angEn.local_season.th) && /Rainy/.test(angEn.local_season.label), 'en: local_season keeps .th (Thai) and adds .label (English)');
+ok(/[A-Za-z]/.test(angEn.solar_term.label) && angEn.solar_term.th === angTh.solar_term.th, 'en: solar_term.label is localized, .th unchanged');
+ok(/[A-Za-z]/.test(angEn.group_plays.affiliate) && /[一-鿿]/.test(angZh.group_plays.affiliate), 'group_plays localize (en Latin, zh CJK)');
+ok(/scrape|LLM/.test(angEn.note) && /LLM/.test(angZh.note), 'localized notes stay honest (no scraping / no LLM claim in every language)');
+// recommend() localizes too
+const recEn = recommend({ date: dSummer, zone: 'tropical', lang: 'en' });
+ok(/[A-Za-z]/.test(recEn.group_actions.producer) && recEn.zone_label && /Tropical/.test(recEn.zone_label), 'recommend(): group_actions + zone_label localize to en');
+ok(recEn.categories.every(c => c.key && c.th && c.en && c.zh && c.why && c.why_en && c.why_zh), 'every category now carries th/en/zh names + th/en/zh why');
+// zonesInfo localizes and always keeps the Thai reference
+const zi = zonesInfo('en');
+ok(zi.length === 3 && zi.every(z => z.key && /[฀-๿]/.test(z.th) && /[A-Za-z]/.test(z.label)), 'zonesInfo(en): key + Thai .th + English .label for all 3 zones');
+// unknown language is a safe no-throw fallback to th
+ok(productAngles({ date: dSummer, zone: 'tropical', lang: 'fr' }).lang === 'th', 'an unknown language falls back to th (never throws)');
 
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

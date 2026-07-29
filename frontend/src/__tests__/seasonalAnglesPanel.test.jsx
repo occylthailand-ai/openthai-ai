@@ -55,11 +55,41 @@ describe('SeasonalAnglesPanel', () => {
     expect(screen.getByText(/ของคุ้มหน้าฝน/)).toBeTruthy();
   });
 
-  it('calls the angles endpoint with the given zone', async () => {
+  it('calls the angles endpoint with the given zone AND the requested language', async () => {
     mockFetchOnce(PAYLOAD);
-    render(<SeasonalAnglesPanel group="producer" lang="th" zone="north_temperate" />);
+    render(<SeasonalAnglesPanel group="producer" lang="en" zone="north_temperate" />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalled());
-    expect(String(global.fetch.mock.calls[0][0])).toMatch(/\/api\/seasonal\/angles\?zone=north_temperate/);
+    const url = String(global.fetch.mock.calls[0][0]);
+    expect(url).toMatch(/\/api\/seasonal\/angles\?zone=north_temperate/);
+    expect(url).toMatch(/[?&]lang=en/); // language must reach the backend so the content is localized
+  });
+
+  it('renders the LOCALIZED labels (en) when the API returns *_label fields', async () => {
+    // Real localized shape from GET /api/seasonal/angles?lang=en — the panel must prefer the
+    // language-neutral *_label / .label fields over the always-Thai _th fields.
+    const EN_PAYLOAD = {
+      success: true, date: '2026-07-24', zone: 'tropical', lang: 'en',
+      zone_th: 'เขตร้อน', zone_label: 'Tropical zone (Thailand / ASEAN / equatorial)',
+      solar_term: { cn: '大暑', th: 'ต้าสู่ (ร้อนใหญ่)', label: 'Major Heat' },
+      local_season: { key: 'rainy', th: 'ฤดูฝน (เขตร้อน)', label: 'Rainy season (tropical)' },
+      angles: [
+        { category: 'rain_gear', category_th: 'ร่ม/เสื้อกันฝน', category_label: 'Rain gear',
+          trend: 'eco', trend_th: 'ความยั่งยืน/รักษ์โลก', trend_label: 'Sustainability / eco',
+          angle: 'Rain gear — Reusable / recyclable / refillable — less waste', why: 'Rainy season; stay dry + Eco-consciousness drives choices' },
+      ],
+      group_plays: { producer: 'Make/adapt Rainy season products to fit the trends', affiliate: 'Create content around the angles below' },
+      note: 'deterministic, no LLM, no scraping',
+    };
+    mockFetchOnce(EN_PAYLOAD);
+    render(<SeasonalAnglesPanel group="affiliate" lang="en" />);
+    await waitFor(() => expect(screen.getByTestId('seasonal-angles')).toBeTruthy());
+    expect(screen.getByText(/Major Heat/)).toBeTruthy();          // localized solar term
+    expect(screen.getByText(/Rainy season \(tropical\)/)).toBeTruthy(); // localized season
+    expect(screen.getByText(/Create content around the angles/)).toBeTruthy(); // localized affiliate play
+    expect(screen.getByText(/Sustainability \/ eco/)).toBeTruthy(); // localized trend tag
+    expect(screen.getByText(/Rain gear — Reusable/)).toBeTruthy();  // localized angle text
+    // and NOT the Thai fallbacks
+    expect(screen.queryByText(/ต้าสู่/)).toBeNull();
   });
 
   it('renders NOTHING when the API returns no angles (purely additive, never breaks the page)', async () => {

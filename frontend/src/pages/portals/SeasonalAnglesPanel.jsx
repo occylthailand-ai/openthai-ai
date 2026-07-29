@@ -32,7 +32,7 @@ export default function SeasonalAnglesPanel({ group = 'producer', lang = 'th', z
     let alive = true;
     (async () => {
       try {
-        const res = await fetch(apiUrl(`/api/seasonal/angles?zone=${encodeURIComponent(zone)}`));
+        const res = await fetch(apiUrl(`/api/seasonal/angles?zone=${encodeURIComponent(zone)}&lang=${encodeURIComponent(lang)}`));
         const json = await res.json();
         if (!alive) return;
         if (json && json.success && Array.isArray(json.angles) && json.angles.length) setData(json);
@@ -42,7 +42,7 @@ export default function SeasonalAnglesPanel({ group = 'producer', lang = 'th', z
       }
     })();
     return () => { alive = false; };
-  }, [zone]);
+  }, [zone, lang]);
 
   if (failed || !data) return null; // purely additive — never break the page
 
@@ -56,7 +56,7 @@ export default function SeasonalAnglesPanel({ group = 'producer', lang = 'th', z
         <span style={{ fontSize:22 }}>🌦️</span>
         <h3 style={{ margin:0, color:'#818cf8', fontSize:18, fontWeight:800 }}>{L.heading}</h3>
         <span style={{ color:'#94a3b8', fontSize:13 }}>
-          {data.solar_term?.th} · {data.local_season?.th} · <span style={{ color:'#64748b' }}>{data.date}</span>
+          {(data.solar_term?.label || data.solar_term?.th)} · {(data.local_season?.label || data.local_season?.th)} · <span style={{ color:'#64748b' }}>{data.date}</span>
         </span>
       </div>
 
@@ -71,8 +71,8 @@ export default function SeasonalAnglesPanel({ group = 'producer', lang = 'th', z
         {angles.map((a, i) => (
           <li key={i} style={{ background:'#0f0f1a', border:'1px solid #232338', borderRadius:10, padding:'12px 14px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-              <span style={{ background:'#6366f122', color:'#a5b4fc', fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:999 }}>{a.trend_th}</span>
-              <span style={{ color:'#cbd5e1', fontSize:12 }}>{a.category_th}</span>
+              <span style={{ background:'#6366f122', color:'#a5b4fc', fontSize:11, fontWeight:700, padding:'2px 8px', borderRadius:999 }}>{a.trend_label || a.trend_th}</span>
+              <span style={{ color:'#cbd5e1', fontSize:12 }}>{a.category_label || a.category_th}</span>
             </div>
             <div style={{ color:'#f1f5f9', fontSize:14, lineHeight:1.55 }}>{a.angle}</div>
             {a.why && <div style={{ color:'#64748b', fontSize:12, marginTop:4 }}>{L.why}: {a.why}</div>}
