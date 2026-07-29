@@ -31,6 +31,7 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const ShowcasePage = lazy(() => import('./pages/ShowcasePage'));
+const SeasonalPage = lazy(() => import('./pages/SeasonalPage'));
 const AboutPage = lazy(() => import('./pages/AboutPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
@@ -191,6 +192,7 @@ function App() {
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/showcase" element={<ShowcasePage />} />
+            <Route path="/seasonal" element={<SeasonalPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/contact" element={<ContactPage />} />

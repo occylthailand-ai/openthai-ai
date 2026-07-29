@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 Allow: /showcase
+Allow: /seasonal
 Allow: /pricing
 Allow: /affiliate
 Allow: /portals
