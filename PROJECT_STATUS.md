@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-24T14:16:14.205Z · branch `claude/daily-reporter-improvements-8vc9ct` (521 commit(s) ahead of main)
+Generated: 2026-07-29T07:26:25.020Z · branch `claude/daily-reporter-improvements-8vc9ct` (523 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 731 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 733 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,23 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks to the en/zh markets, not just Thai
+
+**Gap found by code scan (real, not spec-driven):** the deterministic seasonal engine (`seasonal-engine.js`) is the front-line "first encounter → real value in 10 seconds" hook — it's embedded in every `/portals/*` page **and** on `/showcase` via `SeasonalAnglesPanel`. But its output (`angle`, `why`, `group_plays`/`group_actions`, the season/zone/term display labels) was **Thai-only**, while the platform serves th/en/zh and the panel already had localized chrome (headings). So an en or zh visitor saw localized headings wrapped around Thai content they couldn't read — the hook was broken for two of the three supported markets. Fixing it is squarely in the "marketing/reach wider" lane of the standing order. Still deterministic — the translations are a static knowledge table, **no LLM, no scraping**.
+
+**Design — additive & backward-compatible (the contract rule):**
+- Fields suffixed `_th` / `.th` are, by contract, **always Thai** and were left byte-identical. Localized copies are offered next to them under neutral `label` / `*_label` names (`solar_term.label`, `local_season.label`, `zone_label`, `angle.category_label`, `angle.trend_label`, `zonesInfo().label`).
+- Un-suffixed prose fields (`angle`, `why`, `group_plays`, `group_actions`, `note`) are localized **in place** to the requested `lang`. `lang` defaults to `th`, so every existing caller sees exactly what it saw before — the original 33 unit assertions stayed green untouched.
+- Unknown language → safe fallback to `th` (never throws).
+
+**Change:**
+- `backend/seasonal-engine.js` — added zh names + en/zh `why` to all 35 category rows and en/zh label/modifier/why to the 5 trend directions; en/zh `SEASON_*` / `ZONE_*` tables; `recommend`/`productAngles` now take `lang` and emit the localized + `*_label` fields; new `zonesInfo(lang)` export (localized zone picker) + `_langs` export.
+- `backend/server.js` — `/api/seasonal/recommend|angles|zones` accept `?lang=th|en|zh`; `/zones` now returns `{key, th, label}` objects via `zonesInfo`.
+- `backend/openapi.js` — documented the `lang` param + the new localized/`*_label` response fields on all three seasonal paths.
+- `frontend/.../SeasonalAnglesPanel.jsx` — fetches `?lang=<current UI lang>` (re-fetches on language change) and renders the `*_label`/`.label` fields with a fall-back to the Thai `_th` fields. The four portal pages and `/showcase` already pass `lang={lang}`, so the whole chain is live end-to-end.
+
+**Verified (run, not assumed):** `test:seasonal` **50/50** (was 33; +17 localization assertions, incl. en has no Thai chars, zh is CJK, `_th`/`.th` stay Thai under `lang=en`, notes stay honest in every language, unknown-lang → th). **Mutation:** forcing `catName` to always return Thai flips 2 assertions red — the guard genuinely enforces the en/zh output; restored to 50/50. **Booted the real server** and curled `/api/seasonal/{zones,angles,recommend}` for th/en/zh — English & Chinese content served correctly, default (no `lang`) still Thai. `test:openapi` **12/12**. Frontend `SeasonalAnglesPanel` test file 6/6 (added an en-payload localization test + a `lang` reaches the URL test); full frontend suite **265/265** (was 264; +1). `npm run build` succeeds (prerender + sitemap 23 urls intact). `node --check` clean on all edited backend files; `data/*.json` no git diff after boot.
 
 ### 2026-07-24 — Follow-up: make /showcase discoverable — link it from the homepage footer (it existed but nothing linked to it)
 
@@ -3876,14 +3893,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- e189ab0 feat(showcase): make /showcase discoverable — link it from the homepage footer (22 seconds ago)
-- e462947 chore: sync PROJECT_STATUS.md [skip ci] (21 minutes ago)
-- 6f61c18 feat(showcase): public /showcase tour page — "come see what we built", honestly (22 minutes ago)
-- c63f6da chore: sync PROJECT_STATUS.md [skip ci] (54 minutes ago)
-- c8d0df6 docs(openapi): advertise the seasonal endpoints + add the first guard for the spec (55 minutes ago)
-- 305254b chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- 92e3ddd feat(corporate): AI department officers — a scoped AI specialist per department (59 minutes ago)
-- 8ec5ee2 chore: sync PROJECT_STATUS.md [skip ci] (84 minutes ago)
+- 6e38c37 feat(seasonal): localize the seasonal engine (th/en/zh) — the "value in 10 seconds" hook now speaks en/zh, not just Thai (32 seconds ago)
+- 3284900 chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
+- e189ab0 feat(showcase): make /showcase discoverable — link it from the homepage footer (5 days ago)
+- e462947 chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
+- 6f61c18 feat(showcase): public /showcase tour page — "come see what we built", honestly (5 days ago)
+- c63f6da chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
+- c8d0df6 docs(openapi): advertise the seasonal endpoints + add the first guard for the spec (5 days ago)
+- 305254b chore: sync PROJECT_STATUS.md [skip ci] (5 days ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3906,7 +3923,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.6",
+  "memory_mb": "19.4",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -4071,7 +4088,7 @@ the backend.
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 264 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 182 | PromptPay QR · Credit Card · Subscription Billing |
-| `openapi.js` | 763 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
+| `openapi.js` | 772 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |
 | `orders.js` | 203 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 160 | Portal Leads — captures submissions from the /portals/* landing pages |
@@ -4081,8 +4098,8 @@ the backend.
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `seasonal-engine.js` | 259 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9093 | Vercel serverless detection |
+| `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
+| `server.js` | 9096 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
