@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T22:16:52.846Z · branch `claude/daily-reporter-improvements-8vc9ct` (543 commit(s) ahead of main)
+Generated: 2026-07-29T22:24:53.894Z · branch `claude/daily-reporter-improvements-8vc9ct` (544 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 753 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 627 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: UX — buyer catalog search + category filter (`/catalog` was an unfilterable grid that gets unusable as products grow)
+
+Squarely in the "genuinely beneficial to the people who actually use it" standing priority. `/catalog` (the public buyer storefront fed by `GET /api/catalog`) rendered **every** product as one flat grid with no way to search or narrow down — fine with 1 product, unusable the moment producers list dozens. A shopper who wants "น้ำผึ้ง" or only "เครื่องดื่ม" had to eyeball the whole page. Added client-side search + category filtering; no backend change, no new dependency, and it can't break the existing order/sold-out funnel (that grid logic is untouched — it just iterates the filtered list instead of the full one).
+
+**Change (frontend only):**
+- `frontend/src/pages/CatalogPage.jsx` — added `query` + `cat` state. Categories are derived from the **live** catalog (`[...new Set(products.map(p => p.category).filter(Boolean))]`), so the chips only ever show categories that actually exist — nothing hard-coded to drift. A free-text `<input type="search">` matches across product name / producer / category / description (case-insensitive); a chip row filters by category with an "ทั้งหมด/All/全部" reset chip (`aria-pressed` on the active one). When a filter matches nothing, a helpful "ไม่พบสินค้า…" message shows instead of a blank page; the filter UI is hidden entirely when the catalog is empty (the existing "become the first producer" empty-state still owns that case). Sold-out badge / order-button logic is unchanged — it now maps over `shown` (the filtered list).
+- `frontend/src/i18n/index.jsx` — `mk.cat.search` / `mk.cat.allcat` / `mk.cat.noresults` in th/en/zh.
+
+**Verified (run, not assumed):** new `frontend/src/__tests__/catalogSearch.test.jsx` **5/5** — renders the search box + one chip per real category + the "all" chip; free-text query filters across name/producer/description and clearing it restores everything; a category chip narrows to that category and is announced `aria-pressed=true`; a non-matching query shows the "no results" message with **zero** product cards (never blank); and the filter UI is absent when the catalog is empty. `catalogStock` still **4/4** (the sold-out guard is intact under the new filtered render). Full frontend suite **293/293** (was 288; +5), `npm run build` ok (sitemap 26 urls intact). **Booted the real server** and curled `GET /api/catalog` → confirmed it returns each product's `category` (`"อาหาร"`) — the exact field the chips derive from, so the filter populates in production, not just under the test mock. `backend/data` restored (no git diff) after boot. No backend change.
 
 ### 2026-07-29 — Hourly loop: enhancement — climate-zone selector on `/seasonal` (international visitors can see their own region), using existing engine capability
 
@@ -4004,54 +4014,16 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- d6aa663 feat(seasonal): climate-zone selector on /seasonal — international visitors see their own region (17 seconds ago)
+- ffc24ab chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
+- d6aa663 feat(seasonal): climate-zone selector on /seasonal — international visitors see their own region (8 minutes ago)
 - d42243a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - 57c4d29 feat(seo): public, indexable general /faq — FAQPage rich-result eligible, grounded in what the platform does (3 hours ago)
 - dc40a1a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 68260ac feat(seo): public, indexable "AI tools" page — the 35-skills headline you can see without signing in (4 hours ago)
 - 92cfc3d chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - fd7de01 fix(orders): restore producer stock when an order is cancelled (5 hours ago)
-- e803a98 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

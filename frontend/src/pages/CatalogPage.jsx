@@ -9,11 +9,24 @@ export default function CatalogPage() {
   const { t } = useLang();
   const [products, setProducts] = useState(null);
   const [order, setOrder] = useState(null);
+  const [query, setQuery] = useState('');
+  const [cat, setCat] = useState('all');
 
   useEffect(() => {
     document.title = 'ตลาดสินค้าไทย — Openthai.ai';
     fetch(apiUrl('/api/catalog')).then(r => r.json()).then(d => setProducts(d.products || [])).catch(() => setProducts([]));
   }, []);
+
+  // Categories present in the live catalog (deduped, in first-seen order) — drives the filter chips.
+  const categories = products ? [...new Set(products.map((p) => p.category).filter(Boolean))] : [];
+  // Filter by the selected category AND a free-text query across name / producer / category / description.
+  const q = query.trim().toLowerCase();
+  const shown = (products || []).filter((p) => {
+    if (cat !== 'all' && p.category !== cat) return false;
+    if (!q) return true;
+    return [p.product_name, p.producer, p.category, p.description]
+      .some((f) => String(f || '').toLowerCase().includes(q));
+  });
 
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif" }}>
@@ -42,8 +55,33 @@ export default function CatalogPage() {
           </div>
         )}
         {products && products.length > 0 && (
+          <>
+            <div style={{ marginBottom: 22 }}>
+              <input
+                type="search"
+                aria-label={t('mk.cat.search')}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('mk.cat.search')}
+                style={{ ...inp, maxWidth: 460, marginBottom: categories.length ? 14 : 0 }}
+              />
+              {categories.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <button onClick={() => setCat('all')} aria-pressed={cat === 'all'} style={chip(cat === 'all')}>{t('mk.cat.allcat')}</button>
+                  {categories.map((c) => (
+                    <button key={c} onClick={() => setCat(c)} aria-pressed={cat === c} style={chip(cat === c)}>{c}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {shown.length === 0 && (
+              <div style={{ ...card, textAlign: 'center', color: '#94a3b8' }}>{t('mk.cat.noresults')}</div>
+            )}
+          </>
+        )}
+        {products && products.length > 0 && shown.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 18 }}>
-            {products.map((p, i) => {
+            {shown.map((p, i) => {
               // stock == null means the producer doesn't track stock (always orderable);
               // an explicit stock of 0 or less means sold out — don't offer an order that will disappoint.
               const soldOut = p.stock != null && Number(p.stock) <= 0;
@@ -144,6 +182,12 @@ export function OrderModal({ product, onClose, t }) {
 const card = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24 };
 const badge = { display: 'inline-block', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 20, padding: '5px 16px', fontSize: 13, color: '#34d399', fontWeight: 600 };
 const navBtn = { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '7px 14px', color: '#94a3b8', fontSize: 13, cursor: 'pointer' };
+const chip = (active) => ({
+  background: active ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.05)',
+  border: `1px solid ${active ? 'rgba(16,185,129,0.45)' : 'rgba(255,255,255,0.12)'}`,
+  color: active ? '#34d399' : '#cbd5e1',
+  borderRadius: 50, padding: '6px 15px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+});
 const primaryBtn = { background: 'linear-gradient(135deg,#fe2c55,#6366f1)', color: '#fff', border: 'none', borderRadius: 50, padding: '11px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer' };
 const overlay = { position: 'fixed', inset: 0, zIndex: 9500, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 };
 const lab = { display: 'block', fontSize: 12, color: '#94a3b8', margin: '10px 0 5px', fontWeight: 600 };
