@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T15:19:34.976Z · branch `claude/daily-reporter-improvements-8vc9ct` (533 commit(s) ahead of main)
+Generated: 2026-07-29T16:15:06.574Z · branch `claude/daily-reporter-improvements-8vc9ct` (535 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 743 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 745 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,18 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: funnel gap — the BUYER got no order-confirmation email (only an on-screen id that vanishes when the tab closes)
+
+Continuing through the order funnel. On a successful `POST /api/orders`, `sendOrderNotification` emails the **producer** (and CCs the owner), but the **buyer received nothing** — just the order id shown in the OrderModal. Close the tab and that id (which, with the contact, is the only way to track the order at `/track`) is gone. The dispute-notification path already learned to notify **both** parties (incl. the buyer via `order.contact` when it's an email); the order-placed path hadn't. Added a transactional buyer confirmation.
+
+**Consent note (checked against the standing order):** this is **not** the prohibited "contact people without consent". The buyer *initiated* the order and supplied this contact *for this order* — a one-off transactional receipt is exactly what they expect, and it carries no marketing. We email **only when the contact is an email** (many buyers give a phone → no email channel → we skip, no guessing/enrichment).
+
+**Change:**
+- `backend/order-confirm.js` (new, pure) — `buyerConfirmation(order, domainUrl)` returns `null` when the buyer gave no email (phone/blank/garbage), else `{ to, subject, trackUrl }`. The `trackUrl` is `<domain>/track?id=<id>&contact=<email>` with both params URL-encoded (so a weird id/contact can't break the link) and a trailing slash on the domain won't double up.
+- `backend/server.js` — new `sendBuyerOrderConfirmation(order)` uses that helper: on an email contact it sends a Thai transactional receipt (product/qty/total + the order id + a one-click **"ติดตามสถานะคำสั่งซื้อ"** button to the track link); skips quietly with no SMTP or no email contact. Wired into `onNewOrder` alongside the existing producer notification (fire-and-forget, so it never blocks the order or stock decrement).
+
+**Verified + booted:** new `scripts/test-order-confirm.mjs` (`test:order-confirm`, no-server) **11/11** — emails only on an email contact (phone/empty/garbage/`{}` → null, never throws), the track link encodes id+contact (special chars stay safe, trailing-slash domain doesn't double up), and the subject names the product + `×qty` (missing qty → `×1`). **Booted the real server** with a seeded in-stock producer and placed two real orders: an **email**-contact order → `success` (the new confirmation path runs, skipping the actual send only because this env has no SMTP), and a **phone**-contact order → `success` (buyer confirmation correctly skipped). No runtime error in the `onNewOrder` path (which now also calls the buyer confirmation). `node --check` clean on both files; `data/*.json` restored (no git diff) after the boot. Wired `test:order-confirm` into `package.json` + the no-server CI block.
 
 ### 2026-07-29 — Hourly loop: harden the order path — server-side stock guard in POST /api/orders (closes the direct-POST hole the previous round flagged)
 
@@ -3946,14 +3958,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 206431a feat(orders): server-side stock guard in POST /api/orders (reject out-of-stock) (25 seconds ago)
-- a761d18 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- c4370a9 fix(catalog): don't let buyers order sold-out products in the public catalog (61 minutes ago)
-- 31bc4f4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- aae5ad9 fix(digest): don't feature sold-out products in the consumer category digest (2 hours ago)
-- d718ac6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 8b0d1a8 feat(seo): public /seasonal content page — evergreen answer to "what's in demand this season" (th/en/zh) (3 hours ago)
-- 4d63c7e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 9d13ac7 feat(orders): send the buyer a transactional order-confirmation email (29 seconds ago)
+- 8c6f1d8 chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
+- 206431a feat(orders): server-side stock guard in POST /api/orders (reject out-of-stock) (56 minutes ago)
+- a761d18 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- c4370a9 fix(catalog): don't let buyers order sold-out products in the public catalog (2 hours ago)
+- 31bc4f4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- aae5ad9 fix(digest): don't feature sold-out products in the consumer category digest (3 hours ago)
+- d718ac6 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3976,7 +3988,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.5",
+  "memory_mb": "19.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -4124,7 +4136,7 @@ the backend.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 36 files)
+## Backend modules (backend/*.js — 37 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -4145,6 +4157,7 @@ the backend.
 | `omise-payment.js` | 182 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 772 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |
+| `order-confirm.js` | 29 | Pure, side-effect-free decision helper for the BUYER order-confirmation email. |
 | `orders.js` | 217 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 160 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
@@ -4154,7 +4167,7 @@ the backend.
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9099 | Vercel serverless detection |
+| `server.js` | 9140 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
