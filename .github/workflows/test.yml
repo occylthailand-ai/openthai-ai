@@ -87,6 +87,7 @@ jobs:
           npm run test:digest-match
           npm run test:order-stock-guard
           npm run test:order-confirm
+          npm run test:order-cancel-restock
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage

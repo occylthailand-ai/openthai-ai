@@ -303,5 +303,24 @@ export function createProducers(dataDir, opts = {}) {
     if (store[e] && store[e].stock != null) { store[e].stock = Math.max(0, store[e].stock - n); saveFile(); }
   }
 
-  return { router, register, all, summary, setStatus, updateListing, catalog, decrementStock, getStock, eraseByEmail, CATEGORIES };
+  // คืนสต๊อกเมื่อออเดอร์ถูกยกเลิก (เฉพาะผู้ผลิตที่ตั้งสต๊อกไว้ — stock != null) — คู่กับ decrementStock:
+  // ตอนสั่งสต๊อกถูกตัด onNewOrder ถ้ายกเลิกแล้วไม่คืน สต๊อกจะหายถาวรสำหรับออเดอร์ที่ไม่เกิดขึ้น
+  // (สุดท้ายขึ้น "สินค้าหมด" + ถูก order stock guard บล็อก ทั้งที่ไม่ได้ขาย). อีเมลที่ไม่ตรงผู้ผลิตใด
+  // (เช่น STORE_EMAIL ของร้านแพลตฟอร์มที่ใช้ inventory แยก) จะไม่ถูกแตะ — ปลอดภัยทั้งสองเส้นทางออเดอร์
+  async function incrementStock(email, qty) {
+    const e = (email || '').toString().trim().toLowerCase();
+    const n = Math.max(0, parseInt(qty, 10) || 0);
+    if (!e || !n) return;
+    if (useSB) {
+      try {
+        const rows = await sbReq('GET', '/producers', { params: { email: `eq.${e}`, select: 'stock', limit: '1' } });
+        const cur = rows?.[0]?.stock;
+        if (cur != null) await sbReq('PATCH', '/producers', { body: { stock: cur + n }, params: { email: `eq.${e}` }, prefer: 'return=minimal' });
+        return;
+      } catch (err) { console.warn('[producers] stock restore SB failed, using file:', err.message); }
+    }
+    if (store[e] && store[e].stock != null) { store[e].stock = store[e].stock + n; saveFile(); }
+  }
+
+  return { router, register, all, summary, setStatus, updateListing, catalog, decrementStock, incrementStock, getStock, eraseByEmail, CATEGORIES };
 }

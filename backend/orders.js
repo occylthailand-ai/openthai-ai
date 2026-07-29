@@ -125,9 +125,15 @@ export function createOrders(dataDir, opts = {}) {
     if (!ORDER_STATUS.includes(status)) return { ok: false, error: 'invalid status' };
     const o = await getOne(id);
     if (!o) return { ok: false, error: 'not found' };
+    const prev = o.status;
     o.status = status;
     o.history = [...(o.history || []), hist(status, note)];
     await persist(o);
+    // Fire onCancel exactly once, only on the transition INTO 'cancelled' (prev !== 'cancelled'),
+    // so stock is restored once per order and re-cancelling an already-cancelled order is a no-op.
+    if (status === 'cancelled' && prev !== 'cancelled') {
+      try { await opts.onCancel?.(o); } catch (e) { console.warn('[orders] onCancel hook failed:', e.message); }
+    }
     return { ok: true, id, status };
   }
 
