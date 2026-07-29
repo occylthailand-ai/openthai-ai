@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T16:15:06.574Z · branch `claude/daily-reporter-improvements-8vc9ct` (535 commit(s) ahead of main)
+Generated: 2026-07-29T17:16:36.267Z · branch `claude/daily-reporter-improvements-8vc9ct` (537 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 745 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 747 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,17 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: bug fix — cancelling an order didn't restore the producer's stock (leaked stock → false "สินค้าหมด")
+
+A real bug surfaced by this week's stock work. `onNewOrder` decrements the producer's stock when a catalog order is placed (`producers.decrementStock`), but **cancelling an order never restored it** — the admin cancel path (`POST /api/orders/admin/status → 'cancelled'`) only emailed the customer. So every cancelled order permanently ate a unit of the producer's stock for a sale that never happened. With this week's additions (the catalog **"สินค้าหมด"** badge + the `POST /api/orders` stock guard), the damage is now *visible and blocking*: a producer whose orders get cancelled a few times drifts to `stock 0`, gets marked sold-out, and has real buyers turned away — despite having sold nothing.
+
+**Change (symmetric with the decrement, centralized in the orders module so it covers every cancel path):**
+- `backend/orders.js` — `setStatus` captures the previous status and fires a new `opts.onCancel(order)` hook **only on the transition into `'cancelled'`** (`prev !== 'cancelled'`), so stock is restored exactly once and re-cancelling is a no-op.
+- `backend/producers.js` — added `incrementStock(email, qty)` (the mirror of `decrementStock`): restores only when the producer tracks stock (`stock != null`); an email that matches no producer — e.g. the platform store's `STORE_EMAIL`, whose stock lives in the separate `inventory` module — is left untouched, so the shop-checkout path is unaffected.
+- `backend/server.js` — wired `onCancel: (order) => producers.incrementStock(order.producer_email, order.qty)` into `createOrders` alongside the existing `onNewOrder`/`getProducerStock`.
+
+**Verified + mutation-tested + booted end-to-end:** new `scripts/test-order-cancel-restock.mjs` (`test:order-cancel-restock`, no-server) **12/12** — it wires the exact `onNewOrder→decrement` / `onCancel→increment` hooks server.js uses and asserts the round-trip (place qty 2: 5→3; cancel: 3→5), **idempotency** (re-cancelling doesn't over-restore; a `→confirmed` change doesn't restore; cancelling a previously-confirmed order still restores once), untracked(`null`) producers stay untracked, and an unknown/`STORE_EMAIL`-style producer cancels cleanly with nothing to restore. **Mutation:** dropping the `prev !== 'cancelled'` guard makes the re-cancel over-restore (5→7) and cascades 5 assertions red; restored to 12/12. **Booted the real server** with a seeded producer at `stock:5`: `POST /api/orders` qty 2 → `my-status` shows `stock 3`, then `POST /api/orders/admin/status status:cancelled` → `stock 5` (restored). `node --check` clean on all three files; `data/*.json` restored (no git diff) after the boot. Wired `test:order-cancel-restock` into `package.json` + the no-server CI block.
 
 ### 2026-07-29 — Hourly loop: funnel gap — the BUYER got no order-confirmation email (only an on-screen id that vanishes when the tab closes)
 
@@ -3958,14 +3969,14 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 9d13ac7 feat(orders): send the buyer a transactional order-confirmation email (29 seconds ago)
-- 8c6f1d8 chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
-- 206431a feat(orders): server-side stock guard in POST /api/orders (reject out-of-stock) (56 minutes ago)
-- a761d18 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- c4370a9 fix(catalog): don't let buyers order sold-out products in the public catalog (2 hours ago)
-- 31bc4f4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- aae5ad9 fix(digest): don't feature sold-out products in the consumer category digest (3 hours ago)
-- d718ac6 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- fd7de01 fix(orders): restore producer stock when an order is cancelled (23 seconds ago)
+- e803a98 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 9d13ac7 feat(orders): send the buyer a transactional order-confirmation email (62 minutes ago)
+- 8c6f1d8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 206431a feat(orders): server-side stock guard in POST /api/orders (reject out-of-stock) (2 hours ago)
+- a761d18 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- c4370a9 fix(catalog): don't let buyers order sold-out products in the public catalog (3 hours ago)
+- 31bc4f4 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -3988,7 +3999,7 @@ the backend.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.1",
+  "memory_mb": "19.0",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -4158,11 +4169,11 @@ the backend.
 | `openapi.js` | 772 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |
 | `order-confirm.js` | 29 | Pure, side-effect-free decision helper for the BUYER order-confirmation email. |
-| `orders.js` | 217 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `orders.js` | 223 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 160 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 308 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 327 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
