@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T22:25:25.993Z · branch `claude/daily-reporter-improvements-8vc9ct` (545 commit(s) ahead of main)
+Generated: 2026-07-29T23:15:14.189Z · branch `claude/daily-reporter-improvements-8vc9ct` (546 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 755 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 629 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-29 — Hourly loop: test gap — the content "learning"/feedback loop (rate → patterns → enhance) had NO test, incl. the NaN-poisoning guard
+
+Found by code scan in the "improve on the platform's real feedback" lane. The learning loop lets a user rate a generated piece 1–5 (`POST /api/skills/learning/rate`), aggregates a running average per `content_type|platform` (`GET /api/skills/learning/patterns`), and feeds the best pattern back into the prompt (`POST /api/skills/learning/enhance`). It had **zero test coverage** — and it carries a subtle, already-fixed bug that nothing guards: the rate route must **coerce `Number(rating)` and check `Number.isFinite` BEFORE the 1–5 range check**, because the earlier version compared the raw string (`rating < 1 || rating > 5`) — a non-numeric `"abc"` slipped through (NaN comparisons are always false), `Number("abc")` = NaN was summed into `p.sum`, and that pattern's `avg_rating` went **NaN permanently**, corrupting `/patterns` and the enhance context. A future reorder of those two lines would silently reintroduce it, shipping green. No production code changed — this closes the coverage gap only.
+
+**Added (test only):**
+- `backend/scripts/test-learning-patterns.mjs` (`test:learning-patterns`, self-boot, rate limiter disabled, no Supabase/AI keys; snapshots + restores `learning-patterns.json` so it leaves no state) — **16/16**. Asserts the running average (5 then 3 → 4.0; a numeric-string `"4"` is coerced → (5+3+4)/3 = 4), `total_ratings` accumulation, the **NaN/range guard** (`"abc"` / `6` / `0` / missing `content_type` all → 400), and that `/patterns` reflects **only the valid ratings** — `count` = 3 (not 4), `avg_rating` a finite 4 (**not NaN**), `top_tone` = the most-frequent valid tone, sorted by avg desc (caption 4 before blog 2), `recent_feedback` populated, `total_ratings` = 4.
+- Wired `test:learning-patterns` into `package.json` + a self-contained CI step in `test.yml` (next to the other self-boot tests).
+
+**Mutation-verified (the discipline that proves the test bites):** reverted the guard to the pre-fix form (validate the raw `rating` before coercion + push `Number(rating)`) via `/tmp` backup + a python string-replace on `server.js`, re-ran → `"abc"` now returns **200**, `count` becomes 4, `avg_rating` serializes to **`null`** (JSON's rendering of NaN), the sort flips and `total` inflates — **5 assertions red**, exactly the poisoning the guard prevents. Restored `server.js` (`node --check` clean, 16/16 green again, no git diff on `server.js` or `backend/data`).
 
 ### 2026-07-29 — Hourly loop: UX — buyer catalog search + category filter (`/catalog` was an unfilterable grid that gets unusable as products grow)
 
@@ -4014,54 +4024,16 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- afad1d9 feat(catalog): search + category filter on /catalog — a usable storefront as products grow (21 seconds ago)
-- ffc24ab chore: sync PROJECT_STATUS.md [skip ci] (9 minutes ago)
-- d6aa663 feat(seasonal): climate-zone selector on /seasonal — international visitors see their own region (9 minutes ago)
-- d42243a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 57c4d29 feat(seo): public, indexable general /faq — FAQPage rich-result eligible, grounded in what the platform does (3 hours ago)
-- dc40a1a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 68260ac feat(seo): public, indexable "AI tools" page — the 35-skills headline you can see without signing in (4 hours ago)
-- 92cfc3d chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- fe7bc63 chore: sync PROJECT_STATUS.md [skip ci] (50 minutes ago)
+- afad1d9 feat(catalog): search + category filter on /catalog — a usable storefront as products grow (50 minutes ago)
+- ffc24ab chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- d6aa663 feat(seasonal): climate-zone selector on /seasonal — international visitors see their own region (59 minutes ago)
+- d42243a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 57c4d29 feat(seo): public, indexable general /faq — FAQPage rich-result eligible, grounded in what the platform does (4 hours ago)
+- dc40a1a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 68260ac feat(seo): public, indexable "AI tools" page — the 35-skills headline you can see without signing in (5 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

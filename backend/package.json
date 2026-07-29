@@ -57,7 +57,8 @@
     "test:digest-match": "node scripts/test-digest-match.mjs",
     "test:order-stock-guard": "node scripts/test-order-stock-guard.mjs",
     "test:order-confirm": "node scripts/test-order-confirm.mjs",
-    "test:order-cancel-restock": "node scripts/test-order-cancel-restock.mjs"
+    "test:order-cancel-restock": "node scripts/test-order-cancel-restock.mjs",
+    "test:learning-patterns": "node scripts/test-learning-patterns.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

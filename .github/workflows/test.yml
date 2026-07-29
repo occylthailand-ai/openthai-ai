@@ -88,6 +88,9 @@ jobs:
           npm run test:order-stock-guard
           npm run test:order-confirm
           npm run test:order-cancel-restock
+      - name: Learning-feedback test (self-contained — rating aggregation + NaN-rejection guard)
+        working-directory: backend
+        run: npm run test:learning-patterns
       - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
         working-directory: backend
         run: npm run test:ai-usage
