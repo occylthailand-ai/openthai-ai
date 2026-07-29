@@ -43,18 +43,25 @@ export default function CatalogPage() {
         )}
         {products && products.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 18 }}>
-            {products.map((p, i) => (
-              <div key={p.email + i} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
+            {products.map((p, i) => {
+              // stock == null means the producer doesn't track stock (always orderable);
+              // an explicit stock of 0 or less means sold out — don't offer an order that will disappoint.
+              const soldOut = p.stock != null && Number(p.stock) <= 0;
+              return (
+              <div key={p.email + i} style={{ ...card, display: 'flex', flexDirection: 'column', opacity: soldOut ? 0.65 : 1 }}>
                 <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category || 'สินค้าไทย'}</div>
                 <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{p.product_name}</div>
                 <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>{t('mk.cat.by')} {p.producer}</div>
                 {p.description && <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, marginBottom: 12, flex: 1 }}>{p.description}</div>}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
                   <span style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : t('mk.cat.ask')}</span>
-                  <button onClick={() => setOrder(p)} style={{ ...primaryBtn, padding: '9px 18px', fontSize: 13 }}>{t('mk.cat.order')}</button>
+                  {soldOut
+                    ? <span style={{ background: 'rgba(148,163,184,0.15)', border: '1px solid rgba(148,163,184,0.3)', color: '#94a3b8', borderRadius: 50, padding: '9px 18px', fontSize: 13, fontWeight: 700 }}>{t('mk.cat.soldout')}</span>
+                    : <button onClick={() => setOrder(p)} style={{ ...primaryBtn, padding: '9px 18px', fontSize: 13 }}>{t('mk.cat.order')}</button>}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
