@@ -256,7 +256,7 @@ export default function LandingPage() {
               </span>
             ))}
           </div>
-          <button onClick={() => navigate('/skills-catalog')} style={{ marginTop: 28, padding: '12px 28px', borderRadius: 50, fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none', background: 'linear-gradient(135deg,#6366f1,#fe2c55)', color: '#fff' }}>
+          <button onClick={() => navigate('/ai-skills')} style={{ marginTop: 28, padding: '12px 28px', borderRadius: 50, fontWeight: 700, fontSize: 14, cursor: 'pointer', border: 'none', background: 'linear-gradient(135deg,#6366f1,#fe2c55)', color: '#fff' }}>
             ดูทักษะทั้งหมด →
           </button>
         </section>

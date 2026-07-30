@@ -4229,3 +4229,31 @@ router that MIRRORS the real auth gate (/ai-generator → Navigate to /login), c
 asserts the primary reaches home and the secondary reaches the public page — NOT the login wall.
 Full frontend suite 312/312, `npm run build` clean. Mutation-tested: reverting the CTA to
 /ai-generator makes the anonymous visitor land on /login and the secondary test fails. Runs in CI.
+
+---
+
+## 2026-07-30 — homepage "ดูทักษะทั้งหมด" CTA dead-ended anonymous visitors at /login
+
+Continuing the public-CTA→login-wall audit started with the 404 fix, I enumerated all 32
+login-gated routes (App.jsx `isAuthenticated ? … : <Navigate to="/login"/>`) and grepped the
+public marketing pages for CTAs pointing at them. Findings:
+
+- **Real bug (fixed):** LandingPage's AI-skills showcase had a "ดูทักษะทั้งหมด →" (See all skills)
+  button → /skills-catalog, which is auth-gated. Its intent is EXPLORE, not sign-up, and there is a
+  dedicated PUBLIC page for exactly this — /ai-skills ("ดูรายการทั้งหมดก่อนสมัคร", in ROUTES + robots
+  Allow, itself carrying sign-up CTAs). On the highest-traffic page, a curious anonymous visitor was
+  bounced to the login wall instead of the public list. Changed the target to /ai-skills.
+- **Left as-is (intended funnel, NOT bugs):** the "เริ่มฟรี / Start Free" CTAs (LandingPage
+  handleFreeStart, the free-plan buttons, PricingPage free tier) go to /ai-generator → /login. That
+  is the intended sign-up entry, not a dead-end — changing it would depend on the registration model
+  (LoginPage offers password-login/Google/recovery but no self-serve username sign-up; whether Google
+  OAuth self-registers vs. an allowlist is a product decision), which is owner-gated (rule 8). Not touched.
+- **Not added (unverified data):** the repo has no real brand social profiles — the only social
+  strings are a LINE share deep-link, a Facebook sharer URL, and `tiktok.com/@yourhandle` (a form
+  PLACEHOLDER). So no Organization `sameAs` was added — that would be building on unverified data.
+
+Verified: new `src/__tests__/landingSkillsCta.test.jsx` mocks /api/skills, renders LandingPage in a
+router that MIRRORS the real gate (/skills-catalog → Navigate to /login), clicks the CTA, and asserts
+it reaches the public list — not the login wall. Full frontend suite 313/313, `npm run build` clean.
+Mutation-tested: reverting the target to /skills-catalog makes the anonymous visitor hit /login and
+the test fails. Runs in CI.
