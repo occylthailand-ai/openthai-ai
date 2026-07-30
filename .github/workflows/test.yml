@@ -89,6 +89,7 @@ jobs:
           npm run test:order-confirm
           npm run test:order-cancel-restock
           npm run test:html-escape
+          npm run test:omise-webhook-verify
       - name: Learning-feedback test (self-contained — rating aggregation + NaN-rejection guard)
         working-directory: backend
         run: npm run test:learning-patterns
