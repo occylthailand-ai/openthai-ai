@@ -80,6 +80,7 @@ const StrategyCenterPage = lazy(() => import('./pages/StrategyCenterPage'));
 const PitchDeckPage = lazy(() => import('./pages/PitchDeckPage'));
 const IntegrationHubPage = lazy(() => import('./pages/IntegrationHubPage'));
 const SupplyChainPage = lazy(() => import('./pages/SupplyChainPage'));
+const MatchingPage = lazy(() => import('./pages/MatchingPage'));
 const SkillsCatalogPage = lazy(() => import('./pages/SkillsCatalogPage'));
 const StarterKitPage = lazy(() => import('./pages/StarterKitPage'));
 const AssistantPage = lazy(() => import('./pages/AssistantPage'));
@@ -156,6 +157,7 @@ function App() {
             <Route path="/starter" element={isAuthenticated ? <StarterKitPage /> : <Navigate to="/login" />} />
             <Route path="/assistant" element={isAuthenticated ? <AssistantPage /> : <Navigate to="/login" />} />
             <Route path="/supply-chain" element={isAuthenticated ? <SupplyChainPage /> : <Navigate to="/login" />} />
+            <Route path="/matching" element={isAuthenticated ? <MatchingPage /> : <Navigate to="/login" />} />
             <Route path="/promo-engine" element={isAuthenticated ? <PromoEnginePage /> : <Navigate to="/login" />} />
             <Route path="/daily-pr" element={isAuthenticated ? <DailyPRPage /> : <Navigate to="/login" />} />
             <Route path="/ultra-promo" element={isAuthenticated ? <UltraPromoPage /> : <Navigate to="/login" />} />
