@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-30T12:22:41.603Z · branch `claude/daily-reporter-improvements-8vc9ct` (561 commit(s) ahead of main)
+Generated: 2026-07-30T13:19:24.437Z · branch `claude/daily-reporter-improvements-8vc9ct` (562 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 771 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 645 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -4083,6 +4083,35 @@ file is gitignored local scratch — file mode; production withdrawals live in S
 route guard verified live. Sweep conclusion: this null-crash class is now clean across
 the backend.
 
+---
+
+## 2026-07-30 — a11y: associate the public /store checkout (BuyModal) labels with their inputs
+
+Continuation of the public-form label-association sweep already shipped for /catalog
+(commit 6993130) and /contact (commit aee90ea). StorePage's `BuyModal` — the checkout
+the public /store funnel drives to (in the sitemap) — rendered a visible `<label>` before
+each of its five controls but never associated any of them: name/contact/qty/address
+inputs plus the payment-method `<select>` had no `htmlFor`/`id`, so a screen reader
+announced them with no accessible name. The qty spin button had neither placeholder nor
+label, so it was fully nameless (WCAG 1.3.1 Info & Relationships, 4.1.2 Name/Role/Value,
+3.3.2 Labels or Instructions).
+
+Fix: added `htmlFor="store-name|store-contact|store-qty|store-address|store-method"` to
+the five labels and the matching `id` to each control. The dialog wrapper already had
+`role="dialog"`, `aria-modal`, `aria-label`, and useDialog (Escape/focus-trap), so this
+was the last a11y gap on the modal.
+
+Verified: new `frontend/src/__tests__/storeOrderA11y.test.jsx` renders StorePage (useLang
+returns a Thai-default `t` with no provider needed), mocks /api/shop/products, opens the
+buy modal, and finds all five fields via `getByLabelText`, then types into qty via its
+accessible label to prove the association is real. Full frontend suite 296/296 (33 files),
+`npm run build` clean. Mutation-tested: dropping the `store-qty` htmlFor turns the test red
+(getByLabelText can no longer reach the spin button); restored → green.
+
+Sweep conclusion: the three public order/checkout forms (/catalog, /contact, /store) now
+all associate every field with its label; TrackOrderPage and the /portals/* funnel forms
+were already correct in prior rounds.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -4092,54 +4121,16 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- aee90ea fix(a11y): associate the public /contact form labels with their inputs (17 seconds ago)
-- b8b7eba chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 5ddd9a9 fix(ai): harden parseAIJson (null-safe + code-fence aware) — the parser 36 skills depend on (3 hours ago)
-- 9f75afd chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 6993130 fix(a11y): associate catalog order-form labels with their inputs (nameless fields for screen readers) (4 hours ago)
-- 5c7c11b chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 084bfd8 fix(security): escape consumer-entered category in the digest email <h1> (missed by the sweep) (6 hours ago)
-- 0978d6a chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 5848b80 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
+- aee90ea fix(a11y): associate the public /contact form labels with their inputs (57 minutes ago)
+- b8b7eba chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 5ddd9a9 fix(ai): harden parseAIJson (null-safe + code-fence aware) — the parser 36 skills depend on (4 hours ago)
+- 9f75afd chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 6993130 fix(a11y): associate catalog order-form labels with their inputs (nameless fields for screen readers) (5 hours ago)
+- 5c7c11b chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 084bfd8 fix(security): escape consumer-entered category in the digest email <h1> (missed by the sweep) (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |

@@ -4067,3 +4067,32 @@ file is gitignored local scratch — file mode; production withdrawals live in S
 — and was reset to [] afterward.) No dedicated unit test added; this is a one-line
 route guard verified live. Sweep conclusion: this null-crash class is now clean across
 the backend.
+
+---
+
+## 2026-07-30 — a11y: associate the public /store checkout (BuyModal) labels with their inputs
+
+Continuation of the public-form label-association sweep already shipped for /catalog
+(commit 6993130) and /contact (commit aee90ea). StorePage's `BuyModal` — the checkout
+the public /store funnel drives to (in the sitemap) — rendered a visible `<label>` before
+each of its five controls but never associated any of them: name/contact/qty/address
+inputs plus the payment-method `<select>` had no `htmlFor`/`id`, so a screen reader
+announced them with no accessible name. The qty spin button had neither placeholder nor
+label, so it was fully nameless (WCAG 1.3.1 Info & Relationships, 4.1.2 Name/Role/Value,
+3.3.2 Labels or Instructions).
+
+Fix: added `htmlFor="store-name|store-contact|store-qty|store-address|store-method"` to
+the five labels and the matching `id` to each control. The dialog wrapper already had
+`role="dialog"`, `aria-modal`, `aria-label`, and useDialog (Escape/focus-trap), so this
+was the last a11y gap on the modal.
+
+Verified: new `frontend/src/__tests__/storeOrderA11y.test.jsx` renders StorePage (useLang
+returns a Thai-default `t` with no provider needed), mocks /api/shop/products, opens the
+buy modal, and finds all five fields via `getByLabelText`, then types into qty via its
+accessible label to prove the association is real. Full frontend suite 296/296 (33 files),
+`npm run build` clean. Mutation-tested: dropping the `store-qty` htmlFor turns the test red
+(getByLabelText can no longer reach the spin button); restored → green.
+
+Sweep conclusion: the three public order/checkout forms (/catalog, /contact, /store) now
+all associate every field with its label; TrackOrderPage and the /portals/* funnel forms
+were already correct in prior rounds.
