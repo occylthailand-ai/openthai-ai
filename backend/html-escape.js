@@ -34,6 +34,40 @@ export function lowStockAlertHtml(product, domainUrl) {
           </div></div>`;
 }
 
+// Consumer "new picks" digest email. The consumer's chosen `category` (form_data.category,
+// entered at consumer-portal signup and only clip()-sanitized — the bypassable /<[^>]*>/g) was
+// interpolated RAW into the title that fills the <h1>, so an unclosed `<img …onerror=…` category
+// rendered live in the digest email. Escape it (and name + each match's product/producer) at the
+// HTML insertion point. The email SUBJECT keeps the raw category — a subject is plain text, not
+// HTML, so escaping it would show literal &quot;. Returns { subject, html }.
+export function consumerDigestHtml({ name, category, matches = [], lang, domainUrl, unsubUrl } = {}) {
+  const L = lang === 'en' ? 'en' : lang === 'zh' ? 'zh' : 'th';
+  const cat = String(category ?? '');
+  const nm = escapeHtml(name || '');
+  const itemsHtml = matches.map((p) => `
+      <tr><td style="padding:9px 0;border-top:1px solid rgba(255,255,255,0.08);">${escapeHtml(p.product_name)} <span style="color:#64748b;font-size:12px;">· ${escapeHtml(p.producer)}</span></td>
+      <td style="padding:9px 0;border-top:1px solid rgba(255,255,255,0.08);text-align:right;font-weight:700;">${p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : '-'}</td></tr>`).join('');
+  // Plain title (for the subject) uses the raw category; the <h1> escapes the whole string.
+  const titleByLang = { th: `🛍️ สินค้าใหม่ในหมวด "${cat}" ที่คุณสนใจ`, en: `🛍️ New picks in "${cat}"`, zh: `🛍️ "${cat}" 分类新品` };
+  const introByLang = {
+    th: `สวัสดีคุณ${nm} นี่คือสินค้าจากผู้ผลิตที่ผ่านการรับรองในหมวดที่คุณสนใจ`,
+    en: `Hi ${nm}, here are verified-producer picks in your selected category`,
+    zh: `您好${nm}，以下是您感兴趣分类中的认证生产商产品`,
+  };
+  const unsubByLang = { th: 'ยกเลิกรับอีเมลนี้', en: 'Unsubscribe', zh: '取消订阅' };
+  const subject = titleByLang[L];
+  const html = `
+        <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#06b6d4,#3b82f6);padding:24px;text-align:center;"><h1 style="margin:0;font-size:19px;">${escapeHtml(titleByLang[L])}</h1></div>
+          <div style="padding:24px;font-size:14px;">
+            <p style="margin:0 0 14px;">${introByLang[L]}</p>
+            <table style="width:100%;border-collapse:collapse;">${itemsHtml}</table>
+          </div>
+          <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${domainUrl}" style="color:#6366f1;">${String(domainUrl || '').replace(/^https?:\/\//, '')}</a> · <a href="${unsubUrl}" style="color:#64748b;">${unsubByLang[L]}</a></div>
+        </div>`;
+  return { subject, html };
+}
+
 // Affiliate welcome email body. `name` is applicant-entered (registerAffiliateCore trims/slices
 // but does NOT HTML-escape it) and was interpolated raw into the <h1> — the last notification-email
 // path still doing so. `refLink` can be caller-supplied (input.ref_link) and lands in an href AND as

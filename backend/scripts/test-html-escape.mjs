@@ -5,7 +5,7 @@
 // which an UNCLOSED `<` bypasses (`<img src=x onerror=alert(1)` has no `>`), so the raw
 // opener reaches the email HTML and completes against the template's next `>` — injecting a
 // live tag into the recipient's mail client. escapeHtml at the insertion point is what stops it.
-import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml } from '../html-escape.js';
+import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml } from '../html-escape.js';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -60,6 +60,29 @@ console.log('\n=== affiliateWelcomeHtml: a normal signup renders cleanly ===');
 const cleanAff = affiliateWelcomeHtml({ name: 'มานี ใจดี', refCode: 'AFF778899', refLink: 'https://openthai-ai.com/?ref=AFF778899', domainUrl: 'https://openthai-ai.com' });
 ok(cleanAff.includes('🎉 ยินดีด้วย มานี ใจดี!'), 'plain Thai name passes through unchanged');
 ok(cleanAff.includes('>AFF778899<'), 'the ref code shows as-is');
+
+console.log('\n=== consumerDigestHtml: the consumer-entered category is escaped in the <h1> (was raw) ===');
+const evilDigest = consumerDigestHtml({
+  name: 'ก<b>x',
+  category: '<img src=x onerror=alert(1)>สมุนไพร',
+  matches: [{ product_name: 'สบู่<script>', producer: 'ร้าน"A', price: 120 }],
+  lang: 'th',
+  domainUrl: 'https://www.openthai-ai.com',
+  unsubUrl: 'https://www.openthai-ai.com/api/leads/unsubscribe?email=a%40b.com&type=consumer&token=abc',
+});
+ok(!/<img src=x onerror=alert\(1\)>/.test(evilDigest.html), 'no live <img onerror> from the category survives in the HTML');
+ok(evilDigest.html.includes('&lt;img src=x onerror=alert(1)&gt;สมุนไพร'), 'the category is escaped inside the <h1> title');
+ok(!/<script>/.test(evilDigest.html) && evilDigest.html.includes('สบู่&lt;script&gt;'), 'a product name tag is escaped in the item row');
+ok(evilDigest.html.includes('ก&lt;b&gt;x'), 'the consumer name is escaped in the intro');
+ok(evilDigest.html.includes('ร้าน&quot;A'), 'a quote in the producer name is escaped');
+// the SUBJECT is plain text (not HTML) — it keeps the raw category, and must NOT carry escaped entities
+ok(evilDigest.subject.includes('<img src=x onerror=alert(1)>สมุนไพร') && !evilDigest.subject.includes('&lt;'), 'the subject stays plain text (raw category, no HTML entities)');
+ok(evilDigest.html.includes('href="https://www.openthai-ai.com/api/leads/unsubscribe?email=a%40b.com&type=consumer&token=abc"'), 'the one-click unsubscribe link is present');
+
+console.log('\n=== consumerDigestHtml: a normal digest renders cleanly + localizes ===');
+const cleanDigest = consumerDigestHtml({ name: 'มานี', category: 'เครื่องดื่ม', matches: [{ product_name: 'ชาเขียว', producer: 'สวนชา', price: 90 }], lang: 'en', domainUrl: 'https://www.openthai-ai.com', unsubUrl: 'https://x/u' });
+ok(cleanDigest.html.includes('New picks in') && cleanDigest.html.includes('เครื่องดื่ม'), 'English title localizes and shows the plain category');
+ok(cleanDigest.html.includes('ชาเขียว') && cleanDigest.html.includes('฿90'), 'the product name and formatted price render');
 
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
