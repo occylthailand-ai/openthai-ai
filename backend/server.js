@@ -41,6 +41,7 @@ import { createDisputes } from './disputes.js';
 import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
+import { escapeHtml, lowStockAlertHtml } from './html-escape.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, zonesInfo as seasonalZonesInfo } from './seasonal-engine.js';
 import { selectDigestMatches } from './digest-match.js';
@@ -1054,7 +1055,7 @@ async function sendShopCancelled(order) {
 // เจอ ">" ตัวถัดไปในเทมเพลต HTML เอง (เช่นจาก </td>) กลายเป็น tag ที่สมบูรณ์โดยไม่ตั้งใจ —
 // อีเมลแจ้งเตือน 3 จุด (order/dispute/portal-lead) ส่งถึงคนจริงข้ามฝ่าย (ลูกค้า↔ผู้ผลิต↔แอดมิน)
 // จึงต้อง escape ที่จุดแทรกลง HTML โดยตรง ไม่พึ่ง clip() ที่ต้นทางอย่างเดียว
-const escapeHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+// escapeHtml + lowStockAlertHtml ย้ายไป ./html-escape.js (มี unit test) — behavior เดิมทุกประการ
 
 async function sendOrderNotification(order) {
   const to = order?.producer_email || process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
@@ -1443,13 +1444,9 @@ async function sendLowStockAlert(product) {
     try {
       await mailer.sendMail({
         from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to,
+        // subject เป็น plain text (ไม่ใช่ HTML) — ไม่ต้อง escape เหมือน sendOrderNotification
         subject: `⚠️ เติมสต๊อก: ${product.name} เหลือ ${product.stock}`,
-        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
-          <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">⚠️ สต๊อกใกล้หมด</h1></div>
-          <div style="padding:24px;font-size:15px;line-height:1.7;">
-            <b>${product.name}</b> (SKU ${product.sku})<br>เหลือ <b style="color:#ef4444;">${product.stock}</b> ชิ้น · จุดเตือน ${product.low_stock}<br><br>
-            👉 ควรเติมสต๊อกที่ <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">Admin → คลังสินค้า</a>
-          </div></div>`,
+        html: lowStockAlertHtml(product, DOMAIN_URL),
       });
     } catch (e) { console.error('Low-stock email error:', e.message); }
   }

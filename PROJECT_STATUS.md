@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-29T23:15:44.930Z · branch `claude/daily-reporter-improvements-8vc9ct` (547 commit(s) ahead of main)
+Generated: 2026-07-30T01:14:40.246Z · branch `claude/daily-reporter-improvements-8vc9ct` (548 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 757 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 631 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-30 — Hourly loop: security — stored-XSS in the low-stock alert email (the one notification path that interpolated product name/sku RAW)
+
+Found by code scan following the escaping note at `server.js` ("clip() ตัด <tag> ด้วย regex ที่ bypass ได้ถ้า input มี '<' ไม่ปิด … จึงต้อง escape ที่จุดแทรกลง HTML"). That note fixed the **order / dispute / portal-lead / buyer-confirm** emails — but **`sendLowStockAlert` was missed**: it interpolated `product.name` and `product.sku` straight into the alert email's HTML body (`<b>${product.name}</b> (SKU ${product.sku})`). Product name/sku are producer/admin-entered via `inventory.upsert()`, which sanitizes with the **same bypassable** `clip()` (`/<[^>]*>/g`) — an **unclosed** `<img src=x onerror=…` (no `>`) survives clip, reaches the email raw, and completes into a live tag against the template's next `>` (the `</b>`), firing in the **admin's** mail client when a product crosses its low-stock threshold. Same stored-XSS-to-email class the note already closed elsewhere; this was the remaining hole.
+
+**Change (backend; behavior-identical for every existing email, one real fix):**
+- `backend/html-escape.js` (new, pure) — exports `escapeHtml` (moved verbatim from the inline `server.js` def, same implementation) so the escaping **every** notification email depends on is finally unit-testable and reused without drift, plus `lowStockAlertHtml(product, domainUrl)` which builds the alert body with `escapeHtml(name)`/`escapeHtml(sku)` and numeric-coerced `stock`/`low_stock` (`domainUrl` is a trusted env origin, left verbatim).
+- `backend/server.js` — imports both; removed the inline `escapeHtml` (all 42 other usages unchanged — identical function); `sendLowStockAlert` now sets `html: lowStockAlertHtml(product, DOMAIN_URL)`. The **subject** stays raw (plain-text, not HTML — same as `sendOrderNotification`).
+
+**Verified (run, not assumed) + mutation-tested:** new `scripts/test-html-escape.mjs` (`test:html-escape`, no-server) **20/20** — `escapeHtml` covers all five entities (& first, no double-escape), the **unclosed-`<` bypass payload** reduced to inert `&lt;img…` text, a full `<script>` neutralized, and null/undefined/number inputs never throw; `lowStockAlertHtml` escapes a malicious name **and** sku (no un-escaped attacker tag survives anywhere in the body), renders numeric stock/low_stock as plain numbers, uses the domain URL verbatim, and passes a normal Thai name/sku through unchanged. **Mutation:** dropping the two `escapeHtml()` calls in `lowStockAlertHtml` makes the injected `<img …>` survive → **4 assertions red**; restored to 20/20. **Boot smoke:** real server boots with the new import → `/api/health` 200 (the escapeHtml relocation didn't break the 42 other email interpolations at module load). `node --check` clean on both files; `data/*.json` git-restored after boot. Wired `test:html-escape` into `package.json` + the no-server CI block.
 
 ### 2026-07-29 — Hourly loop: test gap — the content "learning"/feedback loop (rate → patterns → enhance) had NO test, incl. the NaN-poisoning guard
 
@@ -4024,54 +4034,16 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 2665dda test(learning): cover the rate→patterns feedback loop + guard the NaN-poisoning fix (19 seconds ago)
-- fe7bc63 chore: sync PROJECT_STATUS.md [skip ci] (50 minutes ago)
-- afad1d9 feat(catalog): search + category filter on /catalog — a usable storefront as products grow (51 minutes ago)
-- ffc24ab chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
-- d6aa663 feat(seasonal): climate-zone selector on /seasonal — international visitors see their own region (59 minutes ago)
-- d42243a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 57c4d29 feat(seo): public, indexable general /faq — FAQPage rich-result eligible, grounded in what the platform does (4 hours ago)
-- dc40a1a chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- ae4c5a6 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 2665dda test(learning): cover the rate→patterns feedback loop + guard the NaN-poisoning fix (2 hours ago)
+- fe7bc63 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- afad1d9 feat(catalog): search + category filter on /catalog — a usable storefront as products grow (3 hours ago)
+- ffc24ab chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- d6aa663 feat(seasonal): climate-zone selector on /seasonal — international visitors see their own region (3 hours ago)
+- d42243a chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 57c4d29 feat(seo): public, indexable general /faq — FAQPage rich-result eligible, grounded in what the platform does (6 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -4204,7 +4176,7 @@ the backend.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 37 files)
+## Backend modules (backend/*.js — 38 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -4219,6 +4191,7 @@ the backend.
 | `dept-officers.js` | 85 | Openthai.ai — AI Department Officers (เจ้าหน้าที่ AI ประจำฝ่าย) |
 | `digest-match.js` | 22 | Pure, side-effect-free selector for the consumer category digest (sendConsumerDigest in server.js). |
 | `disputes.js` | 319 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
+| `html-escape.js` | 36 | Shared HTML-escaping for values interpolated into notification-email markup. |
 | `integrations.js` | 259 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `mcp-handler.js` | 264 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
@@ -4235,7 +4208,7 @@ the backend.
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9140 | Vercel serverless detection |
+| `server.js` | 9137 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
