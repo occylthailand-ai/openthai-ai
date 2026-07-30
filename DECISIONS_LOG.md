@@ -4096,3 +4096,33 @@ accessible label to prove the association is real. Full frontend suite 296/296 (
 Sweep conclusion: the three public order/checkout forms (/catalog, /contact, /store) now
 all associate every field with its label; TrackOrderPage and the /portals/* funnel forms
 were already correct in prior rounds.
+
+---
+
+## 2026-07-30 — SEO: enrich the Organization JSON-LD entity (description + ContactPoint)
+
+The Organization node in `frontend/index.html`'s `application/ld+json` @graph — the entity
+Google reads to build the site's Knowledge Graph presence (Knowledge Panel, contact
+surfacing) — carried only name/url/logo. It advertised no description and no way to reach
+the org, which is a real discoverability gap for a platform trying to enter the market
+quickly. WebSite/SoftwareApplication/FAQPage/BreadcrumbList structured data already existed
+and is well-tested; only Organization was thin.
+
+Change (grounded entirely in already-verified repo facts, no new external claims):
+- `description`: reused the exact SoftwareApplication description already in the same block
+  ("AI ไทยแท้ สร้างคอนเทนต์ TikTok …") — no new marketing copy invented.
+- `email` + `contactPoint` (ContactType "customer support"): email is `support@openthai.ai`,
+  the same support address the public /contact page (ContactPage.jsx) already renders as its
+  mailto: Email channel — not a new address.
+- `availableLanguage: [Thai, English, Chinese]`: matches i18n LANGS (th/en/zh), the verified
+  trilingual support the platform actually offers.
+- `areaServed: TH`.
+
+Verified: new `frontend/src/__tests__/organizationSchema.test.js` (2 tests) parses the
+index.html ld+json, asserts the Organization node's description + ContactPoint shape, and
+pins the ContactPoint email to the support address read out of ContactPage.jsx so the two
+hand-maintained copies can't silently drift (same drift-guard pattern as
+planPricingConsistency.test.js). Full frontend suite 298/298 (34 files), `npm run build`
+clean, and the built dist/index.html Organization node re-parsed as valid JSON-LD with all
+three new fields present. Mutation-tested: drifting the ContactPoint email → drift-guard
+red; removing the description → shape test red; both restored → green.
