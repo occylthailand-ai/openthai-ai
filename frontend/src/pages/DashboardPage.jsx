@@ -1,8 +1,116 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 import { apiUrl } from '../apiBase';
 import { getPref } from '../cloudSync';
+
+const authHeader = () => {
+  const t = localStorage.getItem('auth_token');
+  return t ? { Authorization: `Bearer ${t}` } : {};
+};
+
+const MATCH_COLOR = {
+  B2B:'#f97316', B2C:'#0ea5e9', B2G:'#10b981',
+  B2B2C:'#8b5cf6', C2B:'#06b6d4', G2G:'#3b82f6', G2B:'#14b8a6',
+};
+
+function MatchingTab({ onNavigate }) {
+  const [matches, setMatches] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const h = authHeader();
+      const [mRes, sRes] = await Promise.all([
+        fetch(apiUrl('/api/match/suggestions?type=all&limit=6'), { headers: h }),
+        fetch(apiUrl('/api/match/summary'), { headers: h }),
+      ]);
+      const mData = await mRes.json();
+      const sData = await sRes.json();
+      if (mData.success) setMatches(mData.matches || []);
+      if (sData.success) setSummary(sData);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const statItems = summary ? [
+    { label: 'ผู้ผลิตอนุมัติ', value: summary.approved_producers ?? 0, color: '#f97316' },
+    { label: 'B2B Leads',      value: summary.b2b_leads  ?? 0,         color: '#f97316' },
+    { label: 'B2C Leads',      value: summary.b2c_leads  ?? 0,         color: '#0ea5e9' },
+    { label: 'B2G Leads',      value: summary.b2g_leads  ?? 0,         color: '#10b981' },
+    { label: 'G2G ไทย',       value: summary.g2g_thai   ?? 0,         color: '#3b82f6' },
+    { label: 'G2G นานาชาติ',  value: summary.g2g_intl   ?? 0,         color: '#8b5cf6' },
+    { label: 'คำขอจับคู่',    value: summary.total_requests ?? 0,     color: '#64748b' },
+  ] : [];
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div className="pro-section-title" style={{ margin: 0 }}>🔄 ระบบจับคู่อัตโนมัติ</div>
+        <button className="pro-view-all-btn" onClick={() => onNavigate('/matching')}>
+          ดูทั้งหมด →
+        </button>
+      </div>
+
+      {summary && (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
+          {statItems.map(s => (
+            <div key={s.label} style={{
+              background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10,
+              padding: '10px 14px', minWidth: 80, flex: '1 1 80px',
+            }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: '#475569' }}>กำลังคำนวณ matches…</div>
+      ) : matches.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: '#475569' }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+          <div>ยังไม่มี matches — เพิ่มผู้ผลิตที่อนุมัติแล้วหรือ leads ใหม่</div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))' }}>
+          {matches.map((m, i) => {
+            const color = MATCH_COLOR[m.match_type] || '#64748b';
+            return (
+              <div key={i} style={{
+                background: '#0f172a', border: `1px solid ${color}33`, borderRadius: 12,
+                padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8,
+              }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span style={{ background: color + '22', color, borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{m.match_type}</span>
+                  <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 700 }}>{m.score}pt</span>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#f1f5f9', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {m.producer_name || m.producer_email || '—'}
+                </div>
+                {m.producer_category && <div style={{ fontSize: 11, color: '#64748b' }}>{m.producer_category}{m.producer_product ? ` · ${m.producer_product}` : ''}</div>}
+                <div style={{ background: '#1e293b', borderRadius: 6, padding: '8px 10px', fontSize: 12, color: '#cbd5e1' }}>
+                  <span style={{ color: '#64748b' }}>↔ </span>{m.lead_name || '—'}
+                </div>
+                <button
+                  onClick={() => onNavigate('/matching')}
+                  style={{ background: color, color: '#fff', border: 'none', borderRadius: 6, padding: '7px 0', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  แสดงความสนใจ →
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const STATS = [
   { icon: '⚡', label: 'คอนเทนต์สร้างแล้ว', value: '24,891', delta: '+12% วันนี้', color: '#6366f1' },
@@ -114,11 +222,12 @@ const DashboardPage = ({ onLogout }) => {
   }, []);
 
   const NAV = [
-    { id: 'overview', icon: '🏠', label: 'ภาพรวม' },
-    { id: 'ai', icon: '🤖', label: 'AI Tools', routes: ['/ai-generator', '/ai-tools'] },
-    { id: 'social', icon: '📱', label: 'Social Feed' },
+    { id: 'overview',  icon: '🏠', label: 'ภาพรวม' },
+    { id: 'matching',  icon: '🔄', label: 'จับคู่' },
+    { id: 'ai',        icon: '🤖', label: 'AI Tools' },
+    { id: 'social',    icon: '📱', label: 'Social Feed' },
     { id: 'analytics', icon: '📊', label: 'Analytics' },
-    { id: 'settings', icon: '⚙️', label: 'ตั้งค่า' },
+    { id: 'settings',  icon: '⚙️', label: 'ตั้งค่า' },
   ];
 
   return (
@@ -185,6 +294,13 @@ const DashboardPage = ({ onLogout }) => {
             ⚡ สร้างคอนเทนต์ AI
           </button>
         </div>
+
+        {/* Matching Tab */}
+        {activeSection === 'matching' && (
+          <MatchingTab onNavigate={navigate} />
+        )}
+
+        {activeSection !== 'matching' && <>
 
         {/* Stats Row */}
         <div className="pro-stats-row">
@@ -300,6 +416,8 @@ const DashboardPage = ({ onLogout }) => {
             </div>
           </div>
         </div>
+
+        </> }
 
       </main>
     </div>
