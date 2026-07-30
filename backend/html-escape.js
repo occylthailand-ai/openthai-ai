@@ -68,6 +68,34 @@ export function consumerDigestHtml({ name, category, matches = [], lang, domainU
   return { subject, html };
 }
 
+// Producer-approval email body ("your shop is approved"). `company` and `productName` are
+// producer-entered at signup (clip()-sanitized only — the bypassable /<[^>]*>/g) and were the
+// one email in server.js still interpolated RAW into the HTML. Besides the XSS class every other
+// email here already closes, this is a correctness bug for legitimate producers: a Thai shop name
+// with `&` (e.g. "S & P") or `<`/`>` rendered garbled in the very email that welcomes them.
+// Escape both at the insertion point. `to` (recipient email) only lands in the manage-link URL
+// via encodeURIComponent (URL context); domainUrl is a trusted env origin, left verbatim.
+export function producerApprovalHtml({ to, company, productName, domainUrl } = {}) {
+  const co = escapeHtml(company);
+  const prod = escapeHtml(productName);
+  const manageUrl = `${domainUrl}/producers/manage?email=${encodeURIComponent(to ?? '')}`;
+  return `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#10b981,#06b6d4);padding:28px;text-align:center;">
+          <h1 style="margin:0;font-size:22px;">🎉 ยินดีด้วย${company ? ' ' + co : ''}!</h1>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);">ใบสมัครผู้ผลิตของคุณได้รับการอนุมัติแล้ว</p>
+        </div>
+        <div style="padding:24px;font-size:15px;line-height:1.7;">
+          <p>${productName ? `สินค้า "<strong>${prod}</strong>"` : 'สินค้าของคุณ'} พร้อมแสดงในตลาด Openthai.ai แล้วตอนนี้</p>
+          <div style="text-align:center;margin:20px 0;">
+            <a href="${manageUrl}" style="display:inline-block;background:linear-gradient(135deg,#10b981,#06b6d4);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">📦 จัดการสินค้าของฉัน</a>
+          </div>
+          <p style="color:#94a3b8;font-size:13px;">เติมสต๊อก แก้ราคา หรือแก้รายละเอียดสินค้าได้เองทุกเมื่อจากหน้านี้ ไม่ต้องรอทีมงาน</p>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${domainUrl}" style="color:#6366f1;">${String(domainUrl || '').replace(/^https?:\/\//, '')}</a></div>
+      </div>`;
+}
+
 // Affiliate welcome email body. `name` is applicant-entered (registerAffiliateCore trims/slices
 // but does NOT HTML-escape it) and was interpolated raw into the <h1> — the last notification-email
 // path still doing so. `refLink` can be caller-supplied (input.ref_link) and lands in an href AND as

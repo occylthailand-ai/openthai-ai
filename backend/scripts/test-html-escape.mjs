@@ -5,7 +5,7 @@
 // which an UNCLOSED `<` bypasses (`<img src=x onerror=alert(1)` has no `>`), so the raw
 // opener reaches the email HTML and completes against the template's next `>` — injecting a
 // live tag into the recipient's mail client. escapeHtml at the insertion point is what stops it.
-import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml } from '../html-escape.js';
+import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml, producerApprovalHtml } from '../html-escape.js';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -83,6 +83,26 @@ console.log('\n=== consumerDigestHtml: a normal digest renders cleanly + localiz
 const cleanDigest = consumerDigestHtml({ name: 'มานี', category: 'เครื่องดื่ม', matches: [{ product_name: 'ชาเขียว', producer: 'สวนชา', price: 90 }], lang: 'en', domainUrl: 'https://www.openthai-ai.com', unsubUrl: 'https://x/u' });
 ok(cleanDigest.html.includes('New picks in') && cleanDigest.html.includes('เครื่องดื่ม'), 'English title localizes and shows the plain category');
 ok(cleanDigest.html.includes('ชาเขียว') && cleanDigest.html.includes('฿90'), 'the product name and formatted price render');
+
+console.log('\n=== producerApprovalHtml: producer company / product name are escaped (was raw) ===');
+const evilApproval = producerApprovalHtml({
+  to: 'shop@example.com',
+  company: '<img src=x onerror=alert(1)>ร้าน',
+  productName: 'สบู่<script>alert(1)</script>',
+  domainUrl: 'https://www.openthai-ai.com',
+});
+ok(!/<img src=x onerror=alert\(1\)>/.test(evilApproval), 'no live <img onerror> from the company name survives in the HTML');
+ok(evilApproval.includes('🎉 ยินดีด้วย &lt;img src=x onerror=alert(1)&gt;ร้าน!'), 'the company name is escaped inside the <h1>');
+ok(!/<script>alert\(1\)<\/script>/.test(evilApproval) && evilApproval.includes('สบู่&lt;script&gt;alert(1)&lt;/script&gt;'), 'the product name tag is escaped, not left live');
+// the recipient email only lands in the manage-link URL via encodeURIComponent
+ok(evilApproval.includes('/producers/manage?email=shop%40example.com'), 'the manage link carries the URL-encoded recipient email');
+
+console.log('\n=== producerApprovalHtml: a normal approval renders cleanly, and empty fields degrade gracefully ===');
+const cleanApproval = producerApprovalHtml({ to: 'a@b.com', company: 'S & P', productName: 'ขนมไทย', domainUrl: 'https://www.openthai-ai.com' });
+ok(cleanApproval.includes('🎉 ยินดีด้วย S &amp; P!'), 'an ampersand in a real shop name is escaped (renders as "S & P", not broken markup)');
+ok(cleanApproval.includes('สินค้า "<strong>ขนมไทย</strong>"'), 'the product name shows inside the <strong> tag');
+const emptyApproval = producerApprovalHtml({ to: 'a@b.com', domainUrl: 'https://www.openthai-ai.com' });
+ok(emptyApproval.includes('🎉 ยินดีด้วย!') && emptyApproval.includes('สินค้าของคุณ'), 'missing company/product fall back to the generic wording (no "undefined")');
 
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

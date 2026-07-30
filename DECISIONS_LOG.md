@@ -4126,3 +4126,32 @@ planPricingConsistency.test.js). Full frontend suite 298/298 (34 files), `npm ru
 clean, and the built dist/index.html Organization node re-parsed as valid JSON-LD with all
 three new fields present. Mutation-tested: drifting the ContactPoint email → drift-guard
 red; removing the description → shape test red; both restored → green.
+
+---
+
+## 2026-07-30 — escape producer company/product in the approval email (last raw-interpolation email)
+
+Scanning the backend money paths for the NaN/Infinity class just fixed in smart-e confirmed
+openthai-ai is already safe there (inventory.js `num()` uses Number.isFinite; shop-checkout
+computes the charge from the stored, validated price × a clamped qty; the affiliate-withdraw
+amount is caught by its `>avail` / `!(amount>0)` guards). No change needed — reported "no gap"
+rather than manufacturing one.
+
+The real gap found in the same sweep: `sendProducerApproval` was the ONE notification email in
+server.js still interpolating producer-entered fields (`company`, `product_name`) RAW into the
+HTML — every other email here already escapes user data (portal-welcome copy, lead-detail rows,
+affiliate-welcome, consumer-digest, low-stock). Beyond the XSS class the module header describes
+(clip()'s /<[^>]*>/g is bypassable by an unclosed `<`), this is a plain correctness bug for
+LEGITIMATE producers: a Thai shop name with `&` (e.g. "S & P") or `<`/`>` renders garbled in the
+very email that tells them "your shop is approved" — a key trust moment in the producer funnel.
+
+Fix: extracted the body into `producerApprovalHtml({ to, company, productName, domainUrl })` in
+html-escape.js (same "pure builder + unit test" pattern as lowStockAlertHtml / affiliateWelcomeHtml
+/ consumerDigestHtml), escaping company + productName at the insertion point; `to` only lands in the
+manage-link URL via encodeURIComponent. server.js now imports and calls it (inline HTML removed).
+
+Verified: test-html-escape.mjs +7 assertions (escaped `<img onerror>`/`<script>` payloads, an "S & P"
+ampersand rendering as `S &amp; P`, empty company/product degrading to generic wording, and the
+URL-encoded manage link) → 43/43 pass. Mutation-tested: reverting to raw company/productName turns
+4 assertions red; restored → green. `node --check server.js` clean and the server boots with
+/api/health → 200 (the new import resolves). test:html-escape is already wired into CI.

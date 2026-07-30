@@ -41,7 +41,7 @@ import { createDisputes } from './disputes.js';
 import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
-import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml } from './html-escape.js';
+import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml, producerApprovalHtml } from './html-escape.js';
 import { parseAIJson } from './ai-json.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, zonesInfo as seasonalZonesInfo } from './seasonal-engine.js';
@@ -1266,27 +1266,12 @@ async function sendPortalWelcomeEmail(lead) {
 // ทั้งที่ไม่รู้ด้วยซ้ำว่าหน้านี้มีอยู่ ส่งอีเมลจริงพร้อมลิงก์ตรงไปหน้าจัดการสินค้าของตัวเอง
 async function sendProducerApproval(to, company, product_name) {
   if (!mailer || !to) return;
-  const manageUrl = `${DOMAIN_URL}/producers/manage?email=${encodeURIComponent(to)}`;
   try {
     await mailer.sendMail({
       from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
       to,
       subject: '🎉 ร้านของคุณได้รับการอนุมัติแล้ว — Openthai.ai',
-      html: `
-      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#10b981,#06b6d4);padding:28px;text-align:center;">
-          <h1 style="margin:0;font-size:22px;">🎉 ยินดีด้วย${company ? ' ' + company : ''}!</h1>
-          <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);">ใบสมัครผู้ผลิตของคุณได้รับการอนุมัติแล้ว</p>
-        </div>
-        <div style="padding:24px;font-size:15px;line-height:1.7;">
-          <p>${product_name ? `สินค้า "<strong>${product_name}</strong>"` : 'สินค้าของคุณ'} พร้อมแสดงในตลาด Openthai.ai แล้วตอนนี้</p>
-          <div style="text-align:center;margin:20px 0;">
-            <a href="${manageUrl}" style="display:inline-block;background:linear-gradient(135deg,#10b981,#06b6d4);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">📦 จัดการสินค้าของฉัน</a>
-          </div>
-          <p style="color:#94a3b8;font-size:13px;">เติมสต๊อก แก้ราคา หรือแก้รายละเอียดสินค้าได้เองทุกเมื่อจากหน้านี้ ไม่ต้องรอทีมงาน</p>
-        </div>
-        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${DOMAIN_URL}" style="color:#6366f1;">${DOMAIN_URL.replace(/^https?:\/\//, '')}</a></div>
-      </div>`,
+      html: producerApprovalHtml({ to, company, productName: product_name, domainUrl: DOMAIN_URL }),
     });
     console.log(`📧 Producer approval email ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
