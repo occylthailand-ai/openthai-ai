@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-30T13:34:10.203Z · branch `claude/general-chat-9jrudk` (1 commit(s) ahead of main)
+Generated: 2026-07-30T14:05:34.323Z · branch `claude/general-chat-9jrudk` (1 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 211 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 85 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -637,60 +637,22 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 81 route components resolved
+- ✅ **Route components exist on disk** — all 82 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- b59cd30 Update PROJECT_STATUS.md to reflect current branch and session (34 seconds ago)
+- 513c844 Add automatic B2B/B2C/B2G matching engine (8 minutes ago)
+- 42cd496 Update PROJECT_STATUS.md to reflect current branch and session (#81) (30 minutes ago)
 - b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (4 weeks ago)
 - f3a860d Open the Council Bridge to external platforms/systems (#76) (4 weeks ago)
 - d73b560 Add Shared Bridge Notes to /council (#75) (4 weeks ago)
 - f1bdb35 PDPA consent gate + real cost/quality tracking (#74) (4 weeks ago)
 - 968cac1 Fix agent-page error handling, email HTML injection, producer category gap (#73) (4 weeks ago)
 - b4096d1 Facebook publish UI, producer/affiliate funnel fix, agent auth, README rewrite (#72) (4 weeks ago)
-- 7d92521 Add consumer and middleman portals + real outreach copy for all 5 membership categories (#71) (4 weeks ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.6",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -731,7 +693,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (81 routes)
+## Route map (82 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -746,6 +708,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /starter | StarterKitPage | auth |
 | /assistant | AssistantPage | auth |
 | /supply-chain | SupplyChainPage | auth |
+| /matching | MatchingPage | auth |
 | /promo-engine | PromoEnginePage | auth |
 | /daily-pr | DailyPRPage | auth |
 | /ultra-promo | UltraPromoPage | auth |
@@ -816,7 +779,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 24 files)
+## Backend modules (backend/*.js — 25 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
@@ -826,6 +789,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `disputes.js` | 279 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
+| `matching.js` | 234 | Matching Engine — จับคู่ B2B / B2C / B2G อัตโนมัติ |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
@@ -836,7 +800,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 160 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7961 | Vercel serverless detection |
+| `server.js` | 7965 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
