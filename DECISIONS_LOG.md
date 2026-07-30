@@ -9,6 +9,15 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-30 — Hourly loop: a11y — the catalog order form's labels weren't associated with their inputs (nameless fields for screen readers)
+
+Found auditing the public commerce funnel. `/catalog`'s `OrderModal` — the checkout every funnel path drives to — rendered a visible `<label>` before each field but **never associated them** (no `htmlFor`/`id`, no wrapping), so a screen reader announced each `<input>`/`<textarea>` with **no accessible name**. Worst was the quantity field: `<input type="number">` with **no placeholder either**, so it was a completely nameless spin button (WCAG 1.3.1 Info & Relationships, 4.1.2 Name/Role/Value, 3.3.2 Labels). A blind buyer literally couldn't tell which box was name / contact / qty / address / note. Purely additive, no behaviour change.
+
+**Change (frontend only):**
+- `frontend/src/pages/CatalogPage.jsx` — added `htmlFor="ord-<field>"` to each of the five order-form labels and the matching `id` to each control (`ord-name` / `ord-contact` / `ord-qty` / `ord-address` / `ord-note`). (The catalog search box already had `aria-label` from the search round; no `<img>` in the public pages lacks `alt`.)
+
+**Verified (run, not assumed) + mutation-tested:** new `frontend/src/__tests__/catalogOrderA11y.test.jsx` **1/1** — opens the order modal and finds **every** field via `getByLabelText` (name/contact/qty/address/note), asserts the qty control is the `type="number"` one (the previously-nameless spin button) and that typing through the accessible handle reaches state. `catalogStock` 4/4 and `catalogSearch` 5/5 unaffected; full frontend suite **294/294** (was 293; +1); `npm run build` ok (sitemap 26). **Mutation:** dropping the `htmlFor="ord-qty"` makes `getByLabelText(/จำนวน/)` fail with "no form control was found associated to that label" — the test genuinely enforces the association; restored to green. No backend change.
+
 ### 2026-07-30 — Hourly loop: security — the email XSS sweep MISSED one: the consumer digest interpolated the consumer's category RAW in the `<h1>`
 
 The 2026-07-30 sweep claimed "no notification email interpolates user input raw" — but it checked **direct** interpolations and missed one hidden inside a template-string map. `sendConsumerDigest` built `titleByLang = { th: \`…"${category}"…\` }` and then dropped `titleByLang[lang]` **raw** into the digest email's `<h1>`. `category` is `lead.form_data.category` — entered at consumer-portal signup and only `clip()`-sanitized (the same bypassable `/<[^>]*>/g`), so an unclosed `<img …onerror=…` category renders live in the consumer's digest email. (`introByLang` already escaped `name`; the product rows already escaped `product_name`/`producer`; only the **category-in-title** was raw — which is exactly why a direct-grep sweep skipped it.) Reachable via a direct `POST /api/leads/submit {type:consumer, category:"<img …"}`. This closes it and makes the sweep actually complete.

@@ -159,16 +159,16 @@ export function OrderModal({ product, onClose, t }) {
           <form onSubmit={submit}>
             <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{t('mk.ord.title')}: {product.product_name}</div>
             <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>{t('mk.ord.by')} {product.producer}{product.price ? ` · ฿${Number(product.price).toLocaleString('th-TH')}` : ''}</div>
-            <label style={lab}>{t('mk.ord.name')}</label>
-            <input style={inp} value={form.customer_name} onChange={set('customer_name')} placeholder={t('mk.ord.name.ph')} />
-            <label style={lab}>{t('mk.ord.contact')}</label>
-            <input style={inp} value={form.contact} onChange={set('contact')} placeholder={t('mk.ord.contact.ph')} />
-            <label style={lab}>{t('mk.ord.qty')}</label>
-            <input style={inp} type="number" min="1" value={form.qty} onChange={set('qty')} />
-            <label style={lab}>{t('mk.ord.address')}</label>
-            <textarea style={{ ...inp, minHeight: 52, resize: 'vertical' }} value={form.address} onChange={set('address')} placeholder={t('mk.ord.address.ph')} />
-            <label style={lab}>{t('mk.ord.note')}</label>
-            <textarea style={{ ...inp, minHeight: 56, resize: 'vertical' }} value={form.note} onChange={set('note')} placeholder={t('mk.ord.note.ph')} />
+            <label htmlFor="ord-name" style={lab}>{t('mk.ord.name')}</label>
+            <input id="ord-name" style={inp} value={form.customer_name} onChange={set('customer_name')} placeholder={t('mk.ord.name.ph')} />
+            <label htmlFor="ord-contact" style={lab}>{t('mk.ord.contact')}</label>
+            <input id="ord-contact" style={inp} value={form.contact} onChange={set('contact')} placeholder={t('mk.ord.contact.ph')} />
+            <label htmlFor="ord-qty" style={lab}>{t('mk.ord.qty')}</label>
+            <input id="ord-qty" style={inp} type="number" min="1" value={form.qty} onChange={set('qty')} />
+            <label htmlFor="ord-address" style={lab}>{t('mk.ord.address')}</label>
+            <textarea id="ord-address" style={{ ...inp, minHeight: 52, resize: 'vertical' }} value={form.address} onChange={set('address')} placeholder={t('mk.ord.address.ph')} />
+            <label htmlFor="ord-note" style={lab}>{t('mk.ord.note')}</label>
+            <textarea id="ord-note" style={{ ...inp, minHeight: 56, resize: 'vertical' }} value={form.note} onChange={set('note')} placeholder={t('mk.ord.note.ph')} />
             {total != null && <div style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', margin: '4px 0 12px' }}>{t('mk.ord.total')} ฿{total.toLocaleString('th-TH')}</div>}
             {err && <div style={{ color: '#fca5a5', fontSize: 13, marginBottom: 8 }}>⚠️ {err}</div>}
             <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', opacity: busy ? 0.7 : 1 }}>{busy ? t('mk.ord.submitting') : t('mk.ord.submit')}</button>

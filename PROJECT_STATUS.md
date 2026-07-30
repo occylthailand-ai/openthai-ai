@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-30T06:21:03.795Z · branch `claude/daily-reporter-improvements-8vc9ct` (555 commit(s) ahead of main)
+Generated: 2026-07-30T08:13:36.052Z · branch `claude/daily-reporter-improvements-8vc9ct` (556 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 765 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 639 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,15 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-30 — Hourly loop: a11y — the catalog order form's labels weren't associated with their inputs (nameless fields for screen readers)
+
+Found auditing the public commerce funnel. `/catalog`'s `OrderModal` — the checkout every funnel path drives to — rendered a visible `<label>` before each field but **never associated them** (no `htmlFor`/`id`, no wrapping), so a screen reader announced each `<input>`/`<textarea>` with **no accessible name**. Worst was the quantity field: `<input type="number">` with **no placeholder either**, so it was a completely nameless spin button (WCAG 1.3.1 Info & Relationships, 4.1.2 Name/Role/Value, 3.3.2 Labels). A blind buyer literally couldn't tell which box was name / contact / qty / address / note. Purely additive, no behaviour change.
+
+**Change (frontend only):**
+- `frontend/src/pages/CatalogPage.jsx` — added `htmlFor="ord-<field>"` to each of the five order-form labels and the matching `id` to each control (`ord-name` / `ord-contact` / `ord-qty` / `ord-address` / `ord-note`). (The catalog search box already had `aria-label` from the search round; no `<img>` in the public pages lacks `alt`.)
+
+**Verified (run, not assumed) + mutation-tested:** new `frontend/src/__tests__/catalogOrderA11y.test.jsx` **1/1** — opens the order modal and finds **every** field via `getByLabelText` (name/contact/qty/address/note), asserts the qty control is the `type="number"` one (the previously-nameless spin button) and that typing through the accessible handle reaches state. `catalogStock` 4/4 and `catalogSearch` 5/5 unaffected; full frontend suite **294/294** (was 293; +1); `npm run build` ok (sitemap 26). **Mutation:** dropping the `htmlFor="ord-qty"` makes `getByLabelText(/จำนวน/)` fail with "no form control was found associated to that label" — the test genuinely enforces the association; restored to green. No backend change.
 
 ### 2026-07-30 — Hourly loop: security — the email XSS sweep MISSED one: the consumer digest interpolated the consumer's category RAW in the `<h1>`
 
@@ -4064,54 +4073,16 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 084bfd8 fix(security): escape consumer-entered category in the digest email <h1> (missed by the sweep) (17 seconds ago)
-- 0978d6a chore: sync PROJECT_STATUS.md [skip ci] (67 minutes ago)
-- ccbc7af test(payment): cover verifyOmiseWebhook fail-closed guard (forged-webhook money hole) (67 minutes ago)
-- 4036a96 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 51d099a fix(security): escape applicant name in the affiliate welcome email (finishes the email XSS sweep) (4 hours ago)
-- 68669e9 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 31fda06 fix(security): escape product name/sku in the low-stock alert email (stored XSS) (5 hours ago)
-- ae4c5a6 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 5c7c11b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 084bfd8 fix(security): escape consumer-entered category in the digest email <h1> (missed by the sweep) (2 hours ago)
+- 0978d6a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- ccbc7af test(payment): cover verifyOmiseWebhook fail-closed guard (forged-webhook money hole) (3 hours ago)
+- 4036a96 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 51d099a fix(security): escape applicant name in the affiliate welcome email (finishes the email XSS sweep) (6 hours ago)
+- 68669e9 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 31fda06 fix(security): escape product name/sku in the low-stock alert email (stored XSS) (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
