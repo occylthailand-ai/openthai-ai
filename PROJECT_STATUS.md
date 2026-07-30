@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-30T08:14:00.130Z · branch `claude/daily-reporter-improvements-8vc9ct` (557 commit(s) ahead of main)
+Generated: 2026-07-30T09:16:26.953Z · branch `claude/daily-reporter-improvements-8vc9ct` (558 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 767 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 641 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,16 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+### 2026-07-30 — Hourly loop: robustness — harden `parseAIJson` (the parser 36 AI-skill endpoints + dispute arbitration depend on), which was untested and threw on common valid replies
+
+Found auditing the core AI product path. Every skill endpoint (`/api/skills/*`, `/api/generate*`, `/api/council*`, `/api/pr/*`, … — **36 call sites**) plus disputes.js's AI arbitration funnels the model's raw text through `parseAIJson(text)` to get structured data; a throw sends the caller to a **generic mock**. The inline helper was `const m = text.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); throw …` — untested, with two real weaknesses that threw away valid model output into the mock: (1) a **null/undefined** reply (a provider returned nothing) hit `null.match` → a **TypeError**, not the intended clean error; (2) models very commonly wrap JSON in a **` ```json … ``` ` code fence** with trailing prose that also contains a `}`, so the **greedy** `{…}` over-matched across the fence and `JSON.parse` threw — a perfectly good reply silently degraded to mock output. Hardened it, behaviour-compatible for everything that parsed before.
+
+**Change (backend; extract + harden, mirrors the escapeHtml / verifyOmiseWebhook extractions):**
+- `backend/ai-json.js` (new, pure) — `parseAIJson`: rejects non-string/empty with a **clean `Error` mentioning "json"** (no more TypeError); prefers a ` ```json … ``` ` (or bare ` ``` `) fenced block's contents when present, then the greedy `{…}` fallback. Anything that parsed under the old rule parses to the **same value**; only previously-failing inputs (null, fenced-with-trailing-brace) now succeed/degrade cleanly.
+- `backend/server.js` — imports it; removed the inline def. All 36 call sites + the `parseAIJson` passed into `createDisputes()` are unchanged (same function contract).
+
+**Verified (run, not assumed) + mutation-tested:** new `scripts/test-ai-json.mjs` (`test:ai-json`, no-server) **14/14** — backward-compat (bare object, object-in-prose, nested, no-json→throw); the new null/undefined/empty/whitespace/non-string cases throw a **clean Error (asserted NOT a TypeError, message mentions "json")**; a ` ```json ` fenced block with a **stray trailing `}`** parses correctly (the case the old greedy scan broke on), a bare ` ``` ` fence works, and a truncated object still throws (mock fallback preserved). **Mutation:** reverting to the old `text.match`-only body flips the clean-Error assertion red (TypeError) and breaks the fenced case; restored to 14/14. **Boot smoke:** server loads with the new import → `/api/health` 200 (the 36 callers + disputes.js resolve the imported symbol). `node --check` clean on both; `backend/data` git-restored. Wired `test:ai-json` into `package.json` + the no-server CI block.
 
 ### 2026-07-30 — Hourly loop: a11y — the catalog order form's labels weren't associated with their inputs (nameless fields for screen readers)
 
@@ -4073,54 +4083,16 @@ the backend.
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
 
 ## Recent commits
-- 6993130 fix(a11y): associate catalog order-form labels with their inputs (nameless fields for screen readers) (22 seconds ago)
-- 5c7c11b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 084bfd8 fix(security): escape consumer-entered category in the digest email <h1> (missed by the sweep) (2 hours ago)
-- 0978d6a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- ccbc7af test(payment): cover verifyOmiseWebhook fail-closed guard (forged-webhook money hole) (3 hours ago)
-- 4036a96 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 51d099a fix(security): escape applicant name in the affiliate welcome email (finishes the email XSS sweep) (6 hours ago)
-- 68669e9 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 9f75afd chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 6993130 fix(a11y): associate catalog order-form labels with their inputs (nameless fields for screen readers) (63 minutes ago)
+- 5c7c11b chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 084bfd8 fix(security): escape consumer-entered category in the digest email <h1> (missed by the sweep) (3 hours ago)
+- 0978d6a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- ccbc7af test(payment): cover verifyOmiseWebhook fail-closed guard (forged-webhook money hole) (4 hours ago)
+- 4036a96 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 51d099a fix(security): escape applicant name in the affiliate welcome email (finishes the email XSS sweep) (7 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.5",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -4253,7 +4225,7 @@ the backend.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 38 files)
+## Backend modules (backend/*.js — 39 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -4262,6 +4234,7 @@ the backend.
 | `affiliate-tiers.js` | 18 | Affiliate commission tiers — extracted from server.js so the money-critical |
 | `affiliate-withdraw-math.js` | 32 | Affiliate withdraw-request math — the money-integrity rules for how much an |
 | `agent-tools.js` | 125 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
+| `ai-json.js` | 26 | Extract a JSON object from a model's text reply. |
 | `auth.js` | 196 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
@@ -4285,7 +4258,7 @@ the backend.
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9081 | Vercel serverless detection |
+| `server.js` | 9078 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |

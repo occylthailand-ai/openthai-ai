@@ -42,6 +42,7 @@ import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml } from './html-escape.js';
+import { parseAIJson } from './ai-json.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, zonesInfo as seasonalZonesInfo } from './seasonal-engine.js';
 import { selectDigestMatches } from './digest-match.js';
@@ -2282,11 +2283,7 @@ async function callAI(prompt, maxTokens = 1024, taskType = 'bulk') {
   return r.text || '';
 }
 
-function parseAIJson(text) {
-  const m = text.match(/\{[\s\S]*\}/);
-  if (m) return JSON.parse(m[0]);
-  throw new Error('no json');
-}
+// parseAIJson moved to ./ai-json.js (hardened: null-safe + ```json fence-aware; has a unit test).
 
 // ─── Per-provider callers สำหรับ OpenThaiAi Council (Claude · Gemini · Grok) ────
 async function callClaude(prompt, maxTokens = 700) {

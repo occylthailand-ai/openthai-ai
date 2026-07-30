@@ -60,7 +60,8 @@
     "test:order-cancel-restock": "node scripts/test-order-cancel-restock.mjs",
     "test:learning-patterns": "node scripts/test-learning-patterns.mjs",
     "test:html-escape": "node scripts/test-html-escape.mjs",
-    "test:omise-webhook-verify": "node scripts/test-omise-webhook-verify.mjs"
+    "test:omise-webhook-verify": "node scripts/test-omise-webhook-verify.mjs",
+    "test:ai-json": "node scripts/test-ai-json.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
