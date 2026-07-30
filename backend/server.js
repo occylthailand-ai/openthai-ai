@@ -34,6 +34,7 @@ import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { createIntegrations } from './integrations.js';
+import { createMatching } from './matching.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -101,6 +102,7 @@ const disputes  = createDisputes(WRITE_DATA_DIR, {
 const portalLeads = createPortalLeads(WRITE_DATA_DIR, { onNewLead: async (lead) => handleNewPortalLead(lead) });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
 const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
+const matching  = createMatching(WRITE_DATA_DIR, { getProducers: () => producers.all(), getLeads: () => portalLeads.all() });
 
 import {
   signToken, verifyToken, requireAuth,
@@ -134,6 +136,8 @@ app.use(disputes.router);
 app.use(portalLeads.router);
 // Inventory / first-party shop routes — /api/shop/products
 app.use(inventory.router);
+// Matching engine — /api/match/*
+app.use(matching.router);
 
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 // DISABLE_RATE_LIMIT=1 ปิด generate limiter เฉพาะตอนรัน smoke test (ไม่มีผลกับ production)
