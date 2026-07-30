@@ -102,7 +102,7 @@ const disputes  = createDisputes(WRITE_DATA_DIR, {
 const portalLeads = createPortalLeads(WRITE_DATA_DIR, { onNewLead: async (lead) => handleNewPortalLead(lead) });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
 const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
-const matching  = createMatching(WRITE_DATA_DIR, { getProducers: () => producers.all(), getLeads: () => portalLeads.all() });
+const matching  = createMatching(WRITE_DATA_DIR, { getProducers: () => producers.all(), getLeads: () => portalLeads.all(), requireAuth });
 
 import {
   signToken, verifyToken, requireAuth,

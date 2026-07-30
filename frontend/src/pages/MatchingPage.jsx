@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiUrl } from '../apiBase';
 
+const authHeader = () => {
+  const token = localStorage.getItem('auth_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 const TABS = [
   { key: 'all', label: 'ทั้งหมด',  icon: '🔄' },
   { key: 'B2B', label: 'B2B',      icon: '🏢', desc: 'ผู้ผลิต ↔ คนกลาง / ครีเอเตอร์ / Affiliate' },
@@ -42,13 +47,15 @@ function MatchCard({ m, onRequest }) {
   async function handleRequest() {
     setLoading(true);
     try {
-      await fetch(apiUrl('/api/match/request'), {
+      const res = await fetch(apiUrl('/api/match/request'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
         body: JSON.stringify({ producer_email: m.producer_email, lead_id: m.lead_id }),
       });
-      setSent(true);
-      onRequest?.();
+      if (res.ok) {
+        setSent(true);
+        onRequest?.();
+      }
     } catch { /* ignore */ }
     setLoading(false);
   }
@@ -120,9 +127,10 @@ export default function MatchingPage() {
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
+      const headers = authHeader();
       const [mRes, sRes] = await Promise.all([
-        fetch(apiUrl(`/api/match/suggestions?type=${activeTab}&limit=40`)),
-        fetch(apiUrl('/api/match/summary')),
+        fetch(apiUrl(`/api/match/suggestions?type=${activeTab}&limit=40`), { headers }),
+        fetch(apiUrl('/api/match/summary'), { headers }),
       ]);
       const mData = await mRes.json();
       const sData = await sRes.json();

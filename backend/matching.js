@@ -69,7 +69,7 @@ function buildMatch(producer, lead, matchType) {
   };
 }
 
-export function createMatching(dataDir, { getProducers, getLeads }) {
+export function createMatching(dataDir, { getProducers, getLeads, requireAuth }) {
   const SB_URL = process.env.SUPABASE_URL;
   const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
   const useSB  = !!(SB_URL && SB_KEY);
@@ -147,12 +147,22 @@ export function createMatching(dataDir, { getProducers, getLeads }) {
   async function summary() {
     const [allProducers, allLeads] = await Promise.all([getProducers(), getLeads()]);
     const approved = allProducers.filter(p => p.status === 'approved').length;
+    let totalRequests = Object.keys(requests).length;
+    if (useSB) {
+      try {
+        const rows = await sbReq('GET', '/match_requests', { params: { select: 'id', limit: '1' } });
+        // Supabase returns the count via Content-Range header; rows array gives us actual data
+        // Use allRequests() length for accuracy
+        const all = await sbReq('GET', '/match_requests', { params: { select: 'id', limit: '10000' } });
+        totalRequests = (all || []).length;
+      } catch { /* fallback to local */ }
+    }
     return {
       approved_producers: approved,
       b2b_leads: allLeads.filter(l => B2B_PARTNER_TYPES.includes(l.type)).length,
       b2c_leads: allLeads.filter(l => B2C_PARTNER_TYPES.includes(l.type)).length,
       b2g_leads: allLeads.filter(l => B2G_PARTNER_TYPES.includes(l.type)).length,
-      total_requests: Object.keys(requests).length,
+      total_requests: totalRequests,
     };
   }
 
@@ -191,13 +201,19 @@ export function createMatching(dataDir, { getProducers, getLeads }) {
   const router = express.Router();
   const wrap = (fn) => (req, res) => fn(req, res).catch(e => { console.error('[matching]', e.message); res.status(500).json({ success: false, error: 'matching error' }); });
 
+  const auth = requireAuth || ((req, res, next) => next());
+  const adminOnly = (req, res, next) => {
+    if (req.user?.role !== 'admin') return res.status(403).json({ success: false, error: 'Admin only' });
+    next();
+  };
+
   // GET /api/match/summary — จำนวน leads/producers แยกประเภท
-  router.get('/api/match/summary', matchLimiter, wrap(async (req, res) => {
+  router.get('/api/match/summary', auth, matchLimiter, wrap(async (req, res) => {
     res.json({ success: true, ...(await summary()) });
   }));
 
   // GET /api/match/suggestions?type=B2B|B2C|B2G&limit=20 — top matches ทั้งระบบ
-  router.get('/api/match/suggestions', matchLimiter, wrap(async (req, res) => {
+  router.get('/api/match/suggestions', auth, matchLimiter, wrap(async (req, res) => {
     const type  = ['B2B', 'B2C', 'B2G', 'all'].includes(req.query.type) ? req.query.type : 'all';
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const matches = await topMatches(type, limit);
@@ -205,7 +221,7 @@ export function createMatching(dataDir, { getProducers, getLeads }) {
   }));
 
   // GET /api/match/for-producer?email=xxx&type=B2B|B2C|B2G — matches สำหรับ producer คนหนึ่ง
-  router.get('/api/match/for-producer', matchLimiter, wrap(async (req, res) => {
+  router.get('/api/match/for-producer', auth, matchLimiter, wrap(async (req, res) => {
     const email = (req.query.email || '').toLowerCase().trim();
     if (!email) return res.status(400).json({ success: false, error: 'ระบุ email ด้วย' });
     const type  = ['B2B', 'B2C', 'B2G', 'all'].includes(req.query.type) ? req.query.type : 'all';
@@ -216,15 +232,18 @@ export function createMatching(dataDir, { getProducers, getLeads }) {
   }));
 
   // POST /api/match/request — producer แสดงความสนใจ
-  router.post('/api/match/request', requestLimiter, wrap(async (req, res) => {
-    const { producer_email, lead_id, note } = req.body || {};
+  router.post('/api/match/request', auth, requestLimiter, wrap(async (req, res) => {
+    const raw = req.body || {};
+    const producer_email = String(raw.producer_email || '').toLowerCase().trim();
+    const lead_id        = String(raw.lead_id        || '').trim();
+    const note           = raw.note !== undefined ? String(raw.note) : '';
     if (!producer_email || !lead_id) return res.status(400).json({ success: false, error: 'ระบุ producer_email และ lead_id' });
     const r = await requestMatch(producer_email, lead_id, note);
     res.json({ success: true, id: r.id });
   }));
 
   // GET /api/match/requests — admin ดูคำขอทั้งหมด
-  router.get('/api/match/requests', matchLimiter, wrap(async (req, res) => {
+  router.get('/api/match/requests', auth, adminOnly, matchLimiter, wrap(async (req, res) => {
     const all = await allRequests();
     res.json({ success: true, requests: all });
   }));
