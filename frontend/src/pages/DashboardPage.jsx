@@ -31,6 +31,7 @@ const QUICK_ACTIONS = [
   { icon: '🚀', label: 'AI Starter Kit', desc: 'ใส่สินค้าครั้งเดียว → ลูกค้า·เทรนด์·แฮชแท็ก ในหน้าเดียว · เริ่มต้นง่ายสุด', route: '/starter', color: '#6366f1', hot: true },
   { icon: '🧩', label: 'Omni-Solver', desc: 'แก้ปัญหารอบด้าน 4 ศาสตร์ · จิตวิทยา·เรขาคณิต·นิเวศ·การแข่งขัน → ปิดดีลเป็นธรรม · S26', route: '/skills?skill=S26', color: '#7c3aed', hot: true },
   { icon: '📚', label: 'Skills Catalog', desc: 'ทักษะ AI ทั้งหมดในที่เดียว · ค้นหา · เปิดใช้งานตรงจุด', route: '/skills-catalog', color: '#0ea5e9', hot: true },
+  { icon: '🔄', label: 'จับคู่ B2B · B2C · B2G', desc: 'ระบบจับคู่อัตโนมัติ · ผู้ผลิต ↔ คนกลาง / ผู้บริโภค / ภาครัฐ', route: '/matching', color: '#f97316', hot: true },
   { icon: '🔗', label: 'Supply Chain Tower', desc: 'สต๊อก · สั่งซื้อซ้ำ · ผู้ผลิต · พยากรณ์ดีมานด์ · ความเสี่ยง · S19 AI', route: '/supply-chain', color: '#0ea5e9', hot: true },
   { icon: '💰', label: 'Pricing Optimizer', desc: 'ตั้งราคาให้ได้กำไร + แข่งขันได้ · จิตวิทยาราคา · margin · bundle · S20', route: '/skills?skill=S20', color: '#6366f1', hot: true },
   { icon: '💬', label: 'Customer Service AI', desc: 'ช่วยตอบลูกค้ามือโปร · intent · sentiment · 3 คำตอบ · do/dont · S21', route: '/skills?skill=S21', color: '#22c55e', hot: true },
