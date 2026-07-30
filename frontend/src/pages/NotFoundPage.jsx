@@ -41,8 +41,8 @@ export default function NotFoundPage() {
           <button onClick={() => navigate('/')} style={{ background: 'linear-gradient(135deg,#fe2c55,#6366f1)', color: '#fff', border: 'none', borderRadius: 50, padding: '13px 28px', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
             🏠 กลับหน้าหลัก
           </button>
-          <button onClick={() => navigate('/ai-generator')} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 50, padding: '12px 24px', fontSize: 14, color: '#94a3b8', cursor: 'pointer' }}>
-            ⚡ ลอง AI Generator
+          <button onClick={() => navigate('/ai-skills')} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 50, padding: '12px 24px', fontSize: 14, color: '#94a3b8', cursor: 'pointer' }}>
+            ⚡ ดูเครื่องมือ AI
           </button>
         </div>
       </div>

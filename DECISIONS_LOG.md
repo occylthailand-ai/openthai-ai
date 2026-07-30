@@ -4205,3 +4205,27 @@ asserts the RFC-required Contact (incl. the real privacy mailto) and exactly one
 renewal alarm — that Expires is still in the FUTURE, so CI fails before the published policy silently
 lapses. Full frontend suite 310/310, build clean. Mutation-tested: setting Expires to a past date
 turns the alarm assertion red; restored → green. (Runs in CI via vitest.)
+
+---
+
+## 2026-07-30 — fix the 404 page's recovery CTA sending anonymous visitors into a login wall
+
+Audit of the funnel/recovery paths (portal consent-gating and category capture verified consistent
+across all 9 /portals/* pages; LINE webhook signature verify in smart-e confirmed fail-closed +
+constant-time; all-platform-files' 192 "missing viewport" files verified to be HTML fragments
+injected into parent pages, correctly headless — not a bug) surfaced one real conversion defect:
+NotFoundPage's secondary CTA ("⚡ ลอง AI Generator") navigated to /ai-generator, which App.jsx
+gates behind auth (`isAuthenticated ? <AIGeneratorPage/> : <Navigate to="/login"/>`). The typical
+404 hitter is an ANONYMOUS visitor (mistyped/old/spam-crawled URL), so that CTA dead-ended them on
+the login wall instead of guiding them into the funnel.
+
+Fix: point the CTA at /ai-skills — the PUBLIC showcase of the same 35+ AI tools (App.jsx route has
+no auth gate; it's in ROUTES + robots Allow, and itself carries sign-up CTAs) — relabeled
+"⚡ ดูเครื่องมือ AI". Now every 404 recovery path is public and never bounces to /login. One-line
+target change; the noindex soft-404 guard is untouched.
+
+Verified: new `src/__tests__/notFoundRecoveryLinks.test.jsx` (2 tests) renders the page inside a
+router that MIRRORS the real auth gate (/ai-generator → Navigate to /login), clicks each CTA, and
+asserts the primary reaches home and the secondary reaches the public page — NOT the login wall.
+Full frontend suite 312/312, `npm run build` clean. Mutation-tested: reverting the CTA to
+/ai-generator makes the anonymous visitor land on /login and the secondary test fails. Runs in CI.
