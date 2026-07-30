@@ -1,4 +1,4 @@
-// ── Matching Engine — จับคู่ B2B / B2C / B2G อัตโนมัติ ─────────────────────────
+// ── Matching Engine — จับคู่ B2B / B2C / B2G / B2B2C / C2B / G2G / G2B ──────
 // อ่านข้อมูลจาก producers + portal_leads แล้วคำนวณ score เพื่อแนะนำคู่ที่เหมาะสม
 // ไม่ต้องการ DB table ใหม่ — ใช้ match_requests.json เก็บคำขอจับคู่
 import express from 'express';
@@ -12,6 +12,10 @@ const clip = (s, n = 200) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').
 const B2B_PARTNER_TYPES  = ['middleman', 'creator', 'affiliate'];
 const B2C_PARTNER_TYPES  = ['consumer'];
 const B2G_PARTNER_TYPES  = ['gov-thai', 'gov-intl', 'intl-org', 'foundation'];
+const G2G_THAI_TYPES     = ['gov-thai'];
+const G2G_INTL_TYPES     = ['gov-intl', 'intl-org', 'foundation'];
+
+const ALL_VALID_TYPES = ['B2B', 'B2C', 'B2G', 'B2B2C', 'C2B', 'G2G', 'G2B', 'all'];
 
 // หมวดหมู่ที่ "ใกล้เคียงกัน" — ถ้าไม่ตรงแน่นะจะได้คะแนนบางส่วน
 const RELATED_CATEGORIES = {
@@ -64,9 +68,69 @@ function buildMatch(producer, lead, matchType) {
     lead_type: lead.type,
     lead_name: lead.name || lead.form_data?.name || '',
     lead_email: lead.email || lead.form_data?.email || '',
-    match_type: matchType,  // 'B2B' | 'B2C' | 'B2G'
+    match_type: matchType,
     score,
   };
+}
+
+// ── G2G: Thai gov ↔ International gov/org ────────────────────────────────────
+function g2gCategoryScore(thaiData, intlData) {
+  const fields = d => [d.sector, d.category, d.interest, d.business_type].filter(Boolean).map(s => s.toString().trim());
+  const tFields = fields(thaiData);
+  const iFields = fields(intlData);
+  if (!tFields.length || !iFields.length) return 3;
+  if (tFields.some(t => iFields.includes(t))) return 10;
+  if (tFields.some(t => (RELATED_CATEGORIES[t] || []).some(r => iFields.includes(r)))) return 5;
+  return 1;
+}
+
+function buildG2GMatch(thaiLead, intlLead) {
+  const tData = thaiLead.form_data || {};
+  const iData = intlLead.form_data || {};
+  const score = g2gCategoryScore(tData, iData) + 5; // +5 base for cross-border connection
+  return {
+    producer_email:    thaiLead.email || tData.email || '',
+    producer_name:     thaiLead.name  || tData.name  || tData.organization || '',
+    producer_category: tData.sector   || tData.category || '',
+    producer_product:  '',
+    lead_id:    intlLead.id,
+    lead_type:  intlLead.type,
+    lead_name:  intlLead.name || iData.name || iData.organization || '',
+    lead_email: intlLead.email || iData.email || '',
+    match_type: 'G2G',
+    score,
+  };
+}
+
+function topMatchesG2G(allLeads, limit) {
+  const thaiLeads = allLeads.filter(l => G2G_THAI_TYPES.includes(l.type));
+  const intlLeads = allLeads.filter(l => G2G_INTL_TYPES.includes(l.type));
+  const all = [];
+  for (const thai of thaiLeads) {
+    for (const intl of intlLeads) {
+      const m = buildG2GMatch(thai, intl);
+      if (m.score >= 5) all.push(m);
+    }
+  }
+  return all.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+
+// ── B2B2C: Producer → Channel Partner (middleman/creator) → Consumer market ──
+function topMatchesB2B2C(approvedProducers, allLeads, limit) {
+  const channelLeads  = allLeads.filter(l => B2B_PARTNER_TYPES.includes(l.type));
+  const consumerLeads = allLeads.filter(l => B2C_PARTNER_TYPES.includes(l.type));
+  const all = [];
+  for (const producer of approvedProducers) {
+    const consumerDemand = consumerLeads.filter(c => categoryScore(producer.category, c.form_data) > 0).length;
+    if (!consumerDemand) continue; // only include if there's end-consumer demand
+    for (const channel of channelLeads) {
+      const base = buildMatch(producer, channel, 'B2B2C');
+      if (base.score < 5) continue;
+      const bonus = Math.min(consumerDemand * 2, 6);
+      all.push({ ...base, score: base.score + bonus, consumer_count: consumerDemand });
+    }
+  }
+  return all.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
 export function createMatching(dataDir, { getProducers, getLeads, requireAuth }) {
@@ -121,25 +185,42 @@ export function createMatching(dataDir, { getProducers, getLeads, requireAuth })
   // ดึง top matches ทั้งระบบ (admin / dashboard)
   async function topMatches(matchType = 'all', limit = 50) {
     const [allProducers, allLeads] = await Promise.all([getProducers(), getLeads()]);
+    const approvedProducers = allProducers.filter(p => p.status === 'approved');
 
+    // Types that need special handling
+    if (matchType === 'G2G') return topMatchesG2G(allLeads, limit);
+    if (matchType === 'B2B2C') return topMatchesB2B2C(approvedProducers, allLeads, limit);
+
+    // Producer ↔ Lead types (B2B, B2C, B2G, C2B, G2B, all)
     let targetTypes;
+    let mtOverride = null;
     if (matchType === 'B2B') targetTypes = B2B_PARTNER_TYPES;
     else if (matchType === 'B2C') targetTypes = B2C_PARTNER_TYPES;
     else if (matchType === 'B2G') targetTypes = B2G_PARTNER_TYPES;
+    else if (matchType === 'C2B') { targetTypes = B2C_PARTNER_TYPES; mtOverride = 'C2B'; }
+    else if (matchType === 'G2B') { targetTypes = B2G_PARTNER_TYPES; mtOverride = 'G2B'; }
     else targetTypes = [...B2B_PARTNER_TYPES, ...B2C_PARTNER_TYPES, ...B2G_PARTNER_TYPES];
 
-    const approvedProducers = allProducers.filter(p => p.status === 'approved');
     const candidates = allLeads.filter(l => targetTypes.includes(l.type));
-
     const all = [];
     for (const producer of approvedProducers) {
       for (const lead of candidates) {
-        const mt = B2B_PARTNER_TYPES.includes(lead.type) ? 'B2B'
-                 : B2C_PARTNER_TYPES.includes(lead.type) ? 'B2C' : 'B2G';
+        const mt = mtOverride || (
+          B2B_PARTNER_TYPES.includes(lead.type) ? 'B2B'
+          : B2C_PARTNER_TYPES.includes(lead.type) ? 'B2C' : 'B2G'
+        );
         const m = buildMatch(producer, lead, mt);
         if (m.score >= 5) all.push(m);
       }
     }
+
+    // For 'all', mix in G2G and B2B2C results
+    if (matchType === 'all') {
+      const slice = Math.ceil(limit / 5);
+      all.push(...topMatchesG2G(allLeads, slice));
+      all.push(...topMatchesB2B2C(approvedProducers, allLeads, slice));
+    }
+
     return all.sort((a, b) => b.score - a.score).slice(0, limit);
   }
 
@@ -159,9 +240,11 @@ export function createMatching(dataDir, { getProducers, getLeads, requireAuth })
     }
     return {
       approved_producers: approved,
-      b2b_leads: allLeads.filter(l => B2B_PARTNER_TYPES.includes(l.type)).length,
-      b2c_leads: allLeads.filter(l => B2C_PARTNER_TYPES.includes(l.type)).length,
-      b2g_leads: allLeads.filter(l => B2G_PARTNER_TYPES.includes(l.type)).length,
+      b2b_leads:   allLeads.filter(l => B2B_PARTNER_TYPES.includes(l.type)).length,
+      b2c_leads:   allLeads.filter(l => B2C_PARTNER_TYPES.includes(l.type)).length,
+      b2g_leads:   allLeads.filter(l => B2G_PARTNER_TYPES.includes(l.type)).length,
+      g2g_thai:    allLeads.filter(l => G2G_THAI_TYPES.includes(l.type)).length,
+      g2g_intl:    allLeads.filter(l => G2G_INTL_TYPES.includes(l.type)).length,
       total_requests: totalRequests,
     };
   }
@@ -212,19 +295,19 @@ export function createMatching(dataDir, { getProducers, getLeads, requireAuth })
     res.json({ success: true, ...(await summary()) });
   }));
 
-  // GET /api/match/suggestions?type=B2B|B2C|B2G&limit=20 — top matches ทั้งระบบ
+  // GET /api/match/suggestions?type=B2B|B2C|B2G|B2B2C|C2B|G2G|G2B|all&limit=20
   router.get('/api/match/suggestions', auth, matchLimiter, wrap(async (req, res) => {
-    const type  = ['B2B', 'B2C', 'B2G', 'all'].includes(req.query.type) ? req.query.type : 'all';
+    const type  = ALL_VALID_TYPES.includes(req.query.type) ? req.query.type : 'all';
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const matches = await topMatches(type, limit);
     res.json({ success: true, type, matches });
   }));
 
-  // GET /api/match/for-producer?email=xxx&type=B2B|B2C|B2G — matches สำหรับ producer คนหนึ่ง
+  // GET /api/match/for-producer?email=xxx&type=... — matches สำหรับ producer คนหนึ่ง
   router.get('/api/match/for-producer', auth, matchLimiter, wrap(async (req, res) => {
     const email = (req.query.email || '').toLowerCase().trim();
     if (!email) return res.status(400).json({ success: false, error: 'ระบุ email ด้วย' });
-    const type  = ['B2B', 'B2C', 'B2G', 'all'].includes(req.query.type) ? req.query.type : 'all';
+    const type  = ALL_VALID_TYPES.includes(req.query.type) ? req.query.type : 'all';
     const limit = Math.min(parseInt(req.query.limit) || 10, 50);
     const result = await suggestForProducer(email, type, limit);
     if (!result.ok) return res.status(404).json({ success: false, error: result.error });
