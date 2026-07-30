@@ -4155,3 +4155,30 @@ ampersand rendering as `S &amp; P`, empty company/product degrading to generic w
 URL-encoded manage link) → 43/43 pass. Mutation-tested: reverting to raw company/productName turns
 4 assertions red; restored → green. `node --check server.js` clean and the server boots with
 /api/health → 200 (the new import resolves). test:html-escape is already wired into CI.
+
+---
+
+## 2026-07-30 — fix CSV formula-injection in the admin leads export (untrusted public input → admin's spreadsheet)
+
+Continuing the untrusted-input sweep (email escaping the round before), the admin
+"⬇️ CSV" leads export (AdminPage.jsx) was found to be vulnerable to CSV Injection /
+Formula Injection (OWASP). It serialized name/contact/detail — fields filled in by
+PUBLIC portal-form submitters — with only `"${v.replace(/"/g,'""')}"` quoting. That
+makes the file PARSE correctly but does NOT stop a spreadsheet from EXECUTING a cell:
+Excel/LibreOffice/Google Sheets strip the CSV quotes, then evaluate any cell whose text
+starts with `=`, `+`, `-`, `@` (or a tab/CR) as a formula. So a submitter entering a name
+like `=HYPERLINK("http://evil","click")` or a DDE payload `=cmd|'/c calc'!A1` gets it run
+on the admin's machine the moment they open the exported leads file. The victim is the
+platform operator, through the very data the consent funnel collects.
+
+Fix: extracted the serialization into `src/lib/csv.js` (`csvCell` + `toCsv`), which prefixes
+any cell beginning with a formula-trigger char with a single quote (the OWASP mitigation —
+Excel hides the leading `'` on display, so a `+66…` phone still reads as `+66…`), then applies
+the existing CSV quoting. AdminPage imports `toCsv`; the inline serializer is gone. This was
+the only CSV export in the frontend.
+
+Verified: new `src/__tests__/csvInjection.test.js` (9 tests) pins that `=/+/-/@`/tab/CR-leading
+cells are defused, ordinary values (Thai names, emails with a non-leading @, phones, null/undefined)
+are untouched, embedded quotes still escape, and full rows serialize correctly. Full frontend suite
+307/307, `npm run build` clean. Mutation-tested: disabling the formula-lead guard turns the injection
+assertions red; restored → green. (Frontend CI runs every vitest file, so this is covered automatically.)

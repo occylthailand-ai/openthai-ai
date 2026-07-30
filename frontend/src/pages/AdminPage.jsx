@@ -4,6 +4,7 @@ import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { ADM } from '../i18n/admin';
+import { toCsv } from '../lib/csv';
 
 
 const PLAN_COLOR = { free: '#94a3b8', pro: '#6366f1', premier: '#f59e0b', business: '#f59e0b' };
@@ -813,7 +814,9 @@ export default function AdminPage() {
           const PORTAL_LABEL = { 'portal:gov-thai': 'Portal: หน่วยงานรัฐไทย', 'portal:gov-intl': 'Portal: หน่วยงานรัฐต่างประเทศ', 'portal:intl-org': 'Portal: องค์กรระหว่างประเทศ', 'portal:foundation': 'Portal: มูลนิธิ/NGO', 'portal:creator': 'Portal: ครีเอเตอร์', 'portal:affiliate': 'Portal: สนใจเป็น Affiliate', 'portal:producer': 'Portal: สนใจเป็นผู้ผลิต', 'portal:consumer': 'Portal: ผู้บริโภค', 'portal:middleman': 'Portal: คนกลาง/ตัวแทนจำหน่าย' };
           const exportCsv = () => {
             const rows = [['type', 'name', 'contact', 'detail', 'date'], ...list.map((l) => [l.type, l.name, l.contact, l.detail, l.date])];
-            const csv = rows.map((r) => r.map((c) => `"${String(c || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+            // toCsv() neutralizes formula-injection: lead name/contact/detail come from public
+            // form submitters, so a cell like =cmd|… must not execute when the admin opens the file.
+            const csv = toCsv(rows);
             const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
             const a = document.createElement('a'); a.href = url; a.download = `openthai-leads-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); URL.revokeObjectURL(url);
           };
