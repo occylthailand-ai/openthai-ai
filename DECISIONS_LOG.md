@@ -4182,3 +4182,26 @@ cells are defused, ordinary values (Thai names, emails with a non-leading @, pho
 are untouched, embedded quotes still escape, and full rows serialize correctly. Full frontend suite
 307/307, `npm run build` clean. Mutation-tested: disabling the formula-lead guard turns the injection
 assertions red; restored → green. (Frontend CI runs every vitest file, so this is covered automatically.)
+
+---
+
+## 2026-07-30 — add /.well-known/security.txt (RFC 9116 responsible-disclosure channel)
+
+Sweep of the security/compliance surface confirmed the high-impact paths are already solid this
+session (money paths guard NaN/Inf via Number.isFinite; all notification emails now escape; the
+admin CSV export defuses formula-injection; the PDPA access-download's Content-Disposition filename
+is header-injection-safe in practice — token-gated and Node rejects CR/LF in header values). One
+genuine gap remained: the platform handles PDPA-covered PII + PromptPay/card payments but published
+no security contact, so a researcher who found a bug had no clear way to report it privately.
+
+Added `frontend/public/.well-known/security.txt` (RFC 9116) with the real privacy inbox
+(mailto:privacy@openthai.ai — the same address ContactPage publishes for PDPA/Privacy), the /contact
+page, a required Expires, Preferred-Languages th/en, Canonical, and Policy → /privacy. No new
+external claims: every URL/email already exists in the repo.
+
+Verified: confirmed at authoring time that Vite copies public/.well-known → dist (probe file), and
+`npm run build` emits dist/.well-known/security.txt. New `src/__tests__/securityTxt.test.js` (3 tests)
+asserts the RFC-required Contact (incl. the real privacy mailto) and exactly one Expires, and — as a
+renewal alarm — that Expires is still in the FUTURE, so CI fails before the published policy silently
+lapses. Full frontend suite 310/310, build clean. Mutation-tested: setting Expires to a past date
+turns the alarm assertion red; restored → green. (Runs in CI via vitest.)
