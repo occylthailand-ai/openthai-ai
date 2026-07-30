@@ -250,22 +250,24 @@ const DashboardPage = ({ onLogout }) => {
             </div>
           ))}
 
-          <div className="nav-separator" />
-          <div className="nav-section-label">AI Automation</div>
-          <div className="nav-link" onClick={() => navigate('/agent')}>
-            <span>🦾</span> AI Agent
-            <span className="nav-badge-new" style={{ background: '#10b981' }}>24/7</span>
-          </div>
+          <div className="sidebar-extras">
+            <div className="nav-separator" />
+            <div className="nav-section-label">AI Automation</div>
+            <div className="nav-link" onClick={() => navigate('/agent')}>
+              <span>🦾</span> AI Agent
+              <span className="nav-badge-new" style={{ background: '#10b981' }}>24/7</span>
+            </div>
 
-          <div className="nav-separator" />
-          <div className="nav-section-label">โซเชียลมีเดีย</div>
-          <div className="nav-link" onClick={() => navigate('/tiktok')}>
-            <span className="tiktok-nav-icon">▶</span> TikTok Feed
-            <span className="nav-badge-new">LIVE</span>
-          </div>
-          <div className="nav-link" onClick={() => navigate('/facebook')}>
-            <span style={{ color: '#1877f2', fontWeight: 900 }}>f</span> Facebook Feed
-            <span className="nav-badge-new" style={{ background: '#1877f2' }}>LIVE</span>
+            <div className="nav-separator" />
+            <div className="nav-section-label">โซเชียลมีเดีย</div>
+            <div className="nav-link" onClick={() => navigate('/tiktok')}>
+              <span className="tiktok-nav-icon">▶</span> TikTok Feed
+              <span className="nav-badge-new">LIVE</span>
+            </div>
+            <div className="nav-link" onClick={() => navigate('/facebook')}>
+              <span style={{ color: '#1877f2', fontWeight: 900 }}>f</span> Facebook Feed
+              <span className="nav-badge-new" style={{ background: '#1877f2' }}>LIVE</span>
+            </div>
           </div>
         </div>
 
