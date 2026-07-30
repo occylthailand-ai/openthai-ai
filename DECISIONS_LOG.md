@@ -9,6 +9,15 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-07-30 — Hourly loop: a11y — the public `/contact` form's labels weren't associated with their inputs
+
+Continuing the a11y-label sweep from the catalog order form. Audited public form pages for the same "visible `<label>` but no `htmlFor`/`id`" gap and found it on `/contact` (`ContactPage.jsx`) — a real public funnel page (in the sitemap). All four fields (name / email / subject `<select>` / message `<textarea>`) rendered a styled label that was **not** associated with its control, so a screen reader announced each field with **no accessible name** (WCAG 1.3.1 Info & Relationships, 4.1.2 Name/Role/Value). Additive, no behaviour change.
+
+**Change (frontend only):**
+- `frontend/src/pages/ContactPage.jsx` — added `htmlFor="contact-<field>"` to each of the four labels and the matching `id` to each control (`contact-name` / `contact-email` / `contact-subject` / `contact-message`).
+
+**Verified (run, not assumed) + mutation-tested:** new `frontend/src/__tests__/contactFormA11y.test.jsx` **1/1** — finds all four fields via `getByLabelText` and asserts the right control types (name=input, email type=email, subject=SELECT, message=TEXTAREA). Full frontend suite **295/295** (was 294; +1); `npm run build` ok (sitemap 26). **Mutation:** dropping the subject `htmlFor` makes `getByLabelText(/หัวข้อ/)` fail with "no form control was found associated to that label"; restored to green. No backend change. (Other pages the crude label-vs-input heuristic flagged are auth-gated internal tools — lower priority than the public funnel; left for a later pass.)
+
 ### 2026-07-30 — Hourly loop: robustness — harden `parseAIJson` (the parser 36 AI-skill endpoints + dispute arbitration depend on), which was untested and threw on common valid replies
 
 Found auditing the core AI product path. Every skill endpoint (`/api/skills/*`, `/api/generate*`, `/api/council*`, `/api/pr/*`, … — **36 call sites**) plus disputes.js's AI arbitration funnels the model's raw text through `parseAIJson(text)` to get structured data; a throw sends the caller to a **generic mock**. The inline helper was `const m = text.match(/\{[\s\S]*\}/); if (m) return JSON.parse(m[0]); throw …` — untested, with two real weaknesses that threw away valid model output into the mock: (1) a **null/undefined** reply (a provider returned nothing) hit `null.match` → a **TypeError**, not the intended clean error; (2) models very commonly wrap JSON in a **` ```json … ``` ` code fence** with trailing prose that also contains a `}`, so the **greedy** `{…}` over-matched across the fence and `JSON.parse` threw — a perfectly good reply silently degraded to mock output. Hardened it, behaviour-compatible for everything that parsed before.

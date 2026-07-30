@@ -136,25 +136,25 @@ export default function ContactPage() {
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
-                    <label style={labelStyle}>ชื่อ <span style={{ color: '#fe2c55' }}>*</span></label>
-                    <input style={inputStyle} placeholder="คุณแพร" value={form.name} onChange={set('name')} required />
+                    <label htmlFor="contact-name" style={labelStyle}>ชื่อ <span style={{ color: '#fe2c55' }}>*</span></label>
+                    <input id="contact-name" style={inputStyle} placeholder="คุณแพร" value={form.name} onChange={set('name')} required />
                   </div>
                   <div>
-                    <label style={labelStyle}>อีเมล <span style={{ color: '#fe2c55' }}>*</span></label>
-                    <input style={inputStyle} type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} required />
+                    <label htmlFor="contact-email" style={labelStyle}>อีเมล <span style={{ color: '#fe2c55' }}>*</span></label>
+                    <input id="contact-email" style={inputStyle} type="email" placeholder="you@email.com" value={form.email} onChange={set('email')} required />
                   </div>
                 </div>
 
                 <div>
-                  <label style={labelStyle}>หัวข้อ</label>
-                  <select style={{ ...inputStyle, cursor: 'pointer' }} value={form.subject} onChange={set('subject')}>
+                  <label htmlFor="contact-subject" style={labelStyle}>หัวข้อ</label>
+                  <select id="contact-subject" style={{ ...inputStyle, cursor: 'pointer' }} value={form.subject} onChange={set('subject')}>
                     {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label style={labelStyle}>ข้อความ <span style={{ color: '#fe2c55' }}>*</span></label>
-                  <textarea style={{ ...inputStyle, minHeight: 140, resize: 'vertical', lineHeight: 1.6 }}
+                  <label htmlFor="contact-message" style={labelStyle}>ข้อความ <span style={{ color: '#fe2c55' }}>*</span></label>
+                  <textarea id="contact-message" style={{ ...inputStyle, minHeight: 140, resize: 'vertical', lineHeight: 1.6 }}
                     placeholder="อธิบายปัญหาหรือข้อสอบถามของคุณ..."
                     value={form.message} onChange={set('message')} required />
                   <div style={{ textAlign: 'right', fontSize: 11, color: '#7c8797', marginTop: 4 }}>
