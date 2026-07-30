@@ -5,7 +5,7 @@
 // which an UNCLOSED `<` bypasses (`<img src=x onerror=alert(1)` has no `>`), so the raw
 // opener reaches the email HTML and completes against the template's next `>` — injecting a
 // live tag into the recipient's mail client. escapeHtml at the insertion point is what stops it.
-import { escapeHtml, lowStockAlertHtml } from '../html-escape.js';
+import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml } from '../html-escape.js';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -42,6 +42,24 @@ ok(evilName.includes('href="https://x.test/admin"'), 'the trusted domain URL is 
 console.log('\n=== lowStockAlertHtml: a normal product renders cleanly ===');
 const clean = lowStockAlertHtml({ name: 'สบู่สมุนไพร', sku: 'SKU-001', stock: 2, low_stock: 10 }, 'https://openthai-ai.com');
 ok(clean.includes('<b>สบู่สมุนไพร</b>') && clean.includes('(SKU SKU-001)'), 'plain Thai name/sku pass through unchanged');
+
+console.log('\n=== affiliateWelcomeHtml: applicant name / caller-supplied ref link are escaped ===');
+const evilAff = affiliateWelcomeHtml({
+  name: '<img src=x onerror=alert(1)>',
+  refCode: 'AFF123',
+  refLink: 'https://x.test/?ref="><script>alert(1)</script>',
+  domainUrl: 'https://openthai-ai.com',
+});
+ok(evilAff.includes('🎉 ยินดีด้วย &lt;img src=x onerror=alert(1)&gt;!'), 'the applicant name is escaped in the <h1> (was raw before)');
+ok(!/<img src=x onerror=alert\(1\)>/.test(evilAff), 'no live <img onerror> tag survives from the name');
+ok(!/<script>alert\(1\)<\/script>/.test(evilAff), 'a <script> smuggled via ref_link does not survive as a live tag');
+ok(evilAff.includes('&lt;script&gt;') || !evilAff.includes('<script'), 'ref_link script is neutralized (escaped or absent)');
+ok(evilAff.includes('href="https://openthai-ai.com/affiliate/dashboard?ref=AFF123"'), 'dashboard link uses the trusted domain + URL-encoded ref code');
+
+console.log('\n=== affiliateWelcomeHtml: a normal signup renders cleanly ===');
+const cleanAff = affiliateWelcomeHtml({ name: 'มานี ใจดี', refCode: 'AFF778899', refLink: 'https://openthai-ai.com/?ref=AFF778899', domainUrl: 'https://openthai-ai.com' });
+ok(cleanAff.includes('🎉 ยินดีด้วย มานี ใจดี!'), 'plain Thai name passes through unchanged');
+ok(cleanAff.includes('>AFF778899<'), 'the ref code shows as-is');
 
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
