@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-30T19:36:39.189Z · branch `claude/openthaiai-data-review-fto45r` (6 commit(s) ahead of main)
+Generated: 2026-07-30T21:39:05.596Z · branch `claude/openthaiai-data-review-fto45r` (7 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 94 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 95 commits, earliest 2026-06-22 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -643,14 +643,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- fdf2aff chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
-- 84e8932 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 03e3a21 chore: merge main + regenerate PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 45a1ae3 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- a545554 feat(responsive): dashboard bottom tab bar + responsive grids for all screen sizes (#85) (4 hours ago)
-- b0379f2 feat(dashboard): add 🔄 จับคู่ tab with live matching widget (5 hours ago)
-- d558a41 Add B2B2C, C2B, G2G, G2B matching types (#83) (5 hours ago)
-- 6f655ac chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 807884c chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- fdf2aff chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 84e8932 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 03e3a21 chore: merge main + regenerate PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 45a1ae3 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- a545554 feat(responsive): dashboard bottom tab bar + responsive grids for all screen sizes (#85) (6 hours ago)
+- b0379f2 feat(dashboard): add 🔄 จับคู่ tab with live matching widget (7 hours ago)
+- d558a41 Add B2B2C, C2B, G2G, G2B matching types (#83) (7 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
