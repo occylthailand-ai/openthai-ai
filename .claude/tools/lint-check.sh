@@ -27,15 +27,28 @@ else
   LINT_PATH="$STAGED"
 fi
 
-# หา ESLint ใน frontend หรือ backend
+# หา ESLint ใน frontend, backend หรือ global
 ESLINT=""
 if [[ -f "$ROOT/frontend/node_modules/.bin/eslint" ]]; then
   ESLINT="$ROOT/frontend/node_modules/.bin/eslint"
 elif [[ -f "$ROOT/backend/node_modules/.bin/eslint" ]]; then
   ESLINT="$ROOT/backend/node_modules/.bin/eslint"
+elif command -v eslint &>/dev/null; then
+  ESLINT="eslint"
 else
-  echo "⚠️  ESLint not found — skipping lint"
-  echo "   Run: cd frontend && npm install  (or backend)"
+  echo "⚠️  ESLint not found — skipping lint (install: cd frontend && npm install)"
+  exit 0
+fi
+
+# ตรวจสอบว่ามี ESLint config ใน root หรือ frontend
+HAS_CONFIG=false
+for cfg in "$ROOT/.eslintrc" "$ROOT/.eslintrc.js" "$ROOT/.eslintrc.json" \
+           "$ROOT/eslint.config.js" "$ROOT/frontend/.eslintrc" \
+           "$ROOT/frontend/.eslintrc.js" "$ROOT/frontend/eslint.config.js"; do
+  [[ -f "$cfg" ]] && { HAS_CONFIG=true; break; }
+done
+if [[ "$HAS_CONFIG" == "false" ]]; then
+  echo "⚠️  No ESLint config found — skipping lint"
   exit 0
 fi
 
