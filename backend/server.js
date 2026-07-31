@@ -1916,6 +1916,25 @@ function saveWaitlist(data) {
 }
 
 const waitlist = loadWaitlist();
+// Durable capture: waitlist.json lives in /tmp on Vercel and is wiped on every redeploy (Vercel
+// redeploys on every push), so a file-only waitlist silently loses every landing-page email signup
+// each time we ship — the very top of the marketing funnel. On boot, pull the canonical list from
+// Supabase and merge it into memory (restoring it after a redeploy), deduping by email. If the table
+// doesn't exist yet (owner hasn't run migration 010), this fails quietly and we stay file-only — no
+// regression; it becomes durable the moment the migration runs. Mirrors the broadcast_unsubscribes
+// hydrate-on-boot / upsert-on-write pattern above.
+if (_useSB) {
+  _sbReq('GET', '/waitlist', { params: { select: 'email,source,joined_at', order: 'joined_at.asc', limit: '100000' } })
+    .then((rows) => {
+      if (!Array.isArray(rows)) return;
+      const have = new Set(waitlist.map((w) => (w.email || '').toLowerCase()));
+      for (const r of rows) {
+        const em = (r?.email || '').toLowerCase();
+        if (em && !have.has(em)) { waitlist.push({ email: em, source: r.source || 'landing', joined_at: r.joined_at || new Date().toISOString() }); have.add(em); }
+      }
+    })
+    .catch((e) => console.warn('[waitlist] Supabase hydrate failed, file-only:', e.message));
+}
 
 const waitlistLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 ชั่วโมง
@@ -1943,6 +1962,11 @@ app.post('/api/waitlist', waitlistLimiter, (req, res) => {
     };
     waitlist.push(record);
     saveWaitlist(waitlist);
+    // Persist to Supabase too so the signup survives the next /tmp wipe (see hydrate on boot).
+    if (_useSB) {
+      _sbReq('POST', '/waitlist', { params: { on_conflict: 'email' }, body: { email: record.email, source: record.source, joined_at: record.joined_at }, prefer: 'resolution=merge-duplicates,return=minimal' })
+        .catch((e) => console.warn('[waitlist] Supabase upsert failed, file-only:', e.message));
+    }
     console.log(`📧 Waitlist: ${sanitizedEmail} (${source || 'landing'}) — total: ${waitlist.length}`);
 
     // ส่ง confirmation email (async)
@@ -6515,7 +6539,11 @@ app.post('/api/privacy/erasure', rateLimit({ windowMs: 3600000, max: 5 }), async
 async function performErasure(sanitized) {
   let removed = 0;
   const wIdx = waitlist.findIndex(w => w.email === sanitized);
-  if (wIdx >= 0) { waitlist.splice(wIdx, 1); saveWaitlist(waitlist); removed++; }
+  if (wIdx >= 0) {
+    waitlist.splice(wIdx, 1); saveWaitlist(waitlist); removed++;
+    // Also delete from Supabase, else the erased email re-hydrates into memory on the next boot.
+    if (_useSB) { try { await _sbReq('DELETE', '/waitlist', { params: { email: `eq.${sanitized}` }, prefer: 'return=minimal' }); } catch (e) { console.error('[erasure] waitlist SB:', e.message); } }
+  }
   const cIdx = consents.findIndex(c => c.email === sanitized);
   if (cIdx >= 0) {
     consents.splice(cIdx, 1); saveConsents(consents); removed++;

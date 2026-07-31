@@ -4748,3 +4748,35 @@ gov-intl and dist/portals/intl-org serve `<html lang="en">`, while producer/cont
 lang="en" (and not th), and the two intl portals carry lang:'en' in the route list. Mutation-tested:
 forcing pageLang='th' (ignoring the route's lang) serves the English page as lang="th" and turns the
 test red; restored → green.
+
+---
+
+## 2026-07-31 — DATA-LOSS: landing-page waitlist was file-only (wiped every Vercel redeploy) — now Supabase-durable
+
+Code scan of the marketing funnel found POST /api/waitlist — the landing-page hero email capture, the
+very TOP of the funnel — persisted signups to waitlist.json ONLY (loadWaitlist/saveWaitlist). On Vercel
+that file is under /tmp and wiped on every redeploy (Vercel redeploys on every push), so every captured
+email was silently lost each ship. This is the exact ephemeral-data class already fixed for portal_leads
+/ broadcast_unsubscribes / pdpa_consents / payments — the waitlist was simply missed. (PDPA access +
+erasure already covered the waitlist array, so rights were fine; DURABILITY was the gap.)
+
+Fix: make the waitlist dual-mode (Supabase primary + file fallback), mirroring the broadcast_unsubscribes
+pattern exactly — hydrate from Supabase into memory on boot (deduping by email, restoring after a
+redeploy), upsert each new signup (on_conflict email), and — critically — DELETE from Supabase on PDPA
+erasure so an erased email can't re-hydrate on the next boot. Before the owner runs the migration it
+fails quietly and stays file-only (no regression). New migration backend/migrations/010_waitlist.sql
+(email PK, source, joined_at; RLS enabled — service_role only, matching the others).
+
+CORRECTION to the recommended Supabase set-up: it is now FIVE files —
+`FULL-MIGRATION.sql + 003_ai_usage_log.sql + 008_broadcast_unsubscribes.sql + 009_pdpa_consents.sql +
+010_waitlist.sql`. test-migration-coverage.mjs was updated (RECOMMENDED_MIGRATIONS + the "missing from
+FULL-MIGRATION" documentation list) and now auto-verifies waitlist is covered — 20/20 (was 18).
+
+Verified against the REAL running server — new scripts/test-waitlist-durability.mjs (8 checks) starts a
+mock Supabase, spawns server.js pointed at it (waitlist.json seeded EMPTY so recognition can only come
+from the hydrate): a prior-deploy signup (Supabase-only) is recognized as already-registered after boot
+(survived the /tmp wipe); a fresh signup is POSTed to Supabase; PDPA erasure issues a DELETE for the
+email (won't re-hydrate) and a forged erasure token → 403. Wired into package.json + CI. Sibling schema
+tests unaffected: migration-coverage 20/20, full-migration-columns 67/67, payments-schema 18/18,
+pdpa-tenant 16/16; server boots + /api/health 200. Mutation-tested: pointing the boot hydrate at a wrong
+table stops the seeded email from being recognized and turns the test red; restored → 8/8.
