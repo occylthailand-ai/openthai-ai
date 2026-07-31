@@ -62,7 +62,8 @@
     "test:html-escape": "node scripts/test-html-escape.mjs",
     "test:omise-webhook-verify": "node scripts/test-omise-webhook-verify.mjs",
     "test:ai-json": "node scripts/test-ai-json.mjs",
-    "test:pdpa-consent-schema": "node scripts/test-pdpa-consent-schema.mjs"
+    "test:pdpa-consent-schema": "node scripts/test-pdpa-consent-schema.mjs",
+    "test:payments-schema": "node scripts/test-payments-schema.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

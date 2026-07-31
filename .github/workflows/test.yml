@@ -92,6 +92,7 @@ jobs:
           npm run test:omise-webhook-verify
           npm run test:ai-json
           npm run test:pdpa-consent-schema
+          npm run test:payments-schema
       - name: Learning-feedback test (self-contained — rating aggregation + NaN-rejection guard)
         working-directory: backend
         run: npm run test:learning-patterns

@@ -44,6 +44,7 @@ import { createInventory } from './inventory.js';
 import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml, producerApprovalHtml } from './html-escape.js';
 import { parseAIJson } from './ai-json.js';
 import { buildConsentRecord } from './pdpa-consent.js';
+import { buildPaymentRow } from './payment-row.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, zonesInfo as seasonalZonesInfo } from './seasonal-engine.js';
 import { selectDigestMatches } from './digest-match.js';
@@ -7562,19 +7563,7 @@ if (_useSB) {
 function savePayments(data) {
   try { writeFileSync(PAYMENTS_FILE, JSON.stringify(data.slice(0, 500), null, 2), 'utf8'); } catch (_) {}
   if (_useSB && data.length > 0) {
-    const rec = data[0];
-    const row = {
-      charge_id:  rec.charge_id || rec.subscription_id || `pay_${Date.now()}`,
-      email:      rec.email || null,
-      plan:       rec.plan || 'unknown',
-      method:     rec.method || 'unknown',
-      amount_thb: rec.amount_thb || null,
-      status:     rec.status || null,
-      paid:       !!rec.paid,
-      paid_at:    rec.paid_at || null,
-      mock_mode:  !!rec.mock_mode,
-      created_at: rec.createdAt || new Date().toISOString(),
-    };
+    const row = buildPaymentRow(data[0]);
     _sbReq('POST', '/payments', { body: [row], params: { on_conflict: 'charge_id' }, prefer: 'resolution=merge-duplicates,return=minimal' })
       .catch(e => console.warn('[payments] Supabase write failed:', e.message));
   }

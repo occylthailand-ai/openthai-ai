@@ -4385,3 +4385,41 @@ returns success with the email lowercased and purposes preserved (buildConsentRe
 existing self-boot `test:consent-durability` (real endpoint + mock Supabase upsert/delete) still
 9/9; sibling unit tests unaffected. Mutation-tested BOTH drift directions: adding a `device_id` field
 to the record (not in the migration) → red; dropping the `purposes` column from 009 → red; restored → green.
+
+---
+
+## 2026-07-31 — CRITICAL schema landmine: two incompatible `payments` tables in migrations; guard the money path
+
+Extending the schema-drift audit to the money tables, I found a real, latent, money-critical bug:
+the migrations define the `payments` table TWICE with INCOMPATIBLE schemas.
+
+- `migrations/FULL-MIGRATION.sql` → FLAT: `charge_id` (PK), email, plan, method, amount_thb, status,
+  paid, paid_at, mock_mode, created_at. **This is exactly what the code writes** (server.js
+  savePayments → `_sbReq('POST','/payments', on_conflict=charge_id)`), verified column-by-column.
+- `migrations/002_subscriptions_payments.sql` → NORMALIZED: id (uuid PK), user_id NOT NULL FK →
+  users(id), subscription_id FK, plan_id, omise_charge_id UNIQUE, metadata, updated_at, etc. It has
+  NONE of `charge_id / email / plan / paid / mock_mode`. The code never writes this shape.
+
+Impact: if Supabase is set up by running the numbered migrations (…002…) rather than
+FULL-MIGRATION.sql, every payment upsert fails at PostgREST (missing charge_id/mock_mode columns +
+`user_id NOT NULL` with no value), so the code silently falls back to the ephemeral /tmp
+payments.json — and every payment/revenue record is lost on the next Vercel redeploy. A money-data-loss
+landmine hiding in the migration set.
+
+What I did (safe + non-gated): extracted the upsert-row builder into `backend/payment-row.js`
+(`buildPaymentRow` + `PAYMENT_COLUMNS`), server.js imports it (inline object removed), and added
+`scripts/test-payments-schema.mjs` (18 checks) that (a) pins the row shape + coercions, (b) asserts
+FULL-MIGRATION.sql's payments defines every column the code writes, and (c) explicitly documents the
+002 mismatch — it lists the columns 002 is missing so the incompatibility can never be silently
+forgotten. Wired into package.json + CI.
+
+Verified: node --check clean; schema test 18/18; server boots (/api/health 200); the existing
+payment self-boot tests still green (payment-status-idempotent 6, webhook-idempotent 7,
+discount-charge 8). Mutation-tested both ways (drop mock_mode from FULL-MIGRATION → red; add a bogus
+column to the code row → red).
+
+**OWNER DECISION NEEDED (adds to the 2026-07-31 blocker list):** reconcile the two payments schemas —
+the safe path is to set up Supabase from FULL-MIGRATION.sql (matches the code) and treat 002's
+`payments` table as superseded, OR migrate the code to 002's normalized schema (much larger change).
+Until then: **when creating the Supabase tables, use FULL-MIGRATION.sql's flat `payments` table, not
+002's.** I did not alter either .sql file — which schema is canonical is a data-model decision (rule 8).
