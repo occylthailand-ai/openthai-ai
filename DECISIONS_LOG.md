@@ -4423,3 +4423,36 @@ the safe path is to set up Supabase from FULL-MIGRATION.sql (matches the code) a
 `payments` table as superseded, OR migrate the code to 002's normalized schema (much larger change).
 Until then: **when creating the Supabase tables, use FULL-MIGRATION.sql's flat `payments` table, not
 002's.** I did not alter either .sql file — which schema is canonical is a data-model decision (rule 8).
+
+---
+
+## 2026-07-31 — CORRECTION: FULL-MIGRATION.sql alone is NOT the complete Supabase set-up
+
+Following the payments-schema finding, I audited whether FULL-MIGRATION.sql (which the previous entry
+recommended running) actually creates EVERY table the backend upserts to. It does not. Parsing all
+`[_]sbReq('POST','/<table>')` call sites gives 14 code-upserted tables; FULL-MIGRATION.sql defines 11
+of them and is MISSING three:
+- `ai_usage_log` → defined only in `003_ai_usage_log.sql`
+- `broadcast_unsubscribes` → defined only in `008_broadcast_unsubscribes.sql`
+- `pdpa_consents` → defined only in `009_pdpa_consents.sql`
+
+So running FULL-MIGRATION alone leaves those three uncreated, and the code keeps falling back to the
+ephemeral /tmp files: AI-usage logging stays off, and the newsletter-unsubscribe list + PDPA consent
+proofs are wiped on every Vercel redeploy (the exact PDPA durability bug). (ai_usage_log fails safe —
+the code detects the missing table and disables logging — but 008/009 are the real PDPA gap.)
+
+**CORRECTED, COMPLETE Supabase set-up (run all four, in the Supabase SQL editor):**
+`FULL-MIGRATION.sql` + `003_ai_usage_log.sql` + `008_broadcast_unsubscribes.sql` + `009_pdpa_consents.sql`
+(all are idempotent `create table if not exists`, safe to run/re-run in any order). Use FULL-MIGRATION's
+flat `payments` table, NOT 002's (see the prior payments entry).
+
+Codified this so the guidance can't silently drift: new `scripts/test-migration-coverage.mjs` (18 checks)
+parses the code's POST-upsert targets and asserts every one is created by that four-file set, and
+explicitly documents the three tables FULL-MIGRATION lacks + which file supplies each. It auto-catches a
+future upsert to a table no migration covers. Wired into package.json + CI.
+
+Verified: coverage test 18/18; parsed all 14 tables correctly. Mutation-tested: dropping 009 from the
+recommended set makes `pdpa_consents` uncovered → red; restored → green. No SQL files were altered — I
+did not consolidate the tables into FULL-MIGRATION to avoid a risky hand-transcription of DDL; the
+four-file recipe + the test are the safe, verified deliverable. (This sharpens blocker #1 from
+2026-07-31: it is not one migration to run, it is these four.)
