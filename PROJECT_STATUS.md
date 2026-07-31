@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-30T15:11:16.983Z · branch `claude/general-chat-9jrudk` (1 commit(s) ahead of main)
+Generated: 2026-07-31T14:57:36.987Z · branch `claude/openhands-repo-review-rlsmyb` (3 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 215 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 218 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -643,14 +643,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- e37fa87 feat(responsive): dashboard fixed bottom tab bar + responsive grids for all screen sizes (7 minutes ago)
-- b0379f2 feat(dashboard): add 🔄 จับคู่ tab with live matching widget (25 minutes ago)
-- d558a41 Add B2B2C, C2B, G2G, G2B matching types (#83) (37 minutes ago)
-- d9f24c8 Add automatic B2B/B2C/B2G matching engine (#82) (59 minutes ago)
-- 42cd496 Update PROJECT_STATUS.md to reflect current branch and session (#81) (2 hours ago)
-- b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (4 weeks ago)
-- f3a860d Open the Council Bridge to external platforms/systems (#76) (4 weeks ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (4 weeks ago)
+- 681d41f feat(claude): add OpenHands-style microagents and tool scripts (47 seconds ago)
+- 286b181 chore: sync PROJECT_STATUS.md [skip ci] (10 minutes ago)
+- 4b8d425 Update PROJECT_STATUS.md to reflect current branch and session (11 minutes ago)
+- a545554 feat(responsive): dashboard bottom tab bar + responsive grids for all screen sizes (#85) (24 hours ago)
+- b0379f2 feat(dashboard): add 🔄 จับคู่ tab with live matching widget (24 hours ago)
+- d558a41 Add B2B2C, C2B, G2G, G2B matching types (#83) (24 hours ago)
+- d9f24c8 Add automatic B2B/B2C/B2G matching engine (#82) (25 hours ago)
+- 42cd496 Update PROJECT_STATUS.md to reflect current branch and session (#81) (25 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -672,8 +672,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "uptime_sec": 1,
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
