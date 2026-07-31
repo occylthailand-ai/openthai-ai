@@ -4310,3 +4310,48 @@ turns the store assertion red (catalog still green); restored → green. Runs in
 
 Transparency sweep conclusion: every PII-collection point in the app now carries a consent checkbox or
 a privacy notice at the point of collection.
+
+---
+
+## 2026-07-31 — full-surface audit: code verified solid; the remaining high-impact work is owner-gated
+
+This round I ran a wide verification pass instead of shipping a change, because the readily
+completable, high-impact gaps have now been closed over the preceding rounds and I would otherwise
+be manufacturing low-value edits (which this repo's rules explicitly warn against). What I checked
+this round and confirmed already-solid, each verified against the actual code (not assumed):
+
+- **Injection/security**: smart-e's two dynamic `UPDATE … SET {fields}` build `fields` from a FIXED
+  column allowlist (values via `?`), so no SQL injection; LINE webhook is HMAC-verified + constant-time;
+  the admin CSV export defuses formula-injection; every notification email escapes user input.
+- **Money**: NaN/Inf rejected in smart-e; openthai-ai checkout derives the charge from stored,
+  validated price × clamped qty; affiliate withdraw is caught by its `>avail` / `!(amount>0)` guards.
+- **Consent/PDPA**: every PII-collection point now carries a consent checkbox or a privacy notice
+  (portals, /contact, /affiliate, homepage newsletter, /store + /catalog order forms); the /privacy
+  page is a complete PDPA policy AND wires self-service Access + Erasure to the real endpoints.
+- **Funnel/UX**: no public CTA dead-ends into /login (404 + landing fixed); all navigate()/href
+  targets resolve to real routes; ErrorBoundary + Suspense fallback wrap the app.
+- **AI cost/abuse**: every AI/generate endpoint has an appropriate limiter (generate/competitor/
+  voice/video/admin); recovery-codes/generate is override-key gated.
+- **SEO/PWA**: robots↔sitemap↔routes invariant enforced by test; Organization/WebSite/SoftwareApplication/
+  FAQPage/BreadcrumbList JSON-LD present; manifest + icons valid; security.txt published. (No
+  Organization `sameAs` and no WebSite `SearchAction` were added — the repo has neither real brand
+  social profiles nor a URL-driven search endpoint, so adding them would fabricate capability.)
+
+**Owner decisions needed to unblock the next tier of high-impact work** (I cannot do these without
+owner input — they need production credentials or a product/architecture call, per rule 8):
+
+1. **Run Supabase migrations 008_broadcast_unsubscribes.sql + 009_pdpa_consents.sql** — HIGHEST impact
+   & concrete. The code falls back to a local file, but on Vercel's ephemeral FS the unsubscribe
+   suppression list is wiped on every deploy (server.js:805), so people who opted out get re-subscribed
+   — a real PDPA problem. Running the two migrations makes opt-outs + proof-of-consent durable. Needs
+   someone with Supabase access to apply them.
+2. **otop-ai-landing production domain** — to finish its SEO: point og:image back at the OTOP-branded
+   image and add og:url + canonical (all need the real deploy domain; I shipped an interim absolute
+   og:image to the shared brand asset so sharing works now).
+3. **all-platform-files duplicate content** — 199/217 `OpenThaiAI_*_Roadmap.html` duplicate the
+   `-roadmap-section.html` set. Decide delete / add rel=canonical / keep.
+4. **OpenThai-AI-v9.0** — it's a Next.js scaffold (2 real files, no package.json, not runnable). Needs
+   an architecture decision before it can be built out and verified.
+
+No code shipped this round by design; this entry is the deliverable (a verified status + a decision
+menu). Recommended next action: (1) above — it's the only one that's a pure ops task with clear PDPA value.
