@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+
+    // Type-check JS files that have @ts-check — don't compile, just verify
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+
+    // Strict mode for new code; existing server.js is excluded via include[]
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+
+    // Resolve .js imports that are actually .ts sources (Node16+ convention)
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
+
+    // Skip checking external library types (only check our code)
+    "skipLibCheck": true
+  },
+
+  // ONLY type-check the new middleware layer + support files.
+  // server.js (7977 lines of legacy JS) is intentionally excluded — add files
+  // here one-by-one as they get JSDoc-typed.
+  "include": [
+    "logger.js",
+    "audit.js",
+    "middleware/**/*.js",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "scripts",
+    "**/*.test.*",
+    "**/*.spec.*"
+  ]
+}

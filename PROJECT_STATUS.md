@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-31T16:26:43.917Z · branch `HEAD` (1 commit(s) ahead of main)
+Generated: 2026-07-31T16:48:24.571Z · branch `claude/enterprise-foundation` (6 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 86 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 92 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -643,14 +643,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- fb01091 feat: fill professionalism gaps — logger, migration tracker, auth tests (64 minutes ago)
-- 88926ec feat(claude): OpenHands microagents + scaffold tool + improved checks (#88) (24 seconds ago)
-- 352f694 feat(claude): OpenHands-style microagents + tool scripts (#87) (84 minutes ago)
-- a545554 feat(responsive): dashboard bottom tab bar + responsive grids for all screen sizes (#85) (25 hours ago)
-- b0379f2 feat(dashboard): add 🔄 จับคู่ tab with live matching widget (26 hours ago)
-- d558a41 Add B2B2C, C2B, G2G, G2B matching types (#83) (26 hours ago)
-- d9f24c8 Add automatic B2B/B2C/B2G matching engine (#82) (26 hours ago)
-- 42cd496 Update PROJECT_STATUS.md to reflect current branch and session (#81) (27 hours ago)
+- 3f5e27c chore: regenerate PROJECT_STATUS.md [skip ci] (13 minutes ago)
+- ab717ee feat(typescript): gradual type-safety via JSDoc + tsc --noEmit (zero Vercel impact) (14 minutes ago)
+- 8a3c964 feat(tests): middleware unit tests, ErrorBoundary component test, Playwright E2E setup (14 minutes ago)
+- 3f4115f feat(enterprise): asyncHandler wrapper, validate import in server, CLAUDE.md docs (16 minutes ago)
+- ce2cb63 chore: sync PROJECT_STATUS.md [skip ci] (78 minutes ago)
+- 824a055 feat(enterprise): request-id tracing, structured logging, error handler, audit trail (79 minutes ago)
+- 6657b77 feat: structured logger, migration tracker, auth tests (#89) (21 minutes ago)
+- 88926ec feat(claude): OpenHands microagents + scaffold tool + improved checks (#88) (22 minutes ago)
 
 ## Production health (⚠️ HTTP 403)
 
@@ -779,17 +779,18 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 26 files)
+## Backend modules (backend/*.js — 27 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
+| `audit.js` | 60 | @ts-check |
 | `auth.js` | 190 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 202 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
 | `disputes.js` | 279 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
-| `logger.js` | 47 | — |
+| `logger.js` | 96 | @ts-check |
 | `matching.js` | 336 | Matching Engine — จับคู่ B2B / B2C / B2G / B2B2C / C2B / G2G / G2B |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
@@ -834,10 +835,9 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
 
-## Environment variables (59 referenced in backend code, 58 documented in .env.example)
+## Environment variables (58 referenced in backend code, 58 documented in .env.example)
 ⚠️ Referenced in code but missing from `backend/.env.example`:
-- IS_VERCEL
-- LOG_DEBUG
+- LOG_LEVEL
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.

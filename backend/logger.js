@@ -1,46 +1,95 @@
+// @ts-check
+// Structured logger — JSON on Vercel, human-readable locally.
+// Usage: log.info('event', { key: value }), log.error('event', err), log.request(req, status, ms)
+
+/** @import { Request } from 'express' */
+
+/** @typedef {'debug'|'info'|'warn'|'error'} Level */
+
+const IS_VERCEL = !!process.env.VERCEL;
+/** @type {Record<Level, number>} */
+const LEVEL_NUM = { debug: 0, info: 1, warn: 2, error: 3 };
+const MIN_LEVEL = LEVEL_NUM[/** @type {Level} */ (process.env.LOG_LEVEL)] ?? LEVEL_NUM.info;
+
 /**
- * Structured logger — ใช้แทน console.log ทั่วไป
- * Output เป็น JSON เมื่อรันบน Vercel (IS_VERCEL=1) เพื่อให้ log aggregator อ่านได้
- * Output เป็น human-readable เมื่อ dev local
+ * @param {Level} level
+ * @param {string} event
+ * @param {Record<string, unknown>} [meta]
  */
-
-const IS_VERCEL = process.env.VERCEL === '1' || process.env.IS_VERCEL === '1';
-const SERVICE = 'openthai-backend';
-
-function format(level, msg, meta = {}) {
-  const ts = new Date().toISOString();
+function emit(level, event, meta = {}) {
+  if (LEVEL_NUM[level] < MIN_LEVEL) return;
+  const entry = { ts: new Date().toISOString(), level, event, ...flatten(meta) };
   if (IS_VERCEL) {
-    return JSON.stringify({ ts, level, service: SERVICE, msg, ...meta });
+    const fn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+    fn(JSON.stringify(entry));
+  } else {
+    /** @type {Record<Level, string>} */
+    const colors = { debug: '\x1b[36m', info: '\x1b[32m', warn: '\x1b[33m', error: '\x1b[31m' };
+    const rst = '\x1b[0m';
+    const extras = Object.entries(entry)
+      .filter(([k]) => !['ts', 'level', 'event'].includes(k))
+      .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+      .join(' ');
+    const fn = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+    fn(`${colors[level]}${level.toUpperCase()}${rst} ${event}${extras ? ' ' + extras : ''}`);
   }
-  const prefix = {
-    info:  '\x1b[36m[INFO]\x1b[0m ',
-    warn:  '\x1b[33m[WARN]\x1b[0m ',
-    error: '\x1b[31m[ERR ]\x1b[0m ',
-    debug: '\x1b[90m[DBG ]\x1b[0m ',
-  }[level] ?? '[LOG] ';
-  const extra = Object.keys(meta).length ? ' ' + JSON.stringify(meta) : '';
-  return `${ts} ${prefix}${msg}${extra}`;
+}
+
+/**
+ * Flatten nested error objects so they serialize cleanly.
+ * @param {Record<string, unknown>} meta
+ * @returns {Record<string, unknown>}
+ */
+function flatten(meta) {
+  if (!meta || typeof meta !== 'object') return {};
+  /** @type {Record<string, unknown>} */
+  const out = {};
+  for (const [k, v] of Object.entries(meta)) {
+    if (v instanceof Error) {
+      out[k] = v.message;
+      if (v.stack) out[`${k}_stack`] = v.stack.split('\n').slice(0, 3).join(' | ');
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
 }
 
 export const log = {
-  info:  (msg, meta) => console.log(format('info',  msg, meta)),
-  warn:  (msg, meta) => console.warn(format('warn',  msg, meta)),
-  error: (msg, meta) => console.error(format('error', msg, meta)),
-  debug: (msg, meta) => { if (process.env.LOG_DEBUG) console.log(format('debug', msg, meta)); },
+  /** @param {string} event @param {Record<string, unknown>} [meta] */
+  debug: (event, meta) => emit('debug', event, meta),
+  /** @param {string} event @param {Record<string, unknown>} [meta] */
+  info:  (event, meta) => emit('info',  event, meta),
+  /** @param {string} event @param {Record<string, unknown>} [meta] */
+  warn:  (event, meta) => emit('warn',  event, meta),
+  /** @param {string} event @param {Record<string, unknown>} [meta] */
+  error: (event, meta) => emit('error', event, meta),
 
-  /** Log HTTP request — ใช้ใน Express middleware */
-  request: (req, status, ms) => {
+  /**
+   * @param {Request} req
+   * @param {number} status
+   * @param {number} ms
+   */
+  request(req, status, ms) {
     const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info';
-    log[level](`${req.method} ${req.path}`, {
+    emit(level, 'http_request', {
+      method: req.method,
+      path:   req.path,
       status,
       ms,
-      ip: req.ip,
-      ua: req.headers['user-agent']?.slice(0, 80),
+      reqId:  req.id,
+      ip:     req.ip,
     });
   },
 
-  /** Log AI call — track token usage */
-  ai: (provider, model, tokens, ms, ok) => {
-    log.info('ai_call', { provider, model, tokens, ms, ok });
+  /**
+   * @param {string} provider
+   * @param {string} model
+   * @param {number} tokens
+   * @param {number} ms
+   * @param {boolean} ok
+   */
+  ai(provider, model, tokens, ms, ok) {
+    emit(ok ? 'info' : 'warn', 'ai_call', { provider, model, tokens, ms, ok });
   },
 };

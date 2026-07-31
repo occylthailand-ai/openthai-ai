@@ -1,27 +1,69 @@
 #!/usr/bin/env bash
-# รัน test suite ของ backend
+# รัน test suite
 # ใช้: bash .claude/tools/run-tests.sh [suite]
-# suite: smoke | affiliate | revenue | all (default: smoke)
+# suite: unit | middleware | types | smoke | affiliate | revenue | e2e | all (default: unit)
 
 set -euo pipefail
 
-SUITE="${1:-smoke}"
-BACKEND_DIR="$(cd "$(dirname "$0")/../../backend" && pwd)"
+SUITE="${1:-unit}"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+BACKEND_DIR="$ROOT/backend"
+FRONTEND_DIR="$ROOT/frontend"
 
-echo "🧪 Running backend tests: $SUITE"
+echo "🧪 Running tests: $SUITE"
 echo ""
 
-cd "$BACKEND_DIR"
-
 case "$SUITE" in
-  health)    npm run test:health ;;
-  smoke)     npm run test:smoke ;;
-  affiliate) npm run test:affiliate ;;
-  revenue)   npm run test:revenue ;;
-  all)       npm run test:all ;;
+  unit)
+    cd "$FRONTEND_DIR"
+    npm test
+    ;;
+  middleware)
+    cd "$ROOT"
+    node --test backend/middleware/__tests__/*.mjs
+    ;;
+  types)
+    cd "$BACKEND_DIR"
+    npm run test:types
+    ;;
+  smoke)
+    cd "$BACKEND_DIR"
+    npm run test:smoke
+    ;;
+  affiliate)
+    cd "$BACKEND_DIR"
+    npm run test:affiliate
+    ;;
+  revenue)
+    cd "$BACKEND_DIR"
+    npm run test:revenue
+    ;;
+  e2e)
+    cd "$ROOT"
+    PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npx --prefix frontend playwright test
+    ;;
+  all)
+    echo "--- unit (frontend vitest) ---"
+    cd "$FRONTEND_DIR" && npm test && cd "$ROOT"
+    echo ""
+    echo "--- middleware (node --test) ---"
+    node --test backend/middleware/__tests__/*.mjs
+    echo ""
+    echo "--- types (tsc --noEmit) ---"
+    cd "$BACKEND_DIR" && npm run test:types && cd "$ROOT"
+    echo ""
+    echo "--- smoke ---"
+    cd "$BACKEND_DIR" && npm run test:smoke && cd "$ROOT"
+    echo ""
+    echo "--- affiliate ---"
+    cd "$BACKEND_DIR" && npm run test:affiliate && cd "$ROOT"
+    echo ""
+    echo "--- revenue ---"
+    cd "$BACKEND_DIR" && npm run test:revenue && cd "$ROOT"
+    ;;
   *)
     echo "❌ Unknown suite: $SUITE"
-    echo "   Valid: health | smoke | affiliate | revenue | all"
+    echo "   Valid: unit | middleware | types | smoke | affiliate | revenue | e2e | all"
     exit 1
     ;;
 esac
