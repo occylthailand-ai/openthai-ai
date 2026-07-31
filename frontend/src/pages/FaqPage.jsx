@@ -1,66 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { FAQ_ITEMS } from '../data/faqContent';
 
 // Public, indexable general FAQ — the broad "how does this work / is my data safe / how do I get
 // paid" questions that /pricing and /affiliate (which have their own topic-specific FAQs) don't cover.
 // Every answer is grounded in what the platform ACTUALLY does (consent-first funnels, no scraping,
 // PromptPay+card THB via Omise, PDPA access/erasure/unsubscribe, order tracking by id+contact,
 // dispute/escrow that hears both sides before an admin decides, 35 AI skills in 3 languages) — no
-// invented features. Emits FAQPage JSON-LD (same client-side pattern as /pricing + /affiliate) so the
-// page is eligible for FAQ rich results; accordions follow the site's keyboard/SR-operable pattern.
+// invented features. Emits FAQPage JSON-LD (same client-side pattern as /pricing + /affiliate) AND
+// the prerendered /faq/index.html carries the same schema statically (scripts/route-meta.mjs), so
+// non-JS crawlers see it too; accordions follow the site's keyboard/SR-operable pattern.
+//
+// The Q&A pairs live in ../data/faqContent.js — the SINGLE source the prerender's FAQPage JSON-LD is
+// also built from, so the visible FAQ and the structured data can't drift (Google drops the rich
+// result if they disagree). faqContent.test.js pins them together.
 
+const UI = {
+  th: { title: 'คำถามที่พบบ่อย', sub: 'ทุกอย่างที่อยากรู้เกี่ยวกับ OpenThaiAi — ตรงไปตรงมา', ctaHead: 'พร้อมเริ่มไหม?', cta: 'เลือกประตูของคุณ', privacy: 'อ่านนโยบายความเป็นส่วนตัว' },
+  en: { title: 'Frequently asked questions', sub: 'Everything you want to know about OpenThaiAi — straight answers', ctaHead: 'Ready to start?', cta: 'Pick your portal', privacy: 'Read the privacy policy' },
+  zh: { title: '常见问题', sub: '关于 OpenThaiAi 你想知道的一切——坦诚作答', ctaHead: '准备好了吗？', cta: '选择你的入口', privacy: '阅读隐私政策' },
+};
 const T = {
-  th: {
-    title: 'คำถามที่พบบ่อย',
-    sub: 'ทุกอย่างที่อยากรู้เกี่ยวกับ OpenThaiAi — ตรงไปตรงมา',
-    faqs: [
-      ['OpenThaiAi คืออะไร?', 'แพลตฟอร์ม AI เพื่อการค้าสำหรับคนไทยและตลาดโลก — รวมเครื่องมือ AI สร้างคอนเทนต์/ขายของ/SEO, ตลาดสินค้าเชื่อมผู้ผลิตกับผู้ซื้อ, ระบบ affiliate และเครื่องมือแนะนำสินค้าตามฤดูกาล ใช้ได้ 3 ภาษา (ไทย/อังกฤษ/จีน)'],
-      ['ข้อมูลของฉันปลอดภัยไหม?', 'ทุกช่องทางสมัครขอความยินยอม (consent) ก่อนเก็บข้อมูลเสมอ เราไม่แอบเก็บ/ไม่ scrape/ไม่ซื้อข้อมูลใคร และคุณใช้สิทธิ PDPA ได้จริง — ขอดูข้อมูลตัวเอง ขอลบข้อมูล และยกเลิกรับอีเมลได้ทุกเมื่อที่หน้าความเป็นส่วนตัว'],
-      ['ชำระเงินได้อย่างไร?', 'รองรับพร้อมเพย์ (PromptPay) และบัตรเครดิต/เดบิต ผ่านระบบชำระเงิน Omise เป็นเงินบาท (THB)'],
-      ['ติดตามคำสั่งซื้อได้อย่างไร?', 'ใช้เลขที่ออเดอร์ + ช่องทางติดต่อที่ใช้ตอนสั่งซื้อ ที่หน้า “ติดตามสถานะ” (/track) — เมื่อสั่งสำเร็จ ระบบส่งอีเมลยืนยันพร้อมลิงก์ติดตามให้ (ถ้าใช้อีเมลเป็นช่องทางติดต่อ)'],
-      ['ถ้ามีปัญหากับคำสั่งซื้อ ทำอย่างไร?', 'เปิดข้อพิพาท (dispute) ได้จากหน้าติดตามคำสั่งซื้อ ระบบจะพักเงิน (escrow) ไว้ก่อน เปิดโอกาสให้ทั้งสองฝ่ายชี้แจงพร้อมหลักฐาน แล้วแอดมินเป็นผู้ตัดสินโดยเห็นทั้งสองด้าน — AI เป็นแค่ผู้ช่วยเสนอความเห็น ไม่ตัดสินเงินจริงเอง'],
-      ['ผู้ผลิต/ร้านค้าเข้าร่วมอย่างไร?', 'สมัครที่หน้าประตูผู้ผลิต (/portals/producer) หรือ /join โดยยินยอม PDPA ก่อน ทีมงานตรวจและอนุมัติ จากนั้นสินค้าของคุณจะขึ้นแสดงในตลาด และคุณแก้ไข/เติมสต๊อกสินค้าเองได้'],
-      ['Affiliate ได้ค่าคอมอย่างไร?', 'สมัครเป็น affiliate รับลิงก์แนะนำของตัวเอง เมื่อมีคนซื้อผ่านลิงก์คุณจะได้ค่าคอมมิชชันตามขั้น (tier) ถอนเข้าพร้อมเพย์ได้ โดยยืนยันคำขอถอนผ่านอีเมลที่ลงทะเบียนไว้เพื่อความปลอดภัย'],
-      ['มีเครื่องมือ AI อะไรบ้าง?', 'มีทักษะ AI มากกว่า 35 อย่าง ครบทั้งสร้างคอนเทนต์ แคปชั่นขายของ วิเคราะห์เทรนด์ SEO บริการลูกค้า ตั้งราคา ไลฟ์ขายของ และอื่นๆ ดูรายการทั้งหมดได้ที่หน้าเครื่องมือ AI (/ai-skills)'],
-    ],
-    ctaHead: 'พร้อมเริ่มไหม?',
-    cta: 'เลือกประตูของคุณ',
-    privacy: 'อ่านนโยบายความเป็นส่วนตัว',
-  },
-  en: {
-    title: 'Frequently asked questions',
-    sub: 'Everything you want to know about OpenThaiAi — straight answers',
-    faqs: [
-      ['What is OpenThaiAi?', 'A commerce AI platform for Thailand and global markets — AI tools for content/selling/SEO, a marketplace connecting producers with buyers, an affiliate system, and a seasonal product recommender. Available in 3 languages (Thai/English/Chinese).'],
-      ['Is my data safe?', 'Every sign-up asks for consent before collecting data. We do not harvest, scrape, or buy anyone’s data, and your PDPA rights are real — view your own data, request erasure, and unsubscribe from emails anytime on the privacy page.'],
-      ['How can I pay?', 'PromptPay and credit/debit cards, via the Omise payment system, in Thai Baht (THB).'],
-      ['How do I track my order?', 'Use your order ID + the contact you gave at checkout on the Track page (/track). When an order succeeds we email a confirmation with a track link (if your contact is an email).'],
-      ['What if there’s a problem with an order?', 'Open a dispute from the order-tracking page. Funds are held in escrow, both sides get to explain with evidence, and an admin decides after seeing both. AI only assists with a suggestion — it never moves real money on its own.'],
-      ['How do producers/sellers join?', 'Apply at the producer portal (/portals/producer) or /join, consenting to PDPA first. The team reviews and approves; your products then appear in the marketplace and you can edit/restock them yourself.'],
-      ['How do affiliates earn?', 'Sign up as an affiliate and get your own referral link. When someone buys through it you earn a tier-based commission, withdrawable to PromptPay — each withdrawal is confirmed via your registered email for safety.'],
-      ['What AI tools are there?', 'Over 35 AI skills — content creation, sales captions, trend analysis, SEO, customer support, pricing, live selling and more. See the full list on the AI tools page (/ai-skills).'],
-    ],
-    ctaHead: 'Ready to start?',
-    cta: 'Pick your portal',
-    privacy: 'Read the privacy policy',
-  },
-  zh: {
-    title: '常见问题',
-    sub: '关于 OpenThaiAi 你想知道的一切——坦诚作答',
-    faqs: [
-      ['OpenThaiAi 是什么？', '面向泰国与全球市场的商用 AI 平台——内容/销售/SEO 的 AI 工具、连接生产商与买家的商城、推广（affiliate）系统，以及应季选品工具。支持三语（泰/英/中）。'],
-      ['我的数据安全吗？', '每个注册入口都会先征得同意才收集数据。我们不采集、不抓取、不购买任何人的数据；你的 PDPA 权利真实可用——可查看本人数据、申请删除、随时退订邮件（在隐私页面）。'],
-      ['如何付款？', '通过 Omise 支付系统支持 PromptPay 及信用卡/借记卡，以泰铢（THB）结算。'],
-      ['如何追踪订单？', '在追踪页面（/track）输入订单号 + 下单时填写的联系方式。下单成功后，我们会发送含追踪链接的确认邮件（若联系方式为邮箱）。'],
-      ['订单出问题怎么办？', '可在订单追踪页发起争议（dispute）。资金将进入托管（escrow），双方均可提交证据说明，管理员在了解双方后裁定。AI 仅提供建议，绝不自行划转真实资金。'],
-      ['生产商/卖家如何加入？', '在生产商入口（/portals/producer）或 /join 注册，先同意 PDPA。团队审核通过后，你的商品将在商城展示，你可自行编辑/补货。'],
-      ['推广者如何赚取佣金？', '注册为 affiliate 并获得专属推广链接。有人通过链接购买后，你将按等级（tier）获得佣金，可提现至 PromptPay——每笔提现需通过注册邮箱确认以保安全。'],
-      ['有哪些 AI 工具？', '超过 35 项 AI 技能——内容创作、销售文案、趋势分析、SEO、客服、定价、直播带货等。完整列表见 AI 工具页面（/ai-skills）。'],
-    ],
-    ctaHead: '准备好了吗？',
-    cta: '选择你的入口',
-    privacy: '阅读隐私政策',
-  },
+  th: { ...UI.th, faqs: FAQ_ITEMS.th },
+  en: { ...UI.en, faqs: FAQ_ITEMS.en },
+  zh: { ...UI.zh, faqs: FAQ_ITEMS.zh },
 };
 
 const card = { background: '#111', border: '1px solid #6366f133', borderRadius: 12 };

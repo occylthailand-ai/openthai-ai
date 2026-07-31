@@ -16,6 +16,10 @@
 // SEO regression into a loud build failure — matching the fail-loud discipline the
 // PROJECT_STATUS generator and seoInvariants test already use elsewhere.
 
+// The /faq Q&A pairs — the SAME list FaqPage.jsx renders — so the prerendered FAQPage JSON-LD
+// stays identical to the visible content. Pure ESM data (no JSX), safe to import from a build script.
+import { FAQ_ITEMS } from '../src/data/faqContent.js';
+
 export function escapeAttr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 }
@@ -40,6 +44,26 @@ function replaceOrThrow(html, pattern, replacement, label, path) {
 // name for the /portals crumb (passed in so this module needn't import the full
 // ROUTES list). JSON.stringify handles value escaping; "<" is additionally escaped
 // so the serialized JSON can never break out of the <script> element.
+
+// FAQPage JSON-LD for /faq. The visible page (FaqPage.jsx) emits the same schema client-side, but a
+// non-JS crawler (Bing, the LINE preview bot, Googlebot's first HTML pass) never runs that — so the
+// rich-result eligibility hung on Google's slower, unreliable render pass. Injecting the schema into
+// the prerendered HTML makes it present in the first byte. Built from the SAME FAQ_ITEMS the page
+// renders (Thai, the language /faq defaults to on first load) so the structured data matches the
+// visible content — Google drops the FAQ rich result when they disagree. "<" is escaped so the
+// serialized JSON can't break out of the <script>.
+export function faqPageJsonLd(items) {
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: (items || []).map(([q, a]) => ({
+      '@type': 'Question', name: String(q),
+      acceptedAnswer: { '@type': 'Answer', text: String(a) },
+    })),
+  };
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
 export function breadcrumbJsonLd(path, title, DOMAIN, portalsTitle = 'Portals') {
   const crumbs = [{ name: 'หน้าแรก', url: DOMAIN + '/' }];
   if (path.startsWith('/portals/')) {
@@ -72,5 +96,10 @@ export function applyRouteMeta(baseHtml, { path, title, desc }, DOMAIN, opts = {
   html = replaceOrThrow(html, /<meta name="twitter:title" content=".*?" \/>/, `<meta name="twitter:title" content="${escapeAttr(fullTitle)}" />`, 'twitter:title meta', path);
   html = replaceOrThrow(html, /<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${escapeAttr(desc)}" />`, 'twitter:description meta', path);
   html = replaceOrThrow(html, '</head>', `  <script type="application/ld+json">${breadcrumbJsonLd(path, title, DOMAIN, opts.portalsTitle)}</script>\n  </head>`, '</head>', path);
+  // /faq additionally carries a static FAQPage schema so non-JS crawlers get FAQ rich-result
+  // eligibility without waiting on the client-side render (see faqPageJsonLd).
+  if (path === '/faq') {
+    html = replaceOrThrow(html, '</head>', `  <script type="application/ld+json">${faqPageJsonLd(FAQ_ITEMS.th)}</script>\n  </head>`, '</head> (faq schema)', path);
+  }
   return html;
 }

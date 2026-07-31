@@ -4485,3 +4485,34 @@ lost on redeploy) fails CI. Wired into package.json + CI.
 Verified: 67/67; mutation-tested (drop orders.escrow_status from FULL-MIGRATION → red; restored → green).
 No SQL files altered. Together with the payments + migration-coverage guards, the Supabase set-up recipe
 (FULL-MIGRATION + 003 + 008 + 009) is now CI-verified end-to-end for table presence AND column completeness.
+
+---
+
+## 2026-07-31 — SEO: /faq FAQPage structured data now in the prerendered HTML (rich-result eligibility for non-JS crawlers)
+
+The /faq page already emitted FAQPage JSON-LD, but ONLY client-side (FaqPage.jsx, via
+dangerouslySetInnerHTML after hydration). The prerendered /faq/index.html — the first HTML byte a
+non-JS crawler actually reads (Bing, the LINE link-preview bot, Googlebot's first HTML pass) — carried
+Organization + WebSite + SoftwareApplication + BreadcrumbList but NO FAQPage schema, so the page's
+eligibility for Google's FAQ rich result (the expandable Q&A accordion in search results — major SERP
+real estate + CTR for organic discovery) depended entirely on Google's slower, unreliable second
+render pass, and non-Google engines never saw it at all.
+
+Fix: prerender the FAQPage schema into /faq/index.html, the same way BreadcrumbList is already injected
+per route. To keep the visible Q&A and the structured data from drifting (Google drops the rich result
+when they disagree), the 8 Q&A pairs (th/en/zh) were extracted to a single source of truth,
+`frontend/src/data/faqContent.js` (`FAQ_ITEMS`), which BOTH FaqPage.jsx renders AND
+`scripts/route-meta.mjs` builds the injected JSON-LD from. New `faqPageJsonLd()` in route-meta.mjs
+builds it from FAQ_ITEMS.th (the language /faq defaults to on first load, so the schema matches
+first-paint content); applyRouteMeta injects it for path === '/faq' only, reusing the existing
+throw-on-no-op guard.
+
+Verified: full frontend suite 324/324 green; real `npm run build` writes dist/faq/index.html with
+exactly one FAQPage schema (8 questions) + its BreadcrumbList, first question present verbatim, and the
+JSON-LD parses cleanly out of the served file; dist/contact/index.html has NO FAQPage (no
+cross-contamination). New `src/__tests__/faqContent.test.js` (7 tests) pins: all 3 languages have the
+same non-empty Q&A count, FaqPage imports the shared list (no hardcoded `faqs: [[...` literal that
+could drift), faqPageJsonLd matches FAQ_ITEMS.th question-for-question, "<" is escaped so the schema
+can't break out of its <script>, and /faq gets the schema while /contact does not. Mutation-tested:
+disabling the /faq injection (`&& false`) turns the guard red; restored → green. Same
+single-source-of-truth + fail-loud discipline as portalCategories / seoInvariants / route-meta.
