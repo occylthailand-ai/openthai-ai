@@ -116,6 +116,11 @@ export function BuyModal({ product, t, onClose }) {
             <div style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', margin: '10px 0' }}>{t('mk.ord.total')} ฿{total.toLocaleString('th-TH')}</div>
             {err && <div style={{ color: '#fca5a5', fontSize: 13, marginBottom: 8 }}>⚠️ {err}</div>}
             <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', opacity: busy ? 0.7 : 1 }}>{busy ? '...' : `💳 ${t('mk.store.buy')}`}</button>
+            {/* PDPA transparency: name/contact/address are collected to fulfil the order. */}
+            <p style={{ fontSize: 11, color: '#7c8797', textAlign: 'center', margin: '10px 0 0' }}>
+              {t('mk.ord.privacyPre')}{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1' }}>{t('mk.ord.privacyLink')}</a>
+            </p>
           </form>
         )}
       </div>

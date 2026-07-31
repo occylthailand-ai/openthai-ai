@@ -4284,3 +4284,29 @@ Verified: new `src/__tests__/landingConsentNotice.test.jsx` (2 tests) asserts th
 the capture point and the privacy link navigates to /privacy. Full frontend suite 315/315,
 `npm run build` clean. Mutation-tested: removing the notice block turns both assertions red;
 restored → green. Runs in CI.
+
+---
+
+## 2026-07-30 — add a PDPA privacy notice to the /store and /catalog order forms (completes the transparency sweep)
+
+Completed the point-of-collection transparency audit begun with the newsletter fix. Confirmed every
+other PII capture already informs the user: /portals/* gate on a consent checkbox, /contact and the
+homepage newsletter show a privacy microtext, /affiliate has a consent checkbox + PDPA link, and the
+marketplace/store order backends already email the buyer a confirmation (sendBuyerOrderConfirmation /
+sendShopReceipt). The only remaining PII-collection surfaces WITHOUT any notice were the two order
+modals (/store BuyModal and /catalog OrderModal), which collect name/contact/address.
+
+Fix: added a transparency notice under the submit button in both modals — "ข้อมูลของคุณใช้เพื่อ
+ดำเนินการและจัดส่งคำสั่งซื้อ ตาม[นโยบายความเป็นส่วนตัว]" with a /privacy link (opens in a new tab so it
+doesn't discard the in-progress order). Both forms already share the `mk.*` i18n system, so this is a
+single new key pair (mk.ord.privacyPre / mk.ord.privacyLink) localized th/en/zh, used in both. Order
+data is processed on a contract-necessity basis (fulfilment), so this is a transparency notice, not a
+blocking consent checkbox — matching the newsletter/contact pattern.
+
+Verified: new `src/__tests__/orderPrivacyNotice.test.jsx` (2 tests) opens each modal (mocking
+/api/catalog and /api/shop/products) and asserts the notice text plus a link whose href is /privacy.
+Full frontend suite 317/317, `npm run build` clean. Mutation-tested: removing the notice from StorePage
+turns the store assertion red (catalog still green); restored → green. Runs in CI.
+
+Transparency sweep conclusion: every PII-collection point in the app now carries a consent checkbox or
+a privacy notice at the point of collection.
