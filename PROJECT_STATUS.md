@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-31T16:59:27.795Z · branch `claude/enterprise-foundation` (7 commit(s) ahead of main)
+Generated: 2026-07-31T17:47:45.053Z · branch `claude/enterprise-foundation` (8 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 93 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 94 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -643,14 +643,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- 790adaa chore: sync PROJECT_STATUS.md [skip ci] (11 minutes ago)
-- 3f5e27c chore: regenerate PROJECT_STATUS.md [skip ci] (24 minutes ago)
-- ab717ee feat(typescript): gradual type-safety via JSDoc + tsc --noEmit (zero Vercel impact) (25 minutes ago)
-- 8a3c964 feat(tests): middleware unit tests, ErrorBoundary component test, Playwright E2E setup (25 minutes ago)
-- 3f4115f feat(enterprise): asyncHandler wrapper, validate import in server, CLAUDE.md docs (27 minutes ago)
-- ce2cb63 chore: sync PROJECT_STATUS.md [skip ci] (89 minutes ago)
+- e53798c chore: sync PROJECT_STATUS.md [skip ci] (48 minutes ago)
+- 790adaa chore: sync PROJECT_STATUS.md [skip ci] (59 minutes ago)
+- 3f5e27c chore: regenerate PROJECT_STATUS.md [skip ci] (73 minutes ago)
+- ab717ee feat(typescript): gradual type-safety via JSDoc + tsc --noEmit (zero Vercel impact) (73 minutes ago)
+- 8a3c964 feat(tests): middleware unit tests, ErrorBoundary component test, Playwright E2E setup (74 minutes ago)
+- 3f4115f feat(enterprise): asyncHandler wrapper, validate import in server, CLAUDE.md docs (75 minutes ago)
+- ce2cb63 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 824a055 feat(enterprise): request-id tracing, structured logging, error handler, audit trail (2 hours ago)
-- 6657b77 feat: structured logger, migration tracker, auth tests (#89) (32 minutes ago)
 
 ## Production health (⚠️ HTTP 403)
 
