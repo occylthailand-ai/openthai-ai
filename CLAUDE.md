@@ -37,3 +37,22 @@ foundation model).
 - Ship real, tested changes — a change isn't done because it should work; it's
   done once it's been run and observed to work (locally, then ideally against
   a real deployed instance).
+
+## Subsystem context (microagents)
+
+Each subsystem has its own CLAUDE.md with patterns and conventions — read it
+before touching that area:
+
+- `frontend/CLAUDE.md` — React/Vite, apiBase.js, i18n, routing
+- `backend/CLAUDE.md` — Express, Supabase, auth, AI fallback, Omise
+- `database/CLAUDE.md` — migration convention, key tables, pgvector
+
+## Built-in tools (run these as bash commands)
+
+| Script | Purpose |
+|---|---|
+| `bash .claude/tools/health-check.sh [URL]` | Check API health (local or prod) |
+| `bash .claude/tools/run-tests.sh [suite]` | Run backend tests (smoke/affiliate/revenue/all) |
+| `bash .claude/tools/refresh-status.sh` | Regenerate PROJECT_STATUS.md |
+| `bash .claude/tools/lint-check.sh [file]` | ESLint on file or git-staged files |
+| `bash .claude/tools/db-status.sh` | Check Supabase env vars + connectivity |
