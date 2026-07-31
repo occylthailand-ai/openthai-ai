@@ -46,10 +46,48 @@ Each domain has its own module file:
 | `agent-tools.js` | MCP tool definitions for AI agents |
 | `mcp-handler.js` | MCP protocol endpoint |
 
+## Middleware (enterprise layer)
+
+### Request tracing
+Every request gets `req.id` (X-Request-ID header). Use it in error messages and logs.
+
+### Error responses
+Throw `ApiError` — the centralized handler formats the response automatically:
+```js
+import { ApiError, asyncHandler } from './middleware/error-handler.js';
+import { validate } from './middleware/validate.js';
+
+app.post('/api/thing', asyncHandler(async (req, res) => {
+  validate(req.body, { name: 'required|minlen:2', email: 'required|email' });
+  const row = await db.query(...);
+  if (!row) throw ApiError.notFound('Thing not found');
+  res.json({ success: true, thing: row });
+}));
+```
+Response shape is always `{success: false, error: {code, message, requestId}}`.
+Always use `asyncHandler` — Express 4 doesn't catch async throws without it.
+
+### Audit trail
+Log critical actions (login, payment, order) with:
+```js
+import { audit } from './audit.js';
+audit.log(req, 'payment_created', { amount, method });
+```
+Writes to `system_log` table in Supabase. Fire-and-forget — never throws.
+
+### Structured logging
+```js
+import { log } from './logger.js';
+log.info('my_event', { key: 'value' });
+log.error('my_error', { err: new Error('oops') });
+```
+JSON on Vercel, color output locally. Respects `LOG_LEVEL` env var.
+
 ## Adding a route
 1. Add handler to the relevant domain file (or create a new one)
 2. Mount in `server.js` with `app.use('/api/...', myRouter)`
 3. Wrap with rate limiter if it's a public endpoint
+4. Use `asyncHandler` + `validate` + `ApiError` for consistent errors
 
 ## Run
 ```bash

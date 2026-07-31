@@ -16,6 +16,11 @@ ApiError.forbidden   = (msg = 'Forbidden')           => new ApiError('FORBIDDEN'
 ApiError.badRequest  = (msg = 'Bad request')         => new ApiError('BAD_REQUEST', msg, 400);
 ApiError.internal    = (msg = 'Internal server error')=> new ApiError('INTERNAL',   msg, 500);
 
+// Wraps async route handlers so thrown errors reach the errorHandler middleware.
+// Express 4 does not auto-catch rejected promises — use this on every async route.
+// Usage: app.post('/path', asyncHandler(async (req, res) => { ... }))
+export const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
 // Express 4 error-handling middleware (4 args required)
 // eslint-disable-next-line no-unused-vars
 export function errorHandler(err, req, res, next) {
