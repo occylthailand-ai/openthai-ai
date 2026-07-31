@@ -5,9 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 
 const T = {
-  en: { title:'Foreign Government Agency Portal', sub:'AI collaboration for governments worldwide — no country restrictions', services:['Bilateral AI cooperation agreements','Government-to-Government (G2G) programs','AI policy consultation','Secure data exchange systems','Multilingual AI services'], form:{ agency:'Agency / Ministry Name', country:'Country', name:'Contact Person', position:'Title / Position', email:'Official Email', phone:'Phone / WhatsApp', need:'Cooperation Area of Interest', submit:'Submit G2G Request', ok:'Thank you! Our International Relations team will contact you within 48 hours.' } },
-  th: { title:'ทางเข้าหน่วยงานรัฐต่างประเทศ', sub:'ความร่วมมือ AI สำหรับรัฐบาลทั่วโลก ไม่จำกัดประเทศ', services:['ข้อตกลงความร่วมมือ AI ทวิภาคี','โปรแกรม G2G','ที่ปรึกษานโยบาย AI','ระบบแลกเปลี่ยนข้อมูลที่ปลอดภัย','บริการ AI หลายภาษา'], form:{ agency:'ชื่อหน่วยงาน/กระทรวง', country:'ประเทศ', name:'ผู้ติดต่อ', position:'ตำแหน่ง', email:'อีเมลราชการ', phone:'โทรศัพท์/WhatsApp', need:'ด้านที่สนใจร่วมมือ', submit:'ส่งคำขอความร่วมมือ G2G', ok:'ขอบคุณ! ทีม International Relations จะติดต่อกลับภายใน 48 ชม.' } },
-  zh: { title:'外国政府机构门户', sub:'面向全球政府的AI合作，无国家限制', services:['双边AI合作协议','政府间（G2G）项目','AI政策咨询','安全数据交换系统','多语言AI服务'], form:{ agency:'机构/部门名称', country:'国家', name:'联系人', position:'职务/职位', email:'官方邮箱', phone:'电话/WhatsApp', need:'感兴趣的合作领域', submit:'提交G2G申请', ok:'谢谢！我们的国际关系团队将在48小时内与您联系。' } },
+  en: { title:'Foreign Government Agency Portal', svcTitle:'Services', sub:'AI collaboration for governments worldwide — no country restrictions', services:['Bilateral AI cooperation agreements','Government-to-Government (G2G) programs','AI policy consultation','Secure data exchange systems','Multilingual AI services'], form:{ agency:'Agency / Ministry Name', country:'Country', name:'Contact Person', position:'Title / Position', email:'Official Email', phone:'Phone / WhatsApp', need:'Cooperation Area of Interest', submit:'Submit G2G Request', ok:'Thank you! Our International Relations team will contact you within 48 hours.' } },
+  th: { title:'ทางเข้าหน่วยงานรัฐต่างประเทศ', svcTitle:'บริการ', sub:'ความร่วมมือ AI สำหรับรัฐบาลทั่วโลก ไม่จำกัดประเทศ', services:['ข้อตกลงความร่วมมือ AI ทวิภาคี','โปรแกรม G2G','ที่ปรึกษานโยบาย AI','ระบบแลกเปลี่ยนข้อมูลที่ปลอดภัย','บริการ AI หลายภาษา'], form:{ agency:'ชื่อหน่วยงาน/กระทรวง', country:'ประเทศ', name:'ผู้ติดต่อ', position:'ตำแหน่ง', email:'อีเมลราชการ', phone:'โทรศัพท์/WhatsApp', need:'ด้านที่สนใจร่วมมือ', submit:'ส่งคำขอความร่วมมือ G2G', ok:'ขอบคุณ! ทีม International Relations จะติดต่อกลับภายใน 48 ชม.' } },
+  zh: { title:'外国政府机构门户', svcTitle:'服务', sub:'面向全球政府的AI合作，无国家限制', services:['双边AI合作协议','政府间（G2G）项目','AI政策咨询','安全数据交换系统','多语言AI服务'], form:{ agency:'机构/部门名称', country:'国家', name:'联系人', position:'职务/职位', email:'官方邮箱', phone:'电话/WhatsApp', need:'感兴趣的合作领域', submit:'提交G2G申请', ok:'谢谢！我们的国际关系团队将在48小时内与您联系。' } },
 };
 
 
@@ -47,7 +47,7 @@ export default function GovIntlPortalPage() {
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr', gap:32 }}>
           <div>
-            <h3 style={{ color:'#3b82f6', marginBottom:20 }}>Services</h3>
+            <h3 style={{ color:'#3b82f6', marginBottom:20 }}>{t.svcTitle}</h3>
             {t.services.map((s,i) => <div key={i} style={{ display:'flex', gap:12, marginBottom:14, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#3b82f6' }}>▸</span><span style={{ color:'#ddd' }}>{s}</span></div>)}
             <div style={{ background:'#3b82f611', border:'1px solid #3b82f633', borderRadius:12, padding:20, marginTop:24 }}>
               <p style={{ color:'#3b82f6', fontWeight:700, margin:'0 0 8px' }}>🔒 Secure & Confidential</p>

@@ -10,6 +10,7 @@ const T = {
     title: 'ทางเข้ามูลนิธิเพื่อสังคม',
     sub: 'OpenThai.ai แบ่งปันกำไรให้มูลนิธิช่วยเหลือผู้ยากไร้เมื่อกำไรรวมเกิน 10 ล้านบาท',
     badge: '⚡ เปิดใช้งานอัตโนมัติเมื่อกำไร > 10,000,000 ฿',
+    howTitle: 'วิธีการทำงาน',
     how: ['OpenThai.ai สร้างกำไรรวมเกิน 10 ล้านบาท','ระบบโอนเงินอัตโนมัติ 5% ของกำไรส่วนเกินไปยังกองทุนมูลนิธิ','มูลนิธิที่ลงทะเบียนไว้จะได้รับการจัดสรรตามสัดส่วน','โปร่งใส ตรวจสอบได้ผ่าน Dashboard'],
     benefits: ['รับเงินสนับสนุนอัตโนมัติ','เข้าถึง AI tools ฟรีสำหรับงานสังคม','ร่วมโครงการ AI เพื่อผู้ยากไร้','รายงานโปร่งใสทุกไตรมาส'],
     form: { name:'ชื่อมูลนิธิ', reg:'เลขทะเบียนมูลนิธิ', country:'ประเทศ', focus:'กลุ่มเป้าหมายที่ช่วยเหลือ', contact:'ชื่อผู้ติดต่อ', email:'อีเมล', submit:'ลงทะเบียนมูลนิธิ', ok:'ลงทะเบียนเรียบร้อย! จะได้รับการแจ้งเตือนเมื่อกองทุนเปิดใช้งาน' },
@@ -18,6 +19,7 @@ const T = {
     title: 'Foundation & NGO Portal',
     sub: 'OpenThai.ai shares profits with poverty-relief foundations when cumulative profit exceeds 10M THB',
     badge: '⚡ Auto-activated when profit > 10,000,000 THB',
+    howTitle: 'How It Works',
     how: ['OpenThai.ai cumulative profit exceeds 10M THB','System auto-transfers 5% of excess profit to foundation fund','Registered foundations receive proportional allocation','Fully transparent — auditable via Dashboard'],
     benefits: ['Automatic financial support','Free AI tools for social work','Participation in AI-for-poverty programs','Quarterly transparent reports'],
     form: { name:'Foundation Name', reg:'Registration Number', country:'Country', focus:'Target Beneficiaries', contact:'Contact Person', email:'Email', submit:'Register Foundation', ok:'Registered! You will be notified when the fund activates.' },
@@ -26,6 +28,7 @@ const T = {
     title: '基金会/NGO门户',
     sub: '当OpenThai.ai累计利润超过1000万泰铢时，将向扶贫基金会分享利润',
     badge: '⚡ 利润超过10,000,000泰铢时自动激活',
+    howTitle: '运作方式',
     how: ['OpenThai.ai累计利润超过1000万泰铢','系统自动将超额利润的5%转入基金会基金','注册的基金会按比例获得分配','完全透明 — 可通过Dashboard审计'],
     benefits: ['自动财务支持','免费AI工具用于社会工作','参与扶贫AI项目','季度透明报告'],
     form: { name:'基金会名称', reg:'注册编号', country:'国家', focus:'受益群体', contact:'联系人', email:'邮箱', submit:'注册基金会', ok:'注册成功！基金激活时将通知您。' },
@@ -70,7 +73,7 @@ export default function FoundationPortalPage() {
         </div>
         {/* How it works */}
         <div style={{ background:'#111', border:'1px solid #05966933', borderRadius:16, padding:28, marginBottom:32 }}>
-          <h3 style={{ color:'#059669', margin:'0 0 20px' }}>วิธีการทำงาน / How It Works</h3>
+          <h3 style={{ color:'#059669', margin:'0 0 20px' }}>{t.howTitle}</h3>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:16 }}>
             {t.how.map((h,i) => (
               <div key={i} style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', padding:16 }}>

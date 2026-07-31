@@ -4604,3 +4604,32 @@ Chinese. New src/__tests__/portalSectionTitle.test.js (20 checks) pins, on all s
 helper, renders {benefitsTitle(lang)} above the t.benefits list, and has no hardcoded ">สิทธิประโยชน์<"
 left; plus the helper covers th/en/zh distinctly and falls back to Thai. Mutation-tested: reverting one
 page to the hardcoded heading turns the guard red (2 checks); restored → green.
+
+---
+
+## 2026-07-31 — a11y/i18n: localized the remaining page-specific /portals/* section headings (follow-up)
+
+Completed the follow-up flagged in the previous entry: the government/international/foundation portals
+had section headings that were hardcoded and ignored the language toggle, the same bug class as the
+back button + Benefits heading:
+  GovThai   "บริการสำหรับภาครัฐ"  (over t.services)  → {t.svcTitle}
+  GovIntl   "Services"            (over t.services)  → {t.svcTitle}
+  IntlOrg   "Partnership Areas"   (over t.services)  → {t.svcTitle}
+  Foundation "วิธีการทำงาน / How It Works"           → {t.howTitle}
+
+Unlike the six shared "Benefits" pages (which use the benefitsTitle() helper), these are DISTINCT
+per-page strings, so each was localized in that page's own T object (colocated with its services/how
+arrays) rather than forced through a shared helper. GovThai deliberately ships only th/en (its toggle
+offers just those two, and t = T[lang] || T.th) so its svcTitle has th/en; the others have th/en/zh.
+Also confirmed in passing that GovThai's th/en-only T is intentional, not a missing-zh bug (its toggle
+never offers zh).
+
+Verified: full frontend suite 389/389 green (was 374; +15 from the new guard). Real `npm run build`
+passes. Functional render test (temporary, not committed) confirmed the ACTUAL behavior: IntlOrg's
+heading shows "Partnership Areas" (en default) → "ด้านความร่วมมือ" (th) → "合作领域" (zh); Foundation's
+shows "วิธีการทำงาน" (th default) → "How It Works" (en) → "运作方式" (zh). New
+src/__tests__/portalServiceTitle.test.js (15 checks) pins each page renders {t.svcTitle}/{t.howTitle},
+defines the key once per supported language, sits over t.services where applicable, and has no
+hardcoded heading left. Mutation-tested: reverting IntlOrg to the hardcoded "Partnership Areas" turns
+the guard red (2 checks); restored → green. With this, every /portals/* section heading + control now
+follows the language toggle (back button, Benefits, and these service/how headings all done).

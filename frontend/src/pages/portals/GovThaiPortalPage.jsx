@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 
 const T = {
-  th: { title:'ทางเข้าหน่วยงานรัฐไทย', sub:'บูรณาการ AI เข้าสู่ระบบงานภาครัฐไทย เพื่อประชาชน', services:['ระบบ AI สำหรับบริการประชาชน','วิเคราะห์ข้อมูลขนาดใหญ่','แชทบอท ตอบคำถามอัตโนมัติ','รายงานและ Dashboard ราชการ','ระบบแปลภาษาข้ามพรมแดน'], form:{ agency:'ชื่อหน่วยงาน', ministry:'กระทรวง/กรม', name:'ชื่อผู้ติดต่อ', position:'ตำแหน่ง', email:'อีเมลราชการ', phone:'โทรศัพท์', need:'ความต้องการหลัก', submit:'ส่งคำขอความร่วมมือ', ok:'ขอบคุณ! ทีม Government Relations จะติดต่อกลับภายใน 48 ชม.' } },
-  en: { title:'Thai Government Agency Portal', sub:'Integrate AI into Thai public services for citizens', services:['AI systems for public services','Big data analytics','Automated chatbot responses','Government reports & dashboards','Cross-border translation system'], form:{ agency:'Agency Name', ministry:'Ministry / Department', name:'Contact Person', position:'Position / Title', email:'Official Email', phone:'Phone', need:'Primary Need', submit:'Submit Cooperation Request', ok:'Thank you! Our Government Relations team will contact you within 48 hours.' } },
+  th: { title:'ทางเข้าหน่วยงานรัฐไทย', svcTitle:'บริการสำหรับภาครัฐ', sub:'บูรณาการ AI เข้าสู่ระบบงานภาครัฐไทย เพื่อประชาชน', services:['ระบบ AI สำหรับบริการประชาชน','วิเคราะห์ข้อมูลขนาดใหญ่','แชทบอท ตอบคำถามอัตโนมัติ','รายงานและ Dashboard ราชการ','ระบบแปลภาษาข้ามพรมแดน'], form:{ agency:'ชื่อหน่วยงาน', ministry:'กระทรวง/กรม', name:'ชื่อผู้ติดต่อ', position:'ตำแหน่ง', email:'อีเมลราชการ', phone:'โทรศัพท์', need:'ความต้องการหลัก', submit:'ส่งคำขอความร่วมมือ', ok:'ขอบคุณ! ทีม Government Relations จะติดต่อกลับภายใน 48 ชม.' } },
+  en: { title:'Thai Government Agency Portal', svcTitle:'Government Services', sub:'Integrate AI into Thai public services for citizens', services:['AI systems for public services','Big data analytics','Automated chatbot responses','Government reports & dashboards','Cross-border translation system'], form:{ agency:'Agency Name', ministry:'Ministry / Department', name:'Contact Person', position:'Position / Title', email:'Official Email', phone:'Phone', need:'Primary Need', submit:'Submit Cooperation Request', ok:'Thank you! Our Government Relations team will contact you within 48 hours.' } },
 };
 
 
@@ -46,7 +46,7 @@ export default function GovThaiPortalPage() {
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1.4fr', gap:32 }}>
           <div>
-            <h3 style={{ color:'#10b981', marginBottom:20 }}>บริการสำหรับภาครัฐ</h3>
+            <h3 style={{ color:'#10b981', marginBottom:20 }}>{t.svcTitle}</h3>
             {t.services.map((s,i) => <div key={i} style={{ display:'flex', gap:12, marginBottom:14, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#10b981' }}>▸</span><span style={{ color:'#ddd' }}>{s}</span></div>)}
             <div style={{ background:'#10b98111', border:'1px solid #10b98133', borderRadius:12, padding:20, marginTop:24 }}>
               <p style={{ color:'#10b981', fontWeight:700, margin:'0 0 8px' }}>MOU / บันทึกความเข้าใจ</p>
