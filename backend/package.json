@@ -64,7 +64,8 @@
     "test:ai-json": "node scripts/test-ai-json.mjs",
     "test:pdpa-consent-schema": "node scripts/test-pdpa-consent-schema.mjs",
     "test:payments-schema": "node scripts/test-payments-schema.mjs",
-    "test:migration-coverage": "node scripts/test-migration-coverage.mjs"
+    "test:migration-coverage": "node scripts/test-migration-coverage.mjs",
+    "test:full-migration-columns": "node scripts/test-full-migration-columns.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

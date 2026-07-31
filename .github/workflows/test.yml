@@ -94,6 +94,7 @@ jobs:
           npm run test:pdpa-consent-schema
           npm run test:payments-schema
           npm run test:migration-coverage
+          npm run test:full-migration-columns
       - name: Learning-feedback test (self-contained — rating aggregation + NaN-rejection guard)
         working-directory: backend
         run: npm run test:learning-patterns

@@ -4456,3 +4456,32 @@ recommended set makes `pdpa_consents` uncovered → red; restored → green. No 
 did not consolidate the tables into FULL-MIGRATION to avoid a risky hand-transcription of DDL; the
 four-file recipe + the test are the safe, verified deliverable. (This sharpens blocker #1 from
 2026-07-31: it is not one migration to run, it is these four.)
+
+---
+
+## 2026-07-31 — schema audit COMPLETE: FULL-MIGRATION verified complete for the money path (+ column guard)
+
+Finished the money/data-table schema audit begun with the payments landmine. Verified — column by
+column against the actual code — that the recommended file FULL-MIGRATION.sql carries every column the
+backend upserts for: orders (orders.js place → 19 fields incl escrow_status), producers (needs stock),
+products + stock_movements (inventory.js), credits (credits.js toRow), entitlements + user_sync
+(server.js). All match. credits-schema.sql is identical to FULL-MIGRATION's credits.
+
+Two more (smaller) incremental-path gaps found, both already folded into FULL-MIGRATION so they only
+bite if you run the OLD standalone files instead:
+- `orders-schema.sql` alone lacks `orders.escrow_status` (added later by 006_order_disputes.sql; present
+  in FULL-MIGRATION).
+- `producers-schema.sql` alone lacks `producers.stock` (added by 001-shipping-stock.sql; present in
+  FULL-MIGRATION).
+Conclusion: **FULL-MIGRATION.sql + 003 + 008 + 009 is complete and correct for the entire code write
+path** — the only true conflict remains the payments 002-vs-FULL one (guarded 2026-07-31). Do NOT run
+the superseded 000-all-in-one.sql / 002 / *-schema.sql files; they are older/partial.
+
+New `scripts/test-full-migration-columns.mjs` (67 checks) pins that FULL-MIGRATION (the file the owner
+runs) contains every column the code writes for orders/producers/products/stock_movements/credits/
+entitlements/user_sync — so a future edit that drops one (silently breaking the Supabase upsert → data
+lost on redeploy) fails CI. Wired into package.json + CI.
+
+Verified: 67/67; mutation-tested (drop orders.escrow_status from FULL-MIGRATION → red; restored → green).
+No SQL files altered. Together with the payments + migration-coverage guards, the Supabase set-up recipe
+(FULL-MIGRATION + 003 + 008 + 009) is now CI-verified end-to-end for table presence AND column completeness.
