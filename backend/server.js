@@ -518,6 +518,59 @@ app.post('/api/inventory/admin/remove', async (req, res) => { if (!invAuth(req, 
 app.get('/api/inventory/admin/sales', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.productSales(req.query.product_id)) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
 app.get('/api/inventory/admin/sales-report', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.salesReport()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
 
+// ─── Producer self-serve inventory (email match — approved producers only) ────
+async function verifyApprovedProducer(emailHeader) {
+  const email = (emailHeader || '').toString().trim().toLowerCase();
+  if (!email) return null;
+  const all = await producers.all();
+  return all.find((p) => p.email === email && p.status === 'approved') || null;
+}
+app.get('/api/producer/my-products', async (req, res) => {
+  try {
+    const prod = await verifyApprovedProducer(req.headers['x-producer-email']);
+    if (!prod) return res.status(401).json({ success: false, message: 'ต้องเป็นผู้ผลิตที่ได้รับอนุมัติแล้ว' });
+    res.json({ success: true, products: await inventory.listByProducer(prod.email) });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/producer/my-products/upsert', async (req, res) => {
+  try {
+    const prod = await verifyApprovedProducer(req.headers['x-producer-email']);
+    if (!prod) return res.status(401).json({ success: false, message: 'ต้องเป็นผู้ผลิตที่ได้รับอนุมัติแล้ว' });
+    const input = { ...(req.body || {}), producer_email: prod.email };
+    if (input.id) {
+      const existing = await inventory.get(input.id);
+      if (existing && existing.producer_email !== prod.email) return res.status(403).json({ success: false, message: 'ไม่ใช่สินค้าของคุณ' });
+    }
+    const r = await inventory.upsert(input);
+    if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    res.json({ success: true, ...r });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/producer/my-products/adjust', async (req, res) => {
+  try {
+    const prod = await verifyApprovedProducer(req.headers['x-producer-email']);
+    if (!prod) return res.status(401).json({ success: false, message: 'ต้องเป็นผู้ผลิตที่ได้รับอนุมัติแล้ว' });
+    const { id, delta, type, reason } = req.body || {};
+    const existing = await inventory.get(id);
+    if (!existing) return res.status(404).json({ success: false, error: 'ไม่พบสินค้า' });
+    if (existing.producer_email !== prod.email) return res.status(403).json({ success: false, message: 'ไม่ใช่สินค้าของคุณ' });
+    const r = await inventory.adjust(id, delta, type, reason);
+    if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    res.json({ success: true, ...r });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+app.post('/api/producer/my-products/remove', async (req, res) => {
+  try {
+    const prod = await verifyApprovedProducer(req.headers['x-producer-email']);
+    if (!prod) return res.status(401).json({ success: false, message: 'ต้องเป็นผู้ผลิตที่ได้รับอนุมัติแล้ว' });
+    const { id } = req.body || {};
+    const existing = await inventory.get(id);
+    if (!existing) return res.status(404).json({ success: false, error: 'ไม่พบสินค้า' });
+    if (existing.producer_email !== prod.email) return res.status(403).json({ success: false, message: 'ไม่ใช่สินค้าของคุณ' });
+    res.json({ success: true, ...(await inventory.remove(id)) });
+  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
 // POST /api/shop/checkout — ซื้อสินค้าร้านเรา + รับชำระเงิน (Omise) + ตัดสต๊อก + สร้างออเดอร์ติดตามได้
 const shopLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 12, message: { success: false, error: 'สั่งซื้อบ่อยเกินไป' } });
 app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
