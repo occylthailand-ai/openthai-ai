@@ -43,6 +43,7 @@ import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
 import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml, producerApprovalHtml } from './html-escape.js';
 import { parseAIJson } from './ai-json.js';
+import { buildConsentRecord } from './pdpa-consent.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, zonesInfo as seasonalZonesInfo } from './seasonal-engine.js';
 import { selectDigestMatches } from './digest-match.js';
@@ -6445,15 +6446,12 @@ app.post('/api/privacy/consent', (req, res) => {
   if (!email || !purposes?.length) {
     return res.status(400).json({ success: false, message: 'ต้องระบุ email และ purposes' });
   }
-  const record = {
-    id:        Date.now().toString(),
-    email:     String(email).toLowerCase().trim().slice(0, 254),
-    ip:        ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-    purposes:  Array.isArray(purposes) ? purposes : [purposes],
-    version:   version || '1.0',
-    consented: true,
-    ts:        new Date().toISOString(),
-  };
+  const record = buildConsentRecord({
+    email,
+    ip: ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+    purposes,
+    version,
+  });
   // อัปเดตถ้ามีแล้ว
   const idx = consents.findIndex(c => c.email === record.email);
   if (idx >= 0) { consents[idx] = record; } else { consents.push(record); }

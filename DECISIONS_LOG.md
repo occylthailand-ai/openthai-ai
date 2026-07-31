@@ -4355,3 +4355,33 @@ owner input — they need production credentials or a product/architecture call,
 
 No code shipped this round by design; this entry is the deliverable (a verified status + a decision
 menu). Recommended next action: (1) above — it's the only one that's a pure ops task with clear PDPA value.
+
+---
+
+## 2026-07-31 — verify migrations 008/009 against the code + add a schema drift-guard (de-risks the owner's #1 action)
+
+Follow-up to yesterday's blocker list: before the owner runs migrations 008/009 in Supabase, I
+verified the SQL actually matches what the code reads/writes, so the migration works first try:
+- `008_broadcast_unsubscribes.sql` — code only touches `email` (hydrate `select: email`, upsert
+  `{email}`); migration = `email` PK + `created_at` default. Match.
+- `009_pdpa_consents.sql` — the consent record POSTed to PostgREST is `{id, email, ip, purposes,
+  version, consented, ts}`; migration defines exactly those 7 columns. Exact match.
+Both use `create table if not exists` (idempotent) and `enable row level security` with no policy —
+correct here, since only the `service_role` key (which the backend uses) bypasses RLS, so anon access
+is denied by default.
+
+To keep that match from silently drifting (a field added to the record with no column → PostgREST
+400 → silent fall back to the ephemeral /tmp file → consent proofs wiped every redeploy, the exact
+bug 009 fixes), I extracted the consent-record construction into `backend/pdpa-consent.js`
+(`buildConsentRecord` + `CONSENT_COLUMNS`) — same "pure module + test" pattern as html-escape.js /
+ai-json.js — and server.js now imports it (inline object removed). New
+`scripts/test-pdpa-consent-schema.mjs` (16 checks) pins the record shape, its value normalisation
+(email lowercased/trimmed/capped-254, scalar purpose → array, consented always true, id/ts from an
+injectable clock), and — the point — parses the migration SQL and asserts every column the code
+writes exists in 009, plus that 008 has `email`. Wired into package.json + CI (test.yml no-server block).
+
+Verified: `node --check` clean; schema test 16/16; the app boots and `POST /api/privacy/consent`
+returns success with the email lowercased and purposes preserved (buildConsentRecord works live); the
+existing self-boot `test:consent-durability` (real endpoint + mock Supabase upsert/delete) still
+9/9; sibling unit tests unaffected. Mutation-tested BOTH drift directions: adding a `device_id` field
+to the record (not in the migration) → red; dropping the `purposes` column from 009 → red; restored → green.
