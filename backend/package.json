@@ -10,7 +10,9 @@
     "preflight": "node preflight.js",
     "test:smoke": "node scripts/smoke-skills.mjs",
     "test:affiliate": "node scripts/test-affiliate-flow.mjs",
-    "test:revenue": "node scripts/test-revenue-system.mjs"
+    "test:revenue": "node scripts/test-revenue-system.mjs",
+    "test:health": "node scripts/test-health-auth.mjs",
+    "test:all": "npm run test:health && npm run test:smoke && npm run test:affiliate && npm run test:revenue"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

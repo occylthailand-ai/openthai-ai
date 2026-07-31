@@ -1,4 +1,5 @@
 ﻿import 'dotenv/config';
+import { log } from './logger.js';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
@@ -116,6 +117,14 @@ const PORT = process.env.PORT || 8000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 app.use(cors({ origin: true, credentials: true })); // allow all origins (file://, localhost, Vercel)
+
+// HTTP request logger — records every request with status + latency
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => log.request(req, res.statusCode, Date.now() - start));
+  next();
+});
+
 // Skip global JSON parser for signed webhooks — ต้องใช้ raw buffer เพื่อตรวจลายเซ็น HMAC
 // (LINE + Omise payment) ไม่งั้น express.json จะกิน body ก่อน → ตรวจลายเซ็นไม่ผ่านตลอด
 app.use((req, res, next) => {
@@ -7545,13 +7554,13 @@ app.post('/api/n8n/register-webhooks', async (req, res) => {
 // ── Process-level error protection (local dev + Vercel both) ─────────────────
 process.on('uncaughtException', (err) => {
   try { addLog('error', 'Process', `uncaughtException: ${err.message}`, err.stack?.slice(0, 4000)); } catch (_) {}
-  console.error('[uncaughtException]', err);
+  log.error('uncaughtException', { message: err.message, stack: err.stack?.slice(0, 2000) });
 });
 process.on('unhandledRejection', (reason) => {
   const msg = reason instanceof Error ? reason.message : String(reason);
   const detail = reason instanceof Error ? reason.stack?.slice(0, 4000) : undefined;
   try { addLog('error', 'Process', `unhandledRejection: ${msg}`, detail); } catch (_) {}
-  console.error('[unhandledRejection]', reason);
+  log.error('unhandledRejection', { message: msg });
 });
 
 async function startServer() {
@@ -7567,29 +7576,23 @@ async function startServer() {
   }
 
   app.listen(PORT, () => {
-    console.log(`\n🚀 Openthai.ai Backend running on http://localhost:${PORT}`);
-    console.log(`   AI Primary  : ${anthropic ? '✅ Claude Haiku 4.5' : '⚠️  ใส่ ANTHROPIC_API_KEY ใน .env'}`);
-    console.log(`   AI Fallback : ${gemini    ? '✅ Gemini Flash Latest' : '⚠️  ใส่ GEMINI_API_KEY ใน .env'}`);
-    console.log(`   AI Mode     : ${anthropic ? 'Claude' : gemini ? 'Gemini' : '⚠️  Mock (ไม่มี API key)'}`);
-    console.log(`   Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? '✅ Configured' : '⚠️  Not configured'}`);
-    console.log(`   Recovery    : ${process.env.RECOVERY_CODES ? '✅ Codes set' : '⚠️  No codes in .env'}`);
-    console.log(`   IS_VERCEL   : ${IS_VERCEL ? '✅ Serverless mode' : '⚠️  Local mode'}`);
-    console.log(`   Supabase    : ${_useSB ? '✅ Connected' : '⚠️  ไม่ได้ตั้ง (fallback เป็น /tmp)'}`);
-    console.log(`   Omise Pay   : ${process.env.OMISE_SECRET_KEY ? '✅ Configured' : '⚠️  Mock mode — ไม่ตัดเงินจริง'}`);
-    console.log(`   LINE Bot    : ${process.env.LINE_CHANNEL_TOKEN ? '✅ Configured' : 'ℹ️  Disabled (optional)'}`);
-    console.log(`   ElevenLabs  : ${process.env.ELEVENLABS_API_KEY ? '✅ Configured' : 'ℹ️  Disabled (optional)'}`);
-    console.log(`   SMTP Email  : ${process.env.SMTP_USER ? '✅ Configured' : 'ℹ️  Disabled (optional)'}`);
-    console.log(`   Domain URL  : ${DOMAIN_URL}`);
-    console.log(`   Health      : http://localhost:${PORT}/api/health`);
-    console.log(`   API Docs    : http://localhost:${PORT}/api-docs`);
-    console.log(`   OpenAPI     : http://localhost:${PORT}/api/openapi.json`);
-    console.log(`   MCP Server  : http://localhost:${PORT}/mcp`);
-    console.log(`   Vector Mem  : http://localhost:${PORT}/api/memory`);
-    console.log(`   Webhooks    : http://localhost:${PORT}/api/webhooks`);
-    console.log(`   Tenants     : http://localhost:${PORT}/api/tenants`);
-    console.log(`   Video Gen   : http://localhost:${PORT}/api/video/generate`);
-    console.log(`   Payment     : http://localhost:${PORT}/api/payment/plans`);
-    console.log(`   n8n         : http://localhost:${PORT}/api/n8n/status\n`);
+    log.info('server_start', {
+      port: PORT,
+      ai_primary:   anthropic ? 'claude'  : null,
+      ai_fallback:  gemini    ? 'gemini'  : null,
+      supabase:     _useSB,
+      omise:        !!process.env.OMISE_SECRET_KEY,
+      line_bot:     !!process.env.LINE_CHANNEL_TOKEN,
+      smtp:         !!process.env.SMTP_USER,
+      vercel:       IS_VERCEL,
+      domain:       DOMAIN_URL,
+    });
+    if (!IS_VERCEL) {
+      console.log(`\n🚀 Openthai.ai Backend  →  http://localhost:${PORT}`);
+      console.log(`   AI     : ${anthropic ? 'Claude' : gemini ? 'Gemini' : 'Mock'}`);
+      console.log(`   DB     : ${_useSB ? 'Supabase' : '/tmp fallback'}`);
+      console.log(`   Docs   : http://localhost:${PORT}/api-docs\n`);
+    }
   });
 }
 

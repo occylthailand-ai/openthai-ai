@@ -14,22 +14,14 @@ echo ""
 cd "$BACKEND_DIR"
 
 case "$SUITE" in
+  health)    npm run test:health ;;
   smoke)     npm run test:smoke ;;
   affiliate) npm run test:affiliate ;;
   revenue)   npm run test:revenue ;;
-  all)
-    echo "--- smoke ---"
-    npm run test:smoke
-    echo ""
-    echo "--- affiliate ---"
-    npm run test:affiliate
-    echo ""
-    echo "--- revenue ---"
-    npm run test:revenue
-    ;;
+  all)       npm run test:all ;;
   *)
     echo "❌ Unknown suite: $SUITE"
-    echo "   Valid: smoke | affiliate | revenue | all"
+    echo "   Valid: health | smoke | affiliate | revenue | all"
     exit 1
     ;;
 esac
