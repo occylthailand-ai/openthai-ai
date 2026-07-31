@@ -4575,3 +4575,32 @@ src/__tests__/portalBackLabel.test.js (30 checks) pins, on all nine pages: impor
 renders {backLabel(lang)} + aria-label={backAria(lang)}, and has no hardcoded "← กลับ"/"← Back" left;
 plus the helper covers th/en/zh distinctly and falls back to Thai. Mutation-tested: reverting one page
 to a hardcoded "← กลับ" turns the guard red (2 checks); restored → green.
+
+---
+
+## 2026-07-31 — a11y/i18n: localized the "Benefits" section heading on six /portals/* pages
+
+Follow-up scan (after the back-button fix) found the same hardcoded-string-ignores-language-toggle bug
+in the main content: the "Benefits" section heading was a hardcoded Thai "สิทธิประโยชน์" on the six
+consumer-facing portals (producer, consumer, creator, affiliate, middleman, foundation) even though the
+benefit ITEMS below it (t.benefits) are fully localized. So an English/Chinese visitor saw localized
+✓-bullets under a Thai heading.
+
+Fix: new shared helper frontend/src/pages/portals/sectionTitle.js (same pattern as backLabel.js /
+consentLabel.jsx) — benefitsTitle(lang) → 'สิทธิประโยชน์' / 'Benefits' / '权益', falling back to Thai.
+All six pages import it and render {benefitsTitle(lang)}.
+
+Scope note (deliberately NOT in this commit — distinct, page-specific strings, logged as follow-up):
+the three government/international portals use their OWN service headings that are hardcoded and also
+don't follow the toggle — GovThai "บริการสำหรับภาครัฐ", GovIntl "Services", IntlOrg "Partnership Areas"
+— and Foundation has a bilingual-but-not-zh "วิธีการทำงาน / How It Works". These are different labels
+(not the shared "Benefits") and each needs its own localized wording, so they belong in a separate
+coherent change rather than being forced through the Benefits helper.
+
+Verified: full frontend suite 374/374 green (was 354; +20 from the new guard). Real `npm run build`
+passes. Functional render test (temporary, not committed) confirmed the ACTUAL behavior: the producer
+portal heading shows "สิทธิประโยชน์" by default, "Benefits" after switching to English, "权益" after
+Chinese. New src/__tests__/portalSectionTitle.test.js (20 checks) pins, on all six pages: imports the
+helper, renders {benefitsTitle(lang)} above the t.benefits list, and has no hardcoded ">สิทธิประโยชน์<"
+left; plus the helper covers th/en/zh distinctly and falls back to Thai. Mutation-tested: reverting one
+page to the hardcoded heading turns the guard red (2 checks); restored → green.

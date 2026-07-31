@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { consentLabel } from './consentLabel';
+import { benefitsTitle } from './sectionTitle';
 import { backLabel, backAria } from './backLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
@@ -59,7 +60,7 @@ export default function AffiliatePortalPage() {
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:32 }}>
           <div>
-            <h3 style={{ color:'#f59e0b', marginBottom:20 }}>สิทธิประโยชน์</h3>
+            <h3 style={{ color:'#f59e0b', marginBottom:20 }}>{benefitsTitle(lang)}</h3>
             {t.benefits.map((b,i) => <div key={i} style={{ display:'flex', gap:12, marginBottom:14, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#f59e0b' }}>✓</span><span style={{ color:'#ddd' }}>{b}</span></div>)}
           </div>
           <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #f59e0b33' }}>
