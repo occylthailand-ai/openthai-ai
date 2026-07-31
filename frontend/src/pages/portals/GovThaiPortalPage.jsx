@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { consentLabel } from './consentLabel';
+import { backLabel, backAria } from './backLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 
@@ -32,7 +33,7 @@ export default function GovThaiPortalPage() {
   return (
     <div style={{ minHeight:'100vh', background:'#0a0a0f', color:'#fff', fontFamily:'system-ui,sans-serif' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 32px', borderBottom:'1px solid #1e1e2e' }}>
-        <button onClick={() => navigate('/portals')} style={{ background:'none', border:'1px solid #333', color:'#aaa', padding:'8px 16px', borderRadius:8, cursor:'pointer' }}>← กลับ</button>
+        <button onClick={() => navigate('/portals')} style={{ background:'none', border:'1px solid #333', color:'#aaa', padding:'8px 16px', borderRadius:8, cursor:'pointer' }} aria-label={backAria(lang)}>{backLabel(lang)}</button>
         <div style={{ display:'flex', gap:8 }}>
           {['th','en'].map(l => <button key={l} onClick={() => setLang(l)} type="button" aria-pressed={lang===l} style={{ background:lang===l?'#0c855d':'none', border:'1px solid #333', color:'#fff', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:13 }}>{l==='th'?'ไทย':'English'}</button>)}
         </div>

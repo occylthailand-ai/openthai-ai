@@ -4548,3 +4548,30 @@ against re-introducing the duplicate); the schema shape + honesty checks (consen
 PDPA present; no Neo4j/Stripe/USD/blockchain/crypto) moved to faqContent.test.js over FAQ_ITEMS.
 Mutation-tested: re-injecting a client-side FAQPage into FaqPage.jsx turns the new guard red;
 removed → green.
+
+---
+
+## 2026-07-31 — a11y/i18n: localized "← Back" on all nine /portals/* pages (was hardcoded per page)
+
+Code scan of the consent funnel found the back control at the top of every /portals/* page was
+hardcoded and did NOT follow the page's language toggle: the seven Thai-default portals (producer,
+consumer, creator, affiliate, middleman, foundation, gov-thai) showed "← กลับ" and the two
+international ones (gov-intl, intl-org) showed "← Back", in both cases fixed regardless of the
+selected language. So a Chinese/English visitor on a Thai-default portal saw "← กลับ", and a
+Thai/Chinese visitor on the international-org portal saw "← Back". The button is also visually just an
+arrow + word with no aria-label, so a screen-reader user got only the bare word with no destination.
+
+Fix: new shared helper frontend/src/pages/portals/backLabel.js (same single-source pattern as the
+existing consentLabel.jsx in that folder) — backLabel(lang) returns the localized "← กลับ / ← Back /
+← 返回" and backAria(lang) returns a localized accessible name stating the destination (the /portals
+hub). All nine pages now import it and render {backLabel(lang)} with aria-label={backAria(lang)};
+falls back to Thai for an unknown language so the control is never blank.
+
+Verified: full frontend suite 354/354 green (was 324; +30 from the new guard). Real `npm run build`
+passes. Functional render test (temporary, not committed) confirmed the ACTUAL behavior: the consumer
+portal shows "← กลับ" by default and "← Back" after switching to English (with aria-label "Back to the
+portal hub"); the intl-org portal shows "← Back" by default and "← กลับ" after switching to ไทย. New
+src/__tests__/portalBackLabel.test.js (30 checks) pins, on all nine pages: imports the shared helper,
+renders {backLabel(lang)} + aria-label={backAria(lang)}, and has no hardcoded "← กลับ"/"← Back" left;
+plus the helper covers th/en/zh distinctly and falls back to Thai. Mutation-tested: reverting one page
+to a hardcoded "← กลับ" turns the guard red (2 checks); restored → green.
