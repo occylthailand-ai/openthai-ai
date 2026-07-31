@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-30T15:11:16.983Z · branch `claude/general-chat-9jrudk` (1 commit(s) ahead of main)
+Generated: 2026-07-31T10:08:13.096Z · branch `claude/mythos-instructions-qpml4m` (1 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 215 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 216 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,35 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-07-31 — Built self-serve product listing for approved producers
+Delivered the task queued in PR #79: `backend/inventory.js` had no self-serve
+path for an approved producer to list their own catalog — all inventory
+mutations required `x-admin-key` (admin-only). A real approved producer had
+to go through an admin intermediary to add or update a product.
+
+Built using the email-match identity pattern already established in
+`backend/disputes.js` (match caller's stated email against a verified record
+before allowing the action):
+
+**`inventory.js`:**
+- `upsert()` now persists `producer_email` (lowercased, clipped) on each product.
+- New `listByProducer(email)` function filters the full product list by `producer_email`.
+
+**`server.js` — 4 new routes, all behind `verifyApprovedProducer()`:**
+- `GET /api/producer/my-products` — list only the caller's own products.
+- `POST /api/producer/my-products/upsert` — create or update a product (forces `producer_email` to the verified caller; updating another producer's product → 403).
+- `POST /api/producer/my-products/adjust` — stock restock/adjust on own products only.
+- `POST /api/producer/my-products/remove` — delete own product only.
+
+`verifyApprovedProducer()` reads `x-producer-email` header, looks up the email in `producers.all()`, and returns the record only if `status === 'approved'` — a pending or rejected applicant gets 401. No admin key needed; no JWT required.
+
+Verified live end-to-end:
+- No header → 401.
+- Non-producer email → 401.
+- Approved producer: create product → 200 with `producer_email` tagged; list → returns own products only; adjust stock → correct new total; cross-producer remove attempt (other approved producer trying to delete a product they don't own) → 403 "ไม่ใช่สินค้าของคุณ".
 
 ---
 
@@ -643,14 +672,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **8 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql
 
 ## Recent commits
-- e37fa87 feat(responsive): dashboard fixed bottom tab bar + responsive grids for all screen sizes (7 minutes ago)
-- b0379f2 feat(dashboard): add 🔄 จับคู่ tab with live matching widget (25 minutes ago)
-- d558a41 Add B2B2C, C2B, G2G, G2B matching types (#83) (37 minutes ago)
-- d9f24c8 Add automatic B2B/B2C/B2G matching engine (#82) (59 minutes ago)
-- 42cd496 Update PROJECT_STATUS.md to reflect current branch and session (#81) (2 hours ago)
+- 5303681 feat(inventory): producer self-serve product listing (38 seconds ago)
+- a545554 feat(responsive): dashboard bottom tab bar + responsive grids for all screen sizes (#85) (19 hours ago)
+- b0379f2 feat(dashboard): add 🔄 จับคู่ tab with live matching widget (19 hours ago)
+- d558a41 Add B2B2C, C2B, G2G, G2B matching types (#83) (20 hours ago)
+- d9f24c8 Add automatic B2B/B2C/B2G matching engine (#82) (20 hours ago)
+- 42cd496 Update PROJECT_STATUS.md to reflect current branch and session (#81) (21 hours ago)
 - b5ce533 Fix shallow-checkout bug corrupting PROJECT_STATUS.md's git-history line (#77) (4 weeks ago)
 - f3a860d Open the Council Bridge to external platforms/systems (#76) (4 weeks ago)
-- d73b560 Add Shared Bridge Notes to /council (#75) (4 weeks ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -672,8 +701,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "uptime_sec": 95,
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -826,7 +855,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `credits.js` | 202 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
 | `disputes.js` | 279 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
-| `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
+| `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `matching.js` | 336 | Matching Engine — จับคู่ B2B / B2C / B2G / B2B2C / C2B / G2G / G2B |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
@@ -838,7 +867,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `producers.js` | 160 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7965 | Vercel serverless detection |
+| `server.js` | 8018 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |

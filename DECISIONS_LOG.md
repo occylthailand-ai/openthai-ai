@@ -11,6 +11,35 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-07-31 — Built self-serve product listing for approved producers
+Delivered the task queued in PR #79: `backend/inventory.js` had no self-serve
+path for an approved producer to list their own catalog — all inventory
+mutations required `x-admin-key` (admin-only). A real approved producer had
+to go through an admin intermediary to add or update a product.
+
+Built using the email-match identity pattern already established in
+`backend/disputes.js` (match caller's stated email against a verified record
+before allowing the action):
+
+**`inventory.js`:**
+- `upsert()` now persists `producer_email` (lowercased, clipped) on each product.
+- New `listByProducer(email)` function filters the full product list by `producer_email`.
+
+**`server.js` — 4 new routes, all behind `verifyApprovedProducer()`:**
+- `GET /api/producer/my-products` — list only the caller's own products.
+- `POST /api/producer/my-products/upsert` — create or update a product (forces `producer_email` to the verified caller; updating another producer's product → 403).
+- `POST /api/producer/my-products/adjust` — stock restock/adjust on own products only.
+- `POST /api/producer/my-products/remove` — delete own product only.
+
+`verifyApprovedProducer()` reads `x-producer-email` header, looks up the email in `producers.all()`, and returns the record only if `status === 'approved'` — a pending or rejected applicant gets 401. No admin key needed; no JWT required.
+
+Verified live end-to-end:
+- No header → 401.
+- Non-producer email → 401.
+- Approved producer: create product → 200 with `producer_email` tagged; list → returns own products only; adjust stock → correct new total; cross-producer remove attempt (other approved producer trying to delete a product they don't own) → 403 "ไม่ใช่สินค้าของคุณ".
+
+---
+
 ### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
 Found by accident while investigating a "there are uncommitted changes"
 prompt — the working-tree diff showed the *currently committed* (on `main`,

@@ -62,6 +62,7 @@ export function createInventory(dataDir, opts = {}) {
       status: ['active', 'inactive'].includes(input.status) ? input.status : (existing?.status || 'active'),
       image_url: clip(input.image_url, 300),
       description: clip(input.description, 500),
+      producer_email: clip(input.producer_email, 120).toLowerCase() || existing?.producer_email || '',
       created_at: existing?.created_at || now,
       updated_at: now,
     };
@@ -158,5 +159,10 @@ export function createInventory(dataDir, opts = {}) {
     res.json({ success: true, products: items.map((p) => ({ id: p.id, sku: p.sku, name: p.name, category: p.category, price: p.price, image_url: p.image_url, description: p.description, in_stock: (p.stock || 0) > 0, stock: p.stock })) });
   }));
 
-  return { router, list, get, upsert, remove, adjust, record, movements, summary, productSales, salesReport };
+  async function listByProducer(email) {
+    const e = (email || '').toString().trim().toLowerCase();
+    return (await list()).filter((p) => p.producer_email === e);
+  }
+
+  return { router, list, get, upsert, remove, adjust, record, movements, summary, productSales, salesReport, listByProducer };
 }
