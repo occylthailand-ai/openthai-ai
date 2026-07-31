@@ -135,6 +135,9 @@ jobs:
       - name: Confirm-link secret test (self-contained — spawns server; one-click confirm links are unforgeable in prod, never signed with a hardcoded fallback)
         working-directory: backend
         run: npm run test:confirm-token-secret
+      - name: Default-admin test (self-contained — spawns server; the guessable admin/1234 default is never a live login in production)
+        working-directory: backend
+        run: npm run test:admin-default-login
       - name: AI department-officer endpoint test (self-contained — auth gate, professional disclaimer, offline fallback)
         working-directory: backend
         run: npm run test:dept-officer-endpoint

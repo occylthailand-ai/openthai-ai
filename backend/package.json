@@ -67,7 +67,8 @@
     "test:migration-coverage": "node scripts/test-migration-coverage.mjs",
     "test:full-migration-columns": "node scripts/test-full-migration-columns.mjs",
     "test:line-signature": "node scripts/test-line-signature.mjs",
-    "test:confirm-token-secret": "node scripts/test-confirm-token-secret.mjs"
+    "test:confirm-token-secret": "node scripts/test-confirm-token-secret.mjs",
+    "test:admin-default-login": "node scripts/test-admin-default-login.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

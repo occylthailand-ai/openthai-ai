@@ -4697,3 +4697,31 @@ confirm-link tests unaffected (they set their own JWT_SECRET): withdraw-confirm 
 7/7, consent-durability 9/9, pdpa-tenant 16/16; server boots + /api/health 200. Mutation-tested:
 reinstating the hardcoded prod fallback makes the forged token accepted (200) and turns the test red;
 restored → 8/8 green.
+
+---
+
+## 2026-07-31 — SECURITY: guessable default admin (admin/1234) was a live login in production — now fail-closed
+
+Continuing the auth audit, found getAdminUsers() in auth.js created the dev-fallback admin account
+(ADMIN_USERNAME||'admin' / ADMIN_PASSWORD_PLAIN||'1234') UNCONDITIONALLY when neither ADMIN_USERS nor a
+real password was set — and pushed it BEFORE the environment check, which only console.error'd on
+Vercel. So a production deploy that forgot to configure admin credentials shipped a live, publicly-
+guessable `admin` / `1234` login (POST /api/auth/login → getAdminUsers() → match → JWT), i.e. a full-
+access admin auth bypass. Same fail-OPEN class as the LINE webhook and confirm-link-secret fixes.
+
+Fix: fail closed in a prod-like env (VERCEL or NODE_ENV=production). When the password is the weak
+default ('1234' / 'change-me-admin-password') AND the env is prod-like, DO NOT create the account —
+leave the admin list empty so password login is rejected until real credentials are configured
+(ADMIN_USERS or a strong ADMIN_PASSWORD_PLAIN). Emergency access is unaffected (ADMIN_OVERRIDE_KEY /
+RECOVERY_CODES remain). Local dev still gets admin/1234 for convenience, and a real ADMIN_PASSWORD_PLAIN
+in prod still logs in normally.
+
+Verified against the REAL running server — new scripts/test-admin-default-login.mjs (5 checks) boots
+server.js per-config and probes POST /api/auth/login: NODE_ENV=production + admin/1234 → 401 (rejected);
+prod + a real ADMIN_PASSWORD_PLAIN + correct creds → 200 + token, and admin/1234 → 401; dev + admin/1234
+→ 200 + token, dev + wrong password → 401. (VERCEL=1 can't be boot-probed — no app.listen() under
+Vercel — so the identical isProdLike branch is exercised via NODE_ENV=production.) Wired into
+package.json + CI. Existing auth tests unaffected (they gate on ADMIN_KEY, not the default password
+login): corporate-auth 9/9, integrations-auth 7/7, video-auth 6/6, tenant-login 10/10, recovery-code
+11/11; server boots + /api/health 200. Mutation-tested: making the account always be created (the old
+bug) lets admin/1234 log in under NODE_ENV=production (200) and turns the test red; restored → 5/5.
