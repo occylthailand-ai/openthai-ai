@@ -8,6 +8,8 @@
     "sdk:gen": "node sdk-gen.js",
     "sdk:watch": "node --watch sdk-gen.js",
     "preflight": "node preflight.js",
+    "test:types": "tsc --noEmit",
+    "test:middleware": "node --test middleware/__tests__/*.mjs",
     "test:smoke": "node scripts/smoke-skills.mjs",
     "test:affiliate": "node scripts/test-affiliate-flow.mjs",
     "test:revenue": "node scripts/test-revenue-system.mjs",
@@ -26,5 +28,10 @@
     "node-cron": "^4.2.1",
     "node-fetch": "^3.3.2",
     "nodemailer": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
   }
 }

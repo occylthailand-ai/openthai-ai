@@ -1,9 +1,10 @@
+// @ts-check
 import { ApiError } from './error-handler.js';
 
-// Lightweight field validator — avoids pulling in a full schema library.
-// Usage: validate(req.body, { email: 'required|email', name: 'required', age: 'number' })
-// Throws ApiError.badRequest with a clear message if validation fails.
-
+/**
+ * Rule functions — each returns true when the value passes.
+ * @type {Record<string, (v: unknown, param?: string) => boolean>}
+ */
 const RULES = {
   required: (v) => v !== undefined && v !== null && v !== '',
   email:    (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v)),
@@ -15,8 +16,18 @@ const RULES = {
   maxlen:   (v, n) => String(v).length <= Number(n),
 };
 
+/**
+ * Validate `data` against `schema`. Throws `ApiError.badRequest` on failure.
+ *
+ * Rules are pipe-separated: `'required|email'`, `'required|minlen:8|maxlen:64'`.
+ * Optional fields (no `required`) are skipped when absent.
+ *
+ * @param {Record<string, unknown> | null | undefined} data
+ * @param {Record<string, string>} schema  — field → rule string
+ * @returns {void}
+ */
 export function validate(data, schema) {
-  const errors = [];
+  const errors = /** @type {string[]} */ ([]);
 
   for (const [field, ruleStr] of Object.entries(schema)) {
     const rules = ruleStr.split('|');
@@ -41,6 +52,12 @@ export function validate(data, schema) {
   }
 }
 
+/**
+ * @param {string} field
+ * @param {string} rule
+ * @param {string | undefined} param
+ * @returns {string}
+ */
 function humanMessage(field, rule, param) {
   switch (rule) {
     case 'required': return `${field} is required`;

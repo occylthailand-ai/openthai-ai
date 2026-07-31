@@ -1,9 +1,17 @@
+// @ts-check
 import { randomUUID } from 'node:crypto';
 
-// Propagates or generates X-Request-ID on every request.
-// req.id is available downstream; the header echoes back in the response.
+/** @import { Request, Response, NextFunction } from 'express' */
+
+/**
+ * Propagates or generates X-Request-ID on every request.
+ * Sets `req.id` for downstream use; echoes the header in the response.
+ * @param {Request} req
+ * @param {Response} res
+ * @param {NextFunction} next
+ */
 export function requestId(req, res, next) {
-  const id = req.headers['x-request-id'] || randomUUID();
+  const id = /** @type {string} */ (req.headers['x-request-id']) || randomUUID();
   req.id = id;
   res.setHeader('X-Request-ID', id);
   next();
