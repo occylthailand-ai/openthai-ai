@@ -4664,3 +4664,36 @@ mock Supabase, LINE_CHANNEL_SECRET set): a signed follow persists user_id to lin
 UNSIGNED follow and a wrong-signature follow are both dropped (never reach the mock). Mutation-tested:
 making the empty-sig case return null (fail-open, the old bug) makes the forged unsigned event get
 persisted again and turns the E2E red; restored → green.
+
+---
+
+## 2026-07-31 — SECURITY: confirm-link tokens no longer signed with a hardcoded fallback secret in prod
+
+Continuing the webhook/signature audit, found that `UNSUB_SECRET` in server.js — the HMAC key for
+every one-click confirm link (unsubscribe, PDPA data-erasure/access, AFFILIATE WITHDRAWAL = moves
+money, payment-cancel) — was `process.env.JWT_SECRET || 'openthai-jwt-secret-2026'`, a hardcoded,
+source-visible constant. If JWT_SECRET was unset, anyone with repo access could forge those links —
+delete another user's data (PDPA erasure/access) or confirm an affiliate withdrawal. There was already
+a console.warn acknowledging this, but the code still USED the forgeable fallback (failed OPEN).
+Notably auth.js already avoids this — its JWT fallback is `crypto.randomBytes(32)` (unforgeable).
+
+Fix: mirror auth.js. `IS_PROD_LIKE = IS_VERCEL || NODE_ENV==='production'`; `UNSUB_SECRET =
+JWT_SECRET || (IS_PROD_LIKE ? randomBytes(32).toString('hex') : 'openthai-dev-only-unsub-secret')`.
+So: prod with JWT_SECRET set → stable + unforgeable (unchanged, correct config); prod WITHOUT
+JWT_SECRET → per-process RANDOM key, so forged links are rejected and legit links simply stop
+verifying across restarts/serverless invocations (fails CLOSED, not forgeable) + a loud warning; local
+dev → a stable dev-only constant so hand-tested links survive a restart. The old guessable constant is
+gone from source entirely.
+
+Verified against the REAL running server — new `scripts/test-confirm-token-secret.mjs` (8 checks)
+boots server.js in each config and probes GET /api/broadcast/unsubscribe: NODE_ENV=production without
+JWT_SECRET rejects a token forged with the old hardcoded secret (403); prod WITH JWT_SECRET accepts a
+correctly-signed token (200) and rejects the old-hardcoded one (403); dev accepts the dev-fallback
+token (200) and rejects the removed constant (403); plus source asserts IS_PROD_LIKE covers Vercel,
+uses randomBytes(32), and the old constant is gone. (VERCEL=1 can't be boot-probed — the server
+doesn't app.listen() under Vercel — so the identical IS_PROD_LIKE branch is exercised via
+NODE_ENV=production + a source assert for the Vercel arm.) Wired into package.json + CI. Existing
+confirm-link tests unaffected (they set their own JWT_SECRET): withdraw-confirm 9/9, broadcast-unsub
+7/7, consent-durability 9/9, pdpa-tenant 16/16; server boots + /api/health 200. Mutation-tested:
+reinstating the hardcoded prod fallback makes the forged token accepted (200) and turns the test red;
+restored → 8/8 green.

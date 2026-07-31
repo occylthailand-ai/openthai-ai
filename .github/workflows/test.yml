@@ -132,6 +132,9 @@ jobs:
       - name: PDPA consent durability test (self-contained — spawns server + mock Supabase; the proof-of-consent record survives a /tmp wipe)
         working-directory: backend
         run: npm run test:consent-durability
+      - name: Confirm-link secret test (self-contained — spawns server; one-click confirm links are unforgeable in prod, never signed with a hardcoded fallback)
+        working-directory: backend
+        run: npm run test:confirm-token-secret
       - name: AI department-officer endpoint test (self-contained — auth gate, professional disclaimer, offline fallback)
         working-directory: backend
         run: npm run test:dept-officer-endpoint

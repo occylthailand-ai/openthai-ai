@@ -10,7 +10,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import cron from 'node-cron';
 import https from 'https';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import { openapiSpec } from './openapi.js';
 import { handleMcp } from './mcp-handler.js';
 import { createMemorySystem } from './vector-memory.js';
@@ -1290,14 +1290,20 @@ async function sendProducerApproval(to, company, product_name) {
 // token ยืนยันตัวก่อน unsubscribe — กันไม่ให้ใครก็ตามที่รู้แค่ email คนอื่นมากด unsubscribe แทนได้
 // ใช้ secret เดียวกับที่ tenant-manager.js ใช้อยู่แล้ว (fallback คงที่ ไม่ใช้ crypto.randomBytes
 // แบบ auth.js เพราะ token นี้ถูกส่งออกไปในอีเมลจริง ต้องยังใช้ได้แม้เซิร์ฟเวอร์ restart)
-const UNSUB_SECRET = process.env.JWT_SECRET || 'openthai-jwt-secret-2026';
-// unsubToken() signs security-sensitive one-click confirm links — unsubscribe,
-// PDPA data-erasure (/api/privacy/erasure/confirm) and affiliate withdrawals. If
-// JWT_SECRET is unset in production the fallback above is a PUBLIC, source-visible
-// constant, so anyone with repo access could forge those links (incl. deleting
-// another user's data). Warn loudly in the prod (Vercel) logs so it gets set.
-if (!process.env.JWT_SECRET && IS_VERCEL) {
-  console.warn('[SECURITY] JWT_SECRET is not set in production — unsubscribe / PDPA-erasure / affiliate-withdraw confirm tokens are derived from a public fallback secret and can be forged. Set JWT_SECRET in the Vercel environment.');
+// unsubToken() signs security-sensitive one-click confirm links — unsubscribe, PDPA
+// data-erasure/access (/api/privacy/*), affiliate withdrawals (moves money) and payment-cancel.
+// When JWT_SECRET is unset we must NOT fall back to a hardcoded, source-visible constant: anyone
+// with repo access could then forge those links (delete another user's data, confirm a withdrawal).
+// In a production-like environment (Vercel, or NODE_ENV=production) fall back to a per-process
+// RANDOM key instead — the same choice auth.js already makes for JWTs — so forged tokens are
+// rejected (unforgeable; the links simply stop verifying across restarts/serverless invocations
+// until JWT_SECRET is set, i.e. they fail CLOSED rather than being forgeable). Only in local dev
+// (no prod signal) do we keep a stable constant, so hand-tested links survive a server restart.
+const IS_PROD_LIKE = IS_VERCEL || process.env.NODE_ENV === 'production';
+const UNSUB_SECRET = process.env.JWT_SECRET
+  || (IS_PROD_LIKE ? randomBytes(32).toString('hex') : 'openthai-dev-only-unsub-secret');
+if (!process.env.JWT_SECRET && IS_PROD_LIKE) {
+  console.warn('[SECURITY] JWT_SECRET is not set in production — confirm links (unsubscribe / PDPA-erasure / affiliate-withdraw / payment-cancel) now use a per-process RANDOM key, so they will not verify reliably across serverless invocations or restarts. Set JWT_SECRET so these links are stable AND unforgeable.');
 }
 function unsubToken(email, type) {
   return createHmac('sha256', UNSUB_SECRET).update(`${email}:${type}`).digest('hex').slice(0, 16);
