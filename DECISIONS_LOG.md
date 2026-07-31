@@ -4257,3 +4257,30 @@ router that MIRRORS the real gate (/skills-catalog → Navigate to /login), clic
 it reaches the public list — not the login wall. Full frontend suite 313/313, `npm run build` clean.
 Mutation-tested: reverting the target to /skills-catalog makes the anonymous visitor hit /login and
 the test fails. Runs in CI.
+
+---
+
+## 2026-07-30 — add a PDPA consent notice to the homepage newsletter signup (the one PII capture missing it)
+
+Continuing the funnel/consent audit: the homepage hero email capture (`/api/waitlist`, source
+'landing-hero') is a WEEKLY MARKETING newsletter (i18n email.desc: "เคล็ดลับ TikTok + แนวโน้มเทรนด์
+ไทย ส่งทุกอาทิตย์"). It collected the subscriber's email (PII, for marketing follow-up) with NO
+consent notice or privacy-policy reference at the point of collection — the privacy link lived only
+in the far-away footer. This was the ONE PII-collection point in the app lacking a notice: the
+/portals/* signups gate on an explicit consent checkbox (backend enforces consent:true), and the
+/contact form already shows "โดยการส่งข้อความ คุณยอมรับ[นโยบายความเป็นส่วนตัว]". For a project whose
+whole ethos is consent-first (owner standing order, rule 3), a marketing newsletter with no notice
+is a real PDPA gap.
+
+Fix: added a consent microtext directly under the join form — "เมื่อกดสมัคร คุณยอมรับ [นโยบายความ
+เป็นส่วนตัว]" linking to /privacy — mirroring the /contact pattern exactly. Localized in all three
+languages (th/en/zh) via new i18n keys email.consentPre / email.consentLink. This is notice-based
+informed consent (the user's affirmative action is typing their email to subscribe); it deliberately
+does NOT add a blocking checkbox, which would add friction to a hero capture — same balance the
+/contact form strikes. Backend waitlist handler already validates/sanitizes/dedups the email and
+sends a confirmation email; no backend change needed.
+
+Verified: new `src/__tests__/landingConsentNotice.test.jsx` (2 tests) asserts the notice renders at
+the capture point and the privacy link navigates to /privacy. Full frontend suite 315/315,
+`npm run build` clean. Mutation-tested: removing the notice block turns both assertions red;
+restored → green. Runs in CI.

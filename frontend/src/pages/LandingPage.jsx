@@ -324,6 +324,15 @@ export default function LandingPage() {
                   {joining ? t('email.submitting') : t('email.submit')}
                 </button>
               </form>
+              {/* PDPA: this is a weekly marketing newsletter — inform the subscriber and link the
+                  privacy policy at the point of collection, consistent with the /contact form and
+                  the consent-gated /portals/* signups (no other PII capture here lacked a notice). */}
+              <p style={{ fontSize: 11, color: '#748293', textAlign: 'center', margin: '10px 0 0' }}>
+                {t('email.consentPre')}{' '}
+                <button type="button" onClick={() => navigate('/privacy')} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', fontSize: 11, padding: 0, textDecoration: 'underline' }}>
+                  {t('email.consentLink')}
+                </button>
+              </p>
               {joinErr && <div role="alert" style={{ color: '#fca5a5', fontSize: 13, marginTop: 10 }}>⚠️ {joinErr}</div>}
             </>
           )}
