@@ -4516,3 +4516,35 @@ could drift), faqPageJsonLd matches FAQ_ITEMS.th question-for-question, "<" is e
 can't break out of its <script>, and /faq gets the schema while /contact does not. Mutation-tested:
 disabling the /faq injection (`&& false`) turns the guard red; restored → green. Same
 single-source-of-truth + fail-loud discipline as portalCategories / seoInvariants / route-meta.
+
+---
+
+## 2026-07-31 — FOLLOW-UP/CORRECTION: /faq now emits exactly ONE FAQPage (removed the duplicate client-side copy)
+
+The previous entry added a prerendered FAQPage schema into /faq/index.html. But FaqPage.jsx STILL
+emitted its own FAQPage JSON-LD client-side, so after hydration a direct-loaded /faq (exactly what a
+crawler does) carried TWO identical FAQPage blocks — duplicate structured data, which Google's
+guidelines discourage. That duplication was introduced by the prerender addition.
+
+Fix: make the prerendered copy authoritative (Google's own recommendation is to server-render
+structured data — present in the first HTML byte, no wait on the render pass) and remove the now-
+redundant client-side `<script type="application/ld+json">` from FaqPage.jsx. Result: exactly one
+FAQPage on the page. Both the visible list and the prerendered schema still read the single
+FAQ_ITEMS source (src/data/faqContent.js), so no drift. The client-side block wasn't needed for SEO:
+FAQ rich results are Google-only (social crawlers ignore FAQPage — noted in PricingPage.jsx), Google
+crawls /faq by direct URL load (getting the prerendered schema), and the language toggle is client
+state with no separate crawlable URL.
+
+Note on scope: /pricing and /affiliate also emit FAQPage only client-side, but their FAQ content
+comes from the i18n layer (already single-sourced) and PricingPage.jsx documents a deliberate choice
+that client-side is sufficient for a Google-only, JS-rendered feature. Left as-is — not duplicating,
+and not worth overriding a documented decision. Only /faq had the duplicate, because only /faq had
+BOTH a client-side block AND the newly-added prerendered one.
+
+Verified: full frontend suite 324/324 green; real `npm run build` → dist/faq/index.html has exactly
+ONE "@type":"FAQPage" and the FaqPage JS bundle contains no FAQPage schema at all (no client-side
+duplicate). faqPage.test.jsx now asserts the component emits ZERO client-side FAQPage blocks (guarding
+against re-introducing the duplicate); the schema shape + honesty checks (consent/no-scrape/PromptPay/
+PDPA present; no Neo4j/Stripe/USD/blockchain/crypto) moved to faqContent.test.js over FAQ_ITEMS.
+Mutation-tested: re-injecting a client-side FAQPage into FaqPage.jsx turns the new guard red;
+removed → green.

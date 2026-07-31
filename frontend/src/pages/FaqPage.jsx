@@ -7,13 +7,15 @@ import { FAQ_ITEMS } from '../data/faqContent';
 // Every answer is grounded in what the platform ACTUALLY does (consent-first funnels, no scraping,
 // PromptPay+card THB via Omise, PDPA access/erasure/unsubscribe, order tracking by id+contact,
 // dispute/escrow that hears both sides before an admin decides, 35 AI skills in 3 languages) — no
-// invented features. Emits FAQPage JSON-LD (same client-side pattern as /pricing + /affiliate) AND
-// the prerendered /faq/index.html carries the same schema statically (scripts/route-meta.mjs), so
-// non-JS crawlers see it too; accordions follow the site's keyboard/SR-operable pattern.
+// invented features. Accordions follow the site's keyboard/SR-operable pattern.
 //
-// The Q&A pairs live in ../data/faqContent.js — the SINGLE source the prerender's FAQPage JSON-LD is
-// also built from, so the visible FAQ and the structured data can't drift (Google drops the rich
-// result if they disagree). faqContent.test.js pins them together.
+// FAQPage JSON-LD is emitted ONCE, statically, into the prerendered /faq/index.html by
+// scripts/route-meta.mjs (Google's recommended way — structured data present in the first HTML byte,
+// no wait on the render pass). This page deliberately does NOT also emit it client-side: a direct
+// load (the only thing a crawler does) would then carry TWO identical FAQPage blocks — duplicate
+// structured data. The Q&A pairs live in ../data/faqContent.js — the SINGLE source both this visible
+// list and the prerendered schema read, so they can't drift (Google drops the rich result if the
+// schema and visible content disagree). faqContent.test.js pins them together.
 
 const UI = {
   th: { title: 'คำถามที่พบบ่อย', sub: 'ทุกอย่างที่อยากรู้เกี่ยวกับ OpenThaiAi — ตรงไปตรงมา', ctaHead: 'พร้อมเริ่มไหม?', cta: 'เลือกประตูของคุณ', privacy: 'อ่านนโยบายความเป็นส่วนตัว' },
@@ -35,17 +37,8 @@ export default function FaqPage() {
 
   useEffect(() => { document.title = t.title + ' — Openthai.ai'; document.documentElement.lang = lang; }, [t.title, lang]);
 
-  // FAQPage JSON-LD derived from the SAME visible Q&A (same client-side pattern as /pricing +
-  // /affiliate) — Google renders the SPA and reads it, making /faq eligible for FAQ rich results.
-  const faqLd = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: t.faqs.map(([q, a]) => ({ '@type': 'Question', name: String(q), acceptedAnswer: { '@type': 'Answer', text: String(a) } })),
-  }).replace(/</g, '\\u003c');
-
   return (
     <div style={{ minHeight: '100vh', background: '#0a0a0f', color: '#fff', fontFamily: 'system-ui,sans-serif' }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '16px 32px', borderBottom: '1px solid #1e1e2e', gap: 8 }}>
         {['th', 'en', 'zh'].map((l) => (
           <button key={l} onClick={() => setLang(l)} type="button" aria-pressed={lang === l} style={{ background: lang === l ? '#5e61f1' : 'none', border: '1px solid #333', color: '#fff', padding: '6px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>{l === 'th' ? 'ไทย' : l === 'en' ? 'English' : '中文'}</button>

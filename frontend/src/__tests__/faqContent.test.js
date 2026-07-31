@@ -32,6 +32,20 @@ describe('FAQ content is a single source shared by the page and the prerendered 
     }
   });
 
+  it('answers are honest — consent/no-scrape/PromptPay/PDPA, no rejected/invented features', () => {
+    // Thai carries the canonical wording (the language /faq defaults to + what the prerendered schema
+    // ships); every language must avoid the products DECISIONS_LOG / CLAUDE.md flag as not-in-repo.
+    const th = FAQ_ITEMS.th.map(([, a]) => a).join(' ');
+    expect(th).toMatch(/ยินยอม|consent/);
+    expect(th).toMatch(/scrape/);
+    expect(th).toMatch(/พร้อมเพย์|PromptPay/);
+    expect(th).toMatch(/PDPA/);
+    for (const l of Object.keys(FAQ_ITEMS)) {
+      const text = FAQ_ITEMS[l].map(([q, a]) => `${q} ${a}`).join(' ');
+      expect(text, `${l} has no invented/rejected features`).not.toMatch(/Neo4j|Stripe|USD|blockchain|crypto/i);
+    }
+  });
+
   it('FaqPage.jsx renders the shared list instead of redeclaring its own Q&A', () => {
     const src = readFileSync(join(here, '..', 'pages', 'FaqPage.jsx'), 'utf8');
     // must import FAQ_ITEMS from the single source of truth …

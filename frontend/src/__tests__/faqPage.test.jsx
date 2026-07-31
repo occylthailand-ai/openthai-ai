@@ -1,16 +1,18 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import FaqPage from '../pages/FaqPage';
 
-// The public general FAQ. It must: render its questions; emit exactly one valid FAQPage JSON-LD block
-// derived from the SAME visible Q&A (so /faq is eligible for Google FAQ rich results and the schema
-// can't drift from what users read); expand answers accessibly (role=button + aria-expanded, keyboard);
-// funnel into /portals + /privacy; localize; and be honest — no invented features.
+// The public general FAQ. This test covers the COMPONENT's behaviour: it renders its questions,
+// expands answers accessibly (role=button + aria-expanded, keyboard), funnels into /portals +
+// /privacy, and localizes. The FAQPage JSON-LD is NOT emitted by this component — it is prerendered
+// once into /faq/index.html by scripts/route-meta.mjs (see faqContent.test.js, which validates the
+// schema's shape + honesty against the shared FAQ_ITEMS source). This component must therefore emit
+// NO client-side FAQPage block, so a direct load doesn't end up with two (duplicate structured data).
 
 afterEach(cleanup);
 const renderPage = () => render(<MemoryRouter><FaqPage /></MemoryRouter>);
-const faqJsonLd = () => [...document.querySelectorAll('script[type="application/ld+json"]')]
+const faqJsonLdBlocks = () => [...document.querySelectorAll('script[type="application/ld+json"]')]
   .map((s) => { try { return JSON.parse(s.textContent); } catch { return null; } })
   .filter((d) => d && d['@type'] === 'FAQPage');
 
@@ -22,32 +24,9 @@ describe('FaqPage', () => {
     expect(screen.getByText(/ข้อมูลของฉันปลอดภัยไหม/)).toBeTruthy();
   });
 
-  it('emits exactly one valid FAQPage JSON-LD derived from the visible Q&A', () => {
+  it('emits NO client-side FAQPage block (the schema is prerendered once, not duplicated here)', () => {
     renderPage();
-    const blocks = faqJsonLd();
-    expect(blocks.length).toBe(1);
-    const qs = blocks[0].mainEntity;
-    expect(Array.isArray(qs) && qs.length).toBe(8);
-    // every entry is a well-formed Question→acceptedAnswer→Answer with non-empty text
-    for (const e of qs) {
-      expect(e['@type']).toBe('Question');
-      expect(typeof e.name).toBe('string');
-      expect(e.acceptedAnswer['@type']).toBe('Answer');
-      expect(String(e.acceptedAnswer.text).length).toBeGreaterThan(0);
-    }
-    // the schema mirrors a visible question
-    expect(qs.some((e) => e.name === 'OpenThaiAi คืออะไร?')).toBe(true);
-  });
-
-  it('answers are honest — consent/no-scrape/PromptPay/PDPA, no invented features', () => {
-    renderPage();
-    const text = faqJsonLd()[0].mainEntity.map((e) => e.acceptedAnswer.text).join(' ');
-    expect(text).toMatch(/consent|ยินยอม/);
-    expect(text).toMatch(/scrape/);
-    expect(text).toMatch(/PromptPay|พร้อมเพย์/);
-    expect(text).toMatch(/PDPA/);
-    // must NOT claim rejected/nonexistent features
-    expect(text).not.toMatch(/Neo4j|Stripe|USD|escrow.*USD|blockchain|crypto/i);
+    expect(faqJsonLdBlocks().length).toBe(0);
   });
 
   it('expands an answer accessibly (role=button + aria-expanded, keyboard-operable)', () => {
@@ -71,6 +50,6 @@ describe('FaqPage', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'English' }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toMatch(/Frequently asked questions/);
-    expect(faqJsonLd()[0].mainEntity.some((e) => e.name === 'What is OpenThaiAi?')).toBe(true);
+    expect(screen.getByText('What is OpenThaiAi?')).toBeTruthy();
   });
 });
