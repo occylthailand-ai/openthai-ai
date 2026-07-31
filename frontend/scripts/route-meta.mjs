@@ -83,10 +83,16 @@ export function breadcrumbJsonLd(path, title, DOMAIN, portalsTitle = 'Portals') 
 // Transform the base index.html into a route's prerendered HTML: swap title/description/
 // canonical/OG/Twitter to the route's own copy and append its BreadcrumbList. Throws if
 // any target tag is missing from `baseHtml` (see module header).
-export function applyRouteMeta(baseHtml, { path, title, desc }, DOMAIN, opts = {}) {
+export function applyRouteMeta(baseHtml, { path, title, desc, lang }, DOMAIN, opts = {}) {
   const url = DOMAIN + path;
   const fullTitle = `${title} — Openthai.ai`;
+  const pageLang = lang || 'th';
   let html = baseHtml;
+  // Set <html lang> to the language this page actually renders on first load. The base template is
+  // lang="th", but the two international portals (gov-intl / intl-org) default to English content —
+  // serving them as lang="th" makes screen readers mispronounce and gives Google a wrong language
+  // signal on the first (pre-JS) byte. The SPA still corrects document.documentElement.lang at runtime.
+  html = replaceOrThrow(html, /<html lang="[a-z-]+">/, `<html lang="${pageLang}">`, '<html lang>', path);
   html = replaceOrThrow(html, /<title>.*?<\/title>/, `<title>${escapeAttr(fullTitle)}</title>`, '<title>', path);
   html = replaceOrThrow(html, /<meta name="description" content=".*?" \/>/, `<meta name="description" content="${escapeAttr(desc)}" />`, 'description meta', path);
   html = replaceOrThrow(html, /<link rel="canonical" href=".*?" \/>/, `<link rel="canonical" href="${url}" />`, 'canonical link', path);

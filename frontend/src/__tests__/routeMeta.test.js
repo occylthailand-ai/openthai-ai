@@ -3,7 +3,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { applyRouteMeta, breadcrumbJsonLd, escapeAttr } from '../../scripts/route-meta.mjs';
-import { DOMAIN } from '../../scripts/seo-routes.mjs';
+import { DOMAIN, ROUTES } from '../../scripts/seo-routes.mjs';
 
 // Guards the per-route prerender transform that gives every /portals/* + funnel page
 // its own LINE/Facebook link-preview (title/description/canonical/OG/Twitter). The
@@ -44,6 +44,25 @@ describe('applyRouteMeta — rewrites the base template into per-route preview m
     expect(a).not.toContain(`${DOMAIN}/contact`);
     expect(b).toContain(`${DOMAIN}/contact`);
     expect(b).not.toContain(`${DOMAIN}/portals/producer`);
+  });
+
+  it('sets <html lang> to the route’s language (th default; en for the international portals)', () => {
+    // a Thai-default route keeps lang="th"
+    const th = applyRouteMeta(baseHtml, contact, DOMAIN);
+    expect(th).toContain('<html lang="th">');
+    // an English-default route (carries lang:'en') is served lang="en", not the base template's th
+    const en = applyRouteMeta(baseHtml, { path: '/portals/intl-org', lang: 'en', title: 'International Organization Portal', desc: 'x' }, DOMAIN);
+    expect(en).toContain('<html lang="en">');
+    expect(en).not.toContain('<html lang="th">');
+  });
+
+  it('the international portals declare lang:"en" in the SEO route list', () => {
+    for (const p of ['/portals/gov-intl', '/portals/intl-org']) {
+      const r = ROUTES.find((x) => x.path === p);
+      expect(r && r.lang, `${p} has lang:"en"`).toBe('en');
+    }
+    // a Thai page must NOT carry an en override (would mislabel Thai content)
+    expect(ROUTES.find((x) => x.path === '/contact')?.lang).not.toBe('en');
   });
 
   it('appends exactly one BreadcrumbList before </head>', () => {

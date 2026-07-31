@@ -33,8 +33,8 @@ export const ROUTES = [
   { path: '/portals/consumer', title: 'ทางเข้าผู้บริโภค', desc: 'สมัครรับสิทธิพิเศษ ส่วนลด และสินค้าใหม่จากผู้ผลิตไทยก่อนใคร พร้อมคำแนะนำเฉพาะตัวจาก AI' },
   { path: '/portals/middleman', title: 'ทางเข้าคนกลาง / ตัวแทนจำหน่าย', desc: 'ตัวแทนจำหน่าย ผู้ค้าส่ง นายหน้า และคนกลางทุกประเภท เข้าร่วมเครือข่ายกระจายสินค้า OpenThaiAi' },
   { path: '/portals/gov-thai', title: 'ทางเข้าหน่วยงานรัฐไทย', desc: 'บูรณาการ AI เข้าสู่ระบบงานภาครัฐไทย เพื่อประชาชน — แชทบอท, วิเคราะห์ข้อมูล, Dashboard ราชการ' },
-  { path: '/portals/gov-intl', title: 'Foreign Government Agency Portal', desc: 'AI collaboration for governments worldwide — no country restrictions. G2G programs, AI policy consultation, secure data exchange.' },
-  { path: '/portals/intl-org', title: 'International Organization Portal', desc: 'Partnering with global institutions to advance AI for humanity — UN agencies, ASEAN bodies, development banks, SDG-aligned programs.' },
+  { path: '/portals/gov-intl', lang: 'en', title: 'Foreign Government Agency Portal', desc: 'AI collaboration for governments worldwide — no country restrictions. G2G programs, AI policy consultation, secure data exchange.' },
+  { path: '/portals/intl-org', lang: 'en', title: 'International Organization Portal', desc: 'Partnering with global institutions to advance AI for humanity — UN agencies, ASEAN bodies, development banks, SDG-aligned programs.' },
   { path: '/portals/foundation', title: 'ทางเข้ามูลนิธิเพื่อสังคม', desc: 'OpenThai.ai แบ่งปันกำไรให้มูลนิธิช่วยเหลือผู้ยากไร้เมื่อกำไรรวมเกิน 10 ล้านบาท — โปร่งใส ตรวจสอบได้' },
   // /pricing และ /affiliate อยู่ใน sitemap.xml + robots.txt Allow มาตั้งแต่ต้น แต่ไม่เคยอยู่ใน
   // รายการนี้ — แชร์สองหน้านี้บน LINE/Facebook จึงยังเห็น meta ของหน้าแรกอยู่ ทั้งที่เป็นหน้า

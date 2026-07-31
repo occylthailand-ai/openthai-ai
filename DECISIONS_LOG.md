@@ -4725,3 +4725,26 @@ package.json + CI. Existing auth tests unaffected (they gate on ADMIN_KEY, not t
 login): corporate-auth 9/9, integrations-auth 7/7, video-auth 6/6, tenant-login 10/10, recovery-code
 11/11; server boots + /api/health 200. Mutation-tested: making the account always be created (the old
 bug) lets admin/1234 log in under NODE_ENV=production (200) and turns the test red; restored → 5/5.
+
+---
+
+## 2026-07-31 — a11y/SEO: prerendered <html lang> now matches each page's actual language (intl portals were mislabeled Thai)
+
+Code scan found the two international portals — /portals/gov-intl and /portals/intl-org — default to
+ENGLISH content (useState('en'), and their prerendered title/description are English), but their
+prerendered HTML inherited the base template's `<html lang="th">` because the prerender transform
+(scripts/route-meta.mjs) never touched the html lang. So the first (pre-JS) byte a crawler or screen
+reader sees declares Thai on English content: screen readers mispronounce the page, and Google gets a
+wrong language signal. (The SPA sets document.documentElement.lang at runtime, so this only affected the
+crawler/first-paint view — exactly what the prerender exists to serve.)
+
+Fix: add an optional `lang` field to the SEO route list (seo-routes.mjs) — set `lang:'en'` on the two
+international portals; everything else defaults to Thai. applyRouteMeta now rewrites `<html lang="…">`
+to the route's language (throw-on-no-op guard like the other tag rewrites).
+
+Verified: frontend suite 391/391 green (was 389; +2 checks). Real `npm run build` → dist/portals/
+gov-intl and dist/portals/intl-org serve `<html lang="en">`, while producer/contact/faq stay
+`<html lang="th">`. routeMeta.test.js now asserts a Thai route keeps lang="th", an en route is served
+lang="en" (and not th), and the two intl portals carry lang:'en' in the route list. Mutation-tested:
+forcing pageLang='th' (ignoring the route's lang) serves the English page as lang="th" and turns the
+test red; restored → green.
