@@ -65,7 +65,8 @@
     "test:pdpa-consent-schema": "node scripts/test-pdpa-consent-schema.mjs",
     "test:payments-schema": "node scripts/test-payments-schema.mjs",
     "test:migration-coverage": "node scripts/test-migration-coverage.mjs",
-    "test:full-migration-columns": "node scripts/test-full-migration-columns.mjs"
+    "test:full-migration-columns": "node scripts/test-full-migration-columns.mjs",
+    "test:line-signature": "node scripts/test-line-signature.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

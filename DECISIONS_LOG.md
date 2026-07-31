@@ -4633,3 +4633,34 @@ defines the key once per supported language, sits over t.services where applicab
 hardcoded heading left. Mutation-tested: reverting IntlOrg to the hardcoded "Partnership Areas" turns
 the guard red (2 checks); restored → green. With this, every /portals/* section heading + control now
 follows the language toggle (back button, Benefits, and these service/how headings all done).
+
+---
+
+## 2026-07-31 — SECURITY: LINE webhook signature check was fail-OPEN (event-injection bypass) — now fail-closed
+
+Code scan of the signed webhooks (prompted by the smart-e webhook-hardening work) found the LINE
+webhook signature verification in server.js was:
+  `if (process.env.LINE_CHANNEL_SECRET && signature) { ...verify... }`
+i.e. verification ran only when the secret was set AND an `x-line-signature` header was present. With
+the secret configured but the header simply OMITTED, `signature` is '' (falsy), the whole block was
+skipped, and the forged events were processed. So an unauthenticated attacker could inject fake LINE
+events — fake `follow`/`message` events with attacker-chosen userIds — straight into the CRM
+(line_followers / line_messages) just by NOT sending a signature header. This is the same class the
+Omise webhook already fails-closed against (verifyOmiseWebhook rejects a missing sig via a length
+mismatch), and smart-e's LINE webhook was hardened for earlier.
+
+Fix: extracted the check into a tested pure module `backend/line-signature.js` — `verifyLineSignature
+(rawBody, signatureHeader, secret)` returns `null` only in dev mode (no secret), `true` on a valid
+signature, and `false` when the secret is set but the signature is missing/empty/wrong-length/
+mismatched. server.js now drops the request on an explicit `false`; the old `&& signature` guard is
+gone. Dev mode (no secret) still processes, matching prior local-testing behaviour.
+
+Verified: new `scripts/test-line-signature.mjs` (12 checks) — valid sig accepted; empty / missing /
+null / garbage / wrong-length / wrong-body signatures all rejected; no-secret returns the null dev
+sentinel; and structural asserts that server.js wires it fail-closed and the old guard is removed.
+Wired into package.json + CI. Sibling test:omise-webhook-verify still 13/13; server still boots +
+/api/health 200. ALSO verified against the REAL running server (E2E, not committed — spawns server +
+mock Supabase, LINE_CHANNEL_SECRET set): a signed follow persists user_id to line_followers, while an
+UNSIGNED follow and a wrong-signature follow are both dropped (never reach the mock). Mutation-tested:
+making the empty-sig case return null (fail-open, the old bug) makes the forged unsigned event get
+persisted again and turns the E2E red; restored → green.

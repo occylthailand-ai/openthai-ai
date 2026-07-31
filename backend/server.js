@@ -23,6 +23,7 @@ import {
   createSubscription, cancelSubscription, verifyOmiseWebhook,
   SUBSCRIPTION_PLANS,
 } from './omise-payment.js';
+import { verifyLineSignature } from './line-signature.js';
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { officerFor, buildPrompt as buildOfficerPrompt, needsProfessionalDisclaimer, DISCLAIMER } from './dept-officers.js';
 import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
@@ -8478,17 +8479,14 @@ app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (
     return;
   }
 
-  // Signature check (skip if no secret configured — dev mode)
-  if (process.env.LINE_CHANNEL_SECRET && signature) {
-    const expected = createHmac('sha256', process.env.LINE_CHANNEL_SECRET).update(rawBodyBuf).digest('base64');
-    // Constant-time comparison (same rationale as the Omise webhook); guard the
-    // length first since timingSafeEqual throws on unequal-length buffers.
-    let ok = false;
-    try { ok = signature.length === expected.length && timingSafeEqual(Buffer.from(signature), Buffer.from(expected)); } catch { ok = false; }
-    if (!ok) {
-      addLog('warn', 'LINE', 'Webhook signature mismatch — ignored');
-      return;
-    }
+  // Signature check — FAILS CLOSED when a secret is configured. verifyLineSignature returns
+  // null only in dev mode (no LINE_CHANNEL_SECRET); with a secret set, a missing/empty/wrong
+  // signature returns false and the forged request is dropped (previously a missing header
+  // skipped the check entirely — an event-injection bypass). See line-signature.js.
+  const sigResult = verifyLineSignature(rawBodyBuf, signature, process.env.LINE_CHANNEL_SECRET);
+  if (sigResult === false) {
+    addLog('warn', 'LINE', 'Webhook signature missing or mismatched — ignored');
+    return;
   }
 
   const token = process.env.LINE_CHANNEL_TOKEN;
