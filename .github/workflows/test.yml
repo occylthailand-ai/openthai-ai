@@ -141,6 +141,9 @@ jobs:
       - name: Scheduler durability test (self-contained — spawns server + mock Supabase; /api/scheduler/* posts survive a /tmp wipe and the daily cron processes them across lambda invocations)
         working-directory: backend
         run: npm run test:scheduler-durability
+      - name: Video jobs durability test (self-contained — spawns server + mock Supabase; a submitted paid video job stays pollable after a /tmp wipe and across lambda invocations)
+        working-directory: backend
+        run: npm run test:video-jobs-durability
       - name: Confirm-link secret test (self-contained — spawns server; one-click confirm links are unforgeable in prod, never signed with a hardcoded fallback)
         working-directory: backend
         run: npm run test:confirm-token-secret

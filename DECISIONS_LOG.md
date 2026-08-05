@@ -4886,3 +4886,50 @@ wipe, not the broadcast.)
 NOTE (still open, unchanged): the affiliate-payout double-payout finding (withdrawals + withdraw_
 confirmations file-only, _affFromRow resets paid_out to 0 on Supabase reload) is a MONEY path with legal
 implications — still untouched, awaiting the owner's go-ahead per standing-order rule 8.
+
+---
+
+## 2026-08-05 — DATA-LOSS: submitted (paid) video jobs became unpollable after a Vercel redeploy — now Supabase-durable
+
+Standing-order loop. Before picking this, verified the other lanes are already solid so this was the
+genuine highest-impact REAL remaining bug: the /portals/* consent funnel is fail-closed + PDPA-covered;
+robots.txt ↔ sitemap ↔ prerender ROUTES are consistent (homepage included, line 61); Organization/WebSite/
+SoftwareApplication/FAQPage/BreadcrumbList structured data all present; credits/orders/producers/payments/
+entitlements/user_sync are all dual-mode Supabase and migration-covered. What remained was /api/video/*.
+
+Bug (verified from code): POST /api/video/generate submits a job to a paid video provider (Runway/Pika/
+Kling/Luma/Veo — real per-clip spend on the PLATFORM's keys) and stored the job record in video_jobs.json
+ONLY. On Vercel that file is under /tmp: wiped on every redeploy AND private to each lambda instance, so
+GET /api/video/jobs/:id/status did `videoJobs.find(...)` on an empty in-memory array and returned 404
+"job not found" after any redeploy or on any other instance — the user could no longer retrieve the video
+they (the platform) already paid a provider to render. Same ephemeral-/tmp class as the autopost/scheduler
+fixes; narrower blast radius (only when a real provider key is set), but a real paid-work loss.
+
+Fix (mirrors the autopost/scheduler durability fixes): dual-mode the job store (Supabase primary + file
+fallback) — _videoToRow/_videoFromRow mappers, hydrate on boot, persistVideoJob() upserts one job at a
+time on create + on each status poll, and a new findVideoJob() looks a job up in Supabase when it isn't in
+this lambda's memory (the poll-after-redeploy / cross-instance path). Fails quietly / stays file-only
+before the migration is applied (no regression). New migration backend/migrations/013_video_jobs.sql
+(id PK; form/script/job jsonb; created_at desc index; RLS service_role only).
+
+CORRECTION to the recommended Supabase set-up: it is now EIGHT files —
+`FULL-MIGRATION.sql + 003 + 008 + 009 + 010 + 011 + 012 + 013_video_jobs.sql`.
+test-migration-coverage.mjs updated (RECOMMENDED_MIGRATIONS + the "missing from FULL-MIGRATION" doc list)
+and — because it auto-parses every `sbReq('POST', '/<table>')` call site — now auto-verifies video_jobs is
+covered: 26/26 (was 24).
+
+Verified against the REAL running server — new scripts/test-video-jobs-durability.mjs (7 checks) starts a
+mock Supabase, spawns server.js pointed at it (video_jobs.json seeded EMPTY so any found job can only have
+come from Supabase; provider:'mock' jobs so the poll returns without any external call): (1) /status
+without a token → 401, unknown id → 404; (2) a job from a PRIOR deploy (Supabase-only) is still pollable
+after the /tmp wipe — 200, not 404; (3) boot hydrate lists it; (4) a job created by ANOTHER instance
+directly in Supabase AFTER this server booted (never in memory) is found via findVideoJob and merged into
+memory. Wired into package.json + CI. Sibling suites unaffected: migration-coverage 26/26, scheduler 12/12,
+autopost 10/10, waitlist 8/8; server boots + /api/health 200. Mutation-tested: forcing findVideoJob back
+to memory-only makes the cross-instance job 404 and turns the test red; restored → 7/7. (The prior-deploy
+case is covered by the boot hydrate, so it stays green under that mutation — the cross-instance checks are
+the discriminating guard for the findVideoJob Supabase lookup.)
+
+NOTE (still open, unchanged): the affiliate-payout double-payout finding (withdrawals + withdraw_
+confirmations file-only; _affFromRow resets paid_out to 0 on Supabase reload) is a MONEY path with legal
+implications — still untouched, awaiting the owner's go-ahead per standing-order rule 8.

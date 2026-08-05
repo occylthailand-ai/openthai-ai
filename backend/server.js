@@ -7584,6 +7584,61 @@ function saveVideoJobs(data) {
 }
 const videoJobs = loadVideoJobs();
 
+// ── Durable video jobs (Supabase primary / JSON file fallback) — migration 013 ────────────────
+// video_jobs.json lives in /tmp on Vercel: wiped on every redeploy AND private to each lambda instance,
+// so a job submitted to a paid video provider (real per-clip spend) becomes unpollable — GET
+// /api/video/jobs/:id/status returns 404 "job not found" after a redeploy or on another instance, and
+// the user can't retrieve the video they paid for. Persist jobs to Supabase so they survive redeploys
+// and are visible across invocations. Fails quietly / stays file-only before the migration is applied.
+const _videoToRow = (e) => ({
+  id: String(e.id),
+  form: e.form || {},
+  script: e.script || {},
+  job: e.job || {},
+  created_at: e.createdAt || new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+const _videoFromRow = (r) => ({
+  id: String(r.id),
+  form: r.form || {},
+  script: r.script || {},
+  job: r.job || {},
+  createdAt: r.created_at || new Date().toISOString(),
+});
+// Save the file (always) + upsert this job to Supabase (when configured), one at a time so a provider
+// status update is persisted immediately.
+function persistVideoJob(entry) {
+  saveVideoJobs(videoJobs);
+  if (_useSB && entry) {
+    _sbReq('POST', '/video_jobs', { params: { on_conflict: 'id' }, body: [_videoToRow(entry)], prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch((e) => console.warn('[video_jobs] Supabase upsert failed, file-only:', e.message));
+  }
+}
+// Find a job by id: memory first, then Supabase (so a poll works after a redeploy / on another lambda
+// where the in-memory list is empty). Merges the fetched job into memory so subsequent updates persist.
+async function findVideoJob(id) {
+  let entry = videoJobs.find((j) => j.id === id);
+  if (entry || !_useSB) return entry || null;
+  try {
+    const rows = await _sbReq('GET', '/video_jobs', { params: { id: `eq.${encodeURIComponent(id)}`, select: '*', limit: '1' } });
+    if (Array.isArray(rows) && rows[0]) { entry = _videoFromRow(rows[0]); videoJobs.unshift(entry); }
+  } catch (e) { console.warn('[video_jobs] Supabase lookup failed:', e.message); }
+  return entry || null;
+}
+
+if (_useSB) {
+  _sbReq('GET', '/video_jobs', { params: { select: '*', order: 'created_at.desc', limit: '200' } })
+    .then((rows) => {
+      if (!Array.isArray(rows)) return;
+      const have = new Set(videoJobs.map((j) => String(j.id)));
+      for (const r of rows) {
+        const id = String(r.id);
+        if (!have.has(id)) { videoJobs.push(_videoFromRow(r)); have.add(id); }
+      }
+    })
+    .catch((e) => console.warn('[video_jobs] Supabase hydrate failed, file-only:', e.message));
+}
+
 const videoLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'Video API rate limit — 10/min' } });
 
 // POST /api/video/generate — สร้าง Script + ส่งไป Video API
@@ -7615,7 +7670,7 @@ app.post('/api/video/generate', requireAuth, videoLimiter, async (req, res) => {
     // persist job
     const entry = { id: `vj_${Date.now()}`, form, script, job, createdAt: new Date().toISOString() };
     videoJobs.unshift(entry);
-    saveVideoJobs(videoJobs);
+    persistVideoJob(entry);
 
     // fire webhook
     webhooks.dispatch('video.generated', { jobId: entry.id, product: form.product, provider, score: script.criticScore }, null);
@@ -7635,7 +7690,7 @@ app.get('/api/video/jobs', requireAuth, (req, res) => {
 
 // GET /api/video/jobs/:id/status — poll provider status
 app.get('/api/video/jobs/:id/status', requireAuth, async (req, res) => {
-  const entry = videoJobs.find(j => j.id === req.params.id);
+  const entry = await findVideoJob(req.params.id);
   if (!entry) return res.status(404).json({ error: 'job not found' });
 
   const { job, form } = entry;
@@ -7648,7 +7703,7 @@ app.get('/api/video/jobs/:id/status', requireAuth, async (req, res) => {
   try {
     const status = await pollVideoJob(job.job_id, job.provider, apiKey || '');
     entry.job = { ...entry.job, ...status };
-    saveVideoJobs(videoJobs);
+    persistVideoJob(entry);
     res.json({ success: true, ...status });
   } catch (e) {
     res.status(500).json({ error: e.message });
