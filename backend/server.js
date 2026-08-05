@@ -48,7 +48,7 @@ import { buildConsentRecord } from './pdpa-consent.js';
 import { buildPaymentRow } from './payment-row.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, zonesInfo as seasonalZonesInfo } from './seasonal-engine.js';
-import { selectDigestMatches } from './digest-match.js';
+import { selectDigestMatches, dedupeConsumerLeads } from './digest-match.js';
 import { buyerConfirmation } from './order-confirm.js';
 import { createIntegrations } from './integrations.js';
 
@@ -1315,7 +1315,9 @@ function unsubToken(email, type) {
 async function sendConsumerDigest() {
   if (!mailer) return { ok: false, error: 'ไม่มี SMTP_USER — ตั้งค่าก่อนส่ง digest จริง' };
   const leads = await portalLeads.all();
-  const consumers = leads.filter((l) => l.type === 'consumer' && l.email && !l.unsubscribed);
+  // Dedup by email so a consumer who submitted /portals/consumer more than once (double-click,
+  // refresh) gets ONE digest, not one per duplicate record — repeat identical mail reads as spam.
+  const consumers = dedupeConsumerLeads(leads.filter((l) => l.type === 'consumer' && l.email && !l.unsubscribed));
   const catalog = await producers.catalog();
   let sent = 0, skipped = 0, failed = 0;
 
