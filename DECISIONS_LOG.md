@@ -5073,3 +5073,21 @@ test-skills-endpoints (which pins the visible skills catalog specifically).
 Verified by running: 165/165 pass. Mutation-tested: injecting apiFetch('/api/phantom-does-not-exist') in a
 page turns the guard red; removing it → 165/165 green. No app code changed — a regression guard for the
 core customer-facing contract, in the spirit of the existing seoInvariants / migration-coverage guards.
+
+---
+
+## 2026-08-05 — Extend the API-contract guard: forbid raw fetch('/api/...') that bypasses apiUrl/apiFetch
+
+Standing-order loop (money path still owner-gated — I said I'd wait for the Part A green light and I'm
+keeping that; not touched). Closed the one remaining gap in yesterday's whole-app contract guard. apiBase.js
+exists so EVERY API call gets the production API base (VITE_API_URL) prepended and the x-user-email /
+x-device-id identity headers attached; a raw fetch('/api/...') skips both — it works in local dev (Vite
+same-origin proxy) but in production hits the wrong origin and sends no identity, a prod-only break that
+never surfaces in dev. Verified the codebase currently has ZERO such raw calls (grep + the test), so the
+frontend is clean; the guard locks it so a future raw call can't slip in.
+
+Extended scripts/test-api-contract.mjs with a check that scans frontend/src for `fetch('/api/...')` /
+`fetch(\`/api/...\`)` not routed through apiUrl/apiFetch (regex excludes apiFetch via a preceding-char
+guard) and fails with the offending file:line. Verified by running: 166/166 (was 165; +1). Mutation-tested:
+injecting fetch('/api/raw-bypass') fails the guard and names AIGeneratorPage.jsx:460; removing it → 166/166.
+No app code changed; already wired into CI as test:api-contract.
