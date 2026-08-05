@@ -135,6 +135,9 @@ jobs:
       - name: Waitlist durability test (self-contained — spawns server + mock Supabase; landing-page email signups survive a /tmp wipe + PDPA erasure deletes them)
         working-directory: backend
         run: npm run test:waitlist-durability
+      - name: Auto-post queue durability test (self-contained — spawns server + mock Supabase; scheduled social posts survive a /tmp wipe and fire across lambda invocations)
+        working-directory: backend
+        run: npm run test:autopost-durability
       - name: Confirm-link secret test (self-contained — spawns server; one-click confirm links are unforgeable in prod, never signed with a hardcoded fallback)
         working-directory: backend
         run: npm run test:confirm-token-secret

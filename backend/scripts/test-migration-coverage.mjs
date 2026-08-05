@@ -17,7 +17,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const backend = join(here, '..');
 
 // The migration files a fresh Supabase project should run, per DECISIONS_LOG 2026-07-31.
-const RECOMMENDED_MIGRATIONS = ['FULL-MIGRATION.sql', '003_ai_usage_log.sql', '008_broadcast_unsubscribes.sql', '009_pdpa_consents.sql', '010_waitlist.sql'];
+const RECOMMENDED_MIGRATIONS = ['FULL-MIGRATION.sql', '003_ai_usage_log.sql', '008_broadcast_unsubscribes.sql', '009_pdpa_consents.sql', '010_waitlist.sql', '011_autopost_queue.sql'];
 
 // Tables the code inserts/upserts to — parsed from every `[_]sbReq('POST', '/<table>'` call site.
 function codeUpsertTables() {
@@ -49,7 +49,7 @@ for (const t of codeTables) {
 }
 
 console.log('\n=== FULL-MIGRATION.sql alone is NOT sufficient — the supplements are required (documents WHY) ===');
-for (const [t, file] of [['ai_usage_log', '003_ai_usage_log.sql'], ['broadcast_unsubscribes', '008_broadcast_unsubscribes.sql'], ['pdpa_consents', '009_pdpa_consents.sql'], ['waitlist', '010_waitlist.sql']]) {
+for (const [t, file] of [['ai_usage_log', '003_ai_usage_log.sql'], ['broadcast_unsubscribes', '008_broadcast_unsubscribes.sql'], ['pdpa_consents', '009_pdpa_consents.sql'], ['waitlist', '010_waitlist.sql'], ['autopost_queue', '011_autopost_queue.sql']]) {
   ok(!fullOnly.has(t) && tablesInMigration(file).includes(t),
      `"${t}" is missing from FULL-MIGRATION.sql and supplied by ${file}`);
 }

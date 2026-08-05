@@ -7273,6 +7273,84 @@ function saveAutopostLog(data) {
 const autopostQueue = loadAutopostQueue();
 const autopostLog   = loadAutopostLog();
 
+// ── Durable auto-post queue (Supabase primary / JSON file fallback) ───────────
+// autopost_queue.json lives in /tmp on Vercel: wiped on every redeploy AND private to each lambda
+// instance, so a scheduled post written by the POST invocation is invisible to the later
+// /api/autopost/process cron invocation → scheduled posts silently never fire in production. Persist
+// the queue to Supabase (migration 011) so due items survive redeploys and are shared across
+// invocations. Before the migration is applied it fails quietly and stays file-only (no regression).
+const _autopostToRow = (i) => ({
+  id: String(i.id),
+  product: i.product ? String(i.product).slice(0, 300) : '',
+  content: i.content || {},
+  platforms: i.platforms || ['line', 'facebook'],
+  schedule_at: i.schedule_at || new Date().toISOString(),
+  video_path: i.videoPath || null,
+  status: i.status || 'queued',
+  results: i.results || null,
+  created_at: i.created_at || new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+const _autopostFromRow = (r) => ({
+  id: String(r.id),
+  product: r.product || '',
+  content: r.content || {},
+  platforms: Array.isArray(r.platforms) ? r.platforms : ['line', 'facebook'],
+  schedule_at: r.schedule_at || new Date().toISOString(),
+  videoPath: r.video_path || null,
+  status: r.status || 'queued',
+  ...(r.results != null ? { results: r.results } : {}),
+  created_at: r.created_at || new Date().toISOString(),
+});
+// Save the file (always) + upsert this item to Supabase (when configured). One item at a time so a
+// status change (queued → sent/failed) is persisted immediately, not just batched at process end.
+function persistAutopost(item) {
+  saveAutopostQueue(autopostQueue);
+  if (_useSB) {
+    _sbReq('POST', '/autopost_queue', { params: { on_conflict: 'id' }, body: [_autopostToRow(item)], prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch((e) => console.warn('[autopost] Supabase upsert failed, file-only:', e.message));
+  }
+}
+// Return the items that are due to be sent now (status queued & schedule_at ≤ now). On Supabase, fetch
+// them directly so a fresh lambda (or one whose boot-hydrate hasn't finished) still sees scheduled
+// posts written by another invocation; merge each due row into the in-memory queue so status updates
+// and persistAutopost operate on the same object. Falls back to the in-memory filter if Supabase is
+// unavailable or the table doesn't exist yet.
+async function dueAutopostItems() {
+  const now = Date.now();
+  if (_useSB) {
+    try {
+      const rows = await _sbReq('GET', '/autopost_queue', { params: { status: 'eq.queued', schedule_at: `lte.${new Date().toISOString()}`, select: '*', order: 'schedule_at.asc', limit: '100' } });
+      if (Array.isArray(rows)) {
+        const byId = new Map(autopostQueue.map((i) => [String(i.id), i]));
+        const due = [];
+        for (const r of rows) {
+          let item = byId.get(String(r.id));
+          if (!item) { item = _autopostFromRow(r); autopostQueue.push(item); }
+          due.push(item);
+        }
+        return due;
+      }
+    } catch (e) {
+      console.warn('[autopost] Supabase due-fetch failed, using memory:', e.message);
+    }
+  }
+  return autopostQueue.filter((i) => i.status === 'queued' && new Date(i.schedule_at).getTime() <= now);
+}
+
+if (_useSB) {
+  _sbReq('GET', '/autopost_queue', { params: { select: '*', order: 'created_at.desc', limit: '500' } })
+    .then((rows) => {
+      if (!Array.isArray(rows)) return;
+      const have = new Set(autopostQueue.map((i) => String(i.id)));
+      for (const r of rows) {
+        const id = String(r.id);
+        if (!have.has(id)) { autopostQueue.push(_autopostFromRow(r)); have.add(id); }
+      }
+    })
+    .catch((e) => console.warn('[autopost] Supabase hydrate failed, file-only:', e.message));
+}
+
 // ── Platform Poster Functions ─────────────────────────────────────────────────
 
 // 1️⃣ LINE Broadcast — ส่งหา Followers ทั้งหมด (ต้องมี LINE_CHANNEL_TOKEN)
@@ -7385,13 +7463,13 @@ app.post('/api/autopost/queue', requireAuth, async (req, res) => {
     item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
     item.results = results;
     autopostQueue.push(item);
-    saveAutopostQueue(autopostQueue);
+    persistAutopost(item);
     return res.json({ success: true, message: 'โพสต์ทันที', item });
   }
 
-  // ถ้ามีเวลากำหนด → เข้า queue รอ cron ส่ง
+  // ถ้ามีเวลากำหนด → เข้า queue รอ cron ส่ง (persist ลง Supabase ให้รอด redeploy + เห็นข้าม invocation)
   autopostQueue.push(item);
-  saveAutopostQueue(autopostQueue);
+  persistAutopost(item);
   addLog('info', 'AutoPost', `📋 Queued: ${product} → ${platforms?.join('+')} @ ${item.schedule_at}`);
   res.json({ success: true, message: `เพิ่มใน queue แล้ว จะส่ง ${item.schedule_at}`, item });
 });
@@ -7453,15 +7531,14 @@ app.get('/api/autopost/status', (req, res) => {
 // ── Cron: ทุก 5 นาที ตรวจ queue ที่ถึงเวลา (local only) ─────────────────────
 if (!IS_VERCEL) {
   cron.schedule('*/5 * * * *', async () => {
-    const now = Date.now();
-    const pending = autopostQueue.filter(i => i.status === 'queued' && new Date(i.schedule_at).getTime() <= now);
+    const pending = await dueAutopostItems();
     for (const item of pending) {
       item.status = 'processing';
       const results = await dispatchAutoPost(item);
       item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
       item.results = results;
+      persistAutopost(item);
     }
-    if (pending.length > 0) saveAutopostQueue(autopostQueue);
   });
 }
 
@@ -7477,17 +7554,19 @@ app.get('/api/autopost/process', async (req, res) => {
   const adminOk = checkAdminKey(req.headers['x-admin-key'] || req.query.key);
   const cronOk  = !!process.env.CRON_SECRET && bearerToken === process.env.CRON_SECRET;
   if (!adminOk && !cronOk) return res.status(401).json({ success: false, message: adminDenyMessage() });
-  const now = Date.now();
-  const pending = autopostQueue.filter(i => i.status === 'queued' && new Date(i.schedule_at).getTime() <= now);
+  // Pull due items from Supabase (survives redeploy + visible across lambda invocations); falls back
+  // to the in-memory queue when Supabase isn't configured. This is what makes scheduled posts actually
+  // fire on Vercel, where the file-only queue was invisible to this cron invocation.
+  const pending = await dueAutopostItems();
   let processed = 0;
   for (const item of pending) {
     item.status = 'processing';
     const results = await dispatchAutoPost(item);
     item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
     item.results = results;
+    persistAutopost(item);
     processed++;
   }
-  if (processed > 0) saveAutopostQueue(autopostQueue);
   addLog('info', 'AutoPost', `🔄 Cron processed ${processed} queued posts`);
   res.json({ success: true, processed, ts: new Date().toISOString() });
 });

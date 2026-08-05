@@ -4780,3 +4780,57 @@ email (won't re-hydrate) and a forged erasure token → 403. Wired into package.
 tests unaffected: migration-coverage 20/20, full-migration-columns 67/67, payments-schema 18/18,
 pdpa-tenant 16/16; server boots + /api/health 200. Mutation-tested: pointing the boot hydrate at a wrong
 table stops the seeded email from being recognized and turns the test red; restored → 8/8.
+
+---
+
+## 2026-08-05 — DATA-LOSS/CORRECTNESS: scheduled auto-posts silently never fired on Vercel — now Supabase-durable
+
+Standing-order loop, marketing lane. Code scan of the auto-marketing engine found POST /api/autopost/queue
+(the "schedule a social post" feature) stored the queue in autopost_queue.json ONLY. On Vercel that file
+is under /tmp, which is (1) wiped on every redeploy (Vercel redeploys on every push) AND (2) private to
+each serverless lambda instance — so a post the POST invocation queued is invisible to the later
+/api/autopost/process cron invocation that is supposed to send it. The in-process cron.schedule fallback
+is also gated `if (!IS_VERCEL)`, so it never runs in production either. Net effect: any post scheduled
+for a future time was silently never sent on prod — a whole marketing-automation feature dead in the
+water. (Immediate posts, schedule_at ≈ now, still worked: they dispatch synchronously inside the POST
+handler before any /tmp/instance boundary matters. Only the SCHEDULED path was broken.) This is the same
+ephemeral-/tmp class already fixed for waitlist / broadcast_unsubscribes / pdpa_consents / payments — the
+autopost queue was simply missed, and here the /tmp being per-instance made it worse than pure redeploy
+loss.
+
+Fix: make the queue dual-mode (Supabase primary + file fallback), mirroring the waitlist pattern but for
+a store with MUTABLE status — hydrate the queue into memory on boot, upsert on every queue/status-change
+(persistAutopost, one item at a time so a queued→sent/failed transition is persisted immediately), and —
+the actual correctness fix — have /api/autopost/process (and the local cron) pull DUE items
+(status=queued & schedule_at≤now) straight from Supabase via a new dueAutopostItems() helper, so the cron
+sees posts queued by ANY instance and after ANY redeploy, not just what happens to be in this lambda's
+memory. Before the owner runs the migration it fails quietly and stays file-only (no regression). New
+migration backend/migrations/011_autopost_queue.sql (id PK, content/platforms/results jsonb, status,
+schedule_at, a (status, schedule_at) index for the due-query; RLS enabled — service_role only, matching
+the others).
+
+CORRECTION to the recommended Supabase set-up: it is now SIX files —
+`FULL-MIGRATION.sql + 003_ai_usage_log.sql + 008_broadcast_unsubscribes.sql + 009_pdpa_consents.sql +
+010_waitlist.sql + 011_autopost_queue.sql`. test-migration-coverage.mjs was updated
+(RECOMMENDED_MIGRATIONS + the "missing from FULL-MIGRATION" documentation list) and — because it
+auto-parses every `sbReq('POST', '/<table>')` call site — now auto-verifies autopost_queue is covered:
+22/22 (was 20).
+
+Verified against the REAL running server — new scripts/test-autopost-durability.mjs (10 checks) starts a
+mock Supabase, spawns server.js pointed at it (autopost_queue.json seeded EMPTY so any due item can only
+have come from Supabase): (1) /api/autopost/process with no key → 401 (it dispatches real outbound posts,
+must stay cron-only); (2) a post queued in a PRIOR deploy (Supabase-only) fires after the /tmp wipe —
+processed≥1 and its Supabase status flips off 'queued'; (3) a post queued by ANOTHER instance directly in
+Supabase AFTER this server booted (never in this process's memory) is still found and dispatched — the
+cross-invocation guarantee the file-only queue could never give; (4) a FUTURE-scheduled post is upserted
+to Supabase (durable) but NOT sent until due (processed=0). Wired into package.json + CI. Sibling suites
+unaffected: migration-coverage 22/22, waitlist-durability 8/8, broadcast-unsub 7/7, payments-schema
+18/18, withdraw-confirm 9/9; server boots + /api/health 200. Mutation-tested: forcing dueAutopostItems()
+back to the old in-memory-only filter makes the cross-instance post invisible (processed=0) and turns the
+test red; restored → 10/10. (Dispatch itself marks items 'failed' in the test since no LINE/FB tokens are
+set — irrelevant; the fix is about the queue being FOUND and processed after a wipe, not the send.)
+
+NOTE (still open, unchanged): the affiliate-payout double-payout finding from the prior round
+(withdrawals + withdraw_confirmations file-only, and _affFromRow resets paid_out to 0 on Supabase reload)
+is a MONEY path with legal implications — left untouched, awaiting the owner's go-ahead per standing-order
+rule 8. This round deliberately picked a non-money durability bug instead.
