@@ -98,6 +98,7 @@ jobs:
           npm run test:skills-endpoints
           npm run test:api-contract
           npm run test:auth-ratelimit
+          npm run test:portal-welcome-coverage
           npm run test:line-signature
       - name: Learning-feedback test (self-contained — rating aggregation + NaN-rejection guard)
         working-directory: backend
