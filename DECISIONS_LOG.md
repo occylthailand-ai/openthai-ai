@@ -5122,3 +5122,23 @@ the recommended set but not the runbook (or vice-versa) fails CI.
 Verified by running: migration-coverage 28/28 (was 26; +2). Mutation-tested: un-bolding the 013 entry in
 the README makes the guard report "MISSING: 013_video_jobs.sql" and turns it red; restored → 28/28. No app
 code changed; the guard rides the existing test:migration-coverage CI step.
+
+---
+
+## 2026-08-05 — Document 3 env vars the code reads but .env.example omitted (deployability gap)
+
+Standing-order loop (money path still owner-gated; waiting on Part A). Ran the rule-1 tool
+`scripts/generate-project-status.mjs` — it exits clean (no code↔registry drift) but flagged one real gap:
+3 env vars are read by backend code yet absent from backend/.env.example, so a deployer configuring from
+the example would never know they exist. Verified each is real and optional (safe default), then documented
+it in the right section (commented-out, since all three are optional):
+- `OMISE_API_URL` (omise-payment.js:9) — Omise API base, default https://api.omise.co; override only for
+  test/mock. Documented under the Omise section.
+- `WEBHOOK_RETRY_DELAYS` (webhook-system.js:77) — JSON array of retry backoff ms for outgoing tenant
+  webhooks; default lives in code. New "Outgoing webhooks" section.
+- `NODE_ENV` (auth.js:72, server.js:1302) — usually platform-set; =production turns on prod-like guards
+  (e.g. the guessable-default-admin block) on non-Vercel hosts. Documented under Server.
+
+Verified by running: re-running generate-project-status now prints "✅ every env var referenced in backend
+code is documented in .env.example" (was ⚠️ 3 missing). No code changed — documentation only; PROJECT_STATUS.md
+left un-committed as usual (it carries a per-run timestamp + a live prod-health probe).
