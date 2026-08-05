@@ -5044,3 +5044,32 @@ Verified by running: 28/28 pass. Mutation-tested: injecting a phantom catalog en
 (endpoint '/api/skills/ghost-nonexistent') turns the guard red; removing it → 28/28 green. No app code
 changed — this is a regression guard for the core product, in the spirit of the existing seoInvariants /
 migration-coverage / portalFieldCollision guards.
+
+---
+
+## 2026-08-05 — Guard the WHOLE-APP frontend↔backend API contract (generalizes the skills guard)
+
+Standing-order loop (money path still owner-gated, untouched). Extended last round's per-catalog skills
+guard to the entire app. Every endpoint the React app calls goes through apiUrl()/apiFetch(); if the
+frontend calls an /api path no backend route serves (a route renamed/removed, or a new call with a typo),
+the feature 404s the moment a user touches it and no unit test catches it — the exact class the repo was
+bitten by (7 /portals/* pages → /api/leads/submit, which didn't exist; every form silently failed).
+
+First VERIFIED the current contract is fully intact: extracted all 165 distinct /api endpoints the
+frontend passes to apiUrl/apiFetch and cross-checked against all backend routes — every one resolves to a
+real handler (the lone raw-grep miss, `/api/usage${email?…}`, was an extraction artifact of a ternary
+query-string, not a real gap: backend has app.get('/api/usage') at server.js:464). Reliable because the
+routing is flat — every router mounts via app.use(x.router) with NO path prefix and every route (server.js
++ the router modules) is declared with a full '/api/...' literal, so a static scan of
+app|router.<verb>('/api/...') is the complete authoritative route set.
+
+Added scripts/test-api-contract.mjs: scans every .jsx/.tsx under frontend/src for apiUrl/apiFetch calls
+(parsing template literals via balanced-brace ${…} handling so `/api/usage${…}` → /api/usage and
+`/api/orders/${id}/status` → a wildcard segment), scans all backend .js for app|router routes, and asserts
+each frontend endpoint matches a route (path params :id and ${id} both normalized to one wildcard segment;
+query strings ignored). Wired into package.json (test:api-contract) + CI. Complements — doesn't replace —
+test-skills-endpoints (which pins the visible skills catalog specifically).
+
+Verified by running: 165/165 pass. Mutation-tested: injecting apiFetch('/api/phantom-does-not-exist') in a
+page turns the guard red; removing it → 165/165 green. No app code changed — a regression guard for the
+core customer-facing contract, in the spirit of the existing seoInvariants / migration-coverage guards.

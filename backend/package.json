@@ -73,7 +73,8 @@
     "test:autopost-durability": "node scripts/test-autopost-durability.mjs",
     "test:scheduler-durability": "node scripts/test-scheduler-durability.mjs",
     "test:video-jobs-durability": "node scripts/test-video-jobs-durability.mjs",
-    "test:skills-endpoints": "node scripts/test-skills-endpoints.mjs"
+    "test:skills-endpoints": "node scripts/test-skills-endpoints.mjs",
+    "test:api-contract": "node scripts/test-api-contract.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
