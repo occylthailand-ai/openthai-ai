@@ -5170,3 +5170,32 @@ Every technical claim verified before writing: JWT_SECRET behaviour corrected �
 "forgeable constant" the first draft said; fixed the doc to describe the real impact (links won't verify
 reliably until JWT_SECRET is set). Confirmed: migrations/README.md exists, v9.0 still has no package.json,
 shop-checkout credit line present. Documentation only; no code changed.
+
+---
+
+## 2026-08-05 — SECURITY/COST: rate-limit the admin-credential auth endpoints + the paid TTS endpoint (were unthrottled)
+
+Standing-order loop (money path still owner-gated). Audited rate-limit coverage on public/costly endpoints
+(backend/CLAUDE.md: "every route group must go through express-rate-limit"). Every AI-generation endpoint is
+already capped (generateLimiter/competitorLimiter/voiceLimiter). Found FOUR that were not:
+- `/api/auth/override` — returns an ADMIN token on a correct override key. No limiter → the override key was
+  brute-forceable with no throttle.
+- `/api/auth/recovery` — returns an ADMIN token on a valid recovery code. No limiter → recovery codes
+  brute-forceable.
+- `/api/auth/recovery-codes/generate` — issues fresh recovery codes on the override key. No limiter.
+  (`/api/auth/login` already had authLimiter — these three siblings were missed.)
+- `/api/tts` — calls the PAID ElevenLabs API on the platform key; public (VoiceCommander runs on public
+  pages) with no throttle → loopable to drain the ElevenLabs budget, the exact real-money exposure the
+  AI/voice/competitor endpoints already cap.
+
+Fix (matches the existing pattern, non-breaking — limiters allow normal use): add `authLimiter` (20/15min
+per IP, same as login) to the three auth endpoints; add a new `ttsLimiter` (20/min, defined before the
+route since voiceLimiter is declared later in the file) to /api/tts. No auth added to /api/tts so the
+public VoiceCommander keeps working — a throttle is the right, non-breaking control there.
+
+Verified against the REAL running server: hammering /api/auth/override 25× with a wrong key returns 20×401
+then 429 (authLimiter engaged); /api/tts returns 20×503 (no key configured — but the limiter runs first)
+then 429. Existing auth flows unaffected: recovery-code 11/11, corporate-auth 9/9, video-auth 6/6 (all make
+< 20 requests). New scripts/test-auth-ratelimit.mjs (5 checks) boots the server and asserts each endpoint
+starts 429-ing once its limiter trips; wired into package.json + CI. Mutation-tested: removing authLimiter
+from /api/auth/override makes the 429 never appear and turns the test red; restored → 5/5. node --check clean.

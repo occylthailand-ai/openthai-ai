@@ -5962,7 +5962,11 @@ app.get('/api/line/status', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  ELEVENLABS TTS
 // ═══════════════════════════════════════════════════════════════════════════════
-app.post('/api/tts', express.json({ limit: '10kb' }), async (req, res) => {
+// TTS hits the PAID ElevenLabs API on the platform's key. It's public (no login — VoiceCommander can run
+// on public pages) and had no throttle, so anyone could POST in a loop and drain the ElevenLabs budget —
+// the same real-money exposure the AI/voice/competitor endpoints already cap. Rate-limit it too.
+const ttsLimiter = rateLimit({ windowMs: 60000, max: 20, message: { error: 'Text-to-speech rate limit exceeded' } });
+app.post('/api/tts', ttsLimiter, express.json({ limit: '10kb' }), async (req, res) => {
   const { text, voiceId } = req.body || {};
   if (!text) return res.status(400).json({ error: 'ต้องการ text' });
 
@@ -7103,7 +7107,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 });
 
 // ─── POST /api/auth/override — Admin Override Key (emergency) ─────────────────
-app.post('/api/auth/override', (req, res) => {
+app.post('/api/auth/override', authLimiter, (req, res) => {
   const { key } = req.body || {};
   if (!checkOverrideKey(key))
     return res.status(401).json({ error: 'Override key ไม่ถูกต้อง' });
@@ -7113,7 +7117,7 @@ app.post('/api/auth/override', (req, res) => {
 });
 
 // ─── POST /api/auth/recovery — One-time Recovery Code ────────────────────────
-app.post('/api/auth/recovery', (req, res) => {
+app.post('/api/auth/recovery', authLimiter, (req, res) => {
   const { code } = req.body || {};
   if (!code) return res.status(400).json({ error: 'กรุณาใส่ recovery code' });
 
@@ -7227,7 +7231,7 @@ app.put('/api/sync', requireAuth, express.json({ limit: '1mb' }), async (req, re
 
 // ─── GET /api/auth/recovery-codes/generate — สร้าง recovery codes ใหม่ ──────
 // ต้องใช้ ADMIN_OVERRIDE_KEY เพื่อขอ codes ใหม่
-app.post('/api/auth/recovery-codes/generate', (req, res) => {
+app.post('/api/auth/recovery-codes/generate', authLimiter, (req, res) => {
   const { key } = req.body || {};
   if (!checkOverrideKey(key))
     return res.status(401).json({ error: 'Override key ไม่ถูกต้อง' });

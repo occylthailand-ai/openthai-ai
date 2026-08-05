@@ -74,7 +74,8 @@
     "test:scheduler-durability": "node scripts/test-scheduler-durability.mjs",
     "test:video-jobs-durability": "node scripts/test-video-jobs-durability.mjs",
     "test:skills-endpoints": "node scripts/test-skills-endpoints.mjs",
-    "test:api-contract": "node scripts/test-api-contract.mjs"
+    "test:api-contract": "node scripts/test-api-contract.mjs",
+    "test:auth-ratelimit": "node scripts/test-auth-ratelimit.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
