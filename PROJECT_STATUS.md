@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-07-30T13:19:53.657Z · branch `claude/daily-reporter-improvements-8vc9ct` (563 commit(s) ahead of main)
+Generated: 2026-08-05T21:23:43.441Z · branch `claude/daily-reporter-improvements-8vc9ct` (600 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 773 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 674 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -4112,63 +4112,1154 @@ Sweep conclusion: the three public order/checkout forms (/catalog, /contact, /st
 all associate every field with its label; TrackOrderPage and the /portals/* funnel forms
 were already correct in prior rounds.
 
+---
+
+## 2026-07-30 — SEO: enrich the Organization JSON-LD entity (description + ContactPoint)
+
+The Organization node in `frontend/index.html`'s `application/ld+json` @graph — the entity
+Google reads to build the site's Knowledge Graph presence (Knowledge Panel, contact
+surfacing) — carried only name/url/logo. It advertised no description and no way to reach
+the org, which is a real discoverability gap for a platform trying to enter the market
+quickly. WebSite/SoftwareApplication/FAQPage/BreadcrumbList structured data already existed
+and is well-tested; only Organization was thin.
+
+Change (grounded entirely in already-verified repo facts, no new external claims):
+- `description`: reused the exact SoftwareApplication description already in the same block
+  ("AI ไทยแท้ สร้างคอนเทนต์ TikTok …") — no new marketing copy invented.
+- `email` + `contactPoint` (ContactType "customer support"): email is `support@openthai.ai`,
+  the same support address the public /contact page (ContactPage.jsx) already renders as its
+  mailto: Email channel — not a new address.
+- `availableLanguage: [Thai, English, Chinese]`: matches i18n LANGS (th/en/zh), the verified
+  trilingual support the platform actually offers.
+- `areaServed: TH`.
+
+Verified: new `frontend/src/__tests__/organizationSchema.test.js` (2 tests) parses the
+index.html ld+json, asserts the Organization node's description + ContactPoint shape, and
+pins the ContactPoint email to the support address read out of ContactPage.jsx so the two
+hand-maintained copies can't silently drift (same drift-guard pattern as
+planPricingConsistency.test.js). Full frontend suite 298/298 (34 files), `npm run build`
+clean, and the built dist/index.html Organization node re-parsed as valid JSON-LD with all
+three new fields present. Mutation-tested: drifting the ContactPoint email → drift-guard
+red; removing the description → shape test red; both restored → green.
+
+---
+
+## 2026-07-30 — escape producer company/product in the approval email (last raw-interpolation email)
+
+Scanning the backend money paths for the NaN/Infinity class just fixed in smart-e confirmed
+openthai-ai is already safe there (inventory.js `num()` uses Number.isFinite; shop-checkout
+computes the charge from the stored, validated price × a clamped qty; the affiliate-withdraw
+amount is caught by its `>avail` / `!(amount>0)` guards). No change needed — reported "no gap"
+rather than manufacturing one.
+
+The real gap found in the same sweep: `sendProducerApproval` was the ONE notification email in
+server.js still interpolating producer-entered fields (`company`, `product_name`) RAW into the
+HTML — every other email here already escapes user data (portal-welcome copy, lead-detail rows,
+affiliate-welcome, consumer-digest, low-stock). Beyond the XSS class the module header describes
+(clip()'s /<[^>]*>/g is bypassable by an unclosed `<`), this is a plain correctness bug for
+LEGITIMATE producers: a Thai shop name with `&` (e.g. "S & P") or `<`/`>` renders garbled in the
+very email that tells them "your shop is approved" — a key trust moment in the producer funnel.
+
+Fix: extracted the body into `producerApprovalHtml({ to, company, productName, domainUrl })` in
+html-escape.js (same "pure builder + unit test" pattern as lowStockAlertHtml / affiliateWelcomeHtml
+/ consumerDigestHtml), escaping company + productName at the insertion point; `to` only lands in the
+manage-link URL via encodeURIComponent. server.js now imports and calls it (inline HTML removed).
+
+Verified: test-html-escape.mjs +7 assertions (escaped `<img onerror>`/`<script>` payloads, an "S & P"
+ampersand rendering as `S &amp; P`, empty company/product degrading to generic wording, and the
+URL-encoded manage link) → 43/43 pass. Mutation-tested: reverting to raw company/productName turns
+4 assertions red; restored → green. `node --check server.js` clean and the server boots with
+/api/health → 200 (the new import resolves). test:html-escape is already wired into CI.
+
+---
+
+## 2026-07-30 — fix CSV formula-injection in the admin leads export (untrusted public input → admin's spreadsheet)
+
+Continuing the untrusted-input sweep (email escaping the round before), the admin
+"⬇️ CSV" leads export (AdminPage.jsx) was found to be vulnerable to CSV Injection /
+Formula Injection (OWASP). It serialized name/contact/detail — fields filled in by
+PUBLIC portal-form submitters — with only `"${v.replace(/"/g,'""')}"` quoting. That
+makes the file PARSE correctly but does NOT stop a spreadsheet from EXECUTING a cell:
+Excel/LibreOffice/Google Sheets strip the CSV quotes, then evaluate any cell whose text
+starts with `=`, `+`, `-`, `@` (or a tab/CR) as a formula. So a submitter entering a name
+like `=HYPERLINK("http://evil","click")` or a DDE payload `=cmd|'/c calc'!A1` gets it run
+on the admin's machine the moment they open the exported leads file. The victim is the
+platform operator, through the very data the consent funnel collects.
+
+Fix: extracted the serialization into `src/lib/csv.js` (`csvCell` + `toCsv`), which prefixes
+any cell beginning with a formula-trigger char with a single quote (the OWASP mitigation —
+Excel hides the leading `'` on display, so a `+66…` phone still reads as `+66…`), then applies
+the existing CSV quoting. AdminPage imports `toCsv`; the inline serializer is gone. This was
+the only CSV export in the frontend.
+
+Verified: new `src/__tests__/csvInjection.test.js` (9 tests) pins that `=/+/-/@`/tab/CR-leading
+cells are defused, ordinary values (Thai names, emails with a non-leading @, phones, null/undefined)
+are untouched, embedded quotes still escape, and full rows serialize correctly. Full frontend suite
+307/307, `npm run build` clean. Mutation-tested: disabling the formula-lead guard turns the injection
+assertions red; restored → green. (Frontend CI runs every vitest file, so this is covered automatically.)
+
+---
+
+## 2026-07-30 — add /.well-known/security.txt (RFC 9116 responsible-disclosure channel)
+
+Sweep of the security/compliance surface confirmed the high-impact paths are already solid this
+session (money paths guard NaN/Inf via Number.isFinite; all notification emails now escape; the
+admin CSV export defuses formula-injection; the PDPA access-download's Content-Disposition filename
+is header-injection-safe in practice — token-gated and Node rejects CR/LF in header values). One
+genuine gap remained: the platform handles PDPA-covered PII + PromptPay/card payments but published
+no security contact, so a researcher who found a bug had no clear way to report it privately.
+
+Added `frontend/public/.well-known/security.txt` (RFC 9116) with the real privacy inbox
+(mailto:privacy@openthai.ai — the same address ContactPage publishes for PDPA/Privacy), the /contact
+page, a required Expires, Preferred-Languages th/en, Canonical, and Policy → /privacy. No new
+external claims: every URL/email already exists in the repo.
+
+Verified: confirmed at authoring time that Vite copies public/.well-known → dist (probe file), and
+`npm run build` emits dist/.well-known/security.txt. New `src/__tests__/securityTxt.test.js` (3 tests)
+asserts the RFC-required Contact (incl. the real privacy mailto) and exactly one Expires, and — as a
+renewal alarm — that Expires is still in the FUTURE, so CI fails before the published policy silently
+lapses. Full frontend suite 310/310, build clean. Mutation-tested: setting Expires to a past date
+turns the alarm assertion red; restored → green. (Runs in CI via vitest.)
+
+---
+
+## 2026-07-30 — fix the 404 page's recovery CTA sending anonymous visitors into a login wall
+
+Audit of the funnel/recovery paths (portal consent-gating and category capture verified consistent
+across all 9 /portals/* pages; LINE webhook signature verify in smart-e confirmed fail-closed +
+constant-time; all-platform-files' 192 "missing viewport" files verified to be HTML fragments
+injected into parent pages, correctly headless — not a bug) surfaced one real conversion defect:
+NotFoundPage's secondary CTA ("⚡ ลอง AI Generator") navigated to /ai-generator, which App.jsx
+gates behind auth (`isAuthenticated ? <AIGeneratorPage/> : <Navigate to="/login"/>`). The typical
+404 hitter is an ANONYMOUS visitor (mistyped/old/spam-crawled URL), so that CTA dead-ended them on
+the login wall instead of guiding them into the funnel.
+
+Fix: point the CTA at /ai-skills — the PUBLIC showcase of the same 35+ AI tools (App.jsx route has
+no auth gate; it's in ROUTES + robots Allow, and itself carries sign-up CTAs) — relabeled
+"⚡ ดูเครื่องมือ AI". Now every 404 recovery path is public and never bounces to /login. One-line
+target change; the noindex soft-404 guard is untouched.
+
+Verified: new `src/__tests__/notFoundRecoveryLinks.test.jsx` (2 tests) renders the page inside a
+router that MIRRORS the real auth gate (/ai-generator → Navigate to /login), clicks each CTA, and
+asserts the primary reaches home and the secondary reaches the public page — NOT the login wall.
+Full frontend suite 312/312, `npm run build` clean. Mutation-tested: reverting the CTA to
+/ai-generator makes the anonymous visitor land on /login and the secondary test fails. Runs in CI.
+
+---
+
+## 2026-07-30 — homepage "ดูทักษะทั้งหมด" CTA dead-ended anonymous visitors at /login
+
+Continuing the public-CTA→login-wall audit started with the 404 fix, I enumerated all 32
+login-gated routes (App.jsx `isAuthenticated ? … : <Navigate to="/login"/>`) and grepped the
+public marketing pages for CTAs pointing at them. Findings:
+
+- **Real bug (fixed):** LandingPage's AI-skills showcase had a "ดูทักษะทั้งหมด →" (See all skills)
+  button → /skills-catalog, which is auth-gated. Its intent is EXPLORE, not sign-up, and there is a
+  dedicated PUBLIC page for exactly this — /ai-skills ("ดูรายการทั้งหมดก่อนสมัคร", in ROUTES + robots
+  Allow, itself carrying sign-up CTAs). On the highest-traffic page, a curious anonymous visitor was
+  bounced to the login wall instead of the public list. Changed the target to /ai-skills.
+- **Left as-is (intended funnel, NOT bugs):** the "เริ่มฟรี / Start Free" CTAs (LandingPage
+  handleFreeStart, the free-plan buttons, PricingPage free tier) go to /ai-generator → /login. That
+  is the intended sign-up entry, not a dead-end — changing it would depend on the registration model
+  (LoginPage offers password-login/Google/recovery but no self-serve username sign-up; whether Google
+  OAuth self-registers vs. an allowlist is a product decision), which is owner-gated (rule 8). Not touched.
+- **Not added (unverified data):** the repo has no real brand social profiles — the only social
+  strings are a LINE share deep-link, a Facebook sharer URL, and `tiktok.com/@yourhandle` (a form
+  PLACEHOLDER). So no Organization `sameAs` was added — that would be building on unverified data.
+
+Verified: new `src/__tests__/landingSkillsCta.test.jsx` mocks /api/skills, renders LandingPage in a
+router that MIRRORS the real gate (/skills-catalog → Navigate to /login), clicks the CTA, and asserts
+it reaches the public list — not the login wall. Full frontend suite 313/313, `npm run build` clean.
+Mutation-tested: reverting the target to /skills-catalog makes the anonymous visitor hit /login and
+the test fails. Runs in CI.
+
+---
+
+## 2026-07-30 — add a PDPA consent notice to the homepage newsletter signup (the one PII capture missing it)
+
+Continuing the funnel/consent audit: the homepage hero email capture (`/api/waitlist`, source
+'landing-hero') is a WEEKLY MARKETING newsletter (i18n email.desc: "เคล็ดลับ TikTok + แนวโน้มเทรนด์
+ไทย ส่งทุกอาทิตย์"). It collected the subscriber's email (PII, for marketing follow-up) with NO
+consent notice or privacy-policy reference at the point of collection — the privacy link lived only
+in the far-away footer. This was the ONE PII-collection point in the app lacking a notice: the
+/portals/* signups gate on an explicit consent checkbox (backend enforces consent:true), and the
+/contact form already shows "โดยการส่งข้อความ คุณยอมรับ[นโยบายความเป็นส่วนตัว]". For a project whose
+whole ethos is consent-first (owner standing order, rule 3), a marketing newsletter with no notice
+is a real PDPA gap.
+
+Fix: added a consent microtext directly under the join form — "เมื่อกดสมัคร คุณยอมรับ [นโยบายความ
+เป็นส่วนตัว]" linking to /privacy — mirroring the /contact pattern exactly. Localized in all three
+languages (th/en/zh) via new i18n keys email.consentPre / email.consentLink. This is notice-based
+informed consent (the user's affirmative action is typing their email to subscribe); it deliberately
+does NOT add a blocking checkbox, which would add friction to a hero capture — same balance the
+/contact form strikes. Backend waitlist handler already validates/sanitizes/dedups the email and
+sends a confirmation email; no backend change needed.
+
+Verified: new `src/__tests__/landingConsentNotice.test.jsx` (2 tests) asserts the notice renders at
+the capture point and the privacy link navigates to /privacy. Full frontend suite 315/315,
+`npm run build` clean. Mutation-tested: removing the notice block turns both assertions red;
+restored → green. Runs in CI.
+
+---
+
+## 2026-07-30 — add a PDPA privacy notice to the /store and /catalog order forms (completes the transparency sweep)
+
+Completed the point-of-collection transparency audit begun with the newsletter fix. Confirmed every
+other PII capture already informs the user: /portals/* gate on a consent checkbox, /contact and the
+homepage newsletter show a privacy microtext, /affiliate has a consent checkbox + PDPA link, and the
+marketplace/store order backends already email the buyer a confirmation (sendBuyerOrderConfirmation /
+sendShopReceipt). The only remaining PII-collection surfaces WITHOUT any notice were the two order
+modals (/store BuyModal and /catalog OrderModal), which collect name/contact/address.
+
+Fix: added a transparency notice under the submit button in both modals — "ข้อมูลของคุณใช้เพื่อ
+ดำเนินการและจัดส่งคำสั่งซื้อ ตาม[นโยบายความเป็นส่วนตัว]" with a /privacy link (opens in a new tab so it
+doesn't discard the in-progress order). Both forms already share the `mk.*` i18n system, so this is a
+single new key pair (mk.ord.privacyPre / mk.ord.privacyLink) localized th/en/zh, used in both. Order
+data is processed on a contract-necessity basis (fulfilment), so this is a transparency notice, not a
+blocking consent checkbox — matching the newsletter/contact pattern.
+
+Verified: new `src/__tests__/orderPrivacyNotice.test.jsx` (2 tests) opens each modal (mocking
+/api/catalog and /api/shop/products) and asserts the notice text plus a link whose href is /privacy.
+Full frontend suite 317/317, `npm run build` clean. Mutation-tested: removing the notice from StorePage
+turns the store assertion red (catalog still green); restored → green. Runs in CI.
+
+Transparency sweep conclusion: every PII-collection point in the app now carries a consent checkbox or
+a privacy notice at the point of collection.
+
+---
+
+## 2026-07-31 — full-surface audit: code verified solid; the remaining high-impact work is owner-gated
+
+This round I ran a wide verification pass instead of shipping a change, because the readily
+completable, high-impact gaps have now been closed over the preceding rounds and I would otherwise
+be manufacturing low-value edits (which this repo's rules explicitly warn against). What I checked
+this round and confirmed already-solid, each verified against the actual code (not assumed):
+
+- **Injection/security**: smart-e's two dynamic `UPDATE … SET {fields}` build `fields` from a FIXED
+  column allowlist (values via `?`), so no SQL injection; LINE webhook is HMAC-verified + constant-time;
+  the admin CSV export defuses formula-injection; every notification email escapes user input.
+- **Money**: NaN/Inf rejected in smart-e; openthai-ai checkout derives the charge from stored,
+  validated price × clamped qty; affiliate withdraw is caught by its `>avail` / `!(amount>0)` guards.
+- **Consent/PDPA**: every PII-collection point now carries a consent checkbox or a privacy notice
+  (portals, /contact, /affiliate, homepage newsletter, /store + /catalog order forms); the /privacy
+  page is a complete PDPA policy AND wires self-service Access + Erasure to the real endpoints.
+- **Funnel/UX**: no public CTA dead-ends into /login (404 + landing fixed); all navigate()/href
+  targets resolve to real routes; ErrorBoundary + Suspense fallback wrap the app.
+- **AI cost/abuse**: every AI/generate endpoint has an appropriate limiter (generate/competitor/
+  voice/video/admin); recovery-codes/generate is override-key gated.
+- **SEO/PWA**: robots↔sitemap↔routes invariant enforced by test; Organization/WebSite/SoftwareApplication/
+  FAQPage/BreadcrumbList JSON-LD present; manifest + icons valid; security.txt published. (No
+  Organization `sameAs` and no WebSite `SearchAction` were added — the repo has neither real brand
+  social profiles nor a URL-driven search endpoint, so adding them would fabricate capability.)
+
+**Owner decisions needed to unblock the next tier of high-impact work** (I cannot do these without
+owner input — they need production credentials or a product/architecture call, per rule 8):
+
+1. **Run Supabase migrations 008_broadcast_unsubscribes.sql + 009_pdpa_consents.sql** — HIGHEST impact
+   & concrete. The code falls back to a local file, but on Vercel's ephemeral FS the unsubscribe
+   suppression list is wiped on every deploy (server.js:805), so people who opted out get re-subscribed
+   — a real PDPA problem. Running the two migrations makes opt-outs + proof-of-consent durable. Needs
+   someone with Supabase access to apply them.
+2. **otop-ai-landing production domain** — to finish its SEO: point og:image back at the OTOP-branded
+   image and add og:url + canonical (all need the real deploy domain; I shipped an interim absolute
+   og:image to the shared brand asset so sharing works now).
+3. **all-platform-files duplicate content** — 199/217 `OpenThaiAI_*_Roadmap.html` duplicate the
+   `-roadmap-section.html` set. Decide delete / add rel=canonical / keep.
+4. **OpenThai-AI-v9.0** — it's a Next.js scaffold (2 real files, no package.json, not runnable). Needs
+   an architecture decision before it can be built out and verified.
+
+No code shipped this round by design; this entry is the deliverable (a verified status + a decision
+menu). Recommended next action: (1) above — it's the only one that's a pure ops task with clear PDPA value.
+
+---
+
+## 2026-07-31 — verify migrations 008/009 against the code + add a schema drift-guard (de-risks the owner's #1 action)
+
+Follow-up to yesterday's blocker list: before the owner runs migrations 008/009 in Supabase, I
+verified the SQL actually matches what the code reads/writes, so the migration works first try:
+- `008_broadcast_unsubscribes.sql` — code only touches `email` (hydrate `select: email`, upsert
+  `{email}`); migration = `email` PK + `created_at` default. Match.
+- `009_pdpa_consents.sql` — the consent record POSTed to PostgREST is `{id, email, ip, purposes,
+  version, consented, ts}`; migration defines exactly those 7 columns. Exact match.
+Both use `create table if not exists` (idempotent) and `enable row level security` with no policy —
+correct here, since only the `service_role` key (which the backend uses) bypasses RLS, so anon access
+is denied by default.
+
+To keep that match from silently drifting (a field added to the record with no column → PostgREST
+400 → silent fall back to the ephemeral /tmp file → consent proofs wiped every redeploy, the exact
+bug 009 fixes), I extracted the consent-record construction into `backend/pdpa-consent.js`
+(`buildConsentRecord` + `CONSENT_COLUMNS`) — same "pure module + test" pattern as html-escape.js /
+ai-json.js — and server.js now imports it (inline object removed). New
+`scripts/test-pdpa-consent-schema.mjs` (16 checks) pins the record shape, its value normalisation
+(email lowercased/trimmed/capped-254, scalar purpose → array, consented always true, id/ts from an
+injectable clock), and — the point — parses the migration SQL and asserts every column the code
+writes exists in 009, plus that 008 has `email`. Wired into package.json + CI (test.yml no-server block).
+
+Verified: `node --check` clean; schema test 16/16; the app boots and `POST /api/privacy/consent`
+returns success with the email lowercased and purposes preserved (buildConsentRecord works live); the
+existing self-boot `test:consent-durability` (real endpoint + mock Supabase upsert/delete) still
+9/9; sibling unit tests unaffected. Mutation-tested BOTH drift directions: adding a `device_id` field
+to the record (not in the migration) → red; dropping the `purposes` column from 009 → red; restored → green.
+
+---
+
+## 2026-07-31 — CRITICAL schema landmine: two incompatible `payments` tables in migrations; guard the money path
+
+Extending the schema-drift audit to the money tables, I found a real, latent, money-critical bug:
+the migrations define the `payments` table TWICE with INCOMPATIBLE schemas.
+
+- `migrations/FULL-MIGRATION.sql` → FLAT: `charge_id` (PK), email, plan, method, amount_thb, status,
+  paid, paid_at, mock_mode, created_at. **This is exactly what the code writes** (server.js
+  savePayments → `_sbReq('POST','/payments', on_conflict=charge_id)`), verified column-by-column.
+- `migrations/002_subscriptions_payments.sql` → NORMALIZED: id (uuid PK), user_id NOT NULL FK →
+  users(id), subscription_id FK, plan_id, omise_charge_id UNIQUE, metadata, updated_at, etc. It has
+  NONE of `charge_id / email / plan / paid / mock_mode`. The code never writes this shape.
+
+Impact: if Supabase is set up by running the numbered migrations (…002…) rather than
+FULL-MIGRATION.sql, every payment upsert fails at PostgREST (missing charge_id/mock_mode columns +
+`user_id NOT NULL` with no value), so the code silently falls back to the ephemeral /tmp
+payments.json — and every payment/revenue record is lost on the next Vercel redeploy. A money-data-loss
+landmine hiding in the migration set.
+
+What I did (safe + non-gated): extracted the upsert-row builder into `backend/payment-row.js`
+(`buildPaymentRow` + `PAYMENT_COLUMNS`), server.js imports it (inline object removed), and added
+`scripts/test-payments-schema.mjs` (18 checks) that (a) pins the row shape + coercions, (b) asserts
+FULL-MIGRATION.sql's payments defines every column the code writes, and (c) explicitly documents the
+002 mismatch — it lists the columns 002 is missing so the incompatibility can never be silently
+forgotten. Wired into package.json + CI.
+
+Verified: node --check clean; schema test 18/18; server boots (/api/health 200); the existing
+payment self-boot tests still green (payment-status-idempotent 6, webhook-idempotent 7,
+discount-charge 8). Mutation-tested both ways (drop mock_mode from FULL-MIGRATION → red; add a bogus
+column to the code row → red).
+
+**OWNER DECISION NEEDED (adds to the 2026-07-31 blocker list):** reconcile the two payments schemas —
+the safe path is to set up Supabase from FULL-MIGRATION.sql (matches the code) and treat 002's
+`payments` table as superseded, OR migrate the code to 002's normalized schema (much larger change).
+Until then: **when creating the Supabase tables, use FULL-MIGRATION.sql's flat `payments` table, not
+002's.** I did not alter either .sql file — which schema is canonical is a data-model decision (rule 8).
+
+---
+
+## 2026-07-31 — CORRECTION: FULL-MIGRATION.sql alone is NOT the complete Supabase set-up
+
+Following the payments-schema finding, I audited whether FULL-MIGRATION.sql (which the previous entry
+recommended running) actually creates EVERY table the backend upserts to. It does not. Parsing all
+`[_]sbReq('POST','/<table>')` call sites gives 14 code-upserted tables; FULL-MIGRATION.sql defines 11
+of them and is MISSING three:
+- `ai_usage_log` → defined only in `003_ai_usage_log.sql`
+- `broadcast_unsubscribes` → defined only in `008_broadcast_unsubscribes.sql`
+- `pdpa_consents` → defined only in `009_pdpa_consents.sql`
+
+So running FULL-MIGRATION alone leaves those three uncreated, and the code keeps falling back to the
+ephemeral /tmp files: AI-usage logging stays off, and the newsletter-unsubscribe list + PDPA consent
+proofs are wiped on every Vercel redeploy (the exact PDPA durability bug). (ai_usage_log fails safe —
+the code detects the missing table and disables logging — but 008/009 are the real PDPA gap.)
+
+**CORRECTED, COMPLETE Supabase set-up (run all four, in the Supabase SQL editor):**
+`FULL-MIGRATION.sql` + `003_ai_usage_log.sql` + `008_broadcast_unsubscribes.sql` + `009_pdpa_consents.sql`
+(all are idempotent `create table if not exists`, safe to run/re-run in any order). Use FULL-MIGRATION's
+flat `payments` table, NOT 002's (see the prior payments entry).
+
+Codified this so the guidance can't silently drift: new `scripts/test-migration-coverage.mjs` (18 checks)
+parses the code's POST-upsert targets and asserts every one is created by that four-file set, and
+explicitly documents the three tables FULL-MIGRATION lacks + which file supplies each. It auto-catches a
+future upsert to a table no migration covers. Wired into package.json + CI.
+
+Verified: coverage test 18/18; parsed all 14 tables correctly. Mutation-tested: dropping 009 from the
+recommended set makes `pdpa_consents` uncovered → red; restored → green. No SQL files were altered — I
+did not consolidate the tables into FULL-MIGRATION to avoid a risky hand-transcription of DDL; the
+four-file recipe + the test are the safe, verified deliverable. (This sharpens blocker #1 from
+2026-07-31: it is not one migration to run, it is these four.)
+
+---
+
+## 2026-07-31 — schema audit COMPLETE: FULL-MIGRATION verified complete for the money path (+ column guard)
+
+Finished the money/data-table schema audit begun with the payments landmine. Verified — column by
+column against the actual code — that the recommended file FULL-MIGRATION.sql carries every column the
+backend upserts for: orders (orders.js place → 19 fields incl escrow_status), producers (needs stock),
+products + stock_movements (inventory.js), credits (credits.js toRow), entitlements + user_sync
+(server.js). All match. credits-schema.sql is identical to FULL-MIGRATION's credits.
+
+Two more (smaller) incremental-path gaps found, both already folded into FULL-MIGRATION so they only
+bite if you run the OLD standalone files instead:
+- `orders-schema.sql` alone lacks `orders.escrow_status` (added later by 006_order_disputes.sql; present
+  in FULL-MIGRATION).
+- `producers-schema.sql` alone lacks `producers.stock` (added by 001-shipping-stock.sql; present in
+  FULL-MIGRATION).
+Conclusion: **FULL-MIGRATION.sql + 003 + 008 + 009 is complete and correct for the entire code write
+path** — the only true conflict remains the payments 002-vs-FULL one (guarded 2026-07-31). Do NOT run
+the superseded 000-all-in-one.sql / 002 / *-schema.sql files; they are older/partial.
+
+New `scripts/test-full-migration-columns.mjs` (67 checks) pins that FULL-MIGRATION (the file the owner
+runs) contains every column the code writes for orders/producers/products/stock_movements/credits/
+entitlements/user_sync — so a future edit that drops one (silently breaking the Supabase upsert → data
+lost on redeploy) fails CI. Wired into package.json + CI.
+
+Verified: 67/67; mutation-tested (drop orders.escrow_status from FULL-MIGRATION → red; restored → green).
+No SQL files altered. Together with the payments + migration-coverage guards, the Supabase set-up recipe
+(FULL-MIGRATION + 003 + 008 + 009) is now CI-verified end-to-end for table presence AND column completeness.
+
+---
+
+## 2026-07-31 — SEO: /faq FAQPage structured data now in the prerendered HTML (rich-result eligibility for non-JS crawlers)
+
+The /faq page already emitted FAQPage JSON-LD, but ONLY client-side (FaqPage.jsx, via
+dangerouslySetInnerHTML after hydration). The prerendered /faq/index.html — the first HTML byte a
+non-JS crawler actually reads (Bing, the LINE link-preview bot, Googlebot's first HTML pass) — carried
+Organization + WebSite + SoftwareApplication + BreadcrumbList but NO FAQPage schema, so the page's
+eligibility for Google's FAQ rich result (the expandable Q&A accordion in search results — major SERP
+real estate + CTR for organic discovery) depended entirely on Google's slower, unreliable second
+render pass, and non-Google engines never saw it at all.
+
+Fix: prerender the FAQPage schema into /faq/index.html, the same way BreadcrumbList is already injected
+per route. To keep the visible Q&A and the structured data from drifting (Google drops the rich result
+when they disagree), the 8 Q&A pairs (th/en/zh) were extracted to a single source of truth,
+`frontend/src/data/faqContent.js` (`FAQ_ITEMS`), which BOTH FaqPage.jsx renders AND
+`scripts/route-meta.mjs` builds the injected JSON-LD from. New `faqPageJsonLd()` in route-meta.mjs
+builds it from FAQ_ITEMS.th (the language /faq defaults to on first load, so the schema matches
+first-paint content); applyRouteMeta injects it for path === '/faq' only, reusing the existing
+throw-on-no-op guard.
+
+Verified: full frontend suite 324/324 green; real `npm run build` writes dist/faq/index.html with
+exactly one FAQPage schema (8 questions) + its BreadcrumbList, first question present verbatim, and the
+JSON-LD parses cleanly out of the served file; dist/contact/index.html has NO FAQPage (no
+cross-contamination). New `src/__tests__/faqContent.test.js` (7 tests) pins: all 3 languages have the
+same non-empty Q&A count, FaqPage imports the shared list (no hardcoded `faqs: [[...` literal that
+could drift), faqPageJsonLd matches FAQ_ITEMS.th question-for-question, "<" is escaped so the schema
+can't break out of its <script>, and /faq gets the schema while /contact does not. Mutation-tested:
+disabling the /faq injection (`&& false`) turns the guard red; restored → green. Same
+single-source-of-truth + fail-loud discipline as portalCategories / seoInvariants / route-meta.
+
+---
+
+## 2026-07-31 — FOLLOW-UP/CORRECTION: /faq now emits exactly ONE FAQPage (removed the duplicate client-side copy)
+
+The previous entry added a prerendered FAQPage schema into /faq/index.html. But FaqPage.jsx STILL
+emitted its own FAQPage JSON-LD client-side, so after hydration a direct-loaded /faq (exactly what a
+crawler does) carried TWO identical FAQPage blocks — duplicate structured data, which Google's
+guidelines discourage. That duplication was introduced by the prerender addition.
+
+Fix: make the prerendered copy authoritative (Google's own recommendation is to server-render
+structured data — present in the first HTML byte, no wait on the render pass) and remove the now-
+redundant client-side `<script type="application/ld+json">` from FaqPage.jsx. Result: exactly one
+FAQPage on the page. Both the visible list and the prerendered schema still read the single
+FAQ_ITEMS source (src/data/faqContent.js), so no drift. The client-side block wasn't needed for SEO:
+FAQ rich results are Google-only (social crawlers ignore FAQPage — noted in PricingPage.jsx), Google
+crawls /faq by direct URL load (getting the prerendered schema), and the language toggle is client
+state with no separate crawlable URL.
+
+Note on scope: /pricing and /affiliate also emit FAQPage only client-side, but their FAQ content
+comes from the i18n layer (already single-sourced) and PricingPage.jsx documents a deliberate choice
+that client-side is sufficient for a Google-only, JS-rendered feature. Left as-is — not duplicating,
+and not worth overriding a documented decision. Only /faq had the duplicate, because only /faq had
+BOTH a client-side block AND the newly-added prerendered one.
+
+Verified: full frontend suite 324/324 green; real `npm run build` → dist/faq/index.html has exactly
+ONE "@type":"FAQPage" and the FaqPage JS bundle contains no FAQPage schema at all (no client-side
+duplicate). faqPage.test.jsx now asserts the component emits ZERO client-side FAQPage blocks (guarding
+against re-introducing the duplicate); the schema shape + honesty checks (consent/no-scrape/PromptPay/
+PDPA present; no Neo4j/Stripe/USD/blockchain/crypto) moved to faqContent.test.js over FAQ_ITEMS.
+Mutation-tested: re-injecting a client-side FAQPage into FaqPage.jsx turns the new guard red;
+removed → green.
+
+---
+
+## 2026-07-31 — a11y/i18n: localized "← Back" on all nine /portals/* pages (was hardcoded per page)
+
+Code scan of the consent funnel found the back control at the top of every /portals/* page was
+hardcoded and did NOT follow the page's language toggle: the seven Thai-default portals (producer,
+consumer, creator, affiliate, middleman, foundation, gov-thai) showed "← กลับ" and the two
+international ones (gov-intl, intl-org) showed "← Back", in both cases fixed regardless of the
+selected language. So a Chinese/English visitor on a Thai-default portal saw "← กลับ", and a
+Thai/Chinese visitor on the international-org portal saw "← Back". The button is also visually just an
+arrow + word with no aria-label, so a screen-reader user got only the bare word with no destination.
+
+Fix: new shared helper frontend/src/pages/portals/backLabel.js (same single-source pattern as the
+existing consentLabel.jsx in that folder) — backLabel(lang) returns the localized "← กลับ / ← Back /
+← 返回" and backAria(lang) returns a localized accessible name stating the destination (the /portals
+hub). All nine pages now import it and render {backLabel(lang)} with aria-label={backAria(lang)};
+falls back to Thai for an unknown language so the control is never blank.
+
+Verified: full frontend suite 354/354 green (was 324; +30 from the new guard). Real `npm run build`
+passes. Functional render test (temporary, not committed) confirmed the ACTUAL behavior: the consumer
+portal shows "← กลับ" by default and "← Back" after switching to English (with aria-label "Back to the
+portal hub"); the intl-org portal shows "← Back" by default and "← กลับ" after switching to ไทย. New
+src/__tests__/portalBackLabel.test.js (30 checks) pins, on all nine pages: imports the shared helper,
+renders {backLabel(lang)} + aria-label={backAria(lang)}, and has no hardcoded "← กลับ"/"← Back" left;
+plus the helper covers th/en/zh distinctly and falls back to Thai. Mutation-tested: reverting one page
+to a hardcoded "← กลับ" turns the guard red (2 checks); restored → green.
+
+---
+
+## 2026-07-31 — a11y/i18n: localized the "Benefits" section heading on six /portals/* pages
+
+Follow-up scan (after the back-button fix) found the same hardcoded-string-ignores-language-toggle bug
+in the main content: the "Benefits" section heading was a hardcoded Thai "สิทธิประโยชน์" on the six
+consumer-facing portals (producer, consumer, creator, affiliate, middleman, foundation) even though the
+benefit ITEMS below it (t.benefits) are fully localized. So an English/Chinese visitor saw localized
+✓-bullets under a Thai heading.
+
+Fix: new shared helper frontend/src/pages/portals/sectionTitle.js (same pattern as backLabel.js /
+consentLabel.jsx) — benefitsTitle(lang) → 'สิทธิประโยชน์' / 'Benefits' / '权益', falling back to Thai.
+All six pages import it and render {benefitsTitle(lang)}.
+
+Scope note (deliberately NOT in this commit — distinct, page-specific strings, logged as follow-up):
+the three government/international portals use their OWN service headings that are hardcoded and also
+don't follow the toggle — GovThai "บริการสำหรับภาครัฐ", GovIntl "Services", IntlOrg "Partnership Areas"
+— and Foundation has a bilingual-but-not-zh "วิธีการทำงาน / How It Works". These are different labels
+(not the shared "Benefits") and each needs its own localized wording, so they belong in a separate
+coherent change rather than being forced through the Benefits helper.
+
+Verified: full frontend suite 374/374 green (was 354; +20 from the new guard). Real `npm run build`
+passes. Functional render test (temporary, not committed) confirmed the ACTUAL behavior: the producer
+portal heading shows "สิทธิประโยชน์" by default, "Benefits" after switching to English, "权益" after
+Chinese. New src/__tests__/portalSectionTitle.test.js (20 checks) pins, on all six pages: imports the
+helper, renders {benefitsTitle(lang)} above the t.benefits list, and has no hardcoded ">สิทธิประโยชน์<"
+left; plus the helper covers th/en/zh distinctly and falls back to Thai. Mutation-tested: reverting one
+page to the hardcoded heading turns the guard red (2 checks); restored → green.
+
+---
+
+## 2026-07-31 — a11y/i18n: localized the remaining page-specific /portals/* section headings (follow-up)
+
+Completed the follow-up flagged in the previous entry: the government/international/foundation portals
+had section headings that were hardcoded and ignored the language toggle, the same bug class as the
+back button + Benefits heading:
+  GovThai   "บริการสำหรับภาครัฐ"  (over t.services)  → {t.svcTitle}
+  GovIntl   "Services"            (over t.services)  → {t.svcTitle}
+  IntlOrg   "Partnership Areas"   (over t.services)  → {t.svcTitle}
+  Foundation "วิธีการทำงาน / How It Works"           → {t.howTitle}
+
+Unlike the six shared "Benefits" pages (which use the benefitsTitle() helper), these are DISTINCT
+per-page strings, so each was localized in that page's own T object (colocated with its services/how
+arrays) rather than forced through a shared helper. GovThai deliberately ships only th/en (its toggle
+offers just those two, and t = T[lang] || T.th) so its svcTitle has th/en; the others have th/en/zh.
+Also confirmed in passing that GovThai's th/en-only T is intentional, not a missing-zh bug (its toggle
+never offers zh).
+
+Verified: full frontend suite 389/389 green (was 374; +15 from the new guard). Real `npm run build`
+passes. Functional render test (temporary, not committed) confirmed the ACTUAL behavior: IntlOrg's
+heading shows "Partnership Areas" (en default) → "ด้านความร่วมมือ" (th) → "合作领域" (zh); Foundation's
+shows "วิธีการทำงาน" (th default) → "How It Works" (en) → "运作方式" (zh). New
+src/__tests__/portalServiceTitle.test.js (15 checks) pins each page renders {t.svcTitle}/{t.howTitle},
+defines the key once per supported language, sits over t.services where applicable, and has no
+hardcoded heading left. Mutation-tested: reverting IntlOrg to the hardcoded "Partnership Areas" turns
+the guard red (2 checks); restored → green. With this, every /portals/* section heading + control now
+follows the language toggle (back button, Benefits, and these service/how headings all done).
+
+---
+
+## 2026-07-31 — SECURITY: LINE webhook signature check was fail-OPEN (event-injection bypass) — now fail-closed
+
+Code scan of the signed webhooks (prompted by the smart-e webhook-hardening work) found the LINE
+webhook signature verification in server.js was:
+  `if (process.env.LINE_CHANNEL_SECRET && signature) { ...verify... }`
+i.e. verification ran only when the secret was set AND an `x-line-signature` header was present. With
+the secret configured but the header simply OMITTED, `signature` is '' (falsy), the whole block was
+skipped, and the forged events were processed. So an unauthenticated attacker could inject fake LINE
+events — fake `follow`/`message` events with attacker-chosen userIds — straight into the CRM
+(line_followers / line_messages) just by NOT sending a signature header. This is the same class the
+Omise webhook already fails-closed against (verifyOmiseWebhook rejects a missing sig via a length
+mismatch), and smart-e's LINE webhook was hardened for earlier.
+
+Fix: extracted the check into a tested pure module `backend/line-signature.js` — `verifyLineSignature
+(rawBody, signatureHeader, secret)` returns `null` only in dev mode (no secret), `true` on a valid
+signature, and `false` when the secret is set but the signature is missing/empty/wrong-length/
+mismatched. server.js now drops the request on an explicit `false`; the old `&& signature` guard is
+gone. Dev mode (no secret) still processes, matching prior local-testing behaviour.
+
+Verified: new `scripts/test-line-signature.mjs` (12 checks) — valid sig accepted; empty / missing /
+null / garbage / wrong-length / wrong-body signatures all rejected; no-secret returns the null dev
+sentinel; and structural asserts that server.js wires it fail-closed and the old guard is removed.
+Wired into package.json + CI. Sibling test:omise-webhook-verify still 13/13; server still boots +
+/api/health 200. ALSO verified against the REAL running server (E2E, not committed — spawns server +
+mock Supabase, LINE_CHANNEL_SECRET set): a signed follow persists user_id to line_followers, while an
+UNSIGNED follow and a wrong-signature follow are both dropped (never reach the mock). Mutation-tested:
+making the empty-sig case return null (fail-open, the old bug) makes the forged unsigned event get
+persisted again and turns the E2E red; restored → green.
+
+---
+
+## 2026-07-31 — SECURITY: confirm-link tokens no longer signed with a hardcoded fallback secret in prod
+
+Continuing the webhook/signature audit, found that `UNSUB_SECRET` in server.js — the HMAC key for
+every one-click confirm link (unsubscribe, PDPA data-erasure/access, AFFILIATE WITHDRAWAL = moves
+money, payment-cancel) — was `process.env.JWT_SECRET || 'openthai-jwt-secret-2026'`, a hardcoded,
+source-visible constant. If JWT_SECRET was unset, anyone with repo access could forge those links —
+delete another user's data (PDPA erasure/access) or confirm an affiliate withdrawal. There was already
+a console.warn acknowledging this, but the code still USED the forgeable fallback (failed OPEN).
+Notably auth.js already avoids this — its JWT fallback is `crypto.randomBytes(32)` (unforgeable).
+
+Fix: mirror auth.js. `IS_PROD_LIKE = IS_VERCEL || NODE_ENV==='production'`; `UNSUB_SECRET =
+JWT_SECRET || (IS_PROD_LIKE ? randomBytes(32).toString('hex') : 'openthai-dev-only-unsub-secret')`.
+So: prod with JWT_SECRET set → stable + unforgeable (unchanged, correct config); prod WITHOUT
+JWT_SECRET → per-process RANDOM key, so forged links are rejected and legit links simply stop
+verifying across restarts/serverless invocations (fails CLOSED, not forgeable) + a loud warning; local
+dev → a stable dev-only constant so hand-tested links survive a restart. The old guessable constant is
+gone from source entirely.
+
+Verified against the REAL running server — new `scripts/test-confirm-token-secret.mjs` (8 checks)
+boots server.js in each config and probes GET /api/broadcast/unsubscribe: NODE_ENV=production without
+JWT_SECRET rejects a token forged with the old hardcoded secret (403); prod WITH JWT_SECRET accepts a
+correctly-signed token (200) and rejects the old-hardcoded one (403); dev accepts the dev-fallback
+token (200) and rejects the removed constant (403); plus source asserts IS_PROD_LIKE covers Vercel,
+uses randomBytes(32), and the old constant is gone. (VERCEL=1 can't be boot-probed — the server
+doesn't app.listen() under Vercel — so the identical IS_PROD_LIKE branch is exercised via
+NODE_ENV=production + a source assert for the Vercel arm.) Wired into package.json + CI. Existing
+confirm-link tests unaffected (they set their own JWT_SECRET): withdraw-confirm 9/9, broadcast-unsub
+7/7, consent-durability 9/9, pdpa-tenant 16/16; server boots + /api/health 200. Mutation-tested:
+reinstating the hardcoded prod fallback makes the forged token accepted (200) and turns the test red;
+restored → 8/8 green.
+
+---
+
+## 2026-07-31 — SECURITY: guessable default admin (admin/1234) was a live login in production — now fail-closed
+
+Continuing the auth audit, found getAdminUsers() in auth.js created the dev-fallback admin account
+(ADMIN_USERNAME||'admin' / ADMIN_PASSWORD_PLAIN||'1234') UNCONDITIONALLY when neither ADMIN_USERS nor a
+real password was set — and pushed it BEFORE the environment check, which only console.error'd on
+Vercel. So a production deploy that forgot to configure admin credentials shipped a live, publicly-
+guessable `admin` / `1234` login (POST /api/auth/login → getAdminUsers() → match → JWT), i.e. a full-
+access admin auth bypass. Same fail-OPEN class as the LINE webhook and confirm-link-secret fixes.
+
+Fix: fail closed in a prod-like env (VERCEL or NODE_ENV=production). When the password is the weak
+default ('1234' / 'change-me-admin-password') AND the env is prod-like, DO NOT create the account —
+leave the admin list empty so password login is rejected until real credentials are configured
+(ADMIN_USERS or a strong ADMIN_PASSWORD_PLAIN). Emergency access is unaffected (ADMIN_OVERRIDE_KEY /
+RECOVERY_CODES remain). Local dev still gets admin/1234 for convenience, and a real ADMIN_PASSWORD_PLAIN
+in prod still logs in normally.
+
+Verified against the REAL running server — new scripts/test-admin-default-login.mjs (5 checks) boots
+server.js per-config and probes POST /api/auth/login: NODE_ENV=production + admin/1234 → 401 (rejected);
+prod + a real ADMIN_PASSWORD_PLAIN + correct creds → 200 + token, and admin/1234 → 401; dev + admin/1234
+→ 200 + token, dev + wrong password → 401. (VERCEL=1 can't be boot-probed — no app.listen() under
+Vercel — so the identical isProdLike branch is exercised via NODE_ENV=production.) Wired into
+package.json + CI. Existing auth tests unaffected (they gate on ADMIN_KEY, not the default password
+login): corporate-auth 9/9, integrations-auth 7/7, video-auth 6/6, tenant-login 10/10, recovery-code
+11/11; server boots + /api/health 200. Mutation-tested: making the account always be created (the old
+bug) lets admin/1234 log in under NODE_ENV=production (200) and turns the test red; restored → 5/5.
+
+---
+
+## 2026-07-31 — a11y/SEO: prerendered <html lang> now matches each page's actual language (intl portals were mislabeled Thai)
+
+Code scan found the two international portals — /portals/gov-intl and /portals/intl-org — default to
+ENGLISH content (useState('en'), and their prerendered title/description are English), but their
+prerendered HTML inherited the base template's `<html lang="th">` because the prerender transform
+(scripts/route-meta.mjs) never touched the html lang. So the first (pre-JS) byte a crawler or screen
+reader sees declares Thai on English content: screen readers mispronounce the page, and Google gets a
+wrong language signal. (The SPA sets document.documentElement.lang at runtime, so this only affected the
+crawler/first-paint view — exactly what the prerender exists to serve.)
+
+Fix: add an optional `lang` field to the SEO route list (seo-routes.mjs) — set `lang:'en'` on the two
+international portals; everything else defaults to Thai. applyRouteMeta now rewrites `<html lang="…">`
+to the route's language (throw-on-no-op guard like the other tag rewrites).
+
+Verified: frontend suite 391/391 green (was 389; +2 checks). Real `npm run build` → dist/portals/
+gov-intl and dist/portals/intl-org serve `<html lang="en">`, while producer/contact/faq stay
+`<html lang="th">`. routeMeta.test.js now asserts a Thai route keeps lang="th", an en route is served
+lang="en" (and not th), and the two intl portals carry lang:'en' in the route list. Mutation-tested:
+forcing pageLang='th' (ignoring the route's lang) serves the English page as lang="th" and turns the
+test red; restored → green.
+
+---
+
+## 2026-07-31 — DATA-LOSS: landing-page waitlist was file-only (wiped every Vercel redeploy) — now Supabase-durable
+
+Code scan of the marketing funnel found POST /api/waitlist — the landing-page hero email capture, the
+very TOP of the funnel — persisted signups to waitlist.json ONLY (loadWaitlist/saveWaitlist). On Vercel
+that file is under /tmp and wiped on every redeploy (Vercel redeploys on every push), so every captured
+email was silently lost each ship. This is the exact ephemeral-data class already fixed for portal_leads
+/ broadcast_unsubscribes / pdpa_consents / payments — the waitlist was simply missed. (PDPA access +
+erasure already covered the waitlist array, so rights were fine; DURABILITY was the gap.)
+
+Fix: make the waitlist dual-mode (Supabase primary + file fallback), mirroring the broadcast_unsubscribes
+pattern exactly — hydrate from Supabase into memory on boot (deduping by email, restoring after a
+redeploy), upsert each new signup (on_conflict email), and — critically — DELETE from Supabase on PDPA
+erasure so an erased email can't re-hydrate on the next boot. Before the owner runs the migration it
+fails quietly and stays file-only (no regression). New migration backend/migrations/010_waitlist.sql
+(email PK, source, joined_at; RLS enabled — service_role only, matching the others).
+
+CORRECTION to the recommended Supabase set-up: it is now FIVE files —
+`FULL-MIGRATION.sql + 003_ai_usage_log.sql + 008_broadcast_unsubscribes.sql + 009_pdpa_consents.sql +
+010_waitlist.sql`. test-migration-coverage.mjs was updated (RECOMMENDED_MIGRATIONS + the "missing from
+FULL-MIGRATION" documentation list) and now auto-verifies waitlist is covered — 20/20 (was 18).
+
+Verified against the REAL running server — new scripts/test-waitlist-durability.mjs (8 checks) starts a
+mock Supabase, spawns server.js pointed at it (waitlist.json seeded EMPTY so recognition can only come
+from the hydrate): a prior-deploy signup (Supabase-only) is recognized as already-registered after boot
+(survived the /tmp wipe); a fresh signup is POSTed to Supabase; PDPA erasure issues a DELETE for the
+email (won't re-hydrate) and a forged erasure token → 403. Wired into package.json + CI. Sibling schema
+tests unaffected: migration-coverage 20/20, full-migration-columns 67/67, payments-schema 18/18,
+pdpa-tenant 16/16; server boots + /api/health 200. Mutation-tested: pointing the boot hydrate at a wrong
+table stops the seeded email from being recognized and turns the test red; restored → 8/8.
+
+---
+
+## 2026-08-05 — DATA-LOSS/CORRECTNESS: scheduled auto-posts silently never fired on Vercel — now Supabase-durable
+
+Standing-order loop, marketing lane. Code scan of the auto-marketing engine found POST /api/autopost/queue
+(the "schedule a social post" feature) stored the queue in autopost_queue.json ONLY. On Vercel that file
+is under /tmp, which is (1) wiped on every redeploy (Vercel redeploys on every push) AND (2) private to
+each serverless lambda instance — so a post the POST invocation queued is invisible to the later
+/api/autopost/process cron invocation that is supposed to send it. The in-process cron.schedule fallback
+is also gated `if (!IS_VERCEL)`, so it never runs in production either. Net effect: any post scheduled
+for a future time was silently never sent on prod — a whole marketing-automation feature dead in the
+water. (Immediate posts, schedule_at ≈ now, still worked: they dispatch synchronously inside the POST
+handler before any /tmp/instance boundary matters. Only the SCHEDULED path was broken.) This is the same
+ephemeral-/tmp class already fixed for waitlist / broadcast_unsubscribes / pdpa_consents / payments — the
+autopost queue was simply missed, and here the /tmp being per-instance made it worse than pure redeploy
+loss.
+
+Fix: make the queue dual-mode (Supabase primary + file fallback), mirroring the waitlist pattern but for
+a store with MUTABLE status — hydrate the queue into memory on boot, upsert on every queue/status-change
+(persistAutopost, one item at a time so a queued→sent/failed transition is persisted immediately), and —
+the actual correctness fix — have /api/autopost/process (and the local cron) pull DUE items
+(status=queued & schedule_at≤now) straight from Supabase via a new dueAutopostItems() helper, so the cron
+sees posts queued by ANY instance and after ANY redeploy, not just what happens to be in this lambda's
+memory. Before the owner runs the migration it fails quietly and stays file-only (no regression). New
+migration backend/migrations/011_autopost_queue.sql (id PK, content/platforms/results jsonb, status,
+schedule_at, a (status, schedule_at) index for the due-query; RLS enabled — service_role only, matching
+the others).
+
+CORRECTION to the recommended Supabase set-up: it is now SIX files —
+`FULL-MIGRATION.sql + 003_ai_usage_log.sql + 008_broadcast_unsubscribes.sql + 009_pdpa_consents.sql +
+010_waitlist.sql + 011_autopost_queue.sql`. test-migration-coverage.mjs was updated
+(RECOMMENDED_MIGRATIONS + the "missing from FULL-MIGRATION" documentation list) and — because it
+auto-parses every `sbReq('POST', '/<table>')` call site — now auto-verifies autopost_queue is covered:
+22/22 (was 20).
+
+Verified against the REAL running server — new scripts/test-autopost-durability.mjs (10 checks) starts a
+mock Supabase, spawns server.js pointed at it (autopost_queue.json seeded EMPTY so any due item can only
+have come from Supabase): (1) /api/autopost/process with no key → 401 (it dispatches real outbound posts,
+must stay cron-only); (2) a post queued in a PRIOR deploy (Supabase-only) fires after the /tmp wipe —
+processed≥1 and its Supabase status flips off 'queued'; (3) a post queued by ANOTHER instance directly in
+Supabase AFTER this server booted (never in this process's memory) is still found and dispatched — the
+cross-invocation guarantee the file-only queue could never give; (4) a FUTURE-scheduled post is upserted
+to Supabase (durable) but NOT sent until due (processed=0). Wired into package.json + CI. Sibling suites
+unaffected: migration-coverage 22/22, waitlist-durability 8/8, broadcast-unsub 7/7, payments-schema
+18/18, withdraw-confirm 9/9; server boots + /api/health 200. Mutation-tested: forcing dueAutopostItems()
+back to the old in-memory-only filter makes the cross-instance post invisible (processed=0) and turns the
+test red; restored → 10/10. (Dispatch itself marks items 'failed' in the test since no LINE/FB tokens are
+set — irrelevant; the fix is about the queue being FOUND and processed after a wipe, not the send.)
+
+NOTE (still open, unchanged): the affiliate-payout double-payout finding from the prior round
+(withdrawals + withdraw_confirmations file-only, and _affFromRow resets paid_out to 0 on Supabase reload)
+is a MONEY path with legal implications — left untouched, awaiting the owner's go-ahead per standing-order
+rule 8. This round deliberately picked a non-money durability bug instead.
+
+---
+
+## 2026-08-05 — DATA-LOSS/CORRECTNESS: /api/scheduler/* scheduled posts silently never processed on Vercel — now Supabase-durable
+
+Standing-order loop, marketing lane. Follow-up to the same-day autopost_queue fix. Code scan found a
+SECOND, parallel "schedule a post" feature — /api/scheduler/* (the live Scheduler page, SchedulerPage.jsx,
+also surfaced on Admin/Dashboard/StrategyCenter/ContentStudio/AIToolsHub) — with the identical serverless
+bug. /api/scheduler/create stored the queue in scheduler.json ONLY; on Vercel that file is under /tmp:
+wiped on every redeploy AND private to each lambda instance. Vercel Cron fires GET /api/scheduler/process
+daily (09:00 UTC, confirmed in vercel.json crons), but that is a DIFFERENT invocation from the one that
+created the post, so it reads an empty/stale /tmp file and sees nothing → scheduled posts (including the
+auto LINE OA broadcast when due, via lineBroadcast) were silently never processed in production. Verified
+by grep + reading the endpoints: processScheduler filtered the in-memory schedulerStore.posts; the cron
+lambda's copy is always empty on a cold start.
+
+Fix (mirrors the autopost_queue durability fix exactly): make the scheduler queue dual-mode (Supabase
+primary + file fallback) — new _schToRow/_schFromRow mappers, hydrate on boot, persistScheduler(post)
+upserts one post at a time on create/status-change/execute, DELETE removes from Supabase, and — the
+actual correctness fix — a new dueSchedulerPosts() pulls due posts (status=pending & scheduled_at≤now)
+straight from Supabase, used by BOTH /api/scheduler/process (the daily cron + the SPA "process now"
+button) and /api/scheduler/due (the SPA's due-count badge, which was also wrong on Vercel). Fails quietly
+/ stays file-only before the migration is applied (no regression). New migration
+backend/migrations/012_scheduler_posts.sql (id PK; platform/content/audience/language, scheduled_at,
+status, channel/error/reach_mock, published_at/ready_at; (status, scheduled_at) index; RLS service_role
+only). DID NOT change auth on /api/scheduler/process — SchedulerPage.jsx calls it unauthenticated ("process
+now" button), so it is intentionally SPA-callable; it only processes already-due owner content, and adding
+auth would break the page (kept out of scope per standing-order rule 8).
+
+CORRECTION to the recommended Supabase set-up: it is now SEVEN files —
+`FULL-MIGRATION.sql + 003 + 008 + 009 + 010 + 011 + 012_scheduler_posts.sql`.
+test-migration-coverage.mjs updated (RECOMMENDED_MIGRATIONS + the "missing from FULL-MIGRATION" doc list)
+and — because it auto-parses every `sbReq('POST', '/<table>')` call site — now auto-verifies
+scheduler_posts is covered: 24/24 (was 22).
+
+Verified against the REAL running server — new scripts/test-scheduler-durability.mjs (12 checks) starts a
+mock Supabase, spawns server.js pointed at it (scheduler.json seeded EMPTY so any due post can only have
+come from Supabase): (1) a post scheduled in a PRIOR deploy (Supabase-only) is processed after the /tmp
+wipe and its status flips off 'pending'; (2) a post created by ANOTHER instance directly in Supabase AFTER
+this server booted (never in memory) is still found and processed — the cross-invocation guarantee the
+file-only queue could never give; (3) a FUTURE post is upserted (durable) but NOT listed by /due and NOT
+processed until due; (4) admin delete removes it from Supabase (won't re-hydrate) and delete without the
+admin key → 401. Wired into package.json + CI. Sibling suites unaffected: migration-coverage 24/24,
+autopost-durability 10/10, waitlist 8/8, broadcast-unsub 7/7; server boots + /api/health 200. Mutation-
+tested: forcing dueSchedulerPosts() back to the in-memory-only filter makes the cross-instance post
+invisible (processed=0) and turns the test red; restored → 12/12. (No LINE token in the test, so a due
+LINE post resolves to 'ready' — irrelevant; the fix is about the post being FOUND and processed after a
+wipe, not the broadcast.)
+
+NOTE (still open, unchanged): the affiliate-payout double-payout finding (withdrawals + withdraw_
+confirmations file-only, _affFromRow resets paid_out to 0 on Supabase reload) is a MONEY path with legal
+implications — still untouched, awaiting the owner's go-ahead per standing-order rule 8.
+
+---
+
+## 2026-08-05 — DATA-LOSS: submitted (paid) video jobs became unpollable after a Vercel redeploy — now Supabase-durable
+
+Standing-order loop. Before picking this, verified the other lanes are already solid so this was the
+genuine highest-impact REAL remaining bug: the /portals/* consent funnel is fail-closed + PDPA-covered;
+robots.txt ↔ sitemap ↔ prerender ROUTES are consistent (homepage included, line 61); Organization/WebSite/
+SoftwareApplication/FAQPage/BreadcrumbList structured data all present; credits/orders/producers/payments/
+entitlements/user_sync are all dual-mode Supabase and migration-covered. What remained was /api/video/*.
+
+Bug (verified from code): POST /api/video/generate submits a job to a paid video provider (Runway/Pika/
+Kling/Luma/Veo — real per-clip spend on the PLATFORM's keys) and stored the job record in video_jobs.json
+ONLY. On Vercel that file is under /tmp: wiped on every redeploy AND private to each lambda instance, so
+GET /api/video/jobs/:id/status did `videoJobs.find(...)` on an empty in-memory array and returned 404
+"job not found" after any redeploy or on any other instance — the user could no longer retrieve the video
+they (the platform) already paid a provider to render. Same ephemeral-/tmp class as the autopost/scheduler
+fixes; narrower blast radius (only when a real provider key is set), but a real paid-work loss.
+
+Fix (mirrors the autopost/scheduler durability fixes): dual-mode the job store (Supabase primary + file
+fallback) — _videoToRow/_videoFromRow mappers, hydrate on boot, persistVideoJob() upserts one job at a
+time on create + on each status poll, and a new findVideoJob() looks a job up in Supabase when it isn't in
+this lambda's memory (the poll-after-redeploy / cross-instance path). Fails quietly / stays file-only
+before the migration is applied (no regression). New migration backend/migrations/013_video_jobs.sql
+(id PK; form/script/job jsonb; created_at desc index; RLS service_role only).
+
+CORRECTION to the recommended Supabase set-up: it is now EIGHT files —
+`FULL-MIGRATION.sql + 003 + 008 + 009 + 010 + 011 + 012 + 013_video_jobs.sql`.
+test-migration-coverage.mjs updated (RECOMMENDED_MIGRATIONS + the "missing from FULL-MIGRATION" doc list)
+and — because it auto-parses every `sbReq('POST', '/<table>')` call site — now auto-verifies video_jobs is
+covered: 26/26 (was 24).
+
+Verified against the REAL running server — new scripts/test-video-jobs-durability.mjs (7 checks) starts a
+mock Supabase, spawns server.js pointed at it (video_jobs.json seeded EMPTY so any found job can only have
+come from Supabase; provider:'mock' jobs so the poll returns without any external call): (1) /status
+without a token → 401, unknown id → 404; (2) a job from a PRIOR deploy (Supabase-only) is still pollable
+after the /tmp wipe — 200, not 404; (3) boot hydrate lists it; (4) a job created by ANOTHER instance
+directly in Supabase AFTER this server booted (never in memory) is found via findVideoJob and merged into
+memory. Wired into package.json + CI. Sibling suites unaffected: migration-coverage 26/26, scheduler 12/12,
+autopost 10/10, waitlist 8/8; server boots + /api/health 200. Mutation-tested: forcing findVideoJob back
+to memory-only makes the cross-instance job 404 and turns the test red; restored → 7/7. (The prior-deploy
+case is covered by the boot hydrate, so it stays green under that mutation — the cross-instance checks are
+the discriminating guard for the findVideoJob Supabase lookup.)
+
+NOTE (still open, unchanged): the affiliate-payout double-payout finding (withdrawals + withdraw_
+confirmations file-only; _affFromRow resets paid_out to 0 on Supabase reload) is a MONEY path with legal
+implications — still untouched, awaiting the owner's go-ahead per standing-order rule 8.
+
+---
+
+## 2026-08-05 — Cross-repo (smart-e): reject a QR/payment that references a nonexistent order
+
+Standing-order loop. Diversified away from openthai-ai after re-verifying its high-traffic paths are
+already solid this session: pricing is consistent across PricingPage PP_META / backend SUBSCRIPTION_PLANS
+/ index.html SoftwareApplication offers (Free/Pro 299/Premier 599/Enterprise 1299 all agree); og-image.png
+exists (330KB) and is referenced absolutely; i18n is key-complete across th/en/zh (index.jsx 260/260/260,
+affiliate.js 25/25/25, admin.js 5/5/5 — no drift that would show Thai to en/zh visitors); robots↔sitemap↔
+prerender ROUTES consistent; Organization/WebSite/SoftwareApplication/FAQPage/BreadcrumbList structured
+data all present. otop-ai-landing's remaining SEO (canonical/og:url) is still the domain-gated owner
+decision; all-platform-files domain normalization likewise owner-gated; the affiliate double-payout money
+path stays owner-gated per rule 8.
+
+Unblocked, verifiable work was in smart-e (the Python-stdlib POS). Ran test_server.py first (134/134
+green), then audited the money paths (_create_order, _update_order_status, _confirm_payment, _create_qr,
+dashboard aggregation) — all well-hardened by earlier rounds (stock/customer-total symmetry on cancel/
+un-cancel, finite-amount guards, 404/400 on missing refs, cancelled-excluded revenue). Found ONE real
+remaining gap: _create_qr stored body.order_id into the payments row WITHOUT checking the order exists, so
+a QR/payment could be recorded against a "ghost" order (typo'd/nonexistent id). That payment can never move
+an order's status (_confirm_payment's `UPDATE orders ... WHERE id=<ghost>` no-ops, order_updated stays
+False) and pollutes any payments↔orders join — inconsistent with the file's own pattern (_confirm_payment
+404s on a missing payment; _create_order 400s on a missing product id).
+
+Fix (smart-e server.py): in _create_qr, when order_id is not None, SELECT the order and 404 if missing;
+order_id=None (standalone QR) still allowed; a real order_id still succeeds. Verified by running — added 4
+assertions to test_server.py's payments/QR block (nonexistent order_id → 404, real → 200, none → 200); full
+suite 138/138 (was 134); ast.parse clean. Mutation-tested: neutering the existence check makes the
+ghost-order QR return 200 and turns the new test red; restored → 138/138. Committed to smart-e branch
+claude/daily-reporter-improvements-8vc9ct (ba28dc6; smart-e has no DECISIONS_LOG so full detail is in the
+commit message) — on the open smart-e PR #1, no auto-merge.
+
+---
+
+## 2026-08-05 — OPEN FINDING (owner-gated, rule 8): affiliate double-payout after a Vercel redeploy — verified, NOT yet fixed
+
+Consolidating into ONE authoritative entry a HIGH-severity financial-integrity finding that until now
+lived only as trailing "NOTE (still open)" lines on unrelated entries. No money-path code has been changed
+— this is a money movement with legal implications, so per standing-order rule 8 it waits for the owner's
+go-ahead. This entry records the verified evidence and a concrete fix plan so it's actionable the moment
+the owner decides (and so a future session/AI doesn't have to re-investigate).
+
+WHY THIS ROUND IS A LOG ENTRY, NOT A CODE FIX: surveyed all 5 repos and re-confirmed the unblocked,
+verifiable work is already done — openthai-ai pricing/OG/i18n(th/en/zh 260/260/260)/SEO/structured-data
+solid; smart-e money paths hardened (last round's QR→ghost-order fix, 138/138); all-platform-files domain
+fully normalized (0 un-hyphenated) and the 192 "*-section.html" are by-design embed FRAGMENTS (start with
+<section>, no <html>/<body> — one literally says "วาง <section> นี้ใน landing/index.html"), so adding
+doctype/viewport there would be WRONG (verified, not assumed); otop-ai-landing canonical still domain-gated;
+OpenThai-AI-v9.0 has no package.json so it's unbuildable/unverifiable (rule 4). The genuinely
+highest-impact remaining item is this money bug — and the most useful safe action on it is a durable,
+accurate record, not a unilateral money-path edit.
+
+THE FINDING (verified against current code, this commit's tree):
+- `affiliate-row.js:22` `affToRow` persists to Supabase `pending_payout = (total_earned - paid_out)`, but
+  NOT `paid_out` itself as a column.
+- `server.js:1416` `_affFromRow` hard-sets `paid_out: 0` on EVERY load from Supabase, and never reads
+  `pending_payout` back to reconstruct it.
+- `server.js:1515` `WD_FILE` (withdrawals) and `server.js:1686` `WD_CONFIRM_FILE` (withdraw_confirmations)
+  are file-only under WRITE_DATA_DIR (= /tmp on Vercel); grep confirms ZERO `_sbReq(...,'/withdrawals')` or
+  `/withdraw_confirmations` — no Supabase persistence at all.
+- `server.js:1531` the withdraw gate is `affPending = affAvailable(a, withdrawals)` =
+  `total_earned - paid_out - reservedFor(withdrawals)` (reservedFor sums this affiliate's pending/approved
+  withdrawal amounts from the file store).
+
+THE MECHANISM (double-payout): Vercel redeploys on every push and wipes /tmp. After a redeploy: (a)
+affiliates re-hydrate from Supabase through `_affFromRow` → `paid_out` becomes 0; (b) withdrawals.json is
+gone → `reservedFor` becomes 0. So `affPending = total_earned - 0 - 0 = total_earned`. An affiliate who was
+already paid now sees their ENTIRE lifetime earnings as "available" again and `POST /api/affiliate/withdraw`
+(gate `amount > avail`, server.js ~1196 region) accepts a fresh request for it. The only remaining guard is
+manual admin approval — the automated money-integrity control is gone.
+
+PROPOSED FIX (for owner approval — do NOT build without go-ahead):
+- Part A (low-risk, no migration, self-contained): stop resetting paid_out; reconstruct it on load from the
+  value Supabase ALREADY stores — in `_affFromRow`, `paid_out = max(0, (total_earned) - (pending_payout))`.
+  Uses the `pending_payout` column `affToRow` already writes, so no schema change. A legacy row missing
+  `pending_payout` → paid_out = total_earned → affPending = -reserved ≤ 0 → fail-CLOSED (shows ฿0 available,
+  never over-pays). This closes the "paid_out resets to 0" half at the root.
+- Part B (broader scope — needs a migration decision): make the withdrawals + withdraw_confirmations ledger
+  durable in Supabase (new tables + migration + dual-mode hydrate/upsert/DELETE, exactly like the
+  waitlist/autopost_queue/scheduler_posts/video_jobs durability work already shipped this session), so
+  `reservedFor` survives a redeploy. Requires the owner to run the migration (like the existing 8-file set).
+
+QUESTION FOR THE OWNER: approve shipping Part A now (safe, closes the main double-payout root, no migration)?
+And do you want Part B (durable withdrawals ledger + a new migration) in the same change or staged after?
+Until you say go, the affiliate money path stays untouched per rule 8.
+
+---
+
+## 2026-08-05 — Guard the AI-skills catalog against "phantom endpoint" drift (core-product regression class)
+
+Standing-order loop (money path still owner-gated, untouched). This round audited the CORE product — the
+AI-skills grid on /ai-skills. The catalog (frontend/src/pages/AISkillsPage.jsx) advertises 26 skill
+buttons, each with an `endpoint: '/api/skills/...'`. Verified — by parsing both files — that all 26 map to
+a real `app.get`/`app.post` handler in server.js (server.js registers 31 such routes; the extra 5 aren't
+surfaced in this grid, which is fine). So there is NO current phantom-endpoint bug.
+
+But this is exactly the bug class the repo was already bitten by (7 /portals/* pages POSTed to
+/api/leads/submit, which didn't exist → every form silently failed; see the portal-leads entry). The
+frontend catalog and the backend routes can silently drift as skills are renamed/added, and a mismatch
+only surfaces as a 404 the moment a user clicks a paid feature — no existing unit test would catch it.
+
+Added scripts/test-skills-endpoints.mjs: parses AISkillsPage.jsx for every advertised
+`/api/skills/...` endpoint and server.js for every `app.get/post('/api/skills/...')` route, and asserts
+each advertised endpoint is a real handler. Static cross-file guard (no server boot), so it's fast,
+deterministic, and can't drift. Wired into package.json (test:skills-endpoints) + CI.
+
+Verified by running: 28/28 pass. Mutation-tested: injecting a phantom catalog entry
+(endpoint '/api/skills/ghost-nonexistent') turns the guard red; removing it → 28/28 green. No app code
+changed — this is a regression guard for the core product, in the spirit of the existing seoInvariants /
+migration-coverage / portalFieldCollision guards.
+
+---
+
+## 2026-08-05 — Guard the WHOLE-APP frontend↔backend API contract (generalizes the skills guard)
+
+Standing-order loop (money path still owner-gated, untouched). Extended last round's per-catalog skills
+guard to the entire app. Every endpoint the React app calls goes through apiUrl()/apiFetch(); if the
+frontend calls an /api path no backend route serves (a route renamed/removed, or a new call with a typo),
+the feature 404s the moment a user touches it and no unit test catches it — the exact class the repo was
+bitten by (7 /portals/* pages → /api/leads/submit, which didn't exist; every form silently failed).
+
+First VERIFIED the current contract is fully intact: extracted all 165 distinct /api endpoints the
+frontend passes to apiUrl/apiFetch and cross-checked against all backend routes — every one resolves to a
+real handler (the lone raw-grep miss, `/api/usage${email?…}`, was an extraction artifact of a ternary
+query-string, not a real gap: backend has app.get('/api/usage') at server.js:464). Reliable because the
+routing is flat — every router mounts via app.use(x.router) with NO path prefix and every route (server.js
++ the router modules) is declared with a full '/api/...' literal, so a static scan of
+app|router.<verb>('/api/...') is the complete authoritative route set.
+
+Added scripts/test-api-contract.mjs: scans every .jsx/.tsx under frontend/src for apiUrl/apiFetch calls
+(parsing template literals via balanced-brace ${…} handling so `/api/usage${…}` → /api/usage and
+`/api/orders/${id}/status` → a wildcard segment), scans all backend .js for app|router routes, and asserts
+each frontend endpoint matches a route (path params :id and ${id} both normalized to one wildcard segment;
+query strings ignored). Wired into package.json (test:api-contract) + CI. Complements — doesn't replace —
+test-skills-endpoints (which pins the visible skills catalog specifically).
+
+Verified by running: 165/165 pass. Mutation-tested: injecting apiFetch('/api/phantom-does-not-exist') in a
+page turns the guard red; removing it → 165/165 green. No app code changed — a regression guard for the
+core customer-facing contract, in the spirit of the existing seoInvariants / migration-coverage guards.
+
+---
+
+## 2026-08-05 — Extend the API-contract guard: forbid raw fetch('/api/...') that bypasses apiUrl/apiFetch
+
+Standing-order loop (money path still owner-gated — I said I'd wait for the Part A green light and I'm
+keeping that; not touched). Closed the one remaining gap in yesterday's whole-app contract guard. apiBase.js
+exists so EVERY API call gets the production API base (VITE_API_URL) prepended and the x-user-email /
+x-device-id identity headers attached; a raw fetch('/api/...') skips both — it works in local dev (Vite
+same-origin proxy) but in production hits the wrong origin and sends no identity, a prod-only break that
+never surfaces in dev. Verified the codebase currently has ZERO such raw calls (grep + the test), so the
+frontend is clean; the guard locks it so a future raw call can't slip in.
+
+Extended scripts/test-api-contract.mjs with a check that scans frontend/src for `fetch('/api/...')` /
+`fetch(\`/api/...\`)` not routed through apiUrl/apiFetch (regex excludes apiFetch via a preceding-char
+guard) and fails with the offending file:line. Verified by running: 166/166 (was 165; +1). Mutation-tested:
+injecting fetch('/api/raw-bypass') fails the guard and names AIGeneratorPage.jsx:460; removing it → 166/166.
+No app code changed; already wired into CI as test:api-contract.
+
+---
+
+## 2026-08-05 — Add an owner-facing migration runbook (unblocks the durability work already shipped)
+
+Standing-order loop (money path still owner-gated — waiting for the Part A green light as promised, not
+touched). This round audited SEO meta first: all 25 routes have a unique, per-audience `desc` — 0 missing,
+0 duplicate description, 0 duplicate title (my first pass used the wrong field name `description` and
+false-alarmed; the real field is `desc`). Five descs run >160 chars (SERP truncation) but they're copied
+verbatim from each page's i18n source, so trimming them here would desync from that source — deliberately
+left alone.
+
+The real, high-leverage gap: everything durable shipped this session (waitlist / autopost_queue /
+scheduler_posts / video_jobs — plus broadcast_unsubscribes / pdpa_consents / ai_usage_log) only becomes
+durable ONCE the owner runs the Supabase migrations. But docs/DEPLOYMENT.md tells the owner to set
+SUPABASE_URL/SERVICE_KEY and NOWHERE lists which .sql files to run, and there was no runbook in
+backend/migrations/. So a deployer sets the env vars, skips the SQL, and every "durable" feature silently
+falls back to the ephemeral /tmp store — i.e. the exact data-loss bugs those migrations fix stay unfixed in
+practice. The code was done; the activation step was undocumented.
+
+Added backend/migrations/README.md — a Thai runbook: run these 8 files in the Supabase SQL editor, in
+order, with a one-line purpose each and what breaks if you skip it; notes that FULL-MIGRATION.sql
+intentionally does NOT include 003/008/009/010/011/012/013 (so all 7 supplements are required), and that
+the older/overlapping files need not be re-run. Guarded against drift (the codebase's core principle —
+derived/checked over hand-maintained): test-migration-coverage.mjs now parses the README's bold-code file
+list and asserts it equals RECOMMENDED_MIGRATIONS exactly (both directions), so a future migration added to
+the recommended set but not the runbook (or vice-versa) fails CI.
+
+Verified by running: migration-coverage 28/28 (was 26; +2). Mutation-tested: un-bolding the 013 entry in
+the README makes the guard report "MISSING: 013_video_jobs.sql" and turns it red; restored → 28/28. No app
+code changed; the guard rides the existing test:migration-coverage CI step.
+
+---
+
+## 2026-08-05 — Document 3 env vars the code reads but .env.example omitted (deployability gap)
+
+Standing-order loop (money path still owner-gated; waiting on Part A). Ran the rule-1 tool
+`scripts/generate-project-status.mjs` — it exits clean (no code↔registry drift) but flagged one real gap:
+3 env vars are read by backend code yet absent from backend/.env.example, so a deployer configuring from
+the example would never know they exist. Verified each is real and optional (safe default), then documented
+it in the right section (commented-out, since all three are optional):
+- `OMISE_API_URL` (omise-payment.js:9) — Omise API base, default https://api.omise.co; override only for
+  test/mock. Documented under the Omise section.
+- `WEBHOOK_RETRY_DELAYS` (webhook-system.js:77) — JSON array of retry backoff ms for outgoing tenant
+  webhooks; default lives in code. New "Outgoing webhooks" section.
+- `NODE_ENV` (auth.js:72, server.js:1302) — usually platform-set; =production turns on prod-like guards
+  (e.g. the guessable-default-admin block) on non-Vercel hosts. Documented under Server.
+
+Verified by running: re-running generate-project-status now prints "✅ every env var referenced in backend
+code is documented in .env.example" (was ⚠️ 3 missing). No code changed — documentation only; PROJECT_STATUS.md
+left un-committed as usual (it carries a per-run timestamp + a live prod-health probe).
+
+---
+
+## 2026-08-05 — Consolidate the pending owner-decisions into one verified, current doc
+
+Standing-order loop. The genuinely highest-leverage work left is unblocking the OWNER — but the pending
+"needs the owner's call" items are scattered across ~5000 lines of DECISIONS_LOG and, critically, several
+are STALE (already fixed). Verifying each against the current code before listing it (rule 1 / "verify
+before believing") found:
+- #9 affiliate commission on shop sales — ALREADY DONE (server.js:728 calls creditAffiliateSale on a ref
+  checkout). Old log said "open".
+- #10 dispute "split" that didn't split — ALREADY DONE (the "แบ่งครึ่ง" button removed, disputes.resolve()
+  rejects `split`). Old log said "open".
+- all-platform-files un-hyphenated domain — ALREADY DONE (0 files left).
+So the "12 owner-decision items" impression the old log gives is wrong; only a handful are genuinely open.
+
+Added docs/OWNER-DECISIONS.md — a prioritised, verified-current snapshot the owner can act on in one pass:
+🔴 high-impact open — (1) the double-payout Part A/B (money), (2) run the 8 Supabase migrations to activate
+the durability work, (3) set JWT_SECRET in the 3 Vercel projects; 🟡 needs-info open — (4) otop-ai-landing
+production domain, (5) whether to build out v9.0 so it deploys; 🟢 already-fixed (recorded so the stale log
+doesn't mislead); 🔵 minor notes. Each 🔴/🟡 item states why it matters, the safe options, and what I ship
+the moment it's approved.
+
+Every technical claim verified before writing: JWT_SECRET behaviour corrected — the code is fail-CLOSED
+(unset in prod → per-process RANDOM key → links unforgeable but flaky across invocations), NOT the old
+"forgeable constant" the first draft said; fixed the doc to describe the real impact (links won't verify
+reliably until JWT_SECRET is set). Confirmed: migrations/README.md exists, v9.0 still has no package.json,
+shop-checkout credit line present. Documentation only; no code changed.
+
+---
+
+## 2026-08-05 — SECURITY/COST: rate-limit the admin-credential auth endpoints + the paid TTS endpoint (were unthrottled)
+
+Standing-order loop (money path still owner-gated). Audited rate-limit coverage on public/costly endpoints
+(backend/CLAUDE.md: "every route group must go through express-rate-limit"). Every AI-generation endpoint is
+already capped (generateLimiter/competitorLimiter/voiceLimiter). Found FOUR that were not:
+- `/api/auth/override` — returns an ADMIN token on a correct override key. No limiter → the override key was
+  brute-forceable with no throttle.
+- `/api/auth/recovery` — returns an ADMIN token on a valid recovery code. No limiter → recovery codes
+  brute-forceable.
+- `/api/auth/recovery-codes/generate` — issues fresh recovery codes on the override key. No limiter.
+  (`/api/auth/login` already had authLimiter — these three siblings were missed.)
+- `/api/tts` — calls the PAID ElevenLabs API on the platform key; public (VoiceCommander runs on public
+  pages) with no throttle → loopable to drain the ElevenLabs budget, the exact real-money exposure the
+  AI/voice/competitor endpoints already cap.
+
+Fix (matches the existing pattern, non-breaking — limiters allow normal use): add `authLimiter` (20/15min
+per IP, same as login) to the three auth endpoints; add a new `ttsLimiter` (20/min, defined before the
+route since voiceLimiter is declared later in the file) to /api/tts. No auth added to /api/tts so the
+public VoiceCommander keeps working — a throttle is the right, non-breaking control there.
+
+Verified against the REAL running server: hammering /api/auth/override 25× with a wrong key returns 20×401
+then 429 (authLimiter engaged); /api/tts returns 20×503 (no key configured — but the limiter runs first)
+then 429. Existing auth flows unaffected: recovery-code 11/11, corporate-auth 9/9, video-auth 6/6 (all make
+< 20 requests). New scripts/test-auth-ratelimit.mjs (5 checks) boots the server and asserts each endpoint
+starts 429-ing once its limiter trips; wired into package.json + CI. Mutation-tested: removing authLimiter
+from /api/auth/override makes the 429 never appear and turns the test red; restored → 5/5. node --check clean.
+
+---
+
+## 2026-08-05 — SECURITY: rate-limit /api/system/auto-heal (unthrottled manual watchdog → agent re-runs = AI spend)
+
+Standing-order loop (money path owner-gated). Continued last round's rate-limit audit of public/costly
+endpoints. Verified the rest of the flagged set is safe: /api/n8n/trigger fails CLOSED (401 if
+N8N_WEBHOOK_SECRET unset or wrong), /api/webhooks/:id/test is admin-gated (webhooksAuth), /api/agent/:id/run
+is device-ownership gated, /api/scheduler/execute/:id is unauth but its ids are unguessable
+(sch_<ts>_<rand>) so the practical risk is low. The real outlier: /api/system/auto-heal had NO auth and NO
+limiter, yet runWatchdog() loops all agents and re-runs any stale scheduled one (runAgent → real AI spend +
+outbound webhooks). Every SIBLING system/cron endpoint (news-rag-clear / daily-report / consumer-digest /
+autopost-process) is already cron-or-admin gated — auto-heal was the one left world-callable.
+
+It's a UI button on the (non-admin, device-scoped) Agent page, so requiring the admin key would break that
+button. The right non-breaking control is a rate limiter (same call last round made for TTS): add
+autoHealLimiter (max 6 / 15 min per IP) so the occasional legitimate click works but a loop that thrashes
+agent re-runs / log spam is capped. (runWatchdog is partly self-limiting anyway — it only re-runs agents
+stale >26h/8d — but an unthrottled public trigger of ANY agent run + checkpoint-file ops still warranted a
+cap and consistency with its siblings.)
+
+Verified against the REAL running server: POST /api/system/auto-heal 8× → 6×200 then 429. Existing auth
+flows unaffected. Extended scripts/test-auth-ratelimit.mjs (now 6 checks) to assert auto-heal 429s within 8
+calls; already wired into CI. Mutation-tested: removing autoHealLimiter makes the 429 never appear and turns
+the check red; restored → 6/6. node --check clean. No tracked data files committed (restored data/ after
+the test runs, which exercise runWatchdog).
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
 - ✅ **Route components exist on disk** — all 88 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
-- ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql
+- ℹ️ **14 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql
 
 ## Recent commits
-- ea12a80 fix(a11y): associate the public /store checkout labels with their inputs (18 seconds ago)
-- 5848b80 chore: sync PROJECT_STATUS.md [skip ci] (57 minutes ago)
-- aee90ea fix(a11y): associate the public /contact form labels with their inputs (58 minutes ago)
-- b8b7eba chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 5ddd9a9 fix(ai): harden parseAIJson (null-safe + code-fence aware) — the parser 36 skills depend on (4 hours ago)
-- 9f75afd chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 6993130 fix(a11y): associate catalog order-form labels with their inputs (nameless fields for screen readers) (5 hours ago)
-- 5c7c11b chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 555e2af fix(security): rate-limit /api/system/auto-heal (was an unthrottled public watchdog trigger) (67 minutes ago)
+- 098baaf fix(security): rate-limit the admin-credential auth endpoints + the paid TTS endpoint (2 hours ago)
+- 0afca52 docs: consolidate pending owner-decisions into one verified, current list (3 hours ago)
+- 231168c docs(env): document 3 env vars the code reads but .env.example omitted (4 hours ago)
+- dcc8d12 docs(migrations): add an owner-facing runbook to activate the durable Supabase tables (5 hours ago)
+- 51b8c7d test(contract): forbid raw fetch('/api/...') that bypasses apiUrl/apiFetch (5 hours ago)
+- 776423d test(contract): guard the whole-app frontend<->backend API contract (7 hours ago)
+- 8213ce4 test(skills): guard the AI-skills catalog against phantom-endpoint drift (8 hours ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.2",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -4301,7 +5392,7 @@ were already correct in prior rounds.
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 39 files)
+## Backend modules (backend/*.js — 42 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -4311,21 +5402,24 @@ were already correct in prior rounds.
 | `affiliate-withdraw-math.js` | 32 | Affiliate withdraw-request math — the money-integrity rules for how much an |
 | `agent-tools.js` | 125 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `ai-json.js` | 26 | Extract a JSON object from a model's text reply. |
-| `auth.js` | 196 | JWT |
+| `auth.js` | 203 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
 | `dept-officers.js` | 85 | Openthai.ai — AI Department Officers (เจ้าหน้าที่ AI ประจำฝ่าย) |
 | `digest-match.js` | 22 | Pure, side-effect-free selector for the consumer category digest (sendConsumerDigest in server.js). |
 | `disputes.js` | 319 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
-| `html-escape.js` | 124 | Shared HTML-escaping for values interpolated into notification-email markup. |
+| `html-escape.js` | 152 | Shared HTML-escaping for values interpolated into notification-email markup. |
 | `integrations.js` | 259 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
+| `line-signature.js` | 33 | Verifies a LINE webhook's X-Line-Signature (HMAC-SHA256 over the RAW request body, |
 | `mcp-handler.js` | 264 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 182 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 772 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |
 | `order-confirm.js` | 29 | Pure, side-effect-free decision helper for the BUYER order-confirmation email. |
 | `orders.js` | 223 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `payment-row.js` | 29 | Payment upsert-row construction — extracted so its shape can be pinned by a test against the |
+| `pdpa-consent.js` | 25 | PDPA consent-record construction — extracted so its shape can be pinned by a test against |
 | `portal-leads.js` | 160 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
@@ -4334,7 +5428,7 @@ were already correct in prior rounds.
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9078 | Vercel serverless detection |
+| `server.js` | 9319 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
@@ -4370,10 +5464,9 @@ were already correct in prior rounds.
 - `0 9 * * *` → /api/scheduler/process
 - `0 2 * * 1` → /api/portals/consumer-digest
 
-## Environment variables (60 referenced in backend code, 59 documented in .env.example)
+## Environment variables (62 referenced in backend code, 62 documented in .env.example)
 ⚠️ Referenced in code but missing from `backend/.env.example`:
-- OMISE_API_URL
-- WEBHOOK_RETRY_DELAYS
+- OPENTHAI_DATA_DIR
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.
@@ -4391,6 +5484,10 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 007_portal_leads.sql
 - 008_broadcast_unsubscribes.sql
 - 009_pdpa_consents.sql
+- 010_waitlist.sql
+- 011_autopost_queue.sql
+- 012_scheduler_posts.sql
+- 013_video_jobs.sql
 - FULL-MIGRATION.sql
 - credits-schema.sql
 - orders-schema.sql
