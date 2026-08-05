@@ -5142,3 +5142,31 @@ it in the right section (commented-out, since all three are optional):
 Verified by running: re-running generate-project-status now prints "✅ every env var referenced in backend
 code is documented in .env.example" (was ⚠️ 3 missing). No code changed — documentation only; PROJECT_STATUS.md
 left un-committed as usual (it carries a per-run timestamp + a live prod-health probe).
+
+---
+
+## 2026-08-05 — Consolidate the pending owner-decisions into one verified, current doc
+
+Standing-order loop. The genuinely highest-leverage work left is unblocking the OWNER — but the pending
+"needs the owner's call" items are scattered across ~5000 lines of DECISIONS_LOG and, critically, several
+are STALE (already fixed). Verifying each against the current code before listing it (rule 1 / "verify
+before believing") found:
+- #9 affiliate commission on shop sales — ALREADY DONE (server.js:728 calls creditAffiliateSale on a ref
+  checkout). Old log said "open".
+- #10 dispute "split" that didn't split — ALREADY DONE (the "แบ่งครึ่ง" button removed, disputes.resolve()
+  rejects `split`). Old log said "open".
+- all-platform-files un-hyphenated domain — ALREADY DONE (0 files left).
+So the "12 owner-decision items" impression the old log gives is wrong; only a handful are genuinely open.
+
+Added docs/OWNER-DECISIONS.md — a prioritised, verified-current snapshot the owner can act on in one pass:
+🔴 high-impact open — (1) the double-payout Part A/B (money), (2) run the 8 Supabase migrations to activate
+the durability work, (3) set JWT_SECRET in the 3 Vercel projects; 🟡 needs-info open — (4) otop-ai-landing
+production domain, (5) whether to build out v9.0 so it deploys; 🟢 already-fixed (recorded so the stale log
+doesn't mislead); 🔵 minor notes. Each 🔴/🟡 item states why it matters, the safe options, and what I ship
+the moment it's approved.
+
+Every technical claim verified before writing: JWT_SECRET behaviour corrected — the code is fail-CLOSED
+(unset in prod → per-process RANDOM key → links unforgeable but flaky across invocations), NOT the old
+"forgeable constant" the first draft said; fixed the doc to describe the real impact (links won't verify
+reliably until JWT_SECRET is set). Confirmed: migrations/README.md exists, v9.0 still has no package.json,
+shop-checkout credit line present. Documentation only; no code changed.
