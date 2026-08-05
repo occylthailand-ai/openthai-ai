@@ -6297,7 +6297,14 @@ app.get('/api/system/charter', (req, res) => {
 });
 
 // ── 4. POST /api/system/auto-heal — manual trigger ──────────────────────────
-app.post('/api/system/auto-heal', async (req, res) => {
+// runWatchdog() loops all agents and re-runs any stale scheduled one (runAgent → real AI spend +
+// outbound webhooks). This is a UI button on the (non-admin) Agent page, so it can't require the admin
+// key without breaking that button — but it was completely unthrottled while every sibling system/cron
+// endpoint (news-rag-clear / daily-report / consumer-digest / autopost-process) is cron-or-admin gated.
+// A rate limiter is the right non-breaking control: the legitimate occasional click works; a loop that
+// thrashes agent re-runs / log spam is capped.
+const autoHealLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 6, message: { success: false, message: 'สั่ง auto-heal บ่อยเกินไป กรุณารอสักครู่' } });
+app.post('/api/system/auto-heal', autoHealLimiter, async (req, res) => {
   try {
     const healedThisRun = await runWatchdog();
     addLog('info', 'AutoHeal', '🔧 Manual auto-heal triggered');

@@ -51,6 +51,10 @@ try {
   const tts = await hammer('/api/tts', { text: 'hi' }, 25);
   ok(tts.includes(429), `a 429 appears within 25 requests (ttsLimiter engaged) — last 5: ${tts.slice(-5).join(',')}`);
 
+  console.log('\n=== /api/system/auto-heal — manual watchdog trigger (runs agents = AI spend) is throttled ===');
+  const ah = await hammer('/api/system/auto-heal', {}, 8);
+  ok(ah.includes(429), `a 429 appears within 8 requests (autoHealLimiter max 6/15min engaged) — got ${ah.join(',')}`);
+
   exitCode = fail ? 1 : 0;
   console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 } finally {

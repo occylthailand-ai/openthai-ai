@@ -5199,3 +5199,29 @@ then 429. Existing auth flows unaffected: recovery-code 11/11, corporate-auth 9/
 < 20 requests). New scripts/test-auth-ratelimit.mjs (5 checks) boots the server and asserts each endpoint
 starts 429-ing once its limiter trips; wired into package.json + CI. Mutation-tested: removing authLimiter
 from /api/auth/override makes the 429 never appear and turns the test red; restored → 5/5. node --check clean.
+
+---
+
+## 2026-08-05 — SECURITY: rate-limit /api/system/auto-heal (unthrottled manual watchdog → agent re-runs = AI spend)
+
+Standing-order loop (money path owner-gated). Continued last round's rate-limit audit of public/costly
+endpoints. Verified the rest of the flagged set is safe: /api/n8n/trigger fails CLOSED (401 if
+N8N_WEBHOOK_SECRET unset or wrong), /api/webhooks/:id/test is admin-gated (webhooksAuth), /api/agent/:id/run
+is device-ownership gated, /api/scheduler/execute/:id is unauth but its ids are unguessable
+(sch_<ts>_<rand>) so the practical risk is low. The real outlier: /api/system/auto-heal had NO auth and NO
+limiter, yet runWatchdog() loops all agents and re-runs any stale scheduled one (runAgent → real AI spend +
+outbound webhooks). Every SIBLING system/cron endpoint (news-rag-clear / daily-report / consumer-digest /
+autopost-process) is already cron-or-admin gated — auto-heal was the one left world-callable.
+
+It's a UI button on the (non-admin, device-scoped) Agent page, so requiring the admin key would break that
+button. The right non-breaking control is a rate limiter (same call last round made for TTS): add
+autoHealLimiter (max 6 / 15 min per IP) so the occasional legitimate click works but a loop that thrashes
+agent re-runs / log spam is capped. (runWatchdog is partly self-limiting anyway — it only re-runs agents
+stale >26h/8d — but an unthrottled public trigger of ANY agent run + checkpoint-file ops still warranted a
+cap and consistency with its siblings.)
+
+Verified against the REAL running server: POST /api/system/auto-heal 8× → 6×200 then 429. Existing auth
+flows unaffected. Extended scripts/test-auth-ratelimit.mjs (now 6 checks) to assert auto-heal 429s within 8
+calls; already wired into CI. Mutation-tested: removing autoHealLimiter makes the 429 never appear and turns
+the check red; restored → 6/6. node --check clean. No tracked data files committed (restored data/ after
+the test runs, which exercise runWatchdog).
