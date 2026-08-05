@@ -5019,3 +5019,28 @@ PROPOSED FIX (for owner approval — do NOT build without go-ahead):
 QUESTION FOR THE OWNER: approve shipping Part A now (safe, closes the main double-payout root, no migration)?
 And do you want Part B (durable withdrawals ledger + a new migration) in the same change or staged after?
 Until you say go, the affiliate money path stays untouched per rule 8.
+
+---
+
+## 2026-08-05 — Guard the AI-skills catalog against "phantom endpoint" drift (core-product regression class)
+
+Standing-order loop (money path still owner-gated, untouched). This round audited the CORE product — the
+AI-skills grid on /ai-skills. The catalog (frontend/src/pages/AISkillsPage.jsx) advertises 26 skill
+buttons, each with an `endpoint: '/api/skills/...'`. Verified — by parsing both files — that all 26 map to
+a real `app.get`/`app.post` handler in server.js (server.js registers 31 such routes; the extra 5 aren't
+surfaced in this grid, which is fine). So there is NO current phantom-endpoint bug.
+
+But this is exactly the bug class the repo was already bitten by (7 /portals/* pages POSTed to
+/api/leads/submit, which didn't exist → every form silently failed; see the portal-leads entry). The
+frontend catalog and the backend routes can silently drift as skills are renamed/added, and a mismatch
+only surfaces as a 404 the moment a user clicks a paid feature — no existing unit test would catch it.
+
+Added scripts/test-skills-endpoints.mjs: parses AISkillsPage.jsx for every advertised
+`/api/skills/...` endpoint and server.js for every `app.get/post('/api/skills/...')` route, and asserts
+each advertised endpoint is a real handler. Static cross-file guard (no server boot), so it's fast,
+deterministic, and can't drift. Wired into package.json (test:skills-endpoints) + CI.
+
+Verified by running: 28/28 pass. Mutation-tested: injecting a phantom catalog entry
+(endpoint '/api/skills/ghost-nonexistent') turns the guard red; removing it → 28/28 green. No app code
+changed — this is a regression guard for the core product, in the spirit of the existing seoInvariants /
+migration-coverage / portalFieldCollision guards.
