@@ -4834,3 +4834,55 @@ NOTE (still open, unchanged): the affiliate-payout double-payout finding from th
 (withdrawals + withdraw_confirmations file-only, and _affFromRow resets paid_out to 0 on Supabase reload)
 is a MONEY path with legal implications — left untouched, awaiting the owner's go-ahead per standing-order
 rule 8. This round deliberately picked a non-money durability bug instead.
+
+---
+
+## 2026-08-05 — DATA-LOSS/CORRECTNESS: /api/scheduler/* scheduled posts silently never processed on Vercel — now Supabase-durable
+
+Standing-order loop, marketing lane. Follow-up to the same-day autopost_queue fix. Code scan found a
+SECOND, parallel "schedule a post" feature — /api/scheduler/* (the live Scheduler page, SchedulerPage.jsx,
+also surfaced on Admin/Dashboard/StrategyCenter/ContentStudio/AIToolsHub) — with the identical serverless
+bug. /api/scheduler/create stored the queue in scheduler.json ONLY; on Vercel that file is under /tmp:
+wiped on every redeploy AND private to each lambda instance. Vercel Cron fires GET /api/scheduler/process
+daily (09:00 UTC, confirmed in vercel.json crons), but that is a DIFFERENT invocation from the one that
+created the post, so it reads an empty/stale /tmp file and sees nothing → scheduled posts (including the
+auto LINE OA broadcast when due, via lineBroadcast) were silently never processed in production. Verified
+by grep + reading the endpoints: processScheduler filtered the in-memory schedulerStore.posts; the cron
+lambda's copy is always empty on a cold start.
+
+Fix (mirrors the autopost_queue durability fix exactly): make the scheduler queue dual-mode (Supabase
+primary + file fallback) — new _schToRow/_schFromRow mappers, hydrate on boot, persistScheduler(post)
+upserts one post at a time on create/status-change/execute, DELETE removes from Supabase, and — the
+actual correctness fix — a new dueSchedulerPosts() pulls due posts (status=pending & scheduled_at≤now)
+straight from Supabase, used by BOTH /api/scheduler/process (the daily cron + the SPA "process now"
+button) and /api/scheduler/due (the SPA's due-count badge, which was also wrong on Vercel). Fails quietly
+/ stays file-only before the migration is applied (no regression). New migration
+backend/migrations/012_scheduler_posts.sql (id PK; platform/content/audience/language, scheduled_at,
+status, channel/error/reach_mock, published_at/ready_at; (status, scheduled_at) index; RLS service_role
+only). DID NOT change auth on /api/scheduler/process — SchedulerPage.jsx calls it unauthenticated ("process
+now" button), so it is intentionally SPA-callable; it only processes already-due owner content, and adding
+auth would break the page (kept out of scope per standing-order rule 8).
+
+CORRECTION to the recommended Supabase set-up: it is now SEVEN files —
+`FULL-MIGRATION.sql + 003 + 008 + 009 + 010 + 011 + 012_scheduler_posts.sql`.
+test-migration-coverage.mjs updated (RECOMMENDED_MIGRATIONS + the "missing from FULL-MIGRATION" doc list)
+and — because it auto-parses every `sbReq('POST', '/<table>')` call site — now auto-verifies
+scheduler_posts is covered: 24/24 (was 22).
+
+Verified against the REAL running server — new scripts/test-scheduler-durability.mjs (12 checks) starts a
+mock Supabase, spawns server.js pointed at it (scheduler.json seeded EMPTY so any due post can only have
+come from Supabase): (1) a post scheduled in a PRIOR deploy (Supabase-only) is processed after the /tmp
+wipe and its status flips off 'pending'; (2) a post created by ANOTHER instance directly in Supabase AFTER
+this server booted (never in memory) is still found and processed — the cross-invocation guarantee the
+file-only queue could never give; (3) a FUTURE post is upserted (durable) but NOT listed by /due and NOT
+processed until due; (4) admin delete removes it from Supabase (won't re-hydrate) and delete without the
+admin key → 401. Wired into package.json + CI. Sibling suites unaffected: migration-coverage 24/24,
+autopost-durability 10/10, waitlist 8/8, broadcast-unsub 7/7; server boots + /api/health 200. Mutation-
+tested: forcing dueSchedulerPosts() back to the in-memory-only filter makes the cross-instance post
+invisible (processed=0) and turns the test red; restored → 12/12. (No LINE token in the test, so a due
+LINE post resolves to 'ready' — irrelevant; the fix is about the post being FOUND and processed after a
+wipe, not the broadcast.)
+
+NOTE (still open, unchanged): the affiliate-payout double-payout finding (withdrawals + withdraw_
+confirmations file-only, _affFromRow resets paid_out to 0 on Supabase reload) is a MONEY path with legal
+implications — still untouched, awaiting the owner's go-ahead per standing-order rule 8.

@@ -8804,6 +8804,91 @@ function saveScheduler() {
   } catch (e) { console.error('[scheduler] save error:', e.message); }
 }
 
+// ── Durable scheduler queue (Supabase primary / JSON file fallback) — migration 012 ───────────
+// scheduler.json lives in /tmp on Vercel: wiped on every redeploy AND private to each lambda instance,
+// so a post the /api/scheduler/create invocation stores is invisible to the daily Vercel Cron
+// invocation (/api/scheduler/process) meant to broadcast it → scheduled LINE broadcasts silently never
+// fire in production. Persist the queue to Supabase so due posts survive redeploys and are visible
+// across invocations. Mirrors the autopost_queue durability fix. Fails quietly / stays file-only before
+// the migration is applied (no regression).
+const _schToRow = (p) => ({
+  id: String(p.id),
+  platform: p.platform || '',
+  content: p.content || '',
+  audience: p.audience || 'general',
+  language: p.language || 'thai',
+  scheduled_at: p.scheduled_at || new Date().toISOString(),
+  status: p.status || 'pending',
+  channel: p.channel || null,
+  error: p.error || null,
+  reach_mock: p.reach_mock != null ? p.reach_mock : null,
+  created_at: p.created_at || new Date().toISOString(),
+  published_at: p.published_at || null,
+  ready_at: p.ready_at || null,
+  updated_at: new Date().toISOString(),
+});
+const _schFromRow = (r) => ({
+  id: String(r.id),
+  platform: r.platform || '',
+  content: r.content || '',
+  audience: r.audience || 'general',
+  language: r.language || 'thai',
+  scheduled_at: r.scheduled_at || new Date().toISOString(),
+  status: r.status || 'pending',
+  ...(r.channel ? { channel: r.channel } : {}),
+  ...(r.error ? { error: r.error } : {}),
+  ...(r.reach_mock != null ? { reach_mock: r.reach_mock } : {}),
+  created_at: r.created_at || new Date().toISOString(),
+  ...(r.published_at ? { published_at: r.published_at } : {}),
+  ...(r.ready_at ? { ready_at: r.ready_at } : {}),
+});
+// Save the file (always) + upsert this post to Supabase (when configured), one at a time so a
+// pending → published/ready/failed transition is persisted immediately.
+function persistScheduler(post) {
+  saveScheduler();
+  if (_useSB && post) {
+    _sbReq('POST', '/scheduler_posts', { params: { on_conflict: 'id' }, body: [_schToRow(post)], prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch((e) => console.warn('[scheduler] Supabase upsert failed, file-only:', e.message));
+  }
+}
+// Posts due now (pending & scheduled_at ≤ now). On Supabase, fetch them directly so a fresh cron lambda
+// sees posts created by another invocation and after a redeploy; merge each into the in-memory store so
+// status updates and persistScheduler operate on the same object. Falls back to the in-memory filter.
+async function dueSchedulerPosts() {
+  const now = Date.now();
+  if (_useSB) {
+    try {
+      const rows = await _sbReq('GET', '/scheduler_posts', { params: { status: 'eq.pending', scheduled_at: `lte.${new Date().toISOString()}`, select: '*', order: 'scheduled_at.asc', limit: '100' } });
+      if (Array.isArray(rows)) {
+        const byId = new Map(schedulerStore.posts.map((p) => [String(p.id), p]));
+        const due = [];
+        for (const r of rows) {
+          let post = byId.get(String(r.id));
+          if (!post) { post = _schFromRow(r); schedulerStore.posts.unshift(post); }
+          due.push(post);
+        }
+        return due;
+      }
+    } catch (e) {
+      console.warn('[scheduler] Supabase due-fetch failed, using memory:', e.message);
+    }
+  }
+  return schedulerStore.posts.filter((p) => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
+}
+
+if (_useSB) {
+  _sbReq('GET', '/scheduler_posts', { params: { select: '*', order: 'created_at.desc', limit: '500' } })
+    .then((rows) => {
+      if (!Array.isArray(rows)) return;
+      const have = new Set(schedulerStore.posts.map((p) => String(p.id)));
+      for (const r of rows) {
+        const id = String(r.id);
+        if (!have.has(id)) { schedulerStore.posts.push(_schFromRow(r)); have.add(id); }
+      }
+    })
+    .catch((e) => console.warn('[scheduler] Supabase hydrate failed, file-only:', e.message));
+}
+
 app.post('/api/scheduler/create', generateLimiter, (req, res) => {
   const { platform, content, scheduled_at, audience, language = 'thai' } = req.body || {};
   if (!content?.trim() || !platform || !scheduled_at) return res.status(400).json({ error: 'content, platform, scheduled_at required' });
@@ -8814,14 +8899,13 @@ app.post('/api/scheduler/create', generateLimiter, (req, res) => {
   };
   schedulerStore.posts.unshift(post);
   if (schedulerStore.posts.length > 200) schedulerStore.posts = schedulerStore.posts.slice(0, 200);
-  saveScheduler();
+  persistScheduler(post);
   res.json({ ok: true, post });
 });
 
 // GET /api/scheduler/due — โพสต์ที่ถึงเวลาแล้วแต่ยังไม่ได้โพสต์ (pending + scheduled_at <= now)
-app.get('/api/scheduler/due', (req, res) => {
-  const now = Date.now();
-  const due = schedulerStore.posts.filter(p => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
+app.get('/api/scheduler/due', async (req, res) => {
+  const due = await dueSchedulerPosts();
   res.json({ ok: true, due, count: due.length });
 });
 
@@ -8830,8 +8914,10 @@ app.get('/api/scheduler/due', (req, res) => {
 // แพลตฟอร์มอื่น → mark 'ready' (ถึงเวลาโพสต์ — รอคุณกดโพสต์เอง, ToS ห้ามบอทโพสต์)
 // รองรับทั้ง GET (Vercel Cron / uptime pinger) และ POST (เรียกจากหน้าเว็บ)
 async function processScheduler(req, res) {
-  const now = Date.now();
-  const due = schedulerStore.posts.filter(p => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
+  // Pull due posts from Supabase (survives redeploy + visible across lambda invocations); falls back to
+  // the in-memory queue when Supabase isn't configured. This is what makes scheduled posts actually get
+  // processed on Vercel, where the file-only queue was invisible to the daily cron invocation.
+  const due = await dueSchedulerPosts();
   const result = { broadcast: [], ready: [], failed: [] };
   for (const post of due) {
     const isLine = ['line', 'line_oa', 'lineoa'].includes(String(post.platform).toLowerCase());
@@ -8846,8 +8932,9 @@ async function processScheduler(req, res) {
       post.status = 'ready'; post.ready_at = new Date().toISOString();
       result.ready.push(post.id);
     }
+    persistScheduler(post);
   }
-  if (due.length) { saveScheduler(); addLog('info', 'Scheduler', `process: broadcast ${result.broadcast.length} · ready ${result.ready.length} · failed ${result.failed.length}`); }
+  if (due.length) addLog('info', 'Scheduler', `process: broadcast ${result.broadcast.length} · ready ${result.ready.length} · failed ${result.failed.length}`);
   res.json({ ok: true, processed: due.length, ...result, ran_at: new Date().toISOString() });
 }
 app.post('/api/scheduler/process', processScheduler);
@@ -8867,7 +8954,7 @@ app.post('/api/scheduler/execute/:id', (req, res) => {
   post.status = 'published';
   post.published_at = new Date().toISOString();
   post.reach_mock = Math.floor(Math.random() * 9000) + 1000;
-  saveScheduler();
+  persistScheduler(post);
   res.json({ ok: true, post });
 });
 
@@ -8879,6 +8966,8 @@ app.delete('/api/scheduler/:id', adminLimiter, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'not found' });
   schedulerStore.posts.splice(idx, 1);
   saveScheduler();
+  // Remove from Supabase too so the deleted post can't re-hydrate on the next boot.
+  if (_useSB) _sbReq('DELETE', '/scheduler_posts', { params: { id: `eq.${encodeURIComponent(req.params.id)}` }, prefer: 'return=minimal' }).catch(() => {});
   res.json({ ok: true });
 });
 

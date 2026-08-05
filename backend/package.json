@@ -70,7 +70,8 @@
     "test:confirm-token-secret": "node scripts/test-confirm-token-secret.mjs",
     "test:admin-default-login": "node scripts/test-admin-default-login.mjs",
     "test:waitlist-durability": "node scripts/test-waitlist-durability.mjs",
-    "test:autopost-durability": "node scripts/test-autopost-durability.mjs"
+    "test:autopost-durability": "node scripts/test-autopost-durability.mjs",
+    "test:scheduler-durability": "node scripts/test-scheduler-durability.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
