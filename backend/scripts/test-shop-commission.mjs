@@ -3,8 +3,10 @@
 // never credit a commission, unlike subscription/quickpay. This guards that a paid shop
 // checkout with a ref credits the affiliate at their tier rate — and that a checkout
 // WITHOUT a ref credits nobody.
-// รัน: boot server (mock mode: no OMISE_SECRET_KEY, VERCEL=1 for isolated data, ADMIN_KEY set)
-//      แล้ว node scripts/test-shop-commission.mjs
+// รัน (hermetic): boot server ด้วย mock mode (no OMISE_SECRET_KEY) + OPENTHAI_DATA_DIR=/tmp/xxx
+//      (ชี้ file store ทั้งหมดไปโฟลเดอร์ทิ้ง ไม่แตะ backend/data/ ที่ track ไว้) + ADMIN_KEY ที่ตั้งเอง
+//      เช่น: OPENTHAI_DATA_DIR=/tmp/shopcomm ADMIN_KEY=ci-admin PORT=8898 node server.js
+//      แล้ว TEST_BASE=http://127.0.0.1:8898 ADMIN_KEY=ci-admin node scripts/test-shop-commission.mjs
 const BASE = process.env.TEST_BASE || 'http://localhost:8000';
 const ADMIN = process.env.ADMIN_KEY || 'testadmin';
 let pass = 0, fail = 0;

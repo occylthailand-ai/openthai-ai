@@ -80,7 +80,10 @@ const adminLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { s
 // บน Vercel: ไฟล์ static อ่านได้จาก repo, ไฟล์ writable ต้องใช้ /tmp
 // Local: ทุกอย่างอยู่ใน backend/data/
 const STATIC_DATA_DIR = join(__dirname, 'data');
-const WRITE_DATA_DIR  = IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR;
+// OPENTHAI_DATA_DIR lets a test point ALL file-backed stores at a throwaway dir instead of the
+// committed backend/data/ files — so a self-boot test can create products/affiliates/orders without
+// snapshot/restore gymnastics on tracked files. Unset in prod/dev: behaves exactly as before.
+const WRITE_DATA_DIR  = process.env.OPENTHAI_DATA_DIR || (IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR);
 
 // ─── Supabase REST helper — shared by affiliates / payments / entitlements ────
 const _SB_URL = process.env.SUPABASE_URL;

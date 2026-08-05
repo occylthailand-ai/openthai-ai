@@ -9,6 +9,17 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-08-05 — Hourly loop: make the shop-commission (#9) money-guard E2E hermetic via a data-dir override
+
+The `#9` guard (`scripts/test-shop-commission.mjs`, wired into CI as the "E2E — shop-commission money guard" step) boots a real server and drives a full ref-link store purchase to prove `/api/shop/checkout` credits the affiliate their tier commission (฿1000 × 0.20 = ฿200) and credits nobody on a no-ref checkout. It was spawned with plain `node server.js` — no data isolation — so every run wrote the affiliate/product/order records it creates into the **tracked** `backend/data/*.json` seed files. Harmless in ephemeral CI, but it meant the guard **could not be run locally without dirtying tracked files** (exactly the snapshot/restore friction that has bitten this loop before, incl. the round-13 accidental delete of tracked seeds).
+
+**Change (additive, no behaviour change in prod/dev):**
+- `backend/server.js` — `WRITE_DATA_DIR` now honours an optional `OPENTHAI_DATA_DIR` env var: `process.env.OPENTHAI_DATA_DIR || (IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR)`. Unset (prod/dev) → **identical** to before. Set → **all** file-backed stores point at that throwaway dir, so a self-boot test can create products/affiliates/orders without ever touching the committed `backend/data/` files.
+- `.github/workflows/test.yml` — the shop-commission E2E step now spawns with `OPENTHAI_DATA_DIR=/tmp/shopcomm-data`, so the guard is hermetic in CI too.
+- `backend/scripts/test-shop-commission.mjs` — header comment updated to the hermetic local-run recipe (`OPENTHAI_DATA_DIR=/tmp/xxx` instead of the old `VERCEL=1`, which shared `/tmp/openthai-data` across all tests).
+
+**Verified (run, not assumed) + mutation-tested:** booted `OPENTHAI_DATA_DIR=/tmp/shopcomm-verify ADMIN_KEY=ci-admin node server.js` and ran the guard → **8/8**, and `git status --short backend/data/` stayed **empty** (tracked seeds untouched — the whole point). **Mutation:** neutering the `if (ref) creditAffiliateSale(…)` call at `server.js:731` (the #9 credit) flips 3 assertions red (`total_sales`/`total_earned` → 0, RC=1); restored to 8/8. `node --check server.js` clean; `test:api-contract` **166/166**, `test:migration-coverage` **28/28**. `PROJECT_STATUS.md` regenerated (was 6 days stale) — committed separately.
+
 ### 2026-07-30 — Hourly loop: a11y — the public `/contact` form's labels weren't associated with their inputs
 
 Continuing the a11y-label sweep from the catalog order form. Audited public form pages for the same "visible `<label>` but no `htmlFor`/`id`" gap and found it on `/contact` (`ContactPage.jsx`) — a real public funnel page (in the sitemap). All four fields (name / email / subject `<select>` / message `<textarea>`) rendered a styled label that was **not** associated with its control, so a screen reader announced each field with **no accessible name** (WCAG 1.3.1 Info & Relationships, 4.1.2 Name/Role/Value). Additive, no behaviour change.

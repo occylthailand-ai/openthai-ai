@@ -181,7 +181,7 @@ jobs:
       - name: E2E — shop-commission money guard (#9)
         working-directory: backend
         run: |
-          ADMIN_KEY=ci-admin PORT=8898 node server.js > /tmp/shop-server.log 2>&1 &
+          OPENTHAI_DATA_DIR=/tmp/shopcomm-data ADMIN_KEY=ci-admin PORT=8898 node server.js > /tmp/shop-server.log 2>&1 &
           SP=$!
           for i in $(seq 1 20); do
             [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8898/api/health || echo 000)" = "200" ] && break
