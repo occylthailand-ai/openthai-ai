@@ -4933,3 +4933,35 @@ the discriminating guard for the findVideoJob Supabase lookup.)
 NOTE (still open, unchanged): the affiliate-payout double-payout finding (withdrawals + withdraw_
 confirmations file-only; _affFromRow resets paid_out to 0 on Supabase reload) is a MONEY path with legal
 implications — still untouched, awaiting the owner's go-ahead per standing-order rule 8.
+
+---
+
+## 2026-08-05 — Cross-repo (smart-e): reject a QR/payment that references a nonexistent order
+
+Standing-order loop. Diversified away from openthai-ai after re-verifying its high-traffic paths are
+already solid this session: pricing is consistent across PricingPage PP_META / backend SUBSCRIPTION_PLANS
+/ index.html SoftwareApplication offers (Free/Pro 299/Premier 599/Enterprise 1299 all agree); og-image.png
+exists (330KB) and is referenced absolutely; i18n is key-complete across th/en/zh (index.jsx 260/260/260,
+affiliate.js 25/25/25, admin.js 5/5/5 — no drift that would show Thai to en/zh visitors); robots↔sitemap↔
+prerender ROUTES consistent; Organization/WebSite/SoftwareApplication/FAQPage/BreadcrumbList structured
+data all present. otop-ai-landing's remaining SEO (canonical/og:url) is still the domain-gated owner
+decision; all-platform-files domain normalization likewise owner-gated; the affiliate double-payout money
+path stays owner-gated per rule 8.
+
+Unblocked, verifiable work was in smart-e (the Python-stdlib POS). Ran test_server.py first (134/134
+green), then audited the money paths (_create_order, _update_order_status, _confirm_payment, _create_qr,
+dashboard aggregation) — all well-hardened by earlier rounds (stock/customer-total symmetry on cancel/
+un-cancel, finite-amount guards, 404/400 on missing refs, cancelled-excluded revenue). Found ONE real
+remaining gap: _create_qr stored body.order_id into the payments row WITHOUT checking the order exists, so
+a QR/payment could be recorded against a "ghost" order (typo'd/nonexistent id). That payment can never move
+an order's status (_confirm_payment's `UPDATE orders ... WHERE id=<ghost>` no-ops, order_updated stays
+False) and pollutes any payments↔orders join — inconsistent with the file's own pattern (_confirm_payment
+404s on a missing payment; _create_order 400s on a missing product id).
+
+Fix (smart-e server.py): in _create_qr, when order_id is not None, SELECT the order and 404 if missing;
+order_id=None (standalone QR) still allowed; a real order_id still succeeds. Verified by running — added 4
+assertions to test_server.py's payments/QR block (nonexistent order_id → 404, real → 200, none → 200); full
+suite 138/138 (was 134); ast.parse clean. Mutation-tested: neutering the existence check makes the
+ghost-order QR return 200 and turns the new test red; restored → 138/138. Committed to smart-e branch
+claude/daily-reporter-improvements-8vc9ct (ba28dc6; smart-e has no DECISIONS_LOG so full detail is in the
+commit message) — on the open smart-e PR #1, no auto-merge.
