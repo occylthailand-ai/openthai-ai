@@ -54,5 +54,19 @@ for (const [t, file] of [['ai_usage_log', '003_ai_usage_log.sql'], ['broadcast_u
      `"${t}" is missing from FULL-MIGRATION.sql and supplied by ${file}`);
 }
 
+console.log('\n=== the migrations/README.md runbook lists exactly the recommended set (no drift) ===');
+// The owner-facing runbook must stay in lockstep with RECOMMENDED_MIGRATIONS — otherwise someone runs
+// the documented files, misses a newer one, and the code silently falls back to the ephemeral /tmp store
+// (the exact durability bug the migration exists to fix). Fail if the README's .sql list drifts either way.
+const readme = readFileSync(join(backend, 'migrations', 'README.md'), 'utf8');
+// Only the numbered runbook entries are bold-code (**`file.sql`**); plain-code mentions in the
+// "do NOT run these" note (`credits-schema.sql`, …) are intentionally excluded.
+const readmeFiles = [...new Set([...readme.matchAll(/\*\*`([A-Za-z0-9_.-]+\.sql)`\*\*/g)].map((m) => m[1]))];
+const recSet = new Set(RECOMMENDED_MIGRATIONS);
+const missingFromReadme = RECOMMENDED_MIGRATIONS.filter((f) => !readmeFiles.includes(f));
+const extraInReadme = readmeFiles.filter((f) => !recSet.has(f));
+ok(missingFromReadme.length === 0, `README lists every recommended file${missingFromReadme.length ? ` — MISSING: ${missingFromReadme.join(', ')}` : ''}`);
+ok(extraInReadme.length === 0, `README lists no non-recommended .sql${extraInReadme.length ? ` — EXTRA: ${extraInReadme.join(', ')}` : ''}`);
+
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

@@ -5091,3 +5091,34 @@ Extended scripts/test-api-contract.mjs with a check that scans frontend/src for 
 guard) and fails with the offending file:line. Verified by running: 166/166 (was 165; +1). Mutation-tested:
 injecting fetch('/api/raw-bypass') fails the guard and names AIGeneratorPage.jsx:460; removing it → 166/166.
 No app code changed; already wired into CI as test:api-contract.
+
+---
+
+## 2026-08-05 — Add an owner-facing migration runbook (unblocks the durability work already shipped)
+
+Standing-order loop (money path still owner-gated — waiting for the Part A green light as promised, not
+touched). This round audited SEO meta first: all 25 routes have a unique, per-audience `desc` — 0 missing,
+0 duplicate description, 0 duplicate title (my first pass used the wrong field name `description` and
+false-alarmed; the real field is `desc`). Five descs run >160 chars (SERP truncation) but they're copied
+verbatim from each page's i18n source, so trimming them here would desync from that source — deliberately
+left alone.
+
+The real, high-leverage gap: everything durable shipped this session (waitlist / autopost_queue /
+scheduler_posts / video_jobs — plus broadcast_unsubscribes / pdpa_consents / ai_usage_log) only becomes
+durable ONCE the owner runs the Supabase migrations. But docs/DEPLOYMENT.md tells the owner to set
+SUPABASE_URL/SERVICE_KEY and NOWHERE lists which .sql files to run, and there was no runbook in
+backend/migrations/. So a deployer sets the env vars, skips the SQL, and every "durable" feature silently
+falls back to the ephemeral /tmp store — i.e. the exact data-loss bugs those migrations fix stay unfixed in
+practice. The code was done; the activation step was undocumented.
+
+Added backend/migrations/README.md — a Thai runbook: run these 8 files in the Supabase SQL editor, in
+order, with a one-line purpose each and what breaks if you skip it; notes that FULL-MIGRATION.sql
+intentionally does NOT include 003/008/009/010/011/012/013 (so all 7 supplements are required), and that
+the older/overlapping files need not be re-run. Guarded against drift (the codebase's core principle —
+derived/checked over hand-maintained): test-migration-coverage.mjs now parses the README's bold-code file
+list and asserts it equals RECOMMENDED_MIGRATIONS exactly (both directions), so a future migration added to
+the recommended set but not the runbook (or vice-versa) fails CI.
+
+Verified by running: migration-coverage 28/28 (was 26; +2). Mutation-tested: un-bolding the 013 entry in
+the README makes the guard report "MISSING: 013_video_jobs.sql" and turns it red; restored → 28/28. No app
+code changed; the guard rides the existing test:migration-coverage CI step.
