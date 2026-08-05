@@ -4965,3 +4965,57 @@ suite 138/138 (was 134); ast.parse clean. Mutation-tested: neutering the existen
 ghost-order QR return 200 and turns the new test red; restored → 138/138. Committed to smart-e branch
 claude/daily-reporter-improvements-8vc9ct (ba28dc6; smart-e has no DECISIONS_LOG so full detail is in the
 commit message) — on the open smart-e PR #1, no auto-merge.
+
+---
+
+## 2026-08-05 — OPEN FINDING (owner-gated, rule 8): affiliate double-payout after a Vercel redeploy — verified, NOT yet fixed
+
+Consolidating into ONE authoritative entry a HIGH-severity financial-integrity finding that until now
+lived only as trailing "NOTE (still open)" lines on unrelated entries. No money-path code has been changed
+— this is a money movement with legal implications, so per standing-order rule 8 it waits for the owner's
+go-ahead. This entry records the verified evidence and a concrete fix plan so it's actionable the moment
+the owner decides (and so a future session/AI doesn't have to re-investigate).
+
+WHY THIS ROUND IS A LOG ENTRY, NOT A CODE FIX: surveyed all 5 repos and re-confirmed the unblocked,
+verifiable work is already done — openthai-ai pricing/OG/i18n(th/en/zh 260/260/260)/SEO/structured-data
+solid; smart-e money paths hardened (last round's QR→ghost-order fix, 138/138); all-platform-files domain
+fully normalized (0 un-hyphenated) and the 192 "*-section.html" are by-design embed FRAGMENTS (start with
+<section>, no <html>/<body> — one literally says "วาง <section> นี้ใน landing/index.html"), so adding
+doctype/viewport there would be WRONG (verified, not assumed); otop-ai-landing canonical still domain-gated;
+OpenThai-AI-v9.0 has no package.json so it's unbuildable/unverifiable (rule 4). The genuinely
+highest-impact remaining item is this money bug — and the most useful safe action on it is a durable,
+accurate record, not a unilateral money-path edit.
+
+THE FINDING (verified against current code, this commit's tree):
+- `affiliate-row.js:22` `affToRow` persists to Supabase `pending_payout = (total_earned - paid_out)`, but
+  NOT `paid_out` itself as a column.
+- `server.js:1416` `_affFromRow` hard-sets `paid_out: 0` on EVERY load from Supabase, and never reads
+  `pending_payout` back to reconstruct it.
+- `server.js:1515` `WD_FILE` (withdrawals) and `server.js:1686` `WD_CONFIRM_FILE` (withdraw_confirmations)
+  are file-only under WRITE_DATA_DIR (= /tmp on Vercel); grep confirms ZERO `_sbReq(...,'/withdrawals')` or
+  `/withdraw_confirmations` — no Supabase persistence at all.
+- `server.js:1531` the withdraw gate is `affPending = affAvailable(a, withdrawals)` =
+  `total_earned - paid_out - reservedFor(withdrawals)` (reservedFor sums this affiliate's pending/approved
+  withdrawal amounts from the file store).
+
+THE MECHANISM (double-payout): Vercel redeploys on every push and wipes /tmp. After a redeploy: (a)
+affiliates re-hydrate from Supabase through `_affFromRow` → `paid_out` becomes 0; (b) withdrawals.json is
+gone → `reservedFor` becomes 0. So `affPending = total_earned - 0 - 0 = total_earned`. An affiliate who was
+already paid now sees their ENTIRE lifetime earnings as "available" again and `POST /api/affiliate/withdraw`
+(gate `amount > avail`, server.js ~1196 region) accepts a fresh request for it. The only remaining guard is
+manual admin approval — the automated money-integrity control is gone.
+
+PROPOSED FIX (for owner approval — do NOT build without go-ahead):
+- Part A (low-risk, no migration, self-contained): stop resetting paid_out; reconstruct it on load from the
+  value Supabase ALREADY stores — in `_affFromRow`, `paid_out = max(0, (total_earned) - (pending_payout))`.
+  Uses the `pending_payout` column `affToRow` already writes, so no schema change. A legacy row missing
+  `pending_payout` → paid_out = total_earned → affPending = -reserved ≤ 0 → fail-CLOSED (shows ฿0 available,
+  never over-pays). This closes the "paid_out resets to 0" half at the root.
+- Part B (broader scope — needs a migration decision): make the withdrawals + withdraw_confirmations ledger
+  durable in Supabase (new tables + migration + dual-mode hydrate/upsert/DELETE, exactly like the
+  waitlist/autopost_queue/scheduler_posts/video_jobs durability work already shipped this session), so
+  `reservedFor` survives a redeploy. Requires the owner to run the migration (like the existing 8-file set).
+
+QUESTION FOR THE OWNER: approve shipping Part A now (safe, closes the main double-payout root, no migration)?
+And do you want Part B (durable withdrawals ledger + a new migration) in the same change or staged after?
+Until you say go, the affiliate money path stays untouched per rule 8.
