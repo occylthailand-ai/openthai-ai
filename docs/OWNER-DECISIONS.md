@@ -46,6 +46,6 @@
 ---
 
 ## 🔵 หมายเหตุเล็ก (ไม่บล็อก — เลือกจัดการเมื่อสะดวก)
-- `index.html` `twitter:site` เป็น `@Openthai.ai` ซึ่งไม่ใช่ handle X ที่ถูกต้อง (มีจุดไม่ได้) — ต้องการ handle จริงหรือลบทิ้ง.
+- ~~`index.html` `twitter:site` เป็น `@Openthai.ai` ซึ่งไม่ใช่ handle X ที่ถูกต้อง (มีจุดไม่ได้)~~ — **แก้แล้ว 2026-08-06:** ลบ tag ที่ไม่ถูกต้องออก (card ยังแสดงจาก card/title/description/image ครบ). ถ้ามี X @handle จริงในอนาคต ใส่กลับได้ที่เดิม.
 - ยืนยันชำระเงินไม่ได้ auto-เลื่อนสถานะ order ที่ผูกอยู่ (ยังเป็น pending) — เป็น product decision ว่าควร auto-advance ไหม.
 - Dashboard affiliate แบบ "กรอก ref code ดูสถิติ" ไม่มี auth จริง (ตั้งใจให้ login-less) — ถ้าจะเพิ่ม auth เป็น architecture decision (ตอนนี้มี rate limiter กัน enumeration แล้ว).

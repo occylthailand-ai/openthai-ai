@@ -9,6 +9,14 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-08-06 — Hourly loop: remove the invalid `twitter:site` handle from the social card (honest-meta cleanup)
+
+Small correctness fix on the main app's share meta (resolves the long-standing 🔵 note in docs/OWNER-DECISIONS.md). `frontend/index.html` shipped `<meta name="twitter:site" content="@Openthai.ai">`, but `@Openthai.ai` is **not** a valid X/Twitter handle — handles are 1–15 chars of `[A-Za-z0-9_]`, no dots — and no real X account is referenced anywhere in the repo (grep: `twitter:site` existed only in this one file; no test asserts it; the prerender pipeline never touches it). An invalid handle provides no card attribution and just ships a malformed tag, which is exactly the "impressive-sounding but not real" the repo's standing priority warns against. The owner's note listed "remove" as an accepted resolution.
+
+**Change (frontend only):** removed the `twitter:site` line (replaced with a one-line comment noting a real X @handle can be added there later). The Twitter card still renders fully from `twitter:card` (summary_large_image) + `title`/`description`/`image` — `twitter:site` is optional.
+
+**Verified (run, not assumed):** `npm run build` succeeds; built `dist/index.html` now carries only `twitter:card`/`title`/`description`/`image` (no `twitter:site`); `routeMeta.test.js` 13/13 (it asserts `twitter:title`, unaffected); sitemap still 26 urls. No backend change.
+
 ### 2026-08-06 — Hourly loop: marketplace orders recorded the CLIENT-supplied price (stale-tab / tamper) instead of the producer's real price
 
 Found scanning the order funnel. `/api/shop/checkout` (first-party store) correctly computes `amount` from the **server** price (`inventory.get(...).price`), but the **marketplace** path — `CatalogPage → POST /api/orders → orders.place()` — took `price` straight from the request body and recorded `amount = price * qty`. That amount is shown in the buyer's and producer's confirmation/receipt emails ("ยอดรวม") and stored on the order. So a stale catalog tab (producer changed their price after the page loaded) or a tampered POST recorded — and emailed a receipt for — the **wrong** total. No Omise charge rides this path (marketplace orders are producer-fulfilled requests, escrow starts `none`), so this is a data-integrity / wrong-receipt bug, not direct theft — but it is exactly the stale-data class the sibling server-side **stock** guard in the same function already defends against, and it was inconsistent to trust the client for price while distrusting it for stock.
