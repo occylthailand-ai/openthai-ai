@@ -5593,3 +5593,23 @@ item without updating the count, each make it exit 1 with a precise per-file mes
 Pushed to all-platform-files branch (PR #1). No main-platform code touched this round.
 
 ---
+
+## 2026-08-06 — [all-platform-files] wire validate-products.mjs into CI (enforce the catalog invariant)
+
+Standing-order loop. This round also re-audited smart-e's money/data paths and confirmed maturity:
+_confirm_payment (404 on missing payment, advances order pending→paid only, idempotent — 'paid' touches no
+stock), _get_dashboard_stats and _get_analytics (COALESCE null-safety, consistent status!='cancelled' filters,
+best-seller lists JOIN orders to exclude cancelled, ?days=abc handled, no server-side avg division). smart-e
+has no discount/promo logic at all, so no negative-total risk. No new bug.
+
+Follow-through on last round's validator: all-platform-files had NO CI, so validate-products.mjs only ran when
+invoked by hand. Added .github/workflows/validate.yml (mirrors openthai-ai's test.yml style — checkout@v4 +
+setup-node@v4) that runs `node validate-products.mjs` on every push and PR. Now a regional catalog whose
+totalProducts drifts from its real item count, or whose JSON/schema breaks, fails a check instead of shipping
+silently — the guard actually enforces.
+
+Verified: the workflow YAML parses (1 job, 3 steps) and the exact command it runs (node validate-products.mjs)
+exits 0 against the current 13 catalogs. Pushed to all-platform-files branch (PR #1). No main-platform code
+touched.
+
+---
