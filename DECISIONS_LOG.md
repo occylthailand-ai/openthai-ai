@@ -9,6 +9,15 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-08-06 — Hourly loop: add a grounded pricing/cost FAQ (market-entry friction + FAQPage rich-result content)
+
+Market-entry/SEO task. The /faq content (`faqContent.js`, the single source for the visible accordion AND the prerendered FAQPage JSON-LD) covered what/data-safety/pay/track/dispute/producer/affiliate/AI-tools — but **not cost**, the single most common pre-signup question. Before writing anything I verified the real price model (CLAUDE.md's "verify before build"): the customer-facing PricingPage (`PP_META`) and PaymentPage both use free/pro ฿299/premier ฿599/enterprise ฿1299, and the backend charge path prices from `omise-payment.js` `SUBSCRIPTION_PLANS` — which carries **the same** ฿0/299/599/1299. (Aside verified along the way: `tenant-manager.js` `PLANS` — free/starter ฿299/pro ฿799/enterprise ฿2499 — is a **separate** corporate/multi-agent product, not the consumer subscription; the shared `pro`/`enterprise` plan IDs across the two namespaces are a naming overlap, not a mispricing. No pricing bug — glad I checked instead of "fixing" it.)
+
+**Change (frontend content only):**
+- `src/data/faqContent.js` — added one Q&A ("มีค่าใช้จ่ายไหม ราคาเท่าไหร่?" / "How much does it cost?" / "收费吗？价格是多少？") in all three languages, stating the free tier + Pro ฿299 / Premier ฿599 / Enterprise ฿1,299 per month, paid via PromptPay or card (Omise), with a pointer to /pricing. Every figure is grounded in `SUBSCRIPTION_PLANS`; no invented claims, no USD (the honesty guard forbids it).
+
+**Verified (run, not assumed):** `faqContent.test.js` **8/8** (all langs stay equal-length at 9 items, JSON-LD still matches FAQ_ITEMS.th, no forbidden terms); `npm run build` regenerates `/faq/index.html` and the new pricing question is present in the prerendered FAQPage schema (`grep` count 1 — non-JS crawlers see it). Full frontend suite **393/393**. No backend change.
+
 ### 2026-08-06 — Hourly loop: /store checkout showed "🎉 ชำระเงินสำเร็จ!" even when the charge succeeded but the item sold out (refund pending)
 
 Found scanning the first-party store's Omise checkout UI. `/api/shop/checkout` has an oversold-race branch (server.js:721-725): if the item sells out between the pre-check and the stock deduction, the charge already succeeded, so the order is cancelled and the response is `{ paid:true, fulfilled:false, refund_pending:true, message:'ชำระเงินสำเร็จ แต่สินค้าหมดสต๊อกพอดี ทีมงานจะติดต่อคืนเงินให้โดยเร็ว' }`. But `StorePage.jsx` rendered the success screen as `res.paid ? '🎉' + t('mk.store.paid') : ...` and only showed `res.message` **when `!res.paid`** — so a customer who **paid and won't get the product** saw a plain "🎉 ชำระเงินสำเร็จ!" with **no** refund notice at all. Misleading on the revenue path, and the exact case the backend carefully handles server-side was dropped in the UI.
