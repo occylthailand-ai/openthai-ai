@@ -5389,3 +5389,27 @@ prerenders and the new consumer Q&A (/portals/consumer) is present in dist/faq/i
 so the rich-result entry ships in the first HTML byte a non-JS crawler reads, no second render pass needed.
 
 ---
+
+## 2026-08-06 — DEPLOYABILITY: document OPENTHAI_DATA_DIR in .env.example (close the one rule-1 drift the generator flagged)
+
+Standing-order loop (money path still owner-gated). Ran the rule-1 tool `generate-project-status.mjs` first:
+its env-var consistency check was the ONE thing flagging a real gap — `OPENTHAI_DATA_DIR` is read by backend
+code (server.js:90, the WRITE_DATA_DIR override) yet was absent from backend/.env.example, so the generator
+printed "⚠️ 1 missing" on every run. Everything else scanned this round came back solid: all 9 /portals/*
+pages share an identical consent+submit funnel (2 consent refs + submitLead each); SEO single-source
+seo-routes.mjs covers every public route incl. all portals; base index.html carries an honest
+Organization+WebSite+SoftwareApplication @graph (Offers match Free/299/599/1299, no invented aggregateRating);
+grep for TODO/FIXME/placeholder found only legit UI input placeholders — no unfinished work.
+
+OPENTHAI_DATA_DIR is a TEST-ONLY override (points every file-backed store at a throwaway dir so self-boot
+tests skip snapshot/restore on tracked files). Documented it in the existing "Dev / Testing เท่านั้น — ห้ามตั้ง
+ใน production" section (commented-out, matching the DISABLE_RATE_LIMIT precedent) WITH an explicit
+production-safety warning: setting it in prod to an ephemeral dir (e.g. /tmp) would silently lose all data on
+restart. So the doc isn't box-ticking — it also prevents a real data-loss footgun.
+
+Verified by running: `generate-project-status.mjs` now prints "✅ every env var referenced in backend code is
+documented in .env.example" (was ⚠️ 1 missing) and exits 0 (no code↔registry drift anywhere). `node --check
+backend/server.js` clean. Docs-only change — no code/behaviour touched; PROJECT_STATUS.md left un-committed as
+usual (per-run timestamp + live prod-health probe).
+
+---
