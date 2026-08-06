@@ -9,6 +9,16 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-08-06 — Hourly loop: show the buyer the authoritative order total at checkout (close a transparency gap from the price-authority fix)
+
+Follow-up to the earlier "record the producer's authoritative price" fix. `place()` now records the producer's current server-side price (a stale catalog tab / tampered POST can no longer set the recorded `amount`), and the receipt email shows that authoritative figure — but `POST /api/orders` returned only `{ id, message }`, and CatalogPage's success screen showed nothing about the total. So a buyer whose order recorded a different amount than their (possibly stale) cart only learned the real total from the email — the on-screen confirmation was silent about money. Not a bug, but a transparency gap the previous change opened.
+
+**Change (backend + frontend, additive):**
+- `backend/orders.js` — `place()` now returns the recorded `amount`, and `POST /api/orders` includes it in the response (`{ success, id, amount, message }`). Backward compatible.
+- `frontend/src/pages/CatalogPage.jsx` — captures `d.amount` and shows "รวม ฿X" on the success screen (only when the server sent a numeric amount), so the buyer sees the same authoritative total the receipt email carries — not the client-side `price × qty` guess.
+
+**Verified (run, not assumed) + mutation-tested:** backend `test:order-price-authority` 8 → **9/9** (adds: `place()` returns the recorded amount). Frontend `catalogOrderA11y.test.jsx` 1 → **2**: a new test mocks the order POST returning `amount: 600` while the client total is ฿120, and asserts the success screen shows **฿600** (the server figure). **Mutation:** making CatalogPage never set the server amount flips that test **red**; restored. Regression-safe: full frontend suite **392/392** (was 391), `npm run build` ok (sitemap 26), backend `order-confirm` 11/11 · `order-cancel-restock` 12/12 · `order-stock-guard` 9/9 · `api-contract` 166/166; boot `/api/health` 200; `backend/data/` untouched.
+
 ### 2026-08-06 — Hourly loop: compare the master admin key in constant time (defence-in-depth, consistency)
 
 Continuing the auth-path scan from the tenant-JWT fix. A systematic grep for hardcoded secret fallbacks (`process.env.X || 'const'`) across `backend/` found **no** remaining offenders (the one hit, `ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'`, is a public default voice id, not a secret) — so the tenant JWT was the last one. But `checkAdminKey()` (the single chokepoint gating **every** admin endpoint — inventory, producer approval, dispute resolution, broadcast, leads, KPI) compared the master key with a plain `provided === key`, which short-circuits at the first differing character. The repo already established constant-time comparison for its money/data confirm-link tokens (`token-verify.js` `safeTokenEqual`, imported in server.js) — the admin key, a higher-value secret, was the inconsistent one. `adminLimiter` (30/15min) makes a remote timing attack impractical, so this is low-severity defence-in-depth, not a live hole; comparing the master credential in constant time is simply the correct, free, consistent practice.

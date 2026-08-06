@@ -25,6 +25,7 @@ const o = createOrders(dir, { getProducerPrice: async (email) => PRICE[email] ??
 let r = await o.place({ ...base, qty: 2, price: 1 }); // client tries to pay ฿1 for a ฿500 item
 ok(r.ok === true, 'order accepted');
 ok(await amountOf(o, r) === 1000, `amount uses the server price (฿500 × 2 = ฿1000), NOT the client's ฿1 (got ${await amountOf(o, r)})`);
+ok(r.amount === 1000, `place() RETURNS the recorded amount so the buyer can be shown the real total (got ${r.amount})`);
 
 r = await o.place({ ...base, qty: 1, price: 500 }); // honest client, matching price
 ok(await amountOf(o, r) === 500, 'a matching client price records the same amount (฿500)');

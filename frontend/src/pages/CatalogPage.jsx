@@ -114,6 +114,7 @@ export function OrderModal({ product, onClose, t }) {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [orderAmount, setOrderAmount] = useState(null);
   const [err, setErr] = useState('');
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
   const total = product.price ? Number(product.price) * (parseInt(form.qty, 10) || 1) : null;
@@ -132,7 +133,7 @@ export function OrderModal({ product, onClose, t }) {
         body: JSON.stringify({ producer_email: product.email, product_name: product.product_name, price: product.price, ...form }),
       });
       const d = await res.json();
-      if (d.success) { setOrderId(d.id || ''); setDone(true); } else setErr(d.error || t('mk.ord.err'));
+      if (d.success) { setOrderId(d.id || ''); setOrderAmount(typeof d.amount === 'number' ? d.amount : null); setDone(true); } else setErr(d.error || t('mk.ord.err'));
     } catch { setErr('เชื่อมต่อไม่ได้ ลองใหม่'); }
     finally { setBusy(false); }
   };
@@ -146,6 +147,9 @@ export function OrderModal({ product, onClose, t }) {
             <div style={{ fontSize: 44, marginBottom: 8 }}>🎉</div>
             <h3 style={{ fontWeight: 900, marginBottom: 6 }}>{t('mk.ord.ok.title')}</h3>
             <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.6 }}>{product.producer} {t('mk.ord.ok.desc')}</p>
+            {orderAmount != null && (
+              <div style={{ fontWeight: 800, color: '#10b981', fontSize: 15, margin: '6px 0 2px' }}>{t('mk.ord.total')} ฿{Number(orderAmount).toLocaleString('th-TH')}</div>
+            )}
             {orderId && (
               <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: 12, marginTop: 14, fontSize: 12 }}>
                 <div style={{ color: '#94a3b8' }}>{t('mk.track.id')}</div>

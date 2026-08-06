@@ -39,4 +39,27 @@ describe('CatalogPage order form accessibility', () => {
     fireEvent.change(qty, { target: { value: '3' } });
     expect(qty.value).toBe('3');
   });
+
+  // Transparency: place() records the producer's authoritative price (a stale tab can send a wrong
+  // one), so the success screen must show the amount the SERVER returned — the same figure on the
+  // receipt email — not the client-side price*qty guess.
+  it('shows the server-returned order total on success (not the client-side guess)', async () => {
+    global.fetch = vi.fn((url, opts) => {
+      if (String(url).includes('/api/orders') && opts?.method === 'POST') {
+        // server's authoritative amount (600) deliberately differs from the client total (120 × 1)
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, id: 'ord_test_1', amount: 600 }) });
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ products: [PRODUCT] }) });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('สบู่สมุนไพร')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'สั่งซื้อ' }));
+    fireEvent.change(screen.getByLabelText(/ชื่อผู้สั่ง/), { target: { value: 'สมชาย' } });
+    fireEvent.change(screen.getByLabelText(/ช่องทางติดต่อ/), { target: { value: '0810000000' } });
+    fireEvent.click(screen.getByRole('button', { name: /ยืนยันสั่งซื้อ/ }));
+    await waitFor(() => expect(screen.getByText('สั่งซื้อสำเร็จ!')).toBeTruthy());
+    // the confirmed total on the success screen reflects the SERVER's 600 (would be the client-side
+    // 120 × 1 if the page showed its own guess — so ฿600 appearing proves the server amount is used)
+    expect(screen.getByText(/รวม\s*฿\s*600/)).toBeTruthy();
+  });
 });

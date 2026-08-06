@@ -124,7 +124,10 @@ export function createOrders(dataDir, opts = {}) {
     }
     await persist(rec);
     try { await opts.onNewOrder?.(rec); } catch (e) { console.warn('[orders] notify failed:', e.message); }
-    return { ok: true, id: rec.id };
+    // Return the recorded amount so the caller can confirm the REAL total to the buyer — since place()
+    // now records the producer's authoritative price, that total may differ from a stale catalog tab,
+    // and the buyer should see the same figure the receipt email shows, not a client-side guess.
+    return { ok: true, id: rec.id, amount: rec.amount };
   }
 
   async function all() {
@@ -222,7 +225,7 @@ export function createOrders(dataDir, opts = {}) {
   router.post('/api/orders', orderLimiter, wrap(async (req, res) => {
     const r = await place(req.body || {});
     if (!r.ok) return res.status(400).json({ success: false, error: r.error });
-    res.json({ success: true, id: r.id, message: 'รับคำสั่งซื้อแล้ว ติดตามสถานะได้ที่หน้า Track ด้วยเลขออเดอร์ + ช่องทางติดต่อ' });
+    res.json({ success: true, id: r.id, amount: r.amount, message: 'รับคำสั่งซื้อแล้ว ติดตามสถานะได้ที่หน้า Track ด้วยเลขออเดอร์ + ช่องทางติดต่อ' });
   }));
 
   // ติดตามสถานะ (สาธารณะ) — /api/orders/track?id=&contact=
