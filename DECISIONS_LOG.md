@@ -9,6 +9,16 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-08-06 — Hourly loop: guard the public producer-directory search against a producer-email harvest regression
+
+Auditing the consent-based producer funnel. `/api/producers/search` (producers.js:235) is **public/unauthenticated**. It previously projected each approved producer's `email` into the response even though `ProducerDirectoryPage` used it only as a React key — so `GET /api/producers/search?q=` (empty query = match-all) let anyone harvest every approved producer's email in one call (PDPA: needlessly exposing personal contact data). That was fixed to project only company/category/product_name/price/description/website/stock — but the fix had **no test**, so a future refactor could silently re-add `email` and re-open the hole. (Sibling `/api/catalog` deliberately still returns `email` because `CatalogPage` sends `producer_email` back as the producer identifier at checkout; moving to an opaque id is a documented, larger, separate refactor — see producers.js:232-234. Left untouched — out of scope to refactor unilaterally.)
+
+**Change (test-only; no runtime change):**
+- `backend/scripts/test-producer-search-privacy.mjs` (new, `test:producer-search-privacy`, self-boot with `OPENTHAI_DATA_DIR` isolation + mock-payment mode) — registers + admin-approves a producer, then asserts the public search response carries the product data (company/name/price) but **never** an `email` field or the raw address, for **both** the empty-query match-all (the harvest case) and a keyword query. Also sanity-checks the product still appears in `/api/catalog` so the checkout path stays intact. Pins only the search endpoint's privacy guarantee — makes no assertion about `/api/catalog`'s email, so it neither blesses nor blocks the future opaque-id refactor.
+- Wired into `package.json` + the self-contained CI block in `.github/workflows/test.yml`.
+
+**Verified (run, not assumed) + mutation-tested:** **11/11**. **Mutation:** re-adding `email: p.email` to the search projection turns **2** assertions red (RC=1); restored to 11/11. `backend/data/` untouched; `package.json` re-parsed valid.
+
 ### 2026-08-05 — Hourly loop: (all-platform-files repo) repaired 205 dead "create content" CTAs across the platform hub
 
 Cross-repo fix — logged here for the canonical loop history; full record is in the all-platform-files commit message (that repo has no DECISIONS_LOG.md). Every roadmap-section + affiliate page in `all-platform-files` carried a CTA ("สร้าง Affiliate Content →" / "สร้างคอนเทนต์ด้วย AI") pointing at a **root-relative** `href="/generate"`. Broken two ways: (1) those pages deploy on the dashboard domain where `/generate` is not a file, so Vercel's catch-all (`/(.*) → /index.html`) served the hub instead; (2) the main app has **no** `/generate` route anyway — its SPA sends unknown paths to NotFoundPage (the generator is the auth-gated `/ai-generator`). So all 205 action buttons were dead ends on the market-entry surface.

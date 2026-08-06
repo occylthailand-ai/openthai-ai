@@ -76,7 +76,8 @@
     "test:skills-endpoints": "node scripts/test-skills-endpoints.mjs",
     "test:api-contract": "node scripts/test-api-contract.mjs",
     "test:auth-ratelimit": "node scripts/test-auth-ratelimit.mjs",
-    "test:portal-welcome-coverage": "node scripts/test-portal-welcome-coverage.mjs"
+    "test:portal-welcome-coverage": "node scripts/test-portal-welcome-coverage.mjs",
+    "test:producer-search-privacy": "node scripts/test-producer-search-privacy.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

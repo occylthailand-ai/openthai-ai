@@ -157,6 +157,9 @@ jobs:
       - name: AI department-officer endpoint test (self-contained — auth gate, professional disclaimer, offline fallback)
         working-directory: backend
         run: npm run test:dept-officer-endpoint
+      - name: Producer-search privacy test (self-contained — the public directory search never leaks producer email, incl. the empty-query harvest case)
+        working-directory: backend
+        run: npm run test:producer-search-privacy
       - name: Skills smoke test (self-contained — every /api/skills endpoint returns 200 on the mock AI path)
         working-directory: backend
         run: npm run test:smoke
