@@ -9,6 +9,16 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-08-06 — Hourly loop: make the affiliate ref-capture testable + guard it (attribution linchpin)
+
+Every affiliate share link is `…/?ref=<CODE>`, and the whole attribution chain depends on one line in `main.jsx` persisting that ref into `localStorage['otai_ref']` on page load — StorePage reads it at checkout, QuickPay/shop forward it, the backend credits the sale. That line was **inline in the bootstrap** (`try { const r = new URLSearchParams(...).get('ref'); if (r) localStorage.setItem('otai_ref', r.slice(0,20)); } catch {}`), so it was **un-importable and untested**: a refactor breaking it (wrong key, wrong param, or overwriting `otai_ref` on a ref-less load) would silently kill **all** affiliate attribution with nothing to catch it. (`utils.test.js` tests `buildRefLink` — the link-building side — but nothing tested the capture side.)
+
+**Change (frontend; behaviour-identical extraction):**
+- `src/lib/affiliateRef.js` (new) — pure, injectable `captureAffiliateRef(search, storage)`: reads `?ref=`, writes `otai_ref` (capped 20 chars) only when a ref is present (a ref-less load never wipes an earlier ref — last non-empty wins), swallows storage errors, returns the captured value. Byte-for-byte the old main.jsx behaviour.
+- `src/main.jsx` — replaced the inline block with `captureAffiliateRef(window.location.search, window.localStorage)`.
+
+**Verified (run, not assumed) + mutation-tested:** new `src/__tests__/affiliateRef.test.js` **7/7** — captures a ref; a ref-less load does NOT wipe a stored ref; a new ref overwrites (last-click); caps at 20; empty `?ref=` is a no-op; missing/undefined query never throws; a throwing storage is swallowed (returns null). **Mutations:** removing the "only write when ref present" guard turns **3** tests red (ref-less wipe, empty-ref, missing-query); dropping the 20-char cap turns **1** red. Restored to 7/7. Full frontend suite **418/418** (46 files, +7), `npm run build` ok. No backend change.
+
 ### 2026-08-06 — Hourly loop: guard the customer-facing status labels against backend↔i18n drift (no raw keys on the track pages)
 
 The order-tracking (`/track` → `TrackOrderPage`) and dispute-tracking (`/dispute` → `DisputeTrackPage`) pages render a status/decision via `t('mk.track.st.'+status)` / `t('mk.dispute.st.'+status)` / `t('mk.dispute.dec.'+decision)` / `t('mk.dispute.openedby.'+role)`. i18n's `read()` **returns the raw key** when a translation is missing (`src/i18n/index.jsx`: `return key in translations.th ? … : key`), so a backend status with no label would show a customer a literal `mk.track.st.<status>` — on a money-sensitive page. The status lists are the **backend's** source of truth (`orders.js` `ORDER_STATUS`, `disputes.js` `DISPUTE_STATUS`/`DECISIONS`), the labels live in the **frontend** i18n — different files, easy to drift when a new status ships. All are currently covered (verified), but nothing stopped a future status/decision from shipping label-less.
