@@ -287,6 +287,16 @@ export function createProducers(dataDir, opts = {}) {
     return rec ? (rec.stock == null ? null : rec.stock) : null;
   }
 
+  // The producer's CURRENT authoritative price (or null if none/unlisted) — companion to getStock,
+  // used by orders.place() so a marketplace order records the real current price, not whatever a
+  // stale catalog tab / tampered POST supplied.
+  async function getPrice(email) {
+    const e = (email || '').toString().trim().toLowerCase();
+    if (!isEmail(e)) return null;
+    const rec = (await all()).find((p) => (p.email || '').toLowerCase() === e);
+    return rec && Number(rec.price) > 0 ? Number(rec.price) : null;
+  }
+
   // ลดสต๊อกเมื่อมีออเดอร์ (เฉพาะผู้ผลิตที่ตั้งสต๊อกไว้ — stock != null)
   async function decrementStock(email, qty) {
     const e = (email || '').toString().trim().toLowerCase();
@@ -322,5 +332,5 @@ export function createProducers(dataDir, opts = {}) {
     if (store[e] && store[e].stock != null) { store[e].stock = store[e].stock + n; saveFile(); }
   }
 
-  return { router, register, all, summary, setStatus, updateListing, catalog, decrementStock, incrementStock, getStock, eraseByEmail, CATEGORIES };
+  return { router, register, all, summary, setStatus, updateListing, catalog, decrementStock, incrementStock, getStock, getPrice, eraseByEmail, CATEGORIES };
 }

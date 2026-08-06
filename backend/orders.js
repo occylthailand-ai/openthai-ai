@@ -73,12 +73,26 @@ export function createOrders(dataDir, opts = {}) {
 
   async function place(input) {
     const qty = Math.max(1, Math.min(9999, parseInt(input.qty, 10) || 1));
-    const price = Number(input.price) > 0 ? Number(input.price) : null;
+    const producer_email = clip(input.producer_email, 120).toLowerCase();
+    const product_name = clip(input.product_name, 120);
+    // Price authority: prefer the producer's CURRENT server-side price over whatever the client posted,
+    // so a tampered POST or a stale catalog tab can't record — and email a receipt for — the wrong
+    // amount (the same "server truth wins" principle the stock guard below already applies). Falls back
+    // to the client price when no authoritative price is available (producer lists none / lookup throws),
+    // so the first-party store path — which passes its own verified price and has no producer record —
+    // keeps recording exactly what it sent.
+    let price = Number(input.price) > 0 ? Number(input.price) : null;
+    if (typeof opts.getProducerPrice === 'function') {
+      try {
+        const authoritative = await opts.getProducerPrice(producer_email, product_name);
+        if (authoritative != null && Number(authoritative) > 0) price = Number(authoritative);
+      } catch (e) { console.warn('[orders] price lookup skipped:', e.message); }
+    }
     const now = new Date().toISOString();
     const rec = {
       id: `ord_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      producer_email: clip(input.producer_email, 120).toLowerCase(),
-      product_name: clip(input.product_name, 120),
+      producer_email,
+      product_name,
       customer_name: clip(input.customer_name, 80),
       contact: clip(input.contact, 120),
       address: clip(input.address, 400),
