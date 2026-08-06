@@ -5487,3 +5487,33 @@ assertion); full harness 145 passed / 0 failed (was 138). Mutation-tested: remov
 checks red, restoring → green. Pushed to smart-e branch claude/daily-reporter-improvements-8vc9ct (PR #1).
 
 ---
+
+## 2026-08-06 — MONEY-PATH: reject non-finite (NaN/Infinity) producer price (generalized from the smart-e fix)
+
+Standing-order loop. After finding the NaN/Infinity money bug in smart-e last round, scanned openthai-ai's
+backend for the same class (client-supplied numbers → money math without a finiteness check). Verified the
+affiliate WITHDRAW path is already safe (Infinity > avail → 400; !(NaN > 0) → 400). But the producer PRICE
+path was not: producers.js register/update and getPrice all used `Number(x) > 0 ? Number(x) : null`, and in
+JS `Number("Infinity"/"1e999") === Infinity` with `Infinity > 0 === true`, so a non-finite price passed.
+
+Reproduced LIVE against the real module (file-store, isolated tmp dir): register({price: 1e999}) → ok:true,
+and getPrice() returns **Infinity in memory**, while the persisted producers.json stores **"price": null**
+(JSON.stringify(Infinity) === "null"). That split means: until the next restart, orders on that product take
+Infinity as the authoritative amount (orders.js place() → order.amount = Infinity → serialised to null on the
+JSON-file write = a null-amount order + poisoned in-memory revenue sums); after a restart the price is silently
+null. Same root cause as smart-e: no finiteness guard at the write boundary.
+
+Fix: added `Number.isFinite(Number(x))` to the price guard at all four spots — producers.js register (write),
+updateListing (write), getPrice (read-back defense for legacy/tampered rows), and orders.js place() for both
+the client price and the authoritative price (belt-and-suspenders). NaN was already nulled (NaN > 0 is false);
+this closes +Infinity/1e999.
+
+Verified by running: reproduced the bug, applied the fix, re-ran → Infinity/1e999 price now normalises to null
+(register + updateListing), and an order given a non-finite client OR authoritative price records amount null,
+never Infinity. Extended two existing deterministic tests: test-producers.mjs (32 passed, +3 finiteness checks)
+and test-order-price-authority.mjs (14 passed, +5). Mutation-tested: reverting the guards turns exactly those
+new checks red (producers 3 fail, order 3 fail incl. "got Infinity"); restoring → green. Sibling suites still
+green: order-confirm 11, stock-guard 9, cancel-restock 12, orders-track 19, producers-schema 14. node --check
+clean on both changed files.
+
+---

@@ -40,6 +40,13 @@ try {
   ok(rec.category === 'อื่นๆ', 'unknown category normalized to อื่นๆ');
   ok(rec.price === null, 'price ≤ 0 normalized to null');
   ok(rec.stock === 0, 'negative stock clamped to 0');
+  // Number("Infinity"/"1e999") === Infinity and Infinity > 0 is true, so a `> 0` check alone stores it;
+  // it then serialises to null on the JSON-file write (JSON.stringify(Infinity)) — an in-memory/on-disk
+  // split where getPrice() returns Infinity into orders until the next restart. Must normalise to null.
+  for (const [email, bad] of [['inf@x.com', 1e999], ['infs@x.com', 'Infinity'], ['nan@x.com', 'nan']]) {
+    await P.register({ ...base, email, consent: true, price: bad });
+    ok((await P.all()).find((p) => p.email === email).price === null, `register price ${bad} → null (not stored as non-finite)`);
+  }
 
   console.log('\n=== public catalog shows ONLY approved + has-product ===');
   ok((await P.catalog()).length === 0, 'pending producer is NOT in public catalog');
@@ -78,6 +85,9 @@ try {
   await P.updateListing('p1@x.com', { price: 250, category: 'หมวดที่ถูกลบไปแล้ว' });
   const afterUpd = (await P.all()).find((p) => p.email === 'p1@x.com');
   ok(afterUpd.category === 'ความงาม', 'unknown category is ignored — existing category preserved (not wiped to undefined)');
+  // a self-service price edit to a non-finite value must normalise to null, same as register
+  await P.updateListing('p1@x.com', { price: 1e999 });
+  ok((await P.all()).find((p) => p.email === 'p1@x.com').price === null, 'updateListing price Infinity → null (not stored as non-finite)');
   ok(afterUpd.price === 250, 'the valid price still updates alongside the ignored category');
   // money guards on the self-serve path (same class inventory.js guards): no negative price/stock
   await P.updateListing('p1@x.com', { price: -10, stock: -4 });

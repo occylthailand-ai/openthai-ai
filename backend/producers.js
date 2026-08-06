@@ -61,7 +61,7 @@ export function createProducers(dataDir, opts = {}) {
       category: CATEGORIES.includes(input.category) ? input.category : 'อื่นๆ',
       description: clip(input.description, 500),
       product_name: clip(input.product_name, 120),
-      price: Number(input.price) > 0 ? Number(input.price) : null,
+      price: Number.isFinite(Number(input.price)) && Number(input.price) > 0 ? Number(input.price) : null,
       stock: (input.stock === '' || input.stock == null) ? null : Math.max(0, parseInt(input.stock, 10) || 0),
       status: 'pending',
       consent: true,
@@ -147,7 +147,7 @@ export function createProducers(dataDir, opts = {}) {
     if (!isEmail(e)) return { ok: false, error: 'invalid email' };
     const patch = {};
     if (fields.product_name !== undefined) patch.product_name = clip(fields.product_name, 120);
-    if (fields.price !== undefined) patch.price = Number(fields.price) > 0 ? Number(fields.price) : null;
+    if (fields.price !== undefined) patch.price = Number.isFinite(Number(fields.price)) && Number(fields.price) > 0 ? Number(fields.price) : null;
     if (fields.stock !== undefined) patch.stock = (fields.stock === '' || fields.stock == null) ? null : Math.max(0, parseInt(fields.stock, 10) || 0);
     if (fields.description !== undefined) patch.description = clip(fields.description, 500);
     // อัปเดตแบบ partial: หมวดที่ไม่รู้จัก (เช่นหมวดเก่าที่ถูกเปลี่ยนชื่อ/ลบ ถูกส่งมาพร้อมการแก้ราคา)
@@ -294,7 +294,9 @@ export function createProducers(dataDir, opts = {}) {
     const e = (email || '').toString().trim().toLowerCase();
     if (!isEmail(e)) return null;
     const rec = (await all()).find((p) => (p.email || '').toLowerCase() === e);
-    return rec && Number(rec.price) > 0 ? Number(rec.price) : null;
+    // isFinite guard so a legacy/tampered row with a non-finite price (Infinity slips past `> 0`)
+    // can't become an order's authoritative amount — mirrors the write-side guard in register/update.
+    return rec && Number.isFinite(Number(rec.price)) && Number(rec.price) > 0 ? Number(rec.price) : null;
   }
 
   // ลดสต๊อกเมื่อมีออเดอร์ (เฉพาะผู้ผลิตที่ตั้งสต๊อกไว้ — stock != null)

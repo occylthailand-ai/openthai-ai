@@ -81,11 +81,15 @@ export function createOrders(dataDir, opts = {}) {
     // to the client price when no authoritative price is available (producer lists none / lookup throws),
     // so the first-party store path — which passes its own verified price and has no producer record —
     // keeps recording exactly what it sent.
-    let price = Number(input.price) > 0 ? Number(input.price) : null;
+    // isFinite guards: Number("Infinity"/"1e999") === Infinity and Infinity > 0 is true, so without
+    // them a non-finite client or authoritative price would become the order amount, then serialize to
+    // null on the JSON-file write (JSON.stringify(Infinity) === "null") — a null-amount order + poisoned
+    // in-memory revenue sums. (getProducerPrice already guards this now; belt-and-suspenders here too.)
+    let price = Number.isFinite(Number(input.price)) && Number(input.price) > 0 ? Number(input.price) : null;
     if (typeof opts.getProducerPrice === 'function') {
       try {
         const authoritative = await opts.getProducerPrice(producer_email, product_name);
-        if (authoritative != null && Number(authoritative) > 0) price = Number(authoritative);
+        if (authoritative != null && Number.isFinite(Number(authoritative)) && Number(authoritative) > 0) price = Number(authoritative);
       } catch (e) { console.warn('[orders] price lookup skipped:', e.message); }
     }
     const now = new Date().toISOString();

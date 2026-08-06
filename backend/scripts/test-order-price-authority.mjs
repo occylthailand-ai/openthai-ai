@@ -49,6 +49,20 @@ console.log('\n=== a producer with no price and a client with no price → amoun
 r = await o.place({ ...base, producer_email: 'free@x.com', qty: 1 });
 ok((await o.getOne(r.id))?.amount === null, 'no server price + no client price → amount null (not 0/NaN)');
 
+console.log('\n=== non-finite prices (NaN/Infinity) must never become an order amount ===');
+// Number("Infinity") === Infinity and Infinity > 0 is true, so a `> 0` check alone lets it through;
+// the amount then serialises to null on the JSON-file write (JSON.stringify(Infinity) === "null") and
+// poisons in-memory revenue sums. Both the client price and an authoritative price must be finite.
+for (const bad of [Infinity, -Infinity, NaN, 1e999]) {
+  r = await o.place({ ...base, producer_email: 'free@x.com', qty: 1, price: bad });
+  const amt = await amountOf(o, r);
+  ok(amt === null, `client price ${bad} → amount null, not carried into the order (got ${amt})`);
+}
+// an authoritative (producer) price that is somehow non-finite must be ignored, not used as the amount
+const infHook = createOrders(dir, { getProducerPrice: async () => Infinity });
+r = await infHook.place({ ...base, qty: 2, price: 300 });
+ok(await amountOf(infHook, r) === 600, `a non-finite authoritative price is ignored; finite client price kept (฿600) (got ${await amountOf(infHook, r)})`);
+
 rmSync(dir, { recursive: true, force: true });
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
