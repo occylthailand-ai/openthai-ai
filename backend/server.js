@@ -64,7 +64,11 @@ function resolveAdminKey() {
 }
 function checkAdminKey(provided) {
   const key = resolveAdminKey();
-  return !!key && provided === key;
+  // Constant-time compare (same defence the confirm-link tokens use via safeTokenEqual): the admin key
+  // is the MASTER credential gating every admin endpoint, and a plain `provided === key` short-circuits
+  // at the first differing character. adminLimiter already throttles brute force, but comparing the
+  // master key in constant time is the correct, free defence-in-depth — consistent with token-verify.js.
+  return !!key && safeTokenEqual(provided, key);
 }
 function adminDenyMessage() {
   return 'Unauthorized';

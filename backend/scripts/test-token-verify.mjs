@@ -36,6 +36,17 @@ ok(safeTokenEqual(good + 'extra', good) === false, 'longer-than-expected token �
 console.log('\n=== a value that stringifies the same is still compared as a string ===');
 ok(safeTokenEqual(1234567890123456, token('n', 'n')) === false, 'number token (not a string) → false');
 
+// checkAdminKey() now compares the master ADMIN_KEY with safeTokenEqual (not `===`), so the same
+// function must be correct for arbitrary secret strings — variable length, symbols, non-hex — not
+// only the 16-hex confirm-link tokens above.
+console.log('\n=== correct for arbitrary admin-key-style secrets (used by checkAdminKey) ===');
+const adminKey = 'otai-admin_9fK3!zQx-2026';
+ok(safeTokenEqual(adminKey, adminKey) === true, 'exact admin key → true');
+ok(safeTokenEqual('otai-admin_9fK3!zQx-2027', adminKey) === false, 'same-length but one char off → false (constant-time reject)');
+ok(safeTokenEqual('wrong', adminKey) === false, 'shorter wrong key → false');
+ok(safeTokenEqual(adminKey + 'x', adminKey) === false, 'longer wrong key → false');
+ok(safeTokenEqual('', adminKey) === false, 'empty provided vs a set key → false (never authorises on blank)');
+
 console.log(`\n${'='.repeat(48)}`);
 console.log(`ผลทดสอบ: ✅ ${pass} ผ่าน · ❌ ${fail} ไม่ผ่าน`);
 console.log('='.repeat(48));
