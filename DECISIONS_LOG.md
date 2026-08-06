@@ -5517,3 +5517,33 @@ green: order-confirm 11, stock-guard 9, cancel-restock 12, orders-track 19, prod
 clean on both changed files.
 
 ---
+
+## 2026-08-06 — TEST/PDPA: guard the /join (ProducerJoinPage) consent funnel — was uncovered
+
+Standing-order loop. Prompted by the v9.0 finding (its affiliate-hub collects PII with NO consent gate AND
+posts to a non-existent endpoint — flagged to the owner, awaiting a decision; not touched, per point 8),
+audited the MAIN platform's consent funnels for the same class. Result: strong. All 9 /portals/* pages gate
+submit on consent (`disabled={!consent || busy}`) and portalConsent.test.js pins 6 PDPA invariants on each,
+incl. the exact "fake success on a failed submit" bug — so the main portals are bulletproof.
+
+Found one real COVERAGE gap: /join (ProducerJoinPage) is the second producer onboarding entry (the /faq itself
+tells producers to use "/portals/producer หรือ /join"), collects the same PII, and POSTs to
+/api/producers/apply (which also requires consent:true) — but portalConsent.test.js only scans *PortalPage.jsx,
+so /join was UNGUARDED. This page shipped once with NO PDPA UI at all (per its own top comment) and uses its
+own CONSENT_TEXT map (not the shared consentLabel()), so its 3-language copy can drift the way the per-page
+maps did before. Verified the page is currently correct: consent defaults false, sent in the POST body,
+checkbox bound, submit disabled without consent, 3-lang label present, and setDone(true) is gated on d.success
+(no fake success). But nothing pinned it.
+
+Added src/__tests__/producerJoinConsent.test.js — 6 structural asserts mirroring portalConsent.test.js
+(consent-state-defaults-false, consent-in-body, checkbox bound, submit disabled without consent, CONSENT_TEXT
+has th/en/zh, success screen gated on .success). Verified by running: 6/6 pass; full frontend suite 473 passed
+(was 467). Mutation-tested: dropping the `!consent` submit gate and making setDone(true) unconditional turns
+2 checks red; restoring → green. Test-only; ProducerJoinPage.jsx untouched (git diff clean).
+
+PENDING OWNER DECISION (unchanged): OpenThai-AI-v9.0 app/affiliate-hub/page.tsx posts to a non-existent
+/api/affiliate/apply (dead form) and collects name/email/phone with no PDPA consent. Options given: (ก) point
+it at the real consent-gated /portals/affiliate [recommended], (ข) build a real consent-gated endpoint
+[owner-gated build-out], (ค) hide the page until v9.0 is built out. Awaiting the owner's choice.
+
+---
