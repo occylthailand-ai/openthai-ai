@@ -9,6 +9,15 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-08-06 — Hourly loop: guard every in-app navigation target against pointing at a non-existent route
+
+The app is a client-rendered SPA, so an internal `navigate('/x')` / `<Link to="/x">` / `<NavLink to="/x">` whose path has **no** `<Route>` in App.jsx silently dumps the user on `NotFoundPage` — a dead CTA with no error anywhere. Routes and nav targets live in different files across dozens of pages, so a typo or a renamed route is easy to ship. I scanned the whole SPA first (all **39** distinct internal nav targets across pages + components) and every one resolves today — but nothing stopped a future dead nav.
+
+**Change (test-only; no runtime change):**
+- `frontend/src/__tests__/spaNavTargets.test.js` (new) — reads the real route table from `App.jsx` (`<Route path="…">`, incl. dynamic `:param` roots and `/*` wildcard prefixes) and every `navigate(...)`/`Link to`/`NavLink to` target across `src/` (excluding `__tests__`), then asserts each target resolves to a real route. Reduces a raw target to its path first (drops a `${…}` interpolation, `?query`, `#hash`, trailing `/`), so template-literal links like `/pay?amount=${a}` and `/affiliate-programs${q}` are checked by their true path. Pure source-parsing — no rendering, no route imports.
+
+**Verified (run, not assumed) + mutation-tested:** **40/40** (39 targets + a sanity check). **Mutation:** adding `navigate('/totally-not-a-route')` to a page turns it **red** with a message naming the file and that "a click lands on NotFoundPage"; restored to 40/40. Full frontend suite **458/458** (47 files, +40). No backend change; Vitest auto-discovers the file.
+
 ### 2026-08-06 — Hourly loop: make the affiliate ref-capture testable + guard it (attribution linchpin)
 
 Every affiliate share link is `…/?ref=<CODE>`, and the whole attribution chain depends on one line in `main.jsx` persisting that ref into `localStorage['otai_ref']` on page load — StorePage reads it at checkout, QuickPay/shop forward it, the backend credits the sale. That line was **inline in the bootstrap** (`try { const r = new URLSearchParams(...).get('ref'); if (r) localStorage.setItem('otai_ref', r.slice(0,20)); } catch {}`), so it was **un-importable and untested**: a refactor breaking it (wrong key, wrong param, or overwriting `otai_ref` on a ref-less load) would silently kill **all** affiliate attribution with nothing to catch it. (`utils.test.js` tests `buildRefLink` — the link-building side — but nothing tested the capture side.)
