@@ -5439,3 +5439,29 @@ match, forbid-list clean); full frontend suite `npm test -- --run` → 47 files 
 prerenders and the new middleman Q&A (/portals/middleman) is present in dist/faq/index.html's FAQPage schema.
 
 ---
+
+## 2026-08-06 — TEST/DRIFT-GUARD: pin FAQ answer text to real routes (unguarded dead-link risk)
+
+Standing-order loop (money path still owner-gated). Rule-1 `generate-project-status.mjs` exits 0. Scanned
+broadly this round and confirmed maturity everywhere: all 9 /portals/* pages link from the /portals hub;
+all-platform-files' 13 region product JSONs share one schema AND every one's totalProducts exactly equals its
+actual categories[].items count (verified by running — my first traversal assumed the wrong shape and falsely
+flagged all 13, so I re-checked before believing it: no data bug); the onboarding components have no images/
+external-links/forms to mis-wire.
+
+Found one REAL unguarded gap: FAQ answers embed in-app paths as plain text ("(/portals/consumer)",
+"ซื้อสินค้าได้ที่ตลาด (/catalog)", "ติดตามคำสั่งซื้อได้ที่ /track" — 8 distinct paths: /ai-skills /catalog /join
+/portals/{consumer,middleman,producer} /pricing /track). The /faq page is public, indexable, 3-language help
+content whose FAQPage schema is also prerendered — so a renamed route would silently send users AND crawlers
+to a dead /path. The existing spaNavTargets guard does NOT cover this: it only parses navigate()/<Link>/<NavLink>
+targets, never route paths sitting inside FAQ answer strings. All 8 resolve today, so this locks in a passing
+invariant rather than fixing a live break.
+
+Added src/__tests__/faqRouteTargets.test.js — reuses spaNavTargets' exact route-table parsing + resolve logic
+(static routes, dynamic roots, wildcard prefixes), extracts /paths from every Q&A string (lookbehind excludes
+matches inside URLs/emails), and asserts each resolves against App.jsx. Verified by running: 9/9 pass;
+full frontend suite 48 files / 467 tests pass (was 47/458). Mutation-tested: rewriting "/catalog" to a
+nonexistent path turns the guard RED (1 failed), restoring → GREEN — so it genuinely catches the drift it
+claims to. Test-only change; faqContent.js untouched (git diff = the one new file).
+
+---
