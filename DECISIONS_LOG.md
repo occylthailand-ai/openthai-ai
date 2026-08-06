@@ -5413,3 +5413,29 @@ backend/server.js` clean. Docs-only change — no code/behaviour touched; PROJEC
 usual (per-run timestamp + live prod-health probe).
 
 ---
+
+## 2026-08-06 — CONTENT/SEO: add middleman/distributor Q&A to /faq — completes consent-group FAQ coverage
+
+Standing-order loop (money path still owner-gated). Ran rule-1 `generate-project-status.mjs` — exits 0, no
+drift. Surveyed for the round's task: openthai-ai's SEO/structured-data is exhaustive (Org+WebSite+
+SoftwareApplication @graph, per-route BreadcrumbList, FAQPage, per-route <html lang> already fixed for the two
+English portals); otop-ai-landing's remaining SEO gaps (canonical / og:url / sitemap) all require the landing
+page's production domain, which is explicitly UNCONFIRMED in-repo (index.html:21-23 note) and on the owner-
+gated list — a wrong canonical actively harms SEO, so per standing-order point 8 I did NOT guess it; verified
+the landing page's in-page anchors (#how/#main/#roles) and all CTAs point at real portal routes (clean).
+
+Picked the one real content gap: the /faq single source covered producer-join, consumer, and affiliate but
+NOT the middleman/distributor consent group — one of the primary consent groups the standing order lists.
+Added one Q&A per language (th/en/zh → 11 items each, equal-length invariant preserved), grounded strictly in
+MiddlemanPortalPage's real content: signup at /portals/middleman with PDPA consent + business-type
+(distributor/wholesaler/broker/reseller) + territory/channel; benefits = special wholesale pricing from
+verified producers, territory/channel rights, marketing/content support, direct producer connection (no
+redundant middlemen); team confirms network membership. No invented features; no forbidden terms. This
+completes FAQ coverage of all four primary consent groups (producer/consumer/middleman/affiliate) — a
+bounded completeness goal, not open-ended churn.
+
+Verified by running: `vitest run faqContent.test.js` → 8/8 (equal-length across langs, JSON-LD⇄FAQ_ITEMS.th
+match, forbid-list clean); full frontend suite `npm test -- --run` → 47 files / 458 tests pass; `npm run build`
+prerenders and the new middleman Q&A (/portals/middleman) is present in dist/faq/index.html's FAQPage schema.
+
+---
