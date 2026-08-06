@@ -5547,3 +5547,27 @@ it at the real consent-gated /portals/affiliate [recommended], (ข) build a rea
 [owner-gated build-out], (ค) hide the page until v9.0 is built out. Awaiting the owner's choice.
 
 ---
+
+## 2026-08-06 — DOC: refresh OWNER-DECISIONS.md — add the v9.0 affiliate-hub finding + consent/money status
+
+Standing-order loop. Completed the consent-surface audit that motivated the /join guard: verified EVERY
+PII-collecting form on the main platform is consent-correct — 9 /portals/* (portalConsent.test.js), /join
+(producerJoinConsent.test.js, added this session), ContactPage (privacy-notice model + success-gated, not an
+opt-in list so no checkbox needed), LandingPage waitlist (res.ok && data.success gated + consent notice, the
+fake-success bug already fixed). The main platform's consent + money paths are now fully verified and guarded.
+
+No new code gap remained, so the highest-value action was keeping the owner's consolidated decision queue
+accurate (docs/OWNER-DECISIONS.md — the single place the owner acts on, per point 8). It was dated 2026-08-05
+and missing the v9.0 affiliate-hub finding I surfaced this session. Before editing, re-verified every existing
+item still matches the code: #1 double-payout (_affFromRow still `paid_out: 0`, server.js:1425 — still open),
+#3 JWT_SECRET fail-closed (auth.js:12 + server.js:1312 prod warning — accurate), #5 v9.0 (still 2 files, no
+package.json). Updated the doc: (1) snapshot date → 2026-08-06; (2) added item #6 = v9.0 affiliate-hub form
+POSTs to a non-existent /api/affiliate/apply (dead form, verified: only /api/monitor/health exists) AND
+collects name/email/phone with no PDPA consent — distinct from #5 because option (ก) [point it at the real
+consent-gated /portals/affiliate] fixes it WITHOUT the full build-out; options ก/ข/ค laid out; (3) added to
+the "done" section the NaN/Infinity money-path guards and the now-complete consent-funnel verification/guards.
+
+Verified: doc re-read, Thai intact (fixed a transient typo in the H1), item #6 + status notes render, no
+`รอเจ้าอง` typo remains. Docs-only. v9.0 itself NOT touched — still awaiting the owner's ก/ข/ค (point 8).
+
+---

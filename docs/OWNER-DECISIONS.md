@@ -1,4 +1,4 @@
-# สิ่งที่รอเจ้าของตัดสินใจ (Owner decisions) — snapshot 2026-08-05
+# สิ่งที่รอเจ้าของตัดสินใจ (Owner decisions) — snapshot 2026-08-06
 
 รายการนี้รวม "ทางแยกที่ต้องให้เจ้าของตัดสินใจ" (ตาม standing-order ข้อ 8) ไว้ที่เดียว เพราะใน
 `DECISIONS_LOG.md` กระจายอยู่หลายรอบและ **หลายอันถูกแก้ไปแล้ว** — อันนี้ยืนยันสถานะจริงกับโค้ด ณ วันที่ระบุ.
@@ -36,12 +36,22 @@
 - **ทำไม:** รีโป v9.0 ไม่มี `package.json`/`next.config`/`tsconfig` เลย (เป็น `app/`-dir scaffold 2 ไฟล์) → Vercel build fail ทุกครั้ง. การทำให้ deploy ได้ = ตั้ง Next.js stack ทั้งชุด + สร้าง backend route ที่ขาด — เกินกว่าการแก้เล็ก ๆ.
 - **รอ:** ให้ผม build v9.0 ให้ deploy ได้จริง หรือ v9.0 ตั้งใจพักไว้ก่อน? (และ ~10 Vercel projects ที่ชี้มารีโปเล็กนี้น่าจะ prune ในแดชบอร์ด Vercel ของเจ้าของ)
 
+### 6. OpenThai-AI-v9.0 → ฟอร์มสมัคร affiliate (`app/affiliate-hub/page.tsx`) พัง + ไม่มี consent
+- **ทำไม (verify แล้ว 2026-08-06):** ฟอร์ม `POST /api/affiliate/apply` ที่ **ไม่มีอยู่จริง** (ทั้งรีโปมี route เดียวคือ `/api/monitor/health`) → กดสมัครได้ 404 เสมอ สมัครไม่ได้เลยแม้แต่ครั้งเดียว. และเก็บ ชื่อ/อีเมล/เบอร์ **โดยไม่มี checkbox ยินยอม PDPA** (ต่างจากทุก portal บนแพลตฟอร์มหลักที่บังคับ consent). แยกจากข้อ 5 (build-out ทั้งสแตก) — อันนี้แก้ได้เล็ก ๆ โดยไม่ต้อง build v9.0 ทั้งชุด.
+- **ตัวเลือก:**
+  - **(ก) แนะนำ:** เปลี่ยนฟอร์มให้พาไป `/portals/affiliate` จริงบนแพลตฟอร์มหลัก (consent-gated + ใช้งานได้จริงแล้ว) → ปิดฟอร์มตาย + ตัดปัญหา PDPA ทันที ไม่ต้องสร้าง endpoint เก็บ PII ซ้ำใน stub. ผมทำได้ทันทีเมื่อไฟเขียว.
+  - (ข) สร้าง `/api/affiliate/apply` จริงใน v9.0 พร้อม consent gate + ที่เก็บข้อมูล = build-out (ผูกกับข้อ 5).
+  - (ค) ซ่อน/ปิดหน้านี้จนกว่าจะ build-out จริง.
+- **รอ:** เลือก ก / ข / ค.
+
 ---
 
 ## 🟢 แก้ไปแล้ว (บันทึกไว้กันเข้าใจผิดว่ายังค้าง)
 - **#9 คอมมิชชัน affiliate จากการขายสินค้าในร้าน** — ทำแล้ว: `/api/shop/checkout` เรียก `creditAffiliateSale(ref, amount, …)` (server.js:728).
 - **#10 ปุ่ม "แบ่งครึ่ง" ข้อพิพาทที่ไม่แบ่งจริง** — ทำแล้ว: ถอดปุ่มออก + `disputes.resolve()` ปฏิเสธ `split` (escrow ยังไม่มีฟิลด์จำนวนเงิน partial).
 - **โดเมน `openthaiai.com` (ไม่มีขีด) ใน all-platform-files 231 หน้า** — ทำแล้ว: normalize เป็น `openthai-ai.com` ครบ (0 ไฟล์ที่ยังผิด).
+- **เส้นเงิน NaN/Infinity (ราคาผู้ผลิต + smart-e ราคาสินค้า)** — ทำแล้ว 2026-08-06: เพิ่มการ์ด `Number.isFinite` ที่ทุกจุดเขียนราคา + เทส + mutation-test (openthai-ai producers/orders, smart-e product) — ไม่มีราคา non-finite หลุดเข้าออเดอร์/แคตตาล็อกได้.
+- **consent funnel ทั้งแพลตฟอร์มหลัก** — verify + guard ครบ 2026-08-06: 9 หน้า `/portals/*` + `/join` มี PDPA consent gate ที่บล็อก submit จริง และมีเทส drift ครอบทุกหน้า (portalConsent + producerJoinConsent). ฟอร์มเดียวที่ยังพัง = v9.0 affiliate-hub (ข้อ 6 ด้านบน) ซึ่งอยู่ในรีโปที่รอ build-out.
 
 ---
 
