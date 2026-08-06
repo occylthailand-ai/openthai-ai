@@ -5366,3 +5366,26 @@ flows unaffected. Extended scripts/test-auth-ratelimit.mjs (now 6 checks) to ass
 calls; already wired into CI. Mutation-tested: removing autoHealLimiter makes the 429 never appear and turns
 the check red; restored → 6/6. node --check clean. No tracked data files committed (restored data/ after
 the test runs, which exercise runWatchdog).
+
+## 2026-08-06 — CONTENT/SEO: add a grounded consumer/buyer Q&A to the /faq single source (consent-funnel gap)
+
+Standing-order loop (money path still owner-gated; waiting on Part A). Rule-1 tool
+`generate-project-status.mjs` exits clean (no code↔registry drift). Picked a real content/consent-funnel gap:
+`frontend/src/data/faqContent.js` (the ONE source that feeds both the visible /faq page and the prerendered
+FAQPage JSON-LD) answered producer-join and affiliate-earn but had NO entry for the consumer/buyer side —
+the very consent group the standing order lists first. A prospective buyer reading /faq found nothing about
+what signing up gets them, and Google's FAQ rich result was missing that Q entirely.
+
+Added one Q&A per language (th/en/zh → 10 items each, equal-length invariant preserved), grounded strictly
+in verified features: consent-based signup at /portals/consumer (route confirmed in App.jsx:239) with PDPA
+consent + category selection; category-matched new-product digest from verified producers with sold-out
+items skipped automatically (sendConsumerDigest); unsubscribe anytime; buy at /catalog (App.jsx:185) via
+PromptPay/card; track at /track. No invented features — no USD/Neo4j/Stripe/blockchain/crypto (the file's
+own rule + faqContent.test.js forbid-list).
+
+Verified by running: `vitest run faqContent.test.js` → 8/8 (equal-length across langs, JSON-LD⇄FAQ_ITEMS.th
+match, forbid-list clean); full frontend suite `npm test -- --run` → 47 files / 458 tests pass; `npm run build`
+prerenders and the new consumer Q&A (/portals/consumer) is present in dist/faq/index.html's FAQPage schema —
+so the rich-result entry ships in the first HTML byte a non-JS crawler reads, no second render pass needed.
+
+---
