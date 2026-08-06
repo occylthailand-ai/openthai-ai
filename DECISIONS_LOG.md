@@ -5465,3 +5465,25 @@ nonexistent path turns the guard RED (1 failed), restoring → GREEN — so it g
 claims to. Test-only change; faqContent.js untouched (git diff = the one new file).
 
 ---
+
+## 2026-08-06 — [smart-e] fix: reject NaN/Infinity product price (was persisted → invalid catalog JSON)
+
+Standing-order loop, this round in the smart-e repo (Python POS). Full detail lives in the smart-e commit
+message (569886a) since that repo has no DECISIONS_LOG; recorded here too so the central decision history stays
+complete.
+
+Found by code scan: smart-e's order path (_create_order) and QR path (_create_qr) both guard math.isfinite()
+on incoming amounts (a NaN/Infinity slips past `x < 0` since nan<0 and inf<0 are both False), but the product
+create/update path did NOT. Verified LIVE against a throwaway SQLite db: POST /api/products {price: Infinity}
+→ HTTP 201 and the product is PERSISTED; GET /api/products then emits a literal `Infinity` token = invalid
+JSON, so a strict client (browser JSON.parse) throws on the WHOLE catalog — one bad product breaks the entire
+product list for every client. POST {price: NaN} → HTTP 500 (unhandled). Both inconsistent with the clean 400
+the sibling money paths return.
+
+Fix: added the same math.isfinite() guard to _create_product (POST) and _update_product (PUT) → clean 400.
+Verified after fix (live): Infinity/NaN on POST+PUT → 400; valid finite prices still create (201); catalog stays
+valid JSON. Added a 'product input validation' section to test_server.py (7 checks incl. a catalog-finiteness
+assertion); full harness 145 passed / 0 failed (was 138). Mutation-tested: removing either guard turns the new
+checks red, restoring → green. Pushed to smart-e branch claude/daily-reporter-improvements-8vc9ct (PR #1).
+
+---
