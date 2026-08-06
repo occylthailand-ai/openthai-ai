@@ -93,10 +93,12 @@ export function BuyModal({ product, t, onClose }) {
         <button onClick={onClose} aria-label={t('mk.close') || 'ปิด'} style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#7c8797', fontSize: 22, cursor: 'pointer' }}>×</button>
         {res ? (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
-            <div style={{ fontSize: 44, marginBottom: 8 }}>{res.paid ? '🎉' : '⏳'}</div>
-            <h3 style={{ fontWeight: 900, marginBottom: 6 }}>{res.paid ? t('mk.store.paid') : t('mk.store.pending')}</h3>
+            {/* refund_pending = paid but the item sold out in the race, so a refund is coming — must NOT
+                read as a plain "🎉 paid!" success (that misleads a customer who won't get the product). */}
+            <div style={{ fontSize: 44, marginBottom: 8 }}>{res.refund_pending ? '↩️' : res.paid ? '🎉' : '⏳'}</div>
+            <h3 style={{ fontWeight: 900, marginBottom: 6 }}>{res.refund_pending ? t('mk.store.refund') : res.paid ? t('mk.store.paid') : t('mk.store.pending')}</h3>
             {res.qr_image_url && <img src={res.qr_image_url} alt="PromptPay QR" style={{ width: 200, height: 200, background: '#fff', borderRadius: 10, padding: 6, margin: '8px 0' }} />}
-            {!res.paid && !res.qr_image_url && <p style={{ color: '#94a3b8', fontSize: 13 }}>{res.message || t('mk.store.qr')}</p>}
+            {(res.refund_pending || (!res.paid && !res.qr_image_url)) && <p style={{ color: res.refund_pending ? '#fbbf24' : '#94a3b8', fontSize: 13 }}>{res.message || t('mk.store.qr')}</p>}
             <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: 12, margin: '12px 0', fontSize: 12 }}>
               <div style={{ color: '#94a3b8' }}>{t('mk.track.id')}</div>
               <div style={{ fontFamily: 'monospace', color: '#a5b4fc', wordBreak: 'break-all' }}>{res.order_id}</div>

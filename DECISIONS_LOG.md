@@ -9,6 +9,16 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+### 2026-08-06 — Hourly loop: /store checkout showed "🎉 ชำระเงินสำเร็จ!" even when the charge succeeded but the item sold out (refund pending)
+
+Found scanning the first-party store's Omise checkout UI. `/api/shop/checkout` has an oversold-race branch (server.js:721-725): if the item sells out between the pre-check and the stock deduction, the charge already succeeded, so the order is cancelled and the response is `{ paid:true, fulfilled:false, refund_pending:true, message:'ชำระเงินสำเร็จ แต่สินค้าหมดสต๊อกพอดี ทีมงานจะติดต่อคืนเงินให้โดยเร็ว' }`. But `StorePage.jsx` rendered the success screen as `res.paid ? '🎉' + t('mk.store.paid') : ...` and only showed `res.message` **when `!res.paid`** — so a customer who **paid and won't get the product** saw a plain "🎉 ชำระเงินสำเร็จ!" with **no** refund notice at all. Misleading on the revenue path, and the exact case the backend carefully handles server-side was dropped in the UI.
+
+**Change (frontend only):**
+- `StorePage.jsx` — the success screen now branches on `res.refund_pending`: icon `↩️`, title `mk.store.refund` ("ชำระเงินแล้ว แต่สินค้าหมดสต๊อกพอดี — กำลังคืนเงิน"), and the backend's `res.message` (the refund explanation) is shown in amber. Normal paid (`🎉`) and pending-QR states are unchanged.
+- `src/i18n/index.jsx` — new `mk.store.refund` in th/en/zh.
+
+**Verified (run, not assumed) + mutation-tested:** `storeOrderA11y.test.jsx` 1 → **2**: a new test mocks the checkout returning `paid:true, refund_pending:true` and asserts the success screen shows the refund title (`/กำลังคืนเงิน/`) + the refund message, and that the plain "ชำระเงินสำเร็จ!" title is **absent**. **Mutation:** reverting the title back to the plain paid/pending logic flips the test **red**; restored. Full frontend suite **393/393** (was 392); `npm run build` ok (sitemap 26). No backend change (the server already returned the correct data — only the UI dropped it).
+
 ### 2026-08-06 — Hourly loop: show the buyer the authoritative order total at checkout (close a transparency gap from the price-authority fix)
 
 Follow-up to the earlier "record the producer's authoritative price" fix. `place()` now records the producer's current server-side price (a stale catalog tab / tampered POST can no longer set the recorded `amount`), and the receipt email shows that authoritative figure — but `POST /api/orders` returned only `{ id, message }`, and CatalogPage's success screen showed nothing about the total. So a buyer whose order recorded a different amount than their (possibly stale) cart only learned the real total from the email — the on-screen confirmation was silent about money. Not a bug, but a transparency gap the previous change opened.

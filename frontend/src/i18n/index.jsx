@@ -242,6 +242,7 @@ const translations = {
     'mk.store.soldout': 'สินค้าหมด',
     'mk.store.qr': 'สแกน QR เพื่อชำระเงิน',
     'mk.store.paid': 'ชำระเงินสำเร็จ!',
+    'mk.store.refund': 'ชำระเงินแล้ว แต่สินค้าหมดสต๊อกพอดี — กำลังคืนเงิน',
     'mk.store.pending': 'รอชำระเงิน — สแกน QR ด้านล่าง',
 
     'mk.ord.address': 'ที่อยู่จัดส่ง',
@@ -548,6 +549,7 @@ const translations = {
     'mk.store.soldout': 'Sold out',
     'mk.store.qr': 'Scan the QR to pay',
     'mk.store.paid': 'Payment successful!',
+    'mk.store.refund': 'Paid — but just out of stock. A refund is on the way.',
     'mk.store.pending': 'Awaiting payment — scan the QR below',
 
     'mk.ord.address': 'Shipping address',
@@ -854,6 +856,7 @@ const translations = {
     'mk.store.soldout': '售罄',
     'mk.store.qr': '扫码支付',
     'mk.store.paid': '支付成功！',
+    'mk.store.refund': '已支付 — 但商品刚好售罄，正在退款',
     'mk.store.pending': '等待支付 — 扫描下方二维码',
 
     'mk.ord.address': '收货地址',

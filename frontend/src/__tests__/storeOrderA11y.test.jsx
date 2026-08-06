@@ -39,4 +39,31 @@ describe('StorePage BuyModal accessibility', () => {
     fireEvent.change(qty, { target: { value: '2' } });
     expect(qty.value).toBe('2');
   });
+
+  // Revenue-path honesty: /api/shop/checkout can return paid:true WITH refund_pending:true (the item
+  // sold out in the race between pre-check and stock deduction, so the charge succeeded but the order
+  // was cancelled and a refund is coming). That must NOT render as a plain "🎉 ชำระเงินสำเร็จ!" — the
+  // customer paid and won't get the product, and the refund notice must be shown.
+  it('shows a refund-pending state (not a plain paid success) when the item sold out in the race', async () => {
+    global.fetch = vi.fn((url, opts) => {
+      if (String(url).includes('/api/shop/checkout') && opts?.method === 'POST') {
+        return Promise.resolve({ json: () => Promise.resolve({
+          success: true, paid: true, fulfilled: false, refund_pending: true, order_id: 'ord_x', amount: 890,
+          message: 'ชำระเงินสำเร็จ แต่สินค้าหมดสต๊อกพอดี ทีมงานจะติดต่อคืนเงินให้โดยเร็ว',
+        }) });
+      }
+      return Promise.resolve({ json: () => Promise.resolve({ products: [PRODUCT] }) });
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByText('ผ้าไหมทอมือ')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'ซื้อเลย' }));
+    fireEvent.change(screen.getByLabelText(/ชื่อผู้สั่ง/), { target: { value: 'สมชาย' } });
+    fireEvent.change(screen.getByLabelText(/ช่องทางติดต่อ/), { target: { value: '0810000000' } });
+    fireEvent.click(screen.getByRole('button', { name: /💳/ }));
+    // the refund-pending title shows, and the celebratory "ชำระเงินสำเร็จ!" title does NOT
+    await waitFor(() => expect(screen.getByText(/กำลังคืนเงิน/)).toBeTruthy());
+    expect(screen.queryByText('ชำระเงินสำเร็จ!')).toBeNull();
+    // the backend's refund explanation is surfaced to the customer
+    expect(screen.getByText(/ทีมงานจะติดต่อคืนเงิน/)).toBeTruthy();
+  });
 });
