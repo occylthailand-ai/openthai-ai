@@ -33,6 +33,7 @@
     "test:openrouter-map": "node scripts/test-openrouter-map.mjs",
     "test:recovery-code": "node scripts/test-recovery-code.mjs",
     "test:tenant-login": "node scripts/test-tenant-login.mjs",
+    "test:tenant-token-secret": "node scripts/test-tenant-token-secret.mjs",
     "test:mcp-batch": "node scripts/test-mcp-batch.mjs",
     "test:progress-kpi": "node scripts/test-progress-kpi.mjs",
     "test:portal-leads-schema": "node scripts/test-portal-leads-schema.mjs",

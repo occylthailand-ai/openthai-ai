@@ -155,6 +155,9 @@ jobs:
       - name: Default-admin test (self-contained — spawns server; the guessable admin/1234 default is never a live login in production)
         working-directory: backend
         run: npm run test:admin-default-login
+      - name: Tenant-token secret test (self-contained — tenant JWTs are never signed with a source-visible constant; fail closed in prod without JWT_SECRET)
+        working-directory: backend
+        run: npm run test:tenant-token-secret
       - name: AI department-officer endpoint test (self-contained — auth gate, professional disclaimer, offline fallback)
         working-directory: backend
         run: npm run test:dept-officer-endpoint
