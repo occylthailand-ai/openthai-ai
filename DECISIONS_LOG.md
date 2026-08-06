@@ -5571,3 +5571,25 @@ Verified: doc re-read, Thai intact (fixed a transient typo in the H1), item #6 +
 `รอเจ้าอง` typo remains. Docs-only. v9.0 itself NOT touched — still awaiting the owner's ก/ข/ค (point 8).
 
 ---
+
+## 2026-08-06 — [all-platform-files] add validate-products.mjs — guard the 13 regional catalog counts
+
+Standing-order loop, in the all-platform-files repo (full detail in commit d972a7c there, since that repo has
+no DECISIONS_LOG). This round audited more of the main platform first and confirmed maturity: the seasonal
+engine (a key SEO differentiator — 24 solar terms, computed live) is correct incl. the Jan 1–5 → previous 冬至
+year-wrap and the 冬至→小寒 next-year wrap, and is well-tested (50 checks pass); the UTC vs Thai-TZ term boundary
+is a defensible choice given the term table is ±1-day approximate, so NOT changed.
+
+Picked a real unguarded invariant: all-platform-files' 13 products-<region>.json each declare a hand-maintained
+`totalProducts` and a `categories[].items[]` list, but nothing checked the header count against the actual item
+count and the repo has no build/test step — so a file could silently claim the wrong number of products
+(misleading any seed/import that trusts the header). Verified all 13 currently hold (totalProducts === items,
+consistent 4-key schema). Added validate-products.mjs (pure stdlib) pinning: valid JSON, the schema, integer
+totalProducts, every category has a name + non-empty string items[], and totalProducts === Σ items. Exit 0/1
+so it can join CI later.
+
+Verified by running: 13/13 valid (exit 0). Mutation-tested: bumping a totalProducts, and separately adding an
+item without updating the count, each make it exit 1 with a precise per-file message; restoring → exit 0.
+Pushed to all-platform-files branch (PR #1). No main-platform code touched this round.
+
+---
