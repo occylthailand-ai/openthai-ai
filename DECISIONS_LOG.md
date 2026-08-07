@@ -5613,3 +5613,19 @@ exits 0 against the current 13 catalogs. Pushed to all-platform-files branch (PR
 touched.
 
 ---
+
+## 2026-08-06 — [otop-ai-landing] unify Organization JSON-LD with the main site (shared @id + contactPoint)
+
+Standing-order loop, in otop-ai-landing (full detail in commit 1814672 there — no DECISIONS_LOG in that repo).
+The landing page's remaining SEO gaps (canonical / og:url / sitemap) all still need its production domain, which
+is unconfirmed (owner-decision #4) — NOT guessed. But one real, domain-INDEPENDENT fix: the landing page emitted
+an Organization JSON-LD with the same url as the main site (www.openthai-ai.com) yet a thinner, different shape
+(no @id, no contactPoint), so a crawler saw two inconsistent entities for one brand. Added the main site's exact
+Organization @id (…/#organization) so both resolve to a single brand entity, plus the same verified email +
+ContactPoint (support@openthai.ai / areaServed TH / Thai-English-Chinese) — all copied from the main site's
+existing Organization, nothing invented, no domain dependency.
+
+Verified by running: the landing JSON-LD parses; its @id byte-matches the main site's Organization @id; the
+email matches the main site's support address (present there). Pushed to otop-ai-landing branch.
+
+---
