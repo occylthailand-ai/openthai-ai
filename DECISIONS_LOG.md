@@ -5629,3 +5629,23 @@ Verified by running: the landing JSON-LD parses; its @id byte-matches the main s
 email matches the main site's support address (present there). Pushed to otop-ai-landing branch.
 
 ---
+
+## 2026-08-07 — VERIFY: confirm PR #79 is fully mergeable after ~20 commits (+ seasonal flake investigated)
+
+Standing-order loop. With the non-gated code surface exhaustively covered over the recent rounds (money-path
+finiteness fixed + swept, consent funnel verified+guarded incl. /join, region-catalog validator+CI, landing
+Organization schema unified), this round's highest-impact action was confirming the accumulated work hasn't
+broken the branch — a hidden red would block the eventual merge that unblocks the owner-gated go-live.
+
+Ran the CI-equivalent on HEAD (c0a974c): frontend `npm test -- --run` → 473/473 pass; `node --check server.js`
+clean; backend deterministic tests incl. every file I touched this session — producers 32/0, order-price-
+authority 14/0, orders-track (exit 0), digest-match 21/0, disputes 30/0, portal-leads 20/0, credits 25/0,
+inventory 29/0, affiliate-payout (exit 0), seasonal 50/0.
+
+One investigation: test-seasonal-engine.mjs exit-1'd ONCE inside a sequential `>/dev/null` loop, then passed
+5/5 in isolation. Audited it for hidden time-dependence: every assertion uses fixed dates (D(2026,…)); the
+only "now"-fallback call (bad-date → new Date()) asserts merely that solar_term.cn is non-empty, never a
+date-specific value. So the test is deterministic and the one-off was an environmental blip, not a real
+test/engine bug — recorded here so a future transient flake is understood, not chased. No code change.
+
+---
