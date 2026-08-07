@@ -14,6 +14,11 @@ const translations = {
   th: {
     // nav + language menu
     'nav.affiliate': '💰 Affiliate',
+    'nav.earn': '💸 หารายได้',
+    'home.skills.title': 'ทักษะ AI ครบจบในที่เดียว',
+    'home.skills.total': 'ทักษะ AI',
+    'home.skills.active': 'พร้อมใช้งาน',
+    'home.skills.categories': 'หมวดหมู่',
     'nav.pricing': 'ราคา',
     'nav.login': 'Login',
     'nav.freeCta': 'ใช้ฟรีตอนนี้ →',
@@ -330,6 +335,11 @@ const translations = {
 
   en: {
     'nav.affiliate': '💰 Affiliate',
+    'nav.earn': '💸 Earn',
+    'home.skills.title': 'All the AI skills in one place',
+    'home.skills.total': 'AI skills',
+    'home.skills.active': 'Ready to use',
+    'home.skills.categories': 'Categories',
     'nav.pricing': 'Pricing',
     'nav.login': 'Login',
     'nav.freeCta': 'Try Free Now →',
@@ -638,6 +648,11 @@ const translations = {
 
   zh: {
     'nav.affiliate': '💰 联盟',
+    'nav.earn': '💸 赚钱',
+    'home.skills.title': 'AI 技能一站齐全',
+    'home.skills.total': 'AI 技能',
+    'home.skills.active': '可用',
+    'home.skills.categories': '类别',
     'nav.pricing': '价格',
     'nav.login': '登录',
     'nav.freeCta': '立即免费试用 →',

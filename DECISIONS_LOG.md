@@ -5666,3 +5666,21 @@ raw-key/Thai fallback); full frontend suite 473/473 pass (49 files — the suite
 t() call is exercised at runtime); `npm run build` succeeds. Frontend-only, two files.
 
 ---
+
+## 2026-08-07 — i18n(home): localize the hero "Earn" CTA + AI-skills section (were hardcoded Thai)
+
+Standing-order loop (content/market-entry, point 2). Continuing the footer-About i18n fix, scanned the
+LandingPage (#1 market-entry page, targets "คนไทยและตลาดโลก") for the same class. It calls t() 62× — clearly
+meant to be fully localized — yet a few prominent strings were hardcoded Thai, so en/zh visitors saw Thai:
+(1) the header "💸 หารายได้" (/earn) CTA, whose sibling buttons all use t('nav.*'); (2) the AI-SKILLS section
+title "ทักษะ AI ครบจบในที่เดียว" and its three stat labels "ทักษะ AI / พร้อมใช้งาน / หมวดหมู่".
+
+Added 5 keys in all three languages — nav.earn (💸 หารายได้ / 💸 Earn / 💸 赚钱) and home.skills.{title,total,
+active,categories} (e.g. en "All the AI skills in one place / AI skills / Ready to use / Categories") — and
+switched LandingPage to t() for each. Scoped to these clear outliers, not a full-page rewrite.
+
+Verified by running: each of the 5 keys present in all 3 lang dicts (grep = 3 each); the 5 hardcoded Thai
+literals gone from LandingPage (grep = 0); full frontend suite 473/473 (the suite renders LandingPage, so the
+new t() calls are exercised at runtime); npm run build succeeds. Frontend-only, two files.
+
+---

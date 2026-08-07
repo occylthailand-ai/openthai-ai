@@ -111,7 +111,7 @@ export default function LandingPage() {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <LanguageSwitcher />
-          <button onClick={() => navigate('/earn')} style={{ ...ghostBtn, color: '#6ee7b7', borderColor: 'rgba(16,185,129,0.4)' }}>💸 หารายได้</button>
+          <button onClick={() => navigate('/earn')} style={{ ...ghostBtn, color: '#6ee7b7', borderColor: 'rgba(16,185,129,0.4)' }}>{t('nav.earn')}</button>
           <button onClick={() => navigate('/affiliate')} style={ghostBtn}>{t('nav.affiliate')}</button>
           <button onClick={() => navigate('/pricing')} style={ghostBtn}>{t('nav.pricing')}</button>
           <button onClick={() => navigate('/login')} style={ghostBtn}>{t('nav.login')}</button>
@@ -243,11 +243,11 @@ export default function LandingPage() {
       {skills && (
         <section style={{ maxWidth: 1000, margin: '0 auto', padding: '0 5% 80px', textAlign: 'center' }}>
           <SectionBadge>🧠 AI SKILLS</SectionBadge>
-          <SectionTitle>ทักษะ AI ครบจบในที่เดียว</SectionTitle>
+          <SectionTitle>{t('home.skills.title')}</SectionTitle>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap', margin: '28px 0 8px' }}>
-            <div><div style={{ fontSize: 44, fontWeight: 900, background: 'linear-gradient(135deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{skills.total}</div><div style={{ fontSize: 13, color: '#94a3b8' }}>ทักษะ AI</div></div>
-            <div><div style={{ fontSize: 44, fontWeight: 900, color: '#10b981' }}>{skills.active}</div><div style={{ fontSize: 13, color: '#94a3b8' }}>พร้อมใช้งาน</div></div>
-            <div><div style={{ fontSize: 44, fontWeight: 900, color: '#f59e0b' }}>{skills.categories?.length || 0}</div><div style={{ fontSize: 13, color: '#94a3b8' }}>หมวดหมู่</div></div>
+            <div><div style={{ fontSize: 44, fontWeight: 900, background: 'linear-gradient(135deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{skills.total}</div><div style={{ fontSize: 13, color: '#94a3b8' }}>{t('home.skills.total')}</div></div>
+            <div><div style={{ fontSize: 44, fontWeight: 900, color: '#10b981' }}>{skills.active}</div><div style={{ fontSize: 13, color: '#94a3b8' }}>{t('home.skills.active')}</div></div>
+            <div><div style={{ fontSize: 44, fontWeight: 900, color: '#f59e0b' }}>{skills.categories?.length || 0}</div><div style={{ fontSize: 13, color: '#94a3b8' }}>{t('home.skills.categories')}</div></div>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 760, margin: '24px auto 0' }}>
             {skills.skills?.map((s) => (
