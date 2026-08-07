@@ -5684,3 +5684,24 @@ literals gone from LandingPage (grep = 0); full frontend suite 473/473 (the suit
 new t() calls are exercised at runtime); npm run build succeeds. Frontend-only, two files.
 
 ---
+
+## 2026-08-07 — i18n(home): localize the "Start earning ฿1,000/day" hero CTA + verify no other Thai leaks
+
+Standing-order loop (content/market-entry). Capstone of the homepage i18n pass. A source scan of JSX text
+misses strings that a real render exposes, so I wrote a throwaway render-probe test (renders LandingPage under
+LanguageProvider forced to 'en'/'zh', reads container.textContent, flags Thai codepoints U+0E00–U+0E7F). It
+caught one more hardcoded-Thai leak the earlier scans missed: the green hero CTA "💸 เริ่มหารายได้ ฿1,000/วัน",
+shown verbatim to English AND Chinese visitors.
+
+Added hero.ctaEarn in all three languages (th '💸 เริ่มหารายได้ ฿1,000/วัน' / en '💸 Start earning ฿1,000/day' /
+zh '💸 每天赚 ฿1,000') and switched LandingPage to t('hero.ctaEarn'). Re-probed: the EN and ZH homepage now
+render only two Thai fragments, both LEGITIMATE — "อ" is inside an SVG <text> (the logo glyph / brand mark)
+and "ไทย" is the language-switcher's own button label (a language picker correctly shows each language's name
+in its own script). So no incorrect Thai remains on the homepage for en/zh visitors.
+
+Verified by running: hero.ctaEarn present in all 3 dicts; the hardcoded literal is gone from LandingPage (only
+the th i18n value remains); render-probe shows no incorrect Thai in the en/zh render; full frontend suite
+473/473; npm run build succeeds. Frontend-only, two files. (This completes the LandingPage localization begun
+with the footer-About and hero/skills fixes.)
+
+---

@@ -153,7 +153,7 @@ export default function LandingPage() {
             {t('hero.ctaPricing')}
           </button>
           <button onClick={() => navigate('/earn')} style={{ fontSize: 15, padding: '14px 28px', borderRadius: 50, fontWeight: 800, cursor: 'pointer', border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff' }}>
-            💸 เริ่มหารายได้ ฿1,000/วัน
+            {t('hero.ctaEarn')}
           </button>
         </div>
 

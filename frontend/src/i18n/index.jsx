@@ -53,6 +53,7 @@ const translations = {
     'hero.sub2': 'Openthai.ai สร้างครบเซ็ตพร้อมโพสต์ทันที ภาษาไทยธรรมชาติ',
     'hero.ctaFree': '🎁 ใช้ฟรี 3 ครั้ง — ไม่ต้องสมัคร!',
     'hero.ctaPricing': 'ดูราคา →',
+    'hero.ctaEarn': '💸 เริ่มหารายได้ ฿1,000/วัน',
     'typing': ['ผ้าไหมอุบล', 'น้ำพริกป้าแดง', 'เซรั่มข้าวหอม', 'กาแฟดอยช้าง', 'สบู่มะขาม'],
     'stats': [
       { v: 'ฟรี', l: 'ทดลองใช้ ไม่ต้องผูกบัตร' },
@@ -373,6 +374,7 @@ const translations = {
     'hero.sub2': 'Openthai.ai builds the whole set ready to post — in natural Thai',
     'hero.ctaFree': '🎁 3 free generations — no signup!',
     'hero.ctaPricing': 'See Pricing →',
+    'hero.ctaEarn': '💸 Start earning ฿1,000/day',
     'typing': ['Ubon silk', "Aunt Daeng's chili paste", 'rice serum', 'Doi Chang coffee', 'tamarind soap'],
     'stats': [
       { v: 'Free', l: 'trial, no card' },
@@ -686,6 +688,7 @@ const translations = {
     'hero.sub2': 'Openthai.ai 一键生成整套内容，立即发布 — 自然地道泰语',
     'hero.ctaFree': '🎁 免费生成 3 次 — 无需注册！',
     'hero.ctaPricing': '查看价格 →',
+    'hero.ctaEarn': '💸 每天赚 ฿1,000',
     'typing': ['乌汶丝绸', '阿姨辣椒酱', '大米精华液', '象山咖啡', '罗望子香皂'],
     'stats': [
       { v: '免费', l: '试用无需信用卡' },
