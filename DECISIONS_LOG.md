@@ -5649,3 +5649,20 @@ date-specific value. So the test is deterministic and the one-off was an environ
 test/engine bug — recorded here so a future transient flake is understood, not chased. No code change.
 
 ---
+
+## 2026-08-07 — i18n(footer): localize the homepage "About" link (was hardcoded Thai for en/zh visitors)
+
+Standing-order loop (content/market-entry, point 2). Auditing internal linking of the key SEO/funnel routes
+found /faq and /seasonal ARE discoverable (homepage footer, LandingPage.jsx:365 — my first grep just missed
+the array-literal form), so no orphan-page gap. But the audit surfaced a real i18n bug in that same footer:
+every link label uses t('footer.link.X') EXCEPT "About", which was a hardcoded Thai literal 'เกี่ยวกับเรา'. So
+an English or Chinese visitor to the homepage — the #1 market-entry page, and the platform explicitly targets
+"คนไทยและตลาดโลก" — saw Thai text for that one footer link while every sibling localized.
+
+Fix: added footer.link.about to all three language dicts (th 'เกี่ยวกับเรา' / en 'About us' / zh '关于我们') and
+switched LandingPage.jsx to t('footer.link.about'). Verified by running: grep confirms the key in all 3 dicts;
+read() (i18n/index.jsx:950) is a plain `key in dict` lookup so each lang resolves to its own string (no more
+raw-key/Thai fallback); full frontend suite 473/473 pass (49 files — the suite renders LandingPage, so the new
+t() call is exercised at runtime); `npm run build` succeeds. Frontend-only, two files.
+
+---

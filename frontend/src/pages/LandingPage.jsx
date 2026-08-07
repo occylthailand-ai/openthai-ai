@@ -362,7 +362,7 @@ export default function LandingPage() {
             </div>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{t('footer.info')}</div>
-              {[[t('footer.link.showcase'), '/showcase'], [t('footer.link.seasonal'), '/seasonal'], [t('footer.link.aiskills'), '/ai-skills'], [t('footer.link.faq'), '/faq'], ['เกี่ยวกับเรา', '/about'], [t('footer.link.privacy'), '/privacy'], [t('footer.link.terms'), '/terms'], [t('footer.link.contact'), 'mailto:support@openthai.ai']].map(([l, r]) => (
+              {[[t('footer.link.showcase'), '/showcase'], [t('footer.link.seasonal'), '/seasonal'], [t('footer.link.aiskills'), '/ai-skills'], [t('footer.link.faq'), '/faq'], [t('footer.link.about'), '/about'], [t('footer.link.privacy'), '/privacy'], [t('footer.link.terms'), '/terms'], [t('footer.link.contact'), 'mailto:support@openthai.ai']].map(([l, r]) => (
                 r.startsWith('mailto')
                   ? <a key={r} href={r} style={{ display: 'block', color: '#94a3b8', fontSize: 13, textDecoration: 'none', marginBottom: 6 }}>{l}</a>
                   : <a key={r} href={r} onClick={(e) => { e.preventDefault(); navigate(r); }} style={{ display: 'block', color: '#94a3b8', fontSize: 13, textDecoration: 'none', cursor: 'pointer', marginBottom: 6 }}>{l}</a>
