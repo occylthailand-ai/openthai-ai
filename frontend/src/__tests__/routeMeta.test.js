@@ -56,6 +56,21 @@ describe('applyRouteMeta — rewrites the base template into per-route preview m
     expect(en).not.toContain('<html lang="th">');
   });
 
+  it('sets og:locale to match the page language (th_TH default; en_US for the international portals)', () => {
+    // a Thai-default route keeps th_TH
+    const th = applyRouteMeta(baseHtml, contact, DOMAIN);
+    expect(th).toContain('<meta property="og:locale" content="th_TH" />');
+    // an English-default route advertises en_US to Facebook/LINE, not the base template's th_TH
+    const en = applyRouteMeta(baseHtml, { path: '/portals/intl-org', lang: 'en', title: 'International Organization Portal', desc: 'x' }, DOMAIN);
+    expect(en).toContain('<meta property="og:locale" content="en_US" />');
+    expect(en).not.toContain('<meta property="og:locale" content="th_TH" />');
+  });
+
+  it('throws when the base is missing the og:locale meta (format drift must fail the build)', () => {
+    const broken = baseHtml.split('\n').filter((l) => !l.includes('og:locale')).join('\n');
+    expect(() => applyRouteMeta(broken, producer, DOMAIN)).toThrow(/route-meta.*og:locale.*not found/s);
+  });
+
   it('the international portals declare lang:"en" in the SEO route list', () => {
     for (const p of ['/portals/gov-intl', '/portals/intl-org']) {
       const r = ROUTES.find((x) => x.path === p);

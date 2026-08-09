@@ -83,6 +83,13 @@ export function breadcrumbJsonLd(path, title, DOMAIN, portalsTitle = 'Portals') 
 // Transform the base index.html into a route's prerendered HTML: swap title/description/
 // canonical/OG/Twitter to the route's own copy and append its BreadcrumbList. Throws if
 // any target tag is missing from `baseHtml` (see module header).
+// Facebook/LINE read og:locale (language_TERRITORY) to label a shared link's language. The base
+// template hardcodes th_TH; a page that renders in another language on first load must advertise
+// that language, or the two international portals (gov-intl / intl-org, English content) get shared
+// as Thai — the same wrong-language signal the <html lang> swap below already fixes, just for the
+// social crawler instead of the DOM. Unknown languages fall back to th_TH (never leave it blank).
+const OG_LOCALE = { th: 'th_TH', en: 'en_US', zh: 'zh_CN' };
+
 export function applyRouteMeta(baseHtml, { path, title, desc, lang }, DOMAIN, opts = {}) {
   const url = DOMAIN + path;
   const fullTitle = `${title} — Openthai.ai`;
@@ -93,6 +100,8 @@ export function applyRouteMeta(baseHtml, { path, title, desc, lang }, DOMAIN, op
   // serving them as lang="th" makes screen readers mispronounce and gives Google a wrong language
   // signal on the first (pre-JS) byte. The SPA still corrects document.documentElement.lang at runtime.
   html = replaceOrThrow(html, /<html lang="[a-z-]+">/, `<html lang="${pageLang}">`, '<html lang>', path);
+  // Keep the social-preview language in sync with <html lang> (see OG_LOCALE above).
+  html = replaceOrThrow(html, /<meta property="og:locale" content=".*?" \/>/, `<meta property="og:locale" content="${OG_LOCALE[pageLang] || OG_LOCALE.th}" />`, 'og:locale meta', path);
   html = replaceOrThrow(html, /<title>.*?<\/title>/, `<title>${escapeAttr(fullTitle)}</title>`, '<title>', path);
   html = replaceOrThrow(html, /<meta name="description" content=".*?" \/>/, `<meta name="description" content="${escapeAttr(desc)}" />`, 'description meta', path);
   html = replaceOrThrow(html, /<link rel="canonical" href=".*?" \/>/, `<link rel="canonical" href="${url}" />`, 'canonical link', path);

@@ -9,6 +9,37 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — fix(seo): og:locale on the prerendered international portals said th_TH for English pages
+
+Standing-order loop (market-entry / SEO). Continuing the international-portal thread from the
+consent-funnel error-localization fix. The base `frontend/index.html` hardcodes
+`<meta property="og:locale" content="th_TH" />`, and the per-route prerender transform
+(`frontend/scripts/route-meta.mjs` `applyRouteMeta`) already rewrites `<html lang>` per route —
+serving gov-intl / intl-org as `<html lang="en">` because they render English on first load — but it
+**never touched og:locale**. So the two English international portals (gov-intl targets foreign
+governments, intl-org targets UN/ASEAN/World Bank) were prerendered with an English title/description
+and `<html lang="en">` yet still advertised `og:locale=th_TH` to Facebook/LINE crawlers — the exact
+wrong-language signal the `<html lang>` swap exists to prevent, just for the social crawler instead of
+the DOM.
+
+**Change (build-script only, no runtime/UI change):**
+- `frontend/scripts/route-meta.mjs` — `applyRouteMeta` now also rewrites `og:locale` from the page's
+  language via a small `OG_LOCALE` map (th→th_TH, en→en_US, zh→zh_CN), falling back to th_TH for an
+  unknown language. Uses the same `replaceOrThrow` helper as the other tags, so a base-template format
+  drift fails the build loudly instead of silently re-serving th_TH.
+
+**Verified by running (standing-order #4):**
+- `routeMeta.test.js` **15/15** (was 13): a Thai route keeps `th_TH`; an en route emits `en_US` and no
+  longer contains `th_TH`; and removing the og:locale line from the base makes the transform throw
+  (fail-loud, matching the existing canonical/og:url/description drift guards).
+- **Real build output** (`npm run build`, not assumed): `dist/portals/intl-org/index.html` and
+  `dist/portals/gov-intl/index.html` now carry `og:locale=en_US` (+ `<html lang="en">`), while
+  `dist/portals/producer/index.html` and the homepage root keep `og:locale=th_TH`.
+- Full frontend suite **478/478** (was 476). Frontend-only, two files (transform + its test).
+
+---
+
+
 ## 2026-08-09 — fix(portals): localize consent-funnel error messages (int'l applicants saw Thai errors)
 
 Standing-order loop (consent-based signup funnel + market entry for non-Thai). Found by scanning the
