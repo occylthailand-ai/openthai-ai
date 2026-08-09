@@ -5705,3 +5705,21 @@ the th i18n value remains); render-probe shows no incorrect Thai in the en/zh re
 with the footer-About and hero/skills fixes.)
 
 ---
+
+## 2026-08-07 — test(i18n): permanent render-based guard against stray Thai on the homepage for non-Thai visitors
+
+Standing-order loop (content/market-entry quality). The three homepage i18n fixes (footer About, hero/skills
+labels, the "เริ่มหารายได้" CTA) were each found only by a real render, never by a source scan — so a source-level
+drift guard would not protect them. Turned the throwaway render-probe into a permanent test:
+`frontend/src/__tests__/landingNoThaiLeak.test.jsx`. It renders LandingPage under LanguageProvider forced to
+'en' and 'zh', collects visible text while skipping any <svg> subtree, strips the ฿ currency sign, and fails if
+any Thai run (U+0E00–U+0E7F) remains — with two by-design exceptions that are NOT bug-allowlisting: the logo is
+an inline <svg> whose glyph is the Thai letter "อ" (brand art, excluded by skipping svg subtrees), and the
+language switcher shows each language's name in its own script so "ไทย" is the one permitted bare-Thai token.
+
+Verified by running: the guard passes 2/2 (en + zh) on current main; mutation test — temporarily injecting a
+hardcoded Thai <span> into LandingPage turned it RED (both langs), reverted → GREEN; full frontend suite now
+475/475 (was 473, +2 from this guard). Frontend-only, one new test file, no source changes. Now any future
+hardcoded Thai on the homepage fails CI instead of silently shipping to English/Chinese visitors.
+
+---
