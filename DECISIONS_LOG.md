@@ -9,6 +9,42 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — fix(portals): localize consent-funnel error messages (int'l applicants saw Thai errors)
+
+Standing-order loop (consent-based signup funnel + market entry for non-Thai). Found by scanning the
+/portals/* funnel: the backend `/api/leads/submit` (`backend/portal-leads.js`) returns **Thai-only**
+error strings — consent missing ("ต้องยินยอมตามนโยบายความเป็นส่วนตัว…"), name/email missing
+("กรอกข้อมูล…"), and the 429 rate limiter ("ส่งฟอร์มบ่อยเกินไป…"). The shared client helper
+`leadError()` (`frontend/src/pages/portals/submitLead.js`) returned that raw `error` string **first**,
+only falling back to a localized generic when it was absent. So an English/Chinese applicant on the
+**international** portals — intl-org and gov-intl default to en/zh, and target UN/ASEAN/World Bank/etc.
+— who tripped the rate limiter (10 submits / 15 min, easily reached) saw a **Thai** error on the signup
+form. A market-entry defect on the exact consent funnel the standing order prioritizes, and on the
+pages aimed at non-Thai institutions.
+
+**Change:**
+- `backend/portal-leads.js` — every error path now carries a stable machine `code` alongside the Thai
+  string: `consent_required`, `missing_contact`, `rate_limited` (limiter message), `server_error`
+  (route 500). The route forwards `code` in the JSON body.
+- `frontend/src/pages/portals/submitLead.js` — `submitLead` captures `code`; `leadError(result, lang)`
+  now localizes **by code** into th/en/zh and falls back to the localized generic for any unknown/absent
+  code. It deliberately **never** surfaces the raw server string again, so no future backend message can
+  leak untranslated Thai to a non-Thai visitor. All 9 portal pages already route through this one helper,
+  so the fix reaches every portal (producer, consumer, creator, affiliate, middleman, foundation,
+  gov-thai, gov-intl, intl-org) with no per-page change.
+
+**Verified by running (standing-order #4):**
+- Backend `test-portal-leads.mjs` **22/22** (was 20; +code assertions for consent_required & missing_contact).
+- End-to-end HTTP (throwaway script, express app + real router): POST returns the code over the wire for
+  400 consent_required, 400 missing_contact, 200 success, and — the real scenario — **429 rate_limited**. 4/4.
+- Frontend `submitLead.test.js` **9/9** (was 8): new tests assert a known code is localized per lang, and
+  that an en/zh applicant is NEVER shown raw Thai (checked against the U+0E00–U+0E7F range) even for an
+  unknown/future code. **Mutation:** reverting `leadError` to "prefer raw backend error" turns **2** tests
+  red; restored. Full frontend suite **476/476** (was 475), `npm run build` ok.
+
+---
+
+
 ### 2026-08-06 — Hourly loop: guard every in-app navigation target against pointing at a non-existent route
 
 The app is a client-rendered SPA, so an internal `navigate('/x')` / `<Link to="/x">` / `<NavLink to="/x">` whose path has **no** `<Route>` in App.jsx silently dumps the user on `NotFoundPage` — a dead CTA with no error anywhere. Routes and nav targets live in different files across dozens of pages, so a typo or a renamed route is easy to ship. I scanned the whole SPA first (all **39** distinct internal nav targets across pages + components) and every one resolves today — but nothing stopped a future dead nav.

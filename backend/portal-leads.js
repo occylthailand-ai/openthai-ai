@@ -80,7 +80,7 @@ export function createPortalLeads(dataDir, opts = {}) {
     const type = clip(input.type, 40) || 'unknown';
     const lang = clip(input.lang, 8) || 'th';
     if (!KNOWN_TYPES.includes(type)) console.warn(`[portal-leads] unknown portal type "${type}" — accepted anyway, check portal page list`);
-    if (input?.consent !== true) return { ok: false, error: 'ต้องยินยอมตามนโยบายความเป็นส่วนตัว (PDPA) ก่อนส่งข้อมูล' };
+    if (input?.consent !== true) return { ok: false, code: 'consent_required', error: 'ต้องยินยอมตามนโยบายความเป็นส่วนตัว (PDPA) ก่อนส่งข้อมูล' };
 
     const { type: _t, lang: _l, consent: _c, ...rest } = input || {};
     const form_data = {};
@@ -90,7 +90,7 @@ export function createPortalLeads(dataDir, opts = {}) {
     const name = form_data.name || form_data.agency || form_data.org || form_data.contact || '';
     const email = isEmailLike(form_data.email) ? form_data.email.toLowerCase() : '';
 
-    if (!name && !email) return { ok: false, error: 'กรอกข้อมูลอย่างน้อยชื่อหรืออีเมลให้ครบ' };
+    if (!name && !email) return { ok: false, code: 'missing_contact', error: 'กรอกข้อมูลอย่างน้อยชื่อหรืออีเมลให้ครบ' };
 
     const rec = {
       id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -103,14 +103,20 @@ export function createPortalLeads(dataDir, opts = {}) {
     return { ok: true, id: rec.id };
   }
 
-  const submitLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { success: false, error: 'ส่งฟอร์มบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
+  // Every error body carries a stable `code` (in addition to the Thai `error` string) so the
+  // client can localize the message per the applicant's language. The international portals
+  // (intl-org / gov-intl, defaulting to en/zh) are the reason: without a code, the frontend fell
+  // back to showing the backend's raw Thai `error` — so an English/Chinese applicant who tripped
+  // the rate limiter saw a Thai error on the signup form. Codes: consent_required, missing_contact,
+  // rate_limited, server_error. See frontend src/pages/portals/submitLead.js (leadError).
+  const submitLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { success: false, code: 'rate_limited', error: 'ส่งฟอร์มบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
   const router = express.Router();
-  const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error('[portal-leads route]', e.message); res.status(500).json({ success: false, error: 'submit error' }); });
+  const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error('[portal-leads route]', e.message); res.status(500).json({ success: false, code: 'server_error', error: 'submit error' }); });
 
   // นี่คือ endpoint ที่ 7 หน้า portal เรียกมาตลอดแต่ไม่เคยมีอยู่จริง
   router.post('/api/leads/submit', submitLimiter, wrap(async (req, res) => {
     const r = await submit(req.body || {});
-    if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    if (!r.ok) return res.status(400).json({ success: false, code: r.code, error: r.error });
     res.json({ success: true, id: r.id });
   }));
 

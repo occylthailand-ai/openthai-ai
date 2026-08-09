@@ -23,6 +23,7 @@ console.log('\n=== consent gate (PDPA) ===');
   const { pl, notified } = make();
   const noConsent = await pl.submit({ type: 'producer', email: 'a@b.com' });
   ok(noConsent.ok === false && /PDPA|ยินยอม/.test(noConsent.error || ''), `no consent → rejected: ${noConsent.error}`);
+  ok(noConsent.code === 'consent_required', `no consent → stable code for client i18n (code=${noConsent.code})`);
   const consentFalse = await pl.submit({ type: 'producer', email: 'a@b.com', consent: false });
   ok(consentFalse.ok === false, 'consent:false → rejected');
   const consentString = await pl.submit({ type: 'producer', email: 'a@b.com', consent: 'true' });
@@ -35,6 +36,7 @@ console.log('\n=== require at least name or email ===');
   const { pl } = make();
   const empty = await pl.submit({ type: 'producer', consent: true });
   ok(empty.ok === false && /ชื่อหรืออีเมล/.test(empty.error || ''), `consent but no name/email → rejected: ${empty.error}`);
+  ok(empty.code === 'missing_contact', `no name/email → stable code for client i18n (code=${empty.code})`);
 }
 
 console.log('\n=== a valid consenting lead is saved with consent:true ===');
