@@ -75,22 +75,59 @@ export function consumerDigestHtml({ name, category, matches = [], lang, domainU
 // with `&` (e.g. "S & P") or `<`/`>` rendered garbled in the very email that welcomes them.
 // Escape both at the insertion point. `to` (recipient email) only lands in the manage-link URL
 // via encodeURIComponent (URL context); domainUrl is a trusted env origin, left verbatim.
-export function producerApprovalHtml({ to, company, productName, domainUrl } = {}) {
+// Localized copy for the producer-approval email. A producer who applied from the /join form in
+// English or Chinese used to get a fully Thai approval email (this builder + its subject were Thai-
+// only) — a market-entry gap the /portals/* welcome emails don't have (those already localize by
+// lead.lang). `lang` comes from the producer record (stored at apply time); unknown → Thai.
+const PRODUCER_APPROVAL_COPY = {
+  th: {
+    subject: '🎉 ร้านของคุณได้รับการอนุมัติแล้ว — Openthai.ai',
+    congrats: (co) => `🎉 ยินดีด้วย${co ? ' ' + co : ''}!`,
+    sub: 'ใบสมัครผู้ผลิตของคุณได้รับการอนุมัติแล้ว',
+    live: (prod) => `${prod ? `สินค้า "<strong>${prod}</strong>"` : 'สินค้าของคุณ'} พร้อมแสดงในตลาด Openthai.ai แล้วตอนนี้`,
+    manage: '📦 จัดการสินค้าของฉัน',
+    note: 'เติมสต๊อก แก้ราคา หรือแก้รายละเอียดสินค้าได้เองทุกเมื่อจากหน้านี้ ไม่ต้องรอทีมงาน',
+  },
+  en: {
+    subject: '🎉 Your shop has been approved — Openthai.ai',
+    congrats: (co) => `🎉 Congratulations${co ? ', ' + co : ''}!`,
+    sub: 'Your producer application has been approved',
+    live: (prod) => `${prod ? `Your product "<strong>${prod}</strong>"` : 'Your products'} ${prod ? 'is' : 'are'} now live on the Openthai.ai marketplace`,
+    manage: '📦 Manage my products',
+    note: 'Restock, change prices, or edit product details anytime from this page — no need to wait for our team.',
+  },
+  zh: {
+    subject: '🎉 您的店铺已通过审核 — Openthai.ai',
+    congrats: (co) => `🎉 恭喜${co ? co : ''}！`,
+    sub: '您的生产商申请已通过审核',
+    live: (prod) => `${prod ? `您的产品 "<strong>${prod}</strong>"` : '您的产品'}现已在 Openthai.ai 市场上线`,
+    manage: '📦 管理我的产品',
+    note: '随时可在此页面补货、改价或编辑产品详情，无需等待团队处理。',
+  },
+};
+
+// The subject lives with the copy so the caller (server.js sendProducerApproval) localizes it too.
+export function producerApprovalSubject(lang) {
+  return (PRODUCER_APPROVAL_COPY[lang] || PRODUCER_APPROVAL_COPY.th).subject;
+}
+
+export function producerApprovalHtml({ to, company, productName, domainUrl, lang } = {}) {
+  const c = PRODUCER_APPROVAL_COPY[lang] || PRODUCER_APPROVAL_COPY.th;
   const co = escapeHtml(company);
   const prod = escapeHtml(productName);
   const manageUrl = `${domainUrl}/producers/manage?email=${encodeURIComponent(to ?? '')}`;
   return `
       <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
         <div style="background:linear-gradient(135deg,#10b981,#06b6d4);padding:28px;text-align:center;">
-          <h1 style="margin:0;font-size:22px;">🎉 ยินดีด้วย${company ? ' ' + co : ''}!</h1>
-          <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);">ใบสมัครผู้ผลิตของคุณได้รับการอนุมัติแล้ว</p>
+          <h1 style="margin:0;font-size:22px;">${c.congrats(company ? co : '')}</h1>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);">${c.sub}</p>
         </div>
         <div style="padding:24px;font-size:15px;line-height:1.7;">
-          <p>${productName ? `สินค้า "<strong>${prod}</strong>"` : 'สินค้าของคุณ'} พร้อมแสดงในตลาด Openthai.ai แล้วตอนนี้</p>
+          <p>${c.live(productName ? prod : '')}</p>
           <div style="text-align:center;margin:20px 0;">
-            <a href="${manageUrl}" style="display:inline-block;background:linear-gradient(135deg,#10b981,#06b6d4);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">📦 จัดการสินค้าของฉัน</a>
+            <a href="${manageUrl}" style="display:inline-block;background:linear-gradient(135deg,#10b981,#06b6d4);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">${c.manage}</a>
           </div>
-          <p style="color:#94a3b8;font-size:13px;">เติมสต๊อก แก้ราคา หรือแก้รายละเอียดสินค้าได้เองทุกเมื่อจากหน้านี้ ไม่ต้องรอทีมงาน</p>
+          <p style="color:#94a3b8;font-size:13px;">${c.note}</p>
         </div>
         <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${domainUrl}" style="color:#6366f1;">${String(domainUrl || '').replace(/^https?:\/\//, '')}</a></div>
       </div>`;

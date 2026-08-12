@@ -65,6 +65,9 @@ export function createProducers(dataDir, opts = {}) {
       stock: (input.stock === '' || input.stock == null) ? null : Math.max(0, parseInt(input.stock, 10) || 0),
       status: 'pending',
       consent: true,
+      // Remember the language the producer applied in, so the later approval email (sent when an
+      // admin approves — see server.js sendProducerApproval) can be in their language, not Thai.
+      lang: ['th', 'en', 'zh'].includes(input.lang) ? input.lang : 'th',
       created_at: new Date().toISOString(),
     };
     if (!rec.company || !rec.contact_name || !isEmail(rec.email)) {

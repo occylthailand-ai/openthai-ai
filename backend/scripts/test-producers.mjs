@@ -40,6 +40,12 @@ try {
   ok(rec.category === 'อื่นๆ', 'unknown category normalized to อื่นๆ');
   ok(rec.price === null, 'price ≤ 0 normalized to null');
   ok(rec.stock === 0, 'negative stock clamped to 0');
+  ok(rec.lang === 'th', 'lang defaults to th when not supplied (so the approval email has a language)');
+  // The producer's application language is stored so the later approval email can be in it (not Thai).
+  await P.register({ ...base, email: 'en@x.com', consent: true, lang: 'en' });
+  ok((await P.all()).find((p) => p.email === 'en@x.com').lang === 'en', 'lang:en is stored on the record');
+  await P.register({ ...base, email: 'bad@x.com', consent: true, lang: 'xx' });
+  ok((await P.all()).find((p) => p.email === 'bad@x.com').lang === 'th', 'unknown lang falls back to th (whitelist)');
   // Number("Infinity"/"1e999") === Infinity and Infinity > 0 is true, so a `> 0` check alone stores it;
   // it then serialises to null on the JSON-file write (JSON.stringify(Infinity)) — an in-memory/on-disk
   // split where getPrice() returns Infinity into orders until the next restart. Must normalise to null.

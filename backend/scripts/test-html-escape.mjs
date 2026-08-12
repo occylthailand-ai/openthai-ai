@@ -5,7 +5,7 @@
 // which an UNCLOSED `<` bypasses (`<img src=x onerror=alert(1)` has no `>`), so the raw
 // opener reaches the email HTML and completes against the template's next `>` — injecting a
 // live tag into the recipient's mail client. escapeHtml at the insertion point is what stops it.
-import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml, producerApprovalHtml } from '../html-escape.js';
+import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml, producerApprovalHtml, producerApprovalSubject } from '../html-escape.js';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -103,6 +103,21 @@ ok(cleanApproval.includes('🎉 ยินดีด้วย S &amp; P!'), 'an am
 ok(cleanApproval.includes('สินค้า "<strong>ขนมไทย</strong>"'), 'the product name shows inside the <strong> tag');
 const emptyApproval = producerApprovalHtml({ to: 'a@b.com', domainUrl: 'https://www.openthai-ai.com' });
 ok(emptyApproval.includes('🎉 ยินดีด้วย!') && emptyApproval.includes('สินค้าของคุณ'), 'missing company/product fall back to the generic wording (no "undefined")');
+
+// Localization: a producer who applied in English/Chinese must get the approval email in that
+// language (the whole email — subject + body — was Thai-only before). The value is escaped the same
+// way regardless of language.
+console.log('\n=== producerApprovalHtml/Subject: localized by the producer\'s application language ===');
+const THAI = /[฀-๿]/;
+const enApproval = producerApprovalHtml({ to: 'a@b.com', company: 'ACME', productName: 'Herbal Tea', domainUrl: 'https://www.openthai-ai.com', lang: 'en' });
+ok(enApproval.includes('Manage my products') && enApproval.includes('has been approved'), 'en approval email uses English copy');
+ok(!THAI.test(enApproval), 'en approval email contains NO Thai characters');
+ok(producerApprovalSubject('en') === '🎉 Your shop has been approved — Openthai.ai', 'en subject is English');
+const zhApproval = producerApprovalHtml({ to: 'a@b.com', company: 'ACME', productName: '茶', domainUrl: 'https://www.openthai-ai.com', lang: 'zh' });
+ok(zhApproval.includes('管理我的产品') && zhApproval.includes('已通过审核'), 'zh approval email uses Chinese copy');
+ok(producerApprovalSubject('zh').includes('已通过审核'), 'zh subject is Chinese');
+ok(producerApprovalSubject('th') === producerApprovalSubject(undefined) && producerApprovalSubject('xx') === producerApprovalSubject('th'), 'missing/unknown lang falls back to the Thai subject');
+ok(THAI.test(producerApprovalHtml({ to: 'a@b.com', company: 'ACME', domainUrl: 'https://d', lang: 'th' })), 'th approval email is still Thai (default behaviour preserved)');
 
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);

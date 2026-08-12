@@ -42,7 +42,7 @@ import { createDisputes } from './disputes.js';
 import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
-import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml, producerApprovalHtml } from './html-escape.js';
+import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml, producerApprovalHtml, producerApprovalSubject } from './html-escape.js';
 import { parseAIJson } from './ai-json.js';
 import { buildConsentRecord } from './pdpa-consent.js';
 import { buildPaymentRow } from './payment-row.js';
@@ -509,10 +509,11 @@ app.post('/api/producers/admin/status', adminLimiter, async (req, res) => {
   const prevStatus = prev?.status;
   const prevCompany = prev?.company;
   const prevProductName = prev?.product_name;
+  const prevLang = prev?.lang;
   const r = await producers.setStatus(req.body?.email, req.body?.status);
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   if (req.body?.status === 'approved' && prevStatus !== 'approved') {
-    sendProducerApproval(emailIn, prevCompany, prevProductName);
+    sendProducerApproval(emailIn, prevCompany, prevProductName, prevLang);
   }
   res.json({ success: true, ...r });
 });
@@ -1274,14 +1275,14 @@ async function sendPortalWelcomeEmail(lead) {
 // อนุมัติผู้ผลิตแล้ว (POST /api/producers/admin/status) เดิมแค่เปลี่ยน status ในฐานข้อมูล
 // ไม่เคยแจ้งผู้ผลิตเลยว่าอนุมัติแล้ว — ผู้ผลิตรู้ได้ทางเดียวคือเข้า /producers/manage มาเช็คเอง
 // ทั้งที่ไม่รู้ด้วยซ้ำว่าหน้านี้มีอยู่ ส่งอีเมลจริงพร้อมลิงก์ตรงไปหน้าจัดการสินค้าของตัวเอง
-async function sendProducerApproval(to, company, product_name) {
+async function sendProducerApproval(to, company, product_name, lang) {
   if (!mailer || !to) return;
   try {
     await mailer.sendMail({
       from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
       to,
-      subject: '🎉 ร้านของคุณได้รับการอนุมัติแล้ว — Openthai.ai',
-      html: producerApprovalHtml({ to, company, productName: product_name, domainUrl: DOMAIN_URL }),
+      subject: producerApprovalSubject(lang),
+      html: producerApprovalHtml({ to, company, productName: product_name, domainUrl: DOMAIN_URL, lang }),
     });
     console.log(`📧 Producer approval email ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {

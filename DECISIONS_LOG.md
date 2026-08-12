@@ -9,6 +9,39 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — i18n(producer funnel): localize the producer-approval email (was Thai-only for en/zh producers)
+
+Standing-order loop (consent signup funnel + market entry). Auditing the funnel's EMAIL side (which no
+render-probe reaches) found a real gap: the /portals/* welcome emails localize by lead.lang, and the
+producer "application received" email does too — but the producer **approval** email
+(`sendProducerApproval` → `producerApprovalHtml`) was **Thai-only**: hardcoded Thai subject + body, no
+lang parameter. A producer who applied via /join in English or Chinese and later got approved received
+a fully Thai email — on the producer funnel the standing order prioritizes.
+
+Root cause was end-to-end: /join never sent `lang`; `register()` never stored it on the producer
+record; and the approval builder/subject had no language branch. Fixed the whole chain:
+- `frontend/src/pages/ProducerJoinPage.jsx` — the apply POST now sends `lang` (from useLang). This also
+  makes the existing "application received" email use the applicant's language (it read
+  `req.body?.lang`, which was undefined → th, before).
+- `backend/producers.js` — `register()` stores `lang` on the record (whitelist th/en/zh, default th),
+  so it's available weeks later when an admin approves.
+- `backend/server.js` — the approve route passes `prev.lang` to `sendProducerApproval(...)`, which now
+  localizes the subject via `producerApprovalSubject(lang)`.
+- `backend/html-escape.js` — `producerApprovalHtml({…, lang})` + new `producerApprovalSubject(lang)`
+  built from a `PRODUCER_APPROVAL_COPY` map (th/en/zh); unknown → th. HTML-escaping of the
+  company/product name is unchanged.
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- `test-html-escape.mjs` 44 → **50**: en email uses English copy with **no** Thai codepoints; en/zh
+  subjects are English/Chinese; th unchanged; unknown/missing lang → th. **Mutation:** forcing the
+  builder to ignore `lang` (always th) turns **3** red; restored.
+- `test-producers.mjs` 32 → **35**: `register()` stores lang (default th; en kept; unknown → th).
+- Full frontend suite **491/491**, `npm run build` ok; server boots and `/api/health` → 200;
+  `node --check` clean on all three edited backend files.
+
+---
+
+
 ## 2026-08-09 — i18n(funnel): localize the homepage skills CTA + the /catalog category chips/tags (+ strengthen the landing guard)
 
 Standing-order loop (market entry). Cleared the two behind-interaction leaks flagged as follow-up last

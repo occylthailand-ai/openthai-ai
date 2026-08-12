@@ -42,7 +42,7 @@ export default function ProducerJoinPage() {
     if (!form.company.trim() || !form.contact_name.trim() || !form.email.trim()) { setErr(t('mk.join.err')); return; }
     setBusy(true);
     try {
-      const res = await fetch(apiUrl('/api/producers/apply'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, consent }) });
+      const res = await fetch(apiUrl('/api/producers/apply'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, consent, lang }) });
       const d = await res.json();
       if (d.success) setDone(true);
       else setErr(d.error || t('mk.join.err'));
