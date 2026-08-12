@@ -131,6 +131,9 @@ jobs:
       - name: PDPA tenant erasure/access test (self-contained — data-subject rights cover the tenant account + cloud-sync blob)
         working-directory: backend
         run: npm run test:pdpa-tenant
+      - name: PDPA access↔erasure parity guard (source-parsing — every store the data export shows is erased or a documented financial-retention exception)
+        working-directory: backend
+        run: npm run test:privacy-parity
       - name: Broadcast opt-out durability test (self-contained — spawns server + mock Supabase; the newsletter unsubscribe list survives a /tmp wipe)
         working-directory: backend
         run: npm run test:broadcast-unsub

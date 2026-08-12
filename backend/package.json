@@ -48,6 +48,7 @@
     "test:corporate-auth": "node scripts/test-corporate-auth.mjs",
     "test:withdraw-confirm": "node scripts/test-affiliate-withdraw-confirm.mjs",
     "test:pdpa-tenant": "node scripts/test-pdpa-tenant-erasure.mjs",
+    "test:privacy-parity": "node scripts/test-privacy-parity.mjs",
     "test:broadcast-unsub": "node scripts/test-broadcast-unsub-durability.mjs",
     "test:consent-durability": "node scripts/test-pdpa-consent-durability.mjs",
     "test:seasonal": "node scripts/test-seasonal-engine.mjs",

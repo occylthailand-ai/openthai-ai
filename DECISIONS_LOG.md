@@ -9,6 +9,41 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — test(pdpa): guard access↔erasure store parity (a new signup can't silently escape erasure)
+
+Standing-order loop (consent/PDPA — the legal foundation of the /portals/* funnel). Scanned the two
+data-subject-rights endpoints in `backend/server.js`: the right-of-access export
+(`/api/privacy/access/confirm`) and right-to-erasure (`/api/privacy/erasure/confirm` → `performErasure()`).
+They were consistent today — access exposes 11 stores; erasure deletes the 7 personal-data ones
+(waitlist, consents, producers, portal_leads, affiliates, tenants, cloud_sync) and intentionally
+retains the 4 financial ones (withdrawals, orders, payments, entitlements) under PDPA's legal-retention
+exception. Verified this parity before assuming any bug (CLAUDE.md "verify before build") — no defect.
+
+But that parity is hand-maintained across ~40 lines of two separate handlers. The silent, one-directional
+risk: a future signup/store wired into the access export but **not** into `performErasure()` lets an
+"erased" data subject still download their record — the system reports deletion while the data persists.
+The existing `test-pdpa-tenant-erasure.mjs` boots the server and checks tenants + cloud_sync end-to-end,
+but nothing pinned the *general* invariant across all stores.
+
+**Change (test-only; no runtime change):**
+- `backend/scripts/test-privacy-parity.mjs` (new) — source-parses server.js and asserts: (1) every
+  `records.<key>` the access export populates is classified as `erased` or `retained`, so a NEW store
+  added to access fails the build until its erasure treatment is decided; (2) each `erased` store has
+  its deletion evidence present in `performErasure()`; (3) the `retained` set is EXACTLY the four
+  financial records — nothing can be quietly parked there to dodge erasure. Slicing throws loudly if
+  the handler anchors drift (a silently-empty slice would make the checks vacuously pass).
+- Wired into `backend/package.json` (`test:privacy-parity`) and `.github/workflows/test.yml` beside the
+  existing PDPA test.
+
+**Verified by running (standing-order #4) + mutation-tested:** **31/31**. Mutation A — adding an
+unclassified `records.newsletter_signups` to the access export turns it **red** (unclassified store);
+Mutation B — removing the `producers.eraseByEmail` call from `performErasure()` turns it **red** (missing
+erasure evidence). Both restored → 31/31, `git diff` on server.js clean. package.json valid JSON,
+test.yml valid YAML. Pure source-parsing — no server boot, complements the end-to-end tenant test.
+
+---
+
+
 ## 2026-08-09 — fix(seo): og:locale on the prerendered international portals said th_TH for English pages
 
 Standing-order loop (market-entry / SEO). Continuing the international-portal thread from the
