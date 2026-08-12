@@ -7,9 +7,9 @@ import { submitLead, leadError } from './submitLead';
 import SeasonalAnglesPanel from './SeasonalAnglesPanel';
 
 const T = {
-  th: { title:'ทางเข้าผู้ขาย / Affiliate', sub:'ขายสินค้าจาก OpenThai.ai และรับค่าคอมมิชชั่นสูงสุด 40%', benefits:['คอมมิชชั่นสูงสุด 40% ต่อการขาย','Dashboard ติดตาม real-time','ลิงก์ referral เฉพาะของคุณ','รับเงินผ่านระบบอัตโนมัติ'], tiers:[{name:'Starter',rate:'20%',min:'0'},{name:'Pro',rate:'30%',min:'10'},{name:'Elite',rate:'40%',min:'50'}], form:{ name:'ชื่อ-นามสกุล', country:'ประเทศ', platform:'แพลตฟอร์มที่ใช้โปรโมท', email:'อีเมล', submit:'สมัคร Affiliate', ok:'สมัครเรียบร้อย! ลิงก์ Affiliate จะส่งไปยังอีเมลของท่าน' } },
-  en: { title:'Seller / Affiliate Portal', sub:'Sell OpenThai.ai products and earn up to 40% commission', benefits:['Up to 40% commission per sale','Real-time tracking dashboard','Personalized referral link','Automated payouts'], tiers:[{name:'Starter',rate:'20%',min:'0'},{name:'Pro',rate:'30%',min:'10'},{name:'Elite',rate:'40%',min:'50'}], form:{ name:'Full Name', country:'Country', platform:'Promotion Platform', email:'Email', submit:'Apply as Affiliate', ok:'Application received! Your affiliate link will be sent to your email.' } },
-  zh: { title:'卖家/联盟门户', sub:'销售OpenThai.ai产品，赚取高达40%的佣金', benefits:['每次销售最高40%佣金','实时追踪仪表板','专属推荐链接','自动结算'], tiers:[{name:'入门级',rate:'20%',min:'0'},{name:'专业级',rate:'30%',min:'10'},{name:'精英级',rate:'40%',min:'50'}], form:{ name:'姓名', country:'国家', platform:'推广平台', email:'邮箱', submit:'申请联盟', ok:'申请已收到！您的联盟链接将发送到您的邮箱。' } },
+  th: { title:'ทางเข้าผู้ขาย / Affiliate', sub:'ขายสินค้าจาก OpenThai.ai และรับค่าคอมมิชชั่นสูงสุด 40%', benefits:['คอมมิชชั่นสูงสุด 40% ต่อการขาย','Dashboard ติดตาม real-time','ลิงก์ referral เฉพาะของคุณ','รับเงินผ่านระบบอัตโนมัติ'], tiers:[{name:'Starter',rate:'20%',min:'0'},{name:'Pro',rate:'30%',min:'10'},{name:'Elite',rate:'40%',min:'50'}], salesLabel:'ยอดขาย', form:{ name:'ชื่อ-นามสกุล', country:'ประเทศ', platform:'แพลตฟอร์มที่ใช้โปรโมท', email:'อีเมล', submit:'สมัคร Affiliate', ok:'สมัครเรียบร้อย! ลิงก์ Affiliate จะส่งไปยังอีเมลของท่าน' } },
+  en: { title:'Seller / Affiliate Portal', sub:'Sell OpenThai.ai products and earn up to 40% commission', benefits:['Up to 40% commission per sale','Real-time tracking dashboard','Personalized referral link','Automated payouts'], tiers:[{name:'Starter',rate:'20%',min:'0'},{name:'Pro',rate:'30%',min:'10'},{name:'Elite',rate:'40%',min:'50'}], salesLabel:'Sales', form:{ name:'Full Name', country:'Country', platform:'Promotion Platform', email:'Email', submit:'Apply as Affiliate', ok:'Application received! Your affiliate link will be sent to your email.' } },
+  zh: { title:'卖家/联盟门户', sub:'销售OpenThai.ai产品，赚取高达40%的佣金', benefits:['每次销售最高40%佣金','实时追踪仪表板','专属推荐链接','自动结算'], tiers:[{name:'入门级',rate:'20%',min:'0'},{name:'专业级',rate:'30%',min:'10'},{name:'精英级',rate:'40%',min:'50'}], salesLabel:'销量', form:{ name:'姓名', country:'国家', platform:'推广平台', email:'邮箱', submit:'申请联盟', ok:'申请已收到！您的联盟链接将发送到您的邮箱。' } },
 };
 
 
@@ -54,7 +54,7 @@ export default function AffiliatePortalPage() {
             <div key={i} style={{ background:'#111', border:`1px solid ${i===2?'#f59e0b':'#333'}`, borderRadius:12, padding:20, textAlign:'center' }}>
               <div style={{ color: i===2?'#f59e0b':'#aaa', fontWeight:700, fontSize:16, marginBottom:8 }}>{tier.name}</div>
               <div style={{ color:'#fff', fontSize:32, fontWeight:800 }}>{tier.rate}</div>
-              <div style={{ color:'#666', fontSize:12, marginTop:4 }}>ยอดขาย {tier.min}+</div>
+              <div style={{ color:'#666', fontSize:12, marginTop:4 }}>{t.salesLabel} {tier.min}+</div>
             </div>
           ))}
         </div>

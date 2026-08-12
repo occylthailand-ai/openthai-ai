@@ -17,6 +17,9 @@ const LANG = {
       { id: 'foundation',  icon: '💚', color: '#059669', title: 'มูลนิธิเพื่อสังคม',        sub: 'Foundation & NGO',              desc: 'มูลนิธิช่วยเหลือผู้ยากไร้ — เปิดใช้งานเมื่อกำไรรวม > 10M ฿', path: '/portals/foundation' },
     ],
     join: 'เข้าร่วม →',
+    back: '← หน้าหลัก',
+    lockedBadge: 'ยังไม่เปิดใช้งาน',
+    lockedCta: 'เปิดเมื่อกำไรสะสม > 10M ฿',
   },
   en: {
     title: 'Gateway to OpenThai.ai',
@@ -33,6 +36,9 @@ const LANG = {
       { id: 'foundation',  icon: '💚', color: '#059669', title: 'Foundation / NGO',           sub: 'Global',    desc: 'Poverty-relief foundations — activated when profit > 10M THB',  path: '/portals/foundation' },
     ],
     join: 'Join →',
+    back: '← Home',
+    lockedBadge: 'Not yet active',
+    lockedCta: 'Opens when cumulative profit > 10M ฿',
   },
   zh: {
     title: '进入 OpenThai.ai',
@@ -49,6 +55,9 @@ const LANG = {
       { id: 'foundation',  icon: '💚', color: '#059669', title: '基金会/NGO',    sub: '全球',    desc: '扶贫基金会 — 利润超1000万泰铢时启用', path: '/portals/foundation' },
     ],
     join: '加入 →',
+    back: '← 首页',
+    lockedBadge: '尚未开放',
+    lockedCta: '累计利润超1000万泰铢时开放',
   },
 };
 
@@ -63,7 +72,7 @@ export default function PortalHubPage() {
       {/* Nav */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 32px', borderBottom: '1px solid #1e1e2e' }}>
         <button onClick={() => navigate('/')} style={{ background: 'none', border: '1px solid #333', color: '#aaa', padding: '8px 16px', borderRadius: 8, cursor: 'pointer' }}>
-          ← หน้าหลัก
+          {t.back}
         </button>
         <div style={{ display: 'flex', gap: 8 }}>
           {['th','en','zh'].map(l => (
@@ -96,14 +105,14 @@ export default function PortalHubPage() {
             >
               {locked && (
                 <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(100,116,139,0.25)', color: '#94a3b8', fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  🔒 ยังไม่เปิดใช้งาน
+                  🔒 {t.lockedBadge}
                 </div>
               )}
               <div style={{ position: 'absolute', top: 16, right: 16, background: `${p.color}22`, color: locked ? '#94a3b8' : p.color, fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600 }}>{p.sub}</div>
               <div style={{ fontSize: 40, marginBottom: 12, marginTop: locked ? 20 : 0 }}>{p.icon}</div>
               <h3 style={{ margin: '0 0 8px', fontSize: 20, color: locked ? '#94a3b8' : '#fff' }}>{p.title}</h3>
               <p style={{ color: '#888', fontSize: 14, lineHeight: 1.6, margin: '0 0 20px' }}>{p.desc}</p>
-              <div style={{ color: locked ? '#7c8797' : p.color, fontWeight: 700, fontSize: 14 }}>{locked ? '🔒 เปิดเมื่อกำไรสะสม > 10M ฿' : t.join}</div>
+              <div style={{ color: locked ? '#7c8797' : p.color, fontWeight: 700, fontSize: 14 }}>{locked ? `🔒 ${t.lockedCta}` : t.join}</div>
             </div>
           );
         })}

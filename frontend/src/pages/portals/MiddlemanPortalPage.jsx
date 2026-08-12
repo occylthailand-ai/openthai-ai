@@ -6,7 +6,15 @@ import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 import SeasonalAnglesPanel from './SeasonalAnglesPanel';
 
-const BUSINESS_TYPES = ['ตัวแทนจำหน่าย (Distributor)', 'ผู้ค้าส่ง (Wholesaler)', 'นายหน้า (Broker)', 'ตัวแทนขายต่อ (Reseller)', 'อื่นๆ'];
+// The `value` is the canonical string stored on the lead (unchanged); only the visible label is
+// localized so a non-Thai distributor isn't shown a Thai-only dropdown for the one required select.
+const BUSINESS_TYPES = [
+  { value: 'ตัวแทนจำหน่าย (Distributor)', th: 'ตัวแทนจำหน่าย', en: 'Distributor', zh: '经销商' },
+  { value: 'ผู้ค้าส่ง (Wholesaler)',      th: 'ผู้ค้าส่ง',      en: 'Wholesaler',  zh: '批发商' },
+  { value: 'นายหน้า (Broker)',            th: 'นายหน้า',        en: 'Broker',      zh: '经纪人' },
+  { value: 'ตัวแทนขายต่อ (Reseller)',     th: 'ตัวแทนขายต่อ',   en: 'Reseller',    zh: '代理转售商' },
+  { value: 'อื่นๆ',                        th: 'อื่นๆ',          en: 'Other',       zh: '其他' },
+];
 
 const T = {
   th: { title:'ทางเข้าคนกลาง / ตัวแทนจำหน่าย', sub:'ตัวแทนจำหน่าย ผู้ค้าส่ง นายหน้า และคนกลางทุกประเภท เข้าร่วมเครือข่ายกระจายสินค้า OpenThaiAi', benefits:['ราคาส่งพิเศษจากผู้ผลิตที่ผ่านการรับรอง','สิทธิ์ดูแลพื้นที่/ช่องทางจำหน่าย','การสนับสนุนด้านการตลาดและคอนเทนต์','เชื่อมต่อกับผู้ผลิตโดยตรง ไม่ผ่านคนกลางซ้ำซ้อน'], form:{ name:'ชื่อ/ชื่อบริษัท', country:'ประเทศ', business_type:'ประเภทธุรกิจ', region:'พื้นที่/ช่องทางที่ดูแล', email:'อีเมล', phone:'เบอร์โทร/WhatsApp', submit:'สมัครเป็นคนกลาง', ok:'ขอบคุณ! ทีมงานจะติดต่อกลับเพื่อยืนยันการเข้าร่วมเครือข่าย' } },
@@ -17,7 +25,7 @@ const T = {
 
 export default function MiddlemanPortalPage() {
   const [lang, setLang] = useState('th');
-  const [form, setForm] = useState({ name:'', country:'', business_type:BUSINESS_TYPES[0], region:'', email:'', phone:'' });
+  const [form, setForm] = useState({ name:'', country:'', business_type:BUSINESS_TYPES[0].value, region:'', email:'', phone:'' });
   const [sent, setSent] = useState(false);
   const [consent, setConsent] = useState(false);
   const [err, setErr] = useState('');
@@ -67,7 +75,7 @@ export default function MiddlemanPortalPage() {
               <div style={{ marginBottom:14 }}>
                 <label htmlFor="business_type" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.business_type}</label>
                 <select id="business_type" value={form.business_type} onChange={e=>setForm({...form,business_type:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
-                  {BUSINESS_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
+                  {BUSINESS_TYPES.map(b => <option key={b.value} value={b.value}>{b[lang] || b.th}</option>)}
                 </select>
               </div>
               <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:14, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>

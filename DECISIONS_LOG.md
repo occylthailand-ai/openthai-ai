@@ -9,6 +9,38 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-12 — i18n(portal funnel): sweep the WHOLE consent-signup funnel for stray Thai (hub + middleman + affiliate)
+
+Standing-order loop (consent signup funnel = the platform's main onboarding path). After the
+category-dropdown fix I wrote a throwaway render-probe over every funnel page — the /portals hub +
+all six self-signup portals, each switched to en/zh — to see whether the same class of leak (Thai
+literals living OUTSIDE the page's th/en/zh dict) existed elsewhere. It did, on three more pages:
+
+- **PortalHubPage** (`/portals`, the funnel entry): the "← หน้าหลัก" back button, the locked
+  "🔒 ยังไม่เปิดใช้งาน" badge, and the locked "🔒 เปิดเมื่อกำไรสะสม > 10M ฿" line were bare Thai
+  literals in the JSX, never in the LANG dict. → added `back` / `lockedBadge` / `lockedCta` to all
+  three langs and referenced them.
+- **MiddlemanPortalPage** (`/portals/middleman`): the business-type `<select>` options
+  (ตัวแทนจำหน่าย / ผู้ค้าส่ง / นายหน้า / ตัวแทนขายต่อ / อื่นๆ) were a Thai-only array. Converted to
+  `{ value, th, en, zh }` objects — the option **`value` (the string stored on the lead) is
+  unchanged**, only the visible label localizes, same rule as the category fix.
+- **AffiliatePortalPage** (`/portals/affiliate`): the "ยอดขาย {min}+" (sales) caption under each
+  commission tier. → added a `salesLabel` key per lang.
+
+ProducerPortalPage, ConsumerPortalPage (already fixed) and CreatorPortalPage probed clean.
+
+**Guard consolidation:** replaced the narrower `portalCategoryNoThaiLeak.test.jsx` with
+`portalFunnelNoThaiLeak.test.jsx`, which now renders all six funnel pages, clicks the en/中文 toggle,
+and fails on any Thai run (U+0E00–U+0E7F) outside `<svg>` (only the toggle's own "ไทย" allowed; ฿ is
+stripped as script-neutral). This is the permanent regression net for the entire signup funnel, not
+just the category selects. Mutation-verified: reverting each of the three fixes turns the guard RED
+(the exact leaked strings), restoring turns it GREEN.
+
+**Verified by running:** funnel guard 12/12; full frontend suite **503/503** (was 495); `vite build`
+clean. Pure frontend/display change — no backend, no data-model, no stored-value change (every option
+`value` is byte-for-byte identical), so no server re-run needed. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79, existing — no new PR).
+
 ## 2026-08-12 — i18n(portal funnel): localize the category dropdown on /portals/consumer & /portals/producer
 
 Standing-order loop (consent signup funnel + market entry). Code-scan follow-up to the email-side
