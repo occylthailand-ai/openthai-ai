@@ -9,6 +9,41 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-12 — i18n(portal funnel): finish the funnel sweep — GovThai MOU box + full 10-page guard
+
+Standing-order loop. Extended the render-probe from the six main funnel pages to the four remaining
+formal ones — the Thai-government, foreign-government, international-organization and foundation
+portals (all submit consent leads, all part of the /portals/* funnel). Three probed clean; one real
+leak on the highest-stakes page:
+
+- **GovThaiPortalPage** (`/portals/gov-thai`): the "MOU / บันทึกความเข้าใจ" box title and its body
+  ("OpenThai.ai พร้อมลงนาม MOU กับหน่วยงานรัฐทุกระดับ") were hardcoded Thai literals outside the T
+  dict, so an English-reading Thai-government official saw one Thai block sitting among otherwise
+  English content — on the page whose whole audience is formal agencies. → added `mouTitle` / `mouBody`
+  to both th and en and referenced them. (This portal is intentionally **th/en only** — no Chinese
+  toggle — since its audience is Thai officials; left as-is, not expanded.)
+
+- GovIntlPortalPage, IntlOrgPortalPage, FoundationPortalPage probed clean in en + zh.
+
+**Guard now covers the entire funnel (10 pages).** Rewrote `portalFunnelNoThaiLeak.test.jsx` to drive
+each page by the non-Thai languages it *actually offers* — a per-page declared list is the single place
+that intent lives (e.g. GovThai = English only; every other portal = en + zh). Render each page, click
+each offered non-Thai toggle, fail on any Thai run (U+0E00–U+0E7F) outside `<svg>` (only the toggle's
+own "ไทย" allowed; ฿ stripped as script-neutral). 19 assertions across the 10 funnel pages.
+Mutation-verified: reverting the GovThai MOU fix turns the guard RED (the exact leaked strings),
+restoring turns it GREEN.
+
+**Verified by running:** funnel guard 19/19; full frontend suite **510/510** (was 503); `vite build`
+clean. Pure frontend/display change — no backend, no data-model. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79, existing — no new PR). This closes the stray-Thai
+audit of the consent-signup funnel: all 10 funnel pages now have a permanent regression net.
+
+Also verified healthy this round (no change needed, checked against real code/running server): the
+`/api/seasonal/angles` value panel returns correct data in th/en/zh; the consumer-digest category
+match uses strict canonical-value equality (the display-only category fix preserved it); all 8 portal
+welcome-email types are localized th/en/zh; robots.txt/sitemap/JSON-LD @graph/PWA manifest/og-image
+are all present and internally consistent.
+
 ## 2026-08-12 — i18n(portal funnel): sweep the WHOLE consent-signup funnel for stray Thai (hub + middleman + affiliate)
 
 Standing-order loop (consent signup funnel = the platform's main onboarding path). After the
