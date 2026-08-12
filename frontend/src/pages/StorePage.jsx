@@ -83,14 +83,14 @@ export function BuyModal({ product, t, onClose }) {
       const ref = (() => { try { return localStorage.getItem('otai_ref') || ''; } catch { return ''; } })();
       const r = await fetch(apiUrl('/api/shop/checkout'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: product.id, ref, ...form }) }).then(x => x.json());
       if (r.success) setRes(r); else setErr(r.error || t('mk.ord.err'));
-    } catch { setErr('เชื่อมต่อไม่ได้'); }
+    } catch { setErr(t('mk.err.network')); }
     finally { setBusy(false); }
   };
 
   return (
     <div onClick={onClose} style={overlay}>
       <div ref={dialogRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`${t('mk.store.buy')} ${product.name}`} onClick={(e) => e.stopPropagation()} style={{ ...card, width: '100%', maxWidth: 400, position: 'relative', outline: 'none' }}>
-        <button onClick={onClose} aria-label={t('mk.close') || 'ปิด'} style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#7c8797', fontSize: 22, cursor: 'pointer' }}>×</button>
+        <button onClick={onClose} aria-label={t('mk.close')} style={{ position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#7c8797', fontSize: 22, cursor: 'pointer' }}>×</button>
         {res ? (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
             {/* refund_pending = paid but the item sold out in the race, so a refund is coming — must NOT

@@ -46,7 +46,7 @@ export default function ProducerJoinPage() {
       const d = await res.json();
       if (d.success) setDone(true);
       else setErr(d.error || t('mk.join.err'));
-    } catch { setErr('เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'); }
+    } catch { setErr(t('mk.err.network')); }
     finally { setBusy(false); }
   };
 

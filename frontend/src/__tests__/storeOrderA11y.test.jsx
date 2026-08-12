@@ -81,5 +81,28 @@ describe('StorePage BuyModal accessibility', () => {
     // the card option is the localized label, and the old Thai literal is gone
     expect(screen.getByRole('option', { name: /Credit\/Debit card/ })).toBeTruthy();
     expect(screen.queryByText(/บัตรเครดิต/)).toBeNull();
+    // the modal close button has a real localized accessible name — NOT the raw i18n key "mk.close"
+    // (mk.close was undefined, so t('mk.close') used to render the literal string "mk.close") and not
+    // the old hardcoded Thai "ปิด".
+    expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'mk.close' })).toBeNull();
+  });
+
+  it('shows a localized (not Thai) error when the checkout request fails to connect', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation((k) => (k === 'otai_lang' ? 'en' : null));
+    let call = 0;
+    global.fetch = vi.fn((url, opts) => {
+      if (String(url).includes('/api/shop/checkout') && opts?.method === 'POST') return Promise.reject(new Error('offline'));
+      call++;
+      return Promise.resolve({ json: () => Promise.resolve({ products: [PRODUCT] }) });
+    });
+    render(<LanguageProvider><MemoryRouter><StorePage /></MemoryRouter></LanguageProvider>);
+    await waitFor(() => expect(screen.getByText('ผ้าไหมทอมือ')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Buy now' }));
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'John' } });
+    fireEvent.change(screen.getByLabelText(/contact/i), { target: { value: 'john@x.com' } });
+    fireEvent.click(screen.getByRole('button', { name: /💳/ }));
+    await waitFor(() => expect(screen.getByText(/Connection failed/i)).toBeTruthy());
+    expect(screen.queryByText(/เชื่อมต่อไม่ได้/)).toBeNull();
   });
 });

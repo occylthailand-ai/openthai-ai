@@ -9,6 +9,41 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — i18n/a11y(funnel): fix behind-interaction leaks — the modal close button rendered "mk.close", + Thai network errors
+
+Standing-order loop (consent funnel / accessible platform). Systematic scan of the localized funnel
+pages for hardcoded Thai *literals* in JSX (the render-probe can't see strings behind a click/error).
+Two real defects surfaced:
+
+1. **Broken close-button accessible name (a11y, current bug).** The checkout close buttons on /catalog
+   and /store used `aria-label={t('mk.close') || 'ปิด'}` — but `mk.close` was **never defined**, so
+   `t()` returned the raw key string and the modal's × button announced literally "mk.close" to screen
+   readers (WCAG 4.1.2). (The `|| 'ปิด'` Thai fallback was dead code — t() never returns falsy.)
+2. **Hardcoded Thai network errors.** The catch-block error on /catalog, /store and /join was
+   `setErr('เชื่อมต่อไม่ได้ …')` — an en/zh user who lost connection mid-submit saw a Thai error.
+
+**Change (frontend):**
+- `src/i18n/index.jsx` — added `mk.close` (ปิด / Close / 关闭) and `mk.err.network`
+  (เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง / Connection failed. Please try again. / 连接失败，请重试。) in all 3 languages.
+- `CatalogPage.jsx` / `StorePage.jsx` — close button now `aria-label={t('mk.close')}` (dead Thai
+  fallback dropped); the network catch-block error → `t('mk.err.network')`.
+- `ProducerJoinPage.jsx` — network catch-block error → `t('mk.err.network')`.
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- `storeOrderA11y.test.jsx` 3 → **4**: the en checkout test now also asserts the close button's
+  accessible name is "Close" (not the raw key "mk.close", not Thai "ปิด"); a new test rejects the
+  checkout fetch and asserts the localized "Connection failed…" error shows with no Thai
+  "เชื่อมต่อไม่ได้". **Mutation:** deleting the `mk.close` en key makes the close-button assertion
+  **red** (the raw key returns); restored. Full frontend suite **490/490** (was 489, +1),
+  `npm run build` ok. Frontend-only, no behaviour change beyond the strings.
+
+**Follow-up noted (not done — keeping this round tight):** a few more behind-interaction Thai literals
+remain — LandingPage's "ดูทักษะทั้งหมด" skills CTA (renders only when live skills load) and the
+/catalog product-card category fallback `{p.category || 'สินค้าไทย'}`. Small, same class; next round.
+
+---
+
+
 ## 2026-08-09 — i18n(store): the checkout card payment option was hardcoded Thai for non-Thai buyers
 
 Standing-order loop (consent funnel / market entry). Auditing the commerce checkout controls (a11y
