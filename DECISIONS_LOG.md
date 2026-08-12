@@ -9,6 +9,36 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — i18n(about): localize /about + finding: 6 more public content pages are still Thai-only
+
+Standing-order loop (market entry). Extended the render-probe sweep to the sitemap-listed public
+content pages (rendered under LanguageProvider forced to en/zh, Thai codepoints U+0E00–U+0E7F flagged).
+Result: **/about, /ai-skills, /contact, /earn, /faq, /seasonal, /showcase all still render in Thai for
+an en/zh visitor** — they have little or no i18n, while the homepage + producer funnel + portals are
+now localized. A visitor who switches to English/Chinese on the homepage (persisted in `otai_lang`,
+read by useLang across the SPA) keeps that language, so these pages are a real market-entry gap.
+
+Fixed the smallest, highest-trust one this round — **/about** (AboutPage), a 62-line self-contained
+page with no i18n and only 4 Thai strings (the tech-skills chips were already English):
+- `AboutPage.jsx` — now uses `useLang()`/`t()`: back button, header title (reuses the existing
+  `footer.link.about` key), hero title, hero subtitle, and `document.title` all follow the language.
+- `src/i18n/index.jsx` — added `about.back`, `about.hero.title`, `about.hero.sub` in th/en/zh.
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- New guard `src/__tests__/aboutNoThaiLeak.test.jsx` **2/2** — renders /about forced to en/zh, asserts
+  no Thai run. **Mutation:** reverting the hero subtitle to its hardcoded Thai turns **both** red;
+  restored. Full frontend suite **486/486** (was 484, +2), `npm run build` ok. Frontend-only.
+
+**Flag to owner (standing-order #8 — larger scope than one task):** the other six content pages above
+are still Thai-only. /faq, /showcase, /earn each carry a lot of copy (34–59 Thai fragments), so making
+them trilingual is a multi-round effort and a content decision (do we want full en/zh content on the
+marketing/FAQ pages, or is Thai-only intended there while only the funnel + homepage are trilingual?).
+Not proceeding on those without a steer. I can localize them one page per round if you'd like — say
+the priority order (my suggestion: /faq → /contact → /seasonal → /ai-skills → /earn → /showcase).
+
+---
+
+
 ## 2026-08-09 — i18n(producer funnel): localize the product-category picker/tags (en/zh saw raw Thai)
 
 Standing-order loop (consent signup funnel + market entry for non-Thai). Render-probed the public
