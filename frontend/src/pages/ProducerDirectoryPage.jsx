@@ -61,8 +61,8 @@ export default function ProducerDirectoryPage() {
 
       <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 5% 16px' }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('mk.find.search.ph')} style={{ ...inp, flex: 1, minWidth: 220 }} />
-          <select value={cat} onChange={(e) => setCat(e.target.value)} style={{ ...inp, maxWidth: 180 }}>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('mk.find.search.ph')} aria-label={t('mk.find.search.label')} style={{ ...inp, flex: 1, minWidth: 220 }} />
+          <select value={cat} onChange={(e) => setCat(e.target.value)} aria-label={t('mk.find.cat.label')} style={{ ...inp, maxWidth: 180 }}>
             {['ทั้งหมด', ...cats].map((c) => <option key={c} value={c}>{c === 'ทั้งหมด' ? t('mk.find.all') : producerCategoryLabel(c, lang)}</option>)}
           </select>
         </div>

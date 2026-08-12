@@ -9,6 +9,34 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — a11y(find-producers): give the search box + category filter accessible names
+
+Standing-order loop (accessible platform — CLAUDE.md standing priority). Audited form-control
+accessibility across the funnel after the i18n sweep. The producer signup form (/join) is correctly
+associated (its Field wrapper injects the id via React.cloneElement, matching the label htmlFor), and
+the /track + /dispute lookups already use htmlFor/id pairs. But **/find-producers**
+(ProducerDirectoryPage) had two filter controls with NO accessible name: the free-text search box
+carried only a placeholder (not an accessible name — it disappears on input and isn't reliably
+announced by screen readers), and the category `<select>` had nothing at all. A screen-reader user
+tabbing in heard "edit text" / "combo box" with no idea what either did — WCAG 4.1.2 (Name, Role,
+Value), on a public funnel page.
+
+**Change (frontend, a11y only — no visual/behaviour change):**
+- `ProducerDirectoryPage.jsx` — added `aria-label` to the search `<input>` and the category
+  `<select>`.
+- `src/i18n/index.jsx` — new `mk.find.search.label` / `mk.find.cat.label` in th/en/zh (the label
+  follows the page language, like the rest of the page).
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- New guard `src/__tests__/producerDirectoryA11y.test.jsx` **2/2** — renders the page and resolves
+  both controls by their accessible name (getByLabelText for "Search producers or products" → INPUT,
+  "Filter by category" → SELECT). **Mutation:** removing the search aria-label makes getByLabelText
+  fail (**1 red**); restored. Full frontend suite **488/488** (was 486, +2), `npm run build` ok.
+  Frontend-only.
+
+---
+
+
 ## 2026-08-09 — i18n(about): localize /about + finding: 6 more public content pages are still Thai-only
 
 Standing-order loop (market entry). Extended the render-probe sweep to the sitemap-listed public
