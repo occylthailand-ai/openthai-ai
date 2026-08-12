@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-05T21:23:43.441Z · branch `claude/daily-reporter-improvements-8vc9ct` (600 commit(s) ahead of main)
+Generated: 2026-08-12T16:23:04.552Z · branch `claude/daily-reporter-improvements-8vc9ct` (643 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 674 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 717 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,507 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+## 2026-08-09 — i18n(affiliate funnel): localize the affiliate welcome email (was Thai-only for en/zh creators)
+
+Standing-order loop (consent signup funnel + market entry). Continuing the email-side audit from the
+producer-approval fix: the **affiliate welcome email** (`sendAffiliateWelcome` → `affiliateWelcomeHtml`)
+was **Thai-only** — hardcoded Thai subject ("🎉 ยินดีต้อนรับสู่ Openthai.ai Affiliate Program!") and a
+fully Thai body (ยินดีด้วย, คุณเป็น Affiliate…, REF CODE ของคุณ, Affiliate Link ของคุณ, Commission เริ่มต้น,
+ทุกจันทร์/จ่ายเงิน, สูงสุด Elite, เปิด Dashboard ของฉัน). It's sent the moment someone joins from
+/affiliate, so a creator who applied in English/Chinese got a fully Thai welcome — affiliate is in the
+standing order's funnel scope.
+
+Same end-to-end gap as the producer email: /affiliate never sent `lang`, `registerAffiliateCore` never
+took/stored it, and the builder/subject had no language branch. Fixed the whole chain:
+- `frontend/src/pages/AffiliatePage.jsx` — the apply POST now sends `lang` (from useLang).
+- `backend/server.js` — `registerAffiliateCore` destructures `lang` → `safeLang` (whitelist th/en/zh,
+  default th), stores it on the affiliate record, and passes it to `sendAffiliateWelcome(...)`, which
+  localizes the subject via `affiliateWelcomeSubject(lang)`. The portal-lead→affiliate auto-register
+  path also forwards `lead.lang`.
+- `backend/html-escape.js` — `affiliateWelcomeHtml({…, lang})` + new `affiliateWelcomeSubject(lang)`
+  built from an `AFFILIATE_WELCOME_COPY` map (th/en/zh; unknown → th). The applicant-name escaping is
+  unchanged (still escaped before interpolation).
+
+**Verified by running (standing-order #4) + mutation-tested earlier for the sibling builder:**
+- `test-html-escape.mjs` 50 → **57**: en welcome uses English copy with **no** Thai codepoints; en/zh
+  subjects are English/Chinese; th unchanged; unknown/missing → th.
+- **End-to-end** (booted server, file mode): POST /api/affiliate/apply with `lang:'en'` persists
+  `record.lang === 'en'`; a no-lang apply persists `'th'` — proving the frontend→register→store→email
+  wiring. The full affiliate-flow E2E (`test-affiliate-flow.mjs`, the sales/commission/tier path) still
+  passes **28/0** against a booted server. (`npm run test:affiliate` standalone shows ECONNREFUSED
+  because that E2E needs a live server on :8000 — CI boots one on :8897; not a code failure.)
+- Full frontend suite **491/491**, `npm run build` ok; server boots & `/api/health` → 200;
+  `node --check` clean on the edited backend files.
+
+---
+
+
+## 2026-08-09 — i18n(producer funnel): localize the producer-approval email (was Thai-only for en/zh producers)
+
+Standing-order loop (consent signup funnel + market entry). Auditing the funnel's EMAIL side (which no
+render-probe reaches) found a real gap: the /portals/* welcome emails localize by lead.lang, and the
+producer "application received" email does too — but the producer **approval** email
+(`sendProducerApproval` → `producerApprovalHtml`) was **Thai-only**: hardcoded Thai subject + body, no
+lang parameter. A producer who applied via /join in English or Chinese and later got approved received
+a fully Thai email — on the producer funnel the standing order prioritizes.
+
+Root cause was end-to-end: /join never sent `lang`; `register()` never stored it on the producer
+record; and the approval builder/subject had no language branch. Fixed the whole chain:
+- `frontend/src/pages/ProducerJoinPage.jsx` — the apply POST now sends `lang` (from useLang). This also
+  makes the existing "application received" email use the applicant's language (it read
+  `req.body?.lang`, which was undefined → th, before).
+- `backend/producers.js` — `register()` stores `lang` on the record (whitelist th/en/zh, default th),
+  so it's available weeks later when an admin approves.
+- `backend/server.js` — the approve route passes `prev.lang` to `sendProducerApproval(...)`, which now
+  localizes the subject via `producerApprovalSubject(lang)`.
+- `backend/html-escape.js` — `producerApprovalHtml({…, lang})` + new `producerApprovalSubject(lang)`
+  built from a `PRODUCER_APPROVAL_COPY` map (th/en/zh); unknown → th. HTML-escaping of the
+  company/product name is unchanged.
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- `test-html-escape.mjs` 44 → **50**: en email uses English copy with **no** Thai codepoints; en/zh
+  subjects are English/Chinese; th unchanged; unknown/missing lang → th. **Mutation:** forcing the
+  builder to ignore `lang` (always th) turns **3** red; restored.
+- `test-producers.mjs` 32 → **35**: `register()` stores lang (default th; en kept; unknown → th).
+- Full frontend suite **491/491**, `npm run build` ok; server boots and `/api/health` → 200;
+  `node --check` clean on all three edited backend files.
+
+---
+
+
+## 2026-08-09 — i18n(funnel): localize the homepage skills CTA + the /catalog category chips/tags (+ strengthen the landing guard)
+
+Standing-order loop (market entry). Cleared the two behind-interaction leaks flagged as follow-up last
+round, plus a third the fix surfaced:
+1. **LandingPage** — the AI-skills section CTA was hardcoded `ดูทักษะทั้งหมด →`. It renders only after
+   /api/skills resolves, and the landing Thai-leak guard read `textContent` synchronously (before that
+   async load), so it never saw the button — the leak shipped past a green guard.
+2. **CatalogPage** — the product-card category was `{p.category || 'สินค้าไทย'}` (raw Thai value +
+   Thai fallback), AND the category filter chips rendered the raw value `{c}`. Both show the Thai
+   PORTAL_CATEGORIES identifier to every visitor.
+
+**Change (frontend; values unchanged, display localized):**
+- `LandingPage.jsx` — CTA → `{t('home.skills.viewAll')} →`; added `home.skills.viewAll` (th/en/zh).
+- `CatalogPage.jsx` — imports `producerCategoryLabel`, destructures `lang`; the card tag →
+  `p.category ? producerCategoryLabel(p.category, lang) : t('mk.find.thaiProduct')` and the filter
+  chips → `producerCategoryLabel(c, lang)`. The stored/filter value stays the Thai identifier.
+- Strengthened `landingNoThaiLeak.test.jsx`: it now `await`s the /api/skills fetch (stub includes a
+  skills list) before scanning, so the whole AI-skills section — including the CTA — is covered.
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- Landing guard **2/2** (now with waitFor). **Mutation:** reverting the CTA to hardcoded Thai turns
+  **both** red — proving the strengthened guard reaches the async section (the old sync guard would
+  have stayed green). Restored.
+- `catalogOrderA11y.test.jsx` 2 → **3**: a new en test asserts the card + chip show "Herbs"
+  (getAllByText) with no raw "สมุนไพร". (This test is what surfaced the filter-chip leak.)
+- Full frontend suite **491/491** (was 490, +1), `npm run build` ok. Frontend-only.
+
+---
+
+
+## 2026-08-09 — i18n/a11y(funnel): fix behind-interaction leaks — the modal close button rendered "mk.close", + Thai network errors
+
+Standing-order loop (consent funnel / accessible platform). Systematic scan of the localized funnel
+pages for hardcoded Thai *literals* in JSX (the render-probe can't see strings behind a click/error).
+Two real defects surfaced:
+
+1. **Broken close-button accessible name (a11y, current bug).** The checkout close buttons on /catalog
+   and /store used `aria-label={t('mk.close') || 'ปิด'}` — but `mk.close` was **never defined**, so
+   `t()` returned the raw key string and the modal's × button announced literally "mk.close" to screen
+   readers (WCAG 4.1.2). (The `|| 'ปิด'` Thai fallback was dead code — t() never returns falsy.)
+2. **Hardcoded Thai network errors.** The catch-block error on /catalog, /store and /join was
+   `setErr('เชื่อมต่อไม่ได้ …')` — an en/zh user who lost connection mid-submit saw a Thai error.
+
+**Change (frontend):**
+- `src/i18n/index.jsx` — added `mk.close` (ปิด / Close / 关闭) and `mk.err.network`
+  (เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง / Connection failed. Please try again. / 连接失败，请重试。) in all 3 languages.
+- `CatalogPage.jsx` / `StorePage.jsx` — close button now `aria-label={t('mk.close')}` (dead Thai
+  fallback dropped); the network catch-block error → `t('mk.err.network')`.
+- `ProducerJoinPage.jsx` — network catch-block error → `t('mk.err.network')`.
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- `storeOrderA11y.test.jsx` 3 → **4**: the en checkout test now also asserts the close button's
+  accessible name is "Close" (not the raw key "mk.close", not Thai "ปิด"); a new test rejects the
+  checkout fetch and asserts the localized "Connection failed…" error shows with no Thai
+  "เชื่อมต่อไม่ได้". **Mutation:** deleting the `mk.close` en key makes the close-button assertion
+  **red** (the raw key returns); restored. Full frontend suite **490/490** (was 489, +1),
+  `npm run build` ok. Frontend-only, no behaviour change beyond the strings.
+
+**Follow-up noted (not done — keeping this round tight):** a few more behind-interaction Thai literals
+remain — LandingPage's "ดูทักษะทั้งหมด" skills CTA (renders only when live skills load) and the
+/catalog product-card category fallback `{p.category || 'สินค้าไทย'}`. Small, same class; next round.
+
+---
+
+
+## 2026-08-09 — i18n(store): the checkout card payment option was hardcoded Thai for non-Thai buyers
+
+Standing-order loop (consent funnel / market entry). Auditing the commerce checkout controls (a11y
+pass) surfaced a Thai leak the earlier render-probe missed: StorePage's payment-method `<select>` had
+its card option hardcoded as `💳 บัตรเครดิต/เดบิต`. The checkout form only renders after a product is
+picked, so the page-level Thai-leak probe (which renders with no product selected) never reached it —
+an English/Chinese buyer saw a Thai payment option **at the money step** of the first-party store.
+
+**Change (frontend):**
+- `StorePage.jsx` — the card `<option>` now renders `💳 {t('mk.store.method.card')}` (PromptPay stays
+  as-is, a proper noun).
+- `src/i18n/index.jsx` — new `mk.store.method.card` in th/en/zh (บัตรเครดิต/เดบิต · Credit/Debit card
+  · 信用卡/借记卡), beside the existing `mk.store.method` label.
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- Extended `storeOrderA11y.test.jsx` 2 → **3**: a new test forces lang=en, opens the buy modal, and
+  asserts the card option resolves as "Credit/Debit card" (getByRole option) with no Thai `บัตรเครดิต`
+  text. **Mutation:** reverting the option to the Thai literal turns it **red**; restored. Full
+  frontend suite **489/489** (was 488, +1), `npm run build` ok. Frontend-only, checkout behaviour
+  unchanged (the option value stays "card").
+
+Aside (verified, no change needed): the rest of the commerce checkout is already accessible + localized
+— /catalog and /store order forms each associate every input with a <label htmlFor>, /catalog search
+carries an aria-label, and both order flows use t() everywhere else.
+
+---
+
+
+## 2026-08-09 — a11y(find-producers): give the search box + category filter accessible names
+
+Standing-order loop (accessible platform — CLAUDE.md standing priority). Audited form-control
+accessibility across the funnel after the i18n sweep. The producer signup form (/join) is correctly
+associated (its Field wrapper injects the id via React.cloneElement, matching the label htmlFor), and
+the /track + /dispute lookups already use htmlFor/id pairs. But **/find-producers**
+(ProducerDirectoryPage) had two filter controls with NO accessible name: the free-text search box
+carried only a placeholder (not an accessible name — it disappears on input and isn't reliably
+announced by screen readers), and the category `<select>` had nothing at all. A screen-reader user
+tabbing in heard "edit text" / "combo box" with no idea what either did — WCAG 4.1.2 (Name, Role,
+Value), on a public funnel page.
+
+**Change (frontend, a11y only — no visual/behaviour change):**
+- `ProducerDirectoryPage.jsx` — added `aria-label` to the search `<input>` and the category
+  `<select>`.
+- `src/i18n/index.jsx` — new `mk.find.search.label` / `mk.find.cat.label` in th/en/zh (the label
+  follows the page language, like the rest of the page).
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- New guard `src/__tests__/producerDirectoryA11y.test.jsx` **2/2** — renders the page and resolves
+  both controls by their accessible name (getByLabelText for "Search producers or products" → INPUT,
+  "Filter by category" → SELECT). **Mutation:** removing the search aria-label makes getByLabelText
+  fail (**1 red**); restored. Full frontend suite **488/488** (was 486, +2), `npm run build` ok.
+  Frontend-only.
+
+---
+
+
+## 2026-08-09 — i18n(about): localize /about + finding: 6 more public content pages are still Thai-only
+
+Standing-order loop (market entry). Extended the render-probe sweep to the sitemap-listed public
+content pages (rendered under LanguageProvider forced to en/zh, Thai codepoints U+0E00–U+0E7F flagged).
+Result: **/about, /ai-skills, /contact, /earn, /faq, /seasonal, /showcase all still render in Thai for
+an en/zh visitor** — they have little or no i18n, while the homepage + producer funnel + portals are
+now localized. A visitor who switches to English/Chinese on the homepage (persisted in `otai_lang`,
+read by useLang across the SPA) keeps that language, so these pages are a real market-entry gap.
+
+Fixed the smallest, highest-trust one this round — **/about** (AboutPage), a 62-line self-contained
+page with no i18n and only 4 Thai strings (the tech-skills chips were already English):
+- `AboutPage.jsx` — now uses `useLang()`/`t()`: back button, header title (reuses the existing
+  `footer.link.about` key), hero title, hero subtitle, and `document.title` all follow the language.
+- `src/i18n/index.jsx` — added `about.back`, `about.hero.title`, `about.hero.sub` in th/en/zh.
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- New guard `src/__tests__/aboutNoThaiLeak.test.jsx` **2/2** — renders /about forced to en/zh, asserts
+  no Thai run. **Mutation:** reverting the hero subtitle to its hardcoded Thai turns **both** red;
+  restored. Full frontend suite **486/486** (was 484, +2), `npm run build` ok. Frontend-only.
+
+**Flag to owner (standing-order #8 — larger scope than one task):** the other six content pages above
+are still Thai-only. /faq, /showcase, /earn each carry a lot of copy (34–59 Thai fragments), so making
+them trilingual is a multi-round effort and a content decision (do we want full en/zh content on the
+marketing/FAQ pages, or is Thai-only intended there while only the funnel + homepage are trilingual?).
+Not proceeding on those without a steer. I can localize them one page per round if you'd like — say
+the priority order (my suggestion: /faq → /contact → /seasonal → /ai-skills → /earn → /showcase).
+
+---
+
+
+## 2026-08-09 — i18n(producer funnel): localize the product-category picker/tags (en/zh saw raw Thai)
+
+Standing-order loop (consent signup funnel + market entry for non-Thai). Render-probed the public
+funnel pages that use the global i18n and found the **producer funnel** leaking raw Thai to en/zh
+visitors — the exact signup surface the order prioritizes:
+- `/join` (ProducerJoinPage, producer signup): the listing-category `<select>` showed the 12 category
+  values raw — อาหาร, ความงาม, สิ่งทอ, … — so a non-Thai producer picked their category from a
+  Thai-only dropdown.
+- `/find-producers` (ProducerDirectoryPage): the category filter dropdown AND every producer card's
+  category tag (`{p.category || 'สินค้าไทย'}`) showed the raw Thai value.
+
+The category values are the **canonical identifiers** the backend whitelist clamps to and the consumer
+digest matches on (`p.category === category`), so they can't be translated in the data — the fix
+localizes only the DISPLAY.
+
+**Change (frontend):**
+- `src/data/portalCategories.js` — added `CATEGORY_LABELS` (th/en/zh for all 12 values; OTOP kept as a
+  proper noun) + `producerCategoryLabel(value, lang)` (falls back to the raw value for an unknown
+  category, never blank) beside the existing single-source-of-truth `PORTAL_CATEGORIES`.
+- `ProducerJoinPage.jsx` / `ProducerDirectoryPage.jsx` — `<option>`s and the card tag now display
+  `producerCategoryLabel(value, lang)` while `value=` stays the Thai identifier; both pages now import
+  the canonical `PORTAL_CATEGORIES` as their API-failure fallback instead of re-declaring the list
+  (removes two drifting copies). Directory now destructures `lang`; the empty-category card fallback
+  'สินค้าไทย' became a localized `mk.find.thaiProduct` (th สินค้าไทย / en Thai product / zh 泰国商品).
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- New render guard `src/__tests__/producerFunnelNoThaiLeak.test.jsx` **4/4** — renders both pages under
+  LanguageProvider forced to en/zh (with a stubbed producer whose category is 'สมุนไพร', so the card
+  tag is exercised) and asserts no Thai run (U+0E00–U+0E7F) except the language-switcher 'ไทย'.
+  **Mutation:** reverting the /join `<option>` to render the raw value turns **2** tests red; restored.
+- `portalCategories.test.js` 3 → **6**: every PORTAL_CATEGORIES value must have a non-empty th/en/zh
+  label (so a new category can't ship label-less and re-leak), no stray label keys, and the en/zh
+  label must not equal the raw Thai value.
+- Full frontend suite **484/484** (was 478, +6), `npm run build` ok. No backend change — category
+  values, storage, and digest matching are unchanged.
+
+---
+
+
+## 2026-08-09 — test(pdpa): guard access↔erasure store parity (a new signup can't silently escape erasure)
+
+Standing-order loop (consent/PDPA — the legal foundation of the /portals/* funnel). Scanned the two
+data-subject-rights endpoints in `backend/server.js`: the right-of-access export
+(`/api/privacy/access/confirm`) and right-to-erasure (`/api/privacy/erasure/confirm` → `performErasure()`).
+They were consistent today — access exposes 11 stores; erasure deletes the 7 personal-data ones
+(waitlist, consents, producers, portal_leads, affiliates, tenants, cloud_sync) and intentionally
+retains the 4 financial ones (withdrawals, orders, payments, entitlements) under PDPA's legal-retention
+exception. Verified this parity before assuming any bug (CLAUDE.md "verify before build") — no defect.
+
+But that parity is hand-maintained across ~40 lines of two separate handlers. The silent, one-directional
+risk: a future signup/store wired into the access export but **not** into `performErasure()` lets an
+"erased" data subject still download their record — the system reports deletion while the data persists.
+The existing `test-pdpa-tenant-erasure.mjs` boots the server and checks tenants + cloud_sync end-to-end,
+but nothing pinned the *general* invariant across all stores.
+
+**Change (test-only; no runtime change):**
+- `backend/scripts/test-privacy-parity.mjs` (new) — source-parses server.js and asserts: (1) every
+  `records.<key>` the access export populates is classified as `erased` or `retained`, so a NEW store
+  added to access fails the build until its erasure treatment is decided; (2) each `erased` store has
+  its deletion evidence present in `performErasure()`; (3) the `retained` set is EXACTLY the four
+  financial records — nothing can be quietly parked there to dodge erasure. Slicing throws loudly if
+  the handler anchors drift (a silently-empty slice would make the checks vacuously pass).
+- Wired into `backend/package.json` (`test:privacy-parity`) and `.github/workflows/test.yml` beside the
+  existing PDPA test.
+
+**Verified by running (standing-order #4) + mutation-tested:** **31/31**. Mutation A — adding an
+unclassified `records.newsletter_signups` to the access export turns it **red** (unclassified store);
+Mutation B — removing the `producers.eraseByEmail` call from `performErasure()` turns it **red** (missing
+erasure evidence). Both restored → 31/31, `git diff` on server.js clean. package.json valid JSON,
+test.yml valid YAML. Pure source-parsing — no server boot, complements the end-to-end tenant test.
+
+---
+
+
+## 2026-08-09 — fix(seo): og:locale on the prerendered international portals said th_TH for English pages
+
+Standing-order loop (market-entry / SEO). Continuing the international-portal thread from the
+consent-funnel error-localization fix. The base `frontend/index.html` hardcodes
+`<meta property="og:locale" content="th_TH" />`, and the per-route prerender transform
+(`frontend/scripts/route-meta.mjs` `applyRouteMeta`) already rewrites `<html lang>` per route —
+serving gov-intl / intl-org as `<html lang="en">` because they render English on first load — but it
+**never touched og:locale**. So the two English international portals (gov-intl targets foreign
+governments, intl-org targets UN/ASEAN/World Bank) were prerendered with an English title/description
+and `<html lang="en">` yet still advertised `og:locale=th_TH` to Facebook/LINE crawlers — the exact
+wrong-language signal the `<html lang>` swap exists to prevent, just for the social crawler instead of
+the DOM.
+
+**Change (build-script only, no runtime/UI change):**
+- `frontend/scripts/route-meta.mjs` — `applyRouteMeta` now also rewrites `og:locale` from the page's
+  language via a small `OG_LOCALE` map (th→th_TH, en→en_US, zh→zh_CN), falling back to th_TH for an
+  unknown language. Uses the same `replaceOrThrow` helper as the other tags, so a base-template format
+  drift fails the build loudly instead of silently re-serving th_TH.
+
+**Verified by running (standing-order #4):**
+- `routeMeta.test.js` **15/15** (was 13): a Thai route keeps `th_TH`; an en route emits `en_US` and no
+  longer contains `th_TH`; and removing the og:locale line from the base makes the transform throw
+  (fail-loud, matching the existing canonical/og:url/description drift guards).
+- **Real build output** (`npm run build`, not assumed): `dist/portals/intl-org/index.html` and
+  `dist/portals/gov-intl/index.html` now carry `og:locale=en_US` (+ `<html lang="en">`), while
+  `dist/portals/producer/index.html` and the homepage root keep `og:locale=th_TH`.
+- Full frontend suite **478/478** (was 476). Frontend-only, two files (transform + its test).
+
+---
+
+
+## 2026-08-09 — fix(portals): localize consent-funnel error messages (int'l applicants saw Thai errors)
+
+Standing-order loop (consent-based signup funnel + market entry for non-Thai). Found by scanning the
+/portals/* funnel: the backend `/api/leads/submit` (`backend/portal-leads.js`) returns **Thai-only**
+error strings — consent missing ("ต้องยินยอมตามนโยบายความเป็นส่วนตัว…"), name/email missing
+("กรอกข้อมูล…"), and the 429 rate limiter ("ส่งฟอร์มบ่อยเกินไป…"). The shared client helper
+`leadError()` (`frontend/src/pages/portals/submitLead.js`) returned that raw `error` string **first**,
+only falling back to a localized generic when it was absent. So an English/Chinese applicant on the
+**international** portals — intl-org and gov-intl default to en/zh, and target UN/ASEAN/World Bank/etc.
+— who tripped the rate limiter (10 submits / 15 min, easily reached) saw a **Thai** error on the signup
+form. A market-entry defect on the exact consent funnel the standing order prioritizes, and on the
+pages aimed at non-Thai institutions.
+
+**Change:**
+- `backend/portal-leads.js` — every error path now carries a stable machine `code` alongside the Thai
+  string: `consent_required`, `missing_contact`, `rate_limited` (limiter message), `server_error`
+  (route 500). The route forwards `code` in the JSON body.
+- `frontend/src/pages/portals/submitLead.js` — `submitLead` captures `code`; `leadError(result, lang)`
+  now localizes **by code** into th/en/zh and falls back to the localized generic for any unknown/absent
+  code. It deliberately **never** surfaces the raw server string again, so no future backend message can
+  leak untranslated Thai to a non-Thai visitor. All 9 portal pages already route through this one helper,
+  so the fix reaches every portal (producer, consumer, creator, affiliate, middleman, foundation,
+  gov-thai, gov-intl, intl-org) with no per-page change.
+
+**Verified by running (standing-order #4):**
+- Backend `test-portal-leads.mjs` **22/22** (was 20; +code assertions for consent_required & missing_contact).
+- End-to-end HTTP (throwaway script, express app + real router): POST returns the code over the wire for
+  400 consent_required, 400 missing_contact, 200 success, and — the real scenario — **429 rate_limited**. 4/4.
+- Frontend `submitLead.test.js` **9/9** (was 8): new tests assert a known code is localized per lang, and
+  that an en/zh applicant is NEVER shown raw Thai (checked against the U+0E00–U+0E7F range) even for an
+  unknown/future code. **Mutation:** reverting `leadError` to "prefer raw backend error" turns **2** tests
+  red; restored. Full frontend suite **476/476** (was 475), `npm run build` ok.
+
+---
+
+
+### 2026-08-06 — Hourly loop: guard every in-app navigation target against pointing at a non-existent route
+
+The app is a client-rendered SPA, so an internal `navigate('/x')` / `<Link to="/x">` / `<NavLink to="/x">` whose path has **no** `<Route>` in App.jsx silently dumps the user on `NotFoundPage` — a dead CTA with no error anywhere. Routes and nav targets live in different files across dozens of pages, so a typo or a renamed route is easy to ship. I scanned the whole SPA first (all **39** distinct internal nav targets across pages + components) and every one resolves today — but nothing stopped a future dead nav.
+
+**Change (test-only; no runtime change):**
+- `frontend/src/__tests__/spaNavTargets.test.js` (new) — reads the real route table from `App.jsx` (`<Route path="…">`, incl. dynamic `:param` roots and `/*` wildcard prefixes) and every `navigate(...)`/`Link to`/`NavLink to` target across `src/` (excluding `__tests__`), then asserts each target resolves to a real route. Reduces a raw target to its path first (drops a `${…}` interpolation, `?query`, `#hash`, trailing `/`), so template-literal links like `/pay?amount=${a}` and `/affiliate-programs${q}` are checked by their true path. Pure source-parsing — no rendering, no route imports.
+
+**Verified (run, not assumed) + mutation-tested:** **40/40** (39 targets + a sanity check). **Mutation:** adding `navigate('/totally-not-a-route')` to a page turns it **red** with a message naming the file and that "a click lands on NotFoundPage"; restored to 40/40. Full frontend suite **458/458** (47 files, +40). No backend change; Vitest auto-discovers the file.
+
+### 2026-08-06 — Hourly loop: make the affiliate ref-capture testable + guard it (attribution linchpin)
+
+Every affiliate share link is `…/?ref=<CODE>`, and the whole attribution chain depends on one line in `main.jsx` persisting that ref into `localStorage['otai_ref']` on page load — StorePage reads it at checkout, QuickPay/shop forward it, the backend credits the sale. That line was **inline in the bootstrap** (`try { const r = new URLSearchParams(...).get('ref'); if (r) localStorage.setItem('otai_ref', r.slice(0,20)); } catch {}`), so it was **un-importable and untested**: a refactor breaking it (wrong key, wrong param, or overwriting `otai_ref` on a ref-less load) would silently kill **all** affiliate attribution with nothing to catch it. (`utils.test.js` tests `buildRefLink` — the link-building side — but nothing tested the capture side.)
+
+**Change (frontend; behaviour-identical extraction):**
+- `src/lib/affiliateRef.js` (new) — pure, injectable `captureAffiliateRef(search, storage)`: reads `?ref=`, writes `otai_ref` (capped 20 chars) only when a ref is present (a ref-less load never wipes an earlier ref — last non-empty wins), swallows storage errors, returns the captured value. Byte-for-byte the old main.jsx behaviour.
+- `src/main.jsx` — replaced the inline block with `captureAffiliateRef(window.location.search, window.localStorage)`.
+
+**Verified (run, not assumed) + mutation-tested:** new `src/__tests__/affiliateRef.test.js` **7/7** — captures a ref; a ref-less load does NOT wipe a stored ref; a new ref overwrites (last-click); caps at 20; empty `?ref=` is a no-op; missing/undefined query never throws; a throwing storage is swallowed (returns null). **Mutations:** removing the "only write when ref present" guard turns **3** tests red (ref-less wipe, empty-ref, missing-query); dropping the 20-char cap turns **1** red. Restored to 7/7. Full frontend suite **418/418** (46 files, +7), `npm run build` ok. No backend change.
+
+### 2026-08-06 — Hourly loop: guard the customer-facing status labels against backend↔i18n drift (no raw keys on the track pages)
+
+The order-tracking (`/track` → `TrackOrderPage`) and dispute-tracking (`/dispute` → `DisputeTrackPage`) pages render a status/decision via `t('mk.track.st.'+status)` / `t('mk.dispute.st.'+status)` / `t('mk.dispute.dec.'+decision)` / `t('mk.dispute.openedby.'+role)`. i18n's `read()` **returns the raw key** when a translation is missing (`src/i18n/index.jsx`: `return key in translations.th ? … : key`), so a backend status with no label would show a customer a literal `mk.track.st.<status>` — on a money-sensitive page. The status lists are the **backend's** source of truth (`orders.js` `ORDER_STATUS`, `disputes.js` `DISPUTE_STATUS`/`DECISIONS`), the labels live in the **frontend** i18n — different files, easy to drift when a new status ships. All are currently covered (verified), but nothing stopped a future status/decision from shipping label-less.
+
+**Change (test-only; no runtime change):**
+- `frontend/src/__tests__/statusLabelCoverage.test.js` (new) — reads the backend `ORDER_STATUS` / `DISPUTE_STATUS` / `DECISIONS` arrays from source and asserts every value (plus the two `opened_by` roles) has its `mk.*` i18n key present in **all** languages (count == `LANGS.length`). Pure source-parsing — no heavy-module imports; same single-source discipline as `faqContent` / `portalCategories` tests.
+
+**Verified (run, not assumed) + mutation-tested:** **18/18** (7 order + 5 dispute + 3 decision + 2 opener + 1 sanity). **Mutation A:** adding a backend `ORDER_STATUS` (`'awaiting_pickup'`) with no label turns it **red** (0/3 language blocks). **Mutation B:** deleting one i18n label (`th mk.track.st.packed`) turns it **red** (2/3). Both restored to 18/18. Full frontend suite **411/411** (45 files), `npm run build` ok. Backend files mutated-then-restored (git clean). Vitest auto-discovers the new test file (no wiring needed).
+
+### 2026-08-06 — Hourly loop: add a grounded pricing/cost FAQ (market-entry friction + FAQPage rich-result content)
+
+Market-entry/SEO task. The /faq content (`faqContent.js`, the single source for the visible accordion AND the prerendered FAQPage JSON-LD) covered what/data-safety/pay/track/dispute/producer/affiliate/AI-tools — but **not cost**, the single most common pre-signup question. Before writing anything I verified the real price model (CLAUDE.md's "verify before build"): the customer-facing PricingPage (`PP_META`) and PaymentPage both use free/pro ฿299/premier ฿599/enterprise ฿1299, and the backend charge path prices from `omise-payment.js` `SUBSCRIPTION_PLANS` — which carries **the same** ฿0/299/599/1299. (Aside verified along the way: `tenant-manager.js` `PLANS` — free/starter ฿299/pro ฿799/enterprise ฿2499 — is a **separate** corporate/multi-agent product, not the consumer subscription; the shared `pro`/`enterprise` plan IDs across the two namespaces are a naming overlap, not a mispricing. No pricing bug — glad I checked instead of "fixing" it.)
+
+**Change (frontend content only):**
+- `src/data/faqContent.js` — added one Q&A ("มีค่าใช้จ่ายไหม ราคาเท่าไหร่?" / "How much does it cost?" / "收费吗？价格是多少？") in all three languages, stating the free tier + Pro ฿299 / Premier ฿599 / Enterprise ฿1,299 per month, paid via PromptPay or card (Omise), with a pointer to /pricing. Every figure is grounded in `SUBSCRIPTION_PLANS`; no invented claims, no USD (the honesty guard forbids it).
+
+**Verified (run, not assumed):** `faqContent.test.js` **8/8** (all langs stay equal-length at 9 items, JSON-LD still matches FAQ_ITEMS.th, no forbidden terms); `npm run build` regenerates `/faq/index.html` and the new pricing question is present in the prerendered FAQPage schema (`grep` count 1 — non-JS crawlers see it). Full frontend suite **393/393**. No backend change.
+
+### 2026-08-06 — Hourly loop: /store checkout showed "🎉 ชำระเงินสำเร็จ!" even when the charge succeeded but the item sold out (refund pending)
+
+Found scanning the first-party store's Omise checkout UI. `/api/shop/checkout` has an oversold-race branch (server.js:721-725): if the item sells out between the pre-check and the stock deduction, the charge already succeeded, so the order is cancelled and the response is `{ paid:true, fulfilled:false, refund_pending:true, message:'ชำระเงินสำเร็จ แต่สินค้าหมดสต๊อกพอดี ทีมงานจะติดต่อคืนเงินให้โดยเร็ว' }`. But `StorePage.jsx` rendered the success screen as `res.paid ? '🎉' + t('mk.store.paid') : ...` and only showed `res.message` **when `!res.paid`** — so a customer who **paid and won't get the product** saw a plain "🎉 ชำระเงินสำเร็จ!" with **no** refund notice at all. Misleading on the revenue path, and the exact case the backend carefully handles server-side was dropped in the UI.
+
+**Change (frontend only):**
+- `StorePage.jsx` — the success screen now branches on `res.refund_pending`: icon `↩️`, title `mk.store.refund` ("ชำระเงินแล้ว แต่สินค้าหมดสต๊อกพอดี — กำลังคืนเงิน"), and the backend's `res.message` (the refund explanation) is shown in amber. Normal paid (`🎉`) and pending-QR states are unchanged.
+- `src/i18n/index.jsx` — new `mk.store.refund` in th/en/zh.
+
+**Verified (run, not assumed) + mutation-tested:** `storeOrderA11y.test.jsx` 1 → **2**: a new test mocks the checkout returning `paid:true, refund_pending:true` and asserts the success screen shows the refund title (`/กำลังคืนเงิน/`) + the refund message, and that the plain "ชำระเงินสำเร็จ!" title is **absent**. **Mutation:** reverting the title back to the plain paid/pending logic flips the test **red**; restored. Full frontend suite **393/393** (was 392); `npm run build` ok (sitemap 26). No backend change (the server already returned the correct data — only the UI dropped it).
+
+### 2026-08-06 — Hourly loop: show the buyer the authoritative order total at checkout (close a transparency gap from the price-authority fix)
+
+Follow-up to the earlier "record the producer's authoritative price" fix. `place()` now records the producer's current server-side price (a stale catalog tab / tampered POST can no longer set the recorded `amount`), and the receipt email shows that authoritative figure — but `POST /api/orders` returned only `{ id, message }`, and CatalogPage's success screen showed nothing about the total. So a buyer whose order recorded a different amount than their (possibly stale) cart only learned the real total from the email — the on-screen confirmation was silent about money. Not a bug, but a transparency gap the previous change opened.
+
+**Change (backend + frontend, additive):**
+- `backend/orders.js` — `place()` now returns the recorded `amount`, and `POST /api/orders` includes it in the response (`{ success, id, amount, message }`). Backward compatible.
+- `frontend/src/pages/CatalogPage.jsx` — captures `d.amount` and shows "รวม ฿X" on the success screen (only when the server sent a numeric amount), so the buyer sees the same authoritative total the receipt email carries — not the client-side `price × qty` guess.
+
+**Verified (run, not assumed) + mutation-tested:** backend `test:order-price-authority` 8 → **9/9** (adds: `place()` returns the recorded amount). Frontend `catalogOrderA11y.test.jsx` 1 → **2**: a new test mocks the order POST returning `amount: 600` while the client total is ฿120, and asserts the success screen shows **฿600** (the server figure). **Mutation:** making CatalogPage never set the server amount flips that test **red**; restored. Regression-safe: full frontend suite **392/392** (was 391), `npm run build` ok (sitemap 26), backend `order-confirm` 11/11 · `order-cancel-restock` 12/12 · `order-stock-guard` 9/9 · `api-contract` 166/166; boot `/api/health` 200; `backend/data/` untouched.
+
+### 2026-08-06 — Hourly loop: compare the master admin key in constant time (defence-in-depth, consistency)
+
+Continuing the auth-path scan from the tenant-JWT fix. A systematic grep for hardcoded secret fallbacks (`process.env.X || 'const'`) across `backend/` found **no** remaining offenders (the one hit, `ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'`, is a public default voice id, not a secret) — so the tenant JWT was the last one. But `checkAdminKey()` (the single chokepoint gating **every** admin endpoint — inventory, producer approval, dispute resolution, broadcast, leads, KPI) compared the master key with a plain `provided === key`, which short-circuits at the first differing character. The repo already established constant-time comparison for its money/data confirm-link tokens (`token-verify.js` `safeTokenEqual`, imported in server.js) — the admin key, a higher-value secret, was the inconsistent one. `adminLimiter` (30/15min) makes a remote timing attack impractical, so this is low-severity defence-in-depth, not a live hole; comparing the master credential in constant time is simply the correct, free, consistent practice.
+
+**Change (backend):**
+- `server.js` `checkAdminKey()` — `provided === key` → `safeTokenEqual(provided, key)` (keeps the `!!key` guard so an unset/`null` admin key in prod still denies). Behavior-identical for accept/reject; only the timing side-channel closes.
+
+**Verified (run, not assumed):** `test:token-verify` extended 14 → **19/19** — added arbitrary admin-key-style secrets (variable length, symbols, non-hex): exact key accepted, a same-length one-char-off key rejected, shorter/longer/empty rejected (confirms `safeTokenEqual` is correct for the admin-key shape, not just 16-hex tokens). Regression-safe (behavior preserved): `integrations-auth` 7/7, `corporate-auth` 9/9, `video-auth` 6/6, `admin-default-login` 5/5; and a **live** boot with `ADMIN_KEY` set → `/api/inventory/admin/list` returns 200 for the right key, **401** for a same-length wrong key / short wrong key / no key. `node --check` clean; `backend/data/` untouched. (A constant-time swap is behavior-identical to `===`, so no functional test can distinguish them — the guard is at the `safeTokenEqual`-primitive level, matching how token-verify.js itself was introduced.)
+
+### 2026-08-06 — Hourly loop: SECURITY — tenant JWTs were signed with a source-visible constant (forgeable tenant auth)
+
+Found scanning the tenant/corporate auth path. `tenant-manager.js` signed AND verified tenant login JWTs with `process.env.JWT_SECRET || 'openthai-jwt-secret-2026'`. Whenever `JWT_SECRET` is unset in production — **the current state**, per docs/OWNER-DECISIONS.md #3 — every tenant token was therefore signed with a secret **printed in this repo**, so anyone who reads the source could forge `{ tenantId, plan, role:'tenant' }` and authenticate as ANY tenant (full corporate-account takeover; the token drives `verifyToken` → the corporate/tenant endpoints). The main app's own confirm-link signing (`server.js` `UNSUB_SECRET`) was already hardened to **fail closed** for exactly this reason (server.js:1306: per-process random key in prod, never a hardcoded constant) — the tenant path was simply missed.
+
+**Change (backend; mirrors server.js's UNSUB_SECRET exactly):**
+- `tenant-manager.js` — the tenant-JWT secret is resolved once at module load: `JWT_SECRET` when set; in a production-like env (`VERCEL` / `NODE_ENV=production`) a **per-process `randomBytes(32)` key** (tokens fail closed — unforgeable, though a tenant may need to re-login across serverless invocations/restarts until `JWT_SECRET` is set); only local dev uses a clearly dev-only string. Emits the same `[SECURITY]` boot warning as the main app when prod-like without `JWT_SECRET`. `signTenantToken`/`verifyTenantToken` now use this resolved secret. No hardcoded production fallback remains anywhere.
+
+**Verified (run, not assumed) + mutation-tested:** new `scripts/test-tenant-token-secret.mjs` (`test:tenant-token-secret`, self-contained — re-execs itself in child processes to control the load-time env) **6/6**: in prod-like + no `JWT_SECRET`, a real login token still verifies in-process while a token forged with the old `'openthai-jwt-secret-2026'` (or any other guess) is **rejected**; with `JWT_SECRET` set, a token signed with it verifies. **Mutation:** restoring the `|| 'openthai-jwt-secret-2026'` fallback flips the "forged-token rejected" assertion **red** (RC=1); restored to 6/6. Regression-safe: `tenant-login` 10/10, `corporate-auth` 9/9, `token-verify` pass; boot `/api/health` 200; `backend/data/` untouched. Wired into `package.json` + the self-contained CI block. (Reinforces OWNER-DECISIONS #3: once `JWT_SECRET` is set in the 3 Vercel projects, tenant tokens become both stable and unforgeable.)
+
+### 2026-08-06 — Hourly loop: remove the invalid `twitter:site` handle from the social card (honest-meta cleanup)
+
+Small correctness fix on the main app's share meta (resolves the long-standing 🔵 note in docs/OWNER-DECISIONS.md). `frontend/index.html` shipped `<meta name="twitter:site" content="@Openthai.ai">`, but `@Openthai.ai` is **not** a valid X/Twitter handle — handles are 1–15 chars of `[A-Za-z0-9_]`, no dots — and no real X account is referenced anywhere in the repo (grep: `twitter:site` existed only in this one file; no test asserts it; the prerender pipeline never touches it). An invalid handle provides no card attribution and just ships a malformed tag, which is exactly the "impressive-sounding but not real" the repo's standing priority warns against. The owner's note listed "remove" as an accepted resolution.
+
+**Change (frontend only):** removed the `twitter:site` line (replaced with a one-line comment noting a real X @handle can be added there later). The Twitter card still renders fully from `twitter:card` (summary_large_image) + `title`/`description`/`image` — `twitter:site` is optional.
+
+**Verified (run, not assumed):** `npm run build` succeeds; built `dist/index.html` now carries only `twitter:card`/`title`/`description`/`image` (no `twitter:site`); `routeMeta.test.js` 13/13 (it asserts `twitter:title`, unaffected); sitemap still 26 urls. No backend change.
+
+### 2026-08-06 — Hourly loop: marketplace orders recorded the CLIENT-supplied price (stale-tab / tamper) instead of the producer's real price
+
+Found scanning the order funnel. `/api/shop/checkout` (first-party store) correctly computes `amount` from the **server** price (`inventory.get(...).price`), but the **marketplace** path — `CatalogPage → POST /api/orders → orders.place()` — took `price` straight from the request body and recorded `amount = price * qty`. That amount is shown in the buyer's and producer's confirmation/receipt emails ("ยอดรวม") and stored on the order. So a stale catalog tab (producer changed their price after the page loaded) or a tampered POST recorded — and emailed a receipt for — the **wrong** total. No Omise charge rides this path (marketplace orders are producer-fulfilled requests, escrow starts `none`), so this is a data-integrity / wrong-receipt bug, not direct theft — but it is exactly the stale-data class the sibling server-side **stock** guard in the same function already defends against, and it was inconsistent to trust the client for price while distrusting it for stock.
+
+**Change (backend; mirrors the existing getProducerStock guard):**
+- `producers.js` — new `getPrice(email)` (companion to `getStock`): the producer's current authoritative price, or null if unlisted. Exported.
+- `server.js` — pass `getProducerPrice: (email) => producers.getPrice(email)` into `createOrders(...)`.
+- `orders.js` `place()` — prefer the authoritative server price over the client's when available; **fall back** to the client price when the producer lists none, the lookup throws, or no hook is wired — so the first-party store path (which passes its own verified price and has no producer record) and the always-degrade-never-lose-a-sale philosophy are both preserved. (Hoisted `producer_email`/`product_name` so the lookup can run before `amount` is set; rec fields otherwise unchanged.)
+
+**Verified (run, not assumed) + mutation-tested:** new `scripts/test-order-price-authority.mjs` (`test:order-price-authority`, no-server) **8/8** — server price overrides a ฿1-for-฿500 tamper and fills a missing client price; falls back to the client price when the producer lists none / the lookup throws / no hook; null+null → amount null. **Mutation:** making `place()` ignore the authoritative price turns **2** assertions red (records ฿2 and null instead of ฿1000/฿1500); restored to 8/8. Regression-safe: `test:order-stock-guard` 9/9 (place() refactor intact), `order-confirm` 11/11, `order-cancel-restock` 12/12, `producers` 28/28, `shop-receipt` 46/46, `api-contract` 166/166, and the shop-commission E2E 8/8 (checkout path — STORE_EMAIL has no producer record, so its server-verified price is recorded unchanged). Boot `/api/health` 200; `backend/data/` untouched. Wired into `package.json` + the no-server CI block.
+
+### 2026-08-06 — Hourly loop: guard the public producer-directory search against a producer-email harvest regression
+
+Auditing the consent-based producer funnel. `/api/producers/search` (producers.js:235) is **public/unauthenticated**. It previously projected each approved producer's `email` into the response even though `ProducerDirectoryPage` used it only as a React key — so `GET /api/producers/search?q=` (empty query = match-all) let anyone harvest every approved producer's email in one call (PDPA: needlessly exposing personal contact data). That was fixed to project only company/category/product_name/price/description/website/stock — but the fix had **no test**, so a future refactor could silently re-add `email` and re-open the hole. (Sibling `/api/catalog` deliberately still returns `email` because `CatalogPage` sends `producer_email` back as the producer identifier at checkout; moving to an opaque id is a documented, larger, separate refactor — see producers.js:232-234. Left untouched — out of scope to refactor unilaterally.)
+
+**Change (test-only; no runtime change):**
+- `backend/scripts/test-producer-search-privacy.mjs` (new, `test:producer-search-privacy`, self-boot with `OPENTHAI_DATA_DIR` isolation + mock-payment mode) — registers + admin-approves a producer, then asserts the public search response carries the product data (company/name/price) but **never** an `email` field or the raw address, for **both** the empty-query match-all (the harvest case) and a keyword query. Also sanity-checks the product still appears in `/api/catalog` so the checkout path stays intact. Pins only the search endpoint's privacy guarantee — makes no assertion about `/api/catalog`'s email, so it neither blesses nor blocks the future opaque-id refactor.
+- Wired into `package.json` + the self-contained CI block in `.github/workflows/test.yml`.
+
+**Verified (run, not assumed) + mutation-tested:** **11/11**. **Mutation:** re-adding `email: p.email` to the search projection turns **2** assertions red (RC=1); restored to 11/11. `backend/data/` untouched; `package.json` re-parsed valid.
+
+### 2026-08-05 — Hourly loop: (all-platform-files repo) repaired 205 dead "create content" CTAs across the platform hub
+
+Cross-repo fix — logged here for the canonical loop history; full record is in the all-platform-files commit message (that repo has no DECISIONS_LOG.md). Every roadmap-section + affiliate page in `all-platform-files` carried a CTA ("สร้าง Affiliate Content →" / "สร้างคอนเทนต์ด้วย AI") pointing at a **root-relative** `href="/generate"`. Broken two ways: (1) those pages deploy on the dashboard domain where `/generate` is not a file, so Vercel's catch-all (`/(.*) → /index.html`) served the hub instead; (2) the main app has **no** `/generate` route anyway — its SPA sends unknown paths to NotFoundPage (the generator is the auth-gated `/ai-generator`). So all 205 action buttons were dead ends on the market-entry surface.
+
+**Fix (all-platform-files):** repointed all 205 to `https://www.openthai-ai.com/ai-skills` — a real, **public**, robots-allowed route (`AiSkillsPublicPage`, the AI-content-tools catalog / pre-signup funnel page). Closest public match to the buttons' promise, avoids bouncing cold traffic into the `/login` wall that `/ai-generator` would, and matches the absolute-URL convention every other main-app link in those pages already uses. **Verified:** full local-link scan across all 516 html files → **0 broken** (was 205); one line changed per file; anchor markup otherwise unchanged. Committed + pushed to `all-platform-files@claude/daily-reporter-improvements-8vc9ct` (PR #1, open). Owner option noted in the commit: switch the target to `/ai-generator` if they'd rather drop users straight into the tool.
+
+### 2026-08-05 — Hourly loop: guard against a portal type ever losing its signup-acknowledgment email (silent-funnel regression)
+
+Auditing the consent-funnel acknowledgment path. `sendPortalWelcomeEmail(lead)` does `const copySet = PORTAL_WELCOME_COPY[lead.type]; if (!copySet ...) return;` — so a portal type with **no** entry in `PORTAL_WELCOME_COPY` sends **nothing**, silently. This is the exact bug the comment above `PORTAL_WELCOME_COPY` documents having already happened once: gov-thai/gov-intl/intl-org/foundation applicants got no confirmation at all while their `/portals/*` pages promised "we'll follow up within 48/72h". Today all 8 non-affiliate types have copy (affiliate is the deliberate exception — it's auto-registered and gets the affiliate-specific ref-link welcome instead, so generic copy there would double-mail). But `KNOWN_TYPES` (portal-leads.js) is the real source of truth for accepted types, and **nothing** stopped a future new portal type/page from shipping without welcome copy and silently swallowing those applicants' acknowledgment — a real funnel/market-entry regression with no test.
+
+**Change (test-only; no runtime change):**
+- `backend/scripts/test-portal-welcome-coverage.mjs` (new, `test:portal-welcome-coverage`, no-server) — imports the runtime `KNOWN_TYPES` (via `createPortalLeads` with a throwaway data dir) and statically extracts the top-level keys of `PORTAL_WELCOME_COPY` from server.js source (importing server.js would boot the server, so it parses source like test-api-contract/test-migration-coverage do). Asserts: every `KNOWN_TYPE` **except affiliate** has a copy entry; affiliate has **none** (pinning the "own welcome" intent so nobody adds a double-mailing generic entry); no stray copy exists for a non-accepted type; and each entry is complete — th/en/zh, each with subject+title+body.
+- Wired into `package.json` + the no-server CI block in `.github/workflows/test.yml`.
+
+**Verified (run, not assumed) + mutation-tested:** **25/25**. **Mutation:** adding a new type (`'newvendor'`) to `KNOWN_TYPES` with no copy turns the guard **red** (`❌ PORTAL_WELCOME_COPY has an entry for "newvendor"`, RC=1); restored to 25/25. `backend/data/` untouched; `package.json` re-parsed valid.
+
+### 2026-08-05 — Hourly loop: consumer digest emailed duplicates to the same person once per re-signup (spam / deliverability risk)
+
+Found scanning the consent-based signup → digest path (a top-priority market-entry surface). `sendConsumerDigest()` (server.js) builds its recipient list as `leads.filter(l => l.type === 'consumer' && l.email && !l.unsubscribed)` and then sends one email **per record**. But `portalLeads.submit()` creates a **fresh record per submission** (`id: lead_<ts>_<rand>`) with **no dedup by email** — so a consumer who submits `/portals/consumer` more than once (double-click, page refresh, "did it go through?") has 2+ `consumer` records for the same address, and this loop mails them the **same** promo once per duplicate. Real people receiving the identical email 2–3× per run reads as spam, hurts sender reputation/deliverability (Gmail/Outlook fold or flag repeated identical sends), and erodes exactly the trust the market-entry push depends on. Unsubscribe/erasure were already correct (they match on email across all records); only the send path over-counted.
+
+**Change (backend; pure extraction + one call site, mirrors selectDigestMatches / ai-json extractions):**
+- `backend/digest-match.js` — new pure `dedupeConsumerLeads(leads)`: collapses to **one record per email** (case-insensitive, trimmed). Among duplicates it keeps the most recent submission that **carries a category** (so `selectDigestMatches` can still match products); if none has a category, the most recent overall. Non-mutating. Does **not** delete duplicate records — the signup data stays intact; only the per-run send list is deduped.
+- `backend/server.js` — `sendConsumerDigest()` now wraps the consumer filter in `dedupeConsumerLeads(...)`. `total_consumers` in the result is now the unique-address count (more meaningful).
+
+**Verified (run, not assumed) + mutation-tested:** extended `scripts/test-digest-match.mjs` (`test:digest-match`, no-server) from 14 → **21/21** — 3 records over 2 addresses collapse to 2, latest-intent wins, a categorized record beats a newer blank one, and null/empty/whitespace/case robustness. **Mutation:** making `dedupeConsumerLeads` a passthrough (`return leads`) turns **5** assertions red (got 3 not 2, etc.); restored to 21/21. `node --check` clean; `test:api-contract` **166/166** (imports resolve); boot smoke `/api/health` 200. `backend/data/` untouched.
+
+### 2026-08-05 — Hourly loop: make the shop-commission (#9) money-guard E2E hermetic via a data-dir override
+
+The `#9` guard (`scripts/test-shop-commission.mjs`, wired into CI as the "E2E — shop-commission money guard" step) boots a real server and drives a full ref-link store purchase to prove `/api/shop/checkout` credits the affiliate their tier commission (฿1000 × 0.20 = ฿200) and credits nobody on a no-ref checkout. It was spawned with plain `node server.js` — no data isolation — so every run wrote the affiliate/product/order records it creates into the **tracked** `backend/data/*.json` seed files. Harmless in ephemeral CI, but it meant the guard **could not be run locally without dirtying tracked files** (exactly the snapshot/restore friction that has bitten this loop before, incl. the round-13 accidental delete of tracked seeds).
+
+**Change (additive, no behaviour change in prod/dev):**
+- `backend/server.js` — `WRITE_DATA_DIR` now honours an optional `OPENTHAI_DATA_DIR` env var: `process.env.OPENTHAI_DATA_DIR || (IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR)`. Unset (prod/dev) → **identical** to before. Set → **all** file-backed stores point at that throwaway dir, so a self-boot test can create products/affiliates/orders without ever touching the committed `backend/data/` files.
+- `.github/workflows/test.yml` — the shop-commission E2E step now spawns with `OPENTHAI_DATA_DIR=/tmp/shopcomm-data`, so the guard is hermetic in CI too.
+- `backend/scripts/test-shop-commission.mjs` — header comment updated to the hermetic local-run recipe (`OPENTHAI_DATA_DIR=/tmp/xxx` instead of the old `VERCEL=1`, which shared `/tmp/openthai-data` across all tests).
+
+**Verified (run, not assumed) + mutation-tested:** booted `OPENTHAI_DATA_DIR=/tmp/shopcomm-verify ADMIN_KEY=ci-admin node server.js` and ran the guard → **8/8**, and `git status --short backend/data/` stayed **empty** (tracked seeds untouched — the whole point). **Mutation:** neutering the `if (ref) creditAffiliateSale(…)` call at `server.js:731` (the #9 credit) flips 3 assertions red (`total_sales`/`total_earned` → 0, RC=1); restored to 8/8. `node --check server.js` clean; `test:api-contract` **166/166**, `test:migration-coverage` **28/28**. `PROJECT_STATUS.md` regenerated (was 6 days stale) — committed separately.
 
 ### 2026-07-30 — Hourly loop: a11y — the public `/contact` form's labels weren't associated with their inputs
 
@@ -5241,6 +5742,363 @@ calls; already wired into CI. Mutation-tested: removing autoHealLimiter makes th
 the check red; restored → 6/6. node --check clean. No tracked data files committed (restored data/ after
 the test runs, which exercise runWatchdog).
 
+## 2026-08-06 — CONTENT/SEO: add a grounded consumer/buyer Q&A to the /faq single source (consent-funnel gap)
+
+Standing-order loop (money path still owner-gated; waiting on Part A). Rule-1 tool
+`generate-project-status.mjs` exits clean (no code↔registry drift). Picked a real content/consent-funnel gap:
+`frontend/src/data/faqContent.js` (the ONE source that feeds both the visible /faq page and the prerendered
+FAQPage JSON-LD) answered producer-join and affiliate-earn but had NO entry for the consumer/buyer side —
+the very consent group the standing order lists first. A prospective buyer reading /faq found nothing about
+what signing up gets them, and Google's FAQ rich result was missing that Q entirely.
+
+Added one Q&A per language (th/en/zh → 10 items each, equal-length invariant preserved), grounded strictly
+in verified features: consent-based signup at /portals/consumer (route confirmed in App.jsx:239) with PDPA
+consent + category selection; category-matched new-product digest from verified producers with sold-out
+items skipped automatically (sendConsumerDigest); unsubscribe anytime; buy at /catalog (App.jsx:185) via
+PromptPay/card; track at /track. No invented features — no USD/Neo4j/Stripe/blockchain/crypto (the file's
+own rule + faqContent.test.js forbid-list).
+
+Verified by running: `vitest run faqContent.test.js` → 8/8 (equal-length across langs, JSON-LD⇄FAQ_ITEMS.th
+match, forbid-list clean); full frontend suite `npm test -- --run` → 47 files / 458 tests pass; `npm run build`
+prerenders and the new consumer Q&A (/portals/consumer) is present in dist/faq/index.html's FAQPage schema —
+so the rich-result entry ships in the first HTML byte a non-JS crawler reads, no second render pass needed.
+
+---
+
+## 2026-08-06 — DEPLOYABILITY: document OPENTHAI_DATA_DIR in .env.example (close the one rule-1 drift the generator flagged)
+
+Standing-order loop (money path still owner-gated). Ran the rule-1 tool `generate-project-status.mjs` first:
+its env-var consistency check was the ONE thing flagging a real gap — `OPENTHAI_DATA_DIR` is read by backend
+code (server.js:90, the WRITE_DATA_DIR override) yet was absent from backend/.env.example, so the generator
+printed "⚠️ 1 missing" on every run. Everything else scanned this round came back solid: all 9 /portals/*
+pages share an identical consent+submit funnel (2 consent refs + submitLead each); SEO single-source
+seo-routes.mjs covers every public route incl. all portals; base index.html carries an honest
+Organization+WebSite+SoftwareApplication @graph (Offers match Free/299/599/1299, no invented aggregateRating);
+grep for TODO/FIXME/placeholder found only legit UI input placeholders — no unfinished work.
+
+OPENTHAI_DATA_DIR is a TEST-ONLY override (points every file-backed store at a throwaway dir so self-boot
+tests skip snapshot/restore on tracked files). Documented it in the existing "Dev / Testing เท่านั้น — ห้ามตั้ง
+ใน production" section (commented-out, matching the DISABLE_RATE_LIMIT precedent) WITH an explicit
+production-safety warning: setting it in prod to an ephemeral dir (e.g. /tmp) would silently lose all data on
+restart. So the doc isn't box-ticking — it also prevents a real data-loss footgun.
+
+Verified by running: `generate-project-status.mjs` now prints "✅ every env var referenced in backend code is
+documented in .env.example" (was ⚠️ 1 missing) and exits 0 (no code↔registry drift anywhere). `node --check
+backend/server.js` clean. Docs-only change — no code/behaviour touched; PROJECT_STATUS.md left un-committed as
+usual (per-run timestamp + live prod-health probe).
+
+---
+
+## 2026-08-06 — CONTENT/SEO: add middleman/distributor Q&A to /faq — completes consent-group FAQ coverage
+
+Standing-order loop (money path still owner-gated). Ran rule-1 `generate-project-status.mjs` — exits 0, no
+drift. Surveyed for the round's task: openthai-ai's SEO/structured-data is exhaustive (Org+WebSite+
+SoftwareApplication @graph, per-route BreadcrumbList, FAQPage, per-route <html lang> already fixed for the two
+English portals); otop-ai-landing's remaining SEO gaps (canonical / og:url / sitemap) all require the landing
+page's production domain, which is explicitly UNCONFIRMED in-repo (index.html:21-23 note) and on the owner-
+gated list — a wrong canonical actively harms SEO, so per standing-order point 8 I did NOT guess it; verified
+the landing page's in-page anchors (#how/#main/#roles) and all CTAs point at real portal routes (clean).
+
+Picked the one real content gap: the /faq single source covered producer-join, consumer, and affiliate but
+NOT the middleman/distributor consent group — one of the primary consent groups the standing order lists.
+Added one Q&A per language (th/en/zh → 11 items each, equal-length invariant preserved), grounded strictly in
+MiddlemanPortalPage's real content: signup at /portals/middleman with PDPA consent + business-type
+(distributor/wholesaler/broker/reseller) + territory/channel; benefits = special wholesale pricing from
+verified producers, territory/channel rights, marketing/content support, direct producer connection (no
+redundant middlemen); team confirms network membership. No invented features; no forbidden terms. This
+completes FAQ coverage of all four primary consent groups (producer/consumer/middleman/affiliate) — a
+bounded completeness goal, not open-ended churn.
+
+Verified by running: `vitest run faqContent.test.js` → 8/8 (equal-length across langs, JSON-LD⇄FAQ_ITEMS.th
+match, forbid-list clean); full frontend suite `npm test -- --run` → 47 files / 458 tests pass; `npm run build`
+prerenders and the new middleman Q&A (/portals/middleman) is present in dist/faq/index.html's FAQPage schema.
+
+---
+
+## 2026-08-06 — TEST/DRIFT-GUARD: pin FAQ answer text to real routes (unguarded dead-link risk)
+
+Standing-order loop (money path still owner-gated). Rule-1 `generate-project-status.mjs` exits 0. Scanned
+broadly this round and confirmed maturity everywhere: all 9 /portals/* pages link from the /portals hub;
+all-platform-files' 13 region product JSONs share one schema AND every one's totalProducts exactly equals its
+actual categories[].items count (verified by running — my first traversal assumed the wrong shape and falsely
+flagged all 13, so I re-checked before believing it: no data bug); the onboarding components have no images/
+external-links/forms to mis-wire.
+
+Found one REAL unguarded gap: FAQ answers embed in-app paths as plain text ("(/portals/consumer)",
+"ซื้อสินค้าได้ที่ตลาด (/catalog)", "ติดตามคำสั่งซื้อได้ที่ /track" — 8 distinct paths: /ai-skills /catalog /join
+/portals/{consumer,middleman,producer} /pricing /track). The /faq page is public, indexable, 3-language help
+content whose FAQPage schema is also prerendered — so a renamed route would silently send users AND crawlers
+to a dead /path. The existing spaNavTargets guard does NOT cover this: it only parses navigate()/<Link>/<NavLink>
+targets, never route paths sitting inside FAQ answer strings. All 8 resolve today, so this locks in a passing
+invariant rather than fixing a live break.
+
+Added src/__tests__/faqRouteTargets.test.js — reuses spaNavTargets' exact route-table parsing + resolve logic
+(static routes, dynamic roots, wildcard prefixes), extracts /paths from every Q&A string (lookbehind excludes
+matches inside URLs/emails), and asserts each resolves against App.jsx. Verified by running: 9/9 pass;
+full frontend suite 48 files / 467 tests pass (was 47/458). Mutation-tested: rewriting "/catalog" to a
+nonexistent path turns the guard RED (1 failed), restoring → GREEN — so it genuinely catches the drift it
+claims to. Test-only change; faqContent.js untouched (git diff = the one new file).
+
+---
+
+## 2026-08-06 — [smart-e] fix: reject NaN/Infinity product price (was persisted → invalid catalog JSON)
+
+Standing-order loop, this round in the smart-e repo (Python POS). Full detail lives in the smart-e commit
+message (569886a) since that repo has no DECISIONS_LOG; recorded here too so the central decision history stays
+complete.
+
+Found by code scan: smart-e's order path (_create_order) and QR path (_create_qr) both guard math.isfinite()
+on incoming amounts (a NaN/Infinity slips past `x < 0` since nan<0 and inf<0 are both False), but the product
+create/update path did NOT. Verified LIVE against a throwaway SQLite db: POST /api/products {price: Infinity}
+→ HTTP 201 and the product is PERSISTED; GET /api/products then emits a literal `Infinity` token = invalid
+JSON, so a strict client (browser JSON.parse) throws on the WHOLE catalog — one bad product breaks the entire
+product list for every client. POST {price: NaN} → HTTP 500 (unhandled). Both inconsistent with the clean 400
+the sibling money paths return.
+
+Fix: added the same math.isfinite() guard to _create_product (POST) and _update_product (PUT) → clean 400.
+Verified after fix (live): Infinity/NaN on POST+PUT → 400; valid finite prices still create (201); catalog stays
+valid JSON. Added a 'product input validation' section to test_server.py (7 checks incl. a catalog-finiteness
+assertion); full harness 145 passed / 0 failed (was 138). Mutation-tested: removing either guard turns the new
+checks red, restoring → green. Pushed to smart-e branch claude/daily-reporter-improvements-8vc9ct (PR #1).
+
+---
+
+## 2026-08-06 — MONEY-PATH: reject non-finite (NaN/Infinity) producer price (generalized from the smart-e fix)
+
+Standing-order loop. After finding the NaN/Infinity money bug in smart-e last round, scanned openthai-ai's
+backend for the same class (client-supplied numbers → money math without a finiteness check). Verified the
+affiliate WITHDRAW path is already safe (Infinity > avail → 400; !(NaN > 0) → 400). But the producer PRICE
+path was not: producers.js register/update and getPrice all used `Number(x) > 0 ? Number(x) : null`, and in
+JS `Number("Infinity"/"1e999") === Infinity` with `Infinity > 0 === true`, so a non-finite price passed.
+
+Reproduced LIVE against the real module (file-store, isolated tmp dir): register({price: 1e999}) → ok:true,
+and getPrice() returns **Infinity in memory**, while the persisted producers.json stores **"price": null**
+(JSON.stringify(Infinity) === "null"). That split means: until the next restart, orders on that product take
+Infinity as the authoritative amount (orders.js place() → order.amount = Infinity → serialised to null on the
+JSON-file write = a null-amount order + poisoned in-memory revenue sums); after a restart the price is silently
+null. Same root cause as smart-e: no finiteness guard at the write boundary.
+
+Fix: added `Number.isFinite(Number(x))` to the price guard at all four spots — producers.js register (write),
+updateListing (write), getPrice (read-back defense for legacy/tampered rows), and orders.js place() for both
+the client price and the authoritative price (belt-and-suspenders). NaN was already nulled (NaN > 0 is false);
+this closes +Infinity/1e999.
+
+Verified by running: reproduced the bug, applied the fix, re-ran → Infinity/1e999 price now normalises to null
+(register + updateListing), and an order given a non-finite client OR authoritative price records amount null,
+never Infinity. Extended two existing deterministic tests: test-producers.mjs (32 passed, +3 finiteness checks)
+and test-order-price-authority.mjs (14 passed, +5). Mutation-tested: reverting the guards turns exactly those
+new checks red (producers 3 fail, order 3 fail incl. "got Infinity"); restoring → green. Sibling suites still
+green: order-confirm 11, stock-guard 9, cancel-restock 12, orders-track 19, producers-schema 14. node --check
+clean on both changed files.
+
+---
+
+## 2026-08-06 — TEST/PDPA: guard the /join (ProducerJoinPage) consent funnel — was uncovered
+
+Standing-order loop. Prompted by the v9.0 finding (its affiliate-hub collects PII with NO consent gate AND
+posts to a non-existent endpoint — flagged to the owner, awaiting a decision; not touched, per point 8),
+audited the MAIN platform's consent funnels for the same class. Result: strong. All 9 /portals/* pages gate
+submit on consent (`disabled={!consent || busy}`) and portalConsent.test.js pins 6 PDPA invariants on each,
+incl. the exact "fake success on a failed submit" bug — so the main portals are bulletproof.
+
+Found one real COVERAGE gap: /join (ProducerJoinPage) is the second producer onboarding entry (the /faq itself
+tells producers to use "/portals/producer หรือ /join"), collects the same PII, and POSTs to
+/api/producers/apply (which also requires consent:true) — but portalConsent.test.js only scans *PortalPage.jsx,
+so /join was UNGUARDED. This page shipped once with NO PDPA UI at all (per its own top comment) and uses its
+own CONSENT_TEXT map (not the shared consentLabel()), so its 3-language copy can drift the way the per-page
+maps did before. Verified the page is currently correct: consent defaults false, sent in the POST body,
+checkbox bound, submit disabled without consent, 3-lang label present, and setDone(true) is gated on d.success
+(no fake success). But nothing pinned it.
+
+Added src/__tests__/producerJoinConsent.test.js — 6 structural asserts mirroring portalConsent.test.js
+(consent-state-defaults-false, consent-in-body, checkbox bound, submit disabled without consent, CONSENT_TEXT
+has th/en/zh, success screen gated on .success). Verified by running: 6/6 pass; full frontend suite 473 passed
+(was 467). Mutation-tested: dropping the `!consent` submit gate and making setDone(true) unconditional turns
+2 checks red; restoring → green. Test-only; ProducerJoinPage.jsx untouched (git diff clean).
+
+PENDING OWNER DECISION (unchanged): OpenThai-AI-v9.0 app/affiliate-hub/page.tsx posts to a non-existent
+/api/affiliate/apply (dead form) and collects name/email/phone with no PDPA consent. Options given: (ก) point
+it at the real consent-gated /portals/affiliate [recommended], (ข) build a real consent-gated endpoint
+[owner-gated build-out], (ค) hide the page until v9.0 is built out. Awaiting the owner's choice.
+
+---
+
+## 2026-08-06 — DOC: refresh OWNER-DECISIONS.md — add the v9.0 affiliate-hub finding + consent/money status
+
+Standing-order loop. Completed the consent-surface audit that motivated the /join guard: verified EVERY
+PII-collecting form on the main platform is consent-correct — 9 /portals/* (portalConsent.test.js), /join
+(producerJoinConsent.test.js, added this session), ContactPage (privacy-notice model + success-gated, not an
+opt-in list so no checkbox needed), LandingPage waitlist (res.ok && data.success gated + consent notice, the
+fake-success bug already fixed). The main platform's consent + money paths are now fully verified and guarded.
+
+No new code gap remained, so the highest-value action was keeping the owner's consolidated decision queue
+accurate (docs/OWNER-DECISIONS.md — the single place the owner acts on, per point 8). It was dated 2026-08-05
+and missing the v9.0 affiliate-hub finding I surfaced this session. Before editing, re-verified every existing
+item still matches the code: #1 double-payout (_affFromRow still `paid_out: 0`, server.js:1425 — still open),
+#3 JWT_SECRET fail-closed (auth.js:12 + server.js:1312 prod warning — accurate), #5 v9.0 (still 2 files, no
+package.json). Updated the doc: (1) snapshot date → 2026-08-06; (2) added item #6 = v9.0 affiliate-hub form
+POSTs to a non-existent /api/affiliate/apply (dead form, verified: only /api/monitor/health exists) AND
+collects name/email/phone with no PDPA consent — distinct from #5 because option (ก) [point it at the real
+consent-gated /portals/affiliate] fixes it WITHOUT the full build-out; options ก/ข/ค laid out; (3) added to
+the "done" section the NaN/Infinity money-path guards and the now-complete consent-funnel verification/guards.
+
+Verified: doc re-read, Thai intact (fixed a transient typo in the H1), item #6 + status notes render, no
+`รอเจ้าอง` typo remains. Docs-only. v9.0 itself NOT touched — still awaiting the owner's ก/ข/ค (point 8).
+
+---
+
+## 2026-08-06 — [all-platform-files] add validate-products.mjs — guard the 13 regional catalog counts
+
+Standing-order loop, in the all-platform-files repo (full detail in commit d972a7c there, since that repo has
+no DECISIONS_LOG). This round audited more of the main platform first and confirmed maturity: the seasonal
+engine (a key SEO differentiator — 24 solar terms, computed live) is correct incl. the Jan 1–5 → previous 冬至
+year-wrap and the 冬至→小寒 next-year wrap, and is well-tested (50 checks pass); the UTC vs Thai-TZ term boundary
+is a defensible choice given the term table is ±1-day approximate, so NOT changed.
+
+Picked a real unguarded invariant: all-platform-files' 13 products-<region>.json each declare a hand-maintained
+`totalProducts` and a `categories[].items[]` list, but nothing checked the header count against the actual item
+count and the repo has no build/test step — so a file could silently claim the wrong number of products
+(misleading any seed/import that trusts the header). Verified all 13 currently hold (totalProducts === items,
+consistent 4-key schema). Added validate-products.mjs (pure stdlib) pinning: valid JSON, the schema, integer
+totalProducts, every category has a name + non-empty string items[], and totalProducts === Σ items. Exit 0/1
+so it can join CI later.
+
+Verified by running: 13/13 valid (exit 0). Mutation-tested: bumping a totalProducts, and separately adding an
+item without updating the count, each make it exit 1 with a precise per-file message; restoring → exit 0.
+Pushed to all-platform-files branch (PR #1). No main-platform code touched this round.
+
+---
+
+## 2026-08-06 — [all-platform-files] wire validate-products.mjs into CI (enforce the catalog invariant)
+
+Standing-order loop. This round also re-audited smart-e's money/data paths and confirmed maturity:
+_confirm_payment (404 on missing payment, advances order pending→paid only, idempotent — 'paid' touches no
+stock), _get_dashboard_stats and _get_analytics (COALESCE null-safety, consistent status!='cancelled' filters,
+best-seller lists JOIN orders to exclude cancelled, ?days=abc handled, no server-side avg division). smart-e
+has no discount/promo logic at all, so no negative-total risk. No new bug.
+
+Follow-through on last round's validator: all-platform-files had NO CI, so validate-products.mjs only ran when
+invoked by hand. Added .github/workflows/validate.yml (mirrors openthai-ai's test.yml style — checkout@v4 +
+setup-node@v4) that runs `node validate-products.mjs` on every push and PR. Now a regional catalog whose
+totalProducts drifts from its real item count, or whose JSON/schema breaks, fails a check instead of shipping
+silently — the guard actually enforces.
+
+Verified: the workflow YAML parses (1 job, 3 steps) and the exact command it runs (node validate-products.mjs)
+exits 0 against the current 13 catalogs. Pushed to all-platform-files branch (PR #1). No main-platform code
+touched.
+
+---
+
+## 2026-08-06 — [otop-ai-landing] unify Organization JSON-LD with the main site (shared @id + contactPoint)
+
+Standing-order loop, in otop-ai-landing (full detail in commit 1814672 there — no DECISIONS_LOG in that repo).
+The landing page's remaining SEO gaps (canonical / og:url / sitemap) all still need its production domain, which
+is unconfirmed (owner-decision #4) — NOT guessed. But one real, domain-INDEPENDENT fix: the landing page emitted
+an Organization JSON-LD with the same url as the main site (www.openthai-ai.com) yet a thinner, different shape
+(no @id, no contactPoint), so a crawler saw two inconsistent entities for one brand. Added the main site's exact
+Organization @id (…/#organization) so both resolve to a single brand entity, plus the same verified email +
+ContactPoint (support@openthai.ai / areaServed TH / Thai-English-Chinese) — all copied from the main site's
+existing Organization, nothing invented, no domain dependency.
+
+Verified by running: the landing JSON-LD parses; its @id byte-matches the main site's Organization @id; the
+email matches the main site's support address (present there). Pushed to otop-ai-landing branch.
+
+---
+
+## 2026-08-07 — VERIFY: confirm PR #79 is fully mergeable after ~20 commits (+ seasonal flake investigated)
+
+Standing-order loop. With the non-gated code surface exhaustively covered over the recent rounds (money-path
+finiteness fixed + swept, consent funnel verified+guarded incl. /join, region-catalog validator+CI, landing
+Organization schema unified), this round's highest-impact action was confirming the accumulated work hasn't
+broken the branch — a hidden red would block the eventual merge that unblocks the owner-gated go-live.
+
+Ran the CI-equivalent on HEAD (c0a974c): frontend `npm test -- --run` → 473/473 pass; `node --check server.js`
+clean; backend deterministic tests incl. every file I touched this session — producers 32/0, order-price-
+authority 14/0, orders-track (exit 0), digest-match 21/0, disputes 30/0, portal-leads 20/0, credits 25/0,
+inventory 29/0, affiliate-payout (exit 0), seasonal 50/0.
+
+One investigation: test-seasonal-engine.mjs exit-1'd ONCE inside a sequential `>/dev/null` loop, then passed
+5/5 in isolation. Audited it for hidden time-dependence: every assertion uses fixed dates (D(2026,…)); the
+only "now"-fallback call (bad-date → new Date()) asserts merely that solar_term.cn is non-empty, never a
+date-specific value. So the test is deterministic and the one-off was an environmental blip, not a real
+test/engine bug — recorded here so a future transient flake is understood, not chased. No code change.
+
+---
+
+## 2026-08-07 — i18n(footer): localize the homepage "About" link (was hardcoded Thai for en/zh visitors)
+
+Standing-order loop (content/market-entry, point 2). Auditing internal linking of the key SEO/funnel routes
+found /faq and /seasonal ARE discoverable (homepage footer, LandingPage.jsx:365 — my first grep just missed
+the array-literal form), so no orphan-page gap. But the audit surfaced a real i18n bug in that same footer:
+every link label uses t('footer.link.X') EXCEPT "About", which was a hardcoded Thai literal 'เกี่ยวกับเรา'. So
+an English or Chinese visitor to the homepage — the #1 market-entry page, and the platform explicitly targets
+"คนไทยและตลาดโลก" — saw Thai text for that one footer link while every sibling localized.
+
+Fix: added footer.link.about to all three language dicts (th 'เกี่ยวกับเรา' / en 'About us' / zh '关于我们') and
+switched LandingPage.jsx to t('footer.link.about'). Verified by running: grep confirms the key in all 3 dicts;
+read() (i18n/index.jsx:950) is a plain `key in dict` lookup so each lang resolves to its own string (no more
+raw-key/Thai fallback); full frontend suite 473/473 pass (49 files — the suite renders LandingPage, so the new
+t() call is exercised at runtime); `npm run build` succeeds. Frontend-only, two files.
+
+---
+
+## 2026-08-07 — i18n(home): localize the hero "Earn" CTA + AI-skills section (were hardcoded Thai)
+
+Standing-order loop (content/market-entry, point 2). Continuing the footer-About i18n fix, scanned the
+LandingPage (#1 market-entry page, targets "คนไทยและตลาดโลก") for the same class. It calls t() 62× — clearly
+meant to be fully localized — yet a few prominent strings were hardcoded Thai, so en/zh visitors saw Thai:
+(1) the header "💸 หารายได้" (/earn) CTA, whose sibling buttons all use t('nav.*'); (2) the AI-SKILLS section
+title "ทักษะ AI ครบจบในที่เดียว" and its three stat labels "ทักษะ AI / พร้อมใช้งาน / หมวดหมู่".
+
+Added 5 keys in all three languages — nav.earn (💸 หารายได้ / 💸 Earn / 💸 赚钱) and home.skills.{title,total,
+active,categories} (e.g. en "All the AI skills in one place / AI skills / Ready to use / Categories") — and
+switched LandingPage to t() for each. Scoped to these clear outliers, not a full-page rewrite.
+
+Verified by running: each of the 5 keys present in all 3 lang dicts (grep = 3 each); the 5 hardcoded Thai
+literals gone from LandingPage (grep = 0); full frontend suite 473/473 (the suite renders LandingPage, so the
+new t() calls are exercised at runtime); npm run build succeeds. Frontend-only, two files.
+
+---
+
+## 2026-08-07 — i18n(home): localize the "Start earning ฿1,000/day" hero CTA + verify no other Thai leaks
+
+Standing-order loop (content/market-entry). Capstone of the homepage i18n pass. A source scan of JSX text
+misses strings that a real render exposes, so I wrote a throwaway render-probe test (renders LandingPage under
+LanguageProvider forced to 'en'/'zh', reads container.textContent, flags Thai codepoints U+0E00–U+0E7F). It
+caught one more hardcoded-Thai leak the earlier scans missed: the green hero CTA "💸 เริ่มหารายได้ ฿1,000/วัน",
+shown verbatim to English AND Chinese visitors.
+
+Added hero.ctaEarn in all three languages (th '💸 เริ่มหารายได้ ฿1,000/วัน' / en '💸 Start earning ฿1,000/day' /
+zh '💸 每天赚 ฿1,000') and switched LandingPage to t('hero.ctaEarn'). Re-probed: the EN and ZH homepage now
+render only two Thai fragments, both LEGITIMATE — "อ" is inside an SVG <text> (the logo glyph / brand mark)
+and "ไทย" is the language-switcher's own button label (a language picker correctly shows each language's name
+in its own script). So no incorrect Thai remains on the homepage for en/zh visitors.
+
+Verified by running: hero.ctaEarn present in all 3 dicts; the hardcoded literal is gone from LandingPage (only
+the th i18n value remains); render-probe shows no incorrect Thai in the en/zh render; full frontend suite
+473/473; npm run build succeeds. Frontend-only, two files. (This completes the LandingPage localization begun
+with the footer-About and hero/skills fixes.)
+
+---
+
+## 2026-08-07 — test(i18n): permanent render-based guard against stray Thai on the homepage for non-Thai visitors
+
+Standing-order loop (content/market-entry quality). The three homepage i18n fixes (footer About, hero/skills
+labels, the "เริ่มหารายได้" CTA) were each found only by a real render, never by a source scan — so a source-level
+drift guard would not protect them. Turned the throwaway render-probe into a permanent test:
+`frontend/src/__tests__/landingNoThaiLeak.test.jsx`. It renders LandingPage under LanguageProvider forced to
+'en' and 'zh', collects visible text while skipping any <svg> subtree, strips the ฿ currency sign, and fails if
+any Thai run (U+0E00–U+0E7F) remains — with two by-design exceptions that are NOT bug-allowlisting: the logo is
+an inline <svg> whose glyph is the Thai letter "อ" (brand art, excluded by skipping svg subtrees), and the
+language switcher shows each language's name in its own script so "ไทย" is the one permitted bare-Thai token.
+
+Verified by running: the guard passes 2/2 (en + zh) on current main; mutation test — temporarily injecting a
+hardcoded Thai <span> into LandingPage turned it RED (both langs), reverted → GREEN; full frontend suite now
+475/475 (was 473, +2 from this guard). Frontend-only, one new test file, no source changes. Now any future
+hardcoded Thai on the homepage fails CI instead of silently shipping to English/Chinese visitors.
+
+---
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -5250,14 +6108,14 @@ the test runs, which exercise runWatchdog).
 - ℹ️ **14 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql
 
 ## Recent commits
-- 555e2af fix(security): rate-limit /api/system/auto-heal (was an unthrottled public watchdog trigger) (67 minutes ago)
-- 098baaf fix(security): rate-limit the admin-credential auth endpoints + the paid TTS endpoint (2 hours ago)
-- 0afca52 docs: consolidate pending owner-decisions into one verified, current list (3 hours ago)
-- 231168c docs(env): document 3 env vars the code reads but .env.example omitted (4 hours ago)
-- dcc8d12 docs(migrations): add an owner-facing runbook to activate the durable Supabase tables (5 hours ago)
-- 51b8c7d test(contract): forbid raw fetch('/api/...') that bypasses apiUrl/apiFetch (5 hours ago)
-- 776423d test(contract): guard the whole-app frontend<->backend API contract (7 hours ago)
-- 8213ce4 test(skills): guard the AI-skills catalog against phantom-endpoint drift (8 hours ago)
+- e68e92a i18n(affiliate funnel): localize the affiliate welcome email for non-Thai creators (2 hours ago)
+- fb88f81 i18n(producer funnel): localize the producer-approval email for non-Thai producers (3 hours ago)
+- 9a0190f i18n(funnel): localize homepage skills CTA + /catalog category chips and tags (4 hours ago)
+- 059475b i18n/a11y(funnel): fix behind-interaction leaks (mk.close key + Thai network errors) (5 hours ago)
+- 09816f0 i18n(store): localize the checkout card payment option (was hardcoded Thai) (6 hours ago)
+- 6218dca a11y(find-producers): give the search box and category filter accessible names (7 hours ago)
+- 274312d i18n(about): localize the /about page for non-Thai visitors (8 hours ago)
+- a278c4a i18n(producer funnel): localize the product-category picker and tags for non-Thai visitors (9 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
@@ -5406,9 +6264,9 @@ the test runs, which exercise runWatchdog).
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
 | `dept-officers.js` | 85 | Openthai.ai — AI Department Officers (เจ้าหน้าที่ AI ประจำฝ่าย) |
-| `digest-match.js` | 22 | Pure, side-effect-free selector for the consumer category digest (sendConsumerDigest in server.js). |
+| `digest-match.js` | 52 | Pure, side-effect-free selector for the consumer category digest (sendConsumerDigest in server.js). |
 | `disputes.js` | 319 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
-| `html-escape.js` | 152 | Shared HTML-escaping for values interpolated into notification-email markup. |
+| `html-escape.js` | 237 | Shared HTML-escaping for values interpolated into notification-email markup. |
 | `integrations.js` | 259 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `line-signature.js` | 33 | Verifies a LINE webhook's X-Line-Signature (HMAC-SHA256 over the RAW request body, |
@@ -5417,20 +6275,20 @@ the test runs, which exercise runWatchdog).
 | `openapi.js` | 772 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |
 | `order-confirm.js` | 29 | Pure, side-effect-free decision helper for the BUYER order-confirmation email. |
-| `orders.js` | 223 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `orders.js` | 244 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `payment-row.js` | 29 | Payment upsert-row construction — extracted so its shape can be pinned by a test against the |
 | `pdpa-consent.js` | 25 | PDPA consent-record construction — extracted so its shape can be pinned by a test against |
-| `portal-leads.js` | 160 | Portal Leads — captures submissions from the /portals/* landing pages |
+| `portal-leads.js` | 166 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 327 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 342 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9319 | Vercel serverless detection |
+| `server.js` | 9328 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
-| `tenant-manager.js` | 278 | Each tenant (store/business) gets: |
+| `tenant-manager.js` | 289 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
@@ -5464,9 +6322,8 @@ the test runs, which exercise runWatchdog).
 - `0 9 * * *` → /api/scheduler/process
 - `0 2 * * 1` → /api/portals/consumer-digest
 
-## Environment variables (62 referenced in backend code, 62 documented in .env.example)
-⚠️ Referenced in code but missing from `backend/.env.example`:
-- OPENTHAI_DATA_DIR
+## Environment variables (62 referenced in backend code, 63 documented in .env.example)
+✅ every env var referenced in backend code is documented in `.env.example`
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.

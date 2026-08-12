@@ -5,7 +5,7 @@ import { backLabel, backAria } from './backLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 import SeasonalAnglesPanel from './SeasonalAnglesPanel';
-import { PORTAL_CATEGORIES as CATEGORIES } from '../../data/portalCategories';
+import { PORTAL_CATEGORIES as CATEGORIES, producerCategoryLabel } from '../../data/portalCategories';
 
 const T = {
   th: { title:'ทางเข้าผู้บริโภค', sub:'สมัครรับสิทธิพิเศษ ส่วนลด และสินค้าใหม่จากผู้ผลิตไทยก่อนใคร', benefits:['ส่วนลดพิเศษเฉพาะสมาชิก','แจ้งเตือนสินค้าใหม่ก่อนใคร','คำแนะนำสินค้าตรงใจด้วย AI','เข้าถึงร้านค้า/ผู้ผลิตที่ผ่านการรับรอง'], form:{ name:'ชื่อ', country:'ประเทศ', category:'หมวดสินค้าที่สนใจ', email:'อีเมล', submit:'สมัครเป็นผู้บริโภค', ok:'ยินดีต้อนรับ! เราจะแจ้งสินค้าและโปรโมชั่นที่ตรงใจให้ทางอีเมล' } },
@@ -66,7 +66,7 @@ export default function ConsumerPortalPage() {
               <div style={{ marginBottom:16 }}>
                 <label htmlFor="category" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.category}</label>
                 <select id="category" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  {CATEGORIES.map(c => <option key={c} value={c}>{producerCategoryLabel(c, lang)}</option>)}
                 </select>
               </div>
               <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:16, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>

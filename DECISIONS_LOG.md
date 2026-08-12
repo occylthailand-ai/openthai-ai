@@ -9,6 +9,40 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-12 — i18n(portal funnel): localize the category dropdown on /portals/consumer & /portals/producer
+
+Standing-order loop (consent signup funnel + market entry). Code-scan follow-up to the email-side
+audit: the two `/portals/*` signup pages — **ConsumerPortalPage** (`/portals/consumer`) and
+**ProducerPortalPage** (`/portals/producer`) — localize their title, benefits, and every form label
+by the in-page language toggle, but rendered the product-category `<select>` **options raw**:
+`{CATEGORIES.map(c => <option value={c}>{c}</option>)}`. `CATEGORIES` is `PORTAL_CATEGORIES` — the
+canonical **Thai** identifiers (OTOP, อาหาร, ความงาม, สิ่งทอ, เครื่องดื่ม, สมุนไพร, …). So an English/
+Chinese visitor who switched the page to their language still saw a dropdown of Thai gibberish for the
+one field that drives matching — and for consumers, `form_data.category` is exactly what the weekly
+digest matches on (`selectDigestMatches(catalog, category, 5)`, exact `p.category === category`). A
+non-Thai consumer who can't read the options can't reliably pick their real category → they get an
+empty/irrelevant digest. This is the same class of bug already fixed on /catalog, /join and
+/find-producers, and it sits directly on top of the digest email localization done in the prior rounds.
+
+**Fix (display-only, value unchanged — same rule as the earlier category fixes):** import
+`producerCategoryLabel` and render `<option value={c}>{producerCategoryLabel(c, lang)}</option>` on both
+pages. The option **`value` stays the canonical Thai** (the stored `form_data.category` and the digest
+match are byte-for-byte unchanged); only the visible label localizes (th/en/zh via the existing
+`CATEGORY_LABELS` map). No backend change, no data-model change.
+
+**Why the leak survived:** the existing `producerFunnelNoThaiLeak` guard only renders `/join` and
+`/find-producers` — it never mounted the `/portals/*` pages, which are a separate signup path with
+their own in-page language toggle (local `useState`, not `LanguageProvider`). Added a new permanent
+guard `frontend/src/__tests__/portalCategoryNoThaiLeak.test.jsx`: renders each portal page, clicks the
+English/中文 toggle, and fails on any Thai run (U+0E00–U+0E7F) left in the DOM outside `<svg>` (only
+"ไทย", the toggle's own button label, is allowed). SeasonalAnglesPanel's fetch is rejected in the stub
+so the additive panel renders null and can't inject unrelated Thai. Mutation-verified: reverting one
+page to `{c}` turns the guard RED (leaks the 11 raw Thai category names), restoring turns it GREEN.
+
+**Verified by running:** new guard 4/4; full frontend suite **495/495** (was 491, +4); `vite build`
+clean. No server change, so no backend re-run needed. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79, existing — no new PR).
+
 ## 2026-08-09 — i18n(affiliate funnel): localize the affiliate welcome email (was Thai-only for en/zh creators)
 
 Standing-order loop (consent signup funnel + market entry). Continuing the email-side audit from the

@@ -4,7 +4,7 @@ import { benefitsTitle } from './sectionTitle';
 import { backLabel, backAria } from './backLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
-import { PORTAL_CATEGORIES as CATEGORIES } from '../../data/portalCategories';
+import { PORTAL_CATEGORIES as CATEGORIES, producerCategoryLabel } from '../../data/portalCategories';
 import SeasonalAnglesPanel from './SeasonalAnglesPanel';
 
 const T = {
@@ -66,7 +66,7 @@ export default function ProducerPortalPage() {
               <div style={{ marginBottom:16 }}>
                 <label htmlFor="category" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.category}</label>
                 <select id="category" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  {CATEGORIES.map(c => <option key={c} value={c}>{producerCategoryLabel(c, lang)}</option>)}
                 </select>
               </div>
               {[['email',t.form.email],['phone',t.form.phone]].map(([k,label]) => (
