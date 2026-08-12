@@ -9,6 +9,41 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — i18n(affiliate funnel): localize the affiliate welcome email (was Thai-only for en/zh creators)
+
+Standing-order loop (consent signup funnel + market entry). Continuing the email-side audit from the
+producer-approval fix: the **affiliate welcome email** (`sendAffiliateWelcome` → `affiliateWelcomeHtml`)
+was **Thai-only** — hardcoded Thai subject ("🎉 ยินดีต้อนรับสู่ Openthai.ai Affiliate Program!") and a
+fully Thai body (ยินดีด้วย, คุณเป็น Affiliate…, REF CODE ของคุณ, Affiliate Link ของคุณ, Commission เริ่มต้น,
+ทุกจันทร์/จ่ายเงิน, สูงสุด Elite, เปิด Dashboard ของฉัน). It's sent the moment someone joins from
+/affiliate, so a creator who applied in English/Chinese got a fully Thai welcome — affiliate is in the
+standing order's funnel scope.
+
+Same end-to-end gap as the producer email: /affiliate never sent `lang`, `registerAffiliateCore` never
+took/stored it, and the builder/subject had no language branch. Fixed the whole chain:
+- `frontend/src/pages/AffiliatePage.jsx` — the apply POST now sends `lang` (from useLang).
+- `backend/server.js` — `registerAffiliateCore` destructures `lang` → `safeLang` (whitelist th/en/zh,
+  default th), stores it on the affiliate record, and passes it to `sendAffiliateWelcome(...)`, which
+  localizes the subject via `affiliateWelcomeSubject(lang)`. The portal-lead→affiliate auto-register
+  path also forwards `lead.lang`.
+- `backend/html-escape.js` — `affiliateWelcomeHtml({…, lang})` + new `affiliateWelcomeSubject(lang)`
+  built from an `AFFILIATE_WELCOME_COPY` map (th/en/zh; unknown → th). The applicant-name escaping is
+  unchanged (still escaped before interpolation).
+
+**Verified by running (standing-order #4) + mutation-tested earlier for the sibling builder:**
+- `test-html-escape.mjs` 50 → **57**: en welcome uses English copy with **no** Thai codepoints; en/zh
+  subjects are English/Chinese; th unchanged; unknown/missing → th.
+- **End-to-end** (booted server, file mode): POST /api/affiliate/apply with `lang:'en'` persists
+  `record.lang === 'en'`; a no-lang apply persists `'th'` — proving the frontend→register→store→email
+  wiring. The full affiliate-flow E2E (`test-affiliate-flow.mjs`, the sales/commission/tier path) still
+  passes **28/0** against a booted server. (`npm run test:affiliate` standalone shows ECONNREFUSED
+  because that E2E needs a live server on :8000 — CI boots one on :8897; not a code failure.)
+- Full frontend suite **491/491**, `npm run build` ok; server boots & `/api/health` → 200;
+  `node --check` clean on the edited backend files.
+
+---
+
+
 ## 2026-08-09 — i18n(producer funnel): localize the producer-approval email (was Thai-only for en/zh producers)
 
 Standing-order loop (consent signup funnel + market entry). Auditing the funnel's EMAIL side (which no

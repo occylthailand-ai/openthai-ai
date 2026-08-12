@@ -42,7 +42,7 @@ import { createDisputes } from './disputes.js';
 import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
-import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml, producerApprovalHtml, producerApprovalSubject } from './html-escape.js';
+import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, affiliateWelcomeSubject, consumerDigestHtml, producerApprovalHtml, producerApprovalSubject } from './html-escape.js';
 import { parseAIJson } from './ai-json.js';
 import { buildConsentRecord } from './pdpa-consent.js';
 import { buildPaymentRow } from './payment-row.js';
@@ -894,14 +894,14 @@ const mailer = process.env.SMTP_USER
     })
   : null;
 
-async function sendAffiliateWelcome(to, name, refCode, refLink) {
+async function sendAffiliateWelcome(to, name, refCode, refLink, lang) {
   if (!mailer) return;
   try {
     await mailer.sendMail({
       from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
       to,
-      subject: '🎉 ยินดีต้อนรับสู่ Openthai.ai Affiliate Program!',
-      html: affiliateWelcomeHtml({ name, refCode, refLink, domainUrl: DOMAIN_URL }),
+      subject: affiliateWelcomeSubject(lang),
+      html: affiliateWelcomeHtml({ name, refCode, refLink, domainUrl: DOMAIN_URL, lang }),
     });
     console.log(`📧 Welcome email ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
@@ -1375,7 +1375,7 @@ async function handleNewPortalLead(lead) {
     } else if (lead.type === 'affiliate') {
       // lead มาถึงตรงนี้ได้แปลว่า portal-leads.js's submit() บังคับ consent:true ไปแล้ว —
       // ส่งต่อความยินยอมที่ยืนยันแล้วนี้ ไม่ใช่การเลี่ยงเช็คใน registerAffiliateCore() ด้านบน
-      const r = await registerAffiliateCore({ name: fd.name, email: lead.email, platform: fd.platform, consent: true });
+      const r = await registerAffiliateCore({ name: fd.name, email: lead.email, platform: fd.platform, consent: true, lang: lead.lang });
       if (r.ok) console.log(`✅ Portal lead (affiliate) auto-registered เป็น affiliate จริง: ${lead.email} — Ref: ${r.record.ref_code}`);
       else console.warn(`[portal-leads] affiliate auto-register ไม่ผ่าน: ${r.message}`);
     }
@@ -1466,7 +1466,8 @@ async function saveAffiliate(record) {
 // บังคับ consent:true เช่นเดียวกัน ฝั่ง handleNewPortalLead ส่งต่อ consent:true ที่ verify แล้ว
 // จาก portal-leads.js ตั้งแต่ต้นทาง ไม่ใช่การเลี่ยงเช็ค
 async function registerAffiliateCore(input) {
-  const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link, consent } = input || {};
+  const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link, consent, lang } = input || {};
+  const safeLang = ['th', 'en', 'zh'].includes(lang) ? lang : 'th';
   if (consent !== true) return { ok: false, status: 400, message: 'ต้องยินยอมตามนโยบายความเป็นส่วนตัว (PDPA) ก่อนส่งข้อมูล' };
   if (!name || !email) return { ok: false, status: 400, message: 'ต้องการชื่อและอีเมล' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -1503,6 +1504,7 @@ async function registerAffiliateCore(input) {
     ref_code: finalCode,
     ref_link: ref_link || `${DOMAIN_URL}/?ref=${encodeURIComponent(finalCode)}`,
     consent: true,
+    lang: safeLang,
     tier: 'starter',
     commission_rate: 0.20,
     total_sales: 0,
@@ -1515,7 +1517,7 @@ async function registerAffiliateCore(input) {
   await saveAffiliate(record);
   console.log(`✅ Affiliate สมัครใหม่: ${name} (${safeEmail}) — Ref: ${record.ref_code}`);
 
-  sendAffiliateWelcome(safeEmail, name, record.ref_code, record.ref_link);
+  sendAffiliateWelcome(safeEmail, name, record.ref_code, record.ref_link, safeLang);
   webhooks.dispatch('affiliate.joined', { name, ref_code: record.ref_code, platform: record.platform });
 
   return { ok: true, record };

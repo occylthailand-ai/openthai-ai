@@ -92,7 +92,7 @@ export default function AffiliatePage() {
       try {
         const res = await fetch(apiUrl('/api/affiliate/apply'), {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, ref_code: code, ref_link: link, consent }),
+          body: JSON.stringify({ ...form, ref_code: code, ref_link: link, consent, lang }),
         });
         if (!res.ok && res.status === 409) toast.warn(T.toast.dup);
         else if (res.ok) {

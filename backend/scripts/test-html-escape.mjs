@@ -5,7 +5,7 @@
 // which an UNCLOSED `<` bypasses (`<img src=x onerror=alert(1)` has no `>`), so the raw
 // opener reaches the email HTML and completes against the template's next `>` — injecting a
 // live tag into the recipient's mail client. escapeHtml at the insertion point is what stops it.
-import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, consumerDigestHtml, producerApprovalHtml, producerApprovalSubject } from '../html-escape.js';
+import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, affiliateWelcomeSubject, consumerDigestHtml, producerApprovalHtml, producerApprovalSubject } from '../html-escape.js';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
@@ -118,6 +118,19 @@ ok(zhApproval.includes('管理我的产品') && zhApproval.includes('已通过�
 ok(producerApprovalSubject('zh').includes('已通过审核'), 'zh subject is Chinese');
 ok(producerApprovalSubject('th') === producerApprovalSubject(undefined) && producerApprovalSubject('xx') === producerApprovalSubject('th'), 'missing/unknown lang falls back to the Thai subject');
 ok(THAI.test(producerApprovalHtml({ to: 'a@b.com', company: 'ACME', domainUrl: 'https://d', lang: 'th' })), 'th approval email is still Thai (default behaviour preserved)');
+
+// Affiliate welcome email — same localization contract (sent immediately when someone joins the
+// affiliate program; was Thai-only subject + body before).
+console.log('\n=== affiliateWelcomeHtml/Subject: localized by the applicant\'s language ===');
+const enAff2 = affiliateWelcomeHtml({ name: 'John', refCode: 'AFF1', refLink: 'https://d/?ref=AFF1', domainUrl: 'https://d', lang: 'en' });
+ok(enAff2.includes('Open my dashboard') && enAff2.includes('Your affiliate link') && enAff2.includes("You're now an Openthai.ai Affiliate"), 'en affiliate welcome uses English copy');
+ok(!THAI.test(enAff2), 'en affiliate welcome contains NO Thai characters');
+ok(affiliateWelcomeSubject('en') === '🎉 Welcome to the Openthai.ai Affiliate Program!', 'en affiliate subject is English');
+const zhAff2 = affiliateWelcomeHtml({ name: '李', refCode: 'AFF2', refLink: 'https://d/?ref=AFF2', domainUrl: 'https://d', lang: 'zh' });
+ok(zhAff2.includes('打开我的仪表板') && zhAff2.includes('您的推荐码'), 'zh affiliate welcome uses Chinese copy');
+ok(affiliateWelcomeSubject('zh').includes('联盟计划'), 'zh affiliate subject is Chinese');
+ok(affiliateWelcomeSubject('xx') === affiliateWelcomeSubject('th') && affiliateWelcomeSubject(undefined) === affiliateWelcomeSubject('th'), 'unknown/missing affiliate lang falls back to Thai subject');
+ok(THAI.test(affiliateWelcomeHtml({ name: 'A', refCode: 'X', refLink: 'https://d', domainUrl: 'https://d', lang: 'th' })), 'th affiliate welcome is still Thai (default behaviour preserved)');
 
 console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
 process.exit(fail ? 1 : 0);
