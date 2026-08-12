@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../i18n';
 import LandingPage from '../pages/LandingPage';
@@ -29,11 +29,15 @@ function textOutsideSvg(node) {
   return out;
 }
 
-function thaiRuns(lang) {
+async function thaiRuns(lang) {
   vi.spyOn(Storage.prototype, 'getItem').mockImplementation((k) => (k === 'otai_lang' ? lang : null));
   const { container, unmount } = render(
     <LanguageProvider><MemoryRouter><LandingPage /></MemoryRouter></LanguageProvider>,
   );
+  // Wait for the /api/skills fetch to resolve so the AI-skills section — including its
+  // "See all skills →" CTA, which used to be hardcoded Thai — actually renders before we scan.
+  // (Reading synchronously would miss anything gated on that async load.)
+  await waitFor(() => expect(container.textContent).toMatch(/18/));
   const text = textOutsideSvg(container).replace(/฿/g, ''); // ฿ (Baht sign) is a currency symbol, not text
   const runs = [...new Set((text.match(/[฀-๿]+/g) || []))];
   unmount();
@@ -43,14 +47,15 @@ function thaiRuns(lang) {
 
 describe('homepage shows no stray Thai to non-Thai visitors', () => {
   beforeEach(() => {
-    // LandingPage fetches /api/skills on mount; keep it from throwing in jsdom.
-    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: true, total: 18, active: 18, categories: ['a', 'b'] }) })));
+    // LandingPage fetches /api/skills on mount; return a realistic payload (incl. a skills list) so
+    // the whole AI-skills section renders — English-safe values so any Thai found is a real leak.
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ success: true, total: 18, active: 18, categories: ['content', 'sales'], skills: [{ id: 'S1', name: 'Caption Writer' }] }) })));
   });
   afterEach(() => { vi.unstubAllGlobals(); });
 
   for (const lang of ['en', 'zh']) {
-    it(`renders no un-localized Thai in the "${lang}" UI`, () => {
-      const leaks = thaiRuns(lang);
+    it(`renders no un-localized Thai in the "${lang}" UI`, async () => {
+      const leaks = await thaiRuns(lang);
       expect(leaks, `un-localized Thai leaked into the ${lang} homepage: ${JSON.stringify(leaks)}`).toEqual([]);
     });
   }

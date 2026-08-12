@@ -9,6 +9,36 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — i18n(funnel): localize the homepage skills CTA + the /catalog category chips/tags (+ strengthen the landing guard)
+
+Standing-order loop (market entry). Cleared the two behind-interaction leaks flagged as follow-up last
+round, plus a third the fix surfaced:
+1. **LandingPage** — the AI-skills section CTA was hardcoded `ดูทักษะทั้งหมด →`. It renders only after
+   /api/skills resolves, and the landing Thai-leak guard read `textContent` synchronously (before that
+   async load), so it never saw the button — the leak shipped past a green guard.
+2. **CatalogPage** — the product-card category was `{p.category || 'สินค้าไทย'}` (raw Thai value +
+   Thai fallback), AND the category filter chips rendered the raw value `{c}`. Both show the Thai
+   PORTAL_CATEGORIES identifier to every visitor.
+
+**Change (frontend; values unchanged, display localized):**
+- `LandingPage.jsx` — CTA → `{t('home.skills.viewAll')} →`; added `home.skills.viewAll` (th/en/zh).
+- `CatalogPage.jsx` — imports `producerCategoryLabel`, destructures `lang`; the card tag →
+  `p.category ? producerCategoryLabel(p.category, lang) : t('mk.find.thaiProduct')` and the filter
+  chips → `producerCategoryLabel(c, lang)`. The stored/filter value stays the Thai identifier.
+- Strengthened `landingNoThaiLeak.test.jsx`: it now `await`s the /api/skills fetch (stub includes a
+  skills list) before scanning, so the whole AI-skills section — including the CTA — is covered.
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- Landing guard **2/2** (now with waitFor). **Mutation:** reverting the CTA to hardcoded Thai turns
+  **both** red — proving the strengthened guard reaches the async section (the old sync guard would
+  have stayed green). Restored.
+- `catalogOrderA11y.test.jsx` 2 → **3**: a new en test asserts the card + chip show "Herbs"
+  (getAllByText) with no raw "สมุนไพร". (This test is what surfaced the filter-chip leak.)
+- Full frontend suite **491/491** (was 490, +1), `npm run build` ok. Frontend-only.
+
+---
+
+
 ## 2026-08-09 — i18n/a11y(funnel): fix behind-interaction leaks — the modal close button rendered "mk.close", + Thai network errors
 
 Standing-order loop (consent funnel / accessible platform). Systematic scan of the localized funnel

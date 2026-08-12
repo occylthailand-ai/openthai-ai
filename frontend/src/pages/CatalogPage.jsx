@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
+import { producerCategoryLabel } from '../data/portalCategories';
 import { useDialog } from '../hooks/useDialog';
 
 export default function CatalogPage() {
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [products, setProducts] = useState(null);
   const [order, setOrder] = useState(null);
   const [query, setQuery] = useState('');
@@ -69,7 +70,7 @@ export default function CatalogPage() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   <button onClick={() => setCat('all')} aria-pressed={cat === 'all'} style={chip(cat === 'all')}>{t('mk.cat.allcat')}</button>
                   {categories.map((c) => (
-                    <button key={c} onClick={() => setCat(c)} aria-pressed={cat === c} style={chip(cat === c)}>{c}</button>
+                    <button key={c} onClick={() => setCat(c)} aria-pressed={cat === c} style={chip(cat === c)}>{producerCategoryLabel(c, lang)}</button>
                   ))}
                 </div>
               )}
@@ -87,7 +88,7 @@ export default function CatalogPage() {
               const soldOut = p.stock != null && Number(p.stock) <= 0;
               return (
               <div key={p.email + i} style={{ ...card, display: 'flex', flexDirection: 'column', opacity: soldOut ? 0.65 : 1 }}>
-                <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category || 'สินค้าไทย'}</div>
+                <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category ? producerCategoryLabel(p.category, lang) : t('mk.find.thaiProduct')}</div>
                 <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{p.product_name}</div>
                 <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>{t('mk.cat.by')} {p.producer}</div>
                 {p.description && <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, marginBottom: 12, flex: 1 }}>{p.description}</div>}

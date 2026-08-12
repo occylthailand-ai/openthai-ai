@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { LanguageProvider } from '../i18n';
 import CatalogPage from '../pages/CatalogPage';
 
 // A11y regression: the catalog order form (the checkout the whole funnel drives to) rendered a
@@ -61,5 +62,19 @@ describe('CatalogPage order form accessibility', () => {
     // the confirmed total on the success screen reflects the SERVER's 600 (would be the client-side
     // 120 × 1 if the page showed its own guess — so ฿600 appearing proves the server amount is used)
     expect(screen.getByText(/รวม\s*฿\s*600/)).toBeTruthy();
+  });
+
+  // i18n: the product-card category tag was `{p.category || 'สินค้าไทย'}` — the raw Thai category
+  // value (and Thai fallback), shown to every visitor. The value is the canonical identifier, so the
+  // fix localizes the DISPLAY via producerCategoryLabel(). This product's category is 'สมุนไพร'.
+  it('localizes the product-card category for a non-Thai visitor (no raw Thai)', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation((k) => (k === 'otai_lang' ? 'en' : null));
+    mockCatalog([PRODUCT]);
+    render(<LanguageProvider><MemoryRouter><CatalogPage /></MemoryRouter></LanguageProvider>);
+    await waitFor(() => expect(screen.getByText('สบู่สมุนไพร')).toBeTruthy()); // product_name is data, not localized
+    // the category shows the localized label "Herbs" (on the card AND the filter chip), never the raw
+    // Thai value "สมุนไพร"
+    expect(screen.getAllByText('Herbs').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('สมุนไพร')).toBeNull();
   });
 });
