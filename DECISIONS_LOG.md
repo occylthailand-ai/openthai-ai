@@ -9,6 +9,34 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — i18n(store): the checkout card payment option was hardcoded Thai for non-Thai buyers
+
+Standing-order loop (consent funnel / market entry). Auditing the commerce checkout controls (a11y
+pass) surfaced a Thai leak the earlier render-probe missed: StorePage's payment-method `<select>` had
+its card option hardcoded as `💳 บัตรเครดิต/เดบิต`. The checkout form only renders after a product is
+picked, so the page-level Thai-leak probe (which renders with no product selected) never reached it —
+an English/Chinese buyer saw a Thai payment option **at the money step** of the first-party store.
+
+**Change (frontend):**
+- `StorePage.jsx` — the card `<option>` now renders `💳 {t('mk.store.method.card')}` (PromptPay stays
+  as-is, a proper noun).
+- `src/i18n/index.jsx` — new `mk.store.method.card` in th/en/zh (บัตรเครดิต/เดบิต · Credit/Debit card
+  · 信用卡/借记卡), beside the existing `mk.store.method` label.
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- Extended `storeOrderA11y.test.jsx` 2 → **3**: a new test forces lang=en, opens the buy modal, and
+  asserts the card option resolves as "Credit/Debit card" (getByRole option) with no Thai `บัตรเครดิต`
+  text. **Mutation:** reverting the option to the Thai literal turns it **red**; restored. Full
+  frontend suite **489/489** (was 488, +1), `npm run build` ok. Frontend-only, checkout behaviour
+  unchanged (the option value stays "card").
+
+Aside (verified, no change needed): the rest of the commerce checkout is already accessible + localized
+— /catalog and /store order forms each associate every input with a <label htmlFor>, /catalog search
+carries an aria-label, and both order flows use t() everywhere else.
+
+---
+
+
 ## 2026-08-09 — a11y(find-producers): give the search box + category filter accessible names
 
 Standing-order loop (accessible platform — CLAUDE.md standing priority). Audited form-control

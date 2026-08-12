@@ -114,7 +114,7 @@ export function BuyModal({ product, t, onClose }) {
             <label htmlFor="store-qty" style={lab}>{t('mk.ord.qty')}</label><input id="store-qty" style={inp} type="number" min="1" value={form.qty} onChange={set('qty')} />
             <label htmlFor="store-address" style={lab}>{t('mk.ord.address')}</label><textarea id="store-address" style={{ ...inp, minHeight: 48, resize: 'vertical' }} value={form.address} onChange={set('address')} placeholder={t('mk.ord.address.ph')} />
             <label htmlFor="store-method" style={lab}>{t('mk.store.method')}</label>
-            <select id="store-method" style={inp} value={form.method} onChange={set('method')}><option value="promptpay">📱 PromptPay</option><option value="card">💳 บัตรเครดิต/เดบิต</option></select>
+            <select id="store-method" style={inp} value={form.method} onChange={set('method')}><option value="promptpay">📱 PromptPay</option><option value="card">💳 {t('mk.store.method.card')}</option></select>
             <div style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', margin: '10px 0' }}>{t('mk.ord.total')} ฿{total.toLocaleString('th-TH')}</div>
             {err && <div style={{ color: '#fca5a5', fontSize: 13, marginBottom: 8 }}>⚠️ {err}</div>}
             <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', opacity: busy ? 0.7 : 1 }}>{busy ? '...' : `💳 ${t('mk.store.buy')}`}</button>

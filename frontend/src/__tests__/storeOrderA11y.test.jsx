@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { LanguageProvider } from '../i18n';
 import StorePage from '../pages/StorePage';
 
 // A11y regression for the public /store checkout (BuyModal): every field rendered a visible <label>
@@ -65,5 +66,20 @@ describe('StorePage BuyModal accessibility', () => {
     expect(screen.queryByText('ชำระเงินสำเร็จ!')).toBeNull();
     // the backend's refund explanation is surfaced to the customer
     expect(screen.getByText(/ทีมงานจะติดต่อคืนเงิน/)).toBeTruthy();
+  });
+
+  // i18n: the checkout payment-method <select> had the card option hardcoded as Thai
+  // ("💳 บัตรเครดิต/เดบิต"). The form only appears after picking a product, so the page's Thai-leak
+  // probe (which renders with no product) never reached it — an en/zh buyer saw a Thai payment option
+  // at the money step. The card option must now follow the page language.
+  it('localizes the card payment option (no hardcoded Thai) for a non-Thai buyer', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation((k) => (k === 'otai_lang' ? 'en' : null));
+    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ products: [PRODUCT] }) }));
+    render(<LanguageProvider><MemoryRouter><StorePage /></MemoryRouter></LanguageProvider>);
+    await waitFor(() => expect(screen.getByText('ผ้าไหมทอมือ')).toBeTruthy());
+    fireEvent.click(screen.getByRole('button', { name: 'Buy now' })); // en label for the card's buy button
+    // the card option is the localized label, and the old Thai literal is gone
+    expect(screen.getByRole('option', { name: /Credit\/Debit card/ })).toBeTruthy();
+    expect(screen.queryByText(/บัตรเครดิต/)).toBeNull();
   });
 });
