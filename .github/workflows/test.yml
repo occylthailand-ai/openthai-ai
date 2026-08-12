@@ -116,6 +116,9 @@ jobs:
       - name: Webhook idempotency test (self-contained — payment.completed fires once per redelivered charge.complete)
         working-directory: backend
         run: npm run test:webhook-idempotent
+      - name: Shop PromptPay commission test (self-contained — charge.complete webhook credits the affiliate once, idempotent)
+        working-directory: backend
+        run: npm run test:shop-commission-promptpay
       - name: Integrations auth test (self-contained — publish/test require the admin key)
         working-directory: backend
         run: npm run test:integrations-auth

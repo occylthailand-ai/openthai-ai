@@ -9,6 +9,34 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-12 — test(affiliate): pin the PromptPay-webhook shop-commission path (was untested — silent commission loss risk)
+
+Standing-order loop (affiliate funnel = market entry). Traced the affiliate-attribution flow end to end
+and found it CORRECT but with a coverage gap on its highest-value branch. `?ref=CODE` → `otai_ref`
+(captured by `lib/affiliateRef.js`, tested) → StorePage forwards it → `/api/shop/checkout` sets
+`channel = "ref:<CODE>"`. For a CARD sale the commission is credited synchronously in `finalizePaid`,
+and `test-shop-commission.mjs` guards that. But for **PromptPay** — Thailand's dominant method — the
+sale is paid LATER: checkout only creates the `new` order + QR, and the commission is credited when
+Omise POSTs a signed `charge.complete` to `/api/payment/webhook`, which recovers the ref from the
+charge's `metadata.channel`, guards on `order.status==='new'` (idempotency + oversold), and runs in an
+async block (server.js ~8384–8421). That deferred path — the more fragile one, on the more common
+payment method — had **no test**: a refactor breaking it would silently drop commission on most real
+Thai sales, and affiliates would quietly stop promoting.
+
+Added `backend/scripts/test-shop-commission-promptpay.mjs` (self-contained: spawns its own server in
+mock-payment mode with `OMISE_WEBHOOK_SECRET` set and `OPENTHAI_DATA_DIR` at a throwaway dir; posts a
+real HMAC-signed `charge.complete` whose metadata carries the same order_id/product_id/qty/channel the
+live Omise charge would). It pins the whole lifecycle: (1) affiliate NOT credited at checkout time
+(before payment), (2) credited exactly once when the webhook fires (฿1000 × 0.20 = ฿200), (3) a
+redelivered webhook does NOT double-credit (Omise is at-least-once; guarded by status==='new'),
+(4) a ref-less PromptPay order credits nobody. Wired into `package.json`
+(`test:shop-commission-promptpay`) and `.github/workflows/test.yml` beside the webhook-idempotency step.
+
+**No production code changed** — the path was already correct; this is a pure regression net for it.
+**Verified by running:** 12/12 pass. Mutation-checked: neutralising the webhook's
+`creditAffiliateSale` call turns it RED (total_sales 0 / earned 0, 4 assertions fail); restoring →
+12/12 green. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` (PR #79, existing).
+
 ## 2026-08-12 — i18n(portal funnel): finish the funnel sweep — GovThai MOU box + full 10-page guard
 
 Standing-order loop. Extended the render-probe from the six main funnel pages to the four remaining

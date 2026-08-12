@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-12T16:23:04.552Z · branch `claude/daily-reporter-improvements-8vc9ct` (643 commit(s) ahead of main)
+Generated: 2026-08-12T18:12:52.555Z · branch `claude/daily-reporter-improvements-8vc9ct` (646 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 717 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 720 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,107 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+## 2026-08-12 — i18n(portal funnel): finish the funnel sweep — GovThai MOU box + full 10-page guard
+
+Standing-order loop. Extended the render-probe from the six main funnel pages to the four remaining
+formal ones — the Thai-government, foreign-government, international-organization and foundation
+portals (all submit consent leads, all part of the /portals/* funnel). Three probed clean; one real
+leak on the highest-stakes page:
+
+- **GovThaiPortalPage** (`/portals/gov-thai`): the "MOU / บันทึกความเข้าใจ" box title and its body
+  ("OpenThai.ai พร้อมลงนาม MOU กับหน่วยงานรัฐทุกระดับ") were hardcoded Thai literals outside the T
+  dict, so an English-reading Thai-government official saw one Thai block sitting among otherwise
+  English content — on the page whose whole audience is formal agencies. → added `mouTitle` / `mouBody`
+  to both th and en and referenced them. (This portal is intentionally **th/en only** — no Chinese
+  toggle — since its audience is Thai officials; left as-is, not expanded.)
+
+- GovIntlPortalPage, IntlOrgPortalPage, FoundationPortalPage probed clean in en + zh.
+
+**Guard now covers the entire funnel (10 pages).** Rewrote `portalFunnelNoThaiLeak.test.jsx` to drive
+each page by the non-Thai languages it *actually offers* — a per-page declared list is the single place
+that intent lives (e.g. GovThai = English only; every other portal = en + zh). Render each page, click
+each offered non-Thai toggle, fail on any Thai run (U+0E00–U+0E7F) outside `<svg>` (only the toggle's
+own "ไทย" allowed; ฿ stripped as script-neutral). 19 assertions across the 10 funnel pages.
+Mutation-verified: reverting the GovThai MOU fix turns the guard RED (the exact leaked strings),
+restoring turns it GREEN.
+
+**Verified by running:** funnel guard 19/19; full frontend suite **510/510** (was 503); `vite build`
+clean. Pure frontend/display change — no backend, no data-model. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79, existing — no new PR). This closes the stray-Thai
+audit of the consent-signup funnel: all 10 funnel pages now have a permanent regression net.
+
+Also verified healthy this round (no change needed, checked against real code/running server): the
+`/api/seasonal/angles` value panel returns correct data in th/en/zh; the consumer-digest category
+match uses strict canonical-value equality (the display-only category fix preserved it); all 8 portal
+welcome-email types are localized th/en/zh; robots.txt/sitemap/JSON-LD @graph/PWA manifest/og-image
+are all present and internally consistent.
+
+## 2026-08-12 — i18n(portal funnel): sweep the WHOLE consent-signup funnel for stray Thai (hub + middleman + affiliate)
+
+Standing-order loop (consent signup funnel = the platform's main onboarding path). After the
+category-dropdown fix I wrote a throwaway render-probe over every funnel page — the /portals hub +
+all six self-signup portals, each switched to en/zh — to see whether the same class of leak (Thai
+literals living OUTSIDE the page's th/en/zh dict) existed elsewhere. It did, on three more pages:
+
+- **PortalHubPage** (`/portals`, the funnel entry): the "← หน้าหลัก" back button, the locked
+  "🔒 ยังไม่เปิดใช้งาน" badge, and the locked "🔒 เปิดเมื่อกำไรสะสม > 10M ฿" line were bare Thai
+  literals in the JSX, never in the LANG dict. → added `back` / `lockedBadge` / `lockedCta` to all
+  three langs and referenced them.
+- **MiddlemanPortalPage** (`/portals/middleman`): the business-type `<select>` options
+  (ตัวแทนจำหน่าย / ผู้ค้าส่ง / นายหน้า / ตัวแทนขายต่อ / อื่นๆ) were a Thai-only array. Converted to
+  `{ value, th, en, zh }` objects — the option **`value` (the string stored on the lead) is
+  unchanged**, only the visible label localizes, same rule as the category fix.
+- **AffiliatePortalPage** (`/portals/affiliate`): the "ยอดขาย {min}+" (sales) caption under each
+  commission tier. → added a `salesLabel` key per lang.
+
+ProducerPortalPage, ConsumerPortalPage (already fixed) and CreatorPortalPage probed clean.
+
+**Guard consolidation:** replaced the narrower `portalCategoryNoThaiLeak.test.jsx` with
+`portalFunnelNoThaiLeak.test.jsx`, which now renders all six funnel pages, clicks the en/中文 toggle,
+and fails on any Thai run (U+0E00–U+0E7F) outside `<svg>` (only the toggle's own "ไทย" allowed; ฿ is
+stripped as script-neutral). This is the permanent regression net for the entire signup funnel, not
+just the category selects. Mutation-verified: reverting each of the three fixes turns the guard RED
+(the exact leaked strings), restoring turns it GREEN.
+
+**Verified by running:** funnel guard 12/12; full frontend suite **503/503** (was 495); `vite build`
+clean. Pure frontend/display change — no backend, no data-model, no stored-value change (every option
+`value` is byte-for-byte identical), so no server re-run needed. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79, existing — no new PR).
+
+## 2026-08-12 — i18n(portal funnel): localize the category dropdown on /portals/consumer & /portals/producer
+
+Standing-order loop (consent signup funnel + market entry). Code-scan follow-up to the email-side
+audit: the two `/portals/*` signup pages — **ConsumerPortalPage** (`/portals/consumer`) and
+**ProducerPortalPage** (`/portals/producer`) — localize their title, benefits, and every form label
+by the in-page language toggle, but rendered the product-category `<select>` **options raw**:
+`{CATEGORIES.map(c => <option value={c}>{c}</option>)}`. `CATEGORIES` is `PORTAL_CATEGORIES` — the
+canonical **Thai** identifiers (OTOP, อาหาร, ความงาม, สิ่งทอ, เครื่องดื่ม, สมุนไพร, …). So an English/
+Chinese visitor who switched the page to their language still saw a dropdown of Thai gibberish for the
+one field that drives matching — and for consumers, `form_data.category` is exactly what the weekly
+digest matches on (`selectDigestMatches(catalog, category, 5)`, exact `p.category === category`). A
+non-Thai consumer who can't read the options can't reliably pick their real category → they get an
+empty/irrelevant digest. This is the same class of bug already fixed on /catalog, /join and
+/find-producers, and it sits directly on top of the digest email localization done in the prior rounds.
+
+**Fix (display-only, value unchanged — same rule as the earlier category fixes):** import
+`producerCategoryLabel` and render `<option value={c}>{producerCategoryLabel(c, lang)}</option>` on both
+pages. The option **`value` stays the canonical Thai** (the stored `form_data.category` and the digest
+match are byte-for-byte unchanged); only the visible label localizes (th/en/zh via the existing
+`CATEGORY_LABELS` map). No backend change, no data-model change.
+
+**Why the leak survived:** the existing `producerFunnelNoThaiLeak` guard only renders `/join` and
+`/find-producers` — it never mounted the `/portals/*` pages, which are a separate signup path with
+their own in-page language toggle (local `useState`, not `LanguageProvider`). Added a new permanent
+guard `frontend/src/__tests__/portalCategoryNoThaiLeak.test.jsx`: renders each portal page, clicks the
+English/中文 toggle, and fails on any Thai run (U+0E00–U+0E7F) left in the DOM outside `<svg>` (only
+"ไทย", the toggle's own button label, is allowed). SeasonalAnglesPanel's fetch is rejected in the stub
+so the additive panel renders null and can't inject unrelated Thai. Mutation-verified: reverting one
+page to `{c}` turns the guard RED (leaks the 11 raw Thai category names), restoring turns it GREEN.
+
+**Verified by running:** new guard 4/4; full frontend suite **495/495** (was 491, +4); `vite build`
+clean. No server change, so no backend re-run needed. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79, existing — no new PR).
 
 ## 2026-08-09 — i18n(affiliate funnel): localize the affiliate welcome email (was Thai-only for en/zh creators)
 
@@ -6108,14 +6209,14 @@ hardcoded Thai on the homepage fails CI instead of silently shipping to English/
 - ℹ️ **14 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql
 
 ## Recent commits
-- e68e92a i18n(affiliate funnel): localize the affiliate welcome email for non-Thai creators (2 hours ago)
-- fb88f81 i18n(producer funnel): localize the producer-approval email for non-Thai producers (3 hours ago)
-- 9a0190f i18n(funnel): localize homepage skills CTA + /catalog category chips and tags (4 hours ago)
-- 059475b i18n/a11y(funnel): fix behind-interaction leaks (mk.close key + Thai network errors) (5 hours ago)
-- 09816f0 i18n(store): localize the checkout card payment option (was hardcoded Thai) (6 hours ago)
-- 6218dca a11y(find-producers): give the search box and category filter accessible names (7 hours ago)
-- 274312d i18n(about): localize the /about page for non-Thai visitors (8 hours ago)
-- a278c4a i18n(producer funnel): localize the product-category picker and tags for non-Thai visitors (9 hours ago)
+- df9b72c i18n(portal funnel): finish sweep — GovThai MOU box + full 10-page guard (55 minutes ago)
+- d432fc7 i18n(portal funnel): sweep entire consent-signup funnel for stray Thai (hub + middleman + affiliate) (2 hours ago)
+- 374057b i18n(portal funnel): localize category dropdown on /portals/consumer & /portals/producer (2 hours ago)
+- e68e92a i18n(affiliate funnel): localize the affiliate welcome email for non-Thai creators (4 hours ago)
+- fb88f81 i18n(producer funnel): localize the producer-approval email for non-Thai producers (5 hours ago)
+- 9a0190f i18n(funnel): localize homepage skills CTA + /catalog category chips and tags (6 hours ago)
+- 059475b i18n/a11y(funnel): fix behind-interaction leaks (mk.close key + Thai network errors) (7 hours ago)
+- 09816f0 i18n(store): localize the checkout card payment option (was hardcoded Thai) (8 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 

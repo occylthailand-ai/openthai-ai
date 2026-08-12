@@ -15,6 +15,7 @@
     "test:portal-leads": "node scripts/test-portal-leads.mjs",
     "test:portal-welcome": "node scripts/test-portal-welcome.mjs",
     "test:shop-commission": "node scripts/test-shop-commission.mjs",
+    "test:shop-commission-promptpay": "node scripts/test-shop-commission-promptpay.mjs",
     "test:ai-usage": "node scripts/test-ai-usage.mjs",
     "test:affiliate-tiers": "node scripts/test-affiliate-tiers.mjs",
     "test:affiliate-payout": "node scripts/test-affiliate-payout.mjs",
