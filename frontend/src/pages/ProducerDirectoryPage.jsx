@@ -2,16 +2,16 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
+// Category values + localized display labels (single source of truth, synced with backend by
+// portalCategories.test.js). Values stay Thai (the filter/query identifier); labels are localized.
+import { PORTAL_CATEGORIES, producerCategoryLabel } from '../data/portalCategories';
 
-// รายการนี้เคย hardcode แล้วหลุด sync กับ backend (producers.js เพิ่ม 'อาหารสัตว์เลี้ยง'/
-// 'สินค้าดิจิทัล' แล้ว แต่ตัวกรองหน้านี้ไม่มีให้เลือก — ผู้ผลิตสองหมวดนั้นค้นด้วยหมวดไม่เจอเลย)
-// ตอนนี้ดึงจาก /api/producers/categories แบบเดียวกับ ProducerJoinPage และคงชุดเต็มไว้เป็น
-// fallback เฉพาะกรณีเรียก API ไม่สำเร็จ
-const FALLBACK_CATS = ['OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อาหารสัตว์เลี้ยง', 'สินค้าดิจิทัล', 'อื่นๆ'];
+// Fallback used only if GET /api/producers/categories fails; the canonical list, not a stale copy.
+const FALLBACK_CATS = PORTAL_CATEGORIES;
 
 export default function ProducerDirectoryPage() {
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('ทั้งหมด');
   const [cats, setCats] = useState(FALLBACK_CATS);
@@ -63,7 +63,7 @@ export default function ProducerDirectoryPage() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('mk.find.search.ph')} style={{ ...inp, flex: 1, minWidth: 220 }} />
           <select value={cat} onChange={(e) => setCat(e.target.value)} style={{ ...inp, maxWidth: 180 }}>
-            {['ทั้งหมด', ...cats].map((c) => <option key={c} value={c}>{c === 'ทั้งหมด' ? t('mk.find.all') : c}</option>)}
+            {['ทั้งหมด', ...cats].map((c) => <option key={c} value={c}>{c === 'ทั้งหมด' ? t('mk.find.all') : producerCategoryLabel(c, lang)}</option>)}
           </select>
         </div>
       </section>
@@ -84,7 +84,7 @@ export default function ProducerDirectoryPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 16 }}>
             {items.map((p, i) => (
               <div key={(p.company || 'p') + i} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category || 'สินค้าไทย'}</div>
+                <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category ? producerCategoryLabel(p.category, lang) : t('mk.find.thaiProduct')}</div>
                 <div style={{ fontWeight: 800, fontSize: 16 }}>{p.company}</div>
                 <div style={{ fontSize: 13, color: '#cbd5e1', marginTop: 2 }}>{p.product_name}</div>
                 {p.description && <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6, margin: '8px 0', flex: 1 }}>{p.description}</div>}

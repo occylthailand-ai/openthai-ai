@@ -9,6 +9,45 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-09 — i18n(producer funnel): localize the product-category picker/tags (en/zh saw raw Thai)
+
+Standing-order loop (consent signup funnel + market entry for non-Thai). Render-probed the public
+funnel pages that use the global i18n and found the **producer funnel** leaking raw Thai to en/zh
+visitors — the exact signup surface the order prioritizes:
+- `/join` (ProducerJoinPage, producer signup): the listing-category `<select>` showed the 12 category
+  values raw — อาหาร, ความงาม, สิ่งทอ, … — so a non-Thai producer picked their category from a
+  Thai-only dropdown.
+- `/find-producers` (ProducerDirectoryPage): the category filter dropdown AND every producer card's
+  category tag (`{p.category || 'สินค้าไทย'}`) showed the raw Thai value.
+
+The category values are the **canonical identifiers** the backend whitelist clamps to and the consumer
+digest matches on (`p.category === category`), so they can't be translated in the data — the fix
+localizes only the DISPLAY.
+
+**Change (frontend):**
+- `src/data/portalCategories.js` — added `CATEGORY_LABELS` (th/en/zh for all 12 values; OTOP kept as a
+  proper noun) + `producerCategoryLabel(value, lang)` (falls back to the raw value for an unknown
+  category, never blank) beside the existing single-source-of-truth `PORTAL_CATEGORIES`.
+- `ProducerJoinPage.jsx` / `ProducerDirectoryPage.jsx` — `<option>`s and the card tag now display
+  `producerCategoryLabel(value, lang)` while `value=` stays the Thai identifier; both pages now import
+  the canonical `PORTAL_CATEGORIES` as their API-failure fallback instead of re-declaring the list
+  (removes two drifting copies). Directory now destructures `lang`; the empty-category card fallback
+  'สินค้าไทย' became a localized `mk.find.thaiProduct` (th สินค้าไทย / en Thai product / zh 泰国商品).
+
+**Verified by running (standing-order #4) + mutation-tested:**
+- New render guard `src/__tests__/producerFunnelNoThaiLeak.test.jsx` **4/4** — renders both pages under
+  LanguageProvider forced to en/zh (with a stubbed producer whose category is 'สมุนไพร', so the card
+  tag is exercised) and asserts no Thai run (U+0E00–U+0E7F) except the language-switcher 'ไทย'.
+  **Mutation:** reverting the /join `<option>` to render the raw value turns **2** tests red; restored.
+- `portalCategories.test.js` 3 → **6**: every PORTAL_CATEGORIES value must have a non-empty th/en/zh
+  label (so a new category can't ship label-less and re-leak), no stray label keys, and the en/zh
+  label must not equal the raw Thai value.
+- Full frontend suite **484/484** (was 478, +6), `npm run build` ok. No backend change — category
+  values, storage, and digest matching are unchanged.
+
+---
+
+
 ## 2026-08-09 — test(pdpa): guard access↔erasure store parity (a new signup can't silently escape erasure)
 
 Standing-order loop (consent/PDPA — the legal foundation of the /portals/* funnel). Scanned the two

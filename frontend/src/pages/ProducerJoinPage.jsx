@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
+// Single source of truth for the category values + their localized display labels (kept in sync with
+// backend/producers.js CATEGORIES by portalCategories.test.js). The stored/submitted value stays the
+// Thai identifier; producerCategoryLabel() localizes only what the visitor sees.
+import { PORTAL_CATEGORIES, producerCategoryLabel } from '../data/portalCategories';
 
-// sync กับ CATEGORIES ใน backend/producers.js — fallback นี้ใช้เฉพาะตอนเรียก
-// /api/producers/categories ไม่สำเร็จ แต่ก็ควรตรงกับของจริง ไม่ใช่ชุดเก่าที่ขาด 2 หมวด
-const FALLBACK_CATS = ['OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อาหารสัตว์เลี้ยง', 'สินค้าดิจิทัล', 'อื่นๆ'];
+// Fallback used only if GET /api/producers/categories fails; the canonical list, not a stale copy.
+const FALLBACK_CATS = PORTAL_CATEGORIES;
 
 // เดิมหน้านี้ไม่มี UI ยินยอม PDPA เลย ทั้งที่ /portals/producer (เก็บข้อมูลชุดเดียวกัน) มี
 // checkbox บังคับติ๊กมาตั้งแต่ต้น — ใช้ CONSENT_TEXT รูปแบบเดียวกับที่ /portals/*.jsx ใช้กัน
@@ -90,7 +93,7 @@ export default function ProducerJoinPage() {
             <Row>
               <Field label={t('mk.join.f.cat')} id="category">
                 <select style={inp} value={form.category} onChange={set('category')}>
-                  {cats.map(c => <option key={c} value={c}>{c}</option>)}
+                  {cats.map(c => <option key={c} value={c}>{producerCategoryLabel(c, lang)}</option>)}
                 </select>
               </Field>
               <Field label={t('mk.join.f.price')} id="price"><input style={inp} type="number" value={form.price} onChange={set('price')} placeholder={t('mk.join.f.price.ph')} /></Field>

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { PORTAL_CATEGORIES } from '../data/portalCategories';
+import { PORTAL_CATEGORIES, CATEGORY_LABELS, CATEGORY_LABEL_LANGS, producerCategoryLabel } from '../data/portalCategories';
 
 // The consumer digest (backend/server.js sendConsumerDigest) recommends products
 // by matching a consumer's chosen category against a producer's catalog category
@@ -40,6 +40,32 @@ describe('portal category list stays identical across frontend + backend', () =>
 
   it("'อื่นๆ' (the register() fallback bucket) is present so unmatched producers have a home", () => {
     expect(PORTAL_CATEGORIES).toContain('อื่นๆ');
+  });
+
+  // Every category value must carry a display label in every language, or the producer funnel
+  // (/join select + /find-producers filter and card tags) re-leaks the raw Thai value to en/zh
+  // visitors — the exact market-entry wall this label map removes.
+  it('every category has a localized label in all languages (th/en/zh)', () => {
+    for (const value of PORTAL_CATEGORIES) {
+      const label = CATEGORY_LABELS[value];
+      expect(label, `CATEGORY_LABELS has an entry for "${value}"`).toBeTruthy();
+      for (const lang of CATEGORY_LABEL_LANGS) {
+        expect(typeof label[lang] === 'string' && label[lang].trim(), `${value} has a non-empty "${lang}" label`).toBeTruthy();
+      }
+    }
+    // No stray labels for values that aren't real categories (would be dead/misleading).
+    for (const value of Object.keys(CATEGORY_LABELS)) {
+      expect(PORTAL_CATEGORIES, `label key "${value}" is a real category`).toContain(value);
+    }
+  });
+
+  it('the en/zh label for a Thai category is not the raw Thai value (real localization)', () => {
+    // 'อาหาร' → Food/食品, never 'อาหาร'. (OTOP is a proper noun and is allowed to be identical.)
+    expect(producerCategoryLabel('อาหาร', 'en')).toBe('Food');
+    expect(producerCategoryLabel('อาหาร', 'zh')).toBe('食品');
+    expect(producerCategoryLabel('อาหาร', 'th')).toBe('อาหาร');
+    // An unknown value degrades to itself rather than throwing/blanking.
+    expect(producerCategoryLabel('__nope__', 'en')).toBe('__nope__');
   });
 
   for (const page of ['ConsumerPortalPage.jsx', 'ProducerPortalPage.jsx']) {
