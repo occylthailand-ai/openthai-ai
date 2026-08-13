@@ -66,6 +66,19 @@ describe('applyRouteMeta — rewrites the base template into per-route preview m
     expect(en).not.toContain('<meta property="og:locale" content="th_TH" />');
   });
 
+  it('emits og:locale:alternate for the two OTHER languages, never the page’s own locale', () => {
+    // Thai page: alternates are the two non-Thai locales
+    const th = applyRouteMeta(baseHtml, contact, DOMAIN);
+    expect(th).toContain('<meta property="og:locale:alternate" content="en_US" />');
+    expect(th).toContain('<meta property="og:locale:alternate" content="zh_CN" />');
+    expect(th).not.toContain('<meta property="og:locale:alternate" content="th_TH" />');
+    // English intl portal: alternates are th_TH + zh_CN, and en_US appears only as the PRIMARY locale
+    const en = applyRouteMeta(baseHtml, { path: '/portals/intl-org', lang: 'en', title: 'International Organization Portal', desc: 'x' }, DOMAIN);
+    expect(en).toContain('<meta property="og:locale:alternate" content="th_TH" />');
+    expect(en).toContain('<meta property="og:locale:alternate" content="zh_CN" />');
+    expect(en).not.toContain('<meta property="og:locale:alternate" content="en_US" />');
+  });
+
   it('throws when the base is missing the og:locale meta (format drift must fail the build)', () => {
     const broken = baseHtml.split('\n').filter((l) => !l.includes('og:locale')).join('\n');
     expect(() => applyRouteMeta(broken, producer, DOMAIN)).toThrow(/route-meta.*og:locale.*not found/s);

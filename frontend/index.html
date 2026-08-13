@@ -21,6 +21,11 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="th_TH" />
+    <!-- The site renders in Thai/English/Chinese (LanguageProvider); declare EN + ZH as alternates so
+         LINE/Facebook/X know the same URL is available in those locales. prerender's route-meta.mjs
+         recomputes these per route so a page's own locale is never also listed as its alternate. -->
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="zh_CN" />
     <meta property="og:site_name" content="Openthai.ai" />
 
     <!-- ── Twitter Card ───────────────────────────────────────────────── -->

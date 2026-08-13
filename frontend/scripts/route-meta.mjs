@@ -102,6 +102,13 @@ export function applyRouteMeta(baseHtml, { path, title, desc, lang }, DOMAIN, op
   html = replaceOrThrow(html, /<html lang="[a-z-]+">/, `<html lang="${pageLang}">`, '<html lang>', path);
   // Keep the social-preview language in sync with <html lang> (see OG_LOCALE above).
   html = replaceOrThrow(html, /<meta property="og:locale" content=".*?" \/>/, `<meta property="og:locale" content="${OG_LOCALE[pageLang] || OG_LOCALE.th}" />`, 'og:locale meta', path);
+  // og:locale:alternate lists the OTHER languages the same URL renders in (the LanguageProvider offers
+  // th/en/zh). Recompute per page so the page's own locale is never also listed as its own alternate
+  // (which would happen for the English intl portals if the base template's static pair were kept).
+  const ALT_LOCALES = { th: ['en_US', 'zh_CN'], en: ['th_TH', 'zh_CN'], zh: ['th_TH', 'en_US'] };
+  const altMetas = (ALT_LOCALES[pageLang] || ALT_LOCALES.th)
+    .map((l) => `<meta property="og:locale:alternate" content="${l}" />`).join('\n    ');
+  html = replaceOrThrow(html, /<meta property="og:locale:alternate" content=".*?" \/>\s*<meta property="og:locale:alternate" content=".*?" \/>/, altMetas, 'og:locale:alternate metas', path);
   html = replaceOrThrow(html, /<title>.*?<\/title>/, `<title>${escapeAttr(fullTitle)}</title>`, '<title>', path);
   html = replaceOrThrow(html, /<meta name="description" content=".*?" \/>/, `<meta name="description" content="${escapeAttr(desc)}" />`, 'description meta', path);
   html = replaceOrThrow(html, /<link rel="canonical" href=".*?" \/>/, `<link rel="canonical" href="${url}" />`, 'canonical link', path);
