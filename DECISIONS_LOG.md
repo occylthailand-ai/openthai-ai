@@ -6577,3 +6577,30 @@ roles: dashboards + in-page links + welcome/approval-email links), the biggest r
 owner-gated and were NOT touched — affiliate commission on plan/subscription sales, v9.0 repo direction +
 deploy.yml, otop-ai-landing production domain, running the 8 Supabase migrations, and setting JWT_SECRET on
 the Vercel projects. Awaiting the owner's decision on those per standing-order point 8.
+
+---
+
+## 2026-08-13 — feat(landing): OTOP-AI landing page now supports TH / EN / 中文 (market entry)
+
+Repo: **otop-ai-landing** (has no DECISIONS_LOG of its own → logged here per standing-order point 6).
+Non-gated market-entry work (standing-order point 2): the landing page is the top-of-funnel entry to
+OpenThaiAi, and it was Thai-only — so the "overseas buyers and partners" the page itself advertises
+(รองรับหลายภาษา … เปิดทางสู่ผู้ซื้อและพันธมิตรต่างประเทศ) literally couldn't read it. Added a lightweight
+client-side i18n layer with a header TH / EN / 中文 switcher.
+
+Design choices (verified, not from a spec):
+- Thai stays the STATIC default in the HTML, so crawlers and no-JS visitors still get a fully-rendered
+  Thai page — no SEO or first-paint regression. JS only re-renders when a visitor picks another language.
+- ~45 strings carry data-i18n / data-i18n-html attributes with full th/en/zh dictionaries. The two
+  markup-bearing strings (hero <h1> gradient <span>, hero <p> + footer credit embedded <a>) go through the
+  data-i18n-html path so their inline tags/href survive the swap.
+- applyLang() also sets <html lang> (th / en / zh-Hans), document.title, and meta description, and persists
+  the choice in localStorage (otopai_lang). Switcher is accessible (role=group, aria-pressed reflects
+  active language, focusable buttons).
+
+Verified by running: rendered index.html in headless Chromium (Playwright). Default = Thai; EN and 中文
+swap every string, preserve the <span>/<strong>/<a> markup and the OpenThaiAi link href, update
+lang+title+aria-pressed; the choice survives a reload; switching back to TH restores the original; no
+console JS errors. All 4 Vercel preview deploys of the push went Ready. Pushed to
+claude/daily-reporter-improvements-8vc9ct on otop-ai-landing (open draft-track PR #1 already exists for the
+branch — not duplicated). Landing-only; no OpenThaiAi code touched.
