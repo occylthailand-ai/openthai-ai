@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T14:58:19.890Z · branch `claude/daily-reporter-improvements-8vc9ct` (659 commit(s) ahead of main)
+Generated: 2026-08-13T16:01:34.503Z · branch `claude/daily-reporter-improvements-8vc9ct` (661 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 878 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 880 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6490,23 +6490,58 @@ stray Thai category label — 2/2. Full frontend suite 553/553 (was 551, +2); np
 still 27 (dashboard correctly excluded). Remaining roles: middleman + affiliate (affiliate already has
 AffiliateDashboard) — as separate verified PRs.
 
+---
+
+## 2026-08-13 — feat(middleman): per-role Middleman/Distributor Dashboard (/middleman/dashboard) — role #3
+
+Third of the owner-directed per-role dashboards (producer + consumer already shipped + CI-green today).
+Verified the surface: distributors/wholesalers/brokers sign up via /portals/middleman (portal lead type
+'middleman', form_data has business_type + region) but had no self-serve view. Unlike a consumer, a
+middleman has no single interest category — they distribute across categories — so the dashboard shows
+two real things: what they can distribute, and where the demand is.
+
+Backend — new GET /api/portals/middleman/my?email= (server.js). Finds the newest 'middleman' lead
+(404 unknown / 400 malformed), then returns (1) distribute = the real approved catalog (producers.catalog())
+and (2) demand = an AGGREGATE count of consumer signups per interest category (top 6, sorted). Two hard
+privacy rules, both tested: the producer's private contact email is stripped from every catalog row (a
+middleman must NOT be able to harvest producer emails just by signing up — connections go through the
+platform, per the consent/no-scrape policy in DECISIONS_LOG 2026-07-03), and demand is counts only —
+never a buyer's email or name. Reuses the existing rate limiter; read-only, no new table.
+
+Frontend — new MiddlemanDashboardPage.jsx at /middleman/dashboard (lazy route). Email box → welcome +
+business_type + region, a demand bar-chart by category, and a grid of distributable products linking to
+/catalog. business_type and every category are localized via businessTypeLabel / producerCategoryLabel.
+Extracted the 5 business types into a shared src/data/businessTypes.js (single source) and switched
+MiddlemanPortalPage to import it, so the signup values and the dashboard's localization can't drift.
+Full i18n (mk.mdash.* th/en/zh); Disallow: /middleman/dashboard added to robots (personal dashboard).
+
+Verified by running: new self-contained backend test scripts/test-middleman-my.mjs (spawns the real
+server, seeds a middleman lead + consumer leads + catalog, asserts business_type/region, approved-only
+distributables, demand = correct per-category counts sorted, NO producer/buyer email or buyer name ever
+leaks, 404/400 gates) — 13/13, wired into package.json + CI. New frontend guard
+middlemanDashboardNoLeak.test.jsx (business-type + category labels localized in en/zh, no raw key/Thai)
+2/2; the existing portalFunnelNoThaiLeak guard still 19/19 (confirms the MiddlemanPortalPage refactor is
+render-identical). Full frontend suite 555/555 (was 553, +2); npm run build clean, sitemap still 27
+(dashboard excluded). This completes the consent-signup dashboard set: producer / consumer / middleman
+(+ affiliate, which already had AffiliateDashboard).
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 91 route components resolved
+- ✅ **Route components exist on disk** — all 92 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- aba0287 feat(consumer): per-role Consumer Dashboard (/consumer/dashboard) (33 seconds ago)
-- e28ed9b chore: sync PROJECT_STATUS.md [skip ci] (11 minutes ago)
-- d091b83 feat(producer): per-role Producer Dashboard (/producer/dashboard) (11 minutes ago)
-- 266d371 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- fa86bd4 fix(matching): add missing match_requests Supabase migration (CI: migration-coverage) (3 hours ago)
-- 03ec803 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 5e316cf Merge origin/main into claude/daily-reporter-improvements-8vc9ct (3 hours ago)
-- a1efc5f SEO(market-entry): advertise /affiliate-programs to crawlers (was missing from sitemap/robots) (4 hours ago)
+- 8b692c4 feat(middleman): per-role Distributor Dashboard (/middleman/dashboard) (24 seconds ago)
+- c253be5 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- aba0287 feat(consumer): per-role Consumer Dashboard (/consumer/dashboard) (64 minutes ago)
+- e28ed9b chore: sync PROJECT_STATUS.md [skip ci] (74 minutes ago)
+- d091b83 feat(producer): per-role Producer Dashboard (/producer/dashboard) (75 minutes ago)
+- 266d371 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- fa86bd4 fix(matching): add missing match_requests Supabase migration (CI: migration-coverage) (4 hours ago)
+- 03ec803 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6528,8 +6563,8 @@ AffiliateDashboard) — as separate verified PRs.
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "uptime_sec": 1,
+  "memory_mb": "19.6",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -6587,7 +6622,7 @@ AffiliateDashboard) — as separate verified PRs.
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (91 routes)
+## Route map (92 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -6623,6 +6658,7 @@ AffiliateDashboard) — as separate verified PRs.
 | /producers/manage | ProducerManagePage | public |
 | /producer/dashboard | ProducerDashboardPage | public |
 | /consumer/dashboard | ConsumerDashboardPage | public |
+| /middleman/dashboard | MiddlemanDashboardPage | public |
 | /catalog | CatalogPage | public |
 | /shop | CatalogPage | public |
 | /find-producers | ProducerDirectoryPage | public |
@@ -6721,7 +6757,7 @@ AffiliateDashboard) — as separate verified PRs.
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9402 | Vercel serverless detection |
+| `server.js` | 9442 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 289 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
