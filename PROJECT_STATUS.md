@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T16:01:34.503Z · branch `claude/daily-reporter-improvements-8vc9ct` (661 commit(s) ahead of main)
+Generated: 2026-08-13T16:53:22.469Z · branch `claude/daily-reporter-improvements-8vc9ct` (663 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 880 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 882 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6525,6 +6525,26 @@ render-identical). Full frontend suite 555/555 (was 553, +2); npm run build clea
 (dashboard excluded). This completes the consent-signup dashboard set: producer / consumer / middleman
 (+ affiliate, which already had AffiliateDashboard).
 
+---
+
+## 2026-08-13 — feat(funnel): link the new role dashboards from the /portals/* signup success state
+
+The three per-role dashboards shipped today (producer/consumer/middleman) were unreachable from the funnel
+— after signing up on /portals/producer|consumer|middleman a member saw only a "thank you" message with no
+way to their dashboard, so the dashboards were effectively orphaned. Closed that loop: each portal's
+success state now shows a button that takes the new member straight to THEIR dashboard with their email
+pre-filled (/producer/dashboard?email=…, /consumer/dashboard?email=…, /middleman/dashboard?email=…), so
+the auto-loading dashboards open populated on first click. Because signup auto-registers the producer and
+records the consumer/middleman lead, the just-signed-up member's dashboard resolves immediately (producer
+shows 'pending' status, etc.). Added a localized `dashboard` label to each portal's own th/en/zh dictionary.
+
+Verified by running: new test src/__tests__/portalDashboardLink.test.jsx mocks submitLead to succeed, fills
++ submits each of the three portals in English, and asserts the success button (1) carries no un-localized
+Thai and (2) navigates to the exact /<role>/dashboard?email=<encoded email> — 3/3. The existing
+portalFunnelNoThaiLeak guard still passes (the dashboard label only renders in the post-submit success
+state). Full frontend suite 561/561 (was 555, +6); npm run build clean, sitemap unchanged at 27 (no new
+routes — just links into the existing dashboards). Frontend-only, four files (3 portals + 1 test).
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6534,14 +6554,14 @@ render-identical). Full frontend suite 555/555 (was 553, +2); npm run build clea
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- 8b692c4 feat(middleman): per-role Distributor Dashboard (/middleman/dashboard) (24 seconds ago)
-- c253be5 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- aba0287 feat(consumer): per-role Consumer Dashboard (/consumer/dashboard) (64 minutes ago)
-- e28ed9b chore: sync PROJECT_STATUS.md [skip ci] (74 minutes ago)
-- d091b83 feat(producer): per-role Producer Dashboard (/producer/dashboard) (75 minutes ago)
-- 266d371 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- fa86bd4 fix(matching): add missing match_requests Supabase migration (CI: migration-coverage) (4 hours ago)
-- 03ec803 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- dc7dda4 feat(funnel): link role dashboards from the /portals/* signup success state (21 seconds ago)
+- 8554431 chore: sync PROJECT_STATUS.md [skip ci] (52 minutes ago)
+- 8b692c4 feat(middleman): per-role Distributor Dashboard (/middleman/dashboard) (52 minutes ago)
+- c253be5 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- aba0287 feat(consumer): per-role Consumer Dashboard (/consumer/dashboard) (2 hours ago)
+- e28ed9b chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- d091b83 feat(producer): per-role Producer Dashboard (/producer/dashboard) (2 hours ago)
+- 266d371 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6563,8 +6583,8 @@ render-identical). Full frontend suite 555/555 (was 553, +2); npm run build clea
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 1,
-  "memory_mb": "19.6",
+  "uptime_sec": 0,
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
