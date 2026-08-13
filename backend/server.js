@@ -264,6 +264,39 @@ app.get('/api/producers/my-orders', producerDashLimiter, async (req, res) => {
   });
 });
 
+// Consumer self-serve dashboard feed — /api/portals/consumer/my?email=<signed-up email>
+// Powers the /consumer/dashboard page: a consumer who signed up via /portals/consumer (a portal lead of
+// type 'consumer', storing their interest category in form_data.category) enters that email and gets back
+// their signup confirmation + product recommendations matched to that interest from the real approved
+// catalog (producers.catalog()). Same public email-identity pattern as the producer dashboard. The
+// producer's contact email in the catalog row is stripped — a consumer sees the shop/product, not the
+// producer's private email (mirrors the producer-search-privacy invariant). 404 for an email that never
+// signed up as a consumer (can't enumerate), 400 for a malformed email.
+app.get('/api/portals/consumer/my', producerDashLimiter, async (req, res) => {
+  const email = (req.query.email || '').toString().trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, error: 'อีเมลไม่ถูกต้อง' });
+  const mine = (await portalLeads.all())
+    .filter((l) => l.type === 'consumer' && (l.email || '').toLowerCase() === email)
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  if (mine.length === 0) return res.status(404).json({ success: false, error: 'ไม่พบการสมัครผู้บริโภคด้วยอีเมลนี้' });
+  const lead = mine[0];
+  const interest = (lead.form_data && lead.form_data.category) || '';
+  let catalog = [];
+  try { catalog = await producers.catalog(); } catch (e) { console.error('[consumer/my] catalog:', e.message); }
+  // strip the producer's private contact email; a consumer sees the shop + product only
+  const pub = (p) => ({ producer: p.producer, product_name: p.product_name, price: p.price ?? null, category: p.category, description: p.description });
+  const matched = interest ? catalog.filter((p) => p.category === interest) : [];
+  // fall back to the newest of the whole catalog when nothing matches the stated interest, so the
+  // dashboard is never empty for a real consumer (recommendations, not a hard filter).
+  const recommendations = (matched.length ? matched : catalog).slice(0, 12).map(pub);
+  res.json({
+    success: true,
+    consumer: { name: lead.name || '', interest, created_at: lead.created_at },
+    matched_count: matched.length,
+    recommendations,
+  });
+});
+
 // Order dispute / escrow routes — /api/disputes
 app.use(disputes.router);
 // Portal lead capture — /api/leads/submit (the endpoint all 7 /portals/* pages call)

@@ -33,6 +33,7 @@ Disallow: /track
 Disallow: /dispute
 Disallow: /producers/manage
 Disallow: /producer/dashboard
+Disallow: /consumer/dashboard
 Disallow: /ai-generator
 Disallow: /ai-tools
 Disallow: /tiktok

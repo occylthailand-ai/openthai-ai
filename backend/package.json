@@ -85,6 +85,7 @@
     "test:portal-welcome-coverage": "node scripts/test-portal-welcome-coverage.mjs",
     "test:producer-search-privacy": "node scripts/test-producer-search-privacy.mjs",
     "test:producer-my-orders": "node scripts/test-producer-my-orders.mjs",
+    "test:consumer-my": "node scripts/test-consumer-my.mjs",
     "test:health": "node scripts/test-health-auth.mjs",
     "test:all": "npm run test:health && npm run test:smoke && npm run test:affiliate && npm run test:revenue"
   },

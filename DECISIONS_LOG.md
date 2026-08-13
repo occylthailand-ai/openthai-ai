@@ -6440,3 +6440,37 @@ dashboard for every order status × producer status in en/zh and fails on a raw 
 8/8. Full frontend suite 551/551 (was 543, +8); `npm run build` clean, sitemap still 27 (dashboard
 correctly excluded). This is role #1 of the per-role dashboard set; consumer/middleman/affiliate to follow
 as separate verified PRs.
+
+---
+
+## 2026-08-13 — feat(consumer): per-role Consumer Dashboard (/consumer/dashboard) — role #2 of the dashboard set
+
+Continuing the owner-directed per-role dashboards (producer shipped earlier today; this is consumer, the
+demand side). Verified the surface first: consumers sign up via /portals/consumer (a portal lead of
+type 'consumer' whose form_data.category is their interest — the same canonical Thai category values
+producers use), but had NO self-serve view afterward (no my-status endpoint existed for leads, and the
+consumer-digest is admin/cron-gated). Built one that turns their stated interest into real value.
+
+Backend — new GET /api/portals/consumer/my?email= (server.js, where portalLeads + producers are both in
+scope). Finds the newest 'consumer' lead for that email (404 if none — can't enumerate; 400 malformed),
+reads their interest = form_data.category, and returns recommendations from the real approved catalog
+(producers.catalog()) filtered to that interest — falling back to the wider catalog when nothing matches
+so the dashboard is never empty. The producer's private contact email in each catalog row is STRIPPED
+(a consumer sees the shop + product, not the producer's email — mirrors the producer-search-privacy
+invariant). Reuses the producer dashboard's rate limiter. Read-only: no new Supabase table, so
+migration-coverage is unaffected.
+
+Frontend — new ConsumerDashboardPage.jsx at /consumer/dashboard (lazy route). Email box (or ?email=
+auto-load) → welcome + interest + a responsive grid of recommended products (name / producer / price /
+category / short description) each linking to /catalog. The interest and every recommendation's category
+are localized for display via producerCategoryLabel(value, lang) — the stored value stays canonical Thai.
+Full i18n (mk.cdash.* in th/en/zh). Added Disallow: /consumer/dashboard to robots (personal dashboard).
+
+Verified by running: new self-contained backend test scripts/test-consumer-my.mjs (spawns the real server
+on the file-fallback path, seeds a consumer lead + catalog, asserts interest-matched recommendations,
+the pending product is excluded, the producer's private email never leaks, a matchless interest falls
+back to a non-empty list, 404/400 gates) — 12/12; wired into package.json + CI. New frontend guard
+consumerDashboardNoLeak.test.jsx renders the loaded dashboard in en/zh and fails on a raw mk.* key or a
+stray Thai category label — 2/2. Full frontend suite 553/553 (was 551, +2); npm run build clean, sitemap
+still 27 (dashboard correctly excluded). Remaining roles: middleman + affiliate (affiliate already has
+AffiliateDashboard) — as separate verified PRs.
