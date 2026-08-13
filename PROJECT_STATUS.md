@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T11:49:47.973Z · branch `claude/daily-reporter-improvements-8vc9ct` (652 commit(s) ahead of main)
+Generated: 2026-08-13T11:54:17.422Z · branch `claude/daily-reporter-improvements-8vc9ct` (653 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 726 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 872 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6361,6 +6361,38 @@ full frontend suite 538/538. Mutation check: deleting the robots Allow line turn
 (drift caught), restoring → GREEN, and `git diff` confirmed robots.txt changed by exactly +1 line.
 Frontend-only, two files (seo-routes.mjs + robots.txt).
 
+---
+
+## 2026-08-13 — merge main into the standing-order branch (resolve PR #79 conflict) + cover main's new /matching route in robots
+
+Owner relayed a report (via another AI) that PR #79 was "dirty". Verified against the real repo before
+acting (per this repo's verify-before-build rule): `pull_request_read` on #79 returned
+`mergeable_state: "dirty"` — a real conflict. main had advanced 9 commits past the branch's merge-base
+(b5ce533): PRs #81–#90 (matching engine, enterprise middleware — request-id/logger/error-handler/audit,
+responsive dashboard, OpenHands microagents). Also confirmed the other PRs the report listed exist
+(#91/#86/#80/#78 all real, open).
+
+A trial `git merge origin/main` conflicted in exactly 3 files; resolved each minimally:
+  • backend/server.js — one hunk. main added `const matching = createMatching(...)`; this branch added
+    `portalLeads` to the progress-tracker deps (PR #79's real leads_total fix). Kept BOTH lines.
+  • backend/package.json — both sides appended npm test scripts. Took the union (all of this branch's
+    test:* scripts + main's test:health and test:all). Validated as JSON.
+  • PROJECT_STATUS.md — generated file; regenerated with scripts/generate-project-status.mjs.
+Everything else (App.jsx, CLAUDE.md, .github/workflows/test.yml, frontend/package.json) auto-merged.
+
+After the merge, the existing seoInvariants guard failed — correctly: main's new `/matching` route is
+login-gated (redirects anon users to /login) but wasn't in robots.txt Disallow, so a crawler would waste
+budget on a /login redirect. Added `Disallow: /matching`. This is exactly the drift the guard exists to
+catch, surfaced automatically by the merge.
+
+Verified by running: no conflict markers remain (grep); `node --check server.js` OK; merged server BOOTS
+clean on a throwaway data dir (GET /api/health → 200, main's structured logger active, matching router
+mounted at /api/match/*); backend smoke S1–S35 all pass; test:progress-kpi 4/4; frontend `npm run build`
+clean with sitemap still 27 urls incl. /affiliate-programs (my round-26 SEO change survived the merge);
+full frontend suite 543/543 (was 538 — +5 from main's new ErrorBoundary/matching tests) after the robots
+fix, seoInvariants back to 7/7. This is a merge commit on the branch (no history rewrite) — PR #79 stays
+the same PR, no force-push, no auto-merge to main.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6370,16 +6402,54 @@ Frontend-only, two files (seo-routes.mjs + robots.txt).
 - ℹ️ **14 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql
 
 ## Recent commits
-- a1efc5f SEO(market-entry): advertise /affiliate-programs to crawlers (was missing from sitemap/robots) (21 minutes ago)
+- 5e316cf Merge origin/main into claude/daily-reporter-improvements-8vc9ct (22 seconds ago)
+- a1efc5f SEO(market-entry): advertise /affiliate-programs to crawlers (was missing from sitemap/robots) (26 minutes ago)
 - f93816b content/SEO(faq): correct overstated AI-skill count (was "over 35"; real = 35) + drift guard (3 hours ago)
-- fbe4ffd test(i18n): pin /dispute dynamic labels to the backend status/decision enums (6 hours ago)
+- fbe4ffd test(i18n): pin /dispute dynamic labels to the backend status/decision enums (7 hours ago)
 - f142d24 test(i18n): guard the buyer-facing /track order page against stray Thai (loaded state) (8 hours ago)
-- 346d3cf fix(affiliate): QuickPay lost commission when the visitor navigated in from the share link (11 hours ago)
+- 346d3cf fix(affiliate): QuickPay lost commission when the visitor navigated in from the share link (12 hours ago)
 - 759b900 test(affiliate): pin the PromptPay-webhook shop-commission path (was untested) (13 hours ago)
 - df9b72c i18n(portal funnel): finish sweep — GovThai MOU box + full 10-page guard (19 hours ago)
-- d432fc7 i18n(portal funnel): sweep entire consent-signup funnel for stray Thai (hub + middleman + affiliate) (19 hours ago)
 
-## Production health (⚠️ HTTP 403)
+## Production health (✅ reachable)
+```json
+{
+  "status": "ok",
+  "version": "2.1.0",
+  "charter_version": 2,
+  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "ai_primary": "✅ Claude Haiku",
+  "ai_fallback": "✅ Gemini Flash Latest",
+  "ai_active": "claude-haiku-4-5-20251001",
+  "google_oauth": true,
+  "affiliates": 0,
+  "waitlist": 0,
+  "agents": 0,
+  "active_agents": 0,
+  "line_oa": true,
+  "elevenlabs": false,
+  "watchdog": "idle",
+  "last_watchdog": null,
+  "system_logs": 2,
+  "uptime_sec": 0,
+  "memory_mb": "19.2",
+  "services": {
+    "news_rag": "✅ Active",
+    "news_rag_refresh": "✅ Auto cache clear every 4h",
+    "competitor_analysis": "✅ Active",
+    "tts": "⚠️ No API Key",
+    "line_oa": "✅ Active",
+    "auto_heal": "✅ Active (every 30 min)",
+    "agent_cron": "✅ Active (every hour)",
+    "watchdog": "✅ Active",
+    "diagnostics": "✅ Active",
+    "persistence": "✅ system_log + agents.json + agent_checkpoint",
+    "vector_memory": "✅ Active (semantic long-term memory)",
+    "webhook_system": "✅ Active (0 registered)",
+    "multi_tenant": "✅ Active (0 tenants)"
+  }
+}
+```
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
