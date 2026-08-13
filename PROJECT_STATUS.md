@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T20:33:04.510Z · branch `claude/daily-reporter-improvements-8vc9ct` (669 commit(s) ahead of main)
+Generated: 2026-08-13T21:26:28.779Z · branch `claude/daily-reporter-improvements-8vc9ct` (671 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 888 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 890 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6620,6 +6620,41 @@ console JS errors. All 4 Vercel preview deploys of the push went Ready. Pushed t
 claude/daily-reporter-improvements-8vc9ct on otop-ai-landing (open draft-track PR #1 already exists for the
 branch — not duplicated). Landing-only; no OpenThaiAi code touched.
 
+---
+
+## 2026-08-13 — seo(landing): declare og:locale:alternate on the trilingual OTOP-AI landing
+
+Repo: **otop-ai-landing** (no DECISIONS_LOG of its own → logged here per point 6). Follow-up to the
+TH/EN/中文 toggle shipped earlier today. That page now genuinely serves three languages, but its Open
+Graph still declared only `th_TH`, so social/search crawlers (LINE + Facebook, share-first in Thailand,
+plus X) had no signal the same URL is available in EN/ZH.
+
+Change (landing index.html only): added `og:locale:alternate` = en_US and zh_CN. Thai stays the primary
+`og:locale` (matches the static `lang="th"`), so crawlers reading the pre-JS markup see the Thai page
+unchanged. Also made the language toggle keep the primary `og:locale` in step with the shown language
+(th_TH / en_US / zh_CN) for any dynamic/social-preview renderer that executes the JS.
+
+Round context — verified-before-building (point 1) saved redundant work this round:
+- Checked whether the affiliate portal success state was missing the "open your dashboard" link the other
+  roles got. It is NOT a gap: the affiliate dashboard is keyed by ref_code, which doesn't exist at
+  signup time (the success copy correctly says the link is emailed later), and the affiliate WELCOME
+  email already links to /affiliate/dashboard?ref=<code> (html-escape.js). Funnel is complete for all
+  roles.
+- Confirmed the personal dashboard routes (/producer,/consumer,/middleman,/affiliate /dashboard) are all
+  Disallow-ed in robots.txt and absent from sitemap — no PII indexing.
+- Confirmed the public FAQ page is fully trilingual (FAQ_ITEMS th/en/zh) with static FAQPage JSON-LD.
+- Ran smart-e's stdlib regression suite: 151 passed, 0 failed. Landing has no mobile horizontal overflow
+  at 320/375/768px after the switcher was added.
+
+Verified by running: headless-Chromium render — both alternates present; default og:locale=th_TH;
+EN/中文 switch updates og:locale to en_US/zh_CN and back on TH; alternates persist across toggles; no JS
+errors. Pushed to claude/daily-reporter-improvements-8vc9ct (PR #1 already open, not duplicated).
+
+Owner-gated levers still untouched (point 8), awaiting a green light: affiliate commission on
+plan/subscription sales, v9.0 repo direction + deploy.yml, otop-ai-landing production domain (the reason
+canonical/sitemap stay domain-relative), running the Supabase migrations, and JWT_SECRET on the Vercel
+projects.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6629,14 +6664,14 @@ branch — not duplicated). Landing-only; no OpenThaiAi code touched.
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- b2f7e3f docs(decisions): log OTOP-AI landing TH/EN/中文 i18n toggle (market-entry round) (23 seconds ago)
-- 0d8c753 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- e9414be feat(funnel): producer approval email also links to the producer dashboard (2 hours ago)
-- 0cfcd4c chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 9d8a263 feat(funnel): add a permanent dashboard link to the portal welcome email (3 hours ago)
-- 87aa6a3 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- dc7dda4 feat(funnel): link role dashboards from the /portals/* signup success state (4 hours ago)
-- 8554431 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 219b403 docs(decisions): log landing og:locale:alternate + this round's verify-first findings (17 seconds ago)
+- 0b06cf4 chore: sync PROJECT_STATUS.md [skip ci] (53 minutes ago)
+- b2f7e3f docs(decisions): log OTOP-AI landing TH/EN/中文 i18n toggle (market-entry round) (54 minutes ago)
+- 0d8c753 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- e9414be feat(funnel): producer approval email also links to the producer dashboard (3 hours ago)
+- 0cfcd4c chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 9d8a263 feat(funnel): add a permanent dashboard link to the portal welcome email (4 hours ago)
+- 87aa6a3 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
