@@ -6312,3 +6312,36 @@ hardcoded Thai <span> into LandingPage turned it RED (both langs), reverted → 
 hardcoded Thai on the homepage fails CI instead of silently shipping to English/Chinese visitors.
 
 ---
+
+---
+
+## 2026-08-13 — SEO(market-entry): add /affiliate-programs to sitemap/robots/prerender (was missing)
+
+Standing-order loop (point 2 — SEO/market entry). Compared the SEO route registry
+(`frontend/scripts/seo-routes.mjs`, single source of truth for sitemap + robots Allow +
+per-route social-crawler prerender) against the real router in `frontend/src/App.jsx`. Found a
+public, shareable funnel page that was never advertised to crawlers: **/affiliate-programs**
+(`AffiliateProgramsPage`) — a searchable directory of affiliate programs that reads `?ref=CODE`
+and pins our own PromptPay-direct program (฿1,000 content package, 20% commission) at the top,
+linked from /earn. Exactly the class of gap prior rounds fixed for /store (run 76) and /earn (run
+87): because it was absent from ROUTES, it had no per-route prerendered `index.html`, wasn't in
+`dist/sitemap.xml`, and wasn't in `robots.txt` Allow — so sharing it on LINE/Facebook rendered the
+homepage's TikTok pitch instead of the page's own preview, and Google had no sitemap entry for it.
+
+Checked the other unlisted public routes too (/trending, /calendar, /brand, /voice, /content-studio,
+/council, /leaderboard, /progress, /router) and deliberately did NOT add them — they are interactive
+tools/dashboards with dynamic or personal content, not static marketing pages; indexing thin/dynamic
+tool pages wastes crawl budget and risks soft-404s. /affiliate-programs is the one clear marketing
+funnel of the set (same category as the already-listed /earn and /affiliate), so scope stayed to it.
+
+Change: one ROUTES entry (title from the page's own document.title "ศูนย์รวมโปรแกรม Affiliate", desc a
+factual restatement of its real content) + one `Allow: /affiliate-programs` line in robots.txt. The
+existing `seoInvariants.test.js` enforces sitemap==robots==ROUTES and that each advertised path is a
+real non-auth-gated route, so the two copies can't silently drift.
+
+Verified by running: seoInvariants 7/7 green; `npm run build` → sitemap now 27 urls (was 26) and
+includes `<loc>…/affiliate-programs</loc>`; prerender wrote `dist/affiliate-programs/index.html` with
+its own `<title>` and `og:title` = "ศูนย์รวมโปรแกรม Affiliate — Openthai.ai" (confirmed by grep);
+full frontend suite 538/538. Mutation check: deleting the robots Allow line turned seoInvariants RED
+(drift caught), restoring → GREEN, and `git diff` confirmed robots.txt changed by exactly +1 line.
+Frontend-only, two files (seo-routes.mjs + robots.txt).

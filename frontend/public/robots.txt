@@ -6,6 +6,7 @@ Allow: /ai-skills
 Allow: /faq
 Allow: /pricing
 Allow: /affiliate
+Allow: /affiliate-programs
 Allow: /portals
 Allow: /portals/producer
 Allow: /portals/affiliate

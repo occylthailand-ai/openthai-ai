@@ -54,6 +54,12 @@ export const ROUTES = [
   // title from the page's own document.title; desc is a factual restatement of its real content
   // (ready-to-ship products paid via PromptPay + affiliate commission 20–40% with a share link).
   { path: '/earn', title: 'ศูนย์สร้างรายได้', desc: 'หารายได้กับ Openthai.ai — สั่งซื้อสินค้าพร้อมส่งจ่ายผ่านพร้อมเพย์ หรือสมัครเป็นพันธมิตรรับค่าคอมมิชชั่น 20–40% ต่อดีล พร้อมลิงก์และคลิปไปแชร์' },
+  // /affiliate-programs ("ศูนย์รวมโปรแกรม Affiliate") is a public, shareable funnel — a searchable
+  // directory of affiliate programs that reads ?ref=CODE and pins our own PromptPay-direct program
+  // at the top — reachable from /earn but never in the sitemap/robots/prerender, so sharing it on
+  // LINE/Facebook still showed the homepage's meta (same gap /store and /earn had). title from the
+  // page's own document.title; desc is a factual restatement of its real content.
+  { path: '/affiliate-programs', title: 'ศูนย์รวมโปรแกรม Affiliate', desc: 'ไดเรกทอรีโปรแกรม Affiliate ค้นหา/กรองตามหมวดแล้วสมัครได้ทันที — ปักหมุดโปรแกรมพร้อมเพย์ตรงของ Openthai.ai (แพ็กเกจคอนเทนต์ AI ฿1,000 รับคอม 20%) ที่เหลือเป็นโปรแกรมพันธมิตรต่างชาติ' },
   { path: '/join', title: 'เอาสินค้าคุณมาขายกับครีเอเตอร์ทั่วไทย', desc: 'สังกัด Openthai.ai ฟรี — ให้ครีเอเตอร์กว่า 1,200 คนช่วยสร้างคอนเทนต์ + ดันยอดขายสินค้าคุณ จ่ายค่าคอมเฉพาะเมื่อขายได้' },
   { path: '/find-producers', title: 'หาผู้ผลิตสินค้าไทยที่ใช่', desc: 'ครีเอเตอร์หาสินค้ามาโปรโมต · ลูกค้าหาของจากผู้ผลิตโดยตรง' },
   { path: '/about', title: 'เกี่ยวกับเรา', desc: 'ทีมงานเบื้องหลัง Openthai.ai และความเชี่ยวชาญที่อยู่เบื้องหลังแพลตฟอร์ม' },

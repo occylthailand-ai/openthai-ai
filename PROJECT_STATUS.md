@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-12T18:12:52.555Z · branch `claude/daily-reporter-improvements-8vc9ct` (646 commit(s) ahead of main)
+Generated: 2026-08-13T11:23:19.739Z · branch `claude/daily-reporter-improvements-8vc9ct` (651 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 720 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 725 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,134 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+## 2026-08-13 — content/SEO(faq): correct the overstated AI-skill count (was "over 35"; real registry = 35) + drift guard
+
+Standing-order loop (content/SEO + honesty). Audited the FAQ (frontend/src/data/faqContent.js), which
+feeds BOTH the visible /faq page AND the FAQPage JSON-LD (Google rich result). Verified the hard claims:
+plan prices (Free ฿0 / Pro ฿299 / Premier ฿599 / Enterprise ฿1,299) match the real omise-payment.js
+PLANS and the PAID_PLANS set /api/payment/create charges — accurate. But the AI-skills answer OVERSTATED
+the count in all three languages — th "มีทักษะ AI มากกว่า 35", en "Over 35 AI skills", zh "超过 35 项" —
+while the backend SKILLS_REGISTRY holds EXACTLY 35 (confirmed by counting its id: entries; PROJECT_STATUS
+and ShowcasePage/AiSkillsPublicPage already say "35"). So the number shown to buyers and to Google was
+literally false (35 is not "more than 35") — against this repo's no-overstatement rule, and the FAQ was
+the lone outlier vs the rest of the app.
+
+FIX: reworded the skills answer to the accurate, app-canonical "35" in th/en/zh (single source, so the
+visible FAQ and the JSON-LD update together — faqContent.test.js still green). Added
+`faqSkillCount.test.js`: reads the real SKILLS_REGISTRY count from backend/server.js (same cross-file
+approach as the SEO-invariant tests) and asserts every language's FAQ skills answer states that exact
+number AND never uses an overstatement word (มากกว่า / กว่า N / over / more than / 超过 / 超過) — so the
+claim can't silently drift or re-inflate as skills are added/removed.
+
+VERIFIED BY RUNNING: new guard 4/4; faqContent sync test still 8/8; full frontend suite **538/538**
+(was 534, +4); `vite build` clean. Mutation-checked: restoring the "มากกว่า 35" / "超过 35" wording turns
+the th+zh cases RED, restoring → green. Content-only change (+ guard), no logic touched. Committed +
+pushed to `claude/daily-reporter-improvements-8vc9ct` (PR #79).
+
+## 2026-08-13 — test(i18n): pin the /dispute status page's dynamic labels to the backend's status/decision enums
+
+Standing-order loop. Completed the buyer/producer-facing trust pair started with /track by auditing
+/dispute (DisputeTrackPage) — the PDPA/escrow-critical page a party in a live dispute checks. Its loaded
+view renders three labels by DYNAMIC key suffix: `mk.dispute.st.<status>`, `mk.dispute.openedby.<who>`,
+`mk.dispute.dec.<decision>`. A value the backend can produce but i18n lacks a key for would render the
+RAW key (e.g. "mk.dispute.st.resolved_supplier") to a party mid-dispute. Cross-checked the canonical
+backend sets against the dict: DISPUTE_STATUS = {open, ai_reviewed, resolved_supplier, resolved_buyer,
+refunded} (disputes.js:12), DECISIONS = {favor_supplier, favor_buyer, refund} (:17), opened_by = {buyer,
+producer} (:111) — all 10 keys present × th/en/zh. Verified healthy, no leak today; and the public
+dispute view / track endpoint are sound (contact must match, sanitized party-facing projection).
+
+The gap was a MISSING GUARD: nothing tied the frontend labels to the backend enums, so a future dispute
+status/decision added in disputes.js without its three i18n keys would silently ship a raw key. Added
+`disputeTrackNoLeak.test.jsx`: for en AND zh, it renders the loaded dispute view for EVERY status and
+EVERY decision (server free-text in English so only the page's own labels are tested) and fails if the
+DOM contains a raw `mk.dispute.` key OR any Thai run outside `<svg>` (only "ไทย" allowed). 16 cases.
+No production code changed — pure regression net tying the labels to the backend source of truth.
+
+VERIFIED BY RUNNING: guard 16/16; full frontend suite **534/534** (was 518, +16); `vite build` clean.
+Mutation-checked: renaming the `mk.dispute.st.resolved_supplier` key turns the resolved_supplier cases
+RED (raw key in the DOM, both langs); restoring → green. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79).
+
+## 2026-08-13 — test(i18n): permanent guard against stray Thai on the buyer-facing /track order page (loaded state)
+
+Standing-order loop. Audited the post-purchase order-tracking flow (/track, TrackOrderPage) — a
+trust-critical, market-entry surface a non-Thai buyer sees AFTER paying. Verified it is already fully
+localized: the status labels come from i18n keys `mk.track.st.<status>` (all 7 statuses × th/en/zh =
+21 keys present), and every other string uses `t()` — no hardcoded Thai literals (the backend
+`/api/orders/track` is also sound: requires the contact to match id, returns the sanitized
+`publicOrderView`, rate-limited, null-guarded). But unlike the funnel pages, /track had NO i18n-leak
+guard, and its highest-risk copy — the status timeline (`stLabel`), the shipping/delivery detail rows,
+the timeline history, and the dispute CTA — only renders once an ORDER LOADS, which a static probe of
+the empty form never reaches.
+
+Added `trackOrderNoThaiLeak.test.jsx`: stubs `/api/orders/track` to return a rich DELIVERED order
+(English server fields so only the page's own copy is under test) and drives the auto-track-on-mount
+path (`?id=&contact=` in the URL), then, forced to en/zh via the `otai_lang` spy, fails on any Thai run
+(U+0E00–U+0E7F) in the DOM outside `<svg>` (only the LanguageSwitcher's own "ไทย" allowed). This is the
+first guard to exercise the loaded-order state, covering the timeline + delivery details a foreign
+buyer actually sees. No production code changed — pure regression net.
+
+VERIFIED BY RUNNING: guard 2/2; full frontend suite **518/518** (was 516, +2); `vite build` clean.
+Mutation-checked: injecting a Thai literal into the loaded-order view turns it RED (the exact string),
+restoring → green. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` (PR #79).
+
+## 2026-08-12 — fix(affiliate): QuickPay lost commission when the visitor navigated in from the share link
+
+Standing-order loop (affiliate funnel = market entry). Continuing the affiliate-attribution audit from
+the previous round, found a REAL money bug on the frontend side. The attribution design (per
+`lib/affiliateRef.js`): every share link is `…/?ref=CODE`; `main.jsx` runs `captureAffiliateRef` at
+boot on EVERY page load, persisting the ref into `localStorage 'otai_ref'` so a LATER purchase on any
+page can attribute the commission (StorePage already reads `otai_ref`). But **QuickPayPage read the ref
+ONLY from its own URL's `?ref=`** (`searchParams.get('ref')`). The default affiliate `ref_link` is
+`${DOMAIN_URL}/?ref=CODE`, which lands the visitor on the homepage; when they then navigate — client-
+side, so no `?ref=` on the new URL — to `/quickpay` and pay, `/api/quickpay/create` received `ref:''`
+and credited **nobody**. The QuickPay backend already captures + credits a ref correctly (verified);
+the ref simply never arrived. So affiliates silently lost commission on package/QuickPay sales that
+originated from their link — exactly the funnel the market-entry push depends on.
+
+FIX: added a pure `resolveAffiliateRef(search, storage)` to `lib/affiliateRef.js` — prefer an explicit
+`?ref=` on the current page, else fall back to the persisted `otai_ref` (last-click, length-capped,
+error-swallowing). QuickPayPage's `/api/quickpay/create` payload now uses it. The page's separate
+ref-link **click-count** effect still keys off the URL `?ref=` only, so click metrics are unchanged —
+only the payment attribution was widened to honour the stored ref (matching StorePage).
+
+VERIFIED BY RUNNING: added 4 unit tests for `resolveAffiliateRef` (URL-first, otai_ref fallback = the
+bug, empty when neither, 20-char cap + throwing-storage safety) and a 2-case component test
+(`quickpayAffiliateRef.test.jsx`) that mounts QuickPayPage with a stored `otai_ref` and NO URL ref and
+asserts the real `/api/quickpay/create` POST body carries `ref:'AFF999'` (and `''` when neither source
+has one). Frontend suite **516/516** (was 510, +6); `vite build` clean. Mutation-checked: reverting the
+payload to the old URL-only `ref` turns the component test RED (`'' ≠ 'AFF999'`); restoring → green.
+Pure frontend change — no backend touched. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79, existing).
+
+## 2026-08-12 — test(affiliate): pin the PromptPay-webhook shop-commission path (was untested — silent commission loss risk)
+
+Standing-order loop (affiliate funnel = market entry). Traced the affiliate-attribution flow end to end
+and found it CORRECT but with a coverage gap on its highest-value branch. `?ref=CODE` → `otai_ref`
+(captured by `lib/affiliateRef.js`, tested) → StorePage forwards it → `/api/shop/checkout` sets
+`channel = "ref:<CODE>"`. For a CARD sale the commission is credited synchronously in `finalizePaid`,
+and `test-shop-commission.mjs` guards that. But for **PromptPay** — Thailand's dominant method — the
+sale is paid LATER: checkout only creates the `new` order + QR, and the commission is credited when
+Omise POSTs a signed `charge.complete` to `/api/payment/webhook`, which recovers the ref from the
+charge's `metadata.channel`, guards on `order.status==='new'` (idempotency + oversold), and runs in an
+async block (server.js ~8384–8421). That deferred path — the more fragile one, on the more common
+payment method — had **no test**: a refactor breaking it would silently drop commission on most real
+Thai sales, and affiliates would quietly stop promoting.
+
+Added `backend/scripts/test-shop-commission-promptpay.mjs` (self-contained: spawns its own server in
+mock-payment mode with `OMISE_WEBHOOK_SECRET` set and `OPENTHAI_DATA_DIR` at a throwaway dir; posts a
+real HMAC-signed `charge.complete` whose metadata carries the same order_id/product_id/qty/channel the
+live Omise charge would). It pins the whole lifecycle: (1) affiliate NOT credited at checkout time
+(before payment), (2) credited exactly once when the webhook fires (฿1000 × 0.20 = ฿200), (3) a
+redelivered webhook does NOT double-credit (Omise is at-least-once; guarded by status==='new'),
+(4) a ref-less PromptPay order credits nobody. Wired into `package.json`
+(`test:shop-commission-promptpay`) and `.github/workflows/test.yml` beside the webhook-idempotency step.
+
+**No production code changed** — the path was already correct; this is a pure regression net for it.
+**Verified by running:** 12/12 pass. Mutation-checked: neutralising the webhook's
+`creditAffiliateSale` call turns it RED (total_sales 0 / earned 0, 4 assertions fail); restoring →
+12/12 green. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` (PR #79, existing).
 
 ## 2026-08-12 — i18n(portal funnel): finish the funnel sweep — GovThai MOU box + full 10-page guard
 
@@ -6209,14 +6337,14 @@ hardcoded Thai on the homepage fails CI instead of silently shipping to English/
 - ℹ️ **14 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql
 
 ## Recent commits
-- df9b72c i18n(portal funnel): finish sweep — GovThai MOU box + full 10-page guard (55 minutes ago)
-- d432fc7 i18n(portal funnel): sweep entire consent-signup funnel for stray Thai (hub + middleman + affiliate) (2 hours ago)
-- 374057b i18n(portal funnel): localize category dropdown on /portals/consumer & /portals/producer (2 hours ago)
-- e68e92a i18n(affiliate funnel): localize the affiliate welcome email for non-Thai creators (4 hours ago)
-- fb88f81 i18n(producer funnel): localize the producer-approval email for non-Thai producers (5 hours ago)
-- 9a0190f i18n(funnel): localize homepage skills CTA + /catalog category chips and tags (6 hours ago)
-- 059475b i18n/a11y(funnel): fix behind-interaction leaks (mk.close key + Thai network errors) (7 hours ago)
-- 09816f0 i18n(store): localize the checkout card payment option (was hardcoded Thai) (8 hours ago)
+- f93816b content/SEO(faq): correct overstated AI-skill count (was "over 35"; real = 35) + drift guard (2 hours ago)
+- fbe4ffd test(i18n): pin /dispute dynamic labels to the backend status/decision enums (6 hours ago)
+- f142d24 test(i18n): guard the buyer-facing /track order page against stray Thai (loaded state) (7 hours ago)
+- 346d3cf fix(affiliate): QuickPay lost commission when the visitor navigated in from the share link (11 hours ago)
+- 759b900 test(affiliate): pin the PromptPay-webhook shop-commission path (was untested) (12 hours ago)
+- df9b72c i18n(portal funnel): finish sweep — GovThai MOU box + full 10-page guard (18 hours ago)
+- d432fc7 i18n(portal funnel): sweep entire consent-signup funnel for stray Thai (hub + middleman + affiliate) (19 hours ago)
+- 374057b i18n(portal funnel): localize category dropdown on /portals/consumer & /portals/producer (19 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
