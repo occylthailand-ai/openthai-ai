@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T21:26:28.779Z · branch `claude/daily-reporter-improvements-8vc9ct` (671 commit(s) ahead of main)
+Generated: 2026-08-13T22:34:56.356Z · branch `claude/daily-reporter-improvements-8vc9ct` (674 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 890 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 893 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6655,6 +6655,35 @@ plan/subscription sales, v9.0 repo direction + deploy.yml, otop-ai-landing produ
 canonical/sitemap stay domain-relative), running the Supabase migrations, and JWT_SECRET on the Vercel
 projects.
 
+---
+
+## 2026-08-13 — seo(main-site): og:locale:alternate on every prerendered route
+
+Repo: **openthai-ai** (frontend). Carries the same market-entry fix from the OTOP-AI landing over to the
+higher-traffic main site. The React SPA renders in th/en/zh (LanguageProvider), and prerender's
+route-meta.mjs already rewrites the PRIMARY og:locale per route (th_TH default; en_US for the two
+international portals gov-intl/intl-org). But the base template declared no alternate locales, so
+LINE/Facebook/X had no signal the same URL exists in the other two languages.
+
+Change (frontend only, 3 files):
+- index.html: add og:locale:alternate en_US + zh_CN to the base <head>.
+- scripts/route-meta.mjs: recompute the two alternates per route as the languages OTHER than the page's
+  own (ALT_LOCALES map), so an English intl-portal page lists th_TH + zh_CN — never en_US as its own
+  alternate. Uses the existing fail-loud replaceOrThrow, so a template-format drift breaks the build
+  (loud) instead of silently serving the wrong locale set.
+- src/__tests__/routeMeta.test.js: new case asserting a Thai page emits en_US+zh_CN (not th_TH) and the
+  English portal emits th_TH+zh_CN (en_US only as the primary).
+
+Verified by running: routeMeta + seoInvariants + homepageStructuredData suites green; full frontend
+vitest 562/562 (was 561 — +1 new case); `npm run build` ran the real prerender over all 27 routes with
+no throw; inspected dist output — /pricing → primary th_TH + alt en_US/zh_CN, /portals/intl-org →
+primary en_US + alt th_TH/zh_CN, homepage → th_TH + en_US/zh_CN. Pushed to
+claude/daily-reporter-improvements-8vc9ct (PR #79 already open, not duplicated). No auto-merge.
+
+Owner-gated levers still untouched (point 8): affiliate commission on plan/subscription sales, v9.0 repo
+direction + deploy.yml, otop-ai-landing production domain, running the Supabase migrations, JWT_SECRET on
+the Vercel projects.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6664,14 +6693,14 @@ projects.
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- 219b403 docs(decisions): log landing og:locale:alternate + this round's verify-first findings (17 seconds ago)
-- 0b06cf4 chore: sync PROJECT_STATUS.md [skip ci] (53 minutes ago)
-- b2f7e3f docs(decisions): log OTOP-AI landing TH/EN/中文 i18n toggle (market-entry round) (54 minutes ago)
-- 0d8c753 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- e9414be feat(funnel): producer approval email also links to the producer dashboard (3 hours ago)
-- 0cfcd4c chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 9d8a263 feat(funnel): add a permanent dashboard link to the portal welcome email (4 hours ago)
-- 87aa6a3 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 8584553 docs(decisions): log main-site og:locale:alternate prerender change (20 seconds ago)
+- 0f59b00 seo(main-site): declare og:locale:alternate on every prerendered route (EN/ZH) (45 seconds ago)
+- 8234591 chore: sync PROJECT_STATUS.md [skip ci] (68 minutes ago)
+- 219b403 docs(decisions): log landing og:locale:alternate + this round's verify-first findings (69 minutes ago)
+- 0b06cf4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- b2f7e3f docs(decisions): log OTOP-AI landing TH/EN/中文 i18n toggle (market-entry round) (2 hours ago)
+- 0d8c753 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- e9414be feat(funnel): producer approval email also links to the producer dashboard (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6693,8 +6722,8 @@ projects.
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "uptime_sec": 21,
+  "memory_mb": "19.8",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
