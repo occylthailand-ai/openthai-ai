@@ -6553,3 +6553,27 @@ inputs return '' (email unchanged); trailing-slash domains aren't doubled; speci
 encoded — 21/21; wired into package.json + CI. The existing test:portal-welcome (59) and
 test:portal-welcome-coverage (25) still pass, and the server boots clean (GET /api/health → 200) with the
 CTA injected. Backend-only (new module + server.js import/inject + package.json + CI).
+
+---
+
+## 2026-08-13 — feat(funnel): producer approval email also links to the new producer dashboard
+
+Completes the "every member-facing email points to the member's dashboard" pass. The producer-approval
+email (sent when an admin approves a producer) had a single button to /producers/manage (edit listing) —
+but the richer /producer/dashboard (orders + revenue + stock) now exists and a just-approved producer has
+no other pointer to it. Added a second button linking to /producer/dashboard?email=<their email> (email
+pre-filled via encodeURIComponent, same as the manage link) plus a localized `dashboard` label + updated
+note in PRODUCER_APPROVAL_COPY (th/en/zh). Manage stays the primary CTA; dashboard is the secondary.
+
+Verified by running: extended the existing pure-builder test scripts/test-html-escape.mjs — asserts the
+approval email now carries /producer/dashboard?email=<encoded> and the localized dashboard button, and the
+pre-existing invariants (company/product XSS-escaped, en/zh localization, en email has NO Thai, empty
+fields degrade) all still hold — 59/59 (was 57). node --check on html-escape.js + server.js clean; server
+boots (GET /api/health → 200) with the two-button email. Backend-only, two files (html-escape.js + its
+test); no new CI wiring needed (test:html-escape already runs in CI).
+
+Note on remaining high-impact levers: with the consent-signup funnel now complete end-to-end (all four
+roles: dashboards + in-page links + welcome/approval-email links), the biggest remaining items are
+owner-gated and were NOT touched — affiliate commission on plan/subscription sales, v9.0 repo direction +
+deploy.yml, otop-ai-landing production domain, running the 8 Supabase migrations, and setting JWT_SECRET on
+the Vercel projects. Awaiting the owner's decision on those per standing-order point 8.

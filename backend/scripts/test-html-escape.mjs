@@ -94,8 +94,10 @@ const evilApproval = producerApprovalHtml({
 ok(!/<img src=x onerror=alert\(1\)>/.test(evilApproval), 'no live <img onerror> from the company name survives in the HTML');
 ok(evilApproval.includes('🎉 ยินดีด้วย &lt;img src=x onerror=alert(1)&gt;ร้าน!'), 'the company name is escaped inside the <h1>');
 ok(!/<script>alert\(1\)<\/script>/.test(evilApproval) && evilApproval.includes('สบู่&lt;script&gt;alert(1)&lt;/script&gt;'), 'the product name tag is escaped, not left live');
-// the recipient email only lands in the manage-link URL via encodeURIComponent
+// the recipient email only lands in the link URLs via encodeURIComponent
 ok(evilApproval.includes('/producers/manage?email=shop%40example.com'), 'the manage link carries the URL-encoded recipient email');
+// a newly-approved producer also gets a link to their dashboard (orders + revenue), email pre-filled
+ok(evilApproval.includes('/producer/dashboard?email=shop%40example.com'), 'the approval email links to the producer dashboard with the URL-encoded email');
 
 console.log('\n=== producerApprovalHtml: a normal approval renders cleanly, and empty fields degrade gracefully ===');
 const cleanApproval = producerApprovalHtml({ to: 'a@b.com', company: 'S & P', productName: 'ขนมไทย', domainUrl: 'https://www.openthai-ai.com' });
@@ -111,6 +113,7 @@ console.log('\n=== producerApprovalHtml/Subject: localized by the producer\'s ap
 const THAI = /[฀-๿]/;
 const enApproval = producerApprovalHtml({ to: 'a@b.com', company: 'ACME', productName: 'Herbal Tea', domainUrl: 'https://www.openthai-ai.com', lang: 'en' });
 ok(enApproval.includes('Manage my products') && enApproval.includes('has been approved'), 'en approval email uses English copy');
+ok(enApproval.includes('View orders &amp; revenue') || enApproval.includes('View orders & revenue'), 'en approval email has the localized dashboard button');
 ok(!THAI.test(enApproval), 'en approval email contains NO Thai characters');
 ok(producerApprovalSubject('en') === '🎉 Your shop has been approved — Openthai.ai', 'en subject is English');
 const zhApproval = producerApprovalHtml({ to: 'a@b.com', company: 'ACME', productName: '茶', domainUrl: 'https://www.openthai-ai.com', lang: 'zh' });

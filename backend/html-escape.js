@@ -86,7 +86,8 @@ const PRODUCER_APPROVAL_COPY = {
     sub: 'ใบสมัครผู้ผลิตของคุณได้รับการอนุมัติแล้ว',
     live: (prod) => `${prod ? `สินค้า "<strong>${prod}</strong>"` : 'สินค้าของคุณ'} พร้อมแสดงในตลาด Openthai.ai แล้วตอนนี้`,
     manage: '📦 จัดการสินค้าของฉัน',
-    note: 'เติมสต๊อก แก้ราคา หรือแก้รายละเอียดสินค้าได้เองทุกเมื่อจากหน้านี้ ไม่ต้องรอทีมงาน',
+    dashboard: '📊 ดูออเดอร์และรายได้',
+    note: 'เติมสต๊อก แก้ราคา หรือแก้รายละเอียดสินค้าได้เองทุกเมื่อจากหน้าจัดการ และดูออเดอร์/รายได้ของคุณได้ในแดชบอร์ด',
   },
   en: {
     subject: '🎉 Your shop has been approved — Openthai.ai',
@@ -94,7 +95,8 @@ const PRODUCER_APPROVAL_COPY = {
     sub: 'Your producer application has been approved',
     live: (prod) => `${prod ? `Your product "<strong>${prod}</strong>"` : 'Your products'} ${prod ? 'is' : 'are'} now live on the Openthai.ai marketplace`,
     manage: '📦 Manage my products',
-    note: 'Restock, change prices, or edit product details anytime from this page — no need to wait for our team.',
+    dashboard: '📊 View orders & revenue',
+    note: 'Restock, change prices, or edit product details anytime from the manage page — and track your orders and revenue in the dashboard.',
   },
   zh: {
     subject: '🎉 您的店铺已通过审核 — Openthai.ai',
@@ -102,7 +104,8 @@ const PRODUCER_APPROVAL_COPY = {
     sub: '您的生产商申请已通过审核',
     live: (prod) => `${prod ? `您的产品 "<strong>${prod}</strong>"` : '您的产品'}现已在 Openthai.ai 市场上线`,
     manage: '📦 管理我的产品',
-    note: '随时可在此页面补货、改价或编辑产品详情，无需等待团队处理。',
+    dashboard: '📊 查看订单和收入',
+    note: '随时可在管理页面补货、改价或编辑产品详情，并可在仪表板中查看您的订单和收入。',
   },
 };
 
@@ -116,6 +119,7 @@ export function producerApprovalHtml({ to, company, productName, domainUrl, lang
   const co = escapeHtml(company);
   const prod = escapeHtml(productName);
   const manageUrl = `${domainUrl}/producers/manage?email=${encodeURIComponent(to ?? '')}`;
+  const dashboardUrl = `${domainUrl}/producer/dashboard?email=${encodeURIComponent(to ?? '')}`;
   return `
       <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
         <div style="background:linear-gradient(135deg,#10b981,#06b6d4);padding:28px;text-align:center;">
@@ -125,7 +129,8 @@ export function producerApprovalHtml({ to, company, productName, domainUrl, lang
         <div style="padding:24px;font-size:15px;line-height:1.7;">
           <p>${c.live(productName ? prod : '')}</p>
           <div style="text-align:center;margin:20px 0;">
-            <a href="${manageUrl}" style="display:inline-block;background:linear-gradient(135deg,#10b981,#06b6d4);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">${c.manage}</a>
+            <a href="${manageUrl}" style="display:inline-block;background:linear-gradient(135deg,#10b981,#06b6d4);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;margin:4px;">${c.manage}</a>
+            <a href="${dashboardUrl}" style="display:inline-block;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:#f8fafc;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;margin:4px;">${c.dashboard || '📊 Dashboard'}</a>
           </div>
           <p style="color:#94a3b8;font-size:13px;">${c.note}</p>
         </div>
