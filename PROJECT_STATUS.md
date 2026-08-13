@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T18:27:52.570Z · branch `claude/daily-reporter-improvements-8vc9ct` (667 commit(s) ahead of main)
+Generated: 2026-08-13T20:33:04.510Z · branch `claude/daily-reporter-improvements-8vc9ct` (669 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 886 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 888 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6593,6 +6593,33 @@ owner-gated and were NOT touched — affiliate commission on plan/subscription s
 deploy.yml, otop-ai-landing production domain, running the 8 Supabase migrations, and setting JWT_SECRET on
 the Vercel projects. Awaiting the owner's decision on those per standing-order point 8.
 
+---
+
+## 2026-08-13 — feat(landing): OTOP-AI landing page now supports TH / EN / 中文 (market entry)
+
+Repo: **otop-ai-landing** (has no DECISIONS_LOG of its own → logged here per standing-order point 6).
+Non-gated market-entry work (standing-order point 2): the landing page is the top-of-funnel entry to
+OpenThaiAi, and it was Thai-only — so the "overseas buyers and partners" the page itself advertises
+(รองรับหลายภาษา … เปิดทางสู่ผู้ซื้อและพันธมิตรต่างประเทศ) literally couldn't read it. Added a lightweight
+client-side i18n layer with a header TH / EN / 中文 switcher.
+
+Design choices (verified, not from a spec):
+- Thai stays the STATIC default in the HTML, so crawlers and no-JS visitors still get a fully-rendered
+  Thai page — no SEO or first-paint regression. JS only re-renders when a visitor picks another language.
+- ~45 strings carry data-i18n / data-i18n-html attributes with full th/en/zh dictionaries. The two
+  markup-bearing strings (hero <h1> gradient <span>, hero <p> + footer credit embedded <a>) go through the
+  data-i18n-html path so their inline tags/href survive the swap.
+- applyLang() also sets <html lang> (th / en / zh-Hans), document.title, and meta description, and persists
+  the choice in localStorage (otopai_lang). Switcher is accessible (role=group, aria-pressed reflects
+  active language, focusable buttons).
+
+Verified by running: rendered index.html in headless Chromium (Playwright). Default = Thai; EN and 中文
+swap every string, preserve the <span>/<strong>/<a> markup and the OpenThaiAi link href, update
+lang+title+aria-pressed; the choice survives a reload; switching back to TH restores the original; no
+console JS errors. All 4 Vercel preview deploys of the push went Ready. Pushed to
+claude/daily-reporter-improvements-8vc9ct on otop-ai-landing (open draft-track PR #1 already exists for the
+branch — not duplicated). Landing-only; no OpenThaiAi code touched.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6602,14 +6629,14 @@ the Vercel projects. Awaiting the owner's decision on those per standing-order p
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- e9414be feat(funnel): producer approval email also links to the producer dashboard (26 seconds ago)
-- 0cfcd4c chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
-- 9d8a263 feat(funnel): add a permanent dashboard link to the portal welcome email (55 minutes ago)
-- 87aa6a3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- dc7dda4 feat(funnel): link role dashboards from the /portals/* signup success state (2 hours ago)
-- 8554431 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 8b692c4 feat(middleman): per-role Distributor Dashboard (/middleman/dashboard) (2 hours ago)
-- c253be5 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- b2f7e3f docs(decisions): log OTOP-AI landing TH/EN/中文 i18n toggle (market-entry round) (23 seconds ago)
+- 0d8c753 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- e9414be feat(funnel): producer approval email also links to the producer dashboard (2 hours ago)
+- 0cfcd4c chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 9d8a263 feat(funnel): add a permanent dashboard link to the portal welcome email (3 hours ago)
+- 87aa6a3 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- dc7dda4 feat(funnel): link role dashboards from the /portals/* signup success state (4 hours ago)
+- 8554431 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6632,7 +6659,7 @@ the Vercel projects. Awaiting the owner's decision on those per standing-order p
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.9",
+  "memory_mb": "19.4",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
