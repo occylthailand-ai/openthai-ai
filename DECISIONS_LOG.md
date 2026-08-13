@@ -6509,3 +6509,23 @@ middlemanDashboardNoLeak.test.jsx (business-type + category labels localized in 
 render-identical). Full frontend suite 555/555 (was 553, +2); npm run build clean, sitemap still 27
 (dashboard excluded). This completes the consent-signup dashboard set: producer / consumer / middleman
 (+ affiliate, which already had AffiliateDashboard).
+
+---
+
+## 2026-08-13 — feat(funnel): link the new role dashboards from the /portals/* signup success state
+
+The three per-role dashboards shipped today (producer/consumer/middleman) were unreachable from the funnel
+— after signing up on /portals/producer|consumer|middleman a member saw only a "thank you" message with no
+way to their dashboard, so the dashboards were effectively orphaned. Closed that loop: each portal's
+success state now shows a button that takes the new member straight to THEIR dashboard with their email
+pre-filled (/producer/dashboard?email=…, /consumer/dashboard?email=…, /middleman/dashboard?email=…), so
+the auto-loading dashboards open populated on first click. Because signup auto-registers the producer and
+records the consumer/middleman lead, the just-signed-up member's dashboard resolves immediately (producer
+shows 'pending' status, etc.). Added a localized `dashboard` label to each portal's own th/en/zh dictionary.
+
+Verified by running: new test src/__tests__/portalDashboardLink.test.jsx mocks submitLead to succeed, fills
++ submits each of the three portals in English, and asserts the success button (1) carries no un-localized
+Thai and (2) navigates to the exact /<role>/dashboard?email=<encoded email> — 3/3. The existing
+portalFunnelNoThaiLeak guard still passes (the dashboard label only renders in the post-submit success
+state). Full frontend suite 561/561 (was 555, +6); npm run build clean, sitemap unchanged at 27 (no new
+routes — just links into the existing dashboards). Frontend-only, four files (3 portals + 1 test).

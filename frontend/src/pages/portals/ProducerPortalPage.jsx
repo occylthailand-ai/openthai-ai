@@ -8,9 +8,9 @@ import { PORTAL_CATEGORIES as CATEGORIES, producerCategoryLabel } from '../../da
 import SeasonalAnglesPanel from './SeasonalAnglesPanel';
 
 const T = {
-  th: { title:'ทางเข้าผู้ผลิต', sub:'เชื่อมต่อสินค้าของคุณกับตลาด AI ไทยและทั่วโลก', benefits:['ขายสินค้าผ่าน AI-powered store','เข้าถึงผู้ซื้อทั่วโลก','ระบบ inventory อัตโนมัติ','รายงานยอดขายแบบ real-time'], form:{ name:'ชื่อบริษัท/ผู้ผลิต', country:'ประเทศ', product:'ประเภทสินค้า/บริการ', category:'หมวดสินค้า', email:'อีเมลติดต่อ', phone:'เบอร์โทร', submit:'ลงทะเบียนผู้ผลิต', ok:'ส่งคำขอเรียบร้อย! ทีมงานจะติดต่อกลับภายใน 24 ชม.' } },
-  en: { title:'Producer Portal', sub:'Connect your products to the Thai AI market and beyond', benefits:['Sell via AI-powered store','Reach global buyers','Automated inventory system','Real-time sales reports'], form:{ name:'Company / Producer Name', country:'Country', product:'Product / Service Type', category:'Product Category', email:'Contact Email', phone:'Phone Number', submit:'Register as Producer', ok:'Request received! Our team will contact you within 24 hours.' } },
-  zh: { title:'生产商门户', sub:'将您的产品连接到泰国AI市场及全球', benefits:['通过AI驱动的商店销售','接触全球买家','自动库存系统','实时销售报告'], form:{ name:'公司/生产商名称', country:'国家', product:'产品/服务类型', category:'产品类别', email:'联系邮箱', phone:'电话号码', submit:'注册为生产商', ok:'申请已收到！我们的团队将在24小时内与您联系。' } },
+  th: { title:'ทางเข้าผู้ผลิต', sub:'เชื่อมต่อสินค้าของคุณกับตลาด AI ไทยและทั่วโลก', benefits:['ขายสินค้าผ่าน AI-powered store','เข้าถึงผู้ซื้อทั่วโลก','ระบบ inventory อัตโนมัติ','รายงานยอดขายแบบ real-time'], form:{ name:'ชื่อบริษัท/ผู้ผลิต', country:'ประเทศ', product:'ประเภทสินค้า/บริการ', category:'หมวดสินค้า', email:'อีเมลติดต่อ', phone:'เบอร์โทร', submit:'ลงทะเบียนผู้ผลิต', ok:'ส่งคำขอเรียบร้อย! ทีมงานจะติดต่อกลับภายใน 24 ชม.', dashboard:'📊 ดูสถานะและออเดอร์ในแดชบอร์ดของฉัน →' } },
+  en: { title:'Producer Portal', sub:'Connect your products to the Thai AI market and beyond', benefits:['Sell via AI-powered store','Reach global buyers','Automated inventory system','Real-time sales reports'], form:{ name:'Company / Producer Name', country:'Country', product:'Product / Service Type', category:'Product Category', email:'Contact Email', phone:'Phone Number', submit:'Register as Producer', ok:'Request received! Our team will contact you within 24 hours.', dashboard:'📊 View my status & orders in the dashboard →' } },
+  zh: { title:'生产商门户', sub:'将您的产品连接到泰国AI市场及全球', benefits:['通过AI驱动的商店销售','接触全球买家','自动库存系统','实时销售报告'], form:{ name:'公司/生产商名称', country:'国家', product:'产品/服务类型', category:'产品类别', email:'联系邮箱', phone:'电话号码', submit:'注册为生产商', ok:'申请已收到！我们的团队将在24小时内与您联系。', dashboard:'📊 在我的仪表板中查看状态和订单 →' } },
 };
 
 
@@ -55,7 +55,7 @@ export default function ProducerPortalPage() {
             {t.benefits.map((b,i) => <div key={i} style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#6366f1', fontSize:20 }}>✓</span><span style={{ color:'#ddd' }}>{b}</span></div>)}
           </div>
           <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #6366f133' }}>
-            {sent ? <div role="status" style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
+            {sent ? <div role="status" style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p><button type="button" onClick={() => navigate('/producer/dashboard?email=' + encodeURIComponent(form.email))} style={{ marginTop:20, background:'#6366f1', color:'#fff', border:'none', padding:'12px 22px', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer' }}>{t.form.dashboard}</button></div> :
             <form onSubmit={submit}>
               {[['name',t.form.name],['country',t.form.country],['product',t.form.product]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:16 }}>
