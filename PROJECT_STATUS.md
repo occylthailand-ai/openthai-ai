@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T14:47:24.842Z · branch `claude/daily-reporter-improvements-8vc9ct` (657 commit(s) ahead of main)
+Generated: 2026-08-13T14:58:19.890Z · branch `claude/daily-reporter-improvements-8vc9ct` (659 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 876 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 878 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6456,23 +6456,57 @@ dashboard for every order status × producer status in en/zh and fails on a raw 
 correctly excluded). This is role #1 of the per-role dashboard set; consumer/middleman/affiliate to follow
 as separate verified PRs.
 
+---
+
+## 2026-08-13 — feat(consumer): per-role Consumer Dashboard (/consumer/dashboard) — role #2 of the dashboard set
+
+Continuing the owner-directed per-role dashboards (producer shipped earlier today; this is consumer, the
+demand side). Verified the surface first: consumers sign up via /portals/consumer (a portal lead of
+type 'consumer' whose form_data.category is their interest — the same canonical Thai category values
+producers use), but had NO self-serve view afterward (no my-status endpoint existed for leads, and the
+consumer-digest is admin/cron-gated). Built one that turns their stated interest into real value.
+
+Backend — new GET /api/portals/consumer/my?email= (server.js, where portalLeads + producers are both in
+scope). Finds the newest 'consumer' lead for that email (404 if none — can't enumerate; 400 malformed),
+reads their interest = form_data.category, and returns recommendations from the real approved catalog
+(producers.catalog()) filtered to that interest — falling back to the wider catalog when nothing matches
+so the dashboard is never empty. The producer's private contact email in each catalog row is STRIPPED
+(a consumer sees the shop + product, not the producer's email — mirrors the producer-search-privacy
+invariant). Reuses the producer dashboard's rate limiter. Read-only: no new Supabase table, so
+migration-coverage is unaffected.
+
+Frontend — new ConsumerDashboardPage.jsx at /consumer/dashboard (lazy route). Email box (or ?email=
+auto-load) → welcome + interest + a responsive grid of recommended products (name / producer / price /
+category / short description) each linking to /catalog. The interest and every recommendation's category
+are localized for display via producerCategoryLabel(value, lang) — the stored value stays canonical Thai.
+Full i18n (mk.cdash.* in th/en/zh). Added Disallow: /consumer/dashboard to robots (personal dashboard).
+
+Verified by running: new self-contained backend test scripts/test-consumer-my.mjs (spawns the real server
+on the file-fallback path, seeds a consumer lead + catalog, asserts interest-matched recommendations,
+the pending product is excluded, the producer's private email never leaks, a matchless interest falls
+back to a non-empty list, 404/400 gates) — 12/12; wired into package.json + CI. New frontend guard
+consumerDashboardNoLeak.test.jsx renders the loaded dashboard in en/zh and fails on a raw mk.* key or a
+stray Thai category label — 2/2. Full frontend suite 553/553 (was 551, +2); npm run build clean, sitemap
+still 27 (dashboard correctly excluded). Remaining roles: middleman + affiliate (affiliate already has
+AffiliateDashboard) — as separate verified PRs.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 90 route components resolved
+- ✅ **Route components exist on disk** — all 91 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- d091b83 feat(producer): per-role Producer Dashboard (/producer/dashboard) (32 seconds ago)
+- aba0287 feat(consumer): per-role Consumer Dashboard (/consumer/dashboard) (33 seconds ago)
+- e28ed9b chore: sync PROJECT_STATUS.md [skip ci] (11 minutes ago)
+- d091b83 feat(producer): per-role Producer Dashboard (/producer/dashboard) (11 minutes ago)
 - 266d371 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - fa86bd4 fix(matching): add missing match_requests Supabase migration (CI: migration-coverage) (3 hours ago)
 - 03ec803 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - 5e316cf Merge origin/main into claude/daily-reporter-improvements-8vc9ct (3 hours ago)
-- a1efc5f SEO(market-entry): advertise /affiliate-programs to crawlers (was missing from sitemap/robots) (3 hours ago)
-- f93816b content/SEO(faq): correct overstated AI-skill count (was "over 35"; real = 35) + drift guard (5 hours ago)
-- fbe4ffd test(i18n): pin /dispute dynamic labels to the backend status/decision enums (9 hours ago)
+- a1efc5f SEO(market-entry): advertise /affiliate-programs to crawlers (was missing from sitemap/robots) (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6495,7 +6529,7 @@ as separate verified PRs.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.5",
+  "memory_mb": "19.4",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -6553,7 +6587,7 @@ as separate verified PRs.
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (90 routes)
+## Route map (91 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -6588,6 +6622,7 @@ as separate verified PRs.
 | /producers | ProducerJoinPage | public |
 | /producers/manage | ProducerManagePage | public |
 | /producer/dashboard | ProducerDashboardPage | public |
+| /consumer/dashboard | ConsumerDashboardPage | public |
 | /catalog | CatalogPage | public |
 | /shop | CatalogPage | public |
 | /find-producers | ProducerDirectoryPage | public |
@@ -6686,7 +6721,7 @@ as separate verified PRs.
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9369 | Vercel serverless detection |
+| `server.js` | 9402 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 289 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
