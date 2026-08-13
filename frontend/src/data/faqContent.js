@@ -25,7 +25,7 @@ export const FAQ_ITEMS = {
     ['เป็นผู้บริโภค/ผู้ซื้อ สมัครแล้วได้อะไร?', 'สมัครที่หน้าผู้บริโภค (/portals/consumer) โดยยินยอม PDPA และเลือกหมวดสินค้าที่สนใจ จากนั้นรับอีเมลแนะนำสินค้าใหม่ที่ตรงหมวดจากผู้ผลิตที่ผ่านการรับรอง (ระบบข้ามสินค้าที่หมดสต๊อกให้อัตโนมัติ) ยกเลิกรับอีเมลได้ทุกเมื่อ ซื้อสินค้าได้ที่ตลาด (/catalog) ชำระผ่านพร้อมเพย์หรือบัตร และติดตามคำสั่งซื้อได้ที่ /track'],
     ['เป็นคนกลาง/ตัวแทนจำหน่ายเข้าร่วมอย่างไร?', 'สมัครที่หน้าคนกลาง (/portals/middleman) โดยยินยอม PDPA เลือกประเภทธุรกิจ (ตัวแทนจำหน่าย/ผู้ค้าส่ง/นายหน้า/ตัวแทนขายต่อ) และพื้นที่/ช่องทางที่ดูแล ทีมงานติดต่อกลับเพื่อยืนยันการเข้าร่วมเครือข่าย จากนั้นได้ราคาส่งพิเศษจากผู้ผลิตที่ผ่านการรับรอง สิทธิ์ดูแลพื้นที่/ช่องทาง การสนับสนุนด้านการตลาด/คอนเทนต์ และเชื่อมต่อกับผู้ผลิตโดยตรงไม่ผ่านคนกลางซ้ำซ้อน'],
     ['Affiliate ได้ค่าคอมอย่างไร?', 'สมัครเป็น affiliate รับลิงก์แนะนำของตัวเอง เมื่อมีคนซื้อผ่านลิงก์คุณจะได้ค่าคอมมิชชันตามขั้น (tier) ถอนเข้าพร้อมเพย์ได้ โดยยืนยันคำขอถอนผ่านอีเมลที่ลงทะเบียนไว้เพื่อความปลอดภัย'],
-    ['มีเครื่องมือ AI อะไรบ้าง?', 'มีทักษะ AI มากกว่า 35 อย่าง ครบทั้งสร้างคอนเทนต์ แคปชั่นขายของ วิเคราะห์เทรนด์ SEO บริการลูกค้า ตั้งราคา ไลฟ์ขายของ และอื่นๆ ดูรายการทั้งหมดได้ที่หน้าเครื่องมือ AI (/ai-skills)'],
+    ['มีเครื่องมือ AI อะไรบ้าง?', 'มีทักษะ AI 35 อย่าง ครบทั้งสร้างคอนเทนต์ แคปชั่นขายของ วิเคราะห์เทรนด์ SEO บริการลูกค้า ตั้งราคา ไลฟ์ขายของ และอื่นๆ ดูรายการทั้งหมดได้ที่หน้าเครื่องมือ AI (/ai-skills)'],
   ],
   en: [
     ['What is OpenThaiAi?', 'A commerce AI platform for Thailand and global markets — AI tools for content/selling/SEO, a marketplace connecting producers with buyers, an affiliate system, and a seasonal product recommender. Available in 3 languages (Thai/English/Chinese).'],
@@ -38,7 +38,7 @@ export const FAQ_ITEMS = {
     ['What do I get as a consumer/buyer?', 'Sign up at the consumer portal (/portals/consumer), consenting to PDPA, and pick the product categories you care about. You then get emails featuring new products that match your category from verified producers (sold-out items are skipped automatically), unsubscribe anytime, buy in the marketplace (/catalog) via PromptPay or card, and track orders at /track.'],
     ['How do middlemen/distributors join?', 'Apply at the distributor portal (/portals/middleman), consenting to PDPA, and pick your business type (distributor/wholesaler/broker/reseller) and the territory/channel you cover. The team contacts you to confirm your place in the network; you then get special wholesale pricing from verified producers, territory/channel rights, marketing and content support, and a direct connection to producers with no redundant middlemen.'],
     ['How do affiliates earn?', 'Sign up as an affiliate and get your own referral link. When someone buys through it you earn a tier-based commission, withdrawable to PromptPay — each withdrawal is confirmed via your registered email for safety.'],
-    ['What AI tools are there?', 'Over 35 AI skills — content creation, sales captions, trend analysis, SEO, customer support, pricing, live selling and more. See the full list on the AI tools page (/ai-skills).'],
+    ['What AI tools are there?', '35 AI skills — content creation, sales captions, trend analysis, SEO, customer support, pricing, live selling and more. See the full list on the AI tools page (/ai-skills).'],
   ],
   zh: [
     ['OpenThaiAi 是什么？', '面向泰国与全球市场的商用 AI 平台——内容/销售/SEO 的 AI 工具、连接生产商与买家的商城、推广（affiliate）系统，以及应季选品工具。支持三语（泰/英/中）。'],
@@ -51,6 +51,6 @@ export const FAQ_ITEMS = {
     ['作为消费者/买家能获得什么？', '在消费者入口（/portals/consumer）注册并同意 PDPA，选择你感兴趣的商品类别，即可收到来自认证生产商、与你类别匹配的新品推荐邮件（系统自动跳过缺货商品），可随时退订；在商城（/catalog）通过 PromptPay 或银行卡购买，并在 /track 追踪订单。'],
     ['中间商/经销商如何加入？', '在经销商入口（/portals/middleman）注册并同意 PDPA，选择你的业务类型（经销商/批发商/经纪人/转售商）以及负责的区域/渠道。团队会与你联系以确认加入网络；随后你将获得来自认证生产商的特殊批发价、区域/渠道权益、营销与内容支持，以及直接对接生产商、减少中间环节。'],
     ['推广者如何赚取佣金？', '注册为 affiliate 并获得专属推广链接。有人通过链接购买后，你将按等级（tier）获得佣金，可提现至 PromptPay——每笔提现需通过注册邮箱确认以保安全。'],
-    ['有哪些 AI 工具？', '超过 35 项 AI 技能——内容创作、销售文案、趋势分析、SEO、客服、定价、直播带货等。完整列表见 AI 工具页面（/ai-skills）。'],
+    ['有哪些 AI 工具？', '35 项 AI 技能——内容创作、销售文案、趋势分析、SEO、客服、定价、直播带货等。完整列表见 AI 工具页面（/ai-skills）。'],
   ],
 };

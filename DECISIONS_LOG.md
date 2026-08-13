@@ -9,6 +9,30 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-13 — content/SEO(faq): correct the overstated AI-skill count (was "over 35"; real registry = 35) + drift guard
+
+Standing-order loop (content/SEO + honesty). Audited the FAQ (frontend/src/data/faqContent.js), which
+feeds BOTH the visible /faq page AND the FAQPage JSON-LD (Google rich result). Verified the hard claims:
+plan prices (Free ฿0 / Pro ฿299 / Premier ฿599 / Enterprise ฿1,299) match the real omise-payment.js
+PLANS and the PAID_PLANS set /api/payment/create charges — accurate. But the AI-skills answer OVERSTATED
+the count in all three languages — th "มีทักษะ AI มากกว่า 35", en "Over 35 AI skills", zh "超过 35 项" —
+while the backend SKILLS_REGISTRY holds EXACTLY 35 (confirmed by counting its id: entries; PROJECT_STATUS
+and ShowcasePage/AiSkillsPublicPage already say "35"). So the number shown to buyers and to Google was
+literally false (35 is not "more than 35") — against this repo's no-overstatement rule, and the FAQ was
+the lone outlier vs the rest of the app.
+
+FIX: reworded the skills answer to the accurate, app-canonical "35" in th/en/zh (single source, so the
+visible FAQ and the JSON-LD update together — faqContent.test.js still green). Added
+`faqSkillCount.test.js`: reads the real SKILLS_REGISTRY count from backend/server.js (same cross-file
+approach as the SEO-invariant tests) and asserts every language's FAQ skills answer states that exact
+number AND never uses an overstatement word (มากกว่า / กว่า N / over / more than / 超过 / 超過) — so the
+claim can't silently drift or re-inflate as skills are added/removed.
+
+VERIFIED BY RUNNING: new guard 4/4; faqContent sync test still 8/8; full frontend suite **538/538**
+(was 534, +4); `vite build` clean. Mutation-checked: restoring the "มากกว่า 35" / "超过 35" wording turns
+the th+zh cases RED, restoring → green. Content-only change (+ guard), no logic touched. Committed +
+pushed to `claude/daily-reporter-improvements-8vc9ct` (PR #79).
+
 ## 2026-08-13 — test(i18n): pin the /dispute status page's dynamic labels to the backend's status/decision enums
 
 Standing-order loop. Completed the buyer/producer-facing trust pair started with /track by auditing
