@@ -11,7 +11,7 @@ waitlist หาย, โพสต์ตั้งเวลาไม่ยิง, �
 
 > ต้องตั้ง env `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` ด้วย ไม่งั้น backend จะ fall back เป็นไฟล์เหมือนเดิม.
 
-## ลำดับการรัน (8 ไฟล์)
+## ลำดับการรัน (9 ไฟล์)
 
 1. **`FULL-MIGRATION.sql`** — schema หลัก (producers / products / orders / order_items / payments / entitlements / stock_movements / order_disputes / user_sync ฯลฯ). รันไฟล์นี้ก่อนเสมอ.
 2. **`003_ai_usage_log.sql`** — ตาราง `ai_usage_log` (สถิติ token/ต้นทุน AI ต่อ endpoint). ถ้าไม่รัน การ log จะปิดตัวเองเงียบ ๆ.
@@ -21,9 +21,10 @@ waitlist หาย, โพสต์ตั้งเวลาไม่ยิง, �
 6. **`011_autopost_queue.sql`** — `autopost_queue` (คิวโพสต์โซเชียลอัตโนมัติ — ถ้าไม่รัน โพสต์ตั้งเวลาจะไม่ยิงบน Vercel).
 7. **`012_scheduler_posts.sql`** — `scheduler_posts` (คิวโพสต์ตั้งเวลาของหน้า Scheduler — รวม LINE OA broadcast เมื่อถึงเวลา).
 8. **`013_video_jobs.sql`** — `video_jobs` (งานสร้างวิดีโอที่จ่ายเงินจริงต่อคลิป — ถ้าไม่รัน จะดึงผลไม่ได้หลัง deploy).
+9. **`014_match_requests.sql`** — `match_requests` (คำขอจับคู่ producer↔lead ของ matching engine — ถ้าไม่รัน คำขอจะไม่ถาวรและแอดมินเห็นหาย).
 
-> **หมายเหตุ:** `FULL-MIGRATION.sql` โดยตั้งใจ **ไม่รวม** ตารางของไฟล์ 003/008/009/010/011/012/013
-> (แต่ละอันเพิ่มมาทีหลังพร้อมเหตุผลเฉพาะ) — จึงต้องรันไฟล์เสริมทั้ง 7 ด้วย ไม่ใช่แค่ FULL-MIGRATION.
+> **หมายเหตุ:** `FULL-MIGRATION.sql` โดยตั้งใจ **ไม่รวม** ตารางของไฟล์ 003/008/009/010/011/012/013/014
+> (แต่ละอันเพิ่มมาทีหลังพร้อมเหตุผลเฉพาะ) — จึงต้องรันไฟล์เสริมทั้ง 8 ด้วย ไม่ใช่แค่ FULL-MIGRATION.
 > ไฟล์อื่นใน `migrations/` (เช่น `001_*`, `002_*`, `004_*`–`007_*`, `credits-schema.sql`) เป็นสคีมาเก่า/ทับซ้อน
 > ที่ FULL-MIGRATION ครอบคลุมแล้ว — **ไม่ต้องรันซ้ำ** เว้นแต่รู้ว่าต้องการเจาะจง.
 

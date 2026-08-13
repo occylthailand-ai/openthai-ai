@@ -6377,3 +6377,32 @@ clean with sitemap still 27 urls incl. /affiliate-programs (my round-26 SEO chan
 full frontend suite 543/543 (was 538 — +5 from main's new ErrorBoundary/matching tests) after the robots
 fix, seoInvariants back to 7/7. This is a merge commit on the branch (no history rewrite) — PR #79 stays
 the same PR, no force-push, no auto-merge to main.
+
+---
+
+## 2026-08-13 — fix(matching): add the missing match_requests migration (CI caught it post-merge)
+
+Right after merging main, the PR #79 CI "Backend Smoke Test" went red on `test:migration-coverage`
+(28 passed, 1 failed): `❌ "match_requests" is created by [recommended set]`. Investigated the real
+CI job log rather than guessing. Root cause is a real production gap main shipped: `backend/matching.js`
+(the matching engine from PRs #82–#85) does `sbReq('POST', '/match_requests', …)` in requestMatch()
+— it writes match requests to a Supabase table `match_requests` — but NO migration ever creates that
+table (its own header comment "ไม่ต้องการ DB table ใหม่" predates the Supabase-persistence code below
+it). On Vercel with Supabase configured, POST /api/match/request would fail the insert and silently fall
+back to the ephemeral /tmp match_requests.json (wiped every redeploy, per-lambda) — so producer→lead
+match requests are lost and the admin /api/match/requests view comes up empty. This branch's
+migration-coverage test (which scans every backend .js for `sbReq('POST','/<table>'` targets) is exactly
+what surfaced it.
+
+Fix: added `backend/migrations/014_match_requests.sql` creating `public.match_requests` with the columns
+matching.js actually writes (id pk / producer_email / lead_id / note / status default 'pending' /
+created_at), + a created_at index and RLS-enable, in the same style as 013_video_jobs.sql. Registered it
+in the test's RECOMMENDED_MIGRATIONS and in migrations/README.md (8→9 files, new item 9, note updated
+7→8 supplements) so the coverage + README-lockstep invariants stay green and the owner's runbook tells
+them to create the table.
+
+Verified by running: test:migration-coverage 29/29 (was 28/1); test:full-migration-columns 67/67; and
+the ENTIRE CI backend unit-test list (~48 scripts) re-run locally by real exit code — all pass, none
+failed (an earlier grep-based scan false-flagged tests whose descriptions contain "throw"/"Error"; the
+exit-code re-run is authoritative). No app code changed — this is a migration + test-registry + runbook
+fix that makes main's matching feature actually persist in production.
