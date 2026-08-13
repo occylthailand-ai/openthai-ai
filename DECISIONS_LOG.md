@@ -6668,3 +6668,37 @@ claude/daily-reporter-improvements-8vc9ct (PR #79 already open, not duplicated).
 Owner-gated levers still untouched (point 8): affiliate commission on plan/subscription sales, v9.0 repo
 direction + deploy.yml, otop-ai-landing production domain, running the Supabase migrations, JWT_SECRET on
 the Vercel projects.
+
+---
+
+## 2026-08-13 — fix(privacy): the public /api/catalog no longer leaks every producer's email (PDPA)
+
+Real bug found by code scan (point 2/3). /api/catalog is public + unauthenticated and returned each
+approved producer's raw email, so anyone could GET it once and harvest every producer's contact address —
+the same PDPA harvesting hole already closed on /api/producers/search. The catalog kept the email only
+because CatalogPage posted producer_email back at checkout as the producer identifier; producers.js even
+carried a comment flagging this as a deferred "separate refactor". Done now.
+
+Fix: expose an opaque, non-reversible ref (truncated sha256 of the lowercased email) instead of the email,
+resolved back to the email server-side in the order flow.
+- producers.js: exported producerRef(email); added emailFromRef(ref); catalog() returns `ref` not `email`.
+- server.js: wired resolveProducerRef into createOrders.
+- orders.js: place() resolves producer_ref -> email before price authority / stock guard / notification.
+  A direct producer_email is still accepted (first-party store path, admin, existing integrations), so
+  every downstream money-guard path is unchanged.
+- CatalogPage.jsx: posts producer_ref (and keys on ref) instead of the email.
+- The consumer/middleman dashboard feeds already stripped the catalog email (their own pub() projection),
+  so they were unaffected — verified.
+
+Verified by running (not "should work"): test-producer-search-privacy extended to 16/16 — asserts the
+catalog row has NO email + an order placed with ONLY the ref reaches the right producer at its
+authoritative price (client price 1 -> server 120, 120*2=240), and a bogus ref resolves to no producer;
+test-producers 35/35 (catalog assertions moved from email to producerRef); order price-authority 14/14,
+stock-guard 9/9, orders-track 19/19, producer-my-orders/consumer-my/middleman-my green; full frontend
+vitest 562/562 (3 catalog mocks moved email->ref); node --check clean; server boots (health 200) and the
+live /api/catalog returns no email field. Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79
+open, not duplicated). No auto-merge.
+
+Process note: mid-round I ran `git reset --hard origin/...` on an unpushed working tree and lost the
+edits; re-applied them from context, re-ran the full verification, and committed BEFORE syncing this time.
+Lesson: never reset --hard with uncommitted work — commit or stash first, then rebase.
