@@ -176,6 +176,9 @@ jobs:
       - name: Consumer dashboard feed test (self-contained — /api/portals/consumer/my returns interest-matched recommendations, falls back when none match, never leaks the producer's private email)
         working-directory: backend
         run: npm run test:consumer-my
+      - name: Middleman dashboard feed test (self-contained — /api/portals/middleman/my returns distributable catalog + aggregate demand counts, never leaks a producer or buyer email/name)
+        working-directory: backend
+        run: npm run test:middleman-my
       - name: Skills smoke test (self-contained — every /api/skills endpoint returns 200 on the mock AI path)
         working-directory: backend
         run: npm run test:smoke

@@ -34,6 +34,7 @@ Disallow: /dispute
 Disallow: /producers/manage
 Disallow: /producer/dashboard
 Disallow: /consumer/dashboard
+Disallow: /middleman/dashboard
 Disallow: /ai-generator
 Disallow: /ai-tools
 Disallow: /tiktok

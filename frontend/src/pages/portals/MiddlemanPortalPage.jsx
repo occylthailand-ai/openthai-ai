@@ -5,16 +5,10 @@ import { backLabel, backAria } from './backLabel';
 import { useNavigate } from 'react-router-dom';
 import { submitLead, leadError } from './submitLead';
 import SeasonalAnglesPanel from './SeasonalAnglesPanel';
-
 // The `value` is the canonical string stored on the lead (unchanged); only the visible label is
-// localized so a non-Thai distributor isn't shown a Thai-only dropdown for the one required select.
-const BUSINESS_TYPES = [
-  { value: 'ตัวแทนจำหน่าย (Distributor)', th: 'ตัวแทนจำหน่าย', en: 'Distributor', zh: '经销商' },
-  { value: 'ผู้ค้าส่ง (Wholesaler)',      th: 'ผู้ค้าส่ง',      en: 'Wholesaler',  zh: '批发商' },
-  { value: 'นายหน้า (Broker)',            th: 'นายหน้า',        en: 'Broker',      zh: '经纪人' },
-  { value: 'ตัวแทนขายต่อ (Reseller)',     th: 'ตัวแทนขายต่อ',   en: 'Reseller',    zh: '代理转售商' },
-  { value: 'อื่นๆ',                        th: 'อื่นๆ',          en: 'Other',       zh: '其他' },
-];
+// localized so a non-Thai distributor isn't shown a Thai-only dropdown. Shared with the middleman
+// dashboard so the stored values stay in lockstep (single source of truth).
+import { BUSINESS_TYPES } from '../../data/businessTypes';
 
 const T = {
   th: { title:'ทางเข้าคนกลาง / ตัวแทนจำหน่าย', sub:'ตัวแทนจำหน่าย ผู้ค้าส่ง นายหน้า และคนกลางทุกประเภท เข้าร่วมเครือข่ายกระจายสินค้า OpenThaiAi', benefits:['ราคาส่งพิเศษจากผู้ผลิตที่ผ่านการรับรอง','สิทธิ์ดูแลพื้นที่/ช่องทางจำหน่าย','การสนับสนุนด้านการตลาดและคอนเทนต์','เชื่อมต่อกับผู้ผลิตโดยตรง ไม่ผ่านคนกลางซ้ำซ้อน'], form:{ name:'ชื่อ/ชื่อบริษัท', country:'ประเทศ', business_type:'ประเภทธุรกิจ', region:'พื้นที่/ช่องทางที่ดูแล', email:'อีเมล', phone:'เบอร์โทร/WhatsApp', submit:'สมัครเป็นคนกลาง', ok:'ขอบคุณ! ทีมงานจะติดต่อกลับเพื่อยืนยันการเข้าร่วมเครือข่าย' } },

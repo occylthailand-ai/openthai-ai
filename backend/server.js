@@ -297,6 +297,46 @@ app.get('/api/portals/consumer/my', producerDashLimiter, async (req, res) => {
   });
 });
 
+// Middleman self-serve dashboard feed — /api/portals/middleman/my?email=<signed-up email>
+// Powers the /middleman/dashboard page: a distributor/wholesaler/broker who signed up via
+// /portals/middleman (portal lead type 'middleman', storing business_type + region) enters that email and
+// gets back their signup + (1) products they can distribute (the real approved catalog) and (2) demand
+// signals — an AGGREGATE count of consumer signups per interest category (no per-consumer data), so a
+// middleman can see which categories buyers are asking for. Same public email-identity pattern as the
+// producer/consumer dashboards. Producer contact emails are STRIPPED from the catalog (a middleman must
+// not be able to harvest producer emails just by signing up — connections happen through the platform,
+// per the consent/no-scrape policy); demand is counts only, never buyer identities. 404 unknown, 400 bad.
+app.get('/api/portals/middleman/my', producerDashLimiter, async (req, res) => {
+  const email = (req.query.email || '').toString().trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, error: 'อีเมลไม่ถูกต้อง' });
+  const leads = await portalLeads.all();
+  const mine = leads
+    .filter((l) => l.type === 'middleman' && (l.email || '').toLowerCase() === email)
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  if (mine.length === 0) return res.status(404).json({ success: false, error: 'ไม่พบการสมัครคนกลางด้วยอีเมลนี้' });
+  const lead = mine[0];
+  let catalog = [];
+  try { catalog = await producers.catalog(); } catch (e) { console.error('[middleman/my] catalog:', e.message); }
+  const pub = (p) => ({ producer: p.producer, product_name: p.product_name, price: p.price ?? null, category: p.category, description: p.description });
+  const distribute = catalog.slice(0, 12).map(pub);
+  // demand = aggregate consumer signups per interest category (counts only — never buyer identities)
+  const counts = {};
+  for (const l of leads) {
+    if (l.type !== 'consumer') continue;
+    const cat = l.form_data && l.form_data.category;
+    if (!cat) continue;
+    counts[cat] = (counts[cat] || 0) + 1;
+  }
+  const demand = Object.entries(counts).map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count).slice(0, 6);
+  res.json({
+    success: true,
+    middleman: { name: lead.name || '', business_type: (lead.form_data && lead.form_data.business_type) || '', region: (lead.form_data && lead.form_data.region) || '', created_at: lead.created_at },
+    distribute,
+    demand,
+  });
+});
+
 // Order dispute / escrow routes — /api/disputes
 app.use(disputes.router);
 // Portal lead capture — /api/leads/submit (the endpoint all 7 /portals/* pages call)
