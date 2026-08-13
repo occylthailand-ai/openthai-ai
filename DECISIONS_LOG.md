@@ -6604,3 +6604,38 @@ lang+title+aria-pressed; the choice survives a reload; switching back to TH rest
 console JS errors. All 4 Vercel preview deploys of the push went Ready. Pushed to
 claude/daily-reporter-improvements-8vc9ct on otop-ai-landing (open draft-track PR #1 already exists for the
 branch — not duplicated). Landing-only; no OpenThaiAi code touched.
+
+---
+
+## 2026-08-13 — seo(landing): declare og:locale:alternate on the trilingual OTOP-AI landing
+
+Repo: **otop-ai-landing** (no DECISIONS_LOG of its own → logged here per point 6). Follow-up to the
+TH/EN/中文 toggle shipped earlier today. That page now genuinely serves three languages, but its Open
+Graph still declared only `th_TH`, so social/search crawlers (LINE + Facebook, share-first in Thailand,
+plus X) had no signal the same URL is available in EN/ZH.
+
+Change (landing index.html only): added `og:locale:alternate` = en_US and zh_CN. Thai stays the primary
+`og:locale` (matches the static `lang="th"`), so crawlers reading the pre-JS markup see the Thai page
+unchanged. Also made the language toggle keep the primary `og:locale` in step with the shown language
+(th_TH / en_US / zh_CN) for any dynamic/social-preview renderer that executes the JS.
+
+Round context — verified-before-building (point 1) saved redundant work this round:
+- Checked whether the affiliate portal success state was missing the "open your dashboard" link the other
+  roles got. It is NOT a gap: the affiliate dashboard is keyed by ref_code, which doesn't exist at
+  signup time (the success copy correctly says the link is emailed later), and the affiliate WELCOME
+  email already links to /affiliate/dashboard?ref=<code> (html-escape.js). Funnel is complete for all
+  roles.
+- Confirmed the personal dashboard routes (/producer,/consumer,/middleman,/affiliate /dashboard) are all
+  Disallow-ed in robots.txt and absent from sitemap — no PII indexing.
+- Confirmed the public FAQ page is fully trilingual (FAQ_ITEMS th/en/zh) with static FAQPage JSON-LD.
+- Ran smart-e's stdlib regression suite: 151 passed, 0 failed. Landing has no mobile horizontal overflow
+  at 320/375/768px after the switcher was added.
+
+Verified by running: headless-Chromium render — both alternates present; default og:locale=th_TH;
+EN/中文 switch updates og:locale to en_US/zh_CN and back on TH; alternates persist across toggles; no JS
+errors. Pushed to claude/daily-reporter-improvements-8vc9ct (PR #1 already open, not duplicated).
+
+Owner-gated levers still untouched (point 8), awaiting a green light: affiliate commission on
+plan/subscription sales, v9.0 repo direction + deploy.yml, otop-ai-landing production domain (the reason
+canonical/sitemap stay domain-relative), running the Supabase migrations, and JWT_SECRET on the Vercel
+projects.
