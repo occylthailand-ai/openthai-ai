@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T23:39:21.991Z · branch `claude/daily-reporter-improvements-8vc9ct` (676 commit(s) ahead of main)
+Generated: 2026-08-13T23:39:41.652Z · branch `claude/daily-reporter-improvements-8vc9ct` (678 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 895 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 897 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6684,6 +6684,40 @@ Owner-gated levers still untouched (point 8): affiliate commission on plan/subsc
 direction + deploy.yml, otop-ai-landing production domain, running the Supabase migrations, JWT_SECRET on
 the Vercel projects.
 
+---
+
+## 2026-08-13 — fix(privacy): the public /api/catalog no longer leaks every producer's email (PDPA)
+
+Real bug found by code scan (point 2/3). /api/catalog is public + unauthenticated and returned each
+approved producer's raw email, so anyone could GET it once and harvest every producer's contact address —
+the same PDPA harvesting hole already closed on /api/producers/search. The catalog kept the email only
+because CatalogPage posted producer_email back at checkout as the producer identifier; producers.js even
+carried a comment flagging this as a deferred "separate refactor". Done now.
+
+Fix: expose an opaque, non-reversible ref (truncated sha256 of the lowercased email) instead of the email,
+resolved back to the email server-side in the order flow.
+- producers.js: exported producerRef(email); added emailFromRef(ref); catalog() returns `ref` not `email`.
+- server.js: wired resolveProducerRef into createOrders.
+- orders.js: place() resolves producer_ref -> email before price authority / stock guard / notification.
+  A direct producer_email is still accepted (first-party store path, admin, existing integrations), so
+  every downstream money-guard path is unchanged.
+- CatalogPage.jsx: posts producer_ref (and keys on ref) instead of the email.
+- The consumer/middleman dashboard feeds already stripped the catalog email (their own pub() projection),
+  so they were unaffected — verified.
+
+Verified by running (not "should work"): test-producer-search-privacy extended to 16/16 — asserts the
+catalog row has NO email + an order placed with ONLY the ref reaches the right producer at its
+authoritative price (client price 1 -> server 120, 120*2=240), and a bogus ref resolves to no producer;
+test-producers 35/35 (catalog assertions moved from email to producerRef); order price-authority 14/14,
+stock-guard 9/9, orders-track 19/19, producer-my-orders/consumer-my/middleman-my green; full frontend
+vitest 562/562 (3 catalog mocks moved email->ref); node --check clean; server boots (health 200) and the
+live /api/catalog returns no email field. Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79
+open, not duplicated). No auto-merge.
+
+Process note: mid-round I ran `git reset --hard origin/...` on an unpushed working tree and lost the
+edits; re-applied them from context, re-ran the full verification, and committed BEFORE syncing this time.
+Lesson: never reset --hard with uncommitted work — commit or stash first, then rebase.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6693,14 +6727,14 @@ the Vercel projects.
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- 469d77c fix(privacy): stop the public /api/catalog from leaking every producer's email (PDPA) (65 seconds ago)
-- 03951de chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- 73874dc docs(decisions): log the /api/catalog producer-email privacy fix (17 seconds ago)
+- 8ba7873 chore: sync PROJECT_STATUS.md [skip ci] (17 seconds ago)
+- 469d77c fix(privacy): stop the public /api/catalog from leaking every producer's email (PDPA) (84 seconds ago)
+- 03951de chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
 - 8584553 docs(decisions): log main-site og:locale:alternate prerender change (65 minutes ago)
 - 0f59b00 seo(main-site): declare og:locale:alternate on every prerendered route (EN/ZH) (65 minutes ago)
 - 8234591 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 219b403 docs(decisions): log landing og:locale:alternate + this round's verify-first findings (2 hours ago)
-- 0b06cf4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- b2f7e3f docs(decisions): log OTOP-AI landing TH/EN/中文 i18n toggle (market-entry round) (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
