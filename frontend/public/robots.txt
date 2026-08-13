@@ -52,6 +52,7 @@ Disallow: /global-pr
 Disallow: /image-prompt
 Disallow: /integrations
 Disallow: /kol-brief
+Disallow: /matching
 Disallow: /pitch
 Disallow: /promo-engine
 Disallow: /scheduler

@@ -2,5 +2,14 @@
   "name": "openthai-ai",
   "version": "1.0.0",
   "type": "module",
-  "description": "Openthai.ai — TikTok content engine with AI, Agents, Affiliate"
+  "description": "Openthai.ai — AI platform for Thai SMEs (content, commerce, matching)",
+  "scripts": {
+    "test":          "npm run test:unit && npm run test:backend && npm run test:types",
+    "test:unit":     "cd frontend && npm test",
+    "test:backend":  "node --test backend/middleware/__tests__/*.mjs",
+    "test:types":    "cd backend && npm run test:types",
+    "test:e2e":      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npx --prefix frontend playwright test",
+    "test:smoke":    "cd backend && npm run test:smoke",
+    "test:all":      "npm run test && npm run test:smoke"
+  }
 }

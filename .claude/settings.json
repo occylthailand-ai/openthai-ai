@@ -11,6 +11,19 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/user/openthai-ai/.claude/tools/lint-check.sh",
+            "timeout": 15,
+            "statusMessage": "กำลังตรวจ lint..."
+          }
+        ]
+      }
     ]
   }
 }

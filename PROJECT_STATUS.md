@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T11:23:19.739Z · branch `claude/daily-reporter-improvements-8vc9ct` (651 commit(s) ahead of main)
+Generated: 2026-08-13T11:49:47.973Z · branch `claude/daily-reporter-improvements-8vc9ct` (652 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 725 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 726 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6328,23 +6328,56 @@ hardcoded Thai on the homepage fails CI instead of silently shipping to English/
 
 ---
 
+---
+
+## 2026-08-13 — SEO(market-entry): add /affiliate-programs to sitemap/robots/prerender (was missing)
+
+Standing-order loop (point 2 — SEO/market entry). Compared the SEO route registry
+(`frontend/scripts/seo-routes.mjs`, single source of truth for sitemap + robots Allow +
+per-route social-crawler prerender) against the real router in `frontend/src/App.jsx`. Found a
+public, shareable funnel page that was never advertised to crawlers: **/affiliate-programs**
+(`AffiliateProgramsPage`) — a searchable directory of affiliate programs that reads `?ref=CODE`
+and pins our own PromptPay-direct program (฿1,000 content package, 20% commission) at the top,
+linked from /earn. Exactly the class of gap prior rounds fixed for /store (run 76) and /earn (run
+87): because it was absent from ROUTES, it had no per-route prerendered `index.html`, wasn't in
+`dist/sitemap.xml`, and wasn't in `robots.txt` Allow — so sharing it on LINE/Facebook rendered the
+homepage's TikTok pitch instead of the page's own preview, and Google had no sitemap entry for it.
+
+Checked the other unlisted public routes too (/trending, /calendar, /brand, /voice, /content-studio,
+/council, /leaderboard, /progress, /router) and deliberately did NOT add them — they are interactive
+tools/dashboards with dynamic or personal content, not static marketing pages; indexing thin/dynamic
+tool pages wastes crawl budget and risks soft-404s. /affiliate-programs is the one clear marketing
+funnel of the set (same category as the already-listed /earn and /affiliate), so scope stayed to it.
+
+Change: one ROUTES entry (title from the page's own document.title "ศูนย์รวมโปรแกรม Affiliate", desc a
+factual restatement of its real content) + one `Allow: /affiliate-programs` line in robots.txt. The
+existing `seoInvariants.test.js` enforces sitemap==robots==ROUTES and that each advertised path is a
+real non-auth-gated route, so the two copies can't silently drift.
+
+Verified by running: seoInvariants 7/7 green; `npm run build` → sitemap now 27 urls (was 26) and
+includes `<loc>…/affiliate-programs</loc>`; prerender wrote `dist/affiliate-programs/index.html` with
+its own `<title>` and `og:title` = "ศูนย์รวมโปรแกรม Affiliate — Openthai.ai" (confirmed by grep);
+full frontend suite 538/538. Mutation check: deleting the robots Allow line turned seoInvariants RED
+(drift caught), restoring → GREEN, and `git diff` confirmed robots.txt changed by exactly +1 line.
+Frontend-only, two files (seo-routes.mjs + robots.txt).
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 88 route components resolved
+- ✅ **Route components exist on disk** — all 89 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
 - ℹ️ **14 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql
 
 ## Recent commits
-- f93816b content/SEO(faq): correct overstated AI-skill count (was "over 35"; real = 35) + drift guard (2 hours ago)
+- a1efc5f SEO(market-entry): advertise /affiliate-programs to crawlers (was missing from sitemap/robots) (21 minutes ago)
+- f93816b content/SEO(faq): correct overstated AI-skill count (was "over 35"; real = 35) + drift guard (3 hours ago)
 - fbe4ffd test(i18n): pin /dispute dynamic labels to the backend status/decision enums (6 hours ago)
-- f142d24 test(i18n): guard the buyer-facing /track order page against stray Thai (loaded state) (7 hours ago)
+- f142d24 test(i18n): guard the buyer-facing /track order page against stray Thai (loaded state) (8 hours ago)
 - 346d3cf fix(affiliate): QuickPay lost commission when the visitor navigated in from the share link (11 hours ago)
-- 759b900 test(affiliate): pin the PromptPay-webhook shop-commission path (was untested) (12 hours ago)
-- df9b72c i18n(portal funnel): finish sweep — GovThai MOU box + full 10-page guard (18 hours ago)
+- 759b900 test(affiliate): pin the PromptPay-webhook shop-commission path (was untested) (13 hours ago)
+- df9b72c i18n(portal funnel): finish sweep — GovThai MOU box + full 10-page guard (19 hours ago)
 - d432fc7 i18n(portal funnel): sweep entire consent-signup funnel for stray Thai (hub + middleman + affiliate) (19 hours ago)
-- 374057b i18n(portal funnel): localize category dropdown on /portals/consumer & /portals/producer (19 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
@@ -6387,7 +6420,7 @@ hardcoded Thai on the homepage fails CI instead of silently shipping to English/
 | S34 | FAQ & Auto-Reply Builder | `POST /api/skills/faq` | active |
 | S35 | Broadcast & Re-engagement | `POST /api/skills/broadcast` | active |
 
-## Route map (88 routes)
+## Route map (89 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -6402,6 +6435,7 @@ hardcoded Thai on the homepage fails CI instead of silently shipping to English/
 | /starter | StarterKitPage | auth |
 | /assistant | AssistantPage | auth |
 | /supply-chain | SupplyChainPage | auth |
+| /matching | MatchingPage | auth |
 | /promo-engine | PromoEnginePage | auth |
 | /daily-pr | DailyPRPage | auth |
 | /ultra-promo | UltraPromoPage | auth |
@@ -6479,7 +6513,7 @@ hardcoded Thai on the homepage fails CI instead of silently shipping to English/
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 42 files)
+## Backend modules (backend/*.js — 45 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -6489,6 +6523,7 @@ hardcoded Thai on the homepage fails CI instead of silently shipping to English/
 | `affiliate-withdraw-math.js` | 32 | Affiliate withdraw-request math — the money-integrity rules for how much an |
 | `agent-tools.js` | 125 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `ai-json.js` | 26 | Extract a JSON object from a model's text reply. |
+| `audit.js` | 60 | @ts-check |
 | `auth.js` | 203 | JWT |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 204 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
@@ -6499,6 +6534,8 @@ hardcoded Thai on the homepage fails CI instead of silently shipping to English/
 | `integrations.js` | 259 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `line-signature.js` | 33 | Verifies a LINE webhook's X-Line-Signature (HMAC-SHA256 over the RAW request body, |
+| `logger.js` | 96 | @ts-check |
+| `matching.js` | 336 | Matching Engine — จับคู่ B2B / B2C / B2G / B2B2C / C2B / G2G / G2B |
 | `mcp-handler.js` | 264 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 182 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 772 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
@@ -6515,7 +6552,7 @@ hardcoded Thai on the homepage fails CI instead of silently shipping to English/
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9328 | Vercel serverless detection |
+| `server.js` | 9335 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 289 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
@@ -6551,8 +6588,9 @@ hardcoded Thai on the homepage fails CI instead of silently shipping to English/
 - `0 9 * * *` → /api/scheduler/process
 - `0 2 * * 1` → /api/portals/consumer-digest
 
-## Environment variables (62 referenced in backend code, 63 documented in .env.example)
-✅ every env var referenced in backend code is documented in `.env.example`
+## Environment variables (63 referenced in backend code, 63 documented in .env.example)
+⚠️ Referenced in code but missing from `backend/.env.example`:
+- LOG_LEVEL
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.

@@ -6345,3 +6345,35 @@ its own `<title>` and `og:title` = "ศูนย์รวมโปรแกร�
 full frontend suite 538/538. Mutation check: deleting the robots Allow line turned seoInvariants RED
 (drift caught), restoring → GREEN, and `git diff` confirmed robots.txt changed by exactly +1 line.
 Frontend-only, two files (seo-routes.mjs + robots.txt).
+
+---
+
+## 2026-08-13 — merge main into the standing-order branch (resolve PR #79 conflict) + cover main's new /matching route in robots
+
+Owner relayed a report (via another AI) that PR #79 was "dirty". Verified against the real repo before
+acting (per this repo's verify-before-build rule): `pull_request_read` on #79 returned
+`mergeable_state: "dirty"` — a real conflict. main had advanced 9 commits past the branch's merge-base
+(b5ce533): PRs #81–#90 (matching engine, enterprise middleware — request-id/logger/error-handler/audit,
+responsive dashboard, OpenHands microagents). Also confirmed the other PRs the report listed exist
+(#91/#86/#80/#78 all real, open).
+
+A trial `git merge origin/main` conflicted in exactly 3 files; resolved each minimally:
+  • backend/server.js — one hunk. main added `const matching = createMatching(...)`; this branch added
+    `portalLeads` to the progress-tracker deps (PR #79's real leads_total fix). Kept BOTH lines.
+  • backend/package.json — both sides appended npm test scripts. Took the union (all of this branch's
+    test:* scripts + main's test:health and test:all). Validated as JSON.
+  • PROJECT_STATUS.md — generated file; regenerated with scripts/generate-project-status.mjs.
+Everything else (App.jsx, CLAUDE.md, .github/workflows/test.yml, frontend/package.json) auto-merged.
+
+After the merge, the existing seoInvariants guard failed — correctly: main's new `/matching` route is
+login-gated (redirects anon users to /login) but wasn't in robots.txt Disallow, so a crawler would waste
+budget on a /login redirect. Added `Disallow: /matching`. This is exactly the drift the guard exists to
+catch, surfaced automatically by the merge.
+
+Verified by running: no conflict markers remain (grep); `node --check server.js` OK; merged server BOOTS
+clean on a throwaway data dir (GET /api/health → 200, main's structured logger active, matching router
+mounted at /api/match/*); backend smoke S1–S35 all pass; test:progress-kpi 4/4; frontend `npm run build`
+clean with sitemap still 27 urls incl. /affiliate-programs (my round-26 SEO change survived the merge);
+full frontend suite 543/543 (was 538 — +5 from main's new ErrorBoundary/matching tests) after the robots
+fix, seoInvariants back to 7/7. This is a merge commit on the branch (no history rewrite) — PR #79 stays
+the same PR, no force-push, no auto-merge to main.
