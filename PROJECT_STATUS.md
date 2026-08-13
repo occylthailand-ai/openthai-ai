@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T11:54:17.422Z · branch `claude/daily-reporter-improvements-8vc9ct` (653 commit(s) ahead of main)
+Generated: 2026-08-13T12:00:25.903Z · branch `claude/daily-reporter-improvements-8vc9ct` (655 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 872 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 874 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6393,23 +6393,52 @@ full frontend suite 543/543 (was 538 — +5 from main's new ErrorBoundary/matchi
 fix, seoInvariants back to 7/7. This is a merge commit on the branch (no history rewrite) — PR #79 stays
 the same PR, no force-push, no auto-merge to main.
 
+---
+
+## 2026-08-13 — fix(matching): add the missing match_requests migration (CI caught it post-merge)
+
+Right after merging main, the PR #79 CI "Backend Smoke Test" went red on `test:migration-coverage`
+(28 passed, 1 failed): `❌ "match_requests" is created by [recommended set]`. Investigated the real
+CI job log rather than guessing. Root cause is a real production gap main shipped: `backend/matching.js`
+(the matching engine from PRs #82–#85) does `sbReq('POST', '/match_requests', …)` in requestMatch()
+— it writes match requests to a Supabase table `match_requests` — but NO migration ever creates that
+table (its own header comment "ไม่ต้องการ DB table ใหม่" predates the Supabase-persistence code below
+it). On Vercel with Supabase configured, POST /api/match/request would fail the insert and silently fall
+back to the ephemeral /tmp match_requests.json (wiped every redeploy, per-lambda) — so producer→lead
+match requests are lost and the admin /api/match/requests view comes up empty. This branch's
+migration-coverage test (which scans every backend .js for `sbReq('POST','/<table>'` targets) is exactly
+what surfaced it.
+
+Fix: added `backend/migrations/014_match_requests.sql` creating `public.match_requests` with the columns
+matching.js actually writes (id pk / producer_email / lead_id / note / status default 'pending' /
+created_at), + a created_at index and RLS-enable, in the same style as 013_video_jobs.sql. Registered it
+in the test's RECOMMENDED_MIGRATIONS and in migrations/README.md (8→9 files, new item 9, note updated
+7→8 supplements) so the coverage + README-lockstep invariants stay green and the owner's runbook tells
+them to create the table.
+
+Verified by running: test:migration-coverage 29/29 (was 28/1); test:full-migration-columns 67/67; and
+the ENTIRE CI backend unit-test list (~48 scripts) re-run locally by real exit code — all pass, none
+failed (an earlier grep-based scan false-flagged tests whose descriptions contain "throw"/"Error"; the
+exit-code re-run is authoritative). No app code changed — this is a migration + test-registry + runbook
+fix that makes main's matching feature actually persist in production.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
 - ✅ **Route components exist on disk** — all 89 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
-- ℹ️ **14 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql
+- ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- 5e316cf Merge origin/main into claude/daily-reporter-improvements-8vc9ct (22 seconds ago)
-- a1efc5f SEO(market-entry): advertise /affiliate-programs to crawlers (was missing from sitemap/robots) (26 minutes ago)
+- fa86bd4 fix(matching): add missing match_requests Supabase migration (CI: migration-coverage) (73 seconds ago)
+- 03ec803 chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
+- 5e316cf Merge origin/main into claude/daily-reporter-improvements-8vc9ct (7 minutes ago)
+- a1efc5f SEO(market-entry): advertise /affiliate-programs to crawlers (was missing from sitemap/robots) (32 minutes ago)
 - f93816b content/SEO(faq): correct overstated AI-skill count (was "over 35"; real = 35) + drift guard (3 hours ago)
 - fbe4ffd test(i18n): pin /dispute dynamic labels to the backend status/decision enums (7 hours ago)
 - f142d24 test(i18n): guard the buyer-facing /track order page against stray Thai (loaded state) (8 hours ago)
 - 346d3cf fix(affiliate): QuickPay lost commission when the visitor navigated in from the share link (12 hours ago)
-- 759b900 test(affiliate): pin the PromptPay-webhook shop-commission path (was untested) (13 hours ago)
-- df9b72c i18n(portal funnel): finish sweep — GovThai MOU box + full 10-page guard (19 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6432,7 +6461,7 @@ the same PR, no force-push, no auto-merge to main.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.2",
+  "memory_mb": "19.8",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -6682,6 +6711,7 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 011_autopost_queue.sql
 - 012_scheduler_posts.sql
 - 013_video_jobs.sql
+- 014_match_requests.sql
 - FULL-MIGRATION.sql
 - credits-schema.sql
 - orders-schema.sql
