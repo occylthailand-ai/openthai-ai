@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T17:29:16.501Z · branch `claude/daily-reporter-improvements-8vc9ct` (664 commit(s) ahead of main)
+Generated: 2026-08-13T17:32:59.886Z · branch `claude/daily-reporter-improvements-8vc9ct` (665 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 747 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 884 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6545,6 +6545,30 @@ portalFunnelNoThaiLeak guard still passes (the dashboard label only renders in t
 state). Full frontend suite 561/561 (was 555, +6); npm run build clean, sitemap unchanged at 27 (no new
 routes — just links into the existing dashboards). Frontend-only, four files (3 portals + 1 test).
 
+---
+
+## 2026-08-13 — feat(funnel): add a permanent "open your dashboard" link to the portal welcome email
+
+Follow-up to today's dashboard + in-page funnel-link work. The in-page "go to your dashboard" button on
+the /portals/* success screen is lost on refresh, so it isn't a durable re-entry path. The welcome email
+IS durable — but it linked only to the homepage, never to the member's own dashboard. Added a per-role
+CTA button to the welcome email for the three roles that have a self-serve dashboard (producer / consumer /
+middleman), linking straight to /<role>/dashboard?email=<their email> so it opens populated. Roles without
+a dashboard (gov-thai/gov-intl/intl-org/foundation/creator, and affiliate which has its own flow) get no
+button — their emails are unchanged.
+
+Kept it testable without a live mailer by extracting a pure helper `backend/portal-welcome-cta.js`
+(`portalWelcomeCtaHtml(type, email, lang, domainUrl)` + `PORTAL_DASHBOARD` map), same pattern as the
+existing `producerApprovalHtml` builder, and injecting its output into sendPortalWelcomeEmail's HTML. The
+email is placed in the href via encodeURIComponent (safe in the attribute; no raw user text in HTML).
+
+Verified by running: new deterministic test scripts/test-portal-welcome-cta.mjs — the three dashboard roles
+link to the right /<role>/dashboard?email=<encoded> with a per-language label; every other role + missing
+inputs return '' (email unchanged); trailing-slash domains aren't doubled; special chars in the email are
+encoded — 21/21; wired into package.json + CI. The existing test:portal-welcome (59) and
+test:portal-welcome-coverage (25) still pass, and the server boots clean (GET /api/health → 200) with the
+CTA injected. Backend-only (new module + server.js import/inject + package.json + CI).
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6554,16 +6578,54 @@ routes — just links into the existing dashboards). Frontend-only, four files (
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- 87aa6a3 chore: sync PROJECT_STATUS.md [skip ci] (36 minutes ago)
-- dc7dda4 feat(funnel): link role dashboards from the /portals/* signup success state (36 minutes ago)
-- 8554431 chore: sync PROJECT_STATUS.md [skip ci] (88 minutes ago)
-- 8b692c4 feat(middleman): per-role Distributor Dashboard (/middleman/dashboard) (88 minutes ago)
+- 9d8a263 feat(funnel): add a permanent dashboard link to the portal welcome email (33 seconds ago)
+- 87aa6a3 chore: sync PROJECT_STATUS.md [skip ci] (40 minutes ago)
+- dc7dda4 feat(funnel): link role dashboards from the /portals/* signup success state (40 minutes ago)
+- 8554431 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 8b692c4 feat(middleman): per-role Distributor Dashboard (/middleman/dashboard) (2 hours ago)
 - c253be5 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - aba0287 feat(consumer): per-role Consumer Dashboard (/consumer/dashboard) (3 hours ago)
 - e28ed9b chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- d091b83 feat(producer): per-role Producer Dashboard (/producer/dashboard) (3 hours ago)
 
-## Production health (⚠️ HTTP 403)
+## Production health (✅ reachable)
+```json
+{
+  "status": "ok",
+  "version": "2.1.0",
+  "charter_version": 2,
+  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "ai_primary": "✅ Claude Haiku",
+  "ai_fallback": "✅ Gemini Flash Latest",
+  "ai_active": "claude-haiku-4-5-20251001",
+  "google_oauth": true,
+  "affiliates": 0,
+  "waitlist": 0,
+  "agents": 0,
+  "active_agents": 0,
+  "line_oa": true,
+  "elevenlabs": false,
+  "watchdog": "idle",
+  "last_watchdog": null,
+  "system_logs": 2,
+  "uptime_sec": 0,
+  "memory_mb": "19.5",
+  "services": {
+    "news_rag": "✅ Active",
+    "news_rag_refresh": "✅ Auto cache clear every 4h",
+    "competitor_analysis": "✅ Active",
+    "tts": "⚠️ No API Key",
+    "line_oa": "✅ Active",
+    "auto_heal": "✅ Active (every 30 min)",
+    "agent_cron": "✅ Active (every hour)",
+    "watchdog": "✅ Active",
+    "diagnostics": "✅ Active",
+    "persistence": "✅ system_log + agents.json + agent_checkpoint",
+    "vector_memory": "✅ Active (semantic long-term memory)",
+    "webhook_system": "✅ Active (0 registered)",
+    "multi_tenant": "✅ Active (0 tenants)"
+  }
+}
+```
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -6700,7 +6762,7 @@ routes — just links into the existing dashboards). Frontend-only, four files (
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 45 files)
+## Backend modules (backend/*.js — 46 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `affiliate-payout.js` | 24 | Affiliate payout invariant — extracted from server.js so the money-critical |
@@ -6732,6 +6794,7 @@ routes — just links into the existing dashboards). Frontend-only, four files (
 | `payment-row.js` | 29 | Payment upsert-row construction — extracted so its shape can be pinned by a test against the |
 | `pdpa-consent.js` | 25 | PDPA consent-record construction — extracted so its shape can be pinned by a test against |
 | `portal-leads.js` | 166 | Portal Leads — captures submissions from the /portals/* landing pages |
+| `portal-welcome-cta.js` | 37 | Pure helper — the "open your dashboard" call-to-action injected into the portal welcome email. |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
 | `producers.js` | 342 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
@@ -6739,7 +6802,7 @@ routes — just links into the existing dashboards). Frontend-only, four files (
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9442 | Vercel serverless detection |
+| `server.js` | 9444 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 289 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
