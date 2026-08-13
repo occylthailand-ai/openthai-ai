@@ -6406,3 +6406,37 @@ the ENTIRE CI backend unit-test list (~48 scripts) re-run locally by real exit c
 failed (an earlier grep-based scan false-flagged tests whose descriptions contain "throw"/"Error"; the
 exit-code re-run is authoritative). No app code changed — this is a migration + test-registry + runbook
 fix that makes main's matching feature actually persist in production.
+
+---
+
+## 2026-08-13 — feat(producer): per-role Producer Dashboard (/producer/dashboard) — owner-directed "dashboard ต่อบทบาท"
+
+Owner chose (this session) to build per-role dashboards for the portal signup groups, starting with the
+highest-impact role — Producer — one verified PR at a time. Verified the existing surface first: producers
+already have /producers/manage (edit their listing) and /api/producers/my-status, but no place to see their
+own ORDERS + income after signup. Built that, reusing the codebase's public email-identity pattern (same as
+/producers/manage and /dispute — no login, verified by the email they applied with).
+
+Backend — new GET /api/producers/my-orders?email= (server.js, where both `orders` and `producers` are in
+scope; uses the exported producers.all() + orders.all(), no changes to producers.js). One call returns the
+producer's approval status + product/stock AND their orders + a work/income summary
+{total, active, to_handle, delivered, cancelled, value_total}. value_total EXCLUDES cancelled orders (no
+phantom revenue). Orders are sanitised through orders.js publicOrderView, so buyer PII (customer name /
+contact / address / raw history notes) never reaches the producer feed. 404 on an unknown email (can't
+enumerate), 400 on a malformed one; rate-limited (60 / 15 min).
+
+Frontend — new ProducerDashboardPage.jsx at /producer/dashboard (lazy route in App.jsx). Email box (or
+?email= auto-load) → producer status badge + product/stock card + four summary tiles + an orders list with
+localized status pills, and a link back to /producers/manage to restock. Fully i18n'd: added mk.pdash.* +
+the 7 order-status labels in th/en/zh (reuses mk.pmanage.st.* for the producer status). Added
+Disallow: /producer/dashboard to robots.txt (personal dashboard, like /track & /dispute — not indexable;
+seoInvariants stays green).
+
+Verified by running: new self-contained backend test scripts/test-producer-my-orders.mjs (spawns the real
+server on the file-fallback path, seeds a producer + 4 orders, asserts own-orders only, summary math,
+value_total excludes cancelled, buyer PII never leaks, 404/400 gates) — 18/18; wired into package.json +
+CI (.github/workflows/test.yml). New frontend guard producerDashboardNoLeak.test.jsx renders the loaded
+dashboard for every order status × producer status in en/zh and fails on a raw mk.* key or stray Thai —
+8/8. Full frontend suite 551/551 (was 543, +8); `npm run build` clean, sitemap still 27 (dashboard
+correctly excluded). This is role #1 of the per-role dashboard set; consumer/middleman/affiliate to follow
+as separate verified PRs.

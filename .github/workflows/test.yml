@@ -170,6 +170,9 @@ jobs:
       - name: Producer-search privacy test (self-contained — the public directory search never leaks producer email, incl. the empty-query harvest case)
         working-directory: backend
         run: npm run test:producer-search-privacy
+      - name: Producer dashboard feed test (self-contained — /api/producers/my-orders returns own orders + income summary, excludes cancelled from revenue, never leaks buyer PII)
+        working-directory: backend
+        run: npm run test:producer-my-orders
       - name: Skills smoke test (self-contained — every /api/skills endpoint returns 200 on the mock AI path)
         working-directory: backend
         run: npm run test:smoke

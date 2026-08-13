@@ -38,7 +38,7 @@ import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNot
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
-import { createOrders } from './orders.js';
+import { createOrders, publicOrderView } from './orders.js';
 import { createDisputes } from './disputes.js';
 import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
@@ -230,6 +230,40 @@ app.use(credits.router);
 app.use(producers.router);
 // Order routes — /api/orders
 app.use(orders.router);
+
+// Producer self-serve dashboard feed — /api/producers/my-orders?email=<applied email>
+// Powers the /producer/dashboard page: one call returns the producer's own approval status +
+// product/stock (from producers.all(), same email-identity as /api/producers/my-status — public,
+// verified by the email they applied with, no admin key) AND their orders + an income/work summary.
+// Sanitised via publicOrderView so buyer PII (customer name/contact/address/raw note) never leaks to
+// the producer feed; only the producer's own fulfilment fields (product, qty, amount, status, tracking)
+// are returned. 404 for an unknown email so it can't be used to enumerate whether an order exists.
+const producerDashLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: { success: false, error: 'เรียกดูข้อมูลบ่อยเกินไป กรุณารอสักครู่' } });
+app.get('/api/producers/my-orders', producerDashLimiter, async (req, res) => {
+  const email = (req.query.email || '').toString().trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, error: 'อีเมลไม่ถูกต้อง' });
+  const prod = (await producers.all()).find((p) => (p.email || '').toLowerCase() === email);
+  if (!prod) return res.status(404).json({ success: false, error: 'ไม่พบผู้ผลิตด้วยอีเมลนี้' });
+  const mine = (await orders.all()).filter((o) => (o.producer_email || '').toLowerCase() === email);
+  const active = mine.filter((o) => o.status !== 'cancelled');
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  const summary = {
+    total:      mine.length,
+    active:     active.length,
+    to_handle:  mine.filter((o) => ['new', 'confirmed', 'packed'].includes(o.status)).length,
+    delivered:  mine.filter((o) => o.status === 'delivered').length,
+    cancelled:  mine.filter((o) => o.status === 'cancelled').length,
+    value_total: active.reduce((s, o) => s + num(o.amount), 0),
+  };
+  const list = mine.map(publicOrderView).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  res.json({
+    success: true,
+    producer: { status: prod.status, company: prod.company, product_name: prod.product_name, category: prod.category, stock: prod.stock ?? null, price: prod.price ?? null },
+    orders: list,
+    summary,
+  });
+});
+
 // Order dispute / escrow routes — /api/disputes
 app.use(disputes.router);
 // Portal lead capture — /api/leads/submit (the endpoint all 7 /portals/* pages call)
