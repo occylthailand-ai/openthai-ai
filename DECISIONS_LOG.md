@@ -9,6 +9,35 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-12 — fix(affiliate): QuickPay lost commission when the visitor navigated in from the share link
+
+Standing-order loop (affiliate funnel = market entry). Continuing the affiliate-attribution audit from
+the previous round, found a REAL money bug on the frontend side. The attribution design (per
+`lib/affiliateRef.js`): every share link is `…/?ref=CODE`; `main.jsx` runs `captureAffiliateRef` at
+boot on EVERY page load, persisting the ref into `localStorage 'otai_ref'` so a LATER purchase on any
+page can attribute the commission (StorePage already reads `otai_ref`). But **QuickPayPage read the ref
+ONLY from its own URL's `?ref=`** (`searchParams.get('ref')`). The default affiliate `ref_link` is
+`${DOMAIN_URL}/?ref=CODE`, which lands the visitor on the homepage; when they then navigate — client-
+side, so no `?ref=` on the new URL — to `/quickpay` and pay, `/api/quickpay/create` received `ref:''`
+and credited **nobody**. The QuickPay backend already captures + credits a ref correctly (verified);
+the ref simply never arrived. So affiliates silently lost commission on package/QuickPay sales that
+originated from their link — exactly the funnel the market-entry push depends on.
+
+FIX: added a pure `resolveAffiliateRef(search, storage)` to `lib/affiliateRef.js` — prefer an explicit
+`?ref=` on the current page, else fall back to the persisted `otai_ref` (last-click, length-capped,
+error-swallowing). QuickPayPage's `/api/quickpay/create` payload now uses it. The page's separate
+ref-link **click-count** effect still keys off the URL `?ref=` only, so click metrics are unchanged —
+only the payment attribution was widened to honour the stored ref (matching StorePage).
+
+VERIFIED BY RUNNING: added 4 unit tests for `resolveAffiliateRef` (URL-first, otai_ref fallback = the
+bug, empty when neither, 20-char cap + throwing-storage safety) and a 2-case component test
+(`quickpayAffiliateRef.test.jsx`) that mounts QuickPayPage with a stored `otai_ref` and NO URL ref and
+asserts the real `/api/quickpay/create` POST body carries `ref:'AFF999'` (and `''` when neither source
+has one). Frontend suite **516/516** (was 510, +6); `vite build` clean. Mutation-checked: reverting the
+payload to the old URL-only `ref` turns the component test RED (`'' ≠ 'AFF999'`); restoring → green.
+Pure frontend change — no backend touched. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79, existing).
+
 ## 2026-08-12 — test(affiliate): pin the PromptPay-webhook shop-commission path (was untested — silent commission loss risk)
 
 Standing-order loop (affiliate funnel = market entry). Traced the affiliate-attribution flow end to end

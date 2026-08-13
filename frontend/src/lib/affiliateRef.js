@@ -25,3 +25,22 @@ export function captureAffiliateRef(search, storage) {
     return null;
   }
 }
+
+// Resolve the affiliate ref to attribute a purchase to, for a checkout that happens on a page which
+// may NOT carry `?ref=` in its own URL. The standard share link is `…/?ref=CODE`, which lands the
+// visitor on the homepage (captureAffiliateRef persists it) and they then navigate — via client-side
+// routing, so no `?ref=` on the new URL — to a paid page like /quickpay. Reading only the current
+// URL's `?ref=` there loses the attribution; the persisted 'otai_ref' is the last-click record that
+// must win. Prefer an explicit `?ref=` on THIS page (most immediate intent) and fall back to the
+// stored ref — mirroring how StorePage already reads localStorage. Length-capped + error-swallowing
+// like captureAffiliateRef. Returns '' when there is nothing to attribute.
+export function resolveAffiliateRef(search, storage) {
+  try {
+    const urlRef = new URLSearchParams(search || '').get('ref');
+    if (urlRef) return urlRef.slice(0, 20);
+    const stored = storage && storage.getItem(REF_STORAGE_KEY);
+    return stored ? String(stored).slice(0, 20) : '';
+  } catch {
+    return '';
+  }
+}
