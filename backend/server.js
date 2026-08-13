@@ -38,6 +38,7 @@ import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNot
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
+import { portalWelcomeCtaHtml } from './portal-welcome-cta.js';
 import { createOrders, publicOrderView } from './orders.js';
 import { createDisputes } from './disputes.js';
 import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
@@ -1383,6 +1384,7 @@ async function sendPortalWelcomeEmail(lead) {
       <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
         <div style="background:linear-gradient(135deg,#06b6d4,#3b82f6);padding:28px;text-align:center;"><h1 style="margin:0;font-size:22px;">${c.title}</h1></div>
         <div style="padding:24px;font-size:15px;line-height:1.7;">${c.body(lead.name)}</div>
+        ${portalWelcomeCtaHtml(lead.type, lead.email, lead.lang, DOMAIN_URL)}
         <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${DOMAIN_URL}" style="color:#6366f1;">${DOMAIN_URL.replace(/^https?:\/\//, '')}</a></div>
       </div>`,
     });

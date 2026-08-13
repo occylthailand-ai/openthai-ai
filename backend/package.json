@@ -16,6 +16,7 @@
     "test:disputes": "node scripts/test-disputes.mjs",
     "test:portal-leads": "node scripts/test-portal-leads.mjs",
     "test:portal-welcome": "node scripts/test-portal-welcome.mjs",
+    "test:portal-welcome-cta": "node scripts/test-portal-welcome-cta.mjs",
     "test:shop-commission": "node scripts/test-shop-commission.mjs",
     "test:shop-commission-promptpay": "node scripts/test-shop-commission-promptpay.mjs",
     "test:ai-usage": "node scripts/test-ai-usage.mjs",

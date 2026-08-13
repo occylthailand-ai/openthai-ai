@@ -57,6 +57,7 @@ jobs:
           npm run test:disputes
           npm run test:portal-leads
           npm run test:portal-welcome
+          npm run test:portal-welcome-cta
           npm run test:affiliate-tiers
           npm run test:affiliate-payout
           npm run test:affiliate-public

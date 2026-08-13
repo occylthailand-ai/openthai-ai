@@ -6529,3 +6529,27 @@ Thai and (2) navigates to the exact /<role>/dashboard?email=<encoded email> — 
 portalFunnelNoThaiLeak guard still passes (the dashboard label only renders in the post-submit success
 state). Full frontend suite 561/561 (was 555, +6); npm run build clean, sitemap unchanged at 27 (no new
 routes — just links into the existing dashboards). Frontend-only, four files (3 portals + 1 test).
+
+---
+
+## 2026-08-13 — feat(funnel): add a permanent "open your dashboard" link to the portal welcome email
+
+Follow-up to today's dashboard + in-page funnel-link work. The in-page "go to your dashboard" button on
+the /portals/* success screen is lost on refresh, so it isn't a durable re-entry path. The welcome email
+IS durable — but it linked only to the homepage, never to the member's own dashboard. Added a per-role
+CTA button to the welcome email for the three roles that have a self-serve dashboard (producer / consumer /
+middleman), linking straight to /<role>/dashboard?email=<their email> so it opens populated. Roles without
+a dashboard (gov-thai/gov-intl/intl-org/foundation/creator, and affiliate which has its own flow) get no
+button — their emails are unchanged.
+
+Kept it testable without a live mailer by extracting a pure helper `backend/portal-welcome-cta.js`
+(`portalWelcomeCtaHtml(type, email, lang, domainUrl)` + `PORTAL_DASHBOARD` map), same pattern as the
+existing `producerApprovalHtml` builder, and injecting its output into sendPortalWelcomeEmail's HTML. The
+email is placed in the href via encodeURIComponent (safe in the attribute; no raw user text in HTML).
+
+Verified by running: new deterministic test scripts/test-portal-welcome-cta.mjs — the three dashboard roles
+link to the right /<role>/dashboard?email=<encoded> with a per-language label; every other role + missing
+inputs return '' (email unchanged); trailing-slash domains aren't doubled; special chars in the email are
+encoded — 21/21; wired into package.json + CI. The existing test:portal-welcome (59) and
+test:portal-welcome-coverage (25) still pass, and the server boots clean (GET /api/health → 200) with the
+CTA injected. Backend-only (new module + server.js import/inject + package.json + CI).
