@@ -9,6 +9,29 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-13 — test(i18n): permanent guard against stray Thai on the buyer-facing /track order page (loaded state)
+
+Standing-order loop. Audited the post-purchase order-tracking flow (/track, TrackOrderPage) — a
+trust-critical, market-entry surface a non-Thai buyer sees AFTER paying. Verified it is already fully
+localized: the status labels come from i18n keys `mk.track.st.<status>` (all 7 statuses × th/en/zh =
+21 keys present), and every other string uses `t()` — no hardcoded Thai literals (the backend
+`/api/orders/track` is also sound: requires the contact to match id, returns the sanitized
+`publicOrderView`, rate-limited, null-guarded). But unlike the funnel pages, /track had NO i18n-leak
+guard, and its highest-risk copy — the status timeline (`stLabel`), the shipping/delivery detail rows,
+the timeline history, and the dispute CTA — only renders once an ORDER LOADS, which a static probe of
+the empty form never reaches.
+
+Added `trackOrderNoThaiLeak.test.jsx`: stubs `/api/orders/track` to return a rich DELIVERED order
+(English server fields so only the page's own copy is under test) and drives the auto-track-on-mount
+path (`?id=&contact=` in the URL), then, forced to en/zh via the `otai_lang` spy, fails on any Thai run
+(U+0E00–U+0E7F) in the DOM outside `<svg>` (only the LanguageSwitcher's own "ไทย" allowed). This is the
+first guard to exercise the loaded-order state, covering the timeline + delivery details a foreign
+buyer actually sees. No production code changed — pure regression net.
+
+VERIFIED BY RUNNING: guard 2/2; full frontend suite **518/518** (was 516, +2); `vite build` clean.
+Mutation-checked: injecting a Thai literal into the loaded-order view turns it RED (the exact string),
+restoring → green. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` (PR #79).
+
 ## 2026-08-12 — fix(affiliate): QuickPay lost commission when the visitor navigated in from the share link
 
 Standing-order loop (affiliate funnel = market entry). Continuing the affiliate-attribution audit from
