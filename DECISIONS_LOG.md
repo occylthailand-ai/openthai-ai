@@ -9,6 +9,30 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-13 — test(i18n): pin the /dispute status page's dynamic labels to the backend's status/decision enums
+
+Standing-order loop. Completed the buyer/producer-facing trust pair started with /track by auditing
+/dispute (DisputeTrackPage) — the PDPA/escrow-critical page a party in a live dispute checks. Its loaded
+view renders three labels by DYNAMIC key suffix: `mk.dispute.st.<status>`, `mk.dispute.openedby.<who>`,
+`mk.dispute.dec.<decision>`. A value the backend can produce but i18n lacks a key for would render the
+RAW key (e.g. "mk.dispute.st.resolved_supplier") to a party mid-dispute. Cross-checked the canonical
+backend sets against the dict: DISPUTE_STATUS = {open, ai_reviewed, resolved_supplier, resolved_buyer,
+refunded} (disputes.js:12), DECISIONS = {favor_supplier, favor_buyer, refund} (:17), opened_by = {buyer,
+producer} (:111) — all 10 keys present × th/en/zh. Verified healthy, no leak today; and the public
+dispute view / track endpoint are sound (contact must match, sanitized party-facing projection).
+
+The gap was a MISSING GUARD: nothing tied the frontend labels to the backend enums, so a future dispute
+status/decision added in disputes.js without its three i18n keys would silently ship a raw key. Added
+`disputeTrackNoLeak.test.jsx`: for en AND zh, it renders the loaded dispute view for EVERY status and
+EVERY decision (server free-text in English so only the page's own labels are tested) and fails if the
+DOM contains a raw `mk.dispute.` key OR any Thai run outside `<svg>` (only "ไทย" allowed). 16 cases.
+No production code changed — pure regression net tying the labels to the backend source of truth.
+
+VERIFIED BY RUNNING: guard 16/16; full frontend suite **534/534** (was 518, +16); `vite build` clean.
+Mutation-checked: renaming the `mk.dispute.st.resolved_supplier` key turns the resolved_supplier cases
+RED (raw key in the DOM, both langs); restoring → green. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79).
+
 ## 2026-08-13 — test(i18n): permanent guard against stray Thai on the buyer-facing /track order page (loaded state)
 
 Standing-order loop. Audited the post-purchase order-tracking flow (/track, TrackOrderPage) — a
