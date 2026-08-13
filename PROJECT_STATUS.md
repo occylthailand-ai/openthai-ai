@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T17:32:59.886Z · branch `claude/daily-reporter-improvements-8vc9ct` (665 commit(s) ahead of main)
+Generated: 2026-08-13T18:27:52.570Z · branch `claude/daily-reporter-improvements-8vc9ct` (667 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 884 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 886 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6569,6 +6569,30 @@ encoded — 21/21; wired into package.json + CI. The existing test:portal-welcom
 test:portal-welcome-coverage (25) still pass, and the server boots clean (GET /api/health → 200) with the
 CTA injected. Backend-only (new module + server.js import/inject + package.json + CI).
 
+---
+
+## 2026-08-13 — feat(funnel): producer approval email also links to the new producer dashboard
+
+Completes the "every member-facing email points to the member's dashboard" pass. The producer-approval
+email (sent when an admin approves a producer) had a single button to /producers/manage (edit listing) —
+but the richer /producer/dashboard (orders + revenue + stock) now exists and a just-approved producer has
+no other pointer to it. Added a second button linking to /producer/dashboard?email=<their email> (email
+pre-filled via encodeURIComponent, same as the manage link) plus a localized `dashboard` label + updated
+note in PRODUCER_APPROVAL_COPY (th/en/zh). Manage stays the primary CTA; dashboard is the secondary.
+
+Verified by running: extended the existing pure-builder test scripts/test-html-escape.mjs — asserts the
+approval email now carries /producer/dashboard?email=<encoded> and the localized dashboard button, and the
+pre-existing invariants (company/product XSS-escaped, en/zh localization, en email has NO Thai, empty
+fields degrade) all still hold — 59/59 (was 57). node --check on html-escape.js + server.js clean; server
+boots (GET /api/health → 200) with the two-button email. Backend-only, two files (html-escape.js + its
+test); no new CI wiring needed (test:html-escape already runs in CI).
+
+Note on remaining high-impact levers: with the consent-signup funnel now complete end-to-end (all four
+roles: dashboards + in-page links + welcome/approval-email links), the biggest remaining items are
+owner-gated and were NOT touched — affiliate commission on plan/subscription sales, v9.0 repo direction +
+deploy.yml, otop-ai-landing production domain, running the 8 Supabase migrations, and setting JWT_SECRET on
+the Vercel projects. Awaiting the owner's decision on those per standing-order point 8.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6578,14 +6602,14 @@ CTA injected. Backend-only (new module + server.js import/inject + package.json 
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- 9d8a263 feat(funnel): add a permanent dashboard link to the portal welcome email (33 seconds ago)
-- 87aa6a3 chore: sync PROJECT_STATUS.md [skip ci] (40 minutes ago)
-- dc7dda4 feat(funnel): link role dashboards from the /portals/* signup success state (40 minutes ago)
+- e9414be feat(funnel): producer approval email also links to the producer dashboard (26 seconds ago)
+- 0cfcd4c chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
+- 9d8a263 feat(funnel): add a permanent dashboard link to the portal welcome email (55 minutes ago)
+- 87aa6a3 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- dc7dda4 feat(funnel): link role dashboards from the /portals/* signup success state (2 hours ago)
 - 8554431 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 8b692c4 feat(middleman): per-role Distributor Dashboard (/middleman/dashboard) (2 hours ago)
-- c253be5 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- aba0287 feat(consumer): per-role Consumer Dashboard (/consumer/dashboard) (3 hours ago)
-- e28ed9b chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- c253be5 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6608,7 +6632,7 @@ CTA injected. Backend-only (new module + server.js import/inject + package.json 
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.5",
+  "memory_mb": "19.9",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -6779,7 +6803,7 @@ CTA injected. Backend-only (new module + server.js import/inject + package.json 
 | `dept-officers.js` | 85 | Openthai.ai — AI Department Officers (เจ้าหน้าที่ AI ประจำฝ่าย) |
 | `digest-match.js` | 52 | Pure, side-effect-free selector for the consumer category digest (sendConsumerDigest in server.js). |
 | `disputes.js` | 319 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
-| `html-escape.js` | 237 | Shared HTML-escaping for values interpolated into notification-email markup. |
+| `html-escape.js` | 242 | Shared HTML-escaping for values interpolated into notification-email markup. |
 | `integrations.js` | 259 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 169 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `line-signature.js` | 33 | Verifies a LINE webhook's X-Line-Signature (HMAC-SHA256 over the RAW request body, |
