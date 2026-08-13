@@ -19,7 +19,7 @@ const privacyLink = () => screen.getByRole('link', { name: /นโยบาย�
 
 describe('order-form PDPA privacy notice', () => {
   it('/catalog order modal shows the notice with a /privacy link', async () => {
-    mockList('/api/catalog', [{ email: 'a@x.com', producer: 'ร้าน A', product_name: 'สบู่สมุนไพร', price: 120, category: 'สมุนไพร', stock: 8 }]);
+    mockList('/api/catalog', [{ ref: 'ref-a@x.com', producer: 'ร้าน A', product_name: 'สบู่สมุนไพร', price: 120, category: 'สมุนไพร', stock: 8 }]);
     render(<MemoryRouter><CatalogPage /></MemoryRouter>);
     await waitFor(() => expect(screen.getByText('สบู่สมุนไพร')).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: 'สั่งซื้อ' }));

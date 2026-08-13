@@ -16,9 +16,9 @@ afterEach(() => { vi.restoreAllMocks(); });
 const renderPage = () => render(<MemoryRouter><CatalogPage /></MemoryRouter>);
 
 const PRODUCTS = [
-  { email: 'a@x.com', producer: 'ร้านสมุนไพรไทย', product_name: 'สบู่สมุนไพร', description: 'สบู่ก้อนจากธรรมชาติ', price: 120, category: 'สมุนไพร', stock: 8 },
-  { email: 'b@x.com', producer: 'สวนชาดอย',        product_name: 'ชาใบหม่อน',   description: 'ชาอบแห้ง',          price: 90,  category: 'เครื่องดื่ม', stock: null },
-  { email: 'c@x.com', producer: 'ฟาร์มผึ้งเหนือ',  product_name: 'น้ำผึ้งป่า',   description: 'น้ำผึ้งแท้ 100%',  price: 250, category: 'อาหาร', stock: 5 },
+  { ref: 'ref-a@x.com', producer: 'ร้านสมุนไพรไทย', product_name: 'สบู่สมุนไพร', description: 'สบู่ก้อนจากธรรมชาติ', price: 120, category: 'สมุนไพร', stock: 8 },
+  { ref: 'ref-b@x.com', producer: 'สวนชาดอย',        product_name: 'ชาใบหม่อน',   description: 'ชาอบแห้ง',          price: 90,  category: 'เครื่องดื่ม', stock: null },
+  { ref: 'ref-c@x.com', producer: 'ฟาร์มผึ้งเหนือ',  product_name: 'น้ำผึ้งป่า',   description: 'น้ำผึ้งแท้ 100%',  price: 250, category: 'อาหาร', stock: 5 },
 ];
 
 describe('CatalogPage search + category filter', () => {

@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { createProducers } from '../producers.js';
+import { createProducers, producerRef } from '../producers.js';
 
 // Guard for the producer registration funnel (producers.js) — the platform's MAIN
 // onboarding path, and PDPA-critical. Pins the invariants that matter for consent,
@@ -58,15 +58,15 @@ try {
   ok((await P.catalog()).length === 0, 'pending producer is NOT in public catalog');
   await P.setStatus('p1@x.com', 'approved');
   const cat = await P.catalog();
-  ok(cat.length === 1 && cat[0].email === 'p1@x.com', 'after approval → appears in catalog');
+  ok(cat.length === 1 && cat[0].ref === producerRef('p1@x.com') && !('email' in cat[0]), 'after approval → appears in catalog');
   // approved but no product_name → excluded
   await P.register({ consent: true, company: 'NoProd', contact_name: 'Z', email: 'p2@x.com' });
   await P.setStatus('p2@x.com', 'approved');
-  ok((await P.catalog()).every((c) => c.email !== 'p2@x.com'), 'approved producer WITHOUT a product_name is excluded from catalog');
+  ok((await P.catalog()).every((c) => c.ref !== producerRef('p2@x.com')), 'approved producer WITHOUT a product_name is excluded from catalog');
   // rejected producer never shows
   await P.register({ ...base, email: 'p3@x.com', consent: true });
   await P.setStatus('p3@x.com', 'rejected');
-  ok((await P.catalog()).every((c) => c.email !== 'p3@x.com'), 'rejected producer never appears in catalog');
+  ok((await P.catalog()).every((c) => c.ref !== producerRef('p3@x.com')), 'rejected producer never appears in catalog');
 
   console.log('\n=== re-apply must NOT overwrite an approved producer back to pending ===');
   const reapply = await P.register({ ...base, email: 'p1@x.com', consent: true, product_name: 'เปลี่ยนชื่อ' });
@@ -107,7 +107,7 @@ try {
   const er = await P.eraseByEmail('p1@x.com');
   ok(er.ok === true && er.removed === 1, 'eraseByEmail removes 1 record');
   ok((await P.all()).every((p) => p.email !== 'p1@x.com'), 'producer gone from all() after erasure');
-  ok((await P.catalog()).every((c) => c.email !== 'p1@x.com'), 'erased producer no longer in public catalog');
+  ok((await P.catalog()).every((c) => c.ref !== producerRef('p1@x.com')), 'erased producer no longer in public catalog');
 } finally {
   rmSync(dir, { recursive: true, force: true });
 }

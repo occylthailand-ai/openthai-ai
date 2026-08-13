@@ -87,7 +87,7 @@ export default function CatalogPage() {
               // an explicit stock of 0 or less means sold out — don't offer an order that will disappoint.
               const soldOut = p.stock != null && Number(p.stock) <= 0;
               return (
-              <div key={p.email + i} style={{ ...card, display: 'flex', flexDirection: 'column', opacity: soldOut ? 0.65 : 1 }}>
+              <div key={(p.ref || p.product_name) + i} style={{ ...card, display: 'flex', flexDirection: 'column', opacity: soldOut ? 0.65 : 1 }}>
                 <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category ? producerCategoryLabel(p.category, lang) : t('mk.find.thaiProduct')}</div>
                 <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{p.product_name}</div>
                 <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>{t('mk.cat.by')} {p.producer}</div>
@@ -131,7 +131,7 @@ export function OrderModal({ product, onClose, t }) {
     try {
       const res = await fetch(apiUrl('/api/orders'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ producer_email: product.email, product_name: product.product_name, price: product.price, ...form }),
+        body: JSON.stringify({ producer_ref: product.ref, product_name: product.product_name, price: product.price, ...form }),
       });
       const d = await res.json();
       if (d.success) { setOrderId(d.id || ''); setOrderAmount(typeof d.amount === 'number' ? d.amount : null); setDone(true); } else setErr(d.error || t('mk.ord.err'));

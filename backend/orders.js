@@ -73,7 +73,17 @@ export function createOrders(dataDir, opts = {}) {
 
   async function place(input) {
     const qty = Math.max(1, Math.min(9999, parseInt(input.qty, 10) || 1));
-    const producer_email = clip(input.producer_email, 120).toLowerCase();
+    // The public /api/catalog no longer exposes producer emails — it returns an opaque `ref` that
+    // CatalogPage posts back as producer_ref. Resolve it to the real email here, server-side, so the
+    // order still stores/uses producer_email everywhere downstream (price authority, stock guard,
+    // producer notification, dashboard feed). A direct producer_email is still honoured for the
+    // first-party store path, admin tools, and existing integrations.
+    let producerEmailIn = input.producer_email;
+    if (!producerEmailIn && input.producer_ref && typeof opts.resolveProducerRef === 'function') {
+      try { producerEmailIn = await opts.resolveProducerRef(String(input.producer_ref)); }
+      catch (e) { console.warn('[orders] producer_ref resolve skipped:', e.message); }
+    }
+    const producer_email = clip(producerEmailIn, 120).toLowerCase();
     const product_name = clip(input.product_name, 120);
     // Price authority: prefer the producer's CURRENT server-side price over whatever the client posted,
     // so a tampered POST or a stale catalog tab can't record — and email a receipt for — the wrong

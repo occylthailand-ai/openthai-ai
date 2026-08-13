@@ -14,10 +14,11 @@ import { rmSync } from 'node:fs';
 // asserts the public search response carries the producer's product data but NEVER their email —
 // including the empty-query match-all case that made harvesting trivial.
 //
-// NB: /api/catalog deliberately still returns email (CatalogPage sends producer_email back as the
-// producer identifier at checkout; switching to an opaque id is a documented, larger, separate refactor
-// — see producers.js:232-234). This test does not assert on catalog's email so it neither blesses nor
-// blocks that future change — it pins only the search endpoint's privacy guarantee.
+// /api/catalog is ALSO public and unauthenticated. It used to return the producer's raw email (the same
+// harvest hole) because CatalogPage posted producer_email back at checkout. It now returns an opaque
+// `ref` (a hash) instead; the order flow resolves the ref → email server-side. This test pins BOTH: the
+// search endpoint and the catalog carry no producer email, and an order placed with only the catalog
+// `ref` still reaches the right producer (checkout path intact, at the producer's authoritative price).
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PORT = 8975;
 const DATA_DIR = join('/tmp', `prodsearch-${Date.now()}`);
@@ -74,10 +75,25 @@ try {
   ok(kw.length >= 1 && kw.some((p) => p.company === COMPANY), 'keyword search finds the producer');
   ok(kw.every((p) => !hasEmailAnywhere(p)), 'keyword search results also carry no email');
 
-  console.log('\n=== sanity: the product is still orderable via /api/catalog (product data present) ===');
+  console.log('\n=== /api/catalog must NOT leak producer email either — returns an opaque ref ===');
   r = await j('GET', '/api/catalog');
   const cat = (r.data?.products || []).filter((p) => p.product_name === 'ข้าวหอมมะลิ');
   ok(cat.length >= 1, 'the approved product is listed in the public catalog (checkout path intact)');
+  const row = cat[0] || {};
+  ok(!hasEmailAnywhere(row), 'catalog row carries NO producer email or raw address (no bulk harvest)');
+  ok(typeof row.ref === 'string' && row.ref.length > 0 && !row.ref.includes('@'), 'catalog row exposes an opaque ref instead of the email');
+
+  console.log('\n=== an order placed with ONLY the catalog ref still reaches the right producer ===');
+  r = await j('POST', '/api/orders', { producer_ref: row.ref, product_name: 'ข้าวหอมมะลิ', price: 1, customer_name: 'ผู้ซื้อ', contact: '0810000000', address: 'กทม', qty: 2 });
+  ok(r.status === 200 && r.data?.success, `order via ref accepted (got ${r.status})`);
+  // price authority: the producer's real price (120) wins over the tampered client price (1) → 120*2=240
+  ok(Number(r.data?.amount) === 240, `order amount uses the producer's authoritative price via the resolved ref (got ${r.data?.amount})`);
+
+  console.log('\n=== a bogus ref does not resolve to our producer (no authoritative price applied) ===');
+  r = await j('POST', '/api/orders', { producer_ref: 'deadbeefdeadbeefdeadbeef', product_name: 'ข้าวหอมมะลิ', price: 5, customer_name: 'y', contact: '0810000000', address: 'z', qty: 1 });
+  // unknown ref → no producer resolved → the real producer's authoritative price (120) is NOT applied;
+  // the client price (5) stands, proving the bogus ref didn't attach to the real producer.
+  ok(Number(r.data?.amount) !== 240 && Number(r.data?.amount) !== 120, `unknown ref gets no producer price authority (amount ${r.data?.amount}, not 120/240)`);
 
   exitCode = fail ? 1 : 0;
   console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);

@@ -4,7 +4,18 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { createHash } from 'node:crypto';
 import { missingColumnFrom, stripColumn } from './sb-column-fallback.js';
+
+// Opaque, non-reversible reference for a producer, used by the PUBLIC /api/catalog.
+// The catalog is unauthenticated, so returning the producer's raw email let anyone harvest every
+// approved producer's contact address in one call — the same PDPA hole already closed on
+// /api/producers/search. The catalog now exposes this ref instead; the order flow resolves it back to
+// the real email server-side (see emailFromRef + /api/orders), so checkout still works without ever
+// putting a producer email on the wire. A hash (not an encrypted token) so it's stable and needs no key.
+export function producerRef(email) {
+  return createHash('sha256').update(String(email || '').trim().toLowerCase()).digest('hex').slice(0, 24);
+}
 
 // เดิมไม่มี 'อาหารสัตว์เลี้ยง'/'สินค้าดิจิทัล' ทั้งที่เพิ่มเข้า CATEGORIES ฝั่งผู้บริโภคแล้ว
 // (ConsumerPortalPage.jsx) — ทำให้ผู้ผลิตสินค้ากลุ่มนี้ที่สมัครผ่าน /join ไม่มีหมวดให้เลือกตรง
@@ -201,7 +212,19 @@ export function createProducers(dataDir, opts = {}) {
     const list = await all();
     return list
       .filter((p) => p.status === 'approved' && p.product_name)
-      .map((p) => ({ producer: p.company, email: p.email, product_name: p.product_name, price: p.price, category: p.category, description: p.description, website: p.website, stock: (p.stock == null ? null : p.stock) }));
+      // `ref` (opaque hash) replaces the producer's raw email — the public catalog must not leak
+      // personal contact data (PDPA). CatalogPage sends this ref back at checkout; /api/orders resolves
+      // it to the email via emailFromRef so price authority / stock guard / notifications still work.
+      .map((p) => ({ producer: p.company, ref: producerRef(p.email), product_name: p.product_name, price: p.price, category: p.category, description: p.description, website: p.website, stock: (p.stock == null ? null : p.stock) }));
+  }
+
+  // Resolve a catalog `ref` back to the approved producer's email (server-side only). Returns null for
+  // an unknown/blank ref so a bad ref can't be used to place an order against a non-existent producer.
+  async function emailFromRef(ref) {
+    const r = String(ref || '');
+    if (!r) return null;
+    const match = (await all()).find((p) => p.status === 'approved' && p.email && producerRef(p.email) === r);
+    return match ? match.email : null;
   }
 
   async function summary() {
@@ -337,5 +360,5 @@ export function createProducers(dataDir, opts = {}) {
     if (store[e] && store[e].stock != null) { store[e].stock = store[e].stock + n; saveFile(); }
   }
 
-  return { router, register, all, summary, setStatus, updateListing, catalog, decrementStock, incrementStock, getStock, getPrice, eraseByEmail, CATEGORIES };
+  return { router, register, all, summary, setStatus, updateListing, catalog, emailFromRef, decrementStock, incrementStock, getStock, getPrice, eraseByEmail, CATEGORIES };
 }
