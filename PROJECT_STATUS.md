@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T22:34:56.356Z · branch `claude/daily-reporter-improvements-8vc9ct` (674 commit(s) ahead of main)
+Generated: 2026-08-13T23:39:21.991Z · branch `claude/daily-reporter-improvements-8vc9ct` (676 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 893 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 895 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6693,14 +6693,14 @@ the Vercel projects.
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- 8584553 docs(decisions): log main-site og:locale:alternate prerender change (20 seconds ago)
-- 0f59b00 seo(main-site): declare og:locale:alternate on every prerendered route (EN/ZH) (45 seconds ago)
-- 8234591 chore: sync PROJECT_STATUS.md [skip ci] (68 minutes ago)
-- 219b403 docs(decisions): log landing og:locale:alternate + this round's verify-first findings (69 minutes ago)
-- 0b06cf4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- b2f7e3f docs(decisions): log OTOP-AI landing TH/EN/中文 i18n toggle (market-entry round) (2 hours ago)
-- 0d8c753 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- e9414be feat(funnel): producer approval email also links to the producer dashboard (4 hours ago)
+- 469d77c fix(privacy): stop the public /api/catalog from leaking every producer's email (PDPA) (65 seconds ago)
+- 03951de chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- 8584553 docs(decisions): log main-site og:locale:alternate prerender change (65 minutes ago)
+- 0f59b00 seo(main-site): declare og:locale:alternate on every prerendered route (EN/ZH) (65 minutes ago)
+- 8234591 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 219b403 docs(decisions): log landing og:locale:alternate + this round's verify-first findings (2 hours ago)
+- 0b06cf4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- b2f7e3f docs(decisions): log OTOP-AI landing TH/EN/中文 i18n toggle (market-entry round) (3 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6722,8 +6722,8 @@ the Vercel projects.
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 21,
-  "memory_mb": "19.8",
+  "uptime_sec": 0,
+  "memory_mb": "19.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -6905,14 +6905,14 @@ the Vercel projects.
 | `openapi.js` | 772 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
 | `openrouter-map.js` | 37 | Pure helpers for the OpenRouter AI wrapper in server.js (used when OPENROUTER_API_KEY is set, |
 | `order-confirm.js` | 29 | Pure, side-effect-free decision helper for the BUYER order-confirmation email. |
-| `orders.js` | 244 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `orders.js` | 254 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `payment-row.js` | 29 | Payment upsert-row construction — extracted so its shape can be pinned by a test against the |
 | `pdpa-consent.js` | 25 | PDPA consent-record construction — extracted so its shape can be pinned by a test against |
 | `portal-leads.js` | 166 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `portal-welcome-cta.js` | 37 | Pure helper — the "open your dashboard" call-to-action injected into the portal welcome email. |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 342 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `producers.js` | 365 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 327 | 360° Progress Tracker — OpenThai.ai |
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
