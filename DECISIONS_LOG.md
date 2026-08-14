@@ -6702,3 +6702,38 @@ open, not duplicated). No auto-merge.
 Process note: mid-round I ran `git reset --hard origin/...` on an unpushed working tree and lost the
 edits; re-applied them from context, re-ran the full verification, and committed BEFORE syncing this time.
 Lesson: never reset --hard with uncommitted work — commit or stash first, then rebase.
+
+---
+
+## 2026-08-13 — fix(scheduler): rate-limit the unauthenticated execute endpoint + FLAG deeper design to owner
+
+Real gap from code scan (point 2/3). POST /api/scheduler/execute/:id — the manual "publish now" the
+login-gated SchedulerPage calls (with no auth header) — was the only MUTATING scheduler route with no
+rate limiter at all (create uses generateLimiter; the destructive DELETE is admin-gated). That breaks the
+repo's own rule (backend/CLAUDE.md: every route group must go through express-rate-limit).
+
+Why it matters beyond convention: execute is unauthenticated and mutates the SHARED schedulerStore that
+the daily Vercel cron (processScheduler) reads. processScheduler actually broadcasts DUE LINE posts to the
+real LINE OA (lineBroadcast) when LINE_CHANNEL_TOKEN is set. An unthrottled caller could script
+execute-by-id (ids are enumerable via the open GET /api/scheduler/list) to flip a due LINE post to
+'published' BEFORE the cron runs, so dueSchedulerPosts() no longer returns it and the real broadcast is
+silently suppressed — a genuine integrity/availability issue, not just cosmetic.
+
+Shipped (safe, non-breaking, verified): schedulerExecuteLimiter (30 / 15 min) on execute. A human
+clicking "publish now" stays well under it; a scripted burst gets 429. No auth-model change, so
+SchedulerPage keeps working and no test that exercises the scheduler is affected. New self-contained test
+test-scheduler-execute-ratelimit (5/5, boots WITHOUT DISABLE_RATE_LIMIT so the limiter is live) — single
+execute still 200, burst trips 429 at the cap; wired into package.json + CI. scheduler-durability still
+12/12; server boots (health 200).
+
+STOPPED at the deeper fork per point 8 — needs the owner's decision (NOT done here):
+- Should /api/scheduler/execute (and the open GET /api/scheduler/list) be AUTHENTICATED? SchedulerPage is
+  a login-gated console but calls these with no token (raw fetch, not apiFetch), and AdminPage reads list
+  with no admin key — so adding auth would require deciding the identity model and updating those callers.
+- Should the scheduler store be SCOPED PER USER? Today it's one global array: any visitor can see and
+  execute every other visitor's queued posts. Per-user scoping is a real design change.
+- Recommendation: authenticate execute against the logged-in user (x-user-email via apiFetch) and scope
+  posts by owner; keep DELETE admin-only. Awaiting the owner's call before touching the auth model.
+
+Repo: openthai-ai (backend). Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79 open, not
+duplicated). No auto-merge.
