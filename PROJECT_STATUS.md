@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-14T03:21:48.132Z · branch `claude/daily-reporter-improvements-8vc9ct` (684 commit(s) ahead of main)
+Generated: 2026-08-14T04:25:56.146Z · branch `claude/daily-reporter-improvements-8vc9ct` (687 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 903 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 906 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6777,6 +6777,32 @@ Repo: openthai-ai (frontend). Pushed to claude/daily-reporter-improvements-8vc9c
 duplicated). No auto-merge. (Prior round's scheduler execute auth/per-user-scoping fork is still awaiting
 the owner's decision — not touched.)
 
+---
+
+## 2026-08-13 — feat(forms): browser-autofill hints across the signup + order funnel
+
+Continues the mobile-conversion work on the #1-priority funnel (point 2). Last round gave the portal
+inputs correct keyboard types; this round adds autoComplete so a returning visitor's browser / password
+manager can autofill — a distinct lever (autofill vs keyboard) that touches fields input-type never did
+(name, country, address), and one that measurably lifts mobile form completion. autoComplete is a hint,
+never validation, so it can't break input.
+
+Change (frontend only, 11 pages):
+- All 9 portal signup forms: email -> autoComplete="email", phone -> "tel", country -> "country-name"
+  (unambiguous tokens). The "name" field is deliberately left alone — it's the COMPANY name on the
+  producer form but a PERSON on the others, so a single shared token would be wrong on one of them.
+- Buyer order forms (CatalogPage OrderModal + StorePage): customer name -> "name", delivery address ->
+  "street-address". The contact field is intentionally free-form ("@line / email / 08x") and maps to no
+  single autofill token, so it's untouched (and stays type="text", correct).
+
+Verified by running: portalInputTypes test extended 14 -> 37 — every portal email is autoComplete="email",
+every phone "tel", every country "country-name" when present, and the exported OrderModal's name/address
+carry name/street-address. Full frontend vitest 599/599 (was 576); production build passes. Pushed to
+claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto-merge.
+
+(Still awaiting the owner on the earlier point-8 fork: scheduler execute auth + per-user store scoping —
+not touched.)
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6786,14 +6812,14 @@ the owner's decision — not touched.)
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- f47589a docs(decisions): log the portal email/phone input-type mobile UX fix (16 seconds ago)
-- 09b3926 fix(portals): give email/phone signup fields mobile-correct input types (31 seconds ago)
-- 0ac0692 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- 4addf69 docs(decisions): log scheduler execute rate-limit fix + owner-flagged design fork (63 minutes ago)
-- 3daf765 fix(scheduler): rate-limit the unauthenticated execute endpoint (anti-abuse) (63 minutes ago)
-- de56e8e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 73874dc docs(decisions): log the /api/catalog producer-email privacy fix (4 hours ago)
-- 8ba7873 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- e7c0037 docs(decisions): log the funnel autofill (autoComplete) pass (16 seconds ago)
+- 0b0cde8 feat(forms): add browser-autofill hints across the signup + order funnel (32 seconds ago)
+- ce6c826 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- f47589a docs(decisions): log the portal email/phone input-type mobile UX fix (64 minutes ago)
+- 09b3926 fix(portals): give email/phone signup fields mobile-correct input types (65 minutes ago)
+- 0ac0692 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 4addf69 docs(decisions): log scheduler execute rate-limit fix + owner-flagged design fork (2 hours ago)
+- 3daf765 fix(scheduler): rate-limit the unauthenticated execute endpoint (anti-abuse) (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6816,7 +6842,7 @@ the owner's decision — not touched.)
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.2",
+  "memory_mb": "19.4",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
