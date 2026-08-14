@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-14T09:41:13.679Z · branch `claude/daily-reporter-improvements-8vc9ct` (696 commit(s) ahead of main)
+Generated: 2026-08-14T10:36:27.161Z · branch `claude/daily-reporter-improvements-8vc9ct` (699 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 915 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 918 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,33 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+## 2026-08-14 — i18n(affiliate-programs): make the /affiliate-programs directory trilingual (th/en/zh) + leak guard
+
+Standing-order loop (market entry / affiliate funnel). Continued the public-page i18n pass (after
+/about, /404, /contact, /earn) with /affiliate-programs (AffiliateProgramsPage) — the shareable
+affiliate directory (reads ?ref=CODE) reachable from /earn, flagged last round as the next Thai-only
+funnel. It was hardcoded Thai in TWO places: the page chrome AND the data file
+(src/data/affiliatePrograms.js) — 6 category labels/notes + 57 program notes — so an affiliate sharing
+the link, or a non-Thai visitor, saw an all-Thai directory.
+
+FIX: converted CATEGORIES + PROGRAMS label/note to { th, en, zh } objects (name/url/cat/hot stay
+language-neutral) and internationalized the page via useLang + a local T dict (same pattern as the
+other public pages — no in-page switcher). Labels/notes render through an L(obj)=>obj[lang]||obj.th
+helper; the /pay label is localized. Search now matches name + all-language notes joined, so keyword
+filtering (e.g. "email", "hosting") works regardless of UI language. No backend/logic touched.
+
+VERIFIED BY RUNNING: new affiliateProgramsNoThaiLeak.test.jsx 5/5 (renders forced to en/zh with
+?ref=TEST; fails on any bare-Thai run in rendered text OR the search placeholder attribute, covering
+all 57 program notes + 6 category chips; clicks a category chip to exercise the per-cat note line;
+asserts en/zh titles + Thai default). Full frontend suite 619/619 (was 614, +5); vite build clean.
+Mutation-checked twice: a Thai leak injected into a data note -> RED, and into the placeholder -> RED;
+revert -> green. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` (PR #79). No
+auto-merge.
+
+Remaining Thai-only public pages: only /privacy and /terms — still owner-gated (binding legal text,
+see the prior entry). With /earn + /affiliate-programs done, the public marketing/funnel surface is now
+trilingual end to end except those two legal pages.
 
 ## 2026-08-14 — i18n(earn): make the /earn earning hub trilingual (th/en/zh) + leak guard
 
@@ -6894,14 +6921,14 @@ claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- 2b10a02 docs(decisions): log the trilingual /earn hub + flag /privacy,/terms as owner-gated legal text (32 seconds ago)
-- b4a4155 i18n(earn): make the /earn earning hub trilingual (th/en/zh) (59 seconds ago)
-- eeaf110 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
-- dce2b26 docs(decisions): log the trilingual /contact page (58 minutes ago)
-- 841829b i18n(contact): make the public /contact page trilingual (th/en/zh) (59 minutes ago)
-- b0acec8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- ae7fd3d docs(decisions): log the trilingual 404 recovery page (2 hours ago)
-- 8470ee9 i18n(404): make the NotFoundPage recovery page trilingual (th/en/zh) (2 hours ago)
+- e17f684 docs(decisions): log the trilingual /affiliate-programs directory (18 seconds ago)
+- e1d1ab4 i18n(affiliate-programs): make the /affiliate-programs directory trilingual (th/en/zh) (36 seconds ago)
+- d481c7d chore: sync PROJECT_STATUS.md [skip ci] (55 minutes ago)
+- 2b10a02 docs(decisions): log the trilingual /earn hub + flag /privacy,/terms as owner-gated legal text (56 minutes ago)
+- b4a4155 i18n(earn): make the /earn earning hub trilingual (th/en/zh) (56 minutes ago)
+- eeaf110 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- dce2b26 docs(decisions): log the trilingual /contact page (2 hours ago)
+- 841829b i18n(contact): make the public /contact page trilingual (th/en/zh) (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6924,7 +6951,7 @@ claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.2",
+  "memory_mb": "19.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
