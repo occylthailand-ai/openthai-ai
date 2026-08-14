@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-14T02:19:18.245Z · branch `claude/daily-reporter-improvements-8vc9ct` (681 commit(s) ahead of main)
+Generated: 2026-08-14T03:21:48.132Z · branch `claude/daily-reporter-improvements-8vc9ct` (684 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 900 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 903 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6753,6 +6753,30 @@ STOPPED at the deeper fork per point 8 — needs the owner's decision (NOT done 
 Repo: openthai-ai (backend). Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79 open, not
 duplicated). No auto-merge.
 
+---
+
+## 2026-08-13 — fix(portals): mobile-correct input types on the consent-signup forms
+
+Real UX gap from code scan (point 2 — the consent-signup funnel is the #1 listed priority, and the
+audience is mostly on phones). 7 of the 9 portal signup forms rendered every field, including email and
+phone, as the default type="text". On mobile that gives the email field a full QWERTY keyboard (no "@"
+shortcut, no native email validation) and the phone field letters instead of a numeric keypad — avoidable
+friction on the exact funnel we want to convert. ConsumerPortalPage and CreatorPortalPage already passed a
+proper type; this brings the other seven in line.
+
+Change (frontend only, 7 portal pages): the mapped input derives its type from the field key —
+email -> type="email", phone -> type="tel" + inputMode="tel" (no strict format so international numbers
+still pass), everything else stays type="text". Non-email/phone fields (company name, country, agency,
+position, etc.) unchanged. Producer had two input blocks; both updated.
+
+Verified by running: new portalInputTypes test renders all nine portals and asserts every email input is
+type="email", every phone input is type="tel" with inputMode tel, and a plain field (producer company
+name) stays type="text" — 14/14. Full frontend vitest 576/576 (was 562); production build passes.
+
+Repo: openthai-ai (frontend). Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79 open, not
+duplicated). No auto-merge. (Prior round's scheduler execute auth/per-user-scoping fork is still awaiting
+the owner's decision — not touched.)
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6762,14 +6786,14 @@ duplicated). No auto-merge.
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- 4addf69 docs(decisions): log scheduler execute rate-limit fix + owner-flagged design fork (19 seconds ago)
-- 3daf765 fix(scheduler): rate-limit the unauthenticated execute endpoint (anti-abuse) (40 seconds ago)
-- de56e8e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 73874dc docs(decisions): log the /api/catalog producer-email privacy fix (3 hours ago)
-- 8ba7873 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 469d77c fix(privacy): stop the public /api/catalog from leaking every producer's email (PDPA) (3 hours ago)
-- 03951de chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- 8584553 docs(decisions): log main-site og:locale:alternate prerender change (4 hours ago)
+- f47589a docs(decisions): log the portal email/phone input-type mobile UX fix (16 seconds ago)
+- 09b3926 fix(portals): give email/phone signup fields mobile-correct input types (31 seconds ago)
+- 0ac0692 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 4addf69 docs(decisions): log scheduler execute rate-limit fix + owner-flagged design fork (63 minutes ago)
+- 3daf765 fix(scheduler): rate-limit the unauthenticated execute endpoint (anti-abuse) (63 minutes ago)
+- de56e8e chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 73874dc docs(decisions): log the /api/catalog producer-email privacy fix (4 hours ago)
+- 8ba7873 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6792,7 +6816,7 @@ duplicated). No auto-merge.
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
