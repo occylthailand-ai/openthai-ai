@@ -60,7 +60,7 @@ export default function ConsumerPortalPage() {
               {[['name',t.form.name,'text'],['country',t.form.country,'text'],['email',t.form.email,'email']].map(([k,label,type]) => (
                 <div key={k} style={{ marginBottom:16 }}>
                   <label htmlFor={k} style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input id={k} type={type} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                  <input id={k} type={type} autoComplete={k === 'email' ? 'email' : k === 'country' ? 'country-name' : undefined} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
                 </div>
               ))}
               <div style={{ marginBottom:16 }}>

@@ -69,7 +69,7 @@ export default function AffiliatePortalPage() {
               {[['name',t.form.name],['country',t.form.country],['platform',t.form.platform],['email',t.form.email]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:16 }}>
                   <label htmlFor={k} style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input id={k} type={k === 'email' ? 'email' : k === 'phone' ? 'tel' : 'text'} inputMode={k === 'phone' ? 'tel' : undefined} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                  <input id={k} type={k === 'email' ? 'email' : k === 'phone' ? 'tel' : 'text'} inputMode={k === 'phone' ? 'tel' : undefined} autoComplete={k === 'email' ? 'email' : k === 'phone' ? 'tel' : k === 'country' ? 'country-name' : undefined} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
                 </div>
               ))}
               <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:16, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>

@@ -60,7 +60,7 @@ export default function GovIntlPortalPage() {
               {[['agency',t.form.agency],['country',t.form.country],['name',t.form.name],['position',t.form.position],['email',t.form.email],['phone',t.form.phone]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:14 }}>
                   <label htmlFor={k} style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input id={k} type={k === 'email' ? 'email' : k === 'phone' ? 'tel' : 'text'} inputMode={k === 'phone' ? 'tel' : undefined} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                  <input id={k} type={k === 'email' ? 'email' : k === 'phone' ? 'tel' : 'text'} inputMode={k === 'phone' ? 'tel' : undefined} autoComplete={k === 'email' ? 'email' : k === 'phone' ? 'tel' : k === 'country' ? 'country-name' : undefined} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
                 </div>
               ))}
               <div style={{ marginBottom:14 }}>

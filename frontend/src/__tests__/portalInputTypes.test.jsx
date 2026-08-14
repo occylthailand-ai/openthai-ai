@@ -17,6 +17,7 @@ import FoundationPortalPage from '../pages/portals/FoundationPortalPage';
 import GovThaiPortalPage from '../pages/portals/GovThaiPortalPage';
 import GovIntlPortalPage from '../pages/portals/GovIntlPortalPage';
 import IntlOrgPortalPage from '../pages/portals/IntlOrgPortalPage';
+import { OrderModal } from '../pages/CatalogPage';
 
 function renderPortal(Comp) {
   return render(<MemoryRouter initialEntries={['/portals/x']}><Comp /></MemoryRouter>);
@@ -62,5 +63,33 @@ describe('portal signup forms use mobile-correct input types', () => {
     const name = container.querySelector('#name');
     expect(name).toBeTruthy();
     expect(name.getAttribute('type')).toBe('text');
+  });
+
+  // Browser-autofill hints (distinct from input type): let a phone's password manager / autofill fill
+  // email, phone, and country so a returning user barely types. Pins the unambiguous tokens.
+  it.each(allPortals)('%s email field has autoComplete="email"', (_name, Comp) => {
+    const { container } = renderPortal(Comp);
+    expect(container.querySelector('#email').getAttribute('autocomplete')).toBe('email');
+  });
+
+  it.each(withPhone)('%s phone field has autoComplete="tel"', (_name, Comp) => {
+    const { container } = renderPortal(Comp);
+    expect(container.querySelector('#phone').getAttribute('autocomplete')).toBe('tel');
+  });
+
+  it.each(allPortals)('%s country field, when present, has autoComplete="country-name"', (_name, Comp) => {
+    const { container } = renderPortal(Comp);
+    const country = container.querySelector('#country');
+    if (country) expect(country.getAttribute('autocomplete')).toBe('country-name');
+  });
+});
+
+describe('buyer order form (CatalogPage OrderModal) has autofill hints', () => {
+  it('name is autoComplete="name" and address is autoComplete="street-address"', () => {
+    const { container } = render(
+      <OrderModal product={{ product_name: 'สบู่', price: 100, producer: 'ร้าน', ref: 'r1' }} onClose={() => {}} t={(k) => k} />,
+    );
+    expect(container.querySelector('#ord-name').getAttribute('autocomplete')).toBe('name');
+    expect(container.querySelector('#ord-address').getAttribute('autocomplete')).toBe('street-address');
   });
 });

@@ -109,10 +109,10 @@ export function BuyModal({ product, t, onClose }) {
           <form onSubmit={submit}>
             <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 2 }}>{t('mk.store.buy')}: {product.name}</div>
             <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 14 }}>฿{Number(product.price).toLocaleString('th-TH')} · {t('mk.cat.by')} Openthai</div>
-            <label htmlFor="store-name" style={lab}>{t('mk.ord.name')}</label><input id="store-name" style={inp} value={form.customer_name} onChange={set('customer_name')} placeholder={t('mk.ord.name.ph')} />
+            <label htmlFor="store-name" style={lab}>{t('mk.ord.name')}</label><input id="store-name" style={inp} autoComplete="name" value={form.customer_name} onChange={set('customer_name')} placeholder={t('mk.ord.name.ph')} />
             <label htmlFor="store-contact" style={lab}>{t('mk.ord.contact')}</label><input id="store-contact" style={inp} value={form.contact} onChange={set('contact')} placeholder={t('mk.ord.contact.ph')} />
             <label htmlFor="store-qty" style={lab}>{t('mk.ord.qty')}</label><input id="store-qty" style={inp} type="number" min="1" value={form.qty} onChange={set('qty')} />
-            <label htmlFor="store-address" style={lab}>{t('mk.ord.address')}</label><textarea id="store-address" style={{ ...inp, minHeight: 48, resize: 'vertical' }} value={form.address} onChange={set('address')} placeholder={t('mk.ord.address.ph')} />
+            <label htmlFor="store-address" style={lab}>{t('mk.ord.address')}</label><textarea id="store-address" style={{ ...inp, minHeight: 48, resize: 'vertical' }} autoComplete="street-address" value={form.address} onChange={set('address')} placeholder={t('mk.ord.address.ph')} />
             <label htmlFor="store-method" style={lab}>{t('mk.store.method')}</label>
             <select id="store-method" style={inp} value={form.method} onChange={set('method')}><option value="promptpay">📱 PromptPay</option><option value="card">💳 {t('mk.store.method.card')}</option></select>
             <div style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', margin: '10px 0' }}>{t('mk.ord.total')} ฿{total.toLocaleString('th-TH')}</div>
