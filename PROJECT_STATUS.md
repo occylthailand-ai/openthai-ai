@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-14T04:25:56.146Z · branch `claude/daily-reporter-improvements-8vc9ct` (687 commit(s) ahead of main)
+Generated: 2026-08-14T07:55:52.454Z · branch `claude/daily-reporter-improvements-8vc9ct` (690 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 906 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 909 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6803,6 +6803,28 @@ claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto
 (Still awaiting the owner on the earlier point-8 fork: scheduler execute auth + per-user store scoping —
 not touched.)
 
+---
+
+## 2026-08-13 — i18n(404): the NotFoundPage recovery page is now trilingual
+
+Market-entry gap from code scan (point 2). The 404 catch-all (App.jsx path="*") is the recovery page for
+every mistyped URL and broken inbound link — a real funnel entry — but it was fully hardcoded in Thai
+(title, description, both recovery buttons, document.title) while the whole rest of the SPA is th/en/zh. A
+visitor who picked English or Chinese (persisted in otai_lang, read by useLang everywhere else) still hit a
+Thai-only 404 and most likely bounced instead of clicking back into the funnel.
+
+Change (frontend only, 1 page + 1 test): NotFoundPage now reads the app language via useLang and renders a
+local th/en/zh dict (title, two description lines, "back home" + "explore AI tools" buttons, document.title).
+The soft-404 SEO guard — flip robots meta to noindex while mounted, restore on unmount so a real route
+re-enables indexing — is preserved unchanged.
+
+Verified by running: new notFoundNoThaiLeak test (5/5, modelled on the existing aboutNoThaiLeak guard) —
+forced to en and zh it emits zero bare-Thai runs (U+0E00–U+0E7F), renders the English/Chinese copy, and
+still defaults to Thai with no language chosen. Full frontend vitest 604/604 (was 599); build passes.
+Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto-merge.
+
+(Still awaiting the owner on the earlier point-8 fork: scheduler execute auth + per-user store scoping.)
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6812,14 +6834,14 @@ not touched.)
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- e7c0037 docs(decisions): log the funnel autofill (autoComplete) pass (16 seconds ago)
-- 0b0cde8 feat(forms): add browser-autofill hints across the signup + order funnel (32 seconds ago)
-- ce6c826 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
-- f47589a docs(decisions): log the portal email/phone input-type mobile UX fix (64 minutes ago)
-- 09b3926 fix(portals): give email/phone signup fields mobile-correct input types (65 minutes ago)
-- 0ac0692 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 4addf69 docs(decisions): log scheduler execute rate-limit fix + owner-flagged design fork (2 hours ago)
-- 3daf765 fix(scheduler): rate-limit the unauthenticated execute endpoint (anti-abuse) (2 hours ago)
+- ae7fd3d docs(decisions): log the trilingual 404 recovery page (17 seconds ago)
+- 8470ee9 i18n(404): make the NotFoundPage recovery page trilingual (th/en/zh) (31 seconds ago)
+- 4cc475f chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- e7c0037 docs(decisions): log the funnel autofill (autoComplete) pass (4 hours ago)
+- 0b0cde8 feat(forms): add browser-autofill hints across the signup + order funnel (4 hours ago)
+- ce6c826 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- f47589a docs(decisions): log the portal email/phone input-type mobile UX fix (5 hours ago)
+- 09b3926 fix(portals): give email/phone signup fields mobile-correct input types (5 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6842,7 +6864,7 @@ not touched.)
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.4",
+  "memory_mb": "19.3",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
