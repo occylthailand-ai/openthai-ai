@@ -153,6 +153,9 @@ jobs:
       - name: Scheduler durability test (self-contained — spawns server + mock Supabase; /api/scheduler/* posts survive a /tmp wipe and the daily cron processes them across lambda invocations)
         working-directory: backend
         run: npm run test:scheduler-durability
+      - name: Scheduler execute rate-limit test (self-contained — spawns server; the unauthenticated manual "publish now" is throttled so it can't be scripted to mass-mutate the shared queue / suppress due broadcasts)
+        working-directory: backend
+        run: npm run test:scheduler-execute-ratelimit
       - name: Video jobs durability test (self-contained — spawns server + mock Supabase; a submitted paid video job stays pollable after a /tmp wipe and across lambda invocations)
         working-directory: backend
         run: npm run test:video-jobs-durability

@@ -9142,7 +9142,17 @@ app.get('/api/scheduler/list', (req, res) => {
   res.json({ ok: true, posts, total: posts.length });
 });
 
-app.post('/api/scheduler/execute/:id', (req, res) => {
+// /api/scheduler/execute (manual "publish now" from the login-gated SchedulerPage) was the only
+// mutating scheduler route with NO rate limiter — every other mutation in the app goes through
+// express-rate-limit (backend/CLAUDE.md), and the destructive DELETE below is admin-gated. Because the
+// route is unauthenticated and shares the store the daily cron reads, an unthrottled caller could script
+// mass execute-by-id calls to flip queued posts to 'published' — including pre-empting a DUE LINE post so
+// processScheduler no longer sees it and the real LINE OA broadcast is suppressed. This limiter caps that
+// abuse without changing the auth model the UI relies on (a human clicking "publish now" stays well under
+// it). NOTE for owner: the deeper fix — authenticating execute + scoping the scheduler store per user so
+// one visitor can't touch another's queued posts — is a design change left for your decision (logged).
+const schedulerExecuteLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { ok: false, error: 'ดำเนินการบ่อยเกินไป กรุณารอสักครู่' } });
+app.post('/api/scheduler/execute/:id', schedulerExecuteLimiter, (req, res) => {
   const post = schedulerStore.posts.find(p => p.id === req.params.id);
   if (!post) return res.status(404).json({ error: 'post not found' });
   post.status = 'published';

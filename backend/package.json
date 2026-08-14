@@ -79,6 +79,7 @@
     "test:waitlist-durability": "node scripts/test-waitlist-durability.mjs",
     "test:autopost-durability": "node scripts/test-autopost-durability.mjs",
     "test:scheduler-durability": "node scripts/test-scheduler-durability.mjs",
+    "test:scheduler-execute-ratelimit": "node scripts/test-scheduler-execute-ratelimit.mjs",
     "test:video-jobs-durability": "node scripts/test-video-jobs-durability.mjs",
     "test:skills-endpoints": "node scripts/test-skills-endpoints.mjs",
     "test:api-contract": "node scripts/test-api-contract.mjs",
