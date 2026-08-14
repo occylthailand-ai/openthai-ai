@@ -6809,3 +6809,29 @@ still defaults to Thai with no language chosen. Full frontend vitest 604/604 (wa
 Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto-merge.
 
 (Still awaiting the owner on the earlier point-8 fork: scheduler execute auth + per-user store scoping.)
+
+---
+
+## 2026-08-13 — i18n(contact): the public /contact page is now trilingual
+
+Market-entry leak from code scan (point 2). /contact is nav/footer-linked and sitemap-listed, but
+shipped fully hardcoded in Thai (header, hero, contact-channel + response-time blocks, every form label,
+placeholder, the subject list, buttons, and all toasts) with no i18n — a visitor who chose English or
+Chinese still saw an all-Thai contact form. Same class as /about and the 404 (both already fixed).
+
+Found it by scanning public marketing pages for the i18n hook: ShowcasePage/FaqPage look Thai-heavy but
+actually carry their own local th/en/zh dict + toggle (not a leak); ContactPage had ZERO language handling
+and ~70 Thai runs — genuinely Thai-only.
+
+Change (frontend only, 1 page + 1 test): ContactPage now follows the global app language (useLang, no
+in-page switcher — matching AboutPage) via a local th/en/zh dict covering every string, incl. the
+per-language subject options and the success/error/network toasts. Also fixed a Thai typo in the
+response-time block ("ภายิน" -> "ภายใน") and added the missing autoComplete name/email hints.
+
+Verified by running: new contactNoThaiLeak test (5/5, same guard pattern as aboutNoThaiLeak) — forced to
+en and zh it emits zero bare-Thai runs (U+0E00–U+0E7F), renders the English/Chinese copy, and still
+defaults to Thai with no language chosen. The existing contactFormA11y test (no LanguageProvider ->
+useLang falls back to Thai) still passes. Full frontend vitest 609/609 (was 604); build passes. Pushed to
+claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto-merge.
+
+(Still awaiting the owner on the earlier point-8 fork: scheduler execute auth + per-user store scoping.)
