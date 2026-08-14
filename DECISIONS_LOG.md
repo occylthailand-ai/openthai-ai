@@ -6787,3 +6787,25 @@ claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto
 
 (Still awaiting the owner on the earlier point-8 fork: scheduler execute auth + per-user store scoping —
 not touched.)
+
+---
+
+## 2026-08-13 — i18n(404): the NotFoundPage recovery page is now trilingual
+
+Market-entry gap from code scan (point 2). The 404 catch-all (App.jsx path="*") is the recovery page for
+every mistyped URL and broken inbound link — a real funnel entry — but it was fully hardcoded in Thai
+(title, description, both recovery buttons, document.title) while the whole rest of the SPA is th/en/zh. A
+visitor who picked English or Chinese (persisted in otai_lang, read by useLang everywhere else) still hit a
+Thai-only 404 and most likely bounced instead of clicking back into the funnel.
+
+Change (frontend only, 1 page + 1 test): NotFoundPage now reads the app language via useLang and renders a
+local th/en/zh dict (title, two description lines, "back home" + "explore AI tools" buttons, document.title).
+The soft-404 SEO guard — flip robots meta to noindex while mounted, restore on unmount so a real route
+re-enables indexing — is preserved unchanged.
+
+Verified by running: new notFoundNoThaiLeak test (5/5, modelled on the existing aboutNoThaiLeak guard) —
+forced to en and zh it emits zero bare-Thai runs (U+0E00–U+0E7F), renders the English/Chinese copy, and
+still defaults to Thai with no language chosen. Full frontend vitest 604/604 (was 599); build passes.
+Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto-merge.
+
+(Still awaiting the owner on the earlier point-8 fork: scheduler execute auth + per-user store scoping.)
