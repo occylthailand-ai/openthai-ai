@@ -9,6 +9,33 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-14 — i18n(affiliate-programs): make the /affiliate-programs directory trilingual (th/en/zh) + leak guard
+
+Standing-order loop (market entry / affiliate funnel). Continued the public-page i18n pass (after
+/about, /404, /contact, /earn) with /affiliate-programs (AffiliateProgramsPage) — the shareable
+affiliate directory (reads ?ref=CODE) reachable from /earn, flagged last round as the next Thai-only
+funnel. It was hardcoded Thai in TWO places: the page chrome AND the data file
+(src/data/affiliatePrograms.js) — 6 category labels/notes + 57 program notes — so an affiliate sharing
+the link, or a non-Thai visitor, saw an all-Thai directory.
+
+FIX: converted CATEGORIES + PROGRAMS label/note to { th, en, zh } objects (name/url/cat/hot stay
+language-neutral) and internationalized the page via useLang + a local T dict (same pattern as the
+other public pages — no in-page switcher). Labels/notes render through an L(obj)=>obj[lang]||obj.th
+helper; the /pay label is localized. Search now matches name + all-language notes joined, so keyword
+filtering (e.g. "email", "hosting") works regardless of UI language. No backend/logic touched.
+
+VERIFIED BY RUNNING: new affiliateProgramsNoThaiLeak.test.jsx 5/5 (renders forced to en/zh with
+?ref=TEST; fails on any bare-Thai run in rendered text OR the search placeholder attribute, covering
+all 57 program notes + 6 category chips; clicks a category chip to exercise the per-cat note line;
+asserts en/zh titles + Thai default). Full frontend suite 619/619 (was 614, +5); vite build clean.
+Mutation-checked twice: a Thai leak injected into a data note -> RED, and into the placeholder -> RED;
+revert -> green. Committed + pushed to `claude/daily-reporter-improvements-8vc9ct` (PR #79). No
+auto-merge.
+
+Remaining Thai-only public pages: only /privacy and /terms — still owner-gated (binding legal text,
+see the prior entry). With /earn + /affiliate-programs done, the public marketing/funnel surface is now
+trilingual end to end except those two legal pages.
+
 ## 2026-08-14 — i18n(earn): make the /earn earning hub trilingual (th/en/zh) + leak guard
 
 Standing-order loop (market entry / consent-based funnel). Continued the public-page i18n pass
