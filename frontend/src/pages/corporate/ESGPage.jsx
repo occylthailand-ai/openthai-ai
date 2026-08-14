@@ -9,7 +9,7 @@ const ESGPage = () => {
   const [tab, setTab] = useState('overview');
 
   useEffect(() => {
-    fetch(apiUrl('/api/corporate/esg')).then(r => r.json()).then(d => setData(d.data)).catch(() => {});
+    fetch(apiUrl('/api/corporate/esg'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setData(d.data)).catch(() => {});
   }, []);
 
   if (!data) return <CorporateLayout title="🌿 ESG & Sustainability" subtitle="Environmental · Social · Governance"><div style={{ color: '#6b7280', textAlign: 'center', paddingTop: '60px' }}>⏳ Loading...</div></CorporateLayout>;

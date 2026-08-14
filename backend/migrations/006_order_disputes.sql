@@ -21,6 +21,14 @@ create table if not exists public.order_disputes (
   created_at     timestamptz not null default now()
 );
 
+-- counter_response คือฟิลด์ที่ backend เขียนจริงบน order_disputes แต่ตารางเดิม (ตอนสร้างครั้งแรก)
+-- ไม่มี — open() ใส่ counter_response:null ลงทุกเรคคอร์ด และ respond() ตั้งเป็น object เมื่ออีกฝ่าย
+-- ตอบโต้ (parties อ่านค่านี้ในมุมมองสาธารณะ). PostgREST ตรวจ "ทุก key" ใน payload กับ schema แม้ค่า
+-- เป็น null → ถ้าคอลัมน์ไม่มี จะปฏิเสธ (PGRST204/400) → persist() ตกไป file store เงียบๆ (/tmp บน
+-- Vercel = หายตอน redeploy). ข้อพิพาทคือกลไก escrow (พักเงินไว้) การหายเงียบจึงร้ายแรง — alter
+-- แบบ idempotent ให้ schema ตรงกับที่โค้ดเขียน รันซ้ำได้ปลอดภัย
+alter table public.order_disputes add column if not exists counter_response jsonb;
+
 create index if not exists order_disputes_order_idx  on public.order_disputes (order_id);
 create index if not exists order_disputes_status_idx on public.order_disputes (status);
 

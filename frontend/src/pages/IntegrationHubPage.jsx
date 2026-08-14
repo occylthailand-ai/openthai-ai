@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { apiUrl } from '../apiBase';
 
+// The publish/test routes act with the platform's own social tokens, so the backend now requires
+// the admin key on them (they were previously public). Send it the same way AdminPage does — from
+// the admin session, falling back to the build-time default for local dev.
+const ADMIN_KEY = import.meta.env.VITE_ADMIN_KEY || 'openthai-admin-2026';
+const adminKey = () => sessionStorage.getItem('admin_key') || ADMIN_KEY;
+
 const CAT_LABEL = {
   social: { label: '📱 Social Media', color: '#6366f1' },
   commerce: { label: '🛒 E-Commerce', color: '#f59e0b' },
@@ -43,7 +49,7 @@ export default function IntegrationHubPage() {
   const testConnection = async (id) => {
     setTesting(id);
     try {
-      const r = await fetch(apiUrl(`/api/integrations/${id}/test`), { method: 'POST' });
+      const r = await fetch(apiUrl(`/api/integrations/${id}/test`), { method: 'POST', headers: { 'x-admin-key': adminKey() } });
       const d = await r.json();
       setTestResults(prev => ({ ...prev, [id]: d.result }));
     } catch (_) {
@@ -65,7 +71,7 @@ export default function IntegrationHubPage() {
       try {
         const r = await fetch(apiUrl(`/api/integrations/${id}/publish`), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey() },
           body: JSON.stringify({ content: composeContent, link: composeLink || undefined }),
         });
         results[id] = await r.json();
@@ -92,17 +98,17 @@ export default function IntegrationHubPage() {
             <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, background: 'linear-gradient(135deg,#6366f1,#10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               🔌 Integration Hub
             </h1>
-            <p style={{ color: '#64748b', margin: '6px 0 0', fontSize: 14 }}>เชื่อมต่อ Platform จริง — ปิด Gap vs Hootsuite/Buffer · พร้อมเสียบ API ทันที</p>
+            <p style={{ color: '#94a3b8', margin: '6px 0 0', fontSize: 14 }}>เชื่อมต่อ Platform จริง — ปิด Gap vs Hootsuite/Buffer · พร้อมเสียบ API ทันที</p>
           </div>
           {data && (
             <div style={{ display: 'flex', gap: 10 }}>
               <div style={{ textAlign: 'center', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 12, padding: '10px 16px' }}>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#10b981' }}>{data.summary.connected}</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>เชื่อมแล้ว</div>
+                <div style={{ fontSize: 11, color: '#94a3b8' }}>เชื่อมแล้ว</div>
               </div>
               <div style={{ textAlign: 'center', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 12, padding: '10px 16px' }}>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#f59e0b' }}>{data.summary.pending}</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>รอเชื่อม</div>
+                <div style={{ fontSize: 11, color: '#94a3b8' }}>รอเชื่อม</div>
               </div>
             </div>
           )}
@@ -122,11 +128,11 @@ export default function IntegrationHubPage() {
                 <div style={{ display: 'flex', gap: 16 }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{live.total_reach.toLocaleString()}</div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>Live Reach</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>Live Reach</div>
                   </div>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 20, fontWeight: 900, color: '#6366f1' }}>{live.total_engagement.toLocaleString()}</div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>Engagement</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>Engagement</div>
                   </div>
                 </div>
               )}
@@ -179,14 +185,14 @@ export default function IntegrationHubPage() {
         )}
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#475569' }}>
+          <div style={{ textAlign: 'center', padding: 60, color: '#7c8797' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🔌</div>
             <div>กำลังโหลดสถานะ Integration...</div>
           </div>
         ) : data ? (
           <>
             {cats.map(cat => {
-              const meta = CAT_LABEL[cat] || { label: cat, color: '#64748b' };
+              const meta = CAT_LABEL[cat] || { label: cat, color: '#94a3b8' };
               const items = data.integrations.filter(i => i.category === cat);
               return (
                 <div key={cat} style={{ marginBottom: 24 }}>
@@ -210,7 +216,7 @@ export default function IntegrationHubPage() {
                         </div>
                         <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12, lineHeight: 1.5 }}>{it.capability}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <code style={{ fontSize: 11, color: '#475569', background: 'rgba(255,255,255,0.04)', borderRadius: 5, padding: '3px 8px' }}>{it.envKey}</code>
+                          <code style={{ fontSize: 11, color: '#7c8797', background: 'rgba(255,255,255,0.04)', borderRadius: 5, padding: '3px 8px' }}>{it.envKey}</code>
                           <button onClick={() => testConnection(it.id)} disabled={testing === it.id} style={{
                             background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)',
                             borderRadius: 8, color: '#a5b4fc', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: '6px 14px',
@@ -248,7 +254,7 @@ export default function IntegrationHubPage() {
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: 60, color: '#475569' }}>ไม่สามารถโหลดข้อมูลได้</div>
+          <div style={{ textAlign: 'center', padding: 60, color: '#7c8797' }}>ไม่สามารถโหลดข้อมูลได้</div>
         )}
       </div>
     </div>

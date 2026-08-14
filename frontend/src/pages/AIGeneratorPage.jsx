@@ -251,7 +251,7 @@ function CompetitorTab({ toast, onUseIdea }) {
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             {COMP_PLATFORMS.map(p => (
               <button key={p} onClick={() => setForm(f=>({...f,platform:p}))}
-                style={{ borderRadius:20, padding:'5px 12px', fontSize:12, fontWeight:600, cursor:'pointer', border:`1.5px solid ${form.platform===p?'#6366f1':'rgba(255,255,255,0.1)'}`, background:form.platform===p?'rgba(99,102,241,0.2)':'transparent', color:form.platform===p?'#a5b4fc':'#64748b' }}>{p}</button>
+                style={{ borderRadius:20, padding:'5px 12px', fontSize:12, fontWeight:600, cursor:'pointer', border:`1.5px solid ${form.platform===p?'#6366f1':'rgba(255,255,255,0.1)'}`, background:form.platform===p?'rgba(99,102,241,0.2)':'transparent', color:form.platform===p?'#a5b4fc':'#94a3b8' }}>{p}</button>
             ))}
           </div>
         </div>
@@ -322,7 +322,7 @@ function CompetitorTab({ toast, onUseIdea }) {
                       <span style={{ fontSize:13, fontWeight:700, color:'#e2e8f0' }}>{a.angle}</span>
                       <span style={{ fontSize:11, padding:'2px 8px', borderRadius:20, background:`${DIFF_COLORS[a.difficulty]||'#64748b'}20`, color:DIFF_COLORS[a.difficulty]||'#64748b', border:`1px solid ${DIFF_COLORS[a.difficulty]||'#64748b'}40` }}>{a.difficulty}</span>
                     </div>
-                    <div style={{ fontSize:12, color:'#64748b' }}>{a.reason}</div>
+                    <div style={{ fontSize:12, color:'#94a3b8' }}>{a.reason}</div>
                   </div>
                 ))}
               </Card>
@@ -368,7 +368,7 @@ function NewsRagTab({ toast, onIdeaSelect }) {
           ⚡ สร้างเลย
         </button>
       </div>
-      <div style={{ fontSize:12, color:'#64748b', lineHeight:1.6 }}>💡 {idea.angle}</div>
+      <div style={{ fontSize:12, color:'#94a3b8', lineHeight:1.6 }}>💡 {idea.angle}</div>
     </div>
   );
 
@@ -377,10 +377,10 @@ function NewsRagTab({ toast, onIdeaSelect }) {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, flexWrap:'wrap', gap:10 }}>
         <div>
           <div style={{ fontSize:15, fontWeight:800 }}>📰 News & Ideas</div>
-          <div style={{ fontSize:12, color:'#64748b', marginTop:2 }}>ข่าวและเทรนด์ไทยวันนี้ → Content Ideas พร้อมใช้</div>
+          <div style={{ fontSize:12, color:'#94a3b8', marginTop:2 }}>ข่าวและเทรนด์ไทยวันนี้ → Content Ideas พร้อมใช้</div>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-          {data && <div style={{ fontSize:11, color:'#475569' }}>Source: {data.source} · {data.ts ? new Date(data.ts).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) : ''}</div>}
+          {data && <div style={{ fontSize:11, color:'#7c8797' }}>Source: {data.source} · {data.ts ? new Date(data.ts).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}) : ''}</div>}
           <button onClick={() => load(true)} disabled={refreshing}
             style={{ background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'7px 14px', color:'#94a3b8', cursor:'pointer', fontSize:12, opacity:refreshing?.6:1 }}>
             {refreshing ? '⏳' : '🔄 รีเฟรช'}
@@ -389,7 +389,7 @@ function NewsRagTab({ toast, onIdeaSelect }) {
       </div>
 
       {loading ? (
-        <div style={{ textAlign:'center', padding:'60px 0', color:'#64748b' }}>⏳ โหลดข่าวล่าสุด...</div>
+        <div style={{ textAlign:'center', padding:'60px 0', color:'#94a3b8' }}>⏳ โหลดข่าวล่าสุด...</div>
       ) : !data ? (
         <div style={{ textAlign:'center', padding:'60px 0', color:'#f87171' }}>โหลดไม่สำเร็จ</div>
       ) : (
@@ -401,7 +401,7 @@ function NewsRagTab({ toast, onIdeaSelect }) {
               <div style={{ display:'grid', gap:7 }}>
                 {data.headlines.map((h,i) => (
                   <div key={i} style={{ display:'flex', alignItems:'center', gap:10, fontSize:13, color:'#cbd5e1', padding:'6px 0', borderBottom:'1px solid rgba(255,255,255,0.04)' }}>
-                    <span style={{ fontSize:11, color:'#475569', flexShrink:0 }}>{String(i+1).padStart(2,'0')}</span>
+                    <span style={{ fontSize:11, color:'#7c8797', flexShrink:0 }}>{String(i+1).padStart(2,'0')}</span>
                     <span style={{ flex:1 }}>{h}</span>
                     <button onClick={() => onIdeaSelect(h, 'ทั่วไป')}
                       style={{ background:'rgba(99,102,241,0.1)', border:'1px solid rgba(99,102,241,0.2)', borderRadius:6, padding:'3px 9px', color:'#a5b4fc', cursor:'pointer', fontSize:11, flexShrink:0 }}>
@@ -494,9 +494,20 @@ const AIGeneratorPage = () => {
     setStreaming(true); setStreamText('');
     try {
       const res = await fetch(apiUrl('/api/generate/stream'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        // ต้องส่ง authHeaders() (x-user-email / x-device-id) เหมือน generate/generate-ab —
+        // ไม่งั้น backend มองสตรีมเป็น anonymous: ผู้ใช้ที่จ่ายเงินแล้วจะโดนจำกัดโควต้าผิด และ
+        // เครดิตโบนัสจะใช้ไม่ได้บนเส้นทางสตรีม
+        method: 'POST', headers: authHeaders(),
         body: JSON.stringify({ product: form.product, platform: form.platform, category: form.category, audience: form.audience }),
       });
+      // โควต้าฟรีหมด → ชวนอัพเกรดเหมือนเส้นทางปกติ (ไม่ใช่แค่ "สตรีมไม่สำเร็จ" กว้างๆ)
+      if (res.status === 429) {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error || 'ใช้สิทธิ์ฟรีครบแล้ววันนี้ — กำลังพาไปอัพเกรด');
+        setStreaming(false);
+        setTimeout(() => navigate(d.upgrade_url || '/payment?plan=pro'), 1200);
+        return;
+      }
       if (!res.ok || !res.body) { toast.error('สตรีมไม่สำเร็จ'); setStreaming(false); return; }
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -517,6 +528,7 @@ const AIGeneratorPage = () => {
       }
     } catch { toast.error('การเชื่อมต่อสตรีมขัดข้อง'); }
     setStreaming(false);
+    refreshUsage();  // สตรีมหักโควต้า 1 ครั้งเมื่อสำเร็จ → รีเฟรชตัวเลขคงเหลือให้ตรง
   };
 
   const handleGenerate = async () => {
@@ -636,7 +648,7 @@ const AIGeneratorPage = () => {
       <div style={{ background:'rgba(8,8,18,0.9)', backdropFilter:'blur(10px)', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', gap:2, padding:'0 24px', overflowX:'auto' }}>
         {GEN_TABS.map(tb => (
           <button key={tb.id} onClick={() => setGenTab(tb.id)}
-            style={{ padding:'12px 18px', background:'none', border:'none', borderBottom:`2px solid ${genTab===tb.id?'#6366f1':'transparent'}`, color:genTab===tb.id?'#a5b4fc':'#475569', cursor:'pointer', fontSize:13, fontWeight:genTab===tb.id?700:400, whiteSpace:'nowrap', transition:'all .2s' }}>
+            style={{ padding:'12px 18px', background:'none', border:'none', borderBottom:`2px solid ${genTab===tb.id?'#6366f1':'transparent'}`, color:genTab===tb.id?'#a5b4fc':'#7c8797', cursor:'pointer', fontSize:13, fontWeight:genTab===tb.id?700:400, whiteSpace:'nowrap', transition:'all .2s' }}>
             {tb.icon} {t('gen.tab.' + tb.id)}
           </button>
         ))}
@@ -677,7 +689,7 @@ const AIGeneratorPage = () => {
                     style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.7)', border: 'none', borderRadius: '50%', width: 24, height: 24, color: '#fff', cursor: 'pointer', fontSize: 12 }}>✕</button>
                 </div>
               ) : (
-                <div style={{ color: '#475569', fontSize: 13 }}>
+                <div style={{ color: '#7c8797', fontSize: 13 }}>
                   <div style={{ fontSize: 28, marginBottom: 6 }}>📷</div>
                   {t('gen.upload.hint')}<br/>
                   <span style={{ fontSize: 11 }}>{t('gen.upload.sub')}</span>
@@ -754,7 +766,7 @@ const AIGeneratorPage = () => {
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: abMode ? '#a5b4fc' : '#94a3b8' }}>🆚 A/B Testing</div>
-              <div style={{ fontSize: 11, color: '#475569' }}>{t('gen.ab')}</div>
+              <div style={{ fontSize: 11, color: '#7c8797' }}>{t('gen.ab')}</div>
             </div>
           </div>
 
@@ -782,7 +794,7 @@ const AIGeneratorPage = () => {
           {/* โควต้ารายวัน */}
           {usage && (usage.unlimited ? (
             <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: '#10b981', fontWeight: 600 }}>
-              ✨ {usage.plan === 'premier' ? 'Premier' : 'Pro'} — {t('gen.quota.unlimited')}
+              ✨ {usage.plan === 'enterprise' ? 'Enterprise' : usage.plan === 'premier' ? 'Premier' : 'Pro'} — {t('gen.quota.unlimited')}
             </div>
           ) : (
             <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: usage.remaining > 0 ? '#94a3b8' : '#fca5a5' }}>
@@ -812,7 +824,7 @@ const AIGeneratorPage = () => {
                 </div>
               ))}
               <button onClick={() => { setHistory([]); saveHistory([]); toast.warn('ล้างประวัติแล้ว'); }}
-                style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 11, marginTop: 4 }}>
+                style={{ background: 'none', border: 'none', color: '#7c8797', cursor: 'pointer', fontSize: 11, marginTop: 4 }}>
                 🗑 ล้างประวัติ
               </button>
             </div>

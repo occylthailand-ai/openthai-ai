@@ -7,7 +7,7 @@ const FinancePage = () => {
   const [tab, setTab] = useState('summary');
 
   useEffect(() => {
-    fetch(apiUrl('/api/corporate/finance')).then(r => r.json()).then(d => setData(d.data)).catch(() => {});
+    fetch(apiUrl('/api/corporate/finance'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setData(d.data)).catch(() => {});
   }, []);
 
   if (!data) return <CorporateLayout title="💰 Finance & Accounting" subtitle="Financial Dashboard · Budget · IPO Roadmap"><div style={{ color: '#6b7280', textAlign: 'center', paddingTop: '60px' }}>⏳ Loading...</div></CorporateLayout>;

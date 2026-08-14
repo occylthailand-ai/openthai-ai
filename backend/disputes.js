@@ -7,10 +7,38 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { missingColumnFrom, stripColumn } from './sb-column-fallback.js';
 
 const DISPUTE_STATUS = ['open', 'ai_reviewed', 'resolved_supplier', 'resolved_buyer', 'refunded'];
-const DECISIONS = ['favor_supplier', 'favor_buyer', 'refund', 'split'];
+// NB: no 'split' — the escrow model has no partial-amount field, so a 50/50 split
+// can't be represented. The old 'split' decision silently released the FULL escrow to
+// the supplier (buyer got nothing) while the admin UI labelled it "แบ่งครึ่ง". Removed
+// until a real partial-split escrow exists; resolve() now rejects it (defense in depth).
+const DECISIONS = ['favor_supplier', 'favor_buyer', 'refund'];
 const clip = (s, n = 800) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
+
+// Party-facing projection of a dispute for the public /api/disputes/:id/track endpoint.
+// The stored dispute carries admin-only artifacts that must NOT reach the two disputing
+// parties: `ai_suggestion` is the AI arbitration draft written *for the human admin to
+// decide on* ("ไม่ใช่ตัดสินเอง") — its recommendation / confidence / reasoning and
+// especially `missing_evidence` (which literally spells out what proof would swing the
+// ruling) would let a party game the arbitration or dispute the human's final call; and
+// the admin's `resolution.note` + `resolved_by` are the internal rationale + which staffer
+// ruled. The resolved-notification email only ever reveals the `decision`, so the public
+// view matches that: parties see the reason, each other's counter_response, the status,
+// and the final decision + when — never the AI draft or the admin's internal note/identity.
+// Pure + exported for deterministic unit testing (same pattern as orders.publicOrderView).
+export function publicDisputeView(d) {
+  if (!d) return null;
+  const resolution = d.resolution
+    ? { decision: d.resolution.decision, resolved_at: d.resolution.resolved_at }
+    : null;
+  return {
+    id: d.id, order_id: d.order_id, opened_by: d.opened_by, reason: d.reason,
+    status: d.status, counter_response: d.counter_response, resolution,
+    created_at: d.created_at,
+  };
+}
 
 export function createDisputes(dataDir, opts = {}) {
   const { orders, callAI, parseAIJson, notify } = opts;
@@ -38,8 +66,19 @@ export function createDisputes(dataDir, opts = {}) {
 
   async function persist(rec) {
     if (useSB) {
-      try { await sbReq('POST', '/order_disputes', { body: [rec], params: { on_conflict: 'id' }, prefer: 'resolution=merge-duplicates,return=minimal' }); return; }
-      catch (e) { console.warn('[disputes] Supabase write failed, using file:', e.message); }
+      const opts = { params: { on_conflict: 'id' }, prefer: 'resolution=merge-duplicates,return=minimal' };
+      try { await sbReq('POST', '/order_disputes', { body: [rec], ...opts }); return; }
+      catch (e) {
+        // If the live table predates a column the record carries (e.g. counter_response —
+        // a migration the owner hasn't run), retry once without it so the dispute (which
+        // gates escrow) still persists durably to Supabase instead of only the file store.
+        const col = missingColumnFrom(e.message);
+        const stripped = col && stripColumn([rec], col);
+        if (stripped) {
+          try { await sbReq('POST', '/order_disputes', { body: stripped, ...opts }); return; }
+          catch (e2) { console.warn(`[disputes] Supabase write failed after dropping "${col}", using file:`, e2.message); }
+        } else { console.warn('[disputes] Supabase write failed, using file:', e.message); }
+      }
     }
     store[rec.id] = rec; saveFile();
   }
@@ -120,7 +159,10 @@ export function createDisputes(dataDir, opts = {}) {
     const order = await orders.getOne(d.order_id);
     if (!order) return { ok: false, error: 'ไม่พบคำสั่งซื้อนี้' };
     // ผู้ตอบต้องเป็น "อีกฝ่าย" ที่ไม่ใช่คนเปิดข้อพิพาท
-    const otherPartyContact = (d.opened_by === 'buyer' ? order.producer_email : order.contact || '').toLowerCase();
+    // ?: ผูกหลวมกว่า || เดิมฝั่ง buyer เป็น order.producer_email เฉยๆ (ไม่มี || '') ต่างจาก open()
+    // ที่กัน null ทั้งสองฝั่ง — ออเดอร์ที่ไม่มี producer_email (เช่นบางช่องทาง) จะทำให้ .toLowerCase()
+    // โยน TypeError กลายเป็น 500 แทนที่จะเป็น error "ช่องทางไม่ตรง" ที่อ่านได้ กัน null ทั้งสองฝั่งให้ตรงกับ open()
+    const otherPartyContact = (d.opened_by === 'buyer' ? (order.producer_email || '') : (order.contact || '')).toLowerCase();
     if (!otherPartyContact || otherPartyContact !== contact) {
       return { ok: false, error: 'ช่องทางติดต่อไม่ตรงกับอีกฝ่ายของคำสั่งซื้อนี้' };
     }
@@ -137,18 +179,15 @@ export function createDisputes(dataDir, opts = {}) {
     if (!d) return { ok: false, error: 'ไม่พบข้อพิพาทนี้' };
     const c = (contact || '').toString().trim().toLowerCase();
     const order = orders ? await orders.getOne(d.order_id) : null;
-    const otherPartyContact = order ? (d.opened_by === 'buyer' ? order.producer_email : order.contact || '').toLowerCase() : '';
+    // Same `?:`-binds-looser-than-`||` crash the respond() fix addressed: the buyer branch was a
+    // bare order.producer_email, so an order with no producer_email made this .toLowerCase() throw
+    // (a 500) for EVERY caller — even the dispute's own opener couldn't track it. Guard both branches.
+    const otherPartyContact = order ? (d.opened_by === 'buyer' ? (order.producer_email || '') : (order.contact || '')).toLowerCase() : '';
     if (!c || (c !== d.opener_contact && c !== otherPartyContact)) {
       return { ok: false, error: 'ช่องทางติดต่อไม่ตรงกับข้อพิพาทนี้' };
     }
-    return {
-      ok: true,
-      dispute: {
-        id: d.id, order_id: d.order_id, opened_by: d.opened_by, reason: d.reason, status: d.status,
-        ai_suggestion: d.ai_suggestion, counter_response: d.counter_response, resolution: d.resolution,
-        created_at: d.created_at,
-      },
-    };
+    // party-facing view — never leaks the admin-only AI arbitration draft or the admin's internal resolution note/identity
+    return { ok: true, dispute: publicDisputeView(d) };
   }
 
   // AI-assist — เสนอความเห็นให้ admin พิจารณา (ไม่ auto-resolve เงินจริง)
@@ -167,7 +206,7 @@ export function createDisputes(dataDir, opts = {}) {
 
 ตอบกลับ JSON เท่านั้น:
 {
-  "recommendation": "favor_supplier | favor_buyer | refund | split | need_more_info",
+  "recommendation": "favor_supplier | favor_buyer | refund | need_more_info",
   "confidence": 0.0,
   "reasoning": "เหตุผลสั้นๆ อ้างอิงข้อเท็จจริงที่มี ไม่ใช่การเดา",
   "missing_evidence": ["สิ่งที่ควรขอเพิ่มเติมก่อนตัดสินใจจริง ถ้ามี"]
@@ -194,8 +233,9 @@ export function createDisputes(dataDir, opts = {}) {
     if (d.status === 'resolved_supplier' || d.status === 'resolved_buyer' || d.status === 'refunded') {
       return { ok: false, error: 'ข้อพิพาทนี้ปิดไปแล้ว' };
     }
-    const escrowNext = (decision === 'favor_supplier' || decision === 'split') ? 'released' : 'refunded';
-    const statusNext = decision === 'favor_supplier' ? 'resolved_supplier' : decision === 'favor_buyer' ? 'resolved_buyer' : decision === 'refund' ? 'refunded' : 'resolved_supplier';
+    // decision ∈ {favor_supplier, favor_buyer, refund} (validated above)
+    const escrowNext = decision === 'favor_supplier' ? 'released' : 'refunded';
+    const statusNext = decision === 'favor_supplier' ? 'resolved_supplier' : decision === 'favor_buyer' ? 'resolved_buyer' : 'refunded';
     if (orders) { try { await orders.setEscrowStatus(d.order_id, escrowNext, `dispute ${id} resolved: ${decision}`); } catch (_) { /* ignore */ } }
 
     d.status = statusNext;

@@ -18,6 +18,13 @@ create table if not exists public.producers (
   created_at   timestamptz not null default now()
 );
 
+-- consent คือฟิลด์ที่ backend เขียนจริงบน producers (register() ใส่ consent:true ทุกใบสมัคร —
+-- PDPA: ต้องพิสูจน์การยินยอมได้) แต่ตารางเดิมไม่มี. PostgREST ตรวจ "ทุก key" ใน payload กับ schema
+-- → ถ้าคอลัมน์ไม่มี จะปฏิเสธ (PGRST204/400) → persist() ตกไป file store เงียบๆ (/tmp บน Vercel =
+-- หายตอน redeploy) → ใบสมัครผู้ผลิตหายทั้งหมดใน production. (stock ถูกเพิ่มแล้วใน
+-- 001-shipping-stock.sql). alter แบบ idempotent ให้ schema ตรงกับที่โค้ดเขียน รันซ้ำได้ปลอดภัย
+alter table public.producers add column if not exists consent boolean not null default false;
+
 create index if not exists producers_status_idx on public.producers (status);
 
 -- ใช้ service key เท่านั้น (เรียกจาก backend) — เปิด RLS, ไม่มี policy = bypass เฉพาะ service_role

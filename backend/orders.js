@@ -9,6 +9,26 @@ import { join } from 'path';
 const ORDER_STATUS = ['new', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
 const clip = (s, n = 300) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 
+// Buyer-facing projection of an order for the public /api/orders/track endpoint.
+// The internal order carries free-text history notes written for admins/the system:
+// the oversold "race" refund note (which embeds the Omise charge id), escrow:* state
+// strings, "ชำระเงินสำเร็จ", and whatever an admin typed when cancelling (possibly an
+// internal remark not meant for the buyer). None of that belongs in the buyer's public
+// timeline — and the details that ARE buyer-facing (carrier / tracking no / delivery
+// proof) are already returned as dedicated fields and rendered separately on the Track
+// page. So the public history keeps only { status, at } (the progression + when) and
+// drops the raw note. Pure + exported for deterministic unit testing.
+export function publicOrderView(o) {
+  if (!o) return null;
+  return {
+    id: o.id, product_name: o.product_name, qty: o.qty, amount: o.amount,
+    status: o.status, tracking_no: o.tracking_no, carrier: o.carrier,
+    delivered_at: o.delivered_at, received_by: o.received_by, drop_off: o.drop_off,
+    history: (Array.isArray(o.history) ? o.history : []).map((h) => ({ status: h.status, at: h.at })),
+    created_at: o.created_at,
+  };
+}
+
 export function createOrders(dataDir, opts = {}) {
   const SB_URL = process.env.SUPABASE_URL;
   const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -53,12 +73,40 @@ export function createOrders(dataDir, opts = {}) {
 
   async function place(input) {
     const qty = Math.max(1, Math.min(9999, parseInt(input.qty, 10) || 1));
-    const price = Number(input.price) > 0 ? Number(input.price) : null;
+    // The public /api/catalog no longer exposes producer emails — it returns an opaque `ref` that
+    // CatalogPage posts back as producer_ref. Resolve it to the real email here, server-side, so the
+    // order still stores/uses producer_email everywhere downstream (price authority, stock guard,
+    // producer notification, dashboard feed). A direct producer_email is still honoured for the
+    // first-party store path, admin tools, and existing integrations.
+    let producerEmailIn = input.producer_email;
+    if (!producerEmailIn && input.producer_ref && typeof opts.resolveProducerRef === 'function') {
+      try { producerEmailIn = await opts.resolveProducerRef(String(input.producer_ref)); }
+      catch (e) { console.warn('[orders] producer_ref resolve skipped:', e.message); }
+    }
+    const producer_email = clip(producerEmailIn, 120).toLowerCase();
+    const product_name = clip(input.product_name, 120);
+    // Price authority: prefer the producer's CURRENT server-side price over whatever the client posted,
+    // so a tampered POST or a stale catalog tab can't record — and email a receipt for — the wrong
+    // amount (the same "server truth wins" principle the stock guard below already applies). Falls back
+    // to the client price when no authoritative price is available (producer lists none / lookup throws),
+    // so the first-party store path — which passes its own verified price and has no producer record —
+    // keeps recording exactly what it sent.
+    // isFinite guards: Number("Infinity"/"1e999") === Infinity and Infinity > 0 is true, so without
+    // them a non-finite client or authoritative price would become the order amount, then serialize to
+    // null on the JSON-file write (JSON.stringify(Infinity) === "null") — a null-amount order + poisoned
+    // in-memory revenue sums. (getProducerPrice already guards this now; belt-and-suspenders here too.)
+    let price = Number.isFinite(Number(input.price)) && Number(input.price) > 0 ? Number(input.price) : null;
+    if (typeof opts.getProducerPrice === 'function') {
+      try {
+        const authoritative = await opts.getProducerPrice(producer_email, product_name);
+        if (authoritative != null && Number.isFinite(Number(authoritative)) && Number(authoritative) > 0) price = Number(authoritative);
+      } catch (e) { console.warn('[orders] price lookup skipped:', e.message); }
+    }
     const now = new Date().toISOString();
     const rec = {
       id: `ord_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      producer_email: clip(input.producer_email, 120).toLowerCase(),
-      product_name: clip(input.product_name, 120),
+      producer_email,
+      product_name,
       customer_name: clip(input.customer_name, 80),
       contact: clip(input.contact, 120),
       address: clip(input.address, 400),
@@ -74,9 +122,26 @@ export function createOrders(dataDir, opts = {}) {
     if (!rec.product_name || !rec.customer_name || !rec.contact) {
       return { ok: false, error: 'กรอกสินค้า ชื่อผู้สั่ง และช่องทางติดต่อให้ครบ' };
     }
+    // Server-side stock guard (companion to the CatalogPage "สินค้าหมด" UI): reject an order the
+    // producer can't fulfil, so a direct POST — or a stale catalog tab — can't place a doomed order.
+    // getProducerStock returns the producer's current stock, or null when they don't track stock
+    // (null = always orderable, matching /api/catalog + the digest selector). If the lookup throws,
+    // we do NOT block the order — degrade to the prior always-accept behaviour rather than lose a sale.
+    if (typeof opts.getProducerStock === 'function') {
+      try {
+        const stock = await opts.getProducerStock(rec.producer_email, rec.product_name);
+        if (stock != null && Number(stock) < qty) {
+          return { ok: false, out_of_stock: true, stock: Number(stock),
+            error: Number(stock) <= 0 ? 'สินค้าหมด' : `สต๊อกไม่พอ (เหลือ ${Number(stock)} ชิ้น)` };
+        }
+      } catch (e) { console.warn('[orders] stock guard skipped:', e.message); }
+    }
     await persist(rec);
     try { await opts.onNewOrder?.(rec); } catch (e) { console.warn('[orders] notify failed:', e.message); }
-    return { ok: true, id: rec.id };
+    // Return the recorded amount so the caller can confirm the REAL total to the buyer — since place()
+    // now records the producer's authoritative price, that total may differ from a stale catalog tab,
+    // and the buyer should see the same figure the receipt email shows, not a client-side guess.
+    return { ok: true, id: rec.id, amount: rec.amount };
   }
 
   async function all() {
@@ -91,9 +156,15 @@ export function createOrders(dataDir, opts = {}) {
     if (!ORDER_STATUS.includes(status)) return { ok: false, error: 'invalid status' };
     const o = await getOne(id);
     if (!o) return { ok: false, error: 'not found' };
+    const prev = o.status;
     o.status = status;
     o.history = [...(o.history || []), hist(status, note)];
     await persist(o);
+    // Fire onCancel exactly once, only on the transition INTO 'cancelled' (prev !== 'cancelled'),
+    // so stock is restored once per order and re-cancelling an already-cancelled order is a no-op.
+    if (status === 'cancelled' && prev !== 'cancelled') {
+      try { await opts.onCancel?.(o); } catch (e) { console.warn('[orders] onCancel hook failed:', e.message); }
+    }
     return { ok: true, id, status };
   }
 
@@ -141,13 +212,12 @@ export function createOrders(dataDir, opts = {}) {
     const o = await getOne(id);
     if (!o) return { ok: false, error: 'ไม่พบคำสั่งซื้อนี้' };
     const c = (contact || '').toString().trim().toLowerCase();
-    if (!c || o.contact.toLowerCase() !== c) return { ok: false, error: 'ช่องทางติดต่อไม่ตรงกับคำสั่งซื้อ' };
-    return { ok: true, order: {
-      id: o.id, product_name: o.product_name, qty: o.qty, amount: o.amount,
-      status: o.status, tracking_no: o.tracking_no, carrier: o.carrier,
-      delivered_at: o.delivered_at, received_by: o.received_by, drop_off: o.drop_off,
-      history: o.history || [], created_at: o.created_at,
-    } };
+    // orders created via place() always carry a non-empty string contact, but a row read back
+    // from Supabase could have a null contact column — o.contact.toLowerCase() would then throw
+    // (a 500) instead of the clean mismatch below. Guard it like the input side already is.
+    if (!c || (o.contact || '').toLowerCase() !== c) return { ok: false, error: 'ช่องทางติดต่อไม่ตรงกับคำสั่งซื้อ' };
+    // sanitized buyer-facing view — never leaks internal history notes (charge id / escrow / admin remarks)
+    return { ok: true, order: publicOrderView(o) };
   }
 
   async function summary() {
@@ -169,7 +239,7 @@ export function createOrders(dataDir, opts = {}) {
   router.post('/api/orders', orderLimiter, wrap(async (req, res) => {
     const r = await place(req.body || {});
     if (!r.ok) return res.status(400).json({ success: false, error: r.error });
-    res.json({ success: true, id: r.id, message: 'รับคำสั่งซื้อแล้ว ติดตามสถานะได้ที่หน้า Track ด้วยเลขออเดอร์ + ช่องทางติดต่อ' });
+    res.json({ success: true, id: r.id, amount: r.amount, message: 'รับคำสั่งซื้อแล้ว ติดตามสถานะได้ที่หน้า Track ด้วยเลขออเดอร์ + ช่องทางติดต่อ' });
   }));
 
   // ติดตามสถานะ (สาธารณะ) — /api/orders/track?id=&contact=

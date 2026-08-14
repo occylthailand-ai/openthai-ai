@@ -49,7 +49,7 @@ export default function ExitIntentModal() {
         <div style={{ fontSize: 22, fontWeight: 800, background: 'linear-gradient(90deg,#fe2c55,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{S.headline}</div>
         <p style={{ color: '#94a3b8', fontSize: 14, margin: '12px 0 18px', lineHeight: 1.6 }}>{S.desc}</p>
         <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{S.expires}</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>{S.expires}</div>
           <div style={{ fontSize: 34, fontWeight: 900, fontVariantNumeric: 'tabular-nums', color: left < 60 ? '#ef4444' : '#f8fafc' }}>{mm}:{ss}</div>
         </div>
         <button onClick={() => { close(); navigate('/pricing'); }} style={cta}>{S.cta}</button>
@@ -61,6 +61,6 @@ export default function ExitIntentModal() {
 
 const overlay = { position: 'fixed', inset: 0, zIndex: 9500, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 };
 const modal = { position: 'relative', width: '100%', maxWidth: 380, background: 'linear-gradient(160deg,#13131f,#0c0c16)', border: '1px solid rgba(254,44,85,0.3)', borderRadius: 20, padding: '28px 24px', textAlign: 'center', boxShadow: '0 24px 60px rgba(0,0,0,0.6)' };
-const closeBtn = { position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#475569', fontSize: 22, cursor: 'pointer', lineHeight: 1 };
+const closeBtn = { position: 'absolute', top: 12, right: 14, background: 'none', border: 'none', color: '#7c8797', fontSize: 22, cursor: 'pointer', lineHeight: 1 };
 const cta = { width: '100%', padding: '14px', borderRadius: 50, border: 'none', background: 'linear-gradient(135deg,#fe2c55,#6366f1)', color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', boxShadow: '0 8px 24px rgba(254,44,85,0.35)' };
-const dismiss = { width: '100%', padding: '10px', marginTop: 8, background: 'none', border: 'none', color: '#64748b', fontSize: 13, cursor: 'pointer' };
+const dismiss = { width: '100%', padding: '10px', marginTop: 8, background: 'none', border: 'none', color: '#94a3b8', fontSize: 13, cursor: 'pointer' };

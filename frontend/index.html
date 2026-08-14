@@ -21,11 +21,16 @@
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="th_TH" />
+    <!-- The site renders in Thai/English/Chinese (LanguageProvider); declare EN + ZH as alternates so
+         LINE/Facebook/X know the same URL is available in those locales. prerender's route-meta.mjs
+         recomputes these per route so a page's own locale is never also listed as its alternate. -->
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:locale:alternate" content="zh_CN" />
     <meta property="og:site_name" content="Openthai.ai" />
 
     <!-- ── Twitter Card ───────────────────────────────────────────────── -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Openthai.ai" />
+    <!-- twitter:site omitted until a real X @handle exists (the old "@Openthai.ai" was invalid — no dots allowed) -->
     <meta name="twitter:title" content="Openthai.ai — สร้างคอนเทนต์ TikTok ปัง ใน 10 วินาที" />
     <meta name="twitter:description" content="AI ไทยแท้ ไม่ต้องคิดสคริปต์ ไม่ต้องเขียนแคปชั่น ใช้ฟรีวันนี้!" />
     <meta name="twitter:image" content="https://www.openthai-ai.com/og-image.png" />
@@ -67,26 +72,56 @@
     </script>
 
     <!-- ── JSON-LD Structured Data ───────────────────────────────────── -->
+    <!-- @graph so the SoftwareApplication, the Organization (brand entity +
+         logo for search results) and the WebSite entity are all linked by @id.
+         This base block is copied verbatim onto every prerendered route page by
+         scripts/prerender-meta.mjs, so all funnel pages carry the same brand
+         entity; that script adds a per-page BreadcrumbList on top. -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "Openthai.ai",
-      "url": "https://www.openthai-ai.com",
-      "description": "AI ไทยแท้ สร้างคอนเทนต์ TikTok สคริปต์ แคปชั่น แฮชแท็ก ครบเซ็ตใน 10 วินาที",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "offers": [
-        { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "THB" },
-        { "@type": "Offer", "name": "Pro", "price": "20", "priceCurrency": "THB" },
-        { "@type": "Offer", "name": "Premier", "price": "30", "priceCurrency": "THB" }
-      ],
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "reviewCount": "1200"
-      },
-      "inLanguage": "th"
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://www.openthai-ai.com/#organization",
+          "name": "Openthai.ai",
+          "url": "https://www.openthai-ai.com",
+          "logo": "https://www.openthai-ai.com/icon-512.png",
+          "description": "AI ไทยแท้ สร้างคอนเทนต์ TikTok สคริปต์ แคปชั่น แฮชแท็ก ครบเซ็ตใน 10 วินาที",
+          "email": "support@openthai.ai",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "email": "support@openthai.ai",
+            "areaServed": "TH",
+            "availableLanguage": ["Thai", "English", "Chinese"]
+          }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.openthai-ai.com/#website",
+          "name": "Openthai.ai",
+          "url": "https://www.openthai-ai.com",
+          "publisher": { "@id": "https://www.openthai-ai.com/#organization" },
+          "inLanguage": "th"
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Openthai.ai",
+          "url": "https://www.openthai-ai.com",
+          "description": "AI ไทยแท้ สร้างคอนเทนต์ TikTok สคริปต์ แคปชั่น แฮชแท็ก ครบเซ็ตใน 10 วินาที",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "publisher": { "@id": "https://www.openthai-ai.com/#organization" },
+          "offers": [
+            { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "THB" },
+            { "@type": "Offer", "name": "Pro", "price": "299", "priceCurrency": "THB" },
+            { "@type": "Offer", "name": "Premier", "price": "599", "priceCurrency": "THB" },
+            { "@type": "Offer", "name": "Enterprise", "price": "1299", "priceCurrency": "THB" }
+          ],
+          "inLanguage": "th"
+        }
+      ]
     }
     </script>
   </head>

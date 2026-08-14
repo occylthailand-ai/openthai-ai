@@ -25,7 +25,7 @@ const MODULES = [
 // ─── Shared styles ────────────────────────────────────────────────────────────
 const st = {
   card: (e = {}) => ({ background: '#fff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 14, padding: '18px 20px', ...e }),
-  lbl: { display: 'block', fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 },
+  lbl: { display: 'block', fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 5, textTransform: 'uppercase', letterSpacing: 0.5 },
   inp: { width: '100%', background: '#f8fafc', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 10, padding: '10px 13px', color: '#1e293b', fontSize: 13, fontFamily: "'Inter','Sarabun',sans-serif", boxSizing: 'border-box', outline: 'none' },
   btn: (c = '#6366f1') => ({ background: `linear-gradient(135deg,${c},${c}bb)`, border: 'none', borderRadius: 10, padding: '11px 20px', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }),
   tag: (c) => ({ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: `${c}18`, color: c, fontWeight: 700, border: `1px solid ${c}30` }),
@@ -55,7 +55,7 @@ function SLabel({ label, color }) {
 function Chip({ v, color }) {
   return <span style={{ ...st.tag(color || '#6366f1'), marginRight: 5, marginBottom: 4, display: 'inline-block' }}>{v}</span>;
 }
-function SubCard({ title, children, color = '#64748b' }) {
+function SubCard({ title, children, color = '#94a3b8' }) {
   return (
     <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
       {title && <div style={{ fontSize: 11, fontWeight: 700, color, marginBottom: 7, textTransform: 'uppercase', letterSpacing: 0.5 }}>{title}</div>}
@@ -106,7 +106,7 @@ function ModHookMatrix({ d, mod }) {
         <div style={st.card()}>
           <SLabel label="🎨 Visual Hook Concepts" color={mod.color} />
           {(d.visual_hooks || []).map((v, i) => (
-            <div key={i} style={{ fontSize: 12, color: '#475569', padding: '4px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>{v}</div>
+            <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '4px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>{v}</div>
           ))}
         </div>
       </div>
@@ -125,7 +125,7 @@ function ModBuyerPsychology({ d, mod }) {
             <span>เหตุผล (Rational)</span><span>อารมณ์ (Emotional)</span><span>ความกลัวลึกๆ</span>
           </div>
           {(d.pain_matrix || []).map((p, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, fontSize: 12, color: '#475569', padding: '8px 10px', borderBottom: '1px solid rgba(0,0,0,0.05)', background: i % 2 ? '#fafafa' : '#fff' }}>
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 0, fontSize: 12, color: '#7c8797', padding: '8px 10px', borderBottom: '1px solid rgba(0,0,0,0.05)', background: i % 2 ? '#fafafa' : '#fff' }}>
               <span>{p.rational}</span><span>{p.emotional}</span><span style={{ color: '#ef4444' }}>{p.deep_fear}</span>
             </div>
           ))}
@@ -137,7 +137,7 @@ function ModBuyerPsychology({ d, mod }) {
         {(d.desire_map || []).map((dm, i) => (
           <SubCard key={i}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 12 }}>
-              <div><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>พูดออกมา</div><div style={{ color: '#475569' }}>{dm.surface}</div></div>
+              <div><div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 700 }}>พูดออกมา</div><div style={{ color: '#7c8797' }}>{dm.surface}</div></div>
               <div><div style={{ fontSize: 10, color: '#a855f7', fontWeight: 700 }}>ต้องการจริงๆ</div><div style={{ color: '#a855f7', fontWeight: 600 }}>{dm.core}</div></div>
               <div><div style={{ fontSize: 10, color: '#ef4444', fontWeight: 700 }}>ตัวตนที่อยากเป็น</div><div style={{ color: '#ef4444', fontWeight: 600 }}>{dm.identity}</div></div>
             </div>
@@ -150,7 +150,7 @@ function ModBuyerPsychology({ d, mod }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 10 }}>
           {(d.cognitive_biases || []).map((b, i) => (
             <SubCard key={i} title={b.bias} color={mod.color}>
-              <div style={{ fontSize: 12, color: '#475569', marginBottom: 5 }}>{b.application}</div>
+              <div style={{ fontSize: 12, color: '#7c8797', marginBottom: 5 }}>{b.application}</div>
               <Q text={b.copy_example} color={mod.color} />
             </SubCard>
           ))}
@@ -161,7 +161,7 @@ function ModBuyerPsychology({ d, mod }) {
         <div style={st.card()}>
           <SLabel label="💔 Emotional Triggers" color={mod.color} />
           {(d.emotional_triggers || []).map((t, i) => (
-            <div key={i} style={{ fontSize: 12, color: '#475569', padding: '5px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>{t}</div>
+            <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '5px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>{t}</div>
           ))}
         </div>
         <div style={st.card()}>
@@ -169,7 +169,7 @@ function ModBuyerPsychology({ d, mod }) {
           {(d.buyer_journey_hooks || []).map((s, i) => (
             <SubCard key={i} title={s.stage} color={mod.color}>
               <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 3 }}>{s.emotion}</div>
-              <div style={{ fontSize: 12, color: '#475569' }}>{s.message}</div>
+              <div style={{ fontSize: 12, color: '#7c8797' }}>{s.message}</div>
             </SubCard>
           ))}
         </div>
@@ -198,7 +198,7 @@ function ModPlatforms({ d, mod }) {
             {Object.entries(pd).map(([k, v]) => {
               if (Array.isArray(v)) return (
                 <SubCard key={k} title={k.replace(/_/g, ' ').toUpperCase()} color={p.color}>
-                  {v.map((item, i) => <div key={i} style={{ fontSize: 12, color: '#475569', padding: '3px 0' }}>• {item}</div>)}
+                  {v.map((item, i) => <div key={i} style={{ fontSize: 12, color: '#7c8797', padding: '3px 0' }}>• {item}</div>)}
                 </SubCard>
               );
               return (
@@ -274,7 +274,7 @@ function SceneTable({ scenes }) {
         <span>เวลา</span><span>Type</span><span>Visual</span><span>Script</span><span>Emotion</span>
       </div>
       {(scenes || []).map((sc, i) => (
-        <div key={i} style={{ display: 'grid', gridTemplateColumns: '70px 90px 1fr 1fr 100px', gap: 0, fontSize: 11, color: '#475569', padding: '8px 10px', background: i % 2 ? '#fafafa' : '#fff', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
+        <div key={i} style={{ display: 'grid', gridTemplateColumns: '70px 90px 1fr 1fr 100px', gap: 0, fontSize: 11, color: '#7c8797', padding: '8px 10px', background: i % 2 ? '#fafafa' : '#fff', borderTop: '1px solid rgba(0,0,0,0.04)' }}>
           <span style={{ fontWeight: 700, color: '#1e293b' }}>{sc.sec}s</span>
           <span style={{ color: '#6366f1', fontWeight: 600 }}>{sc.type}</span>
           <span>{sc.visual}</span>
@@ -326,7 +326,7 @@ function ModPrice({ d, mod }) {
     <div style={{ display: 'grid', gap: 14 }}>
       <div style={st.card({ borderLeft: `4px solid ${mod.color}` })}>
         <SLabel label="⚓ Anchor Pricing Strategy" color={mod.color} />
-        <SubCard><div style={{ fontSize: 13, color: '#475569' }}>{d.anchor_strategy}</div></SubCard>
+        <SubCard><div style={{ fontSize: 13, color: '#7c8797' }}>{d.anchor_strategy}</div></SubCard>
         {d.anchor_copy && <Q text={d.anchor_copy} color={mod.color} />}
       </div>
       <div style={st.card()}>
@@ -336,11 +336,11 @@ function ModPrice({ d, mod }) {
             <div key={i} style={{ background: i === 1 ? `${mod.color}10` : '#f8fafc', border: `1px solid ${i === 1 ? mod.color : 'rgba(0,0,0,0.08)'}`, borderRadius: 12, padding: 12, textAlign: 'center' }}>
               {i === 1 && <div style={{ fontSize: 9, fontWeight: 700, color: mod.color, marginBottom: 4 }}>⭐ ยอดนิยม</div>}
               <div style={{ fontWeight: 800, fontSize: 13, color: '#1e293b', marginBottom: 2 }}>{b.name}</div>
-              <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>{b.items}</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>{b.items}</div>
               <div style={{ fontSize: 11, color: '#94a3b8', textDecoration: 'line-through' }}>฿{b.original_price}</div>
               <div style={{ fontSize: 18, fontWeight: 900, color: mod.color }}>฿{b.bundle_price}</div>
               <div style={{ fontSize: 10, color: '#10b981', fontWeight: 700 }}>ประหยัด ฿{b.saving}</div>
-              <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>{b.headline}</div>
+              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 4 }}>{b.headline}</div>
             </div>
           ))}
         </div>
@@ -401,7 +401,7 @@ function ModFunnel({ d, mod }) {
         <div key={f.key} style={st.card({ borderLeft: `4px solid ${f.color}` })}>
           <SLabel label={f.label} color={f.color} />
           {(d[f.key] || []).map((item, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 1fr', gap: 8, fontSize: 12, color: '#475569', padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 1fr', gap: 8, fontSize: 12, color: '#7c8797', padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
               <span style={{ fontWeight: 600 }}>{item.content_type}</span>
               <span>{item.message}</span>
               <span style={{ color: f.color, fontWeight: 700 }}>{item.platform}</span>
@@ -416,8 +416,8 @@ function ModFunnel({ d, mod }) {
           {d.retargeting_sequence.map((r, i) => (
             <SubCard key={i} title={r.day} color={mod.color}>
               <div style={{ display: 'flex', gap: 8 }}>
-                <span style={{ flex: 1, fontSize: 12, color: '#475569' }}>{r.message}</span>
-                <span style={st.tag('#64748b')}>{r.format}</span>
+                <span style={{ flex: 1, fontSize: 12, color: '#7c8797' }}>{r.message}</span>
+                <span style={st.tag('#94a3b8')}>{r.format}</span>
                 <CopyBtn text={r.message} small />
               </div>
             </SubCard>
@@ -433,7 +433,7 @@ function ModFunnel({ d, mod }) {
               <span style={{ fontSize: 10, color: '#94a3b8', minWidth: 60 }}>{e.timing}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#1e293b' }}>{e.subject}</div>
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{e.body_outline}</div>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{e.body_outline}</div>
               </div>
               <CopyBtn text={e.subject} small />
             </div>
@@ -475,7 +475,7 @@ function ModCompetitive({ d, mod }) {
       </div>
       <div style={st.card({ background: 'rgba(20,184,166,0.04)', borderColor: 'rgba(20,184,166,0.2)' })}>
         <SLabel label="🌊 Blue Ocean — Category Creation" color="#14b8a6" />
-        <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{d.category_creation}</div>
+        <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{d.category_creation}</div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
         <div style={st.card()}>
@@ -509,8 +509,8 @@ function ModKOL({ d, mod }) {
         </div>
         <div style={st.card()}>
           <SLabel label="🎬 Script Direction" color={mod.color} />
-          <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{d.script_direction}</div>
-          <SubCard title="Content Format" color={mod.color}><span style={{ fontSize: 12, color: '#475569' }}>{d.content_format}</span></SubCard>
+          <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{d.script_direction}</div>
+          <SubCard title="Content Format" color={mod.color}><span style={{ fontSize: 12, color: '#7c8797' }}>{d.content_format}</span></SubCard>
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'var(--cols-2)', gap: 12 }}>
@@ -532,7 +532,7 @@ function ModKOL({ d, mod }) {
         </div>
         <div style={st.card()}>
           <SLabel label="📊 KPI Expectations" color={mod.color} />
-          <div style={{ fontSize: 13, color: '#475569', lineHeight: 1.6 }}>{d.kpi_expectations}</div>
+          <div style={{ fontSize: 13, color: '#7c8797', lineHeight: 1.6 }}>{d.kpi_expectations}</div>
         </div>
       </div>
     </div>
@@ -577,7 +577,7 @@ function InputForm({ onResult }) {
 
   const togBtn = (val, current, onChange) => (
     <button onClick={() => onChange(val)}
-      style={{ padding: '5px 13px', borderRadius: 20, fontSize: 11, cursor: 'pointer', fontWeight: current === val ? 700 : 400, border: `1px solid ${current === val ? '#6366f1' : 'rgba(0,0,0,0.1)'}`, background: current === val ? 'rgba(99,102,241,0.12)' : 'transparent', color: current === val ? '#6366f1' : '#64748b' }}>
+      style={{ padding: '5px 13px', borderRadius: 20, fontSize: 11, cursor: 'pointer', fontWeight: current === val ? 700 : 400, border: `1px solid ${current === val ? '#6366f1' : 'rgba(0,0,0,0.1)'}`, background: current === val ? 'rgba(99,102,241,0.12)' : 'transparent', color: current === val ? '#6366f1' : '#94a3b8' }}>
       {val}
     </button>
   );
@@ -630,7 +630,7 @@ function InputForm({ onResult }) {
       {/* Generate button */}
       {loading ? (
         <div style={st.card({ textAlign: 'center', padding: 30 })}>
-          <div style={{ fontSize: 13, color: '#64748b', marginBottom: 10 }}>⏳ AI กำลังวิเคราะห์ครบ 10 โมดูล...</div>
+          <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 10 }}>⏳ AI กำลังวิเคราะห์ครบ 10 โมดูล...</div>
           <div style={{ background: '#f1f5f9', borderRadius: 20, height: 8, margin: '0 auto', maxWidth: 300 }}>
             <div style={{ background: 'linear-gradient(90deg,#ef4444,#6366f1)', height: 8, borderRadius: 20, width: `${progress}%`, transition: 'width .3s' }} />
           </div>
@@ -659,7 +659,7 @@ export default function UltraPromoPage() {
 
       {/* Header */}
       <header style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.08)', padding: '12px 5%', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', flexWrap: 'wrap' }}>
-        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
+        <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>⚡ Ultra Promo Engine</span>
@@ -668,7 +668,7 @@ export default function UltraPromoPage() {
           <div style={{ fontSize: 11, color: '#94a3b8' }}>Hook Matrix · Psychology · Platform · Copy · Video · Price · Objection · Funnel · Competitive · KOL</div>
         </div>
         {result && (
-          <button onClick={() => setResult(null)} style={{ ...st.btn('#64748b'), padding: '8px 16px' }}>← ใส่ข้อมูลใหม่</button>
+          <button onClick={() => setResult(null)} style={{ ...st.btn('#94a3b8'), padding: '8px 16px' }}>← ใส่ข้อมูลใหม่</button>
         )}
       </header>
 
@@ -682,7 +682,7 @@ export default function UltraPromoPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 <div>
                   <span style={{ fontWeight: 900, fontSize: 16, color: '#1e293b' }}>{result.product}</span>
-                  <span style={{ fontSize: 12, color: '#64748b', marginLeft: 10 }}>"{result.usp}"</span>
+                  <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 10 }}>"{result.usp}"</span>
                 </div>
                 <span style={{ fontSize: 10, padding: '3px 10px', borderRadius: 20, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', fontWeight: 700 }}>✅ {result.source?.toUpperCase()} · 10 โมดูล</span>
               </div>
@@ -715,7 +715,7 @@ export default function UltraPromoPage() {
             {/* Prev / Next */}
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               {MODULES.findIndex(m => m.id === activeModule) > 0 && (
-                <button style={{ ...st.btn('#64748b'), flex: 1 }} onClick={() => setActiveModule(MODULES[MODULES.findIndex(m => m.id === activeModule) - 1].id)}>← โมดูลก่อน</button>
+                <button style={{ ...st.btn('#94a3b8'), flex: 1 }} onClick={() => setActiveModule(MODULES[MODULES.findIndex(m => m.id === activeModule) - 1].id)}>← โมดูลก่อน</button>
               )}
               {MODULES.findIndex(m => m.id === activeModule) < MODULES.length - 1 && (
                 <button style={{ ...st.btn('#6366f1'), flex: 1 }} onClick={() => setActiveModule(MODULES[MODULES.findIndex(m => m.id === activeModule) + 1].id)}>โมดูลต่อไป →</button>

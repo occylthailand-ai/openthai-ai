@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ToastContext';
 import { apiUrl } from '../apiBase';
@@ -13,6 +13,14 @@ const TIER_META = [
   { id: 'elite', commission: '40%', minSales: '50', maxSales: '∞', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.4)' },
 ];
 const PLATFORMS = ['TikTok', 'Instagram', 'Facebook', 'YouTube', 'Twitter/X', 'LINE', 'Discord', 'Other'];
+
+// เดิมหน้านี้ (สมัคร Affiliate หลัก) ไม่มี UI ยินยอม PDPA เลย เหมือนที่พบใน ProducerJoinPage.jsx
+// (run 42) — ใช้ CONSENT_TEXT รูปแบบเดียวกับที่ /portals/*.jsx และ ProducerJoinPage.jsx ใช้กัน
+const CONSENT_TEXT = {
+  th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
+  en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>Privacy Policy (PDPA)</a></>,
+  zh: <>同意根据<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>隐私政策（PDPA）</a>收集和使用我的数据</>,
+};
 
 function genRefCode(name) {
   const clean = (name || 'affiliate').replace(/\s+/g, '').toUpperCase().slice(0, 6);
@@ -33,11 +41,30 @@ function useCopy() {
 export default function AffiliatePage() {
   const toast = useToast();
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'โปรแกรม Affiliate — Openthai.ai'; }, []);
   const { lang } = useLang();
   const T = AF[lang] || AF.th;
   const { copied, copy } = useCopy();
 
+  // FAQPage structured data — derived from the SAME T.faqs array rendered below, so it
+  // can't drift from the visible Q&A. /affiliate is a core growth funnel; FAQ rich results
+  // are a Google-only feature and Google renders SPA JS + reads DOM JSON-LD, so client-side
+  // injection is sufficient (mirrors the /pricing FAQ schema added the prior run).
+  const faqPairs = Array.isArray(T.faqs) ? T.faqs.filter((x) => Array.isArray(x) && x.length >= 2) : [];
+  const faqLd = faqPairs.length
+    ? JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqPairs.map(([q, a]) => ({
+          '@type': 'Question',
+          name: String(q),
+          acceptedAnswer: { '@type': 'Answer', text: String(a) },
+        })),
+      }).replace(/</g, '\\u003c')
+    : null;
+
   const [form, setForm] = useState({ name: '', email: '', phone: '', platform: 'TikTok', followers: T.followers[1], channel_url: '', note: '' });
+  const [consent, setConsent] = useState(false);
   const [step, setStep] = useState('form');
   const [loading, setLoading] = useState(false);
   const [refCode, setRefCode] = useState('');
@@ -53,17 +80,28 @@ export default function AffiliatePage() {
     if (!form.name || !form.email) { setError(T.errRequired); toast.error(T.toast.required); return; }
     setLoading(true); setError('');
     try {
+      // ชื่อไทย → genRefCode() ได้โค้ดที่มีอักษรไทยปน แต่ backend's registerAffiliateCore()
+      // (server.js) กรองเหลือแค่ [A-Za-z0-9_-] ก่อนบันทึกจริงเสมอ (กัน ref code ที่ใช้เป็น
+      // query param ไม่ได้) — เดิมหน้านี้ไม่เคยอ่าน response กลับมาเลย ใช้ code/link ที่สร้างเอง
+      // ฝั่ง client แสดงผลตรงๆ ทำให้โค้ด/ลิงก์ที่ผู้ใช้เห็นและก็อปไปแชร์ "ไม่ตรง" กับโค้ดจริงที่
+      // ระบบบันทึกไว้ (แม้การนับคลิกจะยังทำงานถูกเพราะทุกจุดกรองด้วย regex เดียวกัน แต่การ
+      // แสดงผลที่ไม่ตรงกับความจริงในระบบเป็นบั๊กที่ควรแก้) ตอนนี้ใช้ค่าจริงจาก response แทน
       const code = genRefCode(form.name);
       const link = `https://www.openthai-ai.com/?ref=${code}`;
+      let finalCode = code, finalLink = link;
       try {
         const res = await fetch(apiUrl('/api/affiliate/apply'), {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...form, ref_code: code, ref_link: link }),
+          body: JSON.stringify({ ...form, ref_code: code, ref_link: link, consent, lang }),
         });
         if (!res.ok && res.status === 409) toast.warn(T.toast.dup);
-      } catch (_) { /* offline – still show success */ }
-      setRefCode(code); setRefLink(link); setStep('success');
-      toast.success(T.toast.success.replace('{code}', code));
+        else if (res.ok) {
+          const data = await res.json();
+          if (data?.data?.ref_code) { finalCode = data.data.ref_code; finalLink = data.data.ref_link; }
+        }
+      } catch (_) { /* offline – still show success with the locally-generated code */ }
+      setRefCode(finalCode); setRefLink(finalLink); setStep('success');
+      toast.success(T.toast.success.replace('{code}', finalCode));
     } catch (err) {
       setError(T.toast.error); toast.error(T.toast.error);
     } finally { setLoading(false); }
@@ -151,7 +189,7 @@ export default function AffiliatePage() {
           <div style={{ textAlign: 'center', padding: '20px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 4 }}>{T.calc.result}</div>
             <div style={{ fontSize: 52, fontWeight: 900, color: '#10b981' }}>฿{commission.toLocaleString()}</div>
-            <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>{calc.sales} {T.calc.orders} × ฿{calc.price} × 30% = ฿{commission.toLocaleString()}</div>
+            <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>{calc.sales} {T.calc.orders} × ฿{calc.price} × 30% = ฿{commission.toLocaleString()}</div>
           </div>
         </div>
       </section>
@@ -199,9 +237,13 @@ export default function AffiliatePage() {
               <label style={labelStyle}>{T.f.followers}<select style={inputStyle} value={form.followers} onChange={set('followers')}>{T.followers.map((f) => <option key={f}>{f}</option>)}</select></label>
               <label style={labelStyle}>{T.f.channel}<input style={inputStyle} placeholder={T.f.channel_ph} value={form.channel_url} onChange={set('channel_url')} /></label>
               <label style={labelStyle}>{T.f.note}<textarea style={{ ...inputStyle, height: 72, resize: 'vertical' }} placeholder={T.f.note_ph} value={form.note} onChange={set('note')} /></label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: '#94a3b8', lineHeight: 1.5, cursor: 'pointer' }}>
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 2 }} />
+                <span>{CONSENT_TEXT[lang] || CONSENT_TEXT.th}</span>
+              </label>
               {error && <div style={{ color: '#ef4444', fontSize: 13, textAlign: 'center' }}>{error}</div>}
-              <button type="submit" disabled={loading} style={submitBtn}>{loading ? T.submitting : T.submit}</button>
-              <p style={{ fontSize: 12, color: '#64748b', textAlign: 'center', margin: 0 }}>{T.formnote}</p>
+              <button type="submit" disabled={loading || !consent} style={{ ...submitBtn, opacity: (loading || !consent) ? 0.5 : 1, cursor: (loading || !consent) ? 'not-allowed' : 'pointer' }}>{loading ? T.submitting : T.submit}</button>
+              <p style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', margin: 0 }}>{T.formnote}</p>
             </form>
           </div>
         ) : (
@@ -210,28 +252,29 @@ export default function AffiliatePage() {
             <h2 style={{ fontSize: 26, fontWeight: 900, marginBottom: 8, color: '#10b981' }}>{T.ok.title}</h2>
             <p style={{ color: '#94a3b8', marginBottom: 24 }}>{T.ok.sub}</p>
             <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>REF CODE</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>REF CODE</div>
               <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: 4, color: '#10b981' }}>{refCode}</div>
             </div>
             <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: 12, padding: 16, marginBottom: 24 }}>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>AFFILIATE LINK</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>AFFILIATE LINK</div>
               <div style={{ fontSize: 13, color: '#cbd5e1', wordBreak: 'break-all', marginBottom: 10 }}>{refLink}</div>
               <button onClick={() => copy(refLink, 'reflink')} style={submitBtn}>{copied === 'reflink' ? T.ok.copied : T.ok.copylink}</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
               {[[T.ok.tierLabel, T.ok.tierVal], [T.ok.payLabel, T.ok.payVal], [T.ok.confLabel, T.ok.confVal]].map(([label, val]) => (
                 <div key={label} style={{ ...glassCard, padding: 12, textAlign: 'center' }}>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>{label}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{label}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, marginTop: 2 }}>{val}</div>
                 </div>
               ))}
             </div>
-            <p style={{ fontSize: 13, color: '#64748b' }}>{T.ok.team} <strong style={{ color: '#94a3b8' }}>{form.email}</strong></p>
+            <p style={{ fontSize: 13, color: '#94a3b8' }}>{T.ok.team} <strong style={{ color: '#94a3b8' }}>{form.email}</strong></p>
           </div>
         )}
       </section>
 
       <section style={{ maxWidth: 700, margin: '0 auto', padding: '0 24px 80px' }}>
+        {faqLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: faqLd }} />}
         <SectionTitle>{T.faq.title}</SectionTitle>
         {T.faqs.map(([q, a], i) => <FAQItem key={i} q={q} a={a} />)}
       </section>
@@ -251,9 +294,16 @@ function SectionTitle({ children }) {
 }
 function FAQItem({ q, a }) {
   const [open, setOpen] = useState(false);
+  const toggle = () => setOpen((o) => !o);
+  // role/tabIndex/aria-expanded + Enter/Space handler make this disclosure
+  // keyboard- and screen-reader-operable (WCAG 2.1.1 Keyboard, 4.1.2 Role/State);
+  // it was a bare <div onClick> that only responded to a mouse click.
   return (
-    <div style={{ ...glassCard, marginBottom: 10, cursor: 'pointer', padding: '14px 20px' }} onClick={() => setOpen((o) => !o)}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 14 }}>{q}<span style={{ color: '#6366f1', marginLeft: 8 }}>{open ? '▲' : '▼'}</span></div>
+    <div role="button" tabIndex={0} aria-expanded={open}
+      style={{ ...glassCard, marginBottom: 10, cursor: 'pointer', padding: '14px 20px' }}
+      onClick={toggle}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, fontSize: 14 }}>{q}<span style={{ color: '#6366f1', marginLeft: 8 }} aria-hidden="true">{open ? '▲' : '▼'}</span></div>
       {open && <div style={{ marginTop: 10, fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{a}</div>}
     </div>
   );

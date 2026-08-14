@@ -9,7 +9,7 @@ function LangTab({ lang, active, onClick, flag }) {
     <button onClick={onClick} style={{
       background: active ? 'rgba(16,185,129,0.2)' : 'transparent',
       border: active ? '1px solid #10b981' : '1px solid rgba(255,255,255,0.1)',
-      borderRadius: 10, color: active ? '#6ee7b7' : '#64748b',
+      borderRadius: 10, color: active ? '#6ee7b7' : '#94a3b8',
       cursor: 'pointer', fontSize: 13, fontWeight: active ? 700 : 400, padding: '8px 18px',
     }}>{flag} {lang}</button>
   );
@@ -49,7 +49,7 @@ function CatalogView({ data, lang }) {
       <p style={{ fontSize: 14, color: '#cbd5e1', lineHeight: 1.7, margin: '0 0 16px' }}>{data.description}</p>
 
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>✅ Features</div>
+        <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>✅ Features</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {(data.features || []).map((f, i) => (
             <div key={i} style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '7px 12px', fontSize: 13, color: '#6ee7b7' }}>{f}</div>
@@ -59,12 +59,12 @@ function CatalogView({ data, lang }) {
 
       {data.specs_table?.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>📋 Specifications</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>📋 Specifications</div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <tbody>
               {data.specs_table.map((row, i) => (
                 <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <td style={{ padding: '7px 10px', fontSize: 13, color: '#64748b', width: '35%', fontWeight: 600 }}>{row.key}</td>
+                  <td style={{ padding: '7px 10px', fontSize: 13, color: '#94a3b8', width: '35%', fontWeight: 600 }}>{row.key}</td>
                   <td style={{ padding: '7px 10px', fontSize: 13, color: '#e2e8f0' }}>{row.value}</td>
                 </tr>
               ))}
@@ -75,7 +75,7 @@ function CatalogView({ data, lang }) {
 
       {data.certifications?.length > 0 && (
         <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>🏆 Certifications</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', marginBottom: 8 }}>🏆 Certifications</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {data.certifications.map((c, i) => (
               <span key={i} style={{ background: 'rgba(245,158,11,0.15)', color: '#fbbf24', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 6, fontSize: 12, padding: '3px 10px', fontWeight: 700 }}>{c}</span>
@@ -155,7 +155,7 @@ export default function CatalogAIPage() {
   const s = {
     page: { minHeight: '100vh', background: '#080812', color: '#fff', padding: '24px 20px', fontFamily: 'system-ui, sans-serif' },
     card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '20px 22px', marginBottom: 16 },
-    lbl: { fontSize: 12, color: '#64748b', fontWeight: 600, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 },
+    lbl: { fontSize: 12, color: '#94a3b8', fontWeight: 600, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 },
     inp: { width: '100%', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, color: '#fff', fontSize: 14, padding: '10px 14px', outline: 'none', boxSizing: 'border-box' },
   };
 
@@ -166,7 +166,7 @@ export default function CatalogAIPage() {
           <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, background: 'linear-gradient(135deg,#10b981,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             🏪 Product Catalog AI
           </h1>
-          <p style={{ color: '#64748b', margin: '6px 0 0', fontSize: 14 }}>สร้าง Catalog สินค้า 3 ภาษา พร้อม Export Info สำหรับตลาดส่งออก</p>
+          <p style={{ color: '#94a3b8', margin: '6px 0 0', fontSize: 14 }}>สร้าง Catalog สินค้า 3 ภาษา พร้อม Export Info สำหรับตลาดส่งออก</p>
         </div>
 
         <div style={s.card}>
@@ -211,7 +211,7 @@ export default function CatalogAIPage() {
                 <button key={c} onClick={() => toggleCert(c)} style={{
                   padding: '5px 12px', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: selectedCerts.includes(c) ? 700 : 400,
                   background: selectedCerts.includes(c) ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
-                  color: selectedCerts.includes(c) ? '#fbbf24' : '#64748b',
+                  color: selectedCerts.includes(c) ? '#fbbf24' : '#94a3b8',
                   border: selectedCerts.includes(c) ? '1px solid rgba(245,158,11,0.5)' : '1px solid transparent',
                 }}>{c}</button>
               ))}

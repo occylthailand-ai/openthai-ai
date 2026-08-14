@@ -71,8 +71,15 @@ async function deliverOnce(url, payload, sig, timeoutMs = 8000) {
   }
 }
 
+// Retry backoff (ms per attempt). Overridable via WEBHOOK_RETRY_DELAYS (a JSON array)
+// so tests can make retries instant; production default is unchanged.
+const RETRY_DELAYS = (() => {
+  try { const v = JSON.parse(process.env.WEBHOOK_RETRY_DELAYS || ''); if (Array.isArray(v) && v.length) return v; } catch { /* ignore */ }
+  return [0, 5000, 30000];
+})();
+
 async function deliverWithRetry(hook, payload, sig) {
-  const delays = [0, 5000, 30000];
+  const delays = RETRY_DELAYS;
   for (let attempt = 0; attempt < delays.length; attempt++) {
     if (delays[attempt]) await new Promise(r => setTimeout(r, delays[attempt]));
     const result = await deliverOnce(hook.url, payload, sig);
@@ -160,17 +167,22 @@ export function createWebhookSystem(writeDir) {
         return w.events.includes('*') || w.events.includes(event);
       });
 
-      if (!targets.length) return;
+      if (!targets.length) return Promise.resolve([]);
 
-      // Non-blocking — deliver in background
-      for (const hook of targets) {
+      // Non-blocking — deliver in background. Returns a promise of all deliveries so
+      // callers CAN await it (tests do); production callers fire-and-forget and ignore it.
+      const jobs = targets.map((hook) => {
         const sig = sign(hook.secret, payload);
 
-        (async () => {
+        return (async () => {
           const result = await deliverWithRetry(hook, payload, sig);
           hook.lastDelivery = new Date().toISOString();
           hook.deliveryCount++;
+          // failCount is CONSECUTIVE failures (the auto-disable below says so): a success
+          // must reset it, or a webhook that merely fails occasionally over its lifetime
+          // eventually crosses the threshold and gets wrongly disabled.
           if (result.failed) hook.failCount++;
+          else hook.failCount = 0;
 
           // Auto-disable after 20 consecutive failures
           if (hook.failCount > 20) {
@@ -190,9 +202,14 @@ export function createWebhookSystem(writeDir) {
             attempt:    result.attempt,
             failed:     !!result.failed,
           });
+          // Cap the IN-MEMORY log too — flushLog() only slices what it writes to disk, so
+          // without this the deliveries array grew unbounded on a long-running server (one
+          // entry per delivery, forever) even though the file stayed at MAX_DELIVERIES.
+          if (deliveries.length > MAX_DELIVERIES) deliveries.length = MAX_DELIVERIES;
           flushLog();
         })();
-      }
+      });
+      return Promise.all(jobs);
     },
 
     // Test fire a webhook

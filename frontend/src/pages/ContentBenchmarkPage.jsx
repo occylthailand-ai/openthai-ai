@@ -94,7 +94,7 @@ function ScoreGauge({ score }) {
         alignItems: 'center', justifyContent: 'center',
       }}>
         <div style={{ fontSize: 32, fontWeight: 900, color }}>{score}</div>
-        <div style={{ fontSize: 12, color: '#64748b' }}>/ 100</div>
+        <div style={{ fontSize: 12, color: '#94a3b8' }}>/ 100</div>
       </div>
     </div>
   );
@@ -120,7 +120,7 @@ function DimCard({ id, d }) {
       {d.detail && <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 8, lineHeight: 1.6 }}>{d.detail}</div>}
       {d.found?.length > 0 && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>✅ พบในเนื้อหา:</div>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>✅ พบในเนื้อหา:</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {d.found.map((w, i) => <Tag key={i} text={w} color="#10b981" />)}
           </div>
@@ -128,7 +128,7 @@ function DimCard({ id, d }) {
       )}
       {(d.missing?.length > 0 || d.missing_hot?.length > 0) && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>⚠️ ที่ขาด:</div>
+          <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>⚠️ ที่ขาด:</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {(d.missing || d.missing_hot || []).map((w, i) => <Tag key={i} text={w} color="#f97316" />)}
           </div>
@@ -214,7 +214,7 @@ export default function ContentBenchmarkPage() {
                 <button key={p.id} onClick={() => setF('platform', p.id)} style={{
                   padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
                   background: form.platform === p.id ? `${p.color}25` : 'rgba(255,255,255,0.05)',
-                  color: form.platform === p.id ? '#fff' : '#64748b',
+                  color: form.platform === p.id ? '#fff' : '#94a3b8',
                   border: form.platform === p.id ? `1px solid ${p.color}60` : '1px solid transparent',
                   fontWeight: form.platform === p.id ? 700 : 400, fontSize: 13,
                   transition: 'all .15s',
@@ -234,7 +234,7 @@ export default function ContentBenchmarkPage() {
                   <button key={l.id} onClick={() => setF('language', l.id)} style={{
                     flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', cursor: 'pointer',
                     background: form.language === l.id ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)',
-                    color: form.language === l.id ? '#a5b4fc' : '#64748b',
+                    color: form.language === l.id ? '#a5b4fc' : '#94a3b8',
                     fontWeight: form.language === l.id ? 700 : 400, fontSize: 13,
                   }}>{l.flag} {l.label}</button>
                 ))}
@@ -260,7 +260,7 @@ export default function ContentBenchmarkPage() {
               onChange={e => setF('content', e.target.value)}
               style={{ ...inp, resize: 'vertical', lineHeight: 1.7, fontFamily: 'inherit' }}
             />
-            <div style={{ color: '#475569', fontSize: 12, marginTop: 4, textAlign: 'right' }}>
+            <div style={{ color: '#7c8797', fontSize: 12, marginTop: 4, textAlign: 'right' }}>
               {form.content.length} ตัวอักษร
             </div>
           </div>
@@ -289,7 +289,7 @@ export default function ContentBenchmarkPage() {
                   transition: 'width .3s ease',
                 }} />
               </div>
-              <div style={{ color: '#475569', fontSize: 12, marginTop: 5, textAlign: 'center' }}>
+              <div style={{ color: '#7c8797', fontSize: 12, marginTop: 5, textAlign: 'center' }}>
                 AI กำลังเปรียบเทียบกับ Top Content ในตลาด {plat.label}... ({progress}%)
               </div>
             </div>
@@ -322,7 +322,7 @@ export default function ContentBenchmarkPage() {
                   }}>
                     {result.grade}
                   </div>
-                  <div style={{ color: '#64748b', fontSize: 13 }}>
+                  <div style={{ color: '#94a3b8', fontSize: 13 }}>
                     {result.source === 'mock' ? '🔵 Demo' : result.source === 'claude' ? '🟣 Claude AI' : '🟢 Gemini AI'}
                   </div>
                 </div>
@@ -355,7 +355,7 @@ export default function ContentBenchmarkPage() {
                 <button key={v.id} onClick={() => setActiveView(v.id)} style={{
                   padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer',
                   background: activeView === v.id ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)',
-                  color: activeView === v.id ? '#a5b4fc' : '#64748b',
+                  color: activeView === v.id ? '#a5b4fc' : '#94a3b8',
                   fontWeight: activeView === v.id ? 700 : 400, fontSize: 13,
                   whiteSpace: 'nowrap',
                 }}>{v.label}</button>
@@ -421,7 +421,7 @@ export default function ContentBenchmarkPage() {
                       }}>{h}</span>
                     ))}
                   </div>
-                  <div style={{ color: '#475569', fontSize: 12, marginTop: 10 }}>
+                  <div style={{ color: '#7c8797', fontSize: 12, marginTop: 10 }}>
                     คลิก # เพื่อ copy ทีละตัว หรือกด Copy All
                   </div>
                 </div>
@@ -545,7 +545,7 @@ export default function ContentBenchmarkPage() {
                 {/* Copy all improved */}
                 <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                   <CopyBtn text={`${result.improved.headline}\n\n${result.improved.body}\n\n${result.improved.cta}\n\n${(result.improved.hashtags || []).join(' ')}`} />
-                  <span style={{ color: '#475569', fontSize: 13, marginLeft: 10 }}>Copy ทั้งหมด (Headline + Body + CTA + Hashtags)</span>
+                  <span style={{ color: '#7c8797', fontSize: 13, marginLeft: 10 }}>Copy ทั้งหมด (Headline + Body + CTA + Hashtags)</span>
                 </div>
               </div>
             )}
@@ -554,12 +554,12 @@ export default function ContentBenchmarkPage() {
 
         {/* Empty state */}
         {!result && !loading && (
-          <div style={{ textAlign: 'center', padding: '48px 20px', color: '#475569' }}>
+          <div style={{ textAlign: 'center', padding: '48px 20px', color: '#7c8797' }}>
             <div style={{ fontSize: 56, marginBottom: 16 }}>🔍</div>
-            <div style={{ fontSize: 15, color: '#64748b' }}>
+            <div style={{ fontSize: 15, color: '#94a3b8' }}>
               วาง Content ของคุณแล้วกด <strong style={{ color: '#6366f1' }}>วิเคราะห์</strong>
             </div>
-            <div style={{ fontSize: 13, marginTop: 8, color: '#475569' }}>
+            <div style={{ fontSize: 13, marginTop: 8, color: '#7c8797' }}>
               AI จะเทียบกับ Top Performer จริงๆ ใน 5 มิติ พร้อม Version ที่ปรับแล้ว
             </div>
           </div>

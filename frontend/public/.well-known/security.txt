@@ -1,0 +1,11 @@
+# Openthai.ai — security contact (RFC 9116)
+# Responsible-disclosure channel for a platform that handles Thai PII (PDPA) and
+# PromptPay/card payments. If you find a vulnerability, please email us first.
+# NOTE: the Expires date below must be kept in the future — renew it periodically.
+
+Contact: mailto:privacy@openthai.ai
+Contact: https://www.openthai-ai.com/contact
+Expires: 2027-08-01T00:00:00.000Z
+Preferred-Languages: th, en
+Canonical: https://www.openthai-ai.com/.well-known/security.txt
+Policy: https://www.openthai-ai.com/privacy

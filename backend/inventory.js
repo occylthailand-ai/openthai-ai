@@ -66,6 +66,12 @@ export function createInventory(dataDir, opts = {}) {
       updated_at: now,
     };
     if (!p.name) return { ok: false, error: 'ต้องการชื่อสินค้า' };
+    // ราคา/ทุน/สต๊อก/จุดเตือน ติดลบไม่มีความหมายและเป็นบั๊กเงิน: /api/shop/checkout คิดยอด
+    // ชำระจาก price*qty ตรงๆ ราคาติดลบ → ยอด charge Omise ติดลบ (checkout พัง) และสินค้าราคา
+    // ติดลบยังโผล่ในร้านสาธารณะ (/api/shop/products) ปฏิเสธตั้งแต่ตอนบันทึก (num() ปล่อยค่าลบผ่าน)
+    if (p.price < 0 || p.cost < 0 || p.stock < 0 || p.low_stock < 0) {
+      return { ok: false, error: 'ราคา ทุน สต๊อก และจุดเตือนสต๊อก ต้องไม่ติดลบ' };
+    }
     const stockChanged = existing && existing.stock !== p.stock;
     await persist(p);
     if (!existing) await record(p.id, p.stock, 'restock', 'สร้างสินค้าใหม่');

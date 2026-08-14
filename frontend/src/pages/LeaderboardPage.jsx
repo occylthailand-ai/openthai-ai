@@ -12,6 +12,7 @@ const MEDAL = ['🥇', '🥈', '🥉'];
 
 export default function LeaderboardPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'อันดับพันธมิตร Affiliate — Openthai.ai'; }, []);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -74,7 +75,7 @@ export default function LeaderboardPage() {
           const top3 = row.rank <= 3;
           return (
             <div key={row.rank} style={{ ...card, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '14px', border: top3 ? `1px solid ${tier.color}55` : card.border, background: top3 ? `${tier.color}10` : card.background }}>
-              <div style={{ width: '40px', textAlign: 'center', fontSize: top3 ? '24px' : '16px', fontWeight: 900, color: top3 ? undefined : '#64748b' }}>
+              <div style={{ width: '40px', textAlign: 'center', fontSize: top3 ? '24px' : '16px', fontWeight: 900, color: top3 ? undefined : '#94a3b8' }}>
                 {MEDAL[row.rank - 1] || row.rank}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -85,7 +86,7 @@ export default function LeaderboardPage() {
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontWeight: 900, fontSize: '16px', color: '#6ee7b7' }}>{baht(row.total_earned)}</div>
-                <div style={{ fontSize: '11px', color: '#64748b' }}>ค่าคอมสะสม</div>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>ค่าคอมสะสม</div>
               </div>
             </div>
           );

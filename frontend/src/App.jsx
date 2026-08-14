@@ -21,13 +21,23 @@ const AffiliatePage = lazy(() => import('./pages/AffiliatePage'));
 const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
 const ProducerJoinPage = lazy(() => import('./pages/ProducerJoinPage'));
+const ProducerManagePage = lazy(() => import('./pages/ProducerManagePage'));
+const ProducerDashboardPage = lazy(() => import('./pages/ProducerDashboardPage'));
+const ConsumerDashboardPage = lazy(() => import('./pages/ConsumerDashboardPage'));
+const MiddlemanDashboardPage = lazy(() => import('./pages/MiddlemanDashboardPage'));
 const CatalogPage = lazy(() => import('./pages/CatalogPage'));
 const ProducerDirectoryPage = lazy(() => import('./pages/ProducerDirectoryPage'));
 const TrackOrderPage = lazy(() => import('./pages/TrackOrderPage'));
+const DisputeTrackPage = lazy(() => import('./pages/DisputeTrackPage'));
 const StorePage = lazy(() => import('./pages/StorePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const ShowcasePage = lazy(() => import('./pages/ShowcasePage'));
+const SeasonalPage = lazy(() => import('./pages/SeasonalPage'));
+const AiSkillsPublicPage = lazy(() => import('./pages/AiSkillsPublicPage'));
+const FaqPage = lazy(() => import('./pages/FaqPage'));
+const AboutPage = lazy(() => import('./pages/AboutPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 const BrandMemoryPage = lazy(() => import('./pages/BrandMemoryPage'));
@@ -176,16 +186,26 @@ function App() {
             <Route path="/pricing" element={<PricingPage />} />
             <Route path="/join" element={<ProducerJoinPage />} />
             <Route path="/producers" element={<ProducerJoinPage />} />
+            <Route path="/producers/manage" element={<ProducerManagePage />} />
+            <Route path="/producer/dashboard" element={<ProducerDashboardPage />} />
+            <Route path="/consumer/dashboard" element={<ConsumerDashboardPage />} />
+            <Route path="/middleman/dashboard" element={<MiddlemanDashboardPage />} />
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/shop" element={<CatalogPage />} />
             <Route path="/find-producers" element={<ProducerDirectoryPage />} />
             <Route path="/find" element={<ProducerDirectoryPage />} />
             <Route path="/track" element={<TrackOrderPage />} />
+            <Route path="/dispute" element={<DisputeTrackPage />} />
             <Route path="/store" element={<StorePage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/affiliate" element={<AffiliatePage />} />
             <Route path="/affiliate/dashboard" element={<AffiliateDashboard />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/showcase" element={<ShowcasePage />} />
+            <Route path="/seasonal" element={<SeasonalPage />} />
+            <Route path="/ai-skills" element={<AiSkillsPublicPage />} />
+            <Route path="/faq" element={<FaqPage />} />
+            <Route path="/about" element={<AboutPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/contact" element={<ContactPage />} />
             {/* New feature pages — public */}

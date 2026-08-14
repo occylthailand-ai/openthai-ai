@@ -8,7 +8,7 @@ const InvestorRelationsPage = () => {
   const [fin, setFin] = useState({});
 
   useEffect(() => {
-    fetch(apiUrl('/api/corporate/ir')).then(r => r.json()).then(d => { setIR(d.data); setFin(d.data?.financials || {}); }).catch(() => {});
+    fetch(apiUrl('/api/corporate/ir'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => { setIR(d.data); setFin(d.data?.financials || {}); }).catch(() => {});
   }, []);
 
   const save = async () => {
@@ -120,7 +120,7 @@ const InvestorRelationsPage = () => {
       <div style={{ background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: '14px', padding: '20px' }}>
         <h3 style={{ margin: '0 0 12px', fontSize: '14px', color: '#6ee7b7' }}>📬 IR Contact</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', fontSize: '13px' }}>
-          <div><div style={{ color: '#6b7280', marginBottom: '4px' }}>Email</div><div>ir@Openthai.ai.com</div></div>
+          <div><div style={{ color: '#6b7280', marginBottom: '4px' }}>Email</div><div><a href="mailto:ir@openthai.ai" style={{ color: '#6ee7b7' }}>ir@openthai.ai</a></div></div>
           <div><div style={{ color: '#6b7280', marginBottom: '4px' }}>Phone</div><div>+66 (0) 2 XXX XXXX</div></div>
           <div><div style={{ color: '#6b7280', marginBottom: '4px' }}>X (Twitter)</div><div>@OCCYL2</div></div>
         </div>

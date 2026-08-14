@@ -41,7 +41,7 @@ function CharterStrip() {
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: '#a5b4fc' }}>📜 {c.title}</div>
-            <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>นโยบายถาวร · v{c.version}{c.effective ? ` · มีผล ${c.effective}` : ''}</div>
+            <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 4 }}>นโยบายถาวร · v{c.version}{c.effective ? ` · มีผล ${c.effective}` : ''}</div>
           </div>
           <button type="button" onClick={() => setCollapsed(!collapsed)}
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '6px 12px', color: '#94a3b8', cursor: 'pointer', fontSize: 11, flexShrink: 0 }}>
@@ -64,9 +64,9 @@ function CharterStrip() {
             )}
             {c.technical_hooks?.length > 0 && (
               <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>เชื่อมเทคนิคในระบบ</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', marginBottom: 6 }}>เชื่อมเทคนิคในระบบ</div>
                 {c.technical_hooks.map((h, i) => (
-                  <div key={i} style={{ fontSize: 10, color: '#64748b', fontFamily: 'ui-monospace,monospace', marginBottom: 3 }}>{h}</div>
+                  <div key={i} style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'ui-monospace,monospace', marginBottom: 3 }}>{h}</div>
                 ))}
               </div>
             )}
@@ -164,7 +164,7 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
             <div style={{fontSize:22}}>{s.icon}</div>
             <div>
               <div style={{fontSize:18,fontWeight:900,color:s.color}}>{typeof s.val==='function'?s.val():s.val}</div>
-              <div style={{fontSize:11,color:'#64748b'}}>{s.label}</div>
+              <div style={{fontSize:11,color:'#94a3b8'}}>{s.label}</div>
             </div>
           </div>
         ))}
@@ -184,12 +184,12 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
 
       {/* List */}
       {loading ? (
-        <div style={{textAlign:'center',padding:'60px 0',color:'#64748b'}}>⏳ กำลังโหลด...</div>
+        <div style={{textAlign:'center',padding:'60px 0',color:'#94a3b8'}}>⏳ กำลังโหลด...</div>
       ) : agents.length === 0 ? (
         <div style={{...glass,textAlign:'center',padding:'48px 20px'}}>
           <div style={{fontSize:48,marginBottom:12}}>🤖</div>
           <div style={{fontWeight:700,marginBottom:8}}>ยังไม่มี Agent</div>
-          <div style={{color:'#64748b',fontSize:13,marginBottom:20}}>สร้าง Agent ตัวแรกเพื่อให้ AI สร้างคอนเทนต์แทนคุณทุกวัน</div>
+          <div style={{color:'#94a3b8',fontSize:13,marginBottom:20}}>สร้าง Agent ตัวแรกเพื่อให้ AI สร้างคอนเทนต์แทนคุณทุกวัน</div>
           <button onClick={()=>setShowForm(true)}
             style={{background:'linear-gradient(135deg,#fe2c55,#6366f1)',border:'none',borderRadius:50,padding:'12px 28px',color:'#fff',fontWeight:700,cursor:'pointer',fontSize:14}}>
             + สร้าง Agent ตัวแรก
@@ -203,7 +203,7 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
                 <PulseDot active={agent.active} />
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:800,fontSize:14}}>{agent.task==='omni-solver'&&<span style={{color:'#a78bfa'}}>🧩 </span>}{agent.name}</div>
-                  <div style={{fontSize:12,color:'#64748b',marginTop:2}}>
+                  <div style={{fontSize:12,color:'#94a3b8',marginTop:2}}>
                     {agent.task==='omni-solver'
                       ? <>🧩 Omni-Solver · {(agent.problem||'').slice(0,50)||'เฝ้าเป้าหมาย'}</>
                       : <>📦 {agent.product} · {agent.platform} · {STYLES.find(s=>s.id===agent.style)?.label}</>}
@@ -228,7 +228,7 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
                   </button>
                 </div>
               </div>
-              {agent.lastRun&&<div style={{marginTop:8,fontSize:11,color:'#475569'}}>รันล่าสุด: {fmtTime(agent.lastRun)}</div>}
+              {agent.lastRun&&<div style={{marginTop:8,fontSize:11,color:'#7c8797'}}>รันล่าสุด: {fmtTime(agent.lastRun)}</div>}
               {agent.lastError&&(
                 <div style={{marginTop:8,fontSize:11,color:'#fecaca',background:'rgba(239,68,68,0.12)',padding:'8px 10px',borderRadius:8,border:'1px solid rgba(239,68,68,0.25)'}}>
                   ⚠️ ข้อผิดพลาดล่าสุด: {agent.lastError}
@@ -243,7 +243,7 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
                   {expandedId===agent.id&&agent.results.slice(0,3).map((r,i)=>(
                     <div key={i} style={{marginTop:8,background:'rgba(255,255,255,0.02)',borderRadius:10,padding:'10px 12px',fontSize:12}}>
                       <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
-                        <span style={{color:'#64748b'}}>{fmtTime(r.ts)}</span>
+                        <span style={{color:'#94a3b8'}}>{fmtTime(r.ts)}</span>
                         <span style={{color:'#10b981',fontWeight:700}}>⭐ {r.criticScore}/10</span>
                       </div>
                       <div style={{color:'#cbd5e1',lineHeight:1.6}}>🎣 {r.hook}</div>
@@ -266,7 +266,7 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
               <div><label style={labelSt}>ประเภท Agent</label>
                 <div style={{display:'flex',gap:8}}>
                   {[['content','📝 สร้างคอนเทนต์'],['omni-solver','🧩 Omni-Solver (เฝ้าเป้าหมาย)']].map(([id,lbl])=>(
-                    <button key={id} onClick={setB('task')(id)} style={{flex:1,borderRadius:10,padding:'10px 8px',fontSize:12,fontWeight:700,cursor:'pointer',border:`1.5px solid ${form.task===id?(id==='omni-solver'?'#7c3aed':'#6366f1'):'rgba(255,255,255,0.1)'}`,background:form.task===id?(id==='omni-solver'?'rgba(124,58,237,0.2)':'rgba(99,102,241,0.2)'):'transparent',color:form.task===id?'#c4b5fd':'#64748b'}}>{lbl}</button>
+                    <button key={id} onClick={setB('task')(id)} style={{flex:1,borderRadius:10,padding:'10px 8px',fontSize:12,fontWeight:700,cursor:'pointer',border:`1.5px solid ${form.task===id?(id==='omni-solver'?'#7c3aed':'#6366f1'):'rgba(255,255,255,0.1)'}`,background:form.task===id?(id==='omni-solver'?'rgba(124,58,237,0.2)':'rgba(99,102,241,0.2)'):'transparent',color:form.task===id?'#c4b5fd':'#94a3b8'}}>{lbl}</button>
                   ))}
                 </div>
               </div>
@@ -293,19 +293,19 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
                   <div><label style={labelSt}>กลุ่มเป้าหมาย</label><input style={inputSt} placeholder="เช่น แม่บ้าน คนรักสุขภาพ" value={form.audience} onChange={set('audience')} /></div>
                   <div><label style={labelSt}>แพลตฟอร์ม</label>
                     <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                      {PLATFORMS.map(p=><button key={p} onClick={setB('platform')(p)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.platform===p?'#6366f1':'rgba(255,255,255,0.1)'}`,background:form.platform===p?'rgba(99,102,241,0.2)':'transparent',color:form.platform===p?'#a5b4fc':'#64748b'}}>{p}</button>)}
+                      {PLATFORMS.map(p=><button key={p} onClick={setB('platform')(p)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.platform===p?'#6366f1':'rgba(255,255,255,0.1)'}`,background:form.platform===p?'rgba(99,102,241,0.2)':'transparent',color:form.platform===p?'#a5b4fc':'#94a3b8'}}>{p}</button>)}
                     </div>
                   </div>
                   <div><label style={labelSt}>สไตล์</label>
                     <div style={{display:'flex',gap:6}}>
-                      {STYLES.map(s=><button key={s.id} onClick={setB('style')(s.id)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.style===s.id?'#6366f1':'rgba(255,255,255,0.1)'}`,background:form.style===s.id?'rgba(99,102,241,0.2)':'transparent',color:form.style===s.id?'#a5b4fc':'#64748b'}}>{s.label}</button>)}
+                      {STYLES.map(s=><button key={s.id} onClick={setB('style')(s.id)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.style===s.id?'#6366f1':'rgba(255,255,255,0.1)'}`,background:form.style===s.id?'rgba(99,102,241,0.2)':'transparent',color:form.style===s.id?'#a5b4fc':'#94a3b8'}}>{s.label}</button>)}
                     </div>
                   </div>
                 </>
               )}
               <div><label style={labelSt}>Schedule</label>
                 <div style={{display:'flex',gap:6}}>
-                  {SCHEDULES.map(s=><button key={s.id} onClick={setB('schedule')(s.id)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.schedule===s.id?'#10b981':'rgba(255,255,255,0.1)'}`,background:form.schedule===s.id?'rgba(16,185,129,0.15)':'transparent',color:form.schedule===s.id?'#6ee7b7':'#64748b'}}>{s.label}</button>)}
+                  {SCHEDULES.map(s=><button key={s.id} onClick={setB('schedule')(s.id)} style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${form.schedule===s.id?'#10b981':'rgba(255,255,255,0.1)'}`,background:form.schedule===s.id?'rgba(16,185,129,0.15)':'transparent',color:form.schedule===s.id?'#6ee7b7':'#94a3b8'}}>{s.label}</button>)}
                 </div>
               </div>
               {form.schedule!=='manual'&&(
@@ -335,7 +335,7 @@ function TabAgents({ agents, lineStatus, loading, onRefresh, toast }) {
                   <div>
                     <label style={labelSt}>LINE User ID / Group ID</label>
                     <input style={inputSt} placeholder="U1234567890abcdef..." value={form.lineUserId} onChange={set('lineUserId')} />
-                    <div style={{fontSize:11,color:'#475569',marginTop:6}}>ต้องตั้งค่า LINE_CHANNEL_TOKEN ใน .env ก่อน</div>
+                    <div style={{fontSize:11,color:'#7c8797',marginTop:6}}>ต้องตั้งค่า LINE_CHANNEL_TOKEN ใน .env ก่อน</div>
                   </div>
                 )}
               </div>
@@ -367,7 +367,7 @@ function TabSkills({ toast }) {
       .catch(()=>setLoading(false));
   }, []);
 
-  if (loading) return <div style={{textAlign:'center',padding:'60px 0',color:'#64748b'}}>⏳ กำลังโหลด...</div>;
+  if (loading) return <div style={{textAlign:'center',padding:'60px 0',color:'#94a3b8'}}>⏳ กำลังโหลด...</div>;
   if (!data)   return <div style={{textAlign:'center',padding:'60px 0',color:'#f87171'}}>โหลดข้อมูลไม่สำเร็จ</div>;
 
   return (
@@ -375,9 +375,9 @@ function TabSkills({ toast }) {
 
       {data.charter && (
         <div style={{ ...glass, padding: '10px 14px', background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.18)' }}>
-          <span style={{ fontSize: 11, color: '#64748b' }}>สอดคล้องนโยบายถาวร </span>
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>สอดคล้องนโยบายถาวร </span>
           <span style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc' }}>v{data.charter.version}</span>
-          <span style={{ fontSize: 11, color: '#64748b' }}> — รายละเอียดเต็มอยู่แถบด้านบนทุกแท็บ</span>
+          <span style={{ fontSize: 11, color: '#94a3b8' }}> — รายละเอียดเต็มอยู่แถบด้านบนทุกแท็บ</span>
         </div>
       )}
 
@@ -385,14 +385,14 @@ function TabSkills({ toast }) {
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))',gap:10}}>
         {[
           {label:'Overall Score',val:`${data.overall_score}/100`,color:'#6366f1',icon:'🏆'},
-          {label:'Industry Avg',val:`${data.industry_average}/100`,color:'#64748b',icon:'📊'},
+          {label:'Industry Avg',val:`${data.industry_average}/100`,color:'#94a3b8',icon:'📊'},
           {label:'AI Engine',val:data.ts?'Active':'—',color:'#10b981',icon:'🤖'},
           {label:'Thai Advantage',val:`+${Math.max(0, (data.overall_score ?? 0) - (data.industry_average ?? 0))} vs avg`,color:'#f59e0b',icon:'🇹🇭'},
         ].map((s,i)=>(
           <div key={i} style={{...glass,padding:'14px 16px',textAlign:'center'}}>
             <div style={{fontSize:24,marginBottom:6}}>{s.icon}</div>
             <div style={{fontSize:20,fontWeight:900,color:s.color}}>{s.val}</div>
-            <div style={{fontSize:11,color:'#64748b'}}>{s.label}</div>
+            <div style={{fontSize:11,color:'#94a3b8'}}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -405,16 +405,16 @@ function TabSkills({ toast }) {
       {data.industry_ai_pulse && (
         <div style={glass}>
           <div style={{fontWeight:800,fontSize:14,marginBottom:6}}>🛰 กระแส AI ในอุตสาหกรรม vs โปรแกรมเรา</div>
-          <div style={{fontSize:12,color:'#64748b',marginBottom:14}}>เปรียบเทียบแนวผู้นำตลาดกับฟีเจอร์ Openthai.ai — ช่องว่างและวิธีบริหารจัดการ</div>
+          <div style={{fontSize:12,color:'#94a3b8',marginBottom:14}}>เปรียบเทียบแนวผู้นำตลาดกับฟีเจอร์ Openthai.ai — ช่องว่างและวิธีบริหารจัดการ</div>
           <div style={{display:'grid',gap:12}}>
             {data.industry_ai_pulse.map((row, i) => (
               <div key={i} style={{background:'rgba(255,255,255,0.02)',borderRadius:12,padding:'12px 14px',border:'1px solid rgba(255,255,255,0.06)'}}>
                 <div style={{fontSize:13,fontWeight:800,color:'#a5b4fc',marginBottom:8}}>{row.trend}</div>
                 <div style={{display:'grid',gap:6,fontSize:12,lineHeight:1.55}}>
-                  <div><span style={{color:'#64748b'}}>ผู้นำทำ: </span><span style={{color:'#cbd5e1'}}>{row.leaders_do}</span></div>
-                  <div><span style={{color:'#64748b'}}>ของเรา: </span><span style={{color:'#cbd5e1'}}>{row.our_product}</span></div>
-                  <div><span style={{color:'#64748b'}}>ช่องว่าง: </span><span style={{color:'#fda4af'}}>{row.gap}</span></div>
-                  <div><span style={{color:'#64748b'}}>แนวทางบริหาร: </span><span style={{color:'#86efac'}}>{row.manage}</span></div>
+                  <div><span style={{color:'#94a3b8'}}>ผู้นำทำ: </span><span style={{color:'#cbd5e1'}}>{row.leaders_do}</span></div>
+                  <div><span style={{color:'#94a3b8'}}>ของเรา: </span><span style={{color:'#cbd5e1'}}>{row.our_product}</span></div>
+                  <div><span style={{color:'#94a3b8'}}>ช่องว่าง: </span><span style={{color:'#fda4af'}}>{row.gap}</span></div>
+                  <div><span style={{color:'#94a3b8'}}>แนวทางบริหาร: </span><span style={{color:'#86efac'}}>{row.manage}</span></div>
                 </div>
               </div>
             ))}
@@ -451,7 +451,7 @@ function TabSkills({ toast }) {
           {data.our_skills.map(s=>(
             <div key={s.id}>
               <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:5}}>
-                <span style={{fontSize:11,color:'#64748b',width:26}}>{s.id}</span>
+                <span style={{fontSize:11,color:'#94a3b8',width:26}}>{s.id}</span>
                 <span style={{fontSize:13,fontWeight:600,flex:1}}>{s.name}</span>
                 <span style={{fontSize:13}}>{s.status}</span>
                 <span style={{fontSize:13,fontWeight:700,color:s.color,width:38,textAlign:'right'}}>{s.pct}%</span>
@@ -480,7 +480,7 @@ function TabSkills({ toast }) {
                   <div style={{position:'absolute',height:'100%',width:`${b.industry}%`,background:'rgba(100,116,139,0.4)',borderRadius:99}} />
                   <div style={{position:'absolute',height:'100%',width:`${b.ours}%`,background:b.ours>=b.industry?'#6366f1':'#fe2c55',borderRadius:99,transition:'width .6s ease'}} />
                 </div>
-                <span style={{fontSize:11,color:'#64748b',width:58,textAlign:'right'}}>Industry: {b.industry}%</span>
+                <span style={{fontSize:11,color:'#94a3b8',width:58,textAlign:'right'}}>Industry: {b.industry}%</span>
               </div>
             </div>
           ))}
@@ -497,18 +497,18 @@ function TabSkills({ toast }) {
                 <span style={{fontWeight:700,fontSize:13}}>{s.name}</span>
                 <span style={{fontSize:11,color:'#f8fafc'}}>{s.priority}</span>
               </div>
-              <div style={{display:'flex',gap:16,flexWrap:'wrap',fontSize:11,color:'#64748b',marginBottom:8}}>
+              <div style={{display:'flex',gap:16,flexWrap:'wrap',fontSize:11,color:'#94a3b8',marginBottom:8}}>
                 <span>⏱ {s.effort}</span>
                 <span style={{color:'#10b981'}}>📈 {s.impact}</span>
               </div>
               {(s.management || s.automation_now) && (
                 <div style={{fontSize:12,color:'#94a3b8',lineHeight:1.55,marginBottom:8}}>
-                  {s.management && <div style={{marginBottom:4}}><span style={{color:'#64748b'}}>บริหารจัดการ: </span>{s.management}</div>}
-                  {s.automation_now && <div><span style={{color:'#64748b'}}>ทำอัตโนมัติได้แล้ววันนี้: </span><span style={{color:'#a5b4fc'}}>{s.automation_now}</span></div>}
+                  {s.management && <div style={{marginBottom:4}}><span style={{color:'#94a3b8'}}>บริหารจัดการ: </span>{s.management}</div>}
+                  {s.automation_now && <div><span style={{color:'#94a3b8'}}>ทำอัตโนมัติได้แล้ววันนี้: </span><span style={{color:'#a5b4fc'}}>{s.automation_now}</span></div>}
                 </div>
               )}
               <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <span style={{fontSize:11,color:'#64748b',flexShrink:0}}>Progress:</span>
+                <span style={{fontSize:11,color:'#94a3b8',flexShrink:0}}>Progress:</span>
                 <ScoreBar value={s.progress} color='#f59e0b' height={5} />
                 <span style={{fontSize:11,color:'#f59e0b',width:30,textAlign:'right'}}>{s.progress}%</span>
               </div>
@@ -571,7 +571,7 @@ function TabMonitor({ toast, lineStatus }) {
     setHealing(false);
   };
 
-  const statusColor = s => ({ healthy:'#10b981', warning:'#f59e0b', critical:'#ef4444' }[s] || '#64748b');
+  const statusColor = s => ({ healthy:'#10b981', warning:'#f59e0b', critical:'#ef4444' }[s] || '#94a3b8');
 
   return (
     <div style={{display:'grid',gap:20}}>
@@ -587,13 +587,13 @@ function TabMonitor({ toast, lineStatus }) {
             {icon:'📝',label:'Total Runs',val:metrics.total_runs,color:'#8b5cf6'},
             {icon:'⭐',label:'Avg Score',val:metrics.avg_score,color:'#fe2c55'},
             {icon:'🔴',label:'Errors',val:metrics.error_count,color:metrics.error_count>0?'#ef4444':'#10b981'},
-            {icon:'⚠️',label:'Warnings',val:metrics.warn_count,color:metrics.warn_count>5?'#f59e0b':'#64748b'},
+            {icon:'⚠️',label:'Warnings',val:metrics.warn_count,color:metrics.warn_count>5?'#f59e0b':'#94a3b8'},
           ].map((s,i)=>(
             <div key={i} style={{...glass,padding:'12px 14px',display:'flex',alignItems:'center',gap:10}}>
               <span style={{fontSize:20}}>{s.icon}</span>
               <div>
                 <div style={{fontSize:16,fontWeight:800,color:s.color}}>{s.val}</div>
-                <div style={{fontSize:10,color:'#64748b'}}>{s.label}</div>
+                <div style={{fontSize:10,color:'#94a3b8'}}>{s.label}</div>
               </div>
             </div>
           ))}
@@ -607,7 +607,7 @@ function TabMonitor({ toast, lineStatus }) {
             <strong style={{color:'#f8fafc'}}>{metrics.agent_checkpoint.agentName}</strong> · {metrics.agent_checkpoint.product}
             <div style={{marginTop:4}}>สถานะ: <code style={{color:'#94a3b8',fontSize:11}}>{metrics.agent_checkpoint.phase}</code></div>
             {metrics.agent_checkpoint.detail && <div style={{marginTop:6,color:'#f87171',fontSize:11}}>{metrics.agent_checkpoint.detail}</div>}
-            <div style={{fontSize:10,color:'#64748b',marginTop:6}}>บันทึก: {fmtTime(metrics.agent_checkpoint.ts)}</div>
+            <div style={{fontSize:10,color:'#94a3b8',marginTop:6}}>บันทึก: {fmtTime(metrics.agent_checkpoint.ts)}</div>
           </div>
         </div>
       )}
@@ -640,10 +640,10 @@ function TabMonitor({ toast, lineStatus }) {
             { name:'Log + Checkpoint', ok:true, detail:'system_log.json + agent_checkpoint.json' },
           ].map((s,i)=>(
             <div key={i} style={{display:'flex',alignItems:'center',gap:10,background:'rgba(255,255,255,0.02)',padding:'10px 12px',borderRadius:10}}>
-              <PulseDot active={s.ok} color={s.ok?'#10b981':'#475569'} />
+              <PulseDot active={s.ok} color={s.ok?'#10b981':'#7c8797'} />
               <div>
                 <div style={{fontSize:12,fontWeight:600}}>{s.name}</div>
-                <div style={{fontSize:10,color:'#475569'}}>{s.detail}</div>
+                <div style={{fontSize:10,color:'#7c8797'}}>{s.detail}</div>
               </div>
             </div>
           ))}
@@ -657,23 +657,23 @@ function TabMonitor({ toast, lineStatus }) {
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}}>
             <div>
               <div style={{fontWeight:800,fontSize:14,marginBottom:4}}>🛡 Auto-Heal Watchdog</div>
-              <div style={{fontSize:12,color:'#64748b'}}>ตรวจและแก้ไข Agent ที่ stuck อัตโนมัติทุก 30 นาที</div>
+              <div style={{fontSize:12,color:'#94a3b8'}}>ตรวจและแก้ไข Agent ที่ stuck อัตโนมัติทุก 30 นาที</div>
             </div>
             <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
               <div style={{textAlign:'center',padding:'8px 16px',background:'rgba(16,185,129,0.1)',borderRadius:10}}>
                 <div style={{fontSize:18,fontWeight:900,color:'#10b981'}}>{watchdog.healed||0}</div>
-                <div style={{fontSize:10,color:'#64748b'}}>Auto-healed</div>
+                <div style={{fontSize:10,color:'#94a3b8'}}>Auto-healed</div>
               </div>
               <div style={{textAlign:'center',padding:'8px 16px',background:'rgba(99,102,241,0.1)',borderRadius:10}}>
                 <div style={{fontSize:18,fontWeight:900,color:'#a5b4fc'}}>{watchdog.checked||0}</div>
-                <div style={{fontSize:10,color:'#64748b'}}>Checked</div>
+                <div style={{fontSize:10,color:'#94a3b8'}}>Checked</div>
               </div>
             </div>
           </div>
           <div style={{marginTop:12,display:'flex',gap:8,flexWrap:'wrap'}}>
-            <div style={{fontSize:11,color:'#64748b'}}>Status: <span style={{color:watchdog.status==='running'?'#f59e0b':'#10b981',fontWeight:700}}>{watchdog.status}</span></div>
-            {watchdog.lastRun&&<div style={{fontSize:11,color:'#64748b'}}>Last: {fmtTime(watchdog.lastRun)}</div>}
-            {watchdog.nextRun&&<div style={{fontSize:11,color:'#64748b'}}>Next: {fmtTime(watchdog.nextRun)}</div>}
+            <div style={{fontSize:11,color:'#94a3b8'}}>Status: <span style={{color:watchdog.status==='running'?'#f59e0b':'#10b981',fontWeight:700}}>{watchdog.status}</span></div>
+            {watchdog.lastRun&&<div style={{fontSize:11,color:'#94a3b8'}}>Last: {fmtTime(watchdog.lastRun)}</div>}
+            {watchdog.nextRun&&<div style={{fontSize:11,color:'#94a3b8'}}>Next: {fmtTime(watchdog.nextRun)}</div>}
           </div>
           <div style={{marginTop:12}}>
             <button onClick={handleHeal} disabled={healing}
@@ -689,7 +689,7 @@ function TabMonitor({ toast, lineStatus }) {
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10,marginBottom:14}}>
           <div>
             <div style={{fontWeight:800,fontSize:14}}>🔬 AI Self-Diagnosis</div>
-            <div style={{fontSize:12,color:'#64748b',marginTop:2}}>ให้ Claude วิเคราะห์ปัญหาระบบและแนะนำการแก้ไข</div>
+            <div style={{fontSize:12,color:'#94a3b8',marginTop:2}}>ให้ Claude วิเคราะห์ปัญหาระบบและแนะนำการแก้ไข</div>
           </div>
           <button onClick={handleDiagnose} disabled={diagLoading}
             style={{background:'linear-gradient(135deg,#6366f1,#8b5cf6)',border:'none',borderRadius:8,padding:'9px 18px',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:700,opacity:diagLoading?.6:1}}>
@@ -728,7 +728,7 @@ function TabMonitor({ toast, lineStatus }) {
                 ))}
               </div>
             )}
-            <div style={{fontSize:10,color:'#475569',marginTop:10}}>Source: {diagnosis.source} · {fmtTime(diagnosis.ts)}</div>
+            <div style={{fontSize:10,color:'#7c8797',marginTop:10}}>Source: {diagnosis.source} · {fmtTime(diagnosis.ts)}</div>
           </div>
         )}
       </div>
@@ -767,18 +767,18 @@ function TabLogs({ toast }) {
     return () => clearInterval(intervalRef.current);
   }, [load]);
 
-  const levelColor = l => ({ error:'#ef4444', warn:'#f59e0b', info:'#10b981' }[l] || '#64748b');
+  const levelColor = l => ({ error:'#ef4444', warn:'#f59e0b', info:'#10b981' }[l] || '#94a3b8');
   const levelBg    = l => ({ error:'rgba(239,68,68,0.1)', warn:'rgba(245,158,11,0.1)', info:'rgba(16,185,129,0.08)' }[l] || 'rgba(255,255,255,0.02)');
   const levelEmoji = l => ({ error:'🔴', warn:'⚠️', info:'✅' }[l] || '•');
 
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:10}}>
-        <div style={{fontSize:13,color:'#64748b'}}>{total} events ทั้งหมด · รีเฟรชทุก 10 วินาที</div>
+        <div style={{fontSize:13,color:'#94a3b8'}}>{total} events ทั้งหมด · รีเฟรชทุก 10 วินาที</div>
         <div style={{display:'flex',gap:6}}>
           {['all','error','warn','info'].map(f=>(
             <button key={f} onClick={()=>setFilter(f)}
-              style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${filter===f?levelColor(f==='all'?'info':f):'rgba(255,255,255,0.1)'}`,background:filter===f?`${levelBg(f==='all'?'info':f)}`:'transparent',color:filter===f?levelColor(f==='all'?'info':f):'#64748b'}}>
+              style={{borderRadius:20,padding:'5px 12px',fontSize:12,fontWeight:600,cursor:'pointer',border:`1.5px solid ${filter===f?levelColor(f==='all'?'info':f):'rgba(255,255,255,0.1)'}`,background:filter===f?`${levelBg(f==='all'?'info':f)}`:'transparent',color:filter===f?levelColor(f==='all'?'info':f):'#94a3b8'}}>
               {f==='all'?'ทั้งหมด':f}
             </button>
           ))}
@@ -786,9 +786,9 @@ function TabLogs({ toast }) {
       </div>
 
       {loading ? (
-        <div style={{textAlign:'center',padding:'40px 0',color:'#64748b'}}>⏳</div>
+        <div style={{textAlign:'center',padding:'40px 0',color:'#94a3b8'}}>⏳</div>
       ) : logs.length === 0 ? (
-        <div style={{...glass,textAlign:'center',padding:'40px',color:'#64748b'}}>ยังไม่มี log</div>
+        <div style={{...glass,textAlign:'center',padding:'40px',color:'#94a3b8'}}>ยังไม่มี log</div>
       ) : (
         <div style={{display:'grid',gap:4}}>
           {logs.map((log,i)=>(
@@ -798,10 +798,10 @@ function TabLogs({ toast }) {
                 <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:2}}>
                   <span style={{fontSize:11,fontWeight:700,color:levelColor(log.level),textTransform:'uppercase'}}>{log.level}</span>
                   <span style={{fontSize:11,color:'#6366f1',background:'rgba(99,102,241,0.12)',padding:'1px 6px',borderRadius:4}}>{log.source}</span>
-                  <span style={{fontSize:10,color:'#475569',marginLeft:'auto',whiteSpace:'nowrap'}}>{fmtTime(log.ts)}</span>
+                  <span style={{fontSize:10,color:'#7c8797',marginLeft:'auto',whiteSpace:'nowrap'}}>{fmtTime(log.ts)}</span>
                 </div>
                 <div style={{fontSize:12,color:'#cbd5e1',lineHeight:1.5,wordBreak:'break-word'}}>{log.message}</div>
-                {log.detail&&<div style={{fontSize:11,color:'#64748b',marginTop:3,wordBreak:'break-all'}}>{typeof log.detail==='string'?log.detail:JSON.stringify(log.detail)}</div>}
+                {log.detail&&<div style={{fontSize:11,color:'#94a3b8',marginTop:3,wordBreak:'break-all'}}>{typeof log.detail==='string'?log.detail:JSON.stringify(log.detail)}</div>}
               </div>
             </div>
           ))}
@@ -846,7 +846,7 @@ export default function AgentPage() {
         <button onClick={()=>navigate('/dashboard')} style={{background:'none',border:'1px solid rgba(255,255,255,0.14)',borderRadius:8,padding:'6px 14px',color:'#94a3b8',cursor:'pointer',fontSize:13}}>← Dashboard</button>
         <div style={{flex:1}}>
           <div style={{fontSize:15,fontWeight:900}}>🤖 AI Agent Control Center</div>
-          <div style={{fontSize:11,color:'#475569'}}>Auto-content · Self-healing · 24/7 monitoring · Skill gap analysis</div>
+          <div style={{fontSize:11,color:'#7c8797'}}>Auto-content · Self-healing · 24/7 monitoring · Skill gap analysis</div>
         </div>
         <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
           {lineStatus?.connected&&<div style={{fontSize:11,padding:'3px 9px',background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.3)',borderRadius:8,color:'#6ee7b7'}}>💚 LINE</div>}
@@ -860,7 +860,7 @@ export default function AgentPage() {
       <div style={{background:'rgba(8,8,18,0.9)',backdropFilter:'blur(10px)',borderBottom:'1px solid rgba(255,255,255,0.06)',padding:'0 5%',display:'flex',gap:4,overflowX:'auto'}}>
         {TABS.map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)}
-            style={{padding:'12px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t.id?'#6366f1':'transparent'}`,color:tab===t.id?'#a5b4fc':'#475569',cursor:'pointer',fontSize:13,fontWeight:tab===t.id?700:400,whiteSpace:'nowrap',transition:'all .2s'}}>
+            style={{padding:'12px 16px',background:'none',border:'none',borderBottom:`2px solid ${tab===t.id?'#6366f1':'transparent'}`,color:tab===t.id?'#a5b4fc':'#7c8797',cursor:'pointer',fontSize:13,fontWeight:tab===t.id?700:400,whiteSpace:'nowrap',transition:'all .2s'}}>
             {t.icon} {t.label}
           </button>
         ))}

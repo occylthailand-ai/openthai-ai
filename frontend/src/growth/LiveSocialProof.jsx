@@ -45,11 +45,11 @@ export default function LiveSocialProof() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
           <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
           <span style={{ fontSize: 11, color: '#10b981', fontWeight: 600 }}>{S.live}</span>
-          <span style={{ fontSize: 11, color: '#64748b' }}>· {msg.ago}</span>
+          <span style={{ fontSize: 11, color: '#94a3b8' }}>· {msg.ago}</span>
         </div>
       </div>
       <button onClick={() => setClosed(true)} aria-label="close"
-        style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
+        style={{ background: 'none', border: 'none', color: '#7c8797', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: 0, flexShrink: 0 }}>×</button>
     </div>
   );
 }

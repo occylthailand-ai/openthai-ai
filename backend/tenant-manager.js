@@ -59,19 +59,30 @@ function hashKey(key) {
 }
 
 // ── JWT helpers ───────────────────────────────────────────────────────────────
+// Never fall back to a hardcoded, source-visible constant for the tenant-JWT signing secret: the old
+// `|| 'openthai-jwt-secret-2026'` meant that whenever JWT_SECRET was unset in production (the current
+// state — see docs/OWNER-DECISIONS.md #3), tenant tokens were signed with a secret printed in this
+// repo, so anyone could forge `{ tenantId, plan, role:'tenant' }` and authenticate as ANY tenant.
+// Mirror server.js's UNSUB_SECRET: use JWT_SECRET when set; in a production-like env fall back to a
+// per-process RANDOM key (tokens fail CLOSED — unforgeable, though they don't survive a restart / cross
+// serverless invocation until JWT_SECRET is set); only local dev uses a fixed, clearly dev-only string.
+const IS_PROD_LIKE = !!process.env.VERCEL || process.env.NODE_ENV === 'production';
+const TENANT_JWT_SECRET = process.env.JWT_SECRET
+  || (IS_PROD_LIKE ? randomBytes(32).toString('hex') : 'openthai-dev-only-tenant-secret');
+if (!process.env.JWT_SECRET && IS_PROD_LIKE) {
+  console.warn('[SECURITY] JWT_SECRET is not set in production — tenant login tokens now use a per-process RANDOM key, so a tenant may need to re-login across serverless invocations/restarts. Set JWT_SECRET so tenant tokens are stable AND unforgeable.');
+}
 
 function signTenantToken(tenant) {
-  const secret = process.env.JWT_SECRET || 'openthai-jwt-secret-2026';
   return jwt.sign(
     { tenantId: tenant.id, plan: tenant.plan, role: 'tenant' },
-    secret,
+    TENANT_JWT_SECRET,
     { expiresIn: '30d' },
   );
 }
 
 function verifyTenantToken(token) {
-  const secret = process.env.JWT_SECRET || 'openthai-jwt-secret-2026';
-  try { return jwt.verify(token, secret); } catch { return null; }
+  try { return jwt.verify(token, TENANT_JWT_SECRET); } catch { return null; }
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -138,15 +149,18 @@ export function createTenantManager(writeDir) {
       return tenants.find(t => t.id === payload.tenantId && t.active) || null;
     },
 
-    // Login → JWT
+    // Login → JWT.
+    // SECURITY: the API key is the ONLY tenant credential (register returns it once; email is not
+    // secret). The old code had an `else if (email)` branch that issued a valid 30-day JWT for ANY
+    // tenant given just its email and no secret at all — a full authentication bypass (impersonate,
+    // read/patch settings, rotate the victim's API key, burn their quota). Login now REQUIRES a
+    // valid API key; email, if supplied, is only an optional consistency check, never an auth path.
     login({ email, apiKey }) {
-      let tenant = null;
-      if (apiKey) {
-        tenant = mgr.verifyApiKey(apiKey);
-      } else if (email) {
-        tenant = tenants.find(t => t.email === email.toLowerCase().trim() && t.active);
+      const tenant = apiKey ? mgr.verifyApiKey(apiKey) : null;
+      if (!tenant) throw new Error('ต้องระบุ API key ที่ถูกต้องเพื่อเข้าสู่ระบบ');
+      if (email && tenant.email !== email.toLowerCase().trim()) {
+        throw new Error('อีเมลไม่ตรงกับ API key');
       }
-      if (!tenant) throw new Error('ไม่พบ Tenant หรือ API key ไม่ถูกต้อง');
       const token = signTenantToken(tenant);
       return { token, tenant: mgr.safeView(tenant) };
     },
@@ -217,6 +231,27 @@ export function createTenantManager(writeDir) {
     // Admin list
     listAll() {
       return tenants.map(t => mgr.safeView(t));
+    },
+
+    // PDPA (ม.30 access / ม.33 erasure) — a tenant account holds real personal data
+    // (name, email, contactPhone, businessType, brand_name), but the data-subject-rights
+    // flow in server.js only knew about waitlist/consents/producers/portalLeads/affiliates,
+    // so a tenant who asked to see or delete their data got "0 records / removed 0" while the
+    // account sat untouched in tenants.json. These two give that flow a way to reach tenants.
+    // findByEmail returns the SAFE view (apiKeyHash stripped) so an access export never leaks
+    // the key hash.
+    findByEmail(email) {
+      const e = String(email || '').toLowerCase().trim();
+      return tenants.filter(t => (t.email || '').toLowerCase() === e).map(t => mgr.safeView(t));
+    },
+    eraseByEmail(email) {
+      const e = String(email || '').toLowerCase().trim();
+      let removed = 0;
+      for (let i = tenants.length - 1; i >= 0; i--) {
+        if ((tenants[i].email || '').toLowerCase() === e) { tenants.splice(i, 1); removed++; }
+      }
+      if (removed) flush();
+      return { removed };
     },
   };
 

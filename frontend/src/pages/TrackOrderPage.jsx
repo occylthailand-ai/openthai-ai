@@ -17,16 +17,41 @@ export default function TrackOrderPage() {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeEvidence, setDisputeEvidence] = useState('');
+  const [disputeBusy, setDisputeBusy] = useState(false);
+  const [disputeErr, setDisputeErr] = useState('');
+  const [disputeResult, setDisputeResult] = useState(null); // { id } once opened (new or pre-existing)
+
   const track = async (e) => {
     e?.preventDefault?.();
     if (!id.trim() || !contact.trim() || busy) return;
     setBusy(true); setErr(''); setOrder(null);
+    setShowDisputeForm(false); setDisputeResult(null); setDisputeErr(''); setDisputeReason(''); setDisputeEvidence('');
     try {
       const res = await fetch(apiUrl(`/api/orders/track?id=${encodeURIComponent(id.trim())}&contact=${encodeURIComponent(contact.trim())}`));
       const d = await res.json();
       if (d.success) setOrder(d.order); else setErr(d.error || t('mk.track.notfound'));
     } catch { setErr(t('mk.track.notfound')); }
     finally { setBusy(false); }
+  };
+
+  const openDispute = async (e) => {
+    e?.preventDefault?.();
+    if (!order || !disputeReason.trim() || disputeBusy) return;
+    setDisputeBusy(true); setDisputeErr('');
+    try {
+      const res = await fetch(apiUrl('/api/disputes'), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, opened_by: 'buyer', contact: contact.trim(), reason: disputeReason.trim(), evidence: disputeEvidence.trim() }),
+      });
+      const d = await res.json();
+      if (d.success) { setDisputeResult({ id: d.id }); }
+      else if (d.id) { setDisputeResult({ id: d.id, existing: true }); }
+      else { setDisputeErr(d.error || t('mk.dispute.notfound')); }
+    } catch { setDisputeErr(t('mk.dispute.notfound')); }
+    finally { setDisputeBusy(false); }
   };
 
   useEffect(() => { document.title = 'Track — Openthai.ai'; if (sp.get('id') && sp.get('contact')) track(); }, []); // eslint-disable-line
@@ -51,10 +76,10 @@ export default function TrackOrderPage() {
 
       <section style={{ maxWidth: 560, margin: '0 auto', padding: '0 5% 30px' }}>
         <form onSubmit={track} style={card}>
-          <label style={lab}>{t('mk.track.id')}</label>
-          <input style={inp} value={id} onChange={(e) => setId(e.target.value)} placeholder="ord_..." />
-          <label style={lab}>{t('mk.track.contact')}</label>
-          <input style={inp} value={contact} onChange={(e) => setContact(e.target.value)} placeholder="@line / email / 08x" />
+          <label htmlFor="tk-id" style={lab}>{t('mk.track.id')}</label>
+          <input id="tk-id" style={inp} value={id} onChange={(e) => setId(e.target.value)} placeholder="ord_..." />
+          <label htmlFor="tk-contact" style={lab}>{t('mk.track.contact')}</label>
+          <input id="tk-contact" style={inp} value={contact} onChange={(e) => setContact(e.target.value)} placeholder="@line / email / 08x" />
           {err && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 10 }}>⚠️ {err}</div>}
           <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', marginTop: 14, opacity: busy ? 0.7 : 1 }}>{busy ? t('mk.track.searching') : t('mk.track.btn')}</button>
         </form>
@@ -64,7 +89,7 @@ export default function TrackOrderPage() {
         <section style={{ maxWidth: 560, margin: '0 auto', padding: '0 5% 80px' }}>
           <div style={card}>
             <div style={{ fontWeight: 800, fontSize: 16 }}>{order.product_name} <span style={{ color: '#10b981' }}>×{order.qty}</span></div>
-            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>{t('mk.track.placed')}: {order.created_at ? new Date(order.created_at).toLocaleString() : '-'}</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>{t('mk.track.placed')}: {order.created_at ? new Date(order.created_at).toLocaleString() : '-'}</div>
 
             {order.status === 'cancelled' ? (
               <div style={{ ...pill, background: 'rgba(239,68,68,0.12)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.3)' }}>❌ {stLabel('cancelled')}</div>
@@ -76,7 +101,7 @@ export default function TrackOrderPage() {
                     <div key={s} style={{ flex: 1, textAlign: 'center', position: 'relative' }}>
                       {i > 0 && <div style={{ position: 'absolute', top: 16, left: '-50%', width: '100%', height: 2, background: i <= curIdx ? '#10b981' : 'rgba(255,255,255,0.1)' }} />}
                       <div style={{ position: 'relative', width: 34, height: 34, borderRadius: '50%', margin: '0 auto 6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, background: done ? '#10b981' : 'rgba(255,255,255,0.06)', opacity: done ? 1 : 0.5 }}>{ICON[s]}</div>
-                      <div style={{ fontSize: 9, color: done ? '#cbd5e1' : '#475569', lineHeight: 1.2 }}>{stLabel(s)}</div>
+                      <div style={{ fontSize: 9, color: done ? '#cbd5e1' : '#7c8797', lineHeight: 1.2 }}>{stLabel(s)}</div>
                     </div>
                   );
                 })}
@@ -85,11 +110,11 @@ export default function TrackOrderPage() {
 
             {/* shipping detail */}
             {(order.carrier || order.tracking_no) && (
-              <div style={detail}><span style={{ color: '#64748b' }}>🚚 {t('mk.track.carrier')}/{t('mk.track.trackno')}</span><strong>{order.carrier} {order.tracking_no}</strong></div>
+              <div style={detail}><span style={{ color: '#94a3b8' }}>🚚 {t('mk.track.carrier')}/{t('mk.track.trackno')}</span><strong>{order.carrier} {order.tracking_no}</strong></div>
             )}
-            {order.received_by && <div style={detail}><span style={{ color: '#64748b' }}>✍️ {t('mk.track.received')}</span><strong>{order.received_by}</strong></div>}
-            {order.drop_off && <div style={detail}><span style={{ color: '#64748b' }}>📍 {t('mk.track.dropoff')}</span><strong>{order.drop_off}</strong></div>}
-            {order.delivered_at && <div style={detail}><span style={{ color: '#64748b' }}>🏠 {stLabel('delivered')}</span><strong style={{ color: '#10b981' }}>{new Date(order.delivered_at).toLocaleString()}</strong></div>}
+            {order.received_by && <div style={detail}><span style={{ color: '#94a3b8' }}>✍️ {t('mk.track.received')}</span><strong>{order.received_by}</strong></div>}
+            {order.drop_off && <div style={detail}><span style={{ color: '#94a3b8' }}>📍 {t('mk.track.dropoff')}</span><strong>{order.drop_off}</strong></div>}
+            {order.delivered_at && <div style={detail}><span style={{ color: '#94a3b8' }}>🏠 {stLabel('delivered')}</span><strong style={{ color: '#10b981' }}>{new Date(order.delivered_at).toLocaleString()}</strong></div>}
 
             {/* timeline */}
             <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
@@ -97,11 +122,36 @@ export default function TrackOrderPage() {
                 <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '6px 0', fontSize: 13 }}>
                   <span>{ICON[h.status] || '•'}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600 }}>{stLabel(h.status)}{h.note ? <span style={{ color: '#64748b', fontWeight: 400 }}> · {h.note}</span> : ''}</div>
-                    <div style={{ fontSize: 11, color: '#475569' }}>{h.at ? new Date(h.at).toLocaleString() : ''}</div>
+                    <div style={{ fontWeight: 600 }}>{stLabel(h.status)}{h.note ? <span style={{ color: '#94a3b8', fontWeight: 400 }}> · {h.note}</span> : ''}</div>
+                    <div style={{ fontSize: 11, color: '#7c8797' }}>{h.at ? new Date(h.at).toLocaleString() : ''}</div>
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* open a dispute */}
+            <div style={{ marginTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
+              {disputeResult ? (
+                <div style={{ fontSize: 13 }}>
+                  {disputeResult.existing ? <span style={{ color: '#94a3b8' }}>{t('mk.dispute.open.existing')} </span> : <span style={{ color: '#6ee7b7' }}>✅ {t('mk.dispute.open.success')} </span>}
+                  <a href={`/dispute?id=${encodeURIComponent(disputeResult.id)}`} style={{ color: '#a5b4fc' }}>{t('mk.dispute.open.viewstatus')}</a>
+                </div>
+              ) : showDisputeForm ? (
+                <form onSubmit={openDispute}>
+                  <label htmlFor="dispute-reason" style={lab}>{t('mk.dispute.open.reason')}</label>
+                  <textarea id="dispute-reason" style={{ ...inp, minHeight: 70, resize: 'vertical' }} value={disputeReason} onChange={(e) => setDisputeReason(e.target.value)} placeholder={t('mk.dispute.open.reason.ph')} />
+                  <label htmlFor="dispute-evidence" style={lab}>{t('mk.dispute.open.evidence')}</label>
+                  <textarea id="dispute-evidence" style={{ ...inp, minHeight: 50, resize: 'vertical' }} value={disputeEvidence} onChange={(e) => setDisputeEvidence(e.target.value)} placeholder={t('mk.dispute.open.evidence.ph')} />
+                  {disputeErr && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 8 }}>⚠️ {disputeErr}</div>}
+                  <button type="submit" disabled={disputeBusy || !disputeReason.trim()} style={{ ...primaryBtn, width: '100%', marginTop: 12, opacity: disputeBusy || !disputeReason.trim() ? 0.6 : 1 }}>
+                    {disputeBusy ? t('mk.dispute.open.submitting') : t('mk.dispute.open.submit')}
+                  </button>
+                </form>
+              ) : (
+                <button onClick={() => setShowDisputeForm(true)} style={{ ...navBtn, width: '100%', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.3)' }}>
+                  {t('mk.dispute.open.cta')}
+                </button>
+              )}
             </div>
           </div>
         </section>

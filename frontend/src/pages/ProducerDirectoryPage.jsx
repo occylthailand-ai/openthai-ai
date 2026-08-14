@@ -2,14 +2,19 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
+// Category values + localized display labels (single source of truth, synced with backend by
+// portalCategories.test.js). Values stay Thai (the filter/query identifier); labels are localized.
+import { PORTAL_CATEGORIES, producerCategoryLabel } from '../data/portalCategories';
 
-const CATS = ['ทั้งหมด', 'OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อื่นๆ'];
+// Fallback used only if GET /api/producers/categories fails; the canonical list, not a stale copy.
+const FALLBACK_CATS = PORTAL_CATEGORIES;
 
 export default function ProducerDirectoryPage() {
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('ทั้งหมด');
+  const [cats, setCats] = useState(FALLBACK_CATS);
   const [items, setItems] = useState(null);
   const [loading, setLoading] = useState(false);
   const timer = useRef(null);
@@ -27,7 +32,11 @@ export default function ProducerDirectoryPage() {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { document.title = 'ค้นหาผู้ผลิต — Openthai.ai'; search('', 'ทั้งหมด'); }, [search]);
+  useEffect(() => {
+    document.title = 'ค้นหาผู้ผลิต — Openthai.ai';
+    search('', 'ทั้งหมด');
+    fetch(apiUrl('/api/producers/categories')).then(r => r.json()).then(d => { if (d.success && Array.isArray(d.categories)) setCats(d.categories); }).catch(() => {});
+  }, [search]);
 
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
@@ -52,30 +61,30 @@ export default function ProducerDirectoryPage() {
 
       <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 5% 16px' }}>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('mk.find.search.ph')} style={{ ...inp, flex: 1, minWidth: 220 }} />
-          <select value={cat} onChange={(e) => setCat(e.target.value)} style={{ ...inp, maxWidth: 180 }}>
-            {CATS.map((c) => <option key={c} value={c}>{c === 'ทั้งหมด' ? t('mk.find.all') : c}</option>)}
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('mk.find.search.ph')} aria-label={t('mk.find.search.label')} style={{ ...inp, flex: 1, minWidth: 220 }} />
+          <select value={cat} onChange={(e) => setCat(e.target.value)} aria-label={t('mk.find.cat.label')} style={{ ...inp, maxWidth: 180 }}>
+            {['ทั้งหมด', ...cats].map((c) => <option key={c} value={c}>{c === 'ทั้งหมด' ? t('mk.find.all') : producerCategoryLabel(c, lang)}</option>)}
           </select>
         </div>
       </section>
 
       <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 5% 80px' }}>
-        <div style={{ fontSize: 12, color: '#64748b', margin: '8px 2px 14px' }}>
+        <div style={{ fontSize: 12, color: '#94a3b8', margin: '8px 2px 14px' }}>
           {loading ? t('mk.find.searching') : items ? t('mk.find.found').replace('{n}', items.length) : ''}
         </div>
         {items && items.length === 0 && !loading && (
           <div style={{ ...card, textAlign: 'center', padding: 36 }}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>🔎</div>
             <div style={{ fontWeight: 700, marginBottom: 6 }}>{t('mk.find.empty.title')}</div>
-            <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>{t('mk.find.empty.desc')}</p>
+            <p style={{ color: '#94a3b8', fontSize: 13, marginBottom: 16 }}>{t('mk.find.empty.desc')}</p>
             <button onClick={() => navigate('/join')} style={primaryBtn}>{t('mk.find.empty.cta')}</button>
           </div>
         )}
         {items && items.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 16 }}>
             {items.map((p, i) => (
-              <div key={p.email + i} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category || 'สินค้าไทย'}</div>
+              <div key={(p.company || 'p') + i} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category ? producerCategoryLabel(p.category, lang) : t('mk.find.thaiProduct')}</div>
                 <div style={{ fontWeight: 800, fontSize: 16 }}>{p.company}</div>
                 <div style={{ fontSize: 13, color: '#cbd5e1', marginTop: 2 }}>{p.product_name}</div>
                 {p.description && <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6, margin: '8px 0', flex: 1 }}>{p.description}</div>}
@@ -83,7 +92,7 @@ export default function ProducerDirectoryPage() {
                   <span style={{ fontWeight: 900, color: '#10b981' }}>{p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : t('mk.cat.ask')}</span>
                   <button onClick={() => navigate('/catalog')} style={{ ...primaryBtn, padding: '8px 16px', fontSize: 13 }}>{t('mk.find.order')}</button>
                 </div>
-                {p.website && <a href={p.website.startsWith('http') ? p.website : `https://${p.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#64748b', marginTop: 8, textDecoration: 'none' }}>🔗 {p.website}</a>}
+                {p.website && <a href={p.website.startsWith('http') ? p.website : `https://${p.website}`} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#94a3b8', marginTop: 8, textDecoration: 'none' }}>🔗 {p.website}</a>}
               </div>
             ))}
           </div>

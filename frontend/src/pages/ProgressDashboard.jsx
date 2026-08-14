@@ -54,7 +54,7 @@ function ProgressBar({ value, max = 100, color = '#22c55e', showLabel = true }) 
       <div style={{ height: 8, background: '#1e293b', borderRadius: 4, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 4, transition: 'width 1s ease' }} />
       </div>
-      {showLabel && <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{pct}%</div>}
+      {showLabel && <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{pct}%</div>}
     </div>
   );
 }
@@ -98,7 +98,7 @@ function KpiDetail({ guild, data }) {
                 <span style={{ fontSize: 13, color: '#e2e8f0', fontWeight: 600 }}>
                   {typeof kpi.value === 'boolean' ? (kpi.value ? 'Yes' : 'No')
                     : kpi.value !== null && kpi.value !== undefined ? String(kpi.value) : '—'}
-                  <span style={{ color: '#475569', marginLeft: 6 }}>/ {typeof kpi.target === 'boolean' ? (kpi.target ? 'Yes' : 'No') : kpi.target}</span>
+                  <span style={{ color: '#7c8797', marginLeft: 6 }}>/ {typeof kpi.target === 'boolean' ? (kpi.target ? 'Yes' : 'No') : kpi.target}</span>
                 </span>
               </div>
               <ProgressBar value={kpi.score} showLabel={true} />
@@ -134,7 +134,7 @@ function TrendChart({ history }) {
         })}
         {scores.map((s, i) => {
           const x = pad + (i / (scores.length - 1)) * (w - pad * 2);
-          return <text key={i} x={x} y={h - 4} textAnchor="middle" fill="#475569" fontSize={9}>
+          return <text key={i} x={x} y={h - 4} textAnchor="middle" fill="#7c8797" fontSize={9}>
             {history[i]?.date?.slice(5)}
           </text>;
         })}
@@ -176,7 +176,7 @@ export default function ProgressDashboard() {
     finally { setSending(false); }
   };
 
-  const overallColor = !snap ? '#475569'
+  const overallColor = !snap ? '#7c8797'
     : snap.overallScore >= 80 ? '#22c55e'
     : snap.overallScore >= 60 ? '#f59e0b'
     : snap.overallScore >= 40 ? '#f97316' : '#ef4444';
@@ -197,7 +197,7 @@ export default function ProgressDashboard() {
           <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0, background: 'linear-gradient(135deg,#6366f1,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             360° Progress Dashboard
           </h1>
-          <div style={{ color: '#64748b', marginTop: 8, fontSize: 14 }}>
+          <div style={{ color: '#94a3b8', marginTop: 8, fontSize: 14 }}>
             {snap?.thaiDate || 'ไม่มีข้อมูล'} · อัปเดตอัตโนมัติทุกวัน 23:30 น.
           </div>
         </div>
@@ -209,7 +209,7 @@ export default function ProgressDashboard() {
             <div style={{ marginTop: 12, fontSize: 20, fontWeight: 700, color: overallColor }}>
               Overall Score
             </div>
-            <div style={{ color: '#64748b', fontSize: 13, marginTop: 4 }}>เฉลี่ยจาก 10 Guild</div>
+            <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>เฉลี่ยจาก 10 Guild</div>
             <div style={{ display: 'flex', gap: 12, marginTop: 20, justifyContent: 'center' }}>
               <button onClick={sendReport} disabled={sending || sent} style={{
                 background: sent ? '#22c55e' : '#6366f1', color: '#fff', border: 'none', borderRadius: 8,
@@ -235,7 +235,7 @@ export default function ProgressDashboard() {
               return (
                 <div key={k.id} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 16 }}>
                   <div style={{ fontSize: 22, marginBottom: 6 }}>{k.icon}</div>
-                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>{k.label}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>{k.label}</div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: barColor, marginBottom: 8 }}>
                     {biz ? k.fmt(biz.value) : '—'}
                   </div>
@@ -268,7 +268,7 @@ export default function ProgressDashboard() {
         {err && <div style={{ background: '#7f1d1d', borderRadius: 8, padding: '12px 16px', color: '#fca5a5', fontSize: 13, marginTop: 16 }}>⚠️ {err}</div>}
 
         {/* Footer */}
-        <div style={{ textAlign: 'center', marginTop: 48, color: '#334155', fontSize: 12 }}>
+        <div style={{ textAlign: 'center', marginTop: 48, color: '#748293', fontSize: 12 }}>
           รายงานส่งอัตโนมัติทุกวัน 23:30 น. → #all-openthai-ai · OpenThai.ai AI Monitoring Agent
         </div>
       </div>

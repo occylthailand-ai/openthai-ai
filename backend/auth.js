@@ -68,17 +68,24 @@ export async function getAdminUsers() {
   if (_adminUsers.length === 0) {
     const username = process.env.ADMIN_USERNAME || 'admin';
     const plain = process.env.ADMIN_PASSWORD_PLAIN || '1234';
-    const hashed = await hashPassword(plain);
-    _adminUsers.push({ username, password: hashed, role: 'admin' });
-    if (plain === '1234' || plain === 'change-me-admin-password') {
-      const isVercel = !!process.env.VERCEL;
-      if (isVercel) {
-        console.error('[auth] ❌ PRODUCTION: ADMIN_PASSWORD_PLAIN ไม่ได้ตั้ง — กรุณาตั้ง ADMIN_PASSWORD_PLAIN ใน Vercel Environment Variables ก่อน deploy');
-      } else {
-        console.warn('[auth] ⚠️  Dev default admin: admin / 1234 — ตั้ง ADMIN_PASSWORD_PLAIN ใน .env ก่อน go-live');
-      }
+    const isWeakDefault = (plain === '1234' || plain === 'change-me-admin-password');
+    const isProdLike = !!process.env.VERCEL || process.env.NODE_ENV === 'production';
+    // FAIL CLOSED in production: previously the admin/1234 account was created REGARDLESS and the
+    // Vercel branch below only *logged* — so a prod deploy that forgot to set ADMIN_USERS /
+    // ADMIN_PASSWORD_PLAIN shipped a live, publicly-guessable admin login (full-access auth bypass).
+    // Refuse to create the guessable default in a prod-like env; leave the admin list empty so
+    // password login fails until real credentials are configured (ADMIN_USERS or a real
+    // ADMIN_PASSWORD_PLAIN). Emergency access still works via ADMIN_OVERRIDE_KEY / RECOVERY_CODES.
+    if (isWeakDefault && isProdLike) {
+      console.error('[auth] ❌ PRODUCTION: no admin configured — set ADMIN_USERS or a strong ADMIN_PASSWORD_PLAIN. Refusing to create the default admin/1234 account; admin password login is DISABLED until you do.');
     } else {
-      console.log(`[auth] default admin loaded: ${username} (จาก ADMIN_PASSWORD_PLAIN)`);
+      const hashed = await hashPassword(plain);
+      _adminUsers.push({ username, password: hashed, role: 'admin' });
+      if (isWeakDefault) {
+        console.warn('[auth] ⚠️  Dev default admin: admin / 1234 — ตั้ง ADMIN_PASSWORD_PLAIN ใน .env ก่อน go-live');
+      } else {
+        console.log(`[auth] default admin loaded: ${username} (จาก ADMIN_PASSWORD_PLAIN)`);
+      }
     }
   }
 
@@ -131,6 +138,12 @@ export function generateRecoveryCodes(count = 8) {
 }
 
 export function useRecoveryCode(inputCode) {
+  // A non-string code (e.g. a JSON number/object/array in the request body) is simply invalid —
+  // return false instead of throwing. The /api/auth/recovery route guards `!code`, but a *truthy*
+  // non-string like {"code":123} or {"code":{}} slipped past that and hit inputCode.trim() below,
+  // turning a malformed request into an unhandled 500 on an auth endpoint. Same "bad input → clean
+  // rejection, not a 500" contract the rest of the codebase enforces.
+  if (typeof inputCode !== 'string') return false;
   const codesRaw = process.env.RECOVERY_CODES || '';
   const validCodes = codesRaw.split(',').map(c => c.trim()).filter(Boolean);
 

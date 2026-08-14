@@ -23,7 +23,7 @@ export default function TermsPage() {
         </button>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>ข้อกำหนดการใช้งาน</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>Terms of Service — Openthai.ai</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>Terms of Service — Openthai.ai</div>
         </div>
       </header>
 
@@ -34,7 +34,7 @@ export default function TermsPage() {
           <h1 style={{ fontSize: 'clamp(24px,5vw,36px)', fontWeight: 900, background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '0 0 12px' }}>
             ข้อกำหนดการใช้งาน
           </h1>
-          <p style={{ color: '#64748b', fontSize: 13 }}>
+          <p style={{ color: '#94a3b8', fontSize: 13 }}>
             มีผลบังคับใช้ตั้งแต่ <strong style={{ color: '#94a3b8' }}>1 มกราคม 2568</strong> · ปรับปรุงล่าสุด <strong style={{ color: '#94a3b8' }}>3 พฤษภาคม 2569</strong>
           </p>
         </div>

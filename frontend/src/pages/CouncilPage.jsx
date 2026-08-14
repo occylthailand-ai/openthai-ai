@@ -25,6 +25,7 @@ const AUTHORS = [
 
 export default function CouncilPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'OpenThaiAi Council — Openthai.ai'; }, []);
   const [topic, setTopic] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -187,7 +188,7 @@ export default function CouncilPage() {
                   <div key={n.id} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, borderLeft: `3px solid ${a.color}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: a.color, fontWeight: 700, marginBottom: 4 }}>
                       <span>{a.label}</span>
-                      <span style={{ color: '#64748b', fontWeight: 400 }}>{new Date(n.ts).toLocaleString('th-TH')}</span>
+                      <span style={{ color: '#94a3b8', fontWeight: 400 }}>{new Date(n.ts).toLocaleString('th-TH')}</span>
                     </div>
                     <div style={{ fontSize: 13, color: '#e5e7eb', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{n.text}</div>
                   </div>

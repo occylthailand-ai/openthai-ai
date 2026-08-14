@@ -14,7 +14,7 @@ const SLIDES = [
         <p style={{ fontSize: 'clamp(16px,3vw,24px)', color: '#cbd5e1', margin: '16px 0 8px', fontWeight: 600 }}>
           Thai Export Intelligence Platform
         </p>
-        <p style={{ fontSize: 'clamp(13px,2vw,16px)', color: '#64748b', margin: 0 }}>
+        <p style={{ fontSize: 'clamp(13px,2vw,16px)', color: '#94a3b8', margin: 0 }}>
           AI ที่ช่วยสินค้าไทยขายทั่วโลก · 3 ภาษา · 7 ทวีป · Launch 20 ธันวาคม 2026
         </p>
         <div style={{ marginTop: 40, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -75,7 +75,7 @@ const SLIDES = [
             <div key={i} style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, padding: '16px' }}>
               <div style={{ fontSize: 26, marginBottom: 8 }}>{f.icon}</div>
               <div style={{ fontWeight: 700, color: '#6ee7b7', fontSize: 14, marginBottom: 4 }}>{f.t}</div>
-              <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>{f.s}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.4 }}>{f.s}</div>
             </div>
           ))}
         </div>
@@ -130,12 +130,12 @@ const SLIDES = [
             <div key={i} style={{ background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.25)', borderRadius: 14, padding: '20px', textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>{m.icon}</div>
               <div style={{ fontSize: 30, fontWeight: 900, color: '#67e8f9' }}>{m.size}</div>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>{m.sub}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>{m.sub}</div>
               <div style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600 }}>{m.label}</div>
             </div>
           ))}
         </div>
-        <div style={{ marginTop: 24, textAlign: 'center', fontSize: 14, color: '#64748b' }}>
+        <div style={{ marginTop: 24, textAlign: 'center', fontSize: 14, color: '#94a3b8' }}>
           TAM รวม ASEAN 2027: <span style={{ color: '#67e8f9', fontWeight: 700 }}>50M+ businesses</span> · TH → VN → ID → MY → PH
         </div>
       </div>
@@ -154,12 +154,12 @@ const SLIDES = [
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '2px solid rgba(139,92,246,0.4)' }}>
-                <th style={{ padding: '8px 12px', textAlign: 'left', color: '#64748b', fontSize: 11 }}>มิติเด่น</th>
+                <th style={{ padding: '8px 12px', textAlign: 'left', color: '#94a3b8', fontSize: 11 }}>มิติเด่น</th>
                 <th style={{ padding: '8px', textAlign: 'center', color: '#10b981', fontWeight: 800, background: 'rgba(16,185,129,0.1)' }}>เรา</th>
-                <th style={{ padding: '8px', textAlign: 'center', color: '#64748b' }}>Canva</th>
-                <th style={{ padding: '8px', textAlign: 'center', color: '#64748b' }}>Jasper</th>
-                <th style={{ padding: '8px', textAlign: 'center', color: '#64748b' }}>HubSpot</th>
-                <th style={{ padding: '8px', textAlign: 'center', color: '#64748b' }}>Alibaba</th>
+                <th style={{ padding: '8px', textAlign: 'center', color: '#94a3b8' }}>Canva</th>
+                <th style={{ padding: '8px', textAlign: 'center', color: '#94a3b8' }}>Jasper</th>
+                <th style={{ padding: '8px', textAlign: 'center', color: '#94a3b8' }}>HubSpot</th>
+                <th style={{ padding: '8px', textAlign: 'center', color: '#94a3b8' }}>Alibaba</th>
               </tr>
             </thead>
             <tbody>
@@ -174,10 +174,10 @@ const SLIDES = [
                 <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                   <td style={{ padding: '8px 12px', color: '#e2e8f0', fontWeight: 600 }}>{row[0]}</td>
                   <td style={{ padding: '8px', textAlign: 'center', color: '#10b981', background: 'rgba(16,185,129,0.06)', fontWeight: 700 }}>{row[1]}</td>
-                  <td style={{ padding: '8px', textAlign: 'center', color: '#475569' }}>{row[2]}</td>
-                  <td style={{ padding: '8px', textAlign: 'center', color: '#475569' }}>{row[3]}</td>
-                  <td style={{ padding: '8px', textAlign: 'center', color: '#475569' }}>{row[4]}</td>
-                  <td style={{ padding: '8px', textAlign: 'center', color: '#475569' }}>{row[5]}</td>
+                  <td style={{ padding: '8px', textAlign: 'center', color: '#7c8797' }}>{row[2]}</td>
+                  <td style={{ padding: '8px', textAlign: 'center', color: '#7c8797' }}>{row[3]}</td>
+                  <td style={{ padding: '8px', textAlign: 'center', color: '#7c8797' }}>{row[4]}</td>
+                  <td style={{ padding: '8px', textAlign: 'center', color: '#7c8797' }}>{row[5]}</td>
                 </tr>
               ))}
             </tbody>
@@ -232,11 +232,11 @@ const SLIDES = [
               <div style={{ fontSize: 'clamp(18px,3vw,26px)', fontWeight: 900, color: y.c }}>{y.total}</div>
               <div style={{ width: 'clamp(60px,12vw,100px)', height: y.h, background: `linear-gradient(180deg,${y.c},${y.c}40)`, borderRadius: '8px 8px 0 0', transition: 'height 1s ease' }} />
               <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 16 }}>{y.year}</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>{y.sub}</div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>{y.sub}</div>
             </div>
           ))}
         </div>
-        <div style={{ textAlign: 'center', fontSize: 13, color: '#64748b' }}>
+        <div style={{ textAlign: 'center', fontSize: 13, color: '#94a3b8' }}>
           Conservative · SaaS + Export Commission + B2G · CAGR <span style={{ color: '#10b981', fontWeight: 700 }}>~365%</span>
         </div>
       </div>
@@ -334,7 +334,7 @@ export default function PitchDeckPage() {
             <span style={{ fontSize: 20 }}>🎯</span>
             <div>
               <div style={{ fontWeight: 800, fontSize: 15, background: 'linear-gradient(135deg,#6366f1,#10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Investor & Partner Pitch Deck</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>OpenThai AI · {SLIDES.length} slides · กด ← → เลื่อน · พิมพ์/PDF: Ctrl+P</div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>OpenThai AI · {SLIDES.length} slides · กด ← → เลื่อน · พิมพ์/PDF: Ctrl+P</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -363,7 +363,7 @@ export default function PitchDeckPage() {
         {SLIDES.map((sl, i) => (
           <button key={sl.id} onClick={() => setIdx(i)} title={sl.label || sl.id} style={{ width: i === idx ? 28 : 8, height: 8, borderRadius: 4, background: i === idx ? 'linear-gradient(90deg,#6366f1,#10b981)' : 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
         ))}
-        <span style={{ fontSize: 12, color: '#64748b', marginLeft: 8 }}>{idx + 1} / {SLIDES.length}</span>
+        <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 8 }}>{idx + 1} / {SLIDES.length}</span>
       </div>
     </div>
   );

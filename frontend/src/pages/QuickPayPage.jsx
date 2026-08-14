@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
+import { resolveAffiliateRef } from '../lib/affiliateRef';
 
 // ── QuickPay — หน้าขายแพ็กเกจ/สินค้าชิ้นเดียว ปิดการขายไว ๆ ด้วย PromptPay QR ──────
 // ค่าเริ่มต้น: แพ็กเกจ ฿1,000. ปรับยอด/ชื่อแพ็กเกจได้ผ่าน query: /pay?amount=1000&label=...
@@ -79,7 +80,9 @@ const QuickPayPage = () => {
       const res = await fetch(apiUrl('/api/quickpay/create'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount_thb: amt, label, buyer, ref, source: searchParams.get('utm_source') || searchParams.get('source') || '' }),
+        // Attribute to an explicit ?ref= on this page, else the ref persisted from the landing link
+        // (visitor came via …/?ref=CODE then navigated here, so the URL no longer carries it).
+        body: JSON.stringify({ amount_thb: amt, label, buyer, ref: resolveAffiliateRef(window.location.search, window.localStorage), source: searchParams.get('utm_source') || searchParams.get('source') || '' }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'สร้าง QR ไม่สำเร็จ');

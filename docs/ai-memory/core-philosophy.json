@@ -1,8 +1,8 @@
 {
   "id": "openthaiai-core-philosophy-v1",
-  "version": "1.0.0",
-  "generated_at": "2026-07-02",
-  "source": "Derived from real events recorded in DECISIONS_LOG.md (2026-07-01 session). Every lesson below cites the actual incident it came from — nothing here is invented.",
+  "version": "1.1.0",
+  "generated_at": "2026-07-08",
+  "source": "Derived from real events recorded in DECISIONS_LOG.md (2026-07-01 session, updated through the 2026-07-03→08 hourly-loop runs 1-50). Every lesson below cites the actual incident it came from — nothing here is invented.",
   "core_philosophy": {
     "statement": "Ground truth over narrative confidence. A claim about this project's architecture, features, or state — no matter which AI assistant produced it, no matter how confident or detailed it sounds — is only as good as its citation to the real repository (source code, migrations, git log, deployed behavior). When a claim and the repo disagree, the repo wins.",
     "one_line": "Verify against the repo. Every time. No exception for confidence or detail.",
@@ -53,6 +53,50 @@
         "identify both parties in any adjudication flow, not just the one who initiated it",
         "give the non-initiating party a documented way to respond before the decision is final",
         "notify all parties at open/respond/resolve, not just at the end"
+      ]
+    },
+    {
+      "id": "lesson_04_consent_is_platform_policy",
+      "title": "No scraping, no collecting data on, no contacting real people without consent — confirmed platform policy, not a suggestion",
+      "statement": "Any proposal that involves scraping producer/creator/consumer data, cold-contacting real people, or importing third-party contact lists is rejected by standing policy. Growth features must be consent-based: people opt in through the real signup funnels (/portals/*, /join, /affiliate), each of which requires an explicit PDPA consent checkbox that is enforced server-side, not just in the UI.",
+      "why_it_matters": "Scraping/cold-outreach proposals were rejected three separate times before the project owner made the policy permanent in the 2026-07-03 standing order. Separately, three signup flows (/portals/* ×9, /join, /affiliate) were found collecting personal data with no consent UI at all and were fixed — including the server-side enforcement and the internal auto-registration bridges, so consent can't be bypassed by calling the API directly.",
+      "evidence": [
+        "DECISIONS_LOG.md — 2026-07-03 — Project owner issued a 23-point standing order (consent policy confirmed after 3 prior rejections)",
+        "DECISIONS_LOG.md — hourly-loop runs 40, 42, 43 — PDPA consent added to /portals/* (9 pages), /join, /affiliate, enforced in portal-leads.js/producers.js/registerAffiliateCore()"
+      ],
+      "checklist": [
+        "if a proposed feature touches real people's data, ask: did they opt in through a real consent flow?",
+        "consent must be enforced where the data is written (backend), not only where it is typed (frontend)",
+        "when adding a required field to a signup flow, check the internal bridges that also call it (e.g. handleNewPortalLead) or you silently break them"
+      ]
+    },
+    {
+      "id": "lesson_05_no_crash_is_not_no_bug",
+      "title": "'No crash' is not 'no bug' — silent data corruption is the quieter failure class",
+      "statement": "Auditing handlers for exceptions catches only one failure class. A handler that accepts garbage without throwing and persists it (dynamically-typed stores like SQLite columns or JSON files will happily hold a string where a number belongs) is at least as damaging, because the corruption surfaces later, somewhere else, with no traceback pointing at the cause.",
+      "why_it_matters": "A sweep of smart-e's write routes for unhandled exceptions concluded PUT /api/products was safe because nothing in it could throw. One run later, the same route was shown to accept price:'abc'/stock:'xyz' with a 200 — and the next real order silently overwrote the true stock count with 0 (SQLite coerced 'xyz' to 0 in MAX(0,stock-qty)). The crash sweep was correct and still missed it.",
+      "evidence": [
+        "DECISIONS_LOG.md — 2026-07-08 — Hourly loop, run 48 (PUT /api/products stored non-numeric price/stock; real stock destroyed on next order)",
+        "DECISIONS_LOG.md — 2026-07-05/08 — runs 45-46 (the crash-class sweep that preceded and missed it)"
+      ],
+      "checklist": [
+        "after asking 'can this input make the handler throw?', also ask 'can this input be persisted wrong without throwing?'",
+        "check every write path for a field, not just the one that was recently fixed (POST validated, PUT didn't)",
+        "reproduce the downstream damage before fixing — it tells you the real severity"
+      ]
+    },
+    {
+      "id": "lesson_06_trust_the_api_not_the_dashboard_comment",
+      "title": "Status dashboards and bot comments lag; verify against the authoritative API",
+      "statement": "A convenience surface that summarizes state (a bot's PR comment, a dashboard widget) can lag or contradict the authoritative source it summarizes. Before acting on — or reporting — deployment/CI state, read the primary API, not the summary.",
+      "why_it_matters": "Across the 2026-07 hourly-loop session, Vercel's PR comment repeatedly showed 'all Ready' at moments when the GitHub commit-status API simultaneously showed 2 of 3 checks failing (deploy rate-limited). Trusting the comment would have meant repeatedly reporting healthy deploys that did not exist.",
+      "evidence": [
+        "DECISIONS_LOG.md — hourly-loop runs 44-49 — repeated bot-comment vs status-API contradictions, resolved by always calling the commit-status API"
+      ],
+      "checklist": [
+        "identify the authoritative source behind any summary surface, and query it directly for anything that matters",
+        "when the summary and the source disagree, the source wins — same rule as code vs. narrative",
+        "note recurring lag patterns in the log so the next reader doesn't re-litigate them"
       ]
     }
   ]

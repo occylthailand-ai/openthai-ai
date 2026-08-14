@@ -2,14 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
+// Single source of truth for the category values + their localized display labels (kept in sync with
+// backend/producers.js CATEGORIES by portalCategories.test.js). The stored/submitted value stays the
+// Thai identifier; producerCategoryLabel() localizes only what the visitor sees.
+import { PORTAL_CATEGORIES, producerCategoryLabel } from '../data/portalCategories';
 
-const FALLBACK_CATS = ['OTOP', 'อาหาร', 'ความงาม', 'สิ่งทอ', 'เครื่องดื่ม', 'สมุนไพร', 'เครื่องประดับ', 'เฟอร์นิเจอร์', 'เกษตร', 'อื่นๆ'];
+// Fallback used only if GET /api/producers/categories fails; the canonical list, not a stale copy.
+const FALLBACK_CATS = PORTAL_CATEGORIES;
+
+// เดิมหน้านี้ไม่มี UI ยินยอม PDPA เลย ทั้งที่ /portals/producer (เก็บข้อมูลชุดเดียวกัน) มี
+// checkbox บังคับติ๊กมาตั้งแต่ต้น — ใช้ CONSENT_TEXT รูปแบบเดียวกับที่ /portals/*.jsx ใช้กัน
+const CONSENT_TEXT = {
+  th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
+  en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>Privacy Policy (PDPA)</a></>,
+  zh: <>同意根据<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>隐私政策（PDPA）</a>收集和使用我的数据</>,
+};
 
 export default function ProducerJoinPage() {
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [cats, setCats] = useState(FALLBACK_CATS);
   const [form, setForm] = useState({ company: '', contact_name: '', email: '', phone: '', website: '', category: 'OTOP', product_name: '', price: '', stock: '', description: '' });
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState('');
@@ -28,11 +42,11 @@ export default function ProducerJoinPage() {
     if (!form.company.trim() || !form.contact_name.trim() || !form.email.trim()) { setErr(t('mk.join.err')); return; }
     setBusy(true);
     try {
-      const res = await fetch(apiUrl('/api/producers/apply'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const res = await fetch(apiUrl('/api/producers/apply'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...form, consent, lang }) });
       const d = await res.json();
       if (d.success) setDone(true);
       else setErr(d.error || t('mk.join.err'));
-    } catch { setErr('เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'); }
+    } catch { setErr(t('mk.err.network')); }
     finally { setBusy(false); }
   };
 
@@ -41,6 +55,7 @@ export default function ProducerJoinPage() {
       <nav style={{ padding: '14px 5%', display: 'flex', alignItems: 'center', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <button onClick={() => navigate('/')} style={navBtn}>{t('mk.nav.home')}</button>
         <span style={{ flex: 1 }} />
+        <button onClick={() => navigate('/producers/manage')} style={navBtn}>{t('mk.pmanage.title')}</button>
         <button onClick={() => navigate('/affiliate')} style={navBtn}>{t('mk.nav.aff')}</button>
       </nav>
 
@@ -61,37 +76,42 @@ export default function ProducerJoinPage() {
             <div style={{ fontSize: 48, marginBottom: 10 }}>🎉</div>
             <h2 style={{ fontWeight: 900, marginBottom: 8 }}>{t('mk.join.ok.title')}</h2>
             <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.7 }}>{t('mk.join.ok.desc')}</p>
-            <button onClick={() => navigate('/')} style={{ ...primaryBtn, marginTop: 20 }}>{t('mk.join.ok.back')}</button>
+            <button onClick={() => navigate(`/producers/manage?email=${encodeURIComponent(form.email.trim())}`)} style={{ ...primaryBtn, marginTop: 20 }}>{t('mk.pmanage.title')}</button>
+            <button onClick={() => navigate('/')} style={{ ...navBtn, marginTop: 12, display: 'block', width: '100%' }}>{t('mk.join.ok.back')}</button>
           </div>
         ) : (
           <form onSubmit={submit} style={card}>
-            <Field label={t('mk.join.f.company')}><input style={inp} value={form.company} onChange={set('company')} placeholder={t('mk.join.f.company.ph')} /></Field>
+            <Field label={t('mk.join.f.company')} id="company"><input style={inp} value={form.company} onChange={set('company')} placeholder={t('mk.join.f.company.ph')} /></Field>
             <Row>
-              <Field label={t('mk.join.f.contact')}><input style={inp} value={form.contact_name} onChange={set('contact_name')} placeholder={t('mk.join.f.contact.ph')} /></Field>
-              <Field label={t('mk.join.f.phone')}><input style={inp} value={form.phone} onChange={set('phone')} placeholder="08x-xxx-xxxx" /></Field>
+              <Field label={t('mk.join.f.contact')} id="contact_name"><input style={inp} value={form.contact_name} onChange={set('contact_name')} placeholder={t('mk.join.f.contact.ph')} /></Field>
+              <Field label={t('mk.join.f.phone')} id="phone"><input style={inp} value={form.phone} onChange={set('phone')} placeholder="08x-xxx-xxxx" /></Field>
             </Row>
             <Row>
-              <Field label={t('mk.join.f.email')}><input style={inp} type="email" value={form.email} onChange={set('email')} placeholder="you@email.com" /></Field>
-              <Field label={t('mk.join.f.web')}><input style={inp} value={form.website} onChange={set('website')} placeholder="facebook.com/..." /></Field>
+              <Field label={t('mk.join.f.email')} id="email"><input style={inp} type="email" value={form.email} onChange={set('email')} placeholder="you@email.com" /></Field>
+              <Field label={t('mk.join.f.web')} id="website"><input style={inp} value={form.website} onChange={set('website')} placeholder="facebook.com/..." /></Field>
             </Row>
             <Row>
-              <Field label={t('mk.join.f.cat')}>
+              <Field label={t('mk.join.f.cat')} id="category">
                 <select style={inp} value={form.category} onChange={set('category')}>
-                  {cats.map(c => <option key={c} value={c}>{c}</option>)}
+                  {cats.map(c => <option key={c} value={c}>{producerCategoryLabel(c, lang)}</option>)}
                 </select>
               </Field>
-              <Field label={t('mk.join.f.price')}><input style={inp} type="number" value={form.price} onChange={set('price')} placeholder={t('mk.join.f.price.ph')} /></Field>
+              <Field label={t('mk.join.f.price')} id="price"><input style={inp} type="number" value={form.price} onChange={set('price')} placeholder={t('mk.join.f.price.ph')} /></Field>
             </Row>
             <Row>
-              <Field label={t('mk.join.f.product')}><input style={inp} value={form.product_name} onChange={set('product_name')} placeholder={t('mk.join.f.product.ph')} /></Field>
-              <Field label={t('mk.join.f.stock')}><input style={inp} type="number" min="0" value={form.stock} onChange={set('stock')} placeholder="—" /></Field>
+              <Field label={t('mk.join.f.product')} id="product_name"><input style={inp} value={form.product_name} onChange={set('product_name')} placeholder={t('mk.join.f.product.ph')} /></Field>
+              <Field label={t('mk.join.f.stock')} id="stock"><input style={inp} type="number" min="0" value={form.stock} onChange={set('stock')} placeholder="—" /></Field>
             </Row>
-            <Field label={t('mk.join.f.desc')}><textarea style={{ ...inp, minHeight: 80, resize: 'vertical' }} value={form.description} onChange={set('description')} placeholder={t('mk.join.f.desc.ph')} /></Field>
+            <Field label={t('mk.join.f.desc')} id="description"><textarea style={{ ...inp, minHeight: 80, resize: 'vertical' }} value={form.description} onChange={set('description')} placeholder={t('mk.join.f.desc.ph')} /></Field>
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 4, marginBottom: 4, fontSize: 12, color: '#94a3b8', lineHeight: 1.5, cursor: 'pointer' }}>
+              <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: 2 }} />
+              <span>{CONSENT_TEXT[lang] || CONSENT_TEXT.th}</span>
+            </label>
             {err && <div style={{ color: '#fca5a5', fontSize: 13, marginTop: 4 }}>⚠️ {err}</div>}
-            <button type="submit" disabled={busy} style={{ ...primaryBtn, width: '100%', marginTop: 14, opacity: busy ? 0.7 : 1 }}>
+            <button type="submit" disabled={busy || !consent} style={{ ...primaryBtn, width: '100%', marginTop: 14, opacity: (busy || !consent) ? 0.5 : 1, cursor: (busy || !consent) ? 'not-allowed' : 'pointer' }}>
               {busy ? t('mk.join.submitting') : t('mk.join.submit')}
             </button>
-            <p style={{ color: '#475569', fontSize: 12, textAlign: 'center', marginTop: 12 }}>{t('mk.join.note')}</p>
+            <p style={{ color: '#7c8797', fontSize: 12, textAlign: 'center', marginTop: 12 }}>{t('mk.join.note')}</p>
           </form>
         )}
       </section>
@@ -99,10 +119,10 @@ export default function ProducerJoinPage() {
   );
 }
 
-const Field = ({ label, children }) => (
+const Field = ({ label, id, children }) => (
   <div style={{ marginBottom: 14 }}>
-    <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>{label}</label>
-    {children}
+    <label htmlFor={id} style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6, fontWeight: 600 }}>{label}</label>
+    {React.cloneElement(children, { id })}
   </div>
 );
 const Row = ({ children }) => <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>{children}</div>;

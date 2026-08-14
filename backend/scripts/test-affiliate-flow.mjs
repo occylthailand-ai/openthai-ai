@@ -21,10 +21,19 @@ const REF = 'TESTAFF' + Date.now().toString().slice(-5);
 const EMAIL = `aff_${Date.now()}@test.com`;
 
 console.log('\n=== STEP 1: สมัคร affiliate ===');
-let r = await j('POST', '/api/affiliate/apply', { name: 'Test Affiliate', email: EMAIL, platform: 'TikTok', ref_code: REF });
+// consent:true is required — /api/affiliate/apply enforces PDPA consent (server.js
+// registerAffiliateCore: `if (consent !== true) return 400`). Sending it here keeps
+// the E2E honest: it exercises the same consent gate a real applicant passes.
+let r = await j('POST', '/api/affiliate/apply', { name: 'Test Affiliate', email: EMAIL, platform: 'TikTok', ref_code: REF, consent: true });
 ok(r.status === 200 && r.data?.success, `สมัคร affiliate (${REF})`);
 ok(r.data?.data?.ref_code === REF, `ได้ ref_code ตรง: ${r.data?.data?.ref_code}`);
 ok(Math.abs((r.data?.data?.commission_rate ?? 0) - 0.20) < 1e-9, `ค่าคอม 20%`);
+
+// ref_code ต้อง unique: ถ้าคนอื่น (email ต่างกัน) เสนอ ref_code เดียวกัน ต้องถูกปฏิเสธ —
+// ไม่งั้นทุกจุดที่ credit ยอด/ถอนเงินใช้ affiliates.find(a => a.ref_code === ref) จะเข้าคนแรกหมด
+// และยอดขายของคนหลังจะถูกยึดไปทั้งหมด (แก้แล้ว: registerAffiliateCore เช็ค ref_code ซ้ำ → 409)
+const dup = await j('POST', '/api/affiliate/apply', { name: 'Ref Hijacker', email: `dup_${EMAIL}`, platform: 'TikTok', ref_code: REF, consent: true });
+ok(dup.status === 409 && dup.data?.success === false, `ref_code ซ้ำถูกปฏิเสธ (409) — กันการยึด ref ของคนอื่น (got ${dup.status})`);
 
 console.log('\n=== STEP 2: นับคลิกลิงก์ ref ===');
 r = await j('POST', '/api/affiliate/click', { ref: REF });
@@ -73,6 +82,33 @@ ok(r.status === 200, 'webhook ซ้ำรับได้');
 r = await j('GET', `/api/affiliate/stats/${REF}`);
 ok(r.data?.data?.total_sales === 1, `total_sales ยังเป็น 1 (กันเครดิตซ้ำ) = ${r.data?.data?.total_sales}`);
 ok(Math.abs((r.data?.data?.total_earned ?? 0) - 200) < 1e-9, `total_earned ยังเป็น ฿200 = ${r.data?.data?.total_earned}`);
+
+console.log('\n=== STEP 9: เลื่อนขั้น starter→pro — ดีลที่ "ทำให้เลื่อนขั้น" ต้องคิดเรตเดิม, เรตใหม่มีผลดีลถัดไป ===');
+// creditAffiliateSale คิดคอมมิชชันด้วยเรตปัจจุบัน "ก่อน" เลื่อนขั้น (server.js) — การสลับสองบรรทัดนี้
+// จะทำให้แอฟฟิลิเอตที่เพิ่งเลื่อนขั้นได้เรตสูงกับดีลที่ทำให้เลื่อนขั้นด้วย = จ่ายคอมเกิน ล็อกไว้ด้วยยอดเงินตรงๆ
+// 1 ดีล = สร้าง QuickPay ผูก ref แล้วยิง webhook charge.complete ที่เซ็น HMAC จริง (เหมือน STEP 3+5)
+async function sale(amountThb) {
+  const q = await j('POST', '/api/quickpay/create', { amount_thb: amountThb, ref: REF });
+  const cid = q.data?.charge_id;
+  const ev = { key: 'charge.complete', data: { id: cid, paid: true, amount: amountThb * 100, paid_at: new Date().toISOString(), metadata: {} } };
+  const rawE = JSON.stringify(ev);
+  const s = createHmac('sha256', SECRET).update(rawE).digest('hex');
+  await j('POST', '/api/payment/webhook', rawE, { 'x-omise-signature': s });
+}
+// หลัง STEP 8: total_sales=1, earned=฿200 (starter 20%). ขายเพิ่มอีก 9 ดีล ดีลละ ฿1,000 → total_sales=10
+for (let i = 0; i < 9; i++) await sale(1000);
+r = await j('GET', `/api/affiliate/stats/${REF}`);
+const s9 = r.data?.data || {};
+ok(s9.total_sales === 10, `total_sales = ${s9.total_sales} (คาดหวัง 10)`);
+// ดีลที่ 10 (ตัวที่ทำให้ถึงเกณฑ์ pro) ต้องคิด 20% เหมือนเดิม → 10 ดีล × ฿200 = ฿2,000 (ไม่ใช่ ฿2,100)
+ok(Math.abs((s9.total_earned ?? 0) - 2000) < 1e-9, `total_earned = ฿${s9.total_earned} (คาดหวัง ฿2,000 = 10 ดีล × 20% — เลื่อนขั้นไม่ย้อนคิดดีลปัจจุบัน)`);
+ok(s9.tier === 'pro' && Math.abs((s9.commission_rate ?? 0) - 0.30) < 1e-9, `เลื่อนเป็น pro 30% แล้ว (มีผลดีลถัดไป) — tier=${s9.tier} rate=${s9.commission_rate}`);
+// ขายดีลถัดไป (ที่ 11) — ต้องคิดเรตใหม่ 30% → +฿300 → รวม ฿2,300 (ถ้ายังคิด 20% จะได้ ฿2,200)
+await sale(1000);
+r = await j('GET', `/api/affiliate/stats/${REF}`);
+const s11 = r.data?.data || {};
+ok(s11.total_sales === 11, `total_sales = ${s11.total_sales} (คาดหวัง 11)`);
+ok(Math.abs((s11.total_earned ?? 0) - 2300) < 1e-9, `total_earned = ฿${s11.total_earned} (คาดหวัง ฿2,300 = ฿2,000 + ฿300 ดีลถัดไปคิด 30% — เรตใหม่มีผลดีลถัดไปจริง)`);
 
 console.log(`\n${'='.repeat(48)}`);
 console.log(`ผลทดสอบ: ✅ ${pass} ผ่าน · ❌ ${fail} ไม่ผ่าน`);

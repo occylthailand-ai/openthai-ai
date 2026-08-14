@@ -38,6 +38,7 @@
     { "path": "/api/system/news-rag-clear",   "schedule": "0 4 * * *"  },
     { "path": "/api/autopost/process",        "schedule": "0 12 * * *" },
     { "path": "/api/progress/daily-report",   "schedule": "30 16 * * *" },
-    { "path": "/api/scheduler/process",       "schedule": "0 9 * * *" }
+    { "path": "/api/scheduler/process",       "schedule": "0 9 * * *" },
+    { "path": "/api/portals/consumer-digest", "schedule": "0 2 * * 1" }
   ]
 }

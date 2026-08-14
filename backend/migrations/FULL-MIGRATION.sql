@@ -153,6 +153,10 @@ create table if not exists public.affiliates (
   joined_at       timestamptz not null default now(),
   updated_at      timestamptz not null default now()
 );
+-- consent — PDPA: affiliate ยินยอมตอนสมัคร (บังคับใน registerAffiliateCore) ต้องเก็บถาวรพิสูจน์ได้.
+-- idempotent alter เผื่อตารางถูกสร้างไว้ก่อนเพิ่มคอลัมน์นี้ (create table if not exists จะไม่เพิ่ม
+-- คอลัมน์ให้ตารางที่มีอยู่แล้ว)
+alter table public.affiliates add column if not exists consent boolean not null default false;
 create index if not exists affiliates_email_idx  on public.affiliates (email);
 create index if not exists affiliates_status_idx on public.affiliates (status);
 alter table public.affiliates enable row level security;

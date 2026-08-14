@@ -1,5 +1,6 @@
-﻿import React, { useEffect } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiUrl } from '../apiBase';
 
 const Section = ({ title, children }) => (
   <section style={{ marginBottom: 36 }}>
@@ -12,7 +13,27 @@ const Section = ({ title, children }) => (
 
 export default function PrivacyPage() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
   useEffect(() => { document.title = 'นโยบายความเป็นส่วนตัว — Openthai.ai'; }, []);
+
+  // ใช้สิทธิ PDPA แบบ self-service — endpoint จริง (/api/privacy/access, /api/privacy/erasure) มีอยู่แล้ว
+  // แต่หน้านี้เดิมมีแค่ข้อความให้อีเมลไปหา DPO ผู้ใช้จึงกดใช้สิทธิเองไม่ได้เลย ทั้งสอง endpoint จะส่ง
+  // ลิงก์ยืนยันไปที่อีเมลก่อนเสมอ (กันคนอื่นด/ลบข้อมูลของเรา) — ตรง res.ok จริงก่อนแสดงผลสำเร็จ (บทเรียน run 52)
+  const submitRight = async (endpoint) => {
+    const em = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { setMsg({ ok: false, text: 'กรุณากรอกอีเมลให้ถูกต้อง' }); return; }
+    setBusy(true); setMsg(null);
+    try {
+      const res = await fetch(apiUrl(endpoint), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: em }) });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { setMsg({ ok: false, text: (data && (data.message || data.error)) || `เกิดข้อผิดพลาด (HTTP ${res.status})` }); return; }
+      setMsg({ ok: true, text: (data && data.message) || 'ส่งอีเมลยืนยันแล้ว กรุณาตรวจสอบกล่องจดหมายของคุณ' });
+    } catch { setMsg({ ok: false, text: 'เชื่อมต่อไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' }); }
+    finally { setBusy(false); }
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif", padding: '0 0 80px' }}>
       {/* Header */}
@@ -22,7 +43,7 @@ export default function PrivacyPage() {
         </button>
         <div>
           <div style={{ fontSize: 16, fontWeight: 800 }}>นโยบายความเป็นส่วนตัว</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>Privacy Policy — Openthai.ai</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>Privacy Policy — Openthai.ai</div>
         </div>
       </header>
 
@@ -33,7 +54,7 @@ export default function PrivacyPage() {
           <h1 style={{ fontSize: 'clamp(24px,5vw,36px)', fontWeight: 900, background: 'linear-gradient(90deg,#6366f1,#a5b4fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '0 0 12px' }}>
             นโยบายความเป็นส่วนตัว
           </h1>
-          <p style={{ color: '#64748b', fontSize: 13 }}>
+          <p style={{ color: '#94a3b8', fontSize: 13 }}>
             มีผลบังคับใช้ตั้งแต่ <strong style={{ color: '#94a3b8' }}>1 มกราคม 2568</strong> · ปรับปรุงล่าสุด <strong style={{ color: '#94a3b8' }}>3 พฤษภาคม 2569</strong>
           </p>
         </div>
@@ -109,7 +130,7 @@ export default function PrivacyPage() {
               <div key={r.right} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '12px 14px' }}>
                 <div style={{ fontSize: 20, marginBottom: 4 }}>{r.icon}</div>
                 <div style={{ fontWeight: 700, fontSize: 12, color: '#f8fafc', marginBottom: 2 }}>{r.right}</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>{r.desc}</div>
+                <div style={{ fontSize: 11, color: '#94a3b8' }}>{r.desc}</div>
               </div>
             ))}
           </div>
@@ -118,7 +139,35 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title="7. ความปลอดภัยของข้อมูล">
+        <Section title="7. ใช้สิทธิของคุณด้วยตนเอง">
+          <p style={{ marginBottom: 14 }}>
+            กรอกอีเมลที่คุณใช้สมัคร แล้วเลือกสิ่งที่ต้องการ เพื่อความปลอดภัย เราจะส่ง<strong style={{ color: '#f8fafc' }}>ลิงก์ยืนยันไปที่อีเมลนั้นก่อนเสมอ</strong> (กันไม่ให้ผู้อื่นดูหรือลบข้อมูลของคุณ)
+          </p>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@email.com"
+            style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '12px 14px', color: '#f8fafc', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+          />
+          <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+            <button disabled={busy} onClick={() => submitRight('/api/privacy/access')}
+              style={{ flex: '1 1 200px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.4)', color: '#a5b4fc', borderRadius: 10, padding: '12px', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+              📋 ขอดูข้อมูลของฉัน
+            </button>
+            <button disabled={busy} onClick={() => submitRight('/api/privacy/erasure')}
+              style={{ flex: '1 1 200px', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5', borderRadius: 10, padding: '12px', fontSize: 13, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
+              🗑 ขอลบข้อมูลของฉัน
+            </button>
+          </div>
+          {msg && (
+            <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 10, fontSize: 13, lineHeight: 1.6, background: msg.ok ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${msg.ok ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, color: msg.ok ? '#6ee7b7' : '#fca5a5' }}>
+              {msg.ok ? '✅ ' : '⚠️ '}{msg.text}
+            </div>
+          )}
+        </Section>
+
+        <Section title="8. ความปลอดภัยของข้อมูล">
           <p>เราใช้มาตรการรักษาความปลอดภัยดังนี้:</p>
           <ul style={{ paddingLeft: 20, margin: '8px 0 0' }}>
             <li style={{ marginBottom: 6 }}>🔐 HTTPS ทุก request — TLS 1.3</li>
@@ -128,7 +177,7 @@ export default function PrivacyPage() {
           </ul>
         </Section>
 
-        <Section title="8. ติดต่อ DPO (Data Protection Officer)">
+        <Section title="9. ติดต่อ DPO (Data Protection Officer)">
           <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '20px 24px' }}>
             <div style={{ fontWeight: 800, marginBottom: 8, color: '#f8fafc' }}>Openthai.ai — ฝ่ายคุ้มครองข้อมูล</div>
             <div style={{ fontSize: 13, lineHeight: 2 }}>

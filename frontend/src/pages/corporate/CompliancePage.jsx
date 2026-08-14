@@ -22,7 +22,7 @@ const CompliancePage = () => {
   const [tab, setTab] = useState('sec');
 
   useEffect(() => {
-    fetch(apiUrl('/api/corporate/compliance')).then(r => r.json()).then(d => setData(d.data)).catch(() => {});
+    fetch(apiUrl('/api/corporate/compliance'), { headers: { Authorization: 'Bearer ' + (localStorage.getItem('auth_token')||'') } }).then(r => r.json()).then(d => setData(d.data)).catch(() => {});
   }, []);
 
   const updateStatus = async (type, id, status) => {

@@ -1,0 +1,139 @@
+// Unit test for backend/html-escape.js — the escaping every notification email relies on,
+// and the low-stock alert body that was the one email path interpolating product fields raw.
+//
+// The threat it guards (see module header): upstream clip() strips `<tag>` with /<[^>]*>/g,
+// which an UNCLOSED `<` bypasses (`<img src=x onerror=alert(1)` has no `>`), so the raw
+// opener reaches the email HTML and completes against the template's next `>` — injecting a
+// live tag into the recipient's mail client. escapeHtml at the insertion point is what stops it.
+import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, affiliateWelcomeSubject, consumerDigestHtml, producerApprovalHtml, producerApprovalSubject } from '../html-escape.js';
+
+let pass = 0, fail = 0;
+const ok = (c, m) => { if (c) { pass++; console.log(`  ✅ ${m}`); } else { fail++; console.log(`  ❌ ${m}`); } };
+
+console.log('=== escapeHtml: all five HTML-significant characters ===');
+ok(escapeHtml('<') === '&lt;', '< → &lt;');
+ok(escapeHtml('>') === '&gt;', '> → &gt;');
+ok(escapeHtml('&') === '&amp;', '& → &amp;');
+ok(escapeHtml('"') === '&quot;', '" → &quot;');
+ok(escapeHtml("'") === '&#39;', "' → &#39;");
+ok(escapeHtml('a & b < c > d') === 'a &amp; b &lt; c &gt; d', 'mixed run escaped left-to-right (& first, so no double-escape)');
+
+console.log('\n=== escapeHtml: the clip()-bypass payload is fully neutralized ===');
+const unclosed = '<img src=x onerror=alert(1)';   // the exact shape clip() lets through
+ok(!escapeHtml(unclosed).includes('<'), 'an UNCLOSED tag-opener still loses its < (can\'t complete against a later >)');
+ok(escapeHtml(unclosed) === '&lt;img src=x onerror=alert(1)', 'unclosed opener escaped to inert text');
+ok(escapeHtml('<script>alert(1)</script>') === '&lt;script&gt;alert(1)&lt;/script&gt;', 'a full script tag is inert');
+
+console.log('\n=== escapeHtml: non-string / nullish inputs never throw ===');
+ok(escapeHtml(null) === '', 'null → ""');
+ok(escapeHtml(undefined) === '', 'undefined → ""');
+ok(escapeHtml(42) === '42', 'number coerced');
+ok(escapeHtml(0) === '0', '0 coerced (not treated as empty)');
+
+console.log('\n=== lowStockAlertHtml: product name/sku are escaped, numbers are plain ===');
+const evilName = lowStockAlertHtml({ name: '<img src=x onerror=alert(1)>', sku: 'S<b>1', stock: 3, low_stock: 5 }, 'https://x.test');
+ok(!/onerror=alert\(1\)>/.test(evilName) || evilName.includes('&lt;img'), 'malicious product name is escaped in the body');
+ok(evilName.includes('&lt;img src=x onerror=alert(1)&gt;'), 'the injected <img …> comes out as inert &lt;img…&gt; text');
+ok(evilName.includes('S&lt;b&gt;1'), 'a tag in the SKU is escaped too');
+ok(!/<img|<script|onerror=alert\(1\)"/.test(evilName.replace(/&lt;|&gt;/g, '')), 'no un-escaped attacker tag survives anywhere in the body');
+ok(evilName.includes('>3<') && evilName.includes('จุดเตือน 5'), 'numeric stock/low_stock render as plain numbers');
+ok(evilName.includes('href="https://x.test/admin"'), 'the trusted domain URL is used verbatim');
+
+console.log('\n=== lowStockAlertHtml: a normal product renders cleanly ===');
+const clean = lowStockAlertHtml({ name: 'สบู่สมุนไพร', sku: 'SKU-001', stock: 2, low_stock: 10 }, 'https://openthai-ai.com');
+ok(clean.includes('<b>สบู่สมุนไพร</b>') && clean.includes('(SKU SKU-001)'), 'plain Thai name/sku pass through unchanged');
+
+console.log('\n=== affiliateWelcomeHtml: applicant name / caller-supplied ref link are escaped ===');
+const evilAff = affiliateWelcomeHtml({
+  name: '<img src=x onerror=alert(1)>',
+  refCode: 'AFF123',
+  refLink: 'https://x.test/?ref="><script>alert(1)</script>',
+  domainUrl: 'https://openthai-ai.com',
+});
+ok(evilAff.includes('🎉 ยินดีด้วย &lt;img src=x onerror=alert(1)&gt;!'), 'the applicant name is escaped in the <h1> (was raw before)');
+ok(!/<img src=x onerror=alert\(1\)>/.test(evilAff), 'no live <img onerror> tag survives from the name');
+ok(!/<script>alert\(1\)<\/script>/.test(evilAff), 'a <script> smuggled via ref_link does not survive as a live tag');
+ok(evilAff.includes('&lt;script&gt;') || !evilAff.includes('<script'), 'ref_link script is neutralized (escaped or absent)');
+ok(evilAff.includes('href="https://openthai-ai.com/affiliate/dashboard?ref=AFF123"'), 'dashboard link uses the trusted domain + URL-encoded ref code');
+
+console.log('\n=== affiliateWelcomeHtml: a normal signup renders cleanly ===');
+const cleanAff = affiliateWelcomeHtml({ name: 'มานี ใจดี', refCode: 'AFF778899', refLink: 'https://openthai-ai.com/?ref=AFF778899', domainUrl: 'https://openthai-ai.com' });
+ok(cleanAff.includes('🎉 ยินดีด้วย มานี ใจดี!'), 'plain Thai name passes through unchanged');
+ok(cleanAff.includes('>AFF778899<'), 'the ref code shows as-is');
+
+console.log('\n=== consumerDigestHtml: the consumer-entered category is escaped in the <h1> (was raw) ===');
+const evilDigest = consumerDigestHtml({
+  name: 'ก<b>x',
+  category: '<img src=x onerror=alert(1)>สมุนไพร',
+  matches: [{ product_name: 'สบู่<script>', producer: 'ร้าน"A', price: 120 }],
+  lang: 'th',
+  domainUrl: 'https://www.openthai-ai.com',
+  unsubUrl: 'https://www.openthai-ai.com/api/leads/unsubscribe?email=a%40b.com&type=consumer&token=abc',
+});
+ok(!/<img src=x onerror=alert\(1\)>/.test(evilDigest.html), 'no live <img onerror> from the category survives in the HTML');
+ok(evilDigest.html.includes('&lt;img src=x onerror=alert(1)&gt;สมุนไพร'), 'the category is escaped inside the <h1> title');
+ok(!/<script>/.test(evilDigest.html) && evilDigest.html.includes('สบู่&lt;script&gt;'), 'a product name tag is escaped in the item row');
+ok(evilDigest.html.includes('ก&lt;b&gt;x'), 'the consumer name is escaped in the intro');
+ok(evilDigest.html.includes('ร้าน&quot;A'), 'a quote in the producer name is escaped');
+// the SUBJECT is plain text (not HTML) — it keeps the raw category, and must NOT carry escaped entities
+ok(evilDigest.subject.includes('<img src=x onerror=alert(1)>สมุนไพร') && !evilDigest.subject.includes('&lt;'), 'the subject stays plain text (raw category, no HTML entities)');
+ok(evilDigest.html.includes('href="https://www.openthai-ai.com/api/leads/unsubscribe?email=a%40b.com&type=consumer&token=abc"'), 'the one-click unsubscribe link is present');
+
+console.log('\n=== consumerDigestHtml: a normal digest renders cleanly + localizes ===');
+const cleanDigest = consumerDigestHtml({ name: 'มานี', category: 'เครื่องดื่ม', matches: [{ product_name: 'ชาเขียว', producer: 'สวนชา', price: 90 }], lang: 'en', domainUrl: 'https://www.openthai-ai.com', unsubUrl: 'https://x/u' });
+ok(cleanDigest.html.includes('New picks in') && cleanDigest.html.includes('เครื่องดื่ม'), 'English title localizes and shows the plain category');
+ok(cleanDigest.html.includes('ชาเขียว') && cleanDigest.html.includes('฿90'), 'the product name and formatted price render');
+
+console.log('\n=== producerApprovalHtml: producer company / product name are escaped (was raw) ===');
+const evilApproval = producerApprovalHtml({
+  to: 'shop@example.com',
+  company: '<img src=x onerror=alert(1)>ร้าน',
+  productName: 'สบู่<script>alert(1)</script>',
+  domainUrl: 'https://www.openthai-ai.com',
+});
+ok(!/<img src=x onerror=alert\(1\)>/.test(evilApproval), 'no live <img onerror> from the company name survives in the HTML');
+ok(evilApproval.includes('🎉 ยินดีด้วย &lt;img src=x onerror=alert(1)&gt;ร้าน!'), 'the company name is escaped inside the <h1>');
+ok(!/<script>alert\(1\)<\/script>/.test(evilApproval) && evilApproval.includes('สบู่&lt;script&gt;alert(1)&lt;/script&gt;'), 'the product name tag is escaped, not left live');
+// the recipient email only lands in the link URLs via encodeURIComponent
+ok(evilApproval.includes('/producers/manage?email=shop%40example.com'), 'the manage link carries the URL-encoded recipient email');
+// a newly-approved producer also gets a link to their dashboard (orders + revenue), email pre-filled
+ok(evilApproval.includes('/producer/dashboard?email=shop%40example.com'), 'the approval email links to the producer dashboard with the URL-encoded email');
+
+console.log('\n=== producerApprovalHtml: a normal approval renders cleanly, and empty fields degrade gracefully ===');
+const cleanApproval = producerApprovalHtml({ to: 'a@b.com', company: 'S & P', productName: 'ขนมไทย', domainUrl: 'https://www.openthai-ai.com' });
+ok(cleanApproval.includes('🎉 ยินดีด้วย S &amp; P!'), 'an ampersand in a real shop name is escaped (renders as "S & P", not broken markup)');
+ok(cleanApproval.includes('สินค้า "<strong>ขนมไทย</strong>"'), 'the product name shows inside the <strong> tag');
+const emptyApproval = producerApprovalHtml({ to: 'a@b.com', domainUrl: 'https://www.openthai-ai.com' });
+ok(emptyApproval.includes('🎉 ยินดีด้วย!') && emptyApproval.includes('สินค้าของคุณ'), 'missing company/product fall back to the generic wording (no "undefined")');
+
+// Localization: a producer who applied in English/Chinese must get the approval email in that
+// language (the whole email — subject + body — was Thai-only before). The value is escaped the same
+// way regardless of language.
+console.log('\n=== producerApprovalHtml/Subject: localized by the producer\'s application language ===');
+const THAI = /[฀-๿]/;
+const enApproval = producerApprovalHtml({ to: 'a@b.com', company: 'ACME', productName: 'Herbal Tea', domainUrl: 'https://www.openthai-ai.com', lang: 'en' });
+ok(enApproval.includes('Manage my products') && enApproval.includes('has been approved'), 'en approval email uses English copy');
+ok(enApproval.includes('View orders &amp; revenue') || enApproval.includes('View orders & revenue'), 'en approval email has the localized dashboard button');
+ok(!THAI.test(enApproval), 'en approval email contains NO Thai characters');
+ok(producerApprovalSubject('en') === '🎉 Your shop has been approved — Openthai.ai', 'en subject is English');
+const zhApproval = producerApprovalHtml({ to: 'a@b.com', company: 'ACME', productName: '茶', domainUrl: 'https://www.openthai-ai.com', lang: 'zh' });
+ok(zhApproval.includes('管理我的产品') && zhApproval.includes('已通过审核'), 'zh approval email uses Chinese copy');
+ok(producerApprovalSubject('zh').includes('已通过审核'), 'zh subject is Chinese');
+ok(producerApprovalSubject('th') === producerApprovalSubject(undefined) && producerApprovalSubject('xx') === producerApprovalSubject('th'), 'missing/unknown lang falls back to the Thai subject');
+ok(THAI.test(producerApprovalHtml({ to: 'a@b.com', company: 'ACME', domainUrl: 'https://d', lang: 'th' })), 'th approval email is still Thai (default behaviour preserved)');
+
+// Affiliate welcome email — same localization contract (sent immediately when someone joins the
+// affiliate program; was Thai-only subject + body before).
+console.log('\n=== affiliateWelcomeHtml/Subject: localized by the applicant\'s language ===');
+const enAff2 = affiliateWelcomeHtml({ name: 'John', refCode: 'AFF1', refLink: 'https://d/?ref=AFF1', domainUrl: 'https://d', lang: 'en' });
+ok(enAff2.includes('Open my dashboard') && enAff2.includes('Your affiliate link') && enAff2.includes("You're now an Openthai.ai Affiliate"), 'en affiliate welcome uses English copy');
+ok(!THAI.test(enAff2), 'en affiliate welcome contains NO Thai characters');
+ok(affiliateWelcomeSubject('en') === '🎉 Welcome to the Openthai.ai Affiliate Program!', 'en affiliate subject is English');
+const zhAff2 = affiliateWelcomeHtml({ name: '李', refCode: 'AFF2', refLink: 'https://d/?ref=AFF2', domainUrl: 'https://d', lang: 'zh' });
+ok(zhAff2.includes('打开我的仪表板') && zhAff2.includes('您的推荐码'), 'zh affiliate welcome uses Chinese copy');
+ok(affiliateWelcomeSubject('zh').includes('联盟计划'), 'zh affiliate subject is Chinese');
+ok(affiliateWelcomeSubject('xx') === affiliateWelcomeSubject('th') && affiliateWelcomeSubject(undefined) === affiliateWelcomeSubject('th'), 'unknown/missing affiliate lang falls back to Thai subject');
+ok(THAI.test(affiliateWelcomeHtml({ name: 'A', refCode: 'X', refLink: 'https://d', domainUrl: 'https://d', lang: 'th' })), 'th affiliate welcome is still Thai (default behaviour preserved)');
+
+console.log(`\n=== RESULT: ${pass} passed, ${fail} failed ===`);
+process.exit(fail ? 1 : 0);

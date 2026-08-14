@@ -43,7 +43,7 @@ function TrendChart({ data }) {
               {d.reach >= 1000 ? `${(d.reach/1000).toFixed(1)}K` : d.reach}
             </div>
             <div style={{ width: '100%', background: 'linear-gradient(180deg,#6366f1,#8b5cf6)', borderRadius: '4px 4px 0 0', height: h, minHeight: 8, transition: 'height 0.6s ease' }} />
-            <div style={{ fontSize: 11, color: '#64748b' }}>{d.day}</div>
+            <div style={{ fontSize: 11, color: '#94a3b8' }}>{d.day}</div>
           </div>
         );
       })}
@@ -72,7 +72,7 @@ export default function AnalyticsDashboardPage() {
     page: { minHeight: '100vh', background: '#080812', color: '#fff', padding: '24px 20px', fontFamily: 'system-ui, sans-serif' },
     card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '20px 22px', marginBottom: 16 },
     h3: { margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: '#e2e8f0' },
-    pill: (a) => ({ background: period === a ? 'rgba(99,102,241,0.2)' : 'transparent', border: period === a ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: period === a ? '#a5b4fc' : '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: '5px 12px' }),
+    pill: (a) => ({ background: period === a ? 'rgba(99,102,241,0.2)' : 'transparent', border: period === a ? '1px solid #6366f1' : '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: period === a ? '#a5b4fc' : '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: '5px 12px' }),
   };
 
   return (
@@ -84,7 +84,7 @@ export default function AnalyticsDashboardPage() {
             <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, background: 'linear-gradient(135deg,#6366f1,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
               📊 Analytics Dashboard
             </h1>
-            <p style={{ color: '#64748b', margin: '6px 0 0', fontSize: 14 }}>ติดตาม Reach · Engagement · Conversion ของสื่อทุกชิ้น</p>
+            <p style={{ color: '#94a3b8', margin: '6px 0 0', fontSize: 14 }}>ติดตาม Reach · Engagement · Conversion ของสื่อทุกชิ้น</p>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {['7d','30d','90d'].map(p => <button key={p} onClick={() => setPeriod(p)} style={s.pill(p)}>{p}</button>)}
@@ -92,7 +92,7 @@ export default function AnalyticsDashboardPage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#475569' }}>
+          <div style={{ textAlign: 'center', padding: 60, color: '#7c8797' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>📊</div>
             <div>กำลังโหลดข้อมูล...</div>
           </div>
@@ -139,7 +139,7 @@ export default function AnalyticsDashboardPage() {
                   <thead>
                     <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                       {['Platform','Reach','Engagement Rate','Posts','Grade'].map(h => (
-                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
+                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: '#94a3b8', fontWeight: 600, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -164,7 +164,7 @@ export default function AnalyticsDashboardPage() {
             </div>
           </>
         ) : (
-          <div style={{ textAlign: 'center', padding: 60, color: '#475569' }}>ไม่สามารถโหลดข้อมูลได้</div>
+          <div style={{ textAlign: 'center', padding: 60, color: '#7c8797' }}>ไม่สามารถโหลดข้อมูลได้</div>
         )}
       </div>
     </div>

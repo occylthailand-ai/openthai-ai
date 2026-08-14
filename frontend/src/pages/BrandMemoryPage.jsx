@@ -62,7 +62,7 @@ export default function BrandMemoryPage() {
         <button onClick={() => navigate(-1)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '6px 14px', color: '#94a3b8', cursor: 'pointer', fontSize: 13 }}>← กลับ</button>
         <div>
           <div style={{ fontSize: 15, fontWeight: 800 }}>🧠 Brand Memory</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>AI จำข้อมูลแบรนด์ของคุณ — ไม่ต้องพิมพ์ซ้ำ</div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>AI จำข้อมูลแบรนด์ของคุณ — ไม่ต้องพิมพ์ซ้ำ</div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
           <button onClick={handleClear} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '7px 14px', color: '#f87171', cursor: 'pointer', fontSize: 13 }}>
@@ -81,7 +81,7 @@ export default function BrandMemoryPage() {
           <h1 style={{ fontSize: 'clamp(22px,4vw,32px)', fontWeight: 900, background: 'linear-gradient(90deg,#8b5cf6,#06b6d4)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '0 0 10px' }}>
             Brand Memory
           </h1>
-          <p style={{ color: '#64748b', fontSize: 13, maxWidth: 480, margin: '0 auto' }}>
+          <p style={{ color: '#94a3b8', fontSize: 13, maxWidth: 480, margin: '0 auto' }}>
             กรอกข้อมูลแบรนด์ครั้งเดียว AI จะจำและใช้ข้อมูลนี้ทุกครั้งที่สร้างคอนเทนต์ ไม่ต้องพิมพ์ซ้ำ
           </p>
         </div>
@@ -146,7 +146,7 @@ export default function BrandMemoryPage() {
                   style={{ background: brand.tone === t.id ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.02)', border: `1.5px solid ${brand.tone === t.id ? 'rgba(99,102,241,0.6)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 12, padding: '12px 14px', cursor: 'pointer', transition: 'all .2s' }}>
                   <div style={{ fontSize: 18, marginBottom: 4 }}>{t.label.split(' ')[0]}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: brand.tone === t.id ? '#a5b4fc' : '#f8fafc' }}>{t.label.split(' ').slice(1).join(' ')}</div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{t.desc}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{t.desc}</div>
                 </div>
               ))}
             </div>

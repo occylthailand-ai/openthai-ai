@@ -59,7 +59,7 @@ content) so these entries never mix with or get pruned alongside business memori
 
 Suggested `type` values for this dataset:
 - `"philosophy"` — the single core-philosophy statement (1 memory)
-- `"lesson"` — one memory per entry in `key_lessons` (3 memories today, grows over time)
+- `"lesson"` — one memory per entry in `key_lessons` (6 memories today, grows over time)
 
 Store looks like:
 ```bash

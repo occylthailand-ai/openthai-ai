@@ -11,7 +11,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import cron from 'node-cron';
 import https from 'https';
-import { createHmac } from 'node:crypto';
+import { createHmac, timingSafeEqual, randomBytes } from 'node:crypto';
 import { openapiSpec } from './openapi.js';
 import { handleMcp } from './mcp-handler.js';
 import { createMemorySystem } from './vector-memory.js';
@@ -24,16 +24,34 @@ import {
   createSubscription, cancelSubscription, verifyOmiseWebhook,
   SUBSCRIPTION_PLANS,
 } from './omise-payment.js';
+import { verifyLineSignature } from './line-signature.js';
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
+import { officerFor, buildPrompt as buildOfficerPrompt, needsProfessionalDisclaimer, DISCLAIMER } from './dept-officers.js';
+import { AFFILIATE_TIERS, tierForSales } from './affiliate-tiers.js';
+import { payoutRemaining, canPayout } from './affiliate-payout.js';
+import { mapModel, extractText } from './openrouter-map.js';
+import { affToRow, rowWithoutConsent, isMissingConsentColumnError } from './affiliate-row.js';
+import { reservedFor as reservedForPure, affAvailable } from './affiliate-withdraw-math.js';
+import { safeTokenEqual } from './token-verify.js';
+import { publicAffiliateSales } from './affiliate-public.js';
+import { isReceiptEmail, buildShopReceipt, buildShippedNotice, buildDeliveredNotice, buildCancelledNotice, buildQuickpayReceipt } from './shop-receipt.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
 import { createProducers } from './producers.js';
-import { createOrders } from './orders.js';
+import { portalWelcomeCtaHtml } from './portal-welcome-cta.js';
+import { createOrders, publicOrderView } from './orders.js';
 import { createDisputes } from './disputes.js';
 import { TOOL_DEFINITIONS, toGeminiTools, executeTool } from './agent-tools.js';
 import { createPortalLeads } from './portal-leads.js';
 import { createInventory } from './inventory.js';
+import { escapeHtml, lowStockAlertHtml, affiliateWelcomeHtml, affiliateWelcomeSubject, consumerDigestHtml, producerApprovalHtml, producerApprovalSubject } from './html-escape.js';
+import { parseAIJson } from './ai-json.js';
+import { buildConsentRecord } from './pdpa-consent.js';
+import { buildPaymentRow } from './payment-row.js';
 import { createProgressTracker } from './progress-tracker.js';
+import { recommend as seasonalRecommend, productAngles as seasonalProductAngles, zonesInfo as seasonalZonesInfo } from './seasonal-engine.js';
+import { selectDigestMatches, dedupeConsumerLeads } from './digest-match.js';
+import { buyerConfirmation } from './order-confirm.js';
 import { createIntegrations } from './integrations.js';
 import { createMatching } from './matching.js';
 
@@ -49,7 +67,11 @@ function resolveAdminKey() {
 }
 function checkAdminKey(provided) {
   const key = resolveAdminKey();
-  return !!key && provided === key;
+  // Constant-time compare (same defence the confirm-link tokens use via safeTokenEqual): the admin key
+  // is the MASTER credential gating every admin endpoint, and a plain `provided === key` short-circuits
+  // at the first differing character. adminLimiter already throttles brute force, but comparing the
+  // master key in constant time is the correct, free defence-in-depth — consistent with token-verify.js.
+  return !!key && safeTokenEqual(provided, key);
 }
 function adminDenyMessage() {
   return 'Unauthorized';
@@ -65,7 +87,10 @@ const adminLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { s
 // บน Vercel: ไฟล์ static อ่านได้จาก repo, ไฟล์ writable ต้องใช้ /tmp
 // Local: ทุกอย่างอยู่ใน backend/data/
 const STATIC_DATA_DIR = join(__dirname, 'data');
-const WRITE_DATA_DIR  = IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR;
+// OPENTHAI_DATA_DIR lets a test point ALL file-backed stores at a throwaway dir instead of the
+// committed backend/data/ files — so a self-boot test can create products/affiliates/orders without
+// snapshot/restore gymnastics on tracked files. Unset in prod/dev: behaves exactly as before.
+const WRITE_DATA_DIR  = process.env.OPENTHAI_DATA_DIR || (IS_VERCEL ? '/tmp/openthai-data' : STATIC_DATA_DIR);
 
 // ─── Supabase REST helper — shared by affiliates / payments / entitlements ────
 const _SB_URL = process.env.SUPABASE_URL;
@@ -82,6 +107,68 @@ async function _sbReq(method, table, opts = {}) {
   if (!r.ok) throw new Error((d?.message || d?.hint) || `SB HTTP ${r.status}`);
   return d;
 }
+
+// ── AI usage logging (#11) — writes each AI generation to ai_usage_log (migration 003)
+// so the team can see real per-endpoint token/cost totals. Two safety properties:
+//   • fire-and-forget — never awaited in a request path, so it can't add latency or
+//     turn a successful generation into an error.
+//   • self-disabling — if migration 003 isn't applied in this environment, the first
+//     INSERT fails with a "relation/schema cache" error and logging turns itself OFF
+//     for the process, so prod is never spammed. Applying the migration re-enables it
+//     on the next boot. (This is why it's safe to ship without first confirming prod
+//     migration state — worst case it silently no-ops.)
+let _aiUsageLogOff = !_useSB;              // off entirely when Supabase isn't configured
+const USD_TO_THB = 36.5;                   // rough display rate; cost is an estimate anyway
+const AI_SOURCE_COST_PER_1K = { claude: 0.0008, gemini: 0.0004, mock: 0, 'mock-fallback': 0 };
+// Attribute AI spend from the content-generation endpoints (which use smartGenerate,
+// NOT routeAI) to the shared daily budget/cost counters, so ops-summary's
+// ai_spent_today_usd and the Eco-mode budget guard reflect the biggest AI consumer
+// too — previously they only counted router/council traffic, so a heavy /api/generate
+// day showed near-$0 cost and never tripped the daily budget.
+function trackGenerateSpend(source, tokens, usd) {
+  routerRollover();
+  routerState.spentUsd = +(routerState.spentUsd + (usd || 0)).toFixed(6);
+  routerState.calls++;
+  if (source === 'claude' || source === 'gemini') {
+    const bp = routerState.byProvider[source] || { calls: 0, usd: 0, tokens: 0 };
+    bp.calls++; bp.usd = +(bp.usd + (usd || 0)).toFixed(6); bp.tokens += (tokens || 0);
+    routerState.byProvider[source] = bp;
+  }
+}
+function recordAiUsage(row = {}) {
+  const source = ['claude', 'gemini', 'mock', 'mock-fallback'].includes(row.ai_source) ? row.ai_source : 'mock';
+  const inTok = Math.max(0, Math.round(row.input_tokens || 0));
+  const outTok = Math.max(0, Math.round(row.output_tokens || 0));
+  const costUsd = row.cost_usd != null ? +Number(row.cost_usd).toFixed(6)
+    : +(((inTok + outTok) / 1000) * (AI_SOURCE_COST_PER_1K[source] || 0)).toFixed(6);
+  // in-memory budget/cost accounting — runs even when DB logging is off (no Supabase)
+  trackGenerateSpend(source, inTok + outTok, costUsd);
+  if (_aiUsageLogOff) return;   // Supabase persistence below only when migration 003 is applied
+  const body = {
+    endpoint: String(row.endpoint || '').slice(0, 120),
+    ai_source: source,
+    model_id: row.model_id ? String(row.model_id).slice(0, 80) : null,
+    product: row.product ? String(row.product).slice(0, 200) : null,
+    platform: row.platform ? String(row.platform).slice(0, 80) : null,
+    category: row.category ? String(row.category).slice(0, 80) : null,
+    style: row.style ? String(row.style).slice(0, 40) : null,
+    input_tokens: inTok,
+    output_tokens: outTok,
+    cost_usd: costUsd,
+    cost_thb: +(costUsd * USD_TO_THB).toFixed(2),
+    response_ms: row.response_ms != null ? Math.round(row.response_ms) : null,
+    critic_score: row.critic_score != null && !isNaN(parseFloat(row.critic_score)) ? +parseFloat(row.critic_score).toFixed(1) : null,
+  };
+  _sbReq('POST', '/ai_usage_log', { body, prefer: 'return=minimal' }).catch((e) => {
+    const msg = String(e?.message || '');
+    if (/relation|does not exist|PGRST205|schema cache|not found|404/i.test(msg)) {
+      _aiUsageLogOff = true;
+      console.warn('[ai_usage_log] disabled — table not found (apply migration 003 to enable):', msg);
+    } else {
+      console.warn('[ai_usage_log] insert failed (ignored):', msg);
+    }
+  });
+}
 // ── Infrastructure Layer — Vector Memory · Webhooks · Multi-tenant ────────────
 // Initialized after WRITE_DATA_DIR is known
 const memory    = createMemorySystem(WRITE_DATA_DIR, () => gemini ? { _googleAI: { getGenerativeModel: (o) => new GoogleGenerativeAI(process.env.GEMINI_API_KEY).getGenerativeModel(o) } } : null);
@@ -90,8 +177,13 @@ const tenants   = createTenantManager(WRITE_DATA_DIR);
 const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
-const producers = createProducers(WRITE_DATA_DIR);
-const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
+// onApply → ส่งอีเมล "ได้รับใบสมัครแล้ว" ให้ผู้ผลิตที่สมัครผ่าน /join (สาย /portals/producer ได้
+// welcome ผ่าน handleNewPortalLead อยู่แล้ว) — sendPortalWelcomeEmail เป็น function declaration ที่
+// hoist ขึ้นมา ใช้ใน closure ที่ถูกเรียกตอน request ได้ปกติ
+const producers = createProducers(WRITE_DATA_DIR, {
+  onApply: (rec) => sendPortalWelcomeEmail({ type: 'producer', email: rec.email, name: rec.company || rec.contact_name, lang: rec.lang || 'th' }),
+});
+const orders    = createOrders(WRITE_DATA_DIR, { getProducerStock: (email) => producers.getStock(email), getProducerPrice: (email) => producers.getPrice(email), resolveProducerRef: (ref) => producers.emailFromRef(ref), onNewOrder: async (order) => { sendOrderNotification(order); sendBuyerOrderConfirmation(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } }, onCancel: async (order) => { try { await producers.incrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
 const disputes  = createDisputes(WRITE_DATA_DIR, {
   orders, callAI, parseAIJson,
   notify: {
@@ -102,7 +194,7 @@ const disputes  = createDisputes(WRITE_DATA_DIR, {
 });
 const portalLeads = createPortalLeads(WRITE_DATA_DIR, { onNewLead: async (lead) => handleNewPortalLead(lead) });
 const inventory = createInventory(WRITE_DATA_DIR, { onLowStock: (product) => sendLowStockAlert(product) });
-const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory });
+const progress  = createProgressTracker(WRITE_DATA_DIR, { producers, orders, inventory, portalLeads });
 const matching  = createMatching(WRITE_DATA_DIR, { getProducers: () => producers.all(), getLeads: () => portalLeads.all(), requireAuth });
 
 import {
@@ -139,10 +231,133 @@ app.use(credits.router);
 app.use(producers.router);
 // Order routes — /api/orders
 app.use(orders.router);
+
+// Producer self-serve dashboard feed — /api/producers/my-orders?email=<applied email>
+// Powers the /producer/dashboard page: one call returns the producer's own approval status +
+// product/stock (from producers.all(), same email-identity as /api/producers/my-status — public,
+// verified by the email they applied with, no admin key) AND their orders + an income/work summary.
+// Sanitised via publicOrderView so buyer PII (customer name/contact/address/raw note) never leaks to
+// the producer feed; only the producer's own fulfilment fields (product, qty, amount, status, tracking)
+// are returned. 404 for an unknown email so it can't be used to enumerate whether an order exists.
+const producerDashLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: { success: false, error: 'เรียกดูข้อมูลบ่อยเกินไป กรุณารอสักครู่' } });
+app.get('/api/producers/my-orders', producerDashLimiter, async (req, res) => {
+  const email = (req.query.email || '').toString().trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, error: 'อีเมลไม่ถูกต้อง' });
+  const prod = (await producers.all()).find((p) => (p.email || '').toLowerCase() === email);
+  if (!prod) return res.status(404).json({ success: false, error: 'ไม่พบผู้ผลิตด้วยอีเมลนี้' });
+  const mine = (await orders.all()).filter((o) => (o.producer_email || '').toLowerCase() === email);
+  const active = mine.filter((o) => o.status !== 'cancelled');
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  const summary = {
+    total:      mine.length,
+    active:     active.length,
+    to_handle:  mine.filter((o) => ['new', 'confirmed', 'packed'].includes(o.status)).length,
+    delivered:  mine.filter((o) => o.status === 'delivered').length,
+    cancelled:  mine.filter((o) => o.status === 'cancelled').length,
+    value_total: active.reduce((s, o) => s + num(o.amount), 0),
+  };
+  const list = mine.map(publicOrderView).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  res.json({
+    success: true,
+    producer: { status: prod.status, company: prod.company, product_name: prod.product_name, category: prod.category, stock: prod.stock ?? null, price: prod.price ?? null },
+    orders: list,
+    summary,
+  });
+});
+
+// Consumer self-serve dashboard feed — /api/portals/consumer/my?email=<signed-up email>
+// Powers the /consumer/dashboard page: a consumer who signed up via /portals/consumer (a portal lead of
+// type 'consumer', storing their interest category in form_data.category) enters that email and gets back
+// their signup confirmation + product recommendations matched to that interest from the real approved
+// catalog (producers.catalog()). Same public email-identity pattern as the producer dashboard. The
+// producer's contact email in the catalog row is stripped — a consumer sees the shop/product, not the
+// producer's private email (mirrors the producer-search-privacy invariant). 404 for an email that never
+// signed up as a consumer (can't enumerate), 400 for a malformed email.
+app.get('/api/portals/consumer/my', producerDashLimiter, async (req, res) => {
+  const email = (req.query.email || '').toString().trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, error: 'อีเมลไม่ถูกต้อง' });
+  const mine = (await portalLeads.all())
+    .filter((l) => l.type === 'consumer' && (l.email || '').toLowerCase() === email)
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  if (mine.length === 0) return res.status(404).json({ success: false, error: 'ไม่พบการสมัครผู้บริโภคด้วยอีเมลนี้' });
+  const lead = mine[0];
+  const interest = (lead.form_data && lead.form_data.category) || '';
+  let catalog = [];
+  try { catalog = await producers.catalog(); } catch (e) { console.error('[consumer/my] catalog:', e.message); }
+  // strip the producer's private contact email; a consumer sees the shop + product only
+  const pub = (p) => ({ producer: p.producer, product_name: p.product_name, price: p.price ?? null, category: p.category, description: p.description });
+  const matched = interest ? catalog.filter((p) => p.category === interest) : [];
+  // fall back to the newest of the whole catalog when nothing matches the stated interest, so the
+  // dashboard is never empty for a real consumer (recommendations, not a hard filter).
+  const recommendations = (matched.length ? matched : catalog).slice(0, 12).map(pub);
+  res.json({
+    success: true,
+    consumer: { name: lead.name || '', interest, created_at: lead.created_at },
+    matched_count: matched.length,
+    recommendations,
+  });
+});
+
+// Middleman self-serve dashboard feed — /api/portals/middleman/my?email=<signed-up email>
+// Powers the /middleman/dashboard page: a distributor/wholesaler/broker who signed up via
+// /portals/middleman (portal lead type 'middleman', storing business_type + region) enters that email and
+// gets back their signup + (1) products they can distribute (the real approved catalog) and (2) demand
+// signals — an AGGREGATE count of consumer signups per interest category (no per-consumer data), so a
+// middleman can see which categories buyers are asking for. Same public email-identity pattern as the
+// producer/consumer dashboards. Producer contact emails are STRIPPED from the catalog (a middleman must
+// not be able to harvest producer emails just by signing up — connections happen through the platform,
+// per the consent/no-scrape policy); demand is counts only, never buyer identities. 404 unknown, 400 bad.
+app.get('/api/portals/middleman/my', producerDashLimiter, async (req, res) => {
+  const email = (req.query.email || '').toString().trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ success: false, error: 'อีเมลไม่ถูกต้อง' });
+  const leads = await portalLeads.all();
+  const mine = leads
+    .filter((l) => l.type === 'middleman' && (l.email || '').toLowerCase() === email)
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  if (mine.length === 0) return res.status(404).json({ success: false, error: 'ไม่พบการสมัครคนกลางด้วยอีเมลนี้' });
+  const lead = mine[0];
+  let catalog = [];
+  try { catalog = await producers.catalog(); } catch (e) { console.error('[middleman/my] catalog:', e.message); }
+  const pub = (p) => ({ producer: p.producer, product_name: p.product_name, price: p.price ?? null, category: p.category, description: p.description });
+  const distribute = catalog.slice(0, 12).map(pub);
+  // demand = aggregate consumer signups per interest category (counts only — never buyer identities)
+  const counts = {};
+  for (const l of leads) {
+    if (l.type !== 'consumer') continue;
+    const cat = l.form_data && l.form_data.category;
+    if (!cat) continue;
+    counts[cat] = (counts[cat] || 0) + 1;
+  }
+  const demand = Object.entries(counts).map(([category, count]) => ({ category, count }))
+    .sort((a, b) => b.count - a.count).slice(0, 6);
+  res.json({
+    success: true,
+    middleman: { name: lead.name || '', business_type: (lead.form_data && lead.form_data.business_type) || '', region: (lead.form_data && lead.form_data.region) || '', created_at: lead.created_at },
+    distribute,
+    demand,
+  });
+});
+
 // Order dispute / escrow routes — /api/disputes
 app.use(disputes.router);
 // Portal lead capture — /api/leads/submit (the endpoint all 7 /portals/* pages call)
 app.use(portalLeads.router);
+
+// GET /api/leads/unsubscribe — one-click unsubscribe link in consumer-digest emails (PDPA:
+// ผู้สมัครต้องถอนความยินยอมรับอีเมลต่อเนื่องได้ ไม่ใช่แค่สมัครแล้วไม่มีทางออก)
+// ไม่มี rate limiter ตอนแรก ต่างจาก endpoint อื่นๆ ทั้งหมดในไฟล์นี้ที่แตะข้อมูลผู้ใช้จริง —
+// ถึงแม้ token (HMAC 64-bit) จะ brute-force ยากมาก แต่ไม่มีการจำกัดเลยยังเปิดช่องให้ยิงรัว
+// เขียนไฟล์ได้ไม่จำกัด เพิ่มให้เข้ากับ pattern เดียวกับ applyLimiter/submitLimiter/broadcastLimiter
+const unsubLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { success: false, error: 'ลองบ่อยเกินไป กรุณารอสักครู่' } });
+app.get('/api/leads/unsubscribe', unsubLimiter, async (req, res) => {
+  const { email, type, token } = req.query;
+  if (!email || !type || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const expected = unsubToken(String(email).toLowerCase(), String(type));
+  if (!safeTokenEqual(token, expected)) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  const r = await portalLeads.unsubscribe(email, type);
+  if (!r.ok) return res.status(400).send(r.error || 'ยกเลิกไม่สำเร็จ');
+  res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยกเลิกรับอีเมลเรียบร้อยแล้ว</div>');
+});
 // Inventory / first-party shop routes — /api/shop/products
 app.use(inventory.router);
 // Matching engine — /api/match/*
@@ -194,14 +409,13 @@ const anthropic = (() => {
               'X-Title': 'Openthai.ai',
             },
             body: JSON.stringify({
-              model: ({'claude-haiku-4-5-20251001':'anthropic/claude-haiku-4-5','claude-haiku-4-5':'anthropic/claude-haiku-4-5','claude-sonnet-4-5':'anthropic/claude-sonnet-4-5','claude-3-haiku-20240307':'anthropic/claude-3-haiku'})[model] || (model.startsWith('claude') ? `anthropic/${model}` : model),
+              model: mapModel(model),
               max_tokens,
               messages: msgs,
             }),
           });
           const data = await res.json();
-          if (data.error) throw new Error(data.error.message || 'OpenRouter error');
-          return { content: [{ text: data.choices[0].message.content }] };
+          return extractText(data);
         },
       },
     };
@@ -349,19 +563,27 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
   const quota = await checkQuota(req);
   if (!quota.allowed) {
     return res.status(429).json({
-      error: `ใช้สิทธิ์ฟรีครบ ${quota.limit} ชิ้นแล้ววันนี้ — อัพเกรดเป็น Pro (฿20/เดือน) เพื่อสร้างไม่จำกัด`,
+      error: `ใช้สิทธิ์ฟรีครบ ${quota.limit} ชิ้นแล้ววันนี้ — อัพเกรดเป็น Pro (฿299/เดือน) เพื่อสร้างไม่จำกัด`,
       code: 'QUOTA_EXCEEDED', plan: 'free', used: quota.used, limit: quota.limit, upgrade_url: '/payment?plan=pro',
     });
   }
 
+  const t0 = Date.now();
   try {
     const data = await smartGenerate(form);
     const u = await consumeQuota(req);
+    recordAiUsage({
+      endpoint: '/api/generate', ai_source: data.source, product: form.product, platform: form.platform,
+      category: form.category, style: form.style, critic_score: data.criticScore, response_ms: Date.now() - t0,
+      input_tokens: estTokens(buildPrompt(form)),
+      output_tokens: estTokens([data.hook, ...(data.script || []), data.caption].filter(Boolean).join(' ')),
+    });
     return res.json({ ...data, usage: { plan: u.plan, used: u.used ?? null, limit: u.limit ?? null, remaining: u.remaining ?? null, unlimited: !!u.unlimited, viaCredit: !!u.viaCredit, creditBalance: u.creditBalance ?? null } });
   } catch (err) {
     console.error('[generate error]', err.message);
     const fallback = mockGenerate(form);
     fallback.source = 'mock-fallback';
+    recordAiUsage({ endpoint: '/api/generate', ai_source: 'mock-fallback', product: form.product, platform: form.platform, category: form.category, style: form.style, critic_score: fallback.criticScore, response_ms: Date.now() - t0 });
     return res.json(fallback);
   }
 });
@@ -400,45 +622,85 @@ app.get('/api/producers/admin/list', adminLimiter, async (req, res) => {
 app.post('/api/producers/admin/status', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const emailIn = (req.body?.email || '').toString().trim().toLowerCase();
+  const prev = (await producers.all()).find((p) => (p.email || '').toLowerCase() === emailIn);
+  // capture primitives *before* setStatus — producers.all()'s file-mode path returns live
+  // references into its internal store, and setStatus() mutates that same object in place,
+  // so reading prev.status *after* the call below would always see the just-written new value
+  const prevStatus = prev?.status;
+  const prevCompany = prev?.company;
+  const prevProductName = prev?.product_name;
+  const prevLang = prev?.lang;
   const r = await producers.setStatus(req.body?.email, req.body?.status);
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  if (req.body?.status === 'approved' && prevStatus !== 'approved') {
+    sendProducerApproval(emailIn, prevCompany, prevProductName, prevLang);
+  }
+  res.json({ success: true, ...r });
+});
+
+// POST /api/producers/admin/update — แก้ไขสินค้า/ราคา/สต๊อกของผู้ผลิตที่มีอยู่แล้ว (Admin Key)
+// ไม่แตะ status — ใช้เติมสต๊อกหรือแก้ราคา/รายละเอียดโดยไม่ต้องให้ผู้ผลิตหลุดจาก catalog สาธารณะ
+app.post('/api/producers/admin/update', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  const { email, product_name, price, stock, description, category } = req.body || {};
+  const r = await producers.updateListing(email, { product_name, price, stock, description, category });
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
   res.json({ success: true, ...r });
 });
 
 // GET /api/orders/admin/summary + /list, POST /api/orders/admin/status (Admin Key)
-app.get('/api/orders/admin/summary', async (req, res) => {
+app.get('/api/orders/admin/summary', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, ...(await orders.summary()) }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.get('/api/orders/admin/list', async (req, res) => {
+app.get('/api/orders/admin/list', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, orders: await orders.all() }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.post('/api/orders/admin/status', async (req, res) => {
+app.post('/api/orders/admin/status', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await orders.setStatus(req.body?.id, req.body?.status, req.body?.note);
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  // แจ้งลูกค้าเมื่อ admin ยกเลิกออเดอร์ (เดิมลูกค้าที่จ่ายเงินไปแล้วไม่เคยรู้ว่าถูกยกเลิก)
+  if (req.body?.status === 'cancelled') {
+    try {
+      const ord = await orders.getOne(req.body?.id);
+      if (ord) sendShopCancelled({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, order_id: ord.id, amount: ord.amount, reason: req.body?.note });
+    } catch (_) { /* best-effort */ }
+  }
   res.json({ success: true, ...r });
 });
 // POST /api/orders/admin/ship — บันทึกเลขพัสดุ + ขนส่ง (Admin Key)
-app.post('/api/orders/admin/ship', async (req, res) => {
+app.post('/api/orders/admin/ship', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await orders.ship(req.body?.id, req.body || {});
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  // แจ้งลูกค้าว่าจัดส่งแล้ว + เลขพัสดุ (เดิมลูกค้าไม่เคยได้รับแจ้ง)
+  try {
+    const ord = await orders.getOne(req.body?.id);
+    if (ord) sendShopShipped({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, tracking_no: ord.tracking_no, carrier: ord.carrier, order_id: ord.id });
+  } catch (_) { /* best-effort */ }
   res.json({ success: true, ...r });
 });
 // POST /api/orders/admin/deliver — ยืนยันถึงปลายทาง + หลักฐาน (เซ็นรับ/จุดฝาก) (Admin Key)
-app.post('/api/orders/admin/deliver', async (req, res) => {
+app.post('/api/orders/admin/deliver', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const r = await orders.deliver(req.body?.id, req.body || {});
   if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  // แจ้งลูกค้าว่าพัสดุถึงปลายทางแล้ว (เดิมลูกค้าไม่เคยได้รับแจ้ง)
+  try {
+    const ord = await orders.getOne(req.body?.id);
+    if (ord) sendShopDelivered({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, order_id: ord.id, received_by: ord.received_by, drop_off: ord.drop_off });
+  } catch (_) { /* best-effort */ }
   res.json({ success: true, ...r });
 });
 
@@ -450,7 +712,7 @@ app.get('/api/disputes/admin/summary', adminLimiter, async (req, res) => {
   try { res.json({ success: true, ...(await disputes.summary()) }); }
   catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
-app.get('/api/disputes/admin/list', async (req, res) => {
+app.get('/api/disputes/admin/list', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try { res.json({ success: true, disputes: await disputes.all() }); }
@@ -494,17 +756,47 @@ app.get('/api/progress/history', (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
-// POST /api/progress/daily-report — Vercel Cron trigger (23:30 Thai = 16:30 UTC)
-app.post('/api/progress/daily-report', async (req, res) => {
-  const key = req.headers['x-admin-key'] || req.query.key || req.headers['x-vercel-cron-secret'];
-  const adminOk = checkAdminKey(key);
-  const cronOk  = key === process.env.CRON_SECRET;
+// GET+POST /api/progress/daily-report — Vercel Cron trigger (23:30 Thai = 16:30 UTC)
+// Vercel always invokes cron routes via GET and authenticates with `Authorization: Bearer $CRON_SECRET`
+// (https://vercel.com/docs/cron-jobs/manage-cron-jobs) — a POST-only route with no Authorization check
+// never actually fires from the real cron. POST + x-admin-key stays for the "ส่งรายงานตอนนี้" button
+// in ProgressDashboard.jsx.
+async function dailyReportHandler(req, res) {
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const adminOk = checkAdminKey(req.headers['x-admin-key'] || req.query.key);
+  const cronOk  = !!process.env.CRON_SECRET && bearerToken === process.env.CRON_SECRET;
   if (!adminOk && !cronOk) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try {
     const result = await progress.sendDailyReport();
     res.json({ success: true, ...result });
-  } catch (e) { res.status(500).json({ success: false, error: e.message }); }
-});
+  } catch (e) {
+    console.error('[progress/daily-report]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+}
+app.get('/api/progress/daily-report', dailyReportHandler);
+app.post('/api/progress/daily-report', dailyReportHandler);
+
+// GET+POST /api/portals/consumer-digest — weekly category-matched product digest for consumer
+// leads. Same auth shape as daily-report above: GET+Authorization Bearer for the real Vercel Cron,
+// POST+x-admin-key for a manual trigger from the Admin Panel.
+async function consumerDigestHandler(req, res) {
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const adminOk = checkAdminKey(req.headers['x-admin-key'] || req.query.key);
+  const cronOk  = !!process.env.CRON_SECRET && bearerToken === process.env.CRON_SECRET;
+  if (!adminOk && !cronOk) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  try {
+    const result = await sendConsumerDigest();
+    res.json(result);
+  } catch (e) {
+    console.error('[portals/consumer-digest]', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+}
+app.get('/api/portals/consumer-digest', consumerDigestHandler);
+app.post('/api/portals/consumer-digest', consumerDigestHandler);
 
 // PATCH /api/progress/kpi — อัปเดต KPI มือ
 app.patch('/api/progress/kpi', async (req, res) => {
@@ -545,9 +837,27 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
     const orderId = ord.id;
 
     const finalizePaid = async (charge) => {
-      await inventory.adjust(product_id, -qty, 'sale', `ขายผ่านร้าน (ออเดอร์ ${orderId})`, orderId, channel);
+      // ตัดสต๊อกแล้ว "ตรวจผล" — ห้ามละเลยค่าที่คืนมา: ถ้าออเดอร์อื่นที่เข้ามาพร้อมกันตัดสต๊อก
+      // หมดไปก่อน (race ระหว่าง pre-check ที่ 671 กับตอนตัดจริงตรงนี้ — มี await orders.place คั่น
+      // เป็นจุด yield) inventory.adjust จะคืน {ok:false} ทั้งที่ "เก็บเงินไปแล้ว" เดิมโค้ดไม่ดูค่านี้
+      // เลย → กลายเป็น: ลูกค้าจ่ายเงินแต่ไม่ได้ของ + จ่ายค่าคอมให้ affiliate ทั้งที่ขายไม่สำเร็จ +
+      // ออเดอร์ขึ้น confirmed ลอยๆ (เงินหาย ข้อมูลเพี้ยน) จึงต้องแยกเคสสต๊อกหมดออกมาชัดเจน
+      const adj = await inventory.adjust(product_id, -qty, 'sale', `ขายผ่านร้าน (ออเดอร์ ${orderId})`, orderId, channel);
+      if (!adj.ok) {
+        await orders.setStatus(orderId, 'cancelled', `ชำระเงินสำเร็จแต่สต๊อกหมดพอดี (race) — ต้องคืนเงินลูกค้า · charge ${charge?.charge_id || '-'}`);
+        addLog('error', 'Shop', `OVERSOLD: ออเดอร์ ${orderId} จ่ายแล้วแต่สต๊อก ${product_id} หมด — ต้องคืนเงิน (charge ${charge?.charge_id || '-'})`);
+        // ลูกค้าจ่ายเงินแล้วแต่ระบบต้องยกเลิก — แจ้ง + ยืนยันว่ากำลังคืนเงิน (เหตุผลแบบสะอาด ไม่ส่ง charge id ภายในให้ลูกค้า)
+        sendShopCancelled({ contact, customer_name, product_name: p.name, order_id: orderId, amount, reason: 'สินค้าหมดสต๊อกพอดีหลังชำระเงิน', refund_pending: true });
+        return res.status(200).json({ success: true, paid: true, fulfilled: false, refund_pending: true, order_id: orderId, amount, charge_id: charge?.charge_id || null, message: 'ชำระเงินสำเร็จ แต่สินค้าหมดสต๊อกพอดี ทีมงานจะติดต่อคืนเงินให้โดยเร็ว' });
+      }
       await orders.setStatus(orderId, 'confirmed', 'ชำระเงินสำเร็จ');
-      return res.json({ success: true, paid: true, order_id: orderId, amount, stock_left: Math.max(0, (p.stock || 0) - qty), ...(charge || {}) });
+      // #9 — ให้คอมมิชชัน affiliate ถ้าลูกค้าเข้าร้านผ่านลิงก์ ref (เรตตามขั้นของ affiliate เดิม,
+      // เหมือน subscription/quickpay) เดิมร้านค้าเก็บ ref ไว้แค่ attribution ช่องทาง ไม่จ่ายคอมมิชชัน
+      // เส้นบัตร/mock finalize ทันทีที่นี่ครั้งเดียว (PromptPay เครดิตใน webhook แทน — ไม่ซ้ำ)
+      if (ref) creditAffiliateSale(String(ref).slice(0, 40), amount, { charge_id: charge?.charge_id || null, source: platform || 'shop' });
+      // ใบยืนยันคำสั่งซื้อถึงลูกค้า (ถ้า contact เป็นอีเมล) — เดิมลูกค้าร้านค้าไม่เคยได้อีเมลยืนยัน
+      sendShopReceipt({ contact, customer_name, product_name: p.name, qty, amount, order_id: orderId });
+      return res.json({ success: true, paid: true, fulfilled: true, order_id: orderId, amount, stock_left: adj.stock, ...(charge || {}) });
     };
 
     // Mock mode (ยังไม่ตั้ง Omise) — บัตร/ม็อค ถือว่าจ่ายสำเร็จทันที
@@ -557,13 +867,13 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
     }
     if (method === 'card') {
       if (!token) return res.status(400).json({ success: false, error: 'ต้องการ card token' });
-      const charge = await createCardCharge({ amount_thb: amount, token, description: `Openthai Store — ${p.name} ×${qty}`, metadata: { order_id: orderId, product_id, qty } });
+      const charge = await createCardCharge({ amount_thb: amount, token, description: `Openthai Store — ${p.name} ×${qty}`, metadata: { order_id: orderId, product_id, qty, channel } });
       if (charge.status === 'failed') return res.status(402).json({ success: false, error: charge.failure_message || 'บัตรถูกปฏิเสธ', order_id: orderId });
       if (charge.paid) return finalizePaid({ charge_id: charge.charge_id });
       return res.json({ success: true, paid: false, order_id: orderId, amount, ...charge });
     }
     if (method === 'promptpay') {
-      const charge = await createPromptPayCharge({ amount_thb: amount, description: `Openthai Store — ${p.name} ×${qty}`, metadata: { order_id: orderId, product_id, qty } });
+      const charge = await createPromptPayCharge({ amount_thb: amount, description: `Openthai Store — ${p.name} ×${qty}`, metadata: { order_id: orderId, product_id, qty, channel } });
       return res.json({ success: true, paid: false, order_id: orderId, amount, ...charge, note: 'สแกนจ่ายแล้วสต๊อกจะตัดเมื่อยืนยันการชำระ' });
     }
     return res.status(400).json({ success: false, error: 'method ต้องเป็น card หรือ promptpay' });
@@ -571,7 +881,7 @@ app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
 });
 
 // GET /api/leads/admin/search — รวมลูกค้า/ลีดทุกแหล่ง (waitlist + affiliate + order) + ค้นหา/กรอง
-app.get('/api/leads/admin/search', async (req, res) => {
+app.get('/api/leads/admin/search', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   try {
@@ -606,6 +916,52 @@ app.get('/api/leads/admin/search', async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// รายชื่ออีเมลที่ยกเลิกรับ newsletter broadcast — เดิม /api/leads/admin/broadcast ส่งหา
+// waitlist+affiliate+order contacts ทุกครั้งโดยไม่มีทางยกเลิกเลย ทั้งที่ footer เขียนไว้ว่า
+// "ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ" — เก็บแยกจาก portalLeads.unsubscribe() เพราะรายชื่อ
+// ผู้รับมาจากคนละแหล่ง (waitlist/affiliate/order ไม่ใช่ portal lead)
+const BROADCAST_UNSUB_FILE = join(WRITE_DATA_DIR, 'broadcast_unsubscribed.json');
+function loadBroadcastUnsub() {
+  try { if (existsSync(BROADCAST_UNSUB_FILE)) return new Set(JSON.parse(readFileSync(BROADCAST_UNSUB_FILE, 'utf8'))); } catch (_) {}
+  return new Set();
+}
+function saveBroadcastUnsub(set) {
+  try {
+    const dir = BROADCAST_UNSUB_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(BROADCAST_UNSUB_FILE, JSON.stringify([...set], null, 2), 'utf8');
+  } catch (e) { console.error('Save broadcast-unsubscribed error:', e.message); }
+}
+const broadcastUnsubscribed = loadBroadcastUnsub();
+// Durable opt-out: the JSON file lives in /tmp on Vercel and is wiped on every redeploy, so a
+// file-only suppression list silently re-subscribes everyone who unsubscribed each time we ship
+// — a legally-required opt-out (PDPA ม.19 / anti-spam) we must not drop. On boot, pull the
+// canonical list from Supabase and merge it into memory (restoring it after a redeploy). If the
+// table doesn't exist yet (owner hasn't run migration 008), this fails quietly and we stay
+// file-only — no regression; it becomes durable the moment the migration runs.
+if (_useSB) {
+  _sbReq('GET', '/broadcast_unsubscribes', { params: { select: 'email' } })
+    .then((rows) => { if (Array.isArray(rows)) for (const r of rows) if (r?.email) broadcastUnsubscribed.add(String(r.email).toLowerCase()); })
+    .catch((e) => console.warn('[broadcast-unsub] Supabase hydrate failed, file-only:', e.message));
+}
+
+// GET /api/broadcast/unsubscribe — เหมือนกับ /api/leads/unsubscribe แต่สำหรับรายชื่อ broadcast
+// ทั่วไปกลุ่มนี้โดยเฉพาะ (reuse unsubToken() ตัวเดียวกัน แค่ต่าง type string)
+app.get('/api/broadcast/unsubscribe', unsubLimiter, (req, res) => {
+  const { email, token } = req.query;
+  if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const e = String(email).toLowerCase();
+  if (!safeTokenEqual(token, unsubToken(e, 'broadcast'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  broadcastUnsubscribed.add(e);
+  saveBroadcastUnsub(broadcastUnsubscribed);
+  // Persist the opt-out to Supabase too, so it survives the next /tmp wipe (see boot hydrate above).
+  if (_useSB) {
+    _sbReq('POST', '/broadcast_unsubscribes', { body: { email: e }, prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch((err) => console.warn('[broadcast-unsub] Supabase upsert failed, file-only:', err.message));
+  }
+  res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">✅ ยกเลิกรับอีเมลข่าวสารเรียบร้อยแล้ว</div>');
+});
+
 // POST /api/leads/admin/broadcast — ส่งอีเมล newsletter หาลีดทั้งหมด (Admin Key)
 const broadcastLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 6, message: { success: false, error: 'ส่ง broadcast บ่อยเกินไป' } });
 app.post('/api/leads/admin/broadcast', broadcastLimiter, async (req, res) => {
@@ -619,26 +975,27 @@ app.post('/api/leads/admin/broadcast', broadcastLimiter, async (req, res) => {
   if (audience === 'all' || audience === 'waitlist') for (const w of waitlist) if (isEmail(w.email)) set.add(w.email.toLowerCase());
   if (audience === 'all' || audience === 'affiliate') for (const a of affiliates) if (isEmail(a.email)) set.add(a.email.toLowerCase());
   if (audience === 'all' || audience === 'order') { const ords = await orders.all(); for (const o of ords) if (isEmail(o.contact)) set.add(o.contact.toLowerCase()); }
-  const recipients = [...set];
+  const recipients = [...set].filter((email) => !broadcastUnsubscribed.has(email));
 
   if (!mailer) return res.json({ success: false, sent: 0, recipients: recipients.length, error: 'ยังไม่ได้ตั้ง SMTP — ตั้ง SMTP_USER/SMTP_PASS ใน env เพื่อส่งจริง (พบผู้รับ ' + recipients.length + ' คน)' });
   if (!recipients.length) return res.json({ success: true, sent: 0, recipients: 0, message: 'ไม่มีอีเมลผู้รับในกลุ่มนี้' });
 
   const safe = String(message).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-  const html = `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+  // ส่งทีละคน (ไม่ใช้ bcc batch เหมือนเดิม) เพราะลิงก์ยกเลิกรับข่าวสารต้องเป็นของแต่ละคนจริง
+  // ยืนยันตัวด้วย token — ส่งแบบ bcc รวมกันทำแบบนี้ไม่ได้เพราะทุกคนจะได้ลิงก์เดียวกันหมด
+  let sent = 0;
+  for (const email of recipients) {
+    const unsubUrl = `${DOMAIN_URL}/api/broadcast/unsubscribe?email=${encodeURIComponent(email)}&token=${unsubToken(email, 'broadcast')}`;
+    const html = `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
     <div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">Openthai.ai</h1></div>
     <div style="padding:26px;font-size:15px;line-height:1.7;color:#e2e8f0;">${safe}</div>
     <div style="padding:16px;text-align:center;font-size:12px;color:#64748b;border-top:1px solid rgba(255,255,255,0.08);">
-      <a href="${DOMAIN_URL}" style="color:#6366f1;">openthai-ai.com</a> · ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ Openthai.ai
+      <a href="${DOMAIN_URL}" style="color:#6366f1;">openthai-ai.com</a> · ส่งถึงคุณเพราะเคยลงทะเบียน/ใช้บริการ Openthai.ai · <a href="${unsubUrl}" style="color:#64748b;">ยกเลิกรับอีเมลนี้</a>
     </div></div>`;
-
-  let sent = 0;
-  for (let i = 0; i < recipients.length; i += 50) {
-    const batch = recipients.slice(i, i + 50);
     try {
-      await mailer.sendMail({ from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to: process.env.SMTP_USER, bcc: batch, subject: subject.slice(0, 200), html });
-      sent += batch.length;
-    } catch (e) { console.error('[broadcast] batch error:', e.message); }
+      await mailer.sendMail({ from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to: email, subject: subject.slice(0, 200), html });
+      sent++;
+    } catch (e) { console.error(`[broadcast] send error (${email}):`, e.message); }
   }
   addLog('info', 'Broadcast', `ส่ง newsletter "${subject.slice(0, 40)}" → ${sent}/${recipients.length} คน`);
   res.json({ success: true, sent, recipients: recipients.length });
@@ -658,54 +1015,14 @@ const mailer = process.env.SMTP_USER
     })
   : null;
 
-async function sendAffiliateWelcome(to, name, refCode, refLink) {
+async function sendAffiliateWelcome(to, name, refCode, refLink, lang) {
   if (!mailer) return;
   try {
     await mailer.sendMail({
       from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
       to,
-      subject: '🎉 ยินดีต้อนรับสู่ Openthai.ai Affiliate Program!',
-      html: `
-      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#fe2c55,#6366f1);padding:32px;text-align:center;">
-          <h1 style="margin:0;font-size:26px;">🎉 ยินดีด้วย ${name}!</h1>
-          <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);">คุณเป็น Affiliate ของ Openthai.ai แล้ว</p>
-        </div>
-        <div style="padding:28px;">
-          <div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:20px;text-align:center;margin-bottom:20px;">
-            <div style="font-size:12px;color:#64748b;margin-bottom:6px;">REF CODE ของคุณ</div>
-            <div style="font-size:32px;font-weight:900;letter-spacing:4px;color:#10b981;">${refCode}</div>
-          </div>
-          <div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:12px;padding:16px;margin-bottom:20px;">
-            <div style="font-size:12px;color:#64748b;margin-bottom:6px;">Affiliate Link ของคุณ</div>
-            <a href="${refLink}" style="color:#a5b4fc;font-size:14px;word-break:break-all;">${refLink}</a>
-          </div>
-          <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-            <tr>
-              <td style="padding:10px;background:rgba(16,185,129,0.1);border-radius:8px;text-align:center;">
-                <div style="font-size:20px;font-weight:900;color:#10b981;">20%</div>
-                <div style="font-size:11px;color:#64748b;">Commission เริ่มต้น</div>
-              </td>
-              <td style="width:8px;"></td>
-              <td style="padding:10px;background:rgba(99,102,241,0.1);border-radius:8px;text-align:center;">
-                <div style="font-size:20px;font-weight:900;color:#6366f1;">ทุกจันทร์</div>
-                <div style="font-size:11px;color:#64748b;">จ่ายเงิน</div>
-              </td>
-              <td style="width:8px;"></td>
-              <td style="padding:10px;background:rgba(245,158,11,0.1);border-radius:8px;text-align:center;">
-                <div style="font-size:20px;font-weight:900;color:#f59e0b;">40%</div>
-                <div style="font-size:11px;color:#64748b;">สูงสุด Elite</div>
-              </td>
-            </tr>
-          </table>
-          <div style="text-align:center;">
-            <a href="${DOMAIN_URL}/affiliate/dashboard?ref=${encodeURIComponent(refCode)}" style="display:inline-block;background:linear-gradient(135deg,#fe2c55,#6366f1);color:#fff;text-decoration:none;padding:14px 28px;border-radius:50px;font-weight:700;font-size:15px;">📊 เปิด Dashboard ของฉัน</a>
-          </div>
-        </div>
-        <div style="padding:16px;text-align:center;border-top:1px solid rgba(255,255,255,0.08);font-size:12px;color:#475569;">
-          Openthai.ai • <a href="${DOMAIN_URL}" style="color:#6366f1;">openthai-ai.com</a>
-        </div>
-      </div>`,
+      subject: affiliateWelcomeSubject(lang),
+      html: affiliateWelcomeHtml({ name, refCode, refLink, domainUrl: DOMAIN_URL, lang }),
     });
     console.log(`📧 Welcome email ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
@@ -752,6 +1069,78 @@ async function sendPaymentReceipt(to, { plan, amount_thb, charge_id, paid_at, me
   }
 }
 
+// ใบเสร็จสำหรับผู้ซื้อ QuickPay (/api/quickpay/create — ขายแพ็กเกจ/สินค้าชิ้นเดียว) เดิมไม่มี
+// เลย: sendPaymentReceipt เป็น template ของ subscription (บอกว่า "อัพเกรดแผนรายเดือน") และยิง
+// เฉพาะเมื่อ rec.plan มีค่า แต่ QuickPay เก็บ plan:null + อีเมลผู้ซื้อใน buyer_email → ผู้จ่ายเงิน
+// จริงไม่เคยได้ใบเสร็จ ส่งเฉพาะเมื่อ buyer_email เป็นอีเมล best-effort (เหมือน sendShopReceipt)
+async function sendQuickpayReceipt(rec, { amount_thb, charge_id, paid_at } = {}) {
+  const to = rec?.buyer_email;
+  if (!mailer || !isReceiptEmail(to)) return;
+  const { subject, html } = buildQuickpayReceipt({ buyer: rec.buyer, label: rec.label, amount: amount_thb, charge_id, paid_at });
+  try {
+    await mailer.sendMail({ from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to, subject, html });
+    console.log(`🧾 QuickPay receipt ส่งให้ผู้ซื้อ ${to} (${charge_id})`);
+  } catch (err) {
+    console.error('QuickPay receipt email error:', err.message);
+  }
+}
+
+// ใบยืนยันคำสั่งซื้อสำหรับลูกค้าร้านค้า (/api/shop/checkout) — เดิมมีแต่อีเมลแจ้ง "เจ้าของร้าน"
+// ลูกค้าที่จ่ายเงินจริงไม่เคยได้ใบยืนยันเลย (ต่างจาก subscription ที่มี sendPaymentReceipt)
+// ส่งเฉพาะเมื่อ contact เป็นอีเมล (checkout รับเบอร์/LINE ได้ด้วย ซึ่งส่งอีเมลไม่ได้) best-effort
+async function sendShopReceipt(order) {
+  if (!mailer || !isReceiptEmail(order?.contact)) return;
+  const { subject, html } = buildShopReceipt(order);
+  try {
+    await mailer.sendMail({ from: `"Openthai Store" <${process.env.SMTP_USER}>`, to: order.contact, subject, html });
+    console.log(`📧 Shop receipt ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
+  } catch (err) {
+    console.error('Shop receipt email error:', err.message);
+  }
+}
+
+// แจ้งลูกค้าเมื่อออเดอร์ถูกจัดส่ง (บันทึกเลขพัสดุผ่าน /api/orders/admin/ship) — เดิม ship()
+// อัปเดตแค่ในฐานข้อมูล ลูกค้าไม่เคยรู้ว่าของถูกส่งแล้วหรือเลขพัสดุคืออะไร ส่งเฉพาะเมื่อ contact
+// เป็นอีเมล best-effort (เหมือน sendShopReceipt)
+async function sendShopShipped(order) {
+  if (!mailer || !isReceiptEmail(order?.contact)) return;
+  const { subject, html } = buildShippedNotice(order);
+  try {
+    await mailer.sendMail({ from: `"Openthai Store" <${process.env.SMTP_USER}>`, to: order.contact, subject, html });
+    console.log(`📦 Shipped notice ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
+  } catch (err) {
+    console.error('Shipped notice email error:', err.message);
+  }
+}
+
+// แจ้งลูกค้าเมื่อพัสดุถึงปลายทาง (ยืนยันผ่าน /api/orders/admin/deliver) — ปิดไตรภาคการแจ้ง
+// ลูกค้า (ใบเสร็จ → จัดส่ง → ถึงปลายทาง) ส่งเฉพาะเมื่อ contact เป็นอีเมล best-effort
+async function sendShopDelivered(order) {
+  if (!mailer || !isReceiptEmail(order?.contact)) return;
+  const { subject, html } = buildDeliveredNotice(order);
+  try {
+    await mailer.sendMail({ from: `"Openthai Store" <${process.env.SMTP_USER}>`, to: order.contact, subject, html });
+    console.log(`✅ Delivered notice ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
+  } catch (err) {
+    console.error('Delivered notice email error:', err.message);
+  }
+}
+
+// แจ้งลูกค้าเมื่อคำสั่งซื้อถูกยกเลิก — ทั้งกรณี admin ยกเลิกเอง (/api/orders/admin/status)
+// และกรณี "จ่ายเงินแล้วแต่สต๊อกหมด (race)" ที่ระบบยกเลิกอัตโนมัติ (finalizePaid / PromptPay
+// webhook) เดิมลูกค้าที่จ่ายเงินไปแล้วไม่เคยได้รับแจ้งว่าออเดอร์ถูกยกเลิก/กำลังคืนเงิน ส่งเฉพาะ
+// เมื่อ contact เป็นอีเมล best-effort (เหมือน sendShopReceipt)
+async function sendShopCancelled(order) {
+  if (!mailer || !isReceiptEmail(order?.contact)) return;
+  const { subject, html } = buildCancelledNotice(order);
+  try {
+    await mailer.sendMail({ from: `"Openthai Store" <${process.env.SMTP_USER}>`, to: order.contact, subject, html });
+    console.log(`❌ Cancelled notice ส่งให้ลูกค้า ${order.contact} (ออเดอร์ ${order.order_id})`);
+  } catch (err) {
+    console.error('Cancelled notice email error:', err.message);
+  }
+}
+
 // แจ้งเตือนผู้ผลิตทางอีเมลเมื่อมีคำสั่งซื้อใหม่ (+ สำเนาถึงเจ้าของระบบ)
 // HTML-escape ก่อนแทรกข้อมูลที่ผู้ใช้กรอกเองลงในอีเมล — clip() ใน orders.js/disputes.js/
 // portal-leads.js ตัด <tag> ด้วย regex ที่ bypass ได้ถ้า input มี "<" ไม่ปิด (เช่น
@@ -759,7 +1148,7 @@ async function sendPaymentReceipt(to, { plan, amount_thb, charge_id, paid_at, me
 // เจอ ">" ตัวถัดไปในเทมเพลต HTML เอง (เช่นจาก </td>) กลายเป็น tag ที่สมบูรณ์โดยไม่ตั้งใจ —
 // อีเมลแจ้งเตือน 3 จุด (order/dispute/portal-lead) ส่งถึงคนจริงข้ามฝ่าย (ลูกค้า↔ผู้ผลิต↔แอดมิน)
 // จึงต้อง escape ที่จุดแทรกลง HTML โดยตรง ไม่พึ่ง clip() ที่ต้นทางอย่างเดียว
-const escapeHtml = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+// escapeHtml + lowStockAlertHtml ย้ายไป ./html-escape.js (มี unit test) — behavior เดิมทุกประการ
 
 async function sendOrderNotification(order) {
   const to = order?.producer_email || process.env.ORDER_NOTIFY_EMAIL || process.env.SMTP_USER;
@@ -797,6 +1186,46 @@ async function sendOrderNotification(order) {
     console.log(`📧 Order notification ส่งให้ ${to} เรียบร้อย`);
   } catch (err) {
     console.error('Order email error:', err.message);
+  }
+}
+
+// Transactional confirmation to the BUYER (only when they gave an email — many give a phone instead).
+// Gives them their order id + a one-click Track link so closing the tab doesn't lose the order.
+// Consent-safe: the buyer initiated this order and supplied the contact for it (see order-confirm.js).
+async function sendBuyerOrderConfirmation(order) {
+  const info = buyerConfirmation(order, DOMAIN_URL);
+  if (!mailer || !info) return; // no SMTP, or the buyer gave a phone (no email channel) → skip quietly
+  const baht = (n) => (n == null ? '-' : `฿${Number(n).toLocaleString('th-TH')}`);
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to: info.to,
+      subject: info.subject,
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:600px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#10b981,#3b82f6);padding:28px;text-align:center;">
+          <h1 style="margin:0;font-size:23px;">✅ ได้รับคำสั่งซื้อของคุณแล้ว</h1>
+          <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);">ผู้ผลิตจะติดต่อกลับเพื่อยืนยันและจัดส่ง</p>
+        </div>
+        <div style="padding:24px;">
+          <p style="margin:0 0 14px;font-size:14px;">สวัสดีคุณ${escapeHtml(order.customer_name || '')} ขอบคุณที่สั่งซื้อผ่าน Openthai.ai 🙏</p>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <tr><td style="padding:9px 0;color:#94a3b8;">สินค้า</td><td style="padding:9px 0;text-align:right;font-weight:700;">${escapeHtml(order.product_name)}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">จำนวน</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);">${order.qty}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">ยอดรวม</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);color:#10b981;font-weight:700;">${baht(order.amount)}</td></tr>
+            <tr><td style="padding:9px 0;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.08);">เลขที่ออเดอร์</td><td style="padding:9px 0;text-align:right;border-top:1px solid rgba(255,255,255,0.08);font-family:monospace;font-size:12px;color:#a5b4fc;">${order.id}</td></tr>
+          </table>
+          <div style="text-align:center;margin-top:22px;">
+            <a href="${info.trackUrl}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:10px;font-weight:700;text-decoration:none;font-size:14px;">ติดตามสถานะคำสั่งซื้อ</a>
+          </div>
+          <p style="margin:16px 0 0;font-size:12px;color:#64748b;text-align:center;">เก็บเลขที่ออเดอร์นี้ไว้ ใช้ติดตามสถานะได้ทุกเมื่อด้วยเลขออเดอร์ + ช่องทางติดต่อของคุณ</p>
+        </div>
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai • <a href="${DOMAIN_URL}" style="color:#6366f1;">${DOMAIN_URL.replace(/^https?:\/\//, '')}</a></div>
+      </div>`,
+    });
+    console.log(`📧 Buyer confirmation ส่งให้ ${info.to} เรียบร้อย`);
+  } catch (err) {
+    console.error('Buyer confirmation email error:', err.message);
   }
 }
 
@@ -840,7 +1269,7 @@ async function sendDisputeNotification(dispute, order, phase) {
           </table>
         </div>
         <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">
-          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">จัดการข้อพิพาทใน Admin</a> · เช็คสถานะที่ <code>/api/disputes/${dispute.id}/track</code>
+          Openthai.ai • <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">จัดการข้อพิพาทใน Admin</a> · <a href="${DOMAIN_URL}/dispute?id=${dispute.id}" style="color:#6366f1;">เช็คสถานะข้อพิพาทที่นี่</a>
         </div>
       </div>`,
     });
@@ -881,6 +1310,170 @@ async function sendPortalLeadNotification(lead) {
   }
 }
 
+// /portals/consumer และ /portals/middleman ทั้งคู่โชว์ข้อความยืนยันฝั่ง frontend ทันทีที่ส่งฟอร์ม
+// (เช่น consumer: "เราจะแจ้งสินค้าและโปรโมชั่นที่ตรงใจให้ทางอีเมล") แต่ sendPortalLeadNotification()
+// ข้างบนส่งอีเมลแจ้งแอดมินเท่านั้น — ผู้สมัครจริงไม่เคยได้รับอีเมลอะไรจากระบบเลยสักฉบับ
+// คำสัญญาที่ให้ไว้บนหน้าเว็บจึงไม่เป็นจริง ฟังก์ชันนี้ส่งอีเมลต้อนรับจริงกลับไปหาผู้สมัคร
+// (best-effort — ถ้าไม่มี SMTP หรือส่งไม่สำเร็จ lead ก็ยังถูกบันทึกตามปกติ ไม่ throw)
+const PORTAL_WELCOME_COPY = {
+  // ผู้ผลิตเป็น funnel หลักของแพลตฟอร์ม แต่เดิมเป็นประเภทเดียวที่ไม่เคยได้อีเมลตอบรับตอนสมัครเลย
+  // (ทั้งเส้น /join → /api/producers/apply และ /portals/producer) ทั้งที่ทุกประเภทอื่นมีครบ ข้อความ
+  // นี้สะท้อน flow จริง: pending → แอดมินตรวจอนุมัติ → sendProducerApproval ส่งลิงก์จัดการสินค้า
+  producer: {
+    th: { subject: '📦 ได้รับใบสมัครผู้ผลิตแล้ว — Openthai.ai', title: 'ได้รับใบสมัครแล้ว!', body: (name) => `สวัสดีคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่สมัครเป็นผู้ผลิตกับ Openthai.ai ทีมงานได้รับใบสมัครและข้อมูลสินค้าของคุณแล้ว และจะตรวจสอบเพื่ออนุมัติ เมื่ออนุมัติแล้วสินค้าของคุณจะแสดงในตลาดทันที และคุณจะได้รับอีเมลพร้อมลิงก์สำหรับจัดการสินค้าของตัวเอง` },
+    en: { subject: '📦 Producer application received — Openthai.ai', title: 'Application received!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for applying to sell on Openthai.ai. We've received your application and product details and will review them for approval. Once approved, your products go live in the marketplace and you'll get an email with a link to manage your own listings.` },
+    zh: { subject: '📦 已收到生产商申请 — Openthai.ai', title: '已收到申请！', body: (name) => `您好${name ? escapeHtml(name) : ''}，感谢您申请成为 Openthai.ai 的生产商。我们已收到您的申请和产品信息，将进行审核。审核通过后，您的产品将立即在市场上展示，您也会收到一封含有自助管理商品链接的邮件。` },
+  },
+  consumer: {
+    th: { subject: '🎉 ยินดีต้อนรับสู่ OpenThaiAi', title: 'ยินดีต้อนรับ!', body: (name) => `สวัสดีคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่สมัครเป็นผู้บริโภคกับ OpenThaiAi ทีมงานได้รับข้อมูลของคุณแล้ว และจะเริ่มส่งสินค้า/โปรโมชั่นในหมวดที่คุณสนใจให้ทางอีเมลนี้` },
+    en: { subject: '🎉 Welcome to OpenThaiAi', title: 'Welcome!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for joining OpenThaiAi as a consumer. We've received your info and will start sending deals/products in your selected category to this email.` },
+    zh: { subject: '🎉 欢迎加入 OpenThaiAi', title: '欢迎！', body: (name) => `您好${name ? escapeHtml(name) : ''}，感谢您注册成为 OpenThaiAi 消费者。我们已收到您的信息，将开始通过此邮箱发送您感兴趣类别的产品和优惠。` },
+  },
+  middleman: {
+    th: { subject: '🤝 ได้รับใบสมัครคนกลาง/ตัวแทนจำหน่ายแล้ว — OpenThaiAi', title: 'ได้รับใบสมัครแล้ว!', body: (name) => `สวัสดีคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่สนใจเข้าร่วมเครือข่ายจัดจำหน่ายกับ OpenThaiAi ทีมงานได้รับใบสมัครแล้ว และจะติดต่อกลับเพื่อยืนยันการเข้าร่วมเครือข่าย` },
+    en: { subject: '🤝 Distributor application received — OpenThaiAi', title: 'Application received!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for your interest in joining the OpenThaiAi distribution network. We've received your application and our team will contact you to confirm your place in the network.` },
+    zh: { subject: '🤝 已收到经销商申请 — OpenThaiAi', title: '已收到申请！', body: (name) => `您好${name ? escapeHtml(name) : ''}，感谢您有意加入 OpenThaiAi 分销网络。我们已收到您的申请，团队将与您联系以确认加入网络。` },
+  },
+  // creator: ยังไม่มีระบบสร้างบัญชี/ให้สิทธิ์ login อัตโนมัติจริง (/ai-tools ยัง gate ด้วย
+  // isAuthenticated) เดิม CreatorPortalPage.jsx สัญญาว่า "ตรวจสอบอีเมลเพื่อรับ access" ทั้งที่
+  // ไม่มีอะไรส่งเลย — ใช้ข้อความแบบทีมงานติดต่อกลับ (เหมือน middleman) ไม่ใช่ข้อความแบบ
+  // "สิทธิ์เข้าใช้งานพร้อมแล้ว" เพราะยังไม่มีระบบออกบัญชีอัตโนมัติจริง (ดู DECISIONS_LOG)
+  creator: {
+    th: { subject: '🎬 ได้รับใบสมัคร Creator Program แล้ว — OpenThaiAi', title: 'ได้รับใบสมัครแล้ว!', body: (name) => `สวัสดีคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่สนใจเข้าร่วม Creator Program กับ OpenThaiAi ทีมงานได้รับข้อมูลของคุณแล้ว และจะติดต่อกลับพร้อมรายละเอียดการเข้าใช้งาน` },
+    en: { subject: '🎬 Creator Program application received — OpenThaiAi', title: 'Application received!', body: (name) => `Hi ${name ? escapeHtml(name) : ''}, thanks for your interest in the OpenThaiAi Creator Program. We've received your info and our team will follow up with access details.` },
+    zh: { subject: '🎬 已收到创作者计划申请 — OpenThaiAi', title: '已收到申请！', body: (name) => `您好${name ? escapeHtml(name) : ''}，感谢您申请加入 OpenThaiAi 创作者计划。我们已收到您的信息，团队将与您联系并提供访问详情。` },
+  },
+  // gov-thai/gov-intl/intl-org/foundation เดิมไม่มีอยู่ใน copySet นี้เลย — sendPortalWelcomeEmail()
+  // คืนค่าเปล่าทันทีที่ lead.type ไม่ตรง key ใดๆ ในนี้ (ดู `if (!copySet ...) return;` ด้านล่าง)
+  // แปลว่าหน่วยงานรัฐ/องค์กรระหว่างประเทศ/มูลนิธิที่ส่งฟอร์มมา ไม่เคยได้รับอีเมลยืนยันอะไรเลย
+  // ทั้งที่หน้า portal ของทั้ง 4 ประเภทนี้สัญญาไว้ชัดเจนว่า "ทีมงานจะติดต่อกลับภายใน 48/72 ชม."
+  // (หรือ "จะแจ้งเตือนเมื่อกองทุนเปิดใช้งาน" สำหรับ foundation) — คำขอความร่วมมือระดับ G2G/องค์กร
+  // ระหว่างประเทศยิ่งควรมีอีเมลยืนยันการรับคำขอ เพราะเป็นการติดต่อทางการที่มีความคาดหวังสูงกว่า
+  // การสมัครทั่วไป ใช้ pattern เดียวกับ consumer/middleman/creator ด้านบนทุกประการ
+  'gov-thai': {
+    th: { subject: '🇹🇭 ได้รับคำขอความร่วมมือแล้ว — OpenThaiAi', title: 'ได้รับคำขอแล้ว!', body: (name) => `เรียนคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่ติดต่อ OpenThaiAi เพื่อความร่วมมือด้าน AI กับหน่วยงานภาครัฐไทย ทีม Government Relations ได้รับคำขอของท่านแล้ว และจะติดต่อกลับภายใน 48 ชั่วโมง` },
+    en: { subject: '🇹🇭 Cooperation request received — OpenThaiAi', title: 'Request received!', body: (name) => `Dear ${name ? escapeHtml(name) : ''}, thank you for contacting OpenThaiAi regarding AI cooperation with your Thai government agency. Our Government Relations team has received your request and will follow up within 48 hours.` },
+    zh: { subject: '🇹🇭 已收到合作请求 — OpenThaiAi', title: '已收到请求！', body: (name) => `尊敬的${name ? escapeHtml(name) : ''}，感谢您联系 OpenThaiAi 洽谈与泰国政府机构的AI合作。我们的政府关系团队已收到您的请求，将在48小时内与您联系。` },
+  },
+  'gov-intl': {
+    th: { subject: '🌐 ได้รับคำขอความร่วมมือ G2G แล้ว — OpenThaiAi', title: 'ได้รับคำขอแล้ว!', body: (name) => `เรียนคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่ติดต่อ OpenThaiAi เพื่อความร่วมมือ AI ระดับรัฐบาลต่อรัฐบาล (G2G) ทีม International Relations ได้รับคำขอของท่านแล้ว และจะติดต่อกลับภายใน 48 ชั่วโมง` },
+    en: { subject: '🌐 G2G cooperation request received — OpenThaiAi', title: 'Request received!', body: (name) => `Dear ${name ? escapeHtml(name) : ''}, thank you for contacting OpenThaiAi regarding Government-to-Government AI cooperation. Our International Relations team has received your request and will follow up within 48 hours.` },
+    zh: { subject: '🌐 已收到G2G合作请求 — OpenThaiAi', title: '已收到请求！', body: (name) => `尊敬的${name ? escapeHtml(name) : ''}，感谢您联系 OpenThaiAi 洽谈政府间（G2G）AI合作。我们的国际关系团队已收到您的请求，将在48小时内与您联系。` },
+  },
+  'intl-org': {
+    th: { subject: '🏛️ ได้รับคำขอความร่วมมือแล้ว — OpenThaiAi', title: 'ได้รับคำขอแล้ว!', body: (name) => `เรียนคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่ติดต่อ OpenThaiAi เพื่อความร่วมมือกับองค์กรระหว่างประเทศ ทีม Partnerships ได้รับคำขอของท่านแล้ว และจะตอบกลับภายใน 72 ชั่วโมง` },
+    en: { subject: '🏛️ Partnership request received — OpenThaiAi', title: 'Request received!', body: (name) => `Dear ${name ? escapeHtml(name) : ''}, thank you for contacting OpenThaiAi about a partnership. Our Partnerships team has received your request and will respond within 72 hours.` },
+    zh: { subject: '🏛️ 已收到合作请求 — OpenThaiAi', title: '已收到请求！', body: (name) => `尊敬的${name ? escapeHtml(name) : ''}，感谢您联系 OpenThaiAi 洽谈合作。我们的合作团队已收到您的请求，将在72小时内回复。` },
+  },
+  foundation: {
+    th: { subject: '💚 ลงทะเบียนมูลนิธิเรียบร้อย — OpenThaiAi', title: 'ลงทะเบียนเรียบร้อย!', body: (name) => `เรียนคุณ${name ? escapeHtml(name) : ''} ขอบคุณที่ลงทะเบียนมูลนิธิ/องค์กรของท่านกับ OpenThaiAi ทีมงานได้รับข้อมูลของท่านแล้ว และจะแจ้งเตือนทางอีเมลนี้ทันทีที่กองทุนเปิดใช้งาน (เมื่อกำไรรวมของ OpenThaiAi เกิน 10 ล้านบาท)` },
+    en: { subject: '💚 Foundation registered — OpenThaiAi', title: 'Registered!', body: (name) => `Dear ${name ? escapeHtml(name) : ''}, thank you for registering your foundation/organization with OpenThaiAi. We've received your information and will notify you at this email as soon as the fund activates (once OpenThaiAi's cumulative profit exceeds 10M THB).` },
+    zh: { subject: '💚 基金会注册成功 — OpenThaiAi', title: '注册成功！', body: (name) => `尊敬的${name ? escapeHtml(name) : ''}，感谢您向 OpenThaiAi 注册您的基金会/组织。我们已收到您的信息，一旦基金激活（OpenThaiAi累计利润超过1000万泰铢时），将通过此邮箱通知您。` },
+  },
+};
+async function sendPortalWelcomeEmail(lead) {
+  const copySet = PORTAL_WELCOME_COPY[lead.type];
+  if (!copySet || !mailer || !lead.email) return;
+  const c = copySet[lead.lang] || copySet.th;
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to: lead.email,
+      subject: c.subject,
+      html: `
+      <div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#06b6d4,#3b82f6);padding:28px;text-align:center;"><h1 style="margin:0;font-size:22px;">${c.title}</h1></div>
+        <div style="padding:24px;font-size:15px;line-height:1.7;">${c.body(lead.name)}</div>
+        ${portalWelcomeCtaHtml(lead.type, lead.email, lead.lang, DOMAIN_URL)}
+        <div style="background:rgba(255,255,255,0.03);padding:16px;text-align:center;font-size:12px;color:#64748b;">Openthai.ai · <a href="${DOMAIN_URL}" style="color:#6366f1;">${DOMAIN_URL.replace(/^https?:\/\//, '')}</a></div>
+      </div>`,
+    });
+    console.log(`📧 Portal welcome email (${lead.type}) ส่งให้ ${lead.email} เรียบร้อย`);
+  } catch (err) {
+    console.error('Portal welcome email error:', err.message);
+  }
+}
+
+// อนุมัติผู้ผลิตแล้ว (POST /api/producers/admin/status) เดิมแค่เปลี่ยน status ในฐานข้อมูล
+// ไม่เคยแจ้งผู้ผลิตเลยว่าอนุมัติแล้ว — ผู้ผลิตรู้ได้ทางเดียวคือเข้า /producers/manage มาเช็คเอง
+// ทั้งที่ไม่รู้ด้วยซ้ำว่าหน้านี้มีอยู่ ส่งอีเมลจริงพร้อมลิงก์ตรงไปหน้าจัดการสินค้าของตัวเอง
+async function sendProducerApproval(to, company, product_name, lang) {
+  if (!mailer || !to) return;
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to,
+      subject: producerApprovalSubject(lang),
+      html: producerApprovalHtml({ to, company, productName: product_name, domainUrl: DOMAIN_URL, lang }),
+    });
+    console.log(`📧 Producer approval email ส่งให้ ${to} เรียบร้อย`);
+  } catch (err) {
+    console.error('Producer approval email error:', err.message);
+  }
+}
+
+// sendPortalWelcomeEmail() บอกผู้บริโภคว่า "จะเริ่มส่งสินค้า/โปรโมชั่นในหมวดที่สนใจให้ทางอีเมล"
+// แต่จนถึงตอนนี้ไม่มีอะไรส่งต่อจริงเลยนอกจากอีเมลต้อนรับฉบับเดียว — เป็นคำสัญญาที่ยังไม่เป็นจริง
+// เหมือนที่เคยแก้ไปแล้วรอบก่อน ฟังก์ชันนี้คือของจริง: ส่งสรุปสินค้าจาก catalog ที่อนุมัติแล้ว
+// ตรงกับหมวดที่ผู้บริโภคเลือกไว้ตอนสมัคร — ใช้ category string เดียวกับที่ producers.js ใช้แล้ว
+// (sync กันไว้ตั้งแต่รอบก่อนหน้านี้) ไม่มีข้อมูลปลอม/แต่งเติม ใช้ producers.catalog() ตรงๆ
+// token ยืนยันตัวก่อน unsubscribe — กันไม่ให้ใครก็ตามที่รู้แค่ email คนอื่นมากด unsubscribe แทนได้
+// ใช้ secret เดียวกับที่ tenant-manager.js ใช้อยู่แล้ว (fallback คงที่ ไม่ใช้ crypto.randomBytes
+// แบบ auth.js เพราะ token นี้ถูกส่งออกไปในอีเมลจริง ต้องยังใช้ได้แม้เซิร์ฟเวอร์ restart)
+// unsubToken() signs security-sensitive one-click confirm links — unsubscribe, PDPA
+// data-erasure/access (/api/privacy/*), affiliate withdrawals (moves money) and payment-cancel.
+// When JWT_SECRET is unset we must NOT fall back to a hardcoded, source-visible constant: anyone
+// with repo access could then forge those links (delete another user's data, confirm a withdrawal).
+// In a production-like environment (Vercel, or NODE_ENV=production) fall back to a per-process
+// RANDOM key instead — the same choice auth.js already makes for JWTs — so forged tokens are
+// rejected (unforgeable; the links simply stop verifying across restarts/serverless invocations
+// until JWT_SECRET is set, i.e. they fail CLOSED rather than being forgeable). Only in local dev
+// (no prod signal) do we keep a stable constant, so hand-tested links survive a server restart.
+const IS_PROD_LIKE = IS_VERCEL || process.env.NODE_ENV === 'production';
+const UNSUB_SECRET = process.env.JWT_SECRET
+  || (IS_PROD_LIKE ? randomBytes(32).toString('hex') : 'openthai-dev-only-unsub-secret');
+if (!process.env.JWT_SECRET && IS_PROD_LIKE) {
+  console.warn('[SECURITY] JWT_SECRET is not set in production — confirm links (unsubscribe / PDPA-erasure / affiliate-withdraw / payment-cancel) now use a per-process RANDOM key, so they will not verify reliably across serverless invocations or restarts. Set JWT_SECRET so these links are stable AND unforgeable.');
+}
+function unsubToken(email, type) {
+  return createHmac('sha256', UNSUB_SECRET).update(`${email}:${type}`).digest('hex').slice(0, 16);
+}
+
+async function sendConsumerDigest() {
+  if (!mailer) return { ok: false, error: 'ไม่มี SMTP_USER — ตั้งค่าก่อนส่ง digest จริง' };
+  const leads = await portalLeads.all();
+  // Dedup by email so a consumer who submitted /portals/consumer more than once (double-click,
+  // refresh) gets ONE digest, not one per duplicate record — repeat identical mail reads as spam.
+  const consumers = dedupeConsumerLeads(leads.filter((l) => l.type === 'consumer' && l.email && !l.unsubscribed));
+  const catalog = await producers.catalog();
+  let sent = 0, skipped = 0, failed = 0;
+
+  for (const lead of consumers) {
+    const category = (lead.form_data || {}).category || '';
+    // Exact-category match, excluding sold-out items (see digest-match.js) — a "new picks" promo
+    // that links to a product the consumer can't buy wastes the click and erodes trust.
+    const matches = selectDigestMatches(catalog, category, 5);
+    if (matches.length === 0) { skipped++; continue; }
+    const lang = lead.lang === 'en' ? 'en' : lead.lang === 'zh' ? 'zh' : 'th';
+    const unsubUrl = `${DOMAIN_URL}/api/leads/unsubscribe?email=${encodeURIComponent(lead.email)}&type=consumer&token=${unsubToken(lead.email, 'consumer')}`;
+    // Escaping (incl. the consumer-entered category, previously raw in the <h1>) lives in the builder.
+    const { subject, html } = consumerDigestHtml({ name: lead.name, category, matches, lang, domainUrl: DOMAIN_URL, unsubUrl });
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        to: lead.email,
+        subject,
+        html,
+      });
+      sent++;
+    } catch (err) {
+      console.error(`Consumer digest error (${lead.email}):`, err.message);
+      failed++;
+    }
+  }
+  return { ok: true, total_consumers: consumers.length, sent, skipped_no_match: skipped, failed };
+}
+
 // /portals/producer และ /portals/affiliate เดิมส่งข้อมูลเข้า portal_leads เฉยๆ (เก็บไว้ดูใน
 // Admin เท่านั้น) โดยไม่เคยเชื่อมกับระบบสมัครจริง (/api/producers/apply, /api/affiliate/apply)
 // เลย — คนสมัครผ่านหน้านี้จึงไม่ได้กลายเป็นผู้ผลิต/affiliate จริงจนกว่าแอดมินจะสังเกตเห็น
@@ -888,17 +1481,23 @@ async function sendPortalLeadNotification(lead) {
 // (best-effort — ถ้า register ไม่ผ่าน lead ก็ยังถูกบันทึกและแจ้งเตือนตามปกติ)
 async function handleNewPortalLead(lead) {
   await sendPortalLeadNotification(lead);
+  await sendPortalWelcomeEmail(lead);
   const fd = lead.form_data || {};
   try {
     if (lead.type === 'producer') {
+      // lead มาถึงตรงนี้ได้แปลว่าผ่าน portal-leads.js's submit() มาแล้วเท่านั้น ซึ่งบังคับ
+      // consent:true ไปแล้วตั้งแต่ต้นทาง (run 40) — ส่งต่อความยินยอมที่ยืนยันแล้วนี้เข้า
+      // producers.register() (บังคับ consent เหมือนกันตั้งแต่ run 42) ไม่ใช่การเลี่ยงเช็ค
       const r = await producers.register({
         company: fd.name, contact_name: fd.name, email: lead.email,
-        phone: fd.phone, product_name: fd.product,
+        phone: fd.phone, product_name: fd.product, category: fd.category, consent: true,
       });
       if (r.ok) console.log(`✅ Portal lead (producer) auto-registered เป็นใบสมัครผู้ผลิตจริง: ${lead.email}`);
       else console.warn(`[portal-leads] producer auto-register ไม่ผ่าน: ${r.error}`);
     } else if (lead.type === 'affiliate') {
-      const r = await registerAffiliateCore({ name: fd.name, email: lead.email, platform: fd.platform });
+      // lead มาถึงตรงนี้ได้แปลว่า portal-leads.js's submit() บังคับ consent:true ไปแล้ว —
+      // ส่งต่อความยินยอมที่ยืนยันแล้วนี้ ไม่ใช่การเลี่ยงเช็คใน registerAffiliateCore() ด้านบน
+      const r = await registerAffiliateCore({ name: fd.name, email: lead.email, platform: fd.platform, consent: true, lang: lead.lang });
       if (r.ok) console.log(`✅ Portal lead (affiliate) auto-registered เป็น affiliate จริง: ${lead.email} — Ref: ${r.record.ref_code}`);
       else console.warn(`[portal-leads] affiliate auto-register ไม่ผ่าน: ${r.message}`);
     }
@@ -916,13 +1515,9 @@ async function sendLowStockAlert(product) {
     try {
       await mailer.sendMail({
         from: `"Openthai.ai" <${process.env.SMTP_USER}>`, to,
+        // subject เป็น plain text (ไม่ใช่ HTML) — ไม่ต้อง escape เหมือน sendOrderNotification
         subject: `⚠️ เติมสต๊อก: ${product.name} เหลือ ${product.stock}`,
-        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:560px;margin:0 auto;border-radius:16px;overflow:hidden;">
-          <div style="background:linear-gradient(135deg,#f59e0b,#ef4444);padding:24px;text-align:center;"><h1 style="margin:0;font-size:22px;">⚠️ สต๊อกใกล้หมด</h1></div>
-          <div style="padding:24px;font-size:15px;line-height:1.7;">
-            <b>${product.name}</b> (SKU ${product.sku})<br>เหลือ <b style="color:#ef4444;">${product.stock}</b> ชิ้น · จุดเตือน ${product.low_stock}<br><br>
-            👉 ควรเติมสต๊อกที่ <a href="${DOMAIN_URL}/admin" style="color:#6366f1;">Admin → คลังสินค้า</a>
-          </div></div>`,
+        html: lowStockAlertHtml(product, DOMAIN_URL),
       });
     } catch (e) { console.error('Low-stock email error:', e.message); }
   }
@@ -942,17 +1537,7 @@ function _affFileSave(data) {
     writeFileSync(AFF_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (e) { console.error('[affiliates] file save error:', e.message); }
 }
-const _affToRow = (r) => ({
-  ref_code: r.ref_code, name: r.name, email: r.email, phone: r.phone || '',
-  platform: r.platform || 'TikTok', followers: r.followers || '',
-  channel_url: r.channel_url || '', note: r.note || '', ref_link: r.ref_link || '',
-  tier: r.tier || 'starter', commission_rate: r.commission_rate ?? 0.20,
-  total_sales: r.total_sales || 0, total_earned: r.total_earned || 0,
-  pending_payout: (r.total_earned || 0) - (r.paid_out || 0),
-  status: r.status || 'active',
-  joined_at: r.joined_at || new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-});
+const _affToRow = affToRow;
 const _affFromRow = (r) => ({
   id: r.id, ref_code: r.ref_code, name: r.name, email: r.email,
   phone: r.phone || '', platform: r.platform || 'TikTok',
@@ -962,6 +1547,7 @@ const _affFromRow = (r) => ({
   total_sales: r.total_sales || 0, total_earned: r.total_earned || 0,
   paid_out: 0, clicks: 0, monthly: [], recent_sales: [],
   status: r.status || 'active', joined_at: r.joined_at,
+  consent: r.consent === true,
 });
 let affiliates = [];
 try { if (existsSync(AFF_FILE)) affiliates = JSON.parse(readFileSync(AFF_FILE, 'utf8')); } catch (_) {}
@@ -980,15 +1566,31 @@ if (_useSB) {
 async function saveAffiliate(record) {
   _affFileSave(affiliates);
   if (_useSB) {
-    try { await _sbReq('POST', '/affiliates', { body: [_affToRow(record)], params: { on_conflict: 'ref_code' }, prefer: 'resolution=merge-duplicates,return=minimal' }); }
-    catch (e) { console.warn('[affiliates] Supabase write failed:', e.message); }
+    const row = _affToRow(record);
+    const opts = { params: { on_conflict: 'ref_code' }, prefer: 'resolution=merge-duplicates,return=minimal' };
+    try { await _sbReq('POST', '/affiliates', { body: [row], ...opts }); }
+    catch (e) {
+      // If the live table predates the `consent` column (owner hasn't run the migration
+      // alter yet), retry once without it so a real signup still persists to Supabase —
+      // consent stays in the file record. Post-migration this branch never runs.
+      if (isMissingConsentColumnError(e.message)) {
+        try { await _sbReq('POST', '/affiliates', { body: [rowWithoutConsent(row)], ...opts }); return; }
+        catch (e2) { console.warn('[affiliates] Supabase write failed (retry without consent):', e2.message); return; }
+      }
+      console.warn('[affiliates] Supabase write failed:', e.message);
+    }
   }
 }
 
 // สมัคร Affiliate จริง — ใช้ทั้งจาก POST /api/affiliate/apply โดยตรง และจาก portal lead
 // (type:'affiliate') ที่ auto-register ต่อให้อัตโนมัติ ดู handleNewPortalLead ด้านล่าง
+// เดิมไม่มีการบังคับยินยอม PDPA เลย เหมือนกับที่พบใน producers.js's register() (run 42) — ตอนนี้
+// บังคับ consent:true เช่นเดียวกัน ฝั่ง handleNewPortalLead ส่งต่อ consent:true ที่ verify แล้ว
+// จาก portal-leads.js ตั้งแต่ต้นทาง ไม่ใช่การเลี่ยงเช็ค
 async function registerAffiliateCore(input) {
-  const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link } = input || {};
+  const { name, email, phone, platform, followers, channel_url, note, ref_code, ref_link, consent, lang } = input || {};
+  const safeLang = ['th', 'en', 'zh'].includes(lang) ? lang : 'th';
+  if (consent !== true) return { ok: false, status: 400, message: 'ต้องยินยอมตามนโยบายความเป็นส่วนตัว (PDPA) ก่อนส่งข้อมูล' };
   if (!name || !email) return { ok: false, status: 400, message: 'ต้องการชื่อและอีเมล' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { ok: false, status: 400, message: 'รูปแบบอีเมลไม่ถูกต้อง' };
@@ -1000,7 +1602,19 @@ async function registerAffiliateCore(input) {
     return { ok: false, status: 409, message: 'อีเมลนี้สมัครไปแล้ว', duplicate: true };
   }
 
-  const finalCode = proposedCode || `AFF${Date.now().toString().slice(-6)}`;
+  // ref_code ต้องไม่ซ้ำ: ทุกจุดที่เครดิตยอดขาย/คิดค่าคอม/ถอนเงิน (creditAffiliateSale, affPending,
+  // reservedFor, withdraw confirm, dashboard) ค้นด้วย affiliates.find(a => a.ref_code === ref) ซึ่ง
+  // คืน "ตัวแรก" ที่เจอ เดิม dedup แค่ email — ผู้ใช้เสนอ ref_code เองได้ ถ้าซ้ำกับคนอื่น ยอดขายที่เข้ามา
+  // ทาง ?ref=CODE ของ affiliate คนหลังจะไปเข้าคนแรกทั้งหมด และคนหลังจะไม่มีวันได้รับเครดิต/ถอนเงินเลย
+  const codeTaken = (c) => affiliates.some((a) => a.ref_code === c);
+  let finalCode = proposedCode || `AFF${Date.now().toString().slice(-6)}`;
+  if (codeTaken(finalCode)) {
+    if (proposedCode) {
+      return { ok: false, status: 409, message: 'รหัสแนะนำ (ref code) นี้ถูกใช้ไปแล้ว กรุณาเลือกรหัสอื่น', duplicate_code: true };
+    }
+    // auto-gen ชนกันเอง (หายากแต่เป็นไปได้) → เติมสุ่มท้ายจนกว่าจะไม่ซ้ำ
+    do { finalCode = `AFF${Date.now().toString().slice(-6)}${Math.random().toString(36).slice(2, 5)}`; } while (codeTaken(finalCode));
+  }
   const record = {
     id: Date.now().toString(),
     name: String(name).trim().slice(0, 100),
@@ -1011,6 +1625,8 @@ async function registerAffiliateCore(input) {
     note: String(note || '').slice(0, 500),
     ref_code: finalCode,
     ref_link: ref_link || `${DOMAIN_URL}/?ref=${encodeURIComponent(finalCode)}`,
+    consent: true,
+    lang: safeLang,
     tier: 'starter',
     commission_rate: 0.20,
     total_sales: 0,
@@ -1023,7 +1639,7 @@ async function registerAffiliateCore(input) {
   await saveAffiliate(record);
   console.log(`✅ Affiliate สมัครใหม่: ${name} (${safeEmail}) — Ref: ${record.ref_code}`);
 
-  sendAffiliateWelcome(safeEmail, name, record.ref_code, record.ref_link);
+  sendAffiliateWelcome(safeEmail, name, record.ref_code, record.ref_link, safeLang);
   webhooks.dispatch('affiliate.joined', { name, ref_code: record.ref_code, platform: record.platform });
 
   return { ok: true, record };
@@ -1042,8 +1658,11 @@ function saveWithdrawals() {
 }
 const WD_MIN = 100;  // ยอดถอนขั้นต่ำ (บาท)
 // ยอดที่ "จองไว้" = คำขอถอนที่ยังไม่จบ (pending/approved) — กันถอนซ้ำเกินยอดจริง
-const reservedFor = (ref) => withdrawals.filter(w => w.ref_code === ref && ['pending', 'approved'].includes(w.status)).reduce((s, w) => s + (w.amount || 0), 0);
-const affPending = (a) => +((a.total_earned || 0) - (a.paid_out || 0) - reservedFor(a.ref_code)).toFixed(2);
+// reservedFor/affPending math lives in affiliate-withdraw-math.js (pure + unit-tested);
+// these thin closures bind it to the module-level `withdrawals` array so all call sites
+// (withdraw request / finalize / dashboard) stay unchanged.
+const reservedFor = (ref) => reservedForPure(withdrawals, ref);
+const affPending = (a) => affAvailable(a, withdrawals);
 
 // ─── POST /api/affiliate/apply — รับสมัคร Affiliate ──────────────────────────
 
@@ -1067,8 +1686,16 @@ app.post('/api/affiliate/apply', affiliateLimiter, async (req, res) => {
   }
 });
 
+// ref_code เป็นทั้ง "ตัวระบุสาธารณะ" (ฝังในลิงก์แชร์ ?ref=CODE) และ "กุญแจ" เข้าดูสถิติ+
+// คำขอถอนของ affiliate นั้น โดยไม่มี login — และ genRefCode() ให้ entropy ต่ำ (ชื่อ + สุ่ม
+// base36 3 ตัว ≈ 46k แบบ) endpoint อ่านทั้งสองตัวนี้จึงถูก enumerate เพื่อกวาดชื่อจริง +
+// ยอดรายได้/ยอดค้างจ่ายของพันธมิตรได้ไม่จำกัด rate limiter นี้เป็นการลดความเสียหาย
+// (กัน enumeration แบบเดียวกับที่ run 11 ทำกับ unsubscribe) โดยไม่แตะดีไซน์ login-less เดิม
+// ส่วนคำถามว่าควรใส่ auth จริงให้ affiliate dashboard หรือไม่ เป็น decision ที่ต้องถามเจ้าของ
+const affReadLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, message: { success: false, message: 'เรียกดูข้อมูลบ่อยเกินไป กรุณารอสักครู่' } });
+
 // ─── GET /api/affiliate/stats/:ref_code — ดูสถิติ ────────────────────────────
-app.get('/api/affiliate/stats/:ref_code', (req, res) => {
+app.get('/api/affiliate/stats/:ref_code', affReadLimiter, (req, res) => {
   const aff = affiliates.find((a) => a.ref_code === req.params.ref_code);
   if (!aff) return res.status(404).json({ success: false, message: 'ไม่พบ Affiliate นี้' });
 
@@ -1102,7 +1729,7 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
       conversions:     aff.total_sales     || 0,
       conversion_rate: aff.clicks > 0 ? +((aff.total_sales / aff.clicks) * 100).toFixed(1) : 0,
       monthly:         aff.monthly         || [],
-      recent_sales:    aff.recent_sales    || [],
+      recent_sales:    publicAffiliateSales(aff.recent_sales), // redact the buyer's Omise charge_id — this endpoint is public (ref_code-gated only)
       next_payout_date: nextPayout,
       joined_at:       aff.joined_at,
       status:          aff.status,
@@ -1182,8 +1809,27 @@ app.get('/api/affiliate/leaderboard', (req, res) => {
 });
 
 // ─── POST /api/affiliate/withdraw — พันธมิตรขอถอนค่าคอมเข้าพร้อมเพย์ ───────────
+// AffiliateDashboard.jsx เข้าถึงได้แค่ด้วย ?ref=XXXXX ใน URL — ไม่มี login ใดๆ ทั้งสิ้น และ
+// ref_code ไม่ใช่ความลับ มันคือส่วนหนึ่งของลิงก์รีเฟอร์ที่ affiliate ตั้งใจแชร์ให้สาธารณะ (โพสต์
+// TikTok/IG ของตัวเอง) — เดิม endpoint นี้รับ promptpay จาก request body ตรงๆ ไม่ตรวจสอบความ
+// เป็นเจ้าของเลย ใครก็ตามที่เคยเห็นลิงก์รีเฟอร์ของ affiliate คนไหน (ซึ่งอาจถูกแชร์ไปหาผู้ติดตาม
+// นับพัน) สามารถส่งคำขอถอนเงินค่าคอมของเขาไปเข้าพร้อมเพย์ของตัวเองได้ — ต้องรออนุมัติจากแอดมิน
+// ก็จริง แต่แอดมินไม่มีทางรู้เลยว่าเลขพร้อมเพย์ที่เห็นไม่ใช่ของ affiliate ตัวจริง จึงเสี่ยงเงินจริง
+// หายจริง แก้ด้วยแบบเดียวกับ erasure: ยืนยันผ่านอีเมลที่ลงทะเบียนไว้ก่อน ค่อยสร้างคำขอถอนจริงที่
+// แอดมินเห็น (ไม่กระทบ affiliate จริงที่มีอีเมลลงทะเบียนอยู่แล้วตั้งแต่สมัคร)
+const WD_CONFIRM_FILE = join(WRITE_DATA_DIR, 'withdraw_confirmations.json');
+let withdrawConfirmations = [];
+try { if (existsSync(WD_CONFIRM_FILE)) withdrawConfirmations = JSON.parse(readFileSync(WD_CONFIRM_FILE, 'utf8')); } catch (_) {}
+function saveWithdrawConfirmations() {
+  try {
+    const dir = WD_CONFIRM_FILE.replace(/[/\\][^/\\]+$/, '');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(WD_CONFIRM_FILE, JSON.stringify(withdrawConfirmations, null, 2), 'utf8');
+  } catch (e) { console.error('[withdraw-confirm] save error:', e.message); }
+}
+
 const withdrawLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { success: false, error: 'ขอถอนบ่อยเกินไป กรุณารอ' } });
-app.post('/api/affiliate/withdraw', withdrawLimiter, (req, res) => {
+app.post('/api/affiliate/withdraw', withdrawLimiter, async (req, res) => {
   const ref = (req.body?.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   const promptpay = (req.body?.promptpay || '').toString().replace(/[^0-9]/g, '').slice(0, 13);
   const aff = ref && affiliates.find(a => a.ref_code === ref);
@@ -1194,37 +1840,111 @@ app.post('/api/affiliate/withdraw', withdrawLimiter, (req, res) => {
   if (!(amount > 0)) return res.status(400).json({ success: false, error: 'ยอดถอนไม่ถูกต้อง' });
   if (amount < WD_MIN) return res.status(400).json({ success: false, error: `ถอนขั้นต่ำ ฿${WD_MIN}` });
   if (amount > avail) return res.status(400).json({ success: false, error: `ยอดถอนเกินยอดที่ถอนได้ (คงเหลือ ฿${avail})` });
+  if (!aff.email) return res.status(400).json({ success: false, error: 'บัญชีนี้ไม่มีอีเมลลงทะเบียน ติดต่อแอดมินเพื่อยืนยันตัวตน' });
+  if (!mailer) return res.status(503).json({ success: false, error: 'ระบบยืนยันอีเมลยังไม่พร้อม (ไม่ได้ตั้งค่า SMTP) — ติดต่อแอดมิน' });
 
+  const confirmId = `wdc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const pending = { id: confirmId, ref_code: ref, name: aff.name, amount, promptpay, created_at: new Date().toISOString() };
+  withdrawConfirmations.push(pending);
+  saveWithdrawConfirmations();
+
+  const confirmUrl = `${DOMAIN_URL}/api/affiliate/withdraw/confirm?id=${confirmId}&token=${unsubToken(confirmId, 'affiliate-withdraw')}`;
+  try {
+    await mailer.sendMail({
+      from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+      to: aff.email,
+      subject: '💰 ยืนยันคำขอถอนเงินค่าคอมมิชชัน — Openthai.ai',
+      html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:520px;margin:0 auto;border-radius:16px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#22c55e,#3b82f6);padding:24px;text-align:center;"><h1 style="margin:0;font-size:19px;">ยืนยันคำขอถอนเงิน</h1></div>
+        <div style="padding:24px;font-size:14px;line-height:1.7;">
+          <p>คำขอถอนค่าคอมมิชชัน <strong>฿${amount.toLocaleString('th-TH')}</strong> เข้าพร้อมเพย์เลขที่ <strong>${promptpay}</strong> สำหรับบัญชี <strong>${escapeHtml(ref)}</strong></p>
+          <p style="text-align:center;margin:20px 0;"><a href="${confirmUrl}" style="background:#22c55e;color:#0f0f1a;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700;">ยืนยันคำขอถอนเงิน</a></p>
+          <p style="color:#94a3b8;font-size:12px;">หากคุณไม่ได้ส่งคำขอนี้ ไม่ต้องกดลิงก์ — จะไม่มีการถอนเงินเกิดขึ้นจนกว่าจะยืนยัน</p>
+        </div></div>`,
+    });
+  } catch (e) {
+    console.error('[withdraw] confirm email error:', e.message);
+    return res.status(502).json({ success: false, error: 'ส่งอีเมลยืนยันไม่สำเร็จ ลองใหม่อีกครั้ง' });
+  }
+  addLog('info', 'Withdraw', `ส่งอีเมลยืนยันคำขอถอน ฿${amount} → ${ref} (${aff.name})`);
+  res.json({ success: true, message: `ส่งอีเมลยืนยันไปที่ ${aff.email} แล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันคำขอถอนเงิน`, pending_balance: avail });
+});
+
+// สร้างคำขอถอนจริงจาก pending — เรียกจาก POST เท่านั้น idempotent (splice ก่อน; ไม่พบ = ยืนยันไปแล้ว)
+function finalizeWithdraw(id) {
+  const idx = withdrawConfirmations.findIndex(p => p.id === id);
+  if (idx === -1) return { ok: false, code: 404, error: 'ไม่พบคำขอนี้ หรือถูกยืนยันไปแล้ว' };
+  const pending = withdrawConfirmations[idx];
+  withdrawConfirmations.splice(idx, 1);
+  saveWithdrawConfirmations();
+  const aff = affiliates.find(a => a.ref_code === pending.ref_code);
+  const avail = aff ? affPending(aff) : 0;
+  if (!aff || pending.amount > avail) {
+    return { ok: false, code: 400, error: 'ยอดคงเหลือไม่พอสำหรับคำขอนี้แล้ว (อาจมีการถอนอื่นไปก่อน) — กรุณาส่งคำขอใหม่' };
+  }
   const wd = {
     id: `wd_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    ref_code: ref, name: aff.name, amount, promptpay,
+    ref_code: pending.ref_code, name: pending.name, amount: pending.amount, promptpay: pending.promptpay,
     status: 'pending', requested_at: new Date().toISOString(), updated_at: new Date().toISOString(),
   };
   withdrawals.unshift(wd);
   saveWithdrawals();
-  addLog('info', 'Withdraw', `คำขอถอน ฿${amount} → ${ref} (${aff.name})`);
-  webhooks.dispatch('affiliate.withdraw_requested', { ref_code: ref, amount, id: wd.id }, null);
-  res.json({ success: true, withdrawal: wd, pending_balance: affPending(aff) });
+  addLog('info', 'Withdraw', `ยืนยันแล้ว: คำขอถอน ฿${wd.amount} → ${wd.ref_code} (${wd.name})`);
+  webhooks.dispatch('affiliate.withdraw_requested', { ref_code: wd.ref_code, amount: wd.amount, id: wd.id }, null);
+  return { ok: true, wd };
+}
+
+// GET = หน้ายืนยันเท่านั้น ไม่สร้างคำขอถอน — กัน email link-scanner/prefetch (ยิง GET ลิงก์ในอีเมล
+// อัตโนมัติ) สร้างคำขอถอนเงินโดยที่เจ้าตัวยังไม่ได้กดจริง การสร้างจริงเกิดตอนกดปุ่ม → POST เท่านั้น
+app.get('/api/affiliate/withdraw/confirm', unsubLimiter, (req, res) => {
+  const { id, token } = req.query;
+  if (!id || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  if (!safeTokenEqual(token, unsubToken(String(id), 'affiliate-withdraw'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  const pending = withdrawConfirmations.find(p => p.id === id);
+  if (!pending) return res.status(404).send('ไม่พบคำขอนี้ หรือถูกยืนยันไปแล้ว');
+  const qs = `id=${encodeURIComponent(String(id))}&token=${encodeURIComponent(String(token))}`;
+  res.send(`<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><body style="background:#0f0f1a;color:#f8fafc;"><div style="font-family:Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;line-height:1.7;padding:0 20px;">
+    <h2 style="color:#22c55e;">ยืนยันคำขอถอนเงิน</h2>
+    <p>ยืนยันคำขอถอนค่าคอมมิชชัน <strong>฿${pending.amount.toLocaleString('th-TH')}</strong> เข้าพร้อมเพย์ <strong>${escapeHtml(pending.promptpay)}</strong></p>
+    <button id="go" style="background:#22c55e;color:#0f0f1a;border:none;padding:12px 26px;border-radius:999px;font-size:16px;font-weight:700;cursor:pointer;">ยืนยันคำขอถอนเงิน</button>
+    <p id="out" style="margin-top:18px;color:#94a3b8;"></p>
+    <script>
+      document.getElementById('go').onclick=function(){var b=this,o=document.getElementById('out');b.disabled=true;b.textContent='กำลังยืนยัน...';fetch('/api/affiliate/withdraw/confirm?${qs}',{method:'POST'}).then(function(r){return r.json();}).then(function(d){if(d.success){b.style.display='none';o.textContent='✅ ยืนยันคำขอถอน ฿'+Number(d.amount).toLocaleString('th-TH')+' แล้ว รอแอดมินอนุมัติ';}else{o.textContent=d.message||'เกิดข้อผิดพลาด';b.disabled=false;b.textContent='ยืนยันคำขอถอนเงิน';}}).catch(function(){o.textContent='เชื่อมต่อไม่สำเร็จ ลองใหม่';b.disabled=false;b.textContent='ยืนยันคำขอถอนเงิน';});};
+    </script>
+  </div></body></html>`);
+});
+
+// POST = สร้างคำขอถอนจริง (ต้องกดปุ่มบนหน้ายืนยันก่อน bot ที่ทำแต่ GET จะไม่ทริกเกอร์)
+app.post('/api/affiliate/withdraw/confirm', unsubLimiter, (req, res) => {
+  const id = req.query.id || req.body?.id;
+  const token = req.query.token || req.body?.token;
+  if (!id || !token) return res.status(400).json({ success: false, message: 'ลิงก์ไม่ถูกต้อง' });
+  if (!safeTokenEqual(token, unsubToken(String(id), 'affiliate-withdraw'))) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
+  const r = finalizeWithdraw(String(id));
+  if (!r.ok) return res.status(r.code || 400).json({ success: false, message: r.error });
+  res.json({ success: true, amount: r.wd.amount, id: r.wd.id });
 });
 
 // ─── GET /api/affiliate/withdrawals?ref_code= — รายการคำขอของพันธมิตร ─────────
-app.get('/api/affiliate/withdrawals', (req, res) => {
+app.get('/api/affiliate/withdrawals', affReadLimiter, (req, res) => {
   const ref = (req.query.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   if (!ref) return res.status(400).json({ success: false, error: 'ต้องการ ref_code' });
   const aff = affiliates.find(a => a.ref_code === ref);
-  const list = withdrawals.filter(w => w.ref_code === ref).map(w => ({ ...w, promptpay: w.promptpay.replace(/(\d{3})\d+(\d{2})/, '$1****$2') }));
+  // withdrawals persist to a JSON file across restarts; a legacy/hand-edited row could lack
+  // promptpay, and w.promptpay.replace(...) would then 500 the whole page. Guard the mask.
+  const list = withdrawals.filter(w => w.ref_code === ref).map(w => ({ ...w, promptpay: (w.promptpay || '').replace(/(\d{3})\d+(\d{2})/, '$1****$2') }));
   res.json({ success: true, withdrawals: list, pending_balance: aff ? affPending(aff) : 0, total_earned: aff?.total_earned || 0, paid_out: aff?.paid_out || 0 });
 });
 
 // ─── Admin: รายการ + อนุมัติ/ปฏิเสธ/จ่ายแล้ว (x-admin-key) ────────────────────
-app.get('/api/affiliate/withdrawals/admin', (req, res) => {
+app.get('/api/affiliate/withdrawals/admin', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const status = (req.query.status || '').toString();
   const list = status ? withdrawals.filter(w => w.status === status) : withdrawals;
   res.json({ success: true, count: list.length, withdrawals: list });
 });
-app.post('/api/affiliate/withdrawals/admin/:id', (req, res) => {
+app.post('/api/affiliate/withdrawals/admin/:id', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const wd = withdrawals.find(w => w.id === req.params.id);
@@ -1237,6 +1957,14 @@ app.post('/api/affiliate/withdrawals/admin/:id', (req, res) => {
   else if (action === 'reject') { wd.status = 'rejected'; wd.note = (req.body?.note || '').toString().slice(0, 200); }
   else if (action === 'paid') {
     const aff = affiliates.find(a => a.ref_code === wd.ref_code);
+    // จ่ายจริงต้องไม่ทำให้ paid_out เกิน total_earned — เดิม 'paid' บวก paid_out ทันทีโดยไม่เช็ค
+    // ยอดคงเหลือ ทำให้จ่ายเกินได้ผ่านลำดับ: reject คำขอหนึ่ง → ขอ+จ่ายคำขอใหม่จนเต็มยอด →
+    // แล้วชุบชีวิตคำขอเดิม (rejected → approve → paid) ซึ่ง reservedFor ดักไม่ได้เพราะสถานะ
+    // 'rejected'/'paid' ไม่นับใน reservedFor คำขอที่ยืนยันตอน finalize ก็ผ่านมาแล้วด้วยยอด ณ ตอนนั้น
+    // เช็คยอดค้างจ่ายจริง (canPayout) ตอนจ่ายจริงเป็นด่านสุดท้ายกันจ่ายซ้ำ/จ่ายเกิน
+    if (aff && !canPayout(aff, wd.amount)) {
+      return res.status(409).json({ success: false, error: `จ่ายไม่ได้: ยอดค้างจ่ายคงเหลือ ฿${payoutRemaining(aff)} ไม่พอกับคำขอ ฿${wd.amount} (อาจจ่ายคำขออื่นไปแล้ว)` });
+    }
     if (aff) { aff.paid_out = +((aff.paid_out || 0) + wd.amount).toFixed(2); saveAffiliate(aff).catch(() => {}); }
     wd.status = 'paid'; wd.paid_at = new Date().toISOString();
   }
@@ -1248,7 +1976,7 @@ app.post('/api/affiliate/withdrawals/admin/:id', (req, res) => {
 });
 
 // ─── GET /api/affiliate/list — admin only (ต้องใช้ ADMIN_KEY header) ──────────
-app.get('/api/affiliate/list', (req, res) => {
+app.get('/api/affiliate/list', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) {
     return res.status(401).json({ success: false, message: adminDenyMessage() });
@@ -1322,6 +2050,25 @@ function saveWaitlist(data) {
 }
 
 const waitlist = loadWaitlist();
+// Durable capture: waitlist.json lives in /tmp on Vercel and is wiped on every redeploy (Vercel
+// redeploys on every push), so a file-only waitlist silently loses every landing-page email signup
+// each time we ship — the very top of the marketing funnel. On boot, pull the canonical list from
+// Supabase and merge it into memory (restoring it after a redeploy), deduping by email. If the table
+// doesn't exist yet (owner hasn't run migration 010), this fails quietly and we stay file-only — no
+// regression; it becomes durable the moment the migration runs. Mirrors the broadcast_unsubscribes
+// hydrate-on-boot / upsert-on-write pattern above.
+if (_useSB) {
+  _sbReq('GET', '/waitlist', { params: { select: 'email,source,joined_at', order: 'joined_at.asc', limit: '100000' } })
+    .then((rows) => {
+      if (!Array.isArray(rows)) return;
+      const have = new Set(waitlist.map((w) => (w.email || '').toLowerCase()));
+      for (const r of rows) {
+        const em = (r?.email || '').toLowerCase();
+        if (em && !have.has(em)) { waitlist.push({ email: em, source: r.source || 'landing', joined_at: r.joined_at || new Date().toISOString() }); have.add(em); }
+      }
+    })
+    .catch((e) => console.warn('[waitlist] Supabase hydrate failed, file-only:', e.message));
+}
 
 const waitlistLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 ชั่วโมง
@@ -1349,6 +2096,11 @@ app.post('/api/waitlist', waitlistLimiter, (req, res) => {
     };
     waitlist.push(record);
     saveWaitlist(waitlist);
+    // Persist to Supabase too so the signup survives the next /tmp wipe (see hydrate on boot).
+    if (_useSB) {
+      _sbReq('POST', '/waitlist', { params: { on_conflict: 'email' }, body: { email: record.email, source: record.source, joined_at: record.joined_at }, prefer: 'resolution=merge-duplicates,return=minimal' })
+        .catch((e) => console.warn('[waitlist] Supabase upsert failed, file-only:', e.message));
+    }
     console.log(`📧 Waitlist: ${sanitizedEmail} (${source || 'landing'}) — total: ${waitlist.length}`);
 
     // ส่ง confirmation email (async)
@@ -1423,6 +2175,30 @@ app.post('/api/analyze-image', express.json({ limit: '5mb' }), generateLimiter, 
   return res.status(503).json({ success: false, error: 'ต้องตั้งค่า ANTHROPIC_API_KEY หรือ GEMINI_API_KEY' });
 });
 
+// ─── GET /api/seasonal/recommend — 24 solar terms (节气) × climate zone → หมวดสินค้าที่ดีมานด์ ─────
+// เครื่องมือ "ดันสินค้าที่ใช่ ให้พื้นที่/ฤดูกาลที่ใช่" ตามวิสัยทัศน์เจ้าของ (2026-07-24): เชิงกำหนดได้
+// จากปฏิทินสุริยคติ + ฤดูกาลของเขตภูมิอากาศ — ไม่ผูกกับ LLM และไม่ scrape ข้อมูลใคร ตอบทันทีแม้ AI ล่ม
+// query: ?zone=tropical|north_temperate|south_temperate (ดีฟอลต์ tropical) &date=YYYY-MM-DD (ดีฟอลต์วันนี้)
+//        &lang=th|en|zh (ดีฟอลต์ th) — เนื้อหา (ฤดูกาล/หมวด/มุมขาย/คำแนะนำต่อกลุ่ม) เปลี่ยนตามภาษา
+app.get('/api/seasonal/recommend', (req, res) => {
+  const zone = String(req.query.zone || 'tropical');
+  const lang = String(req.query.lang || 'th');
+  const date = req.query.date ? new Date(String(req.query.date)) : new Date();
+  const data = seasonalRecommend({ date: isNaN(date.getTime()) ? new Date() : date, zone, lang });
+  res.json({ success: true, ...data });
+});
+// GET /api/seasonal/zones — รายชื่อเขตภูมิอากาศที่รองรับ (ให้ frontend/skill รู้ตัวเลือก) &lang=th|en|zh
+app.get('/api/seasonal/zones', (req, res) => res.json({ success: true, zones: seasonalZonesInfo(String(req.query.lang || 'th')) }));
+// GET /api/seasonal/angles — brick 2: fuse ฤดูกาล × เทรนด์เชิงโครงสร้าง → "มุมขายสินค้า" ที่จับต้องได้
+// (deterministic, ไม่ใช้ LLM, ไม่ scrape) query เหมือน /recommend: ?zone=&date=&lang=
+app.get('/api/seasonal/angles', (req, res) => {
+  const zone = String(req.query.zone || 'tropical');
+  const lang = String(req.query.lang || 'th');
+  const date = req.query.date ? new Date(String(req.query.date)) : new Date();
+  const data = seasonalProductAngles({ date: isNaN(date.getTime()) ? new Date() : date, zone, lang });
+  res.json({ success: true, ...data });
+});
+
 // ─── GET /api/trending — Trending Thai hashtags (cached 30 min) ───────────────
 const trendCache = { data: null, ts: 0 };
 const TREND_TTL  = 30 * 60 * 1000;
@@ -1489,10 +2265,31 @@ app.post('/api/generate-ab', generateLimiter, async (req, res) => {
   form.product = sanitize(form.product);
   form.audience = sanitize(form.audience);
   form.price = sanitize(form.price);
+  const t0 = Date.now();
+  // Enforce the same daily plan quota as /api/generate. This A/B endpoint previously had
+  // NO quota check (only the burst rate-limiter), so a Free user could bypass FREE_DAILY_LIMIT
+  // entirely — and get two variants per call — just by using /api/generate-ab. Count one A/B
+  // request as one use (matches the per-action daily model), same key as /api/generate.
+  const quota = await checkQuota(req);
+  if (!quota.allowed) {
+    return res.status(429).json({
+      error: `ใช้สิทธิ์ฟรีครบ ${quota.limit} ชิ้นแล้ววันนี้ — อัพเกรดเป็น Pro (฿299/เดือน) เพื่อสร้างไม่จำกัด`,
+      code: 'QUOTA_EXCEEDED', plan: 'free', used: quota.used, limit: quota.limit, upgrade_url: '/payment?plan=pro',
+    });
+  }
   try {
     const [a, b] = await Promise.all([smartGenerate(form), smartGenerate({ ...form, style: form.style === 'sales' ? 'entertainment' : 'sales' })]);
+    await consumeQuota(req);
+    // #11 — log AI usage (A/B = two generations in one request; count both variants' output)
+    recordAiUsage({
+      endpoint: '/api/generate-ab', ai_source: a.source, product: form.product, platform: form.platform,
+      category: form.category, style: form.style, critic_score: a.criticScore, response_ms: Date.now() - t0,
+      input_tokens: estTokens(buildPrompt(form)) * 2,
+      output_tokens: estTokens([a.hook, ...(a.script || []), a.caption, b.hook, ...(b.script || []), b.caption].filter(Boolean).join(' ')),
+    });
     return res.json({ a, b });
   } catch (err) {
+    // AI failed → mock fallback; do NOT consume quota on failure (same as /api/generate).
     const a = mockGenerate(form);
     const b = mockGenerate({ ...form, style: 'entertainment' });
     return res.json({ a, b });
@@ -1504,6 +2301,16 @@ app.post('/api/generate-ab', generateLimiter, async (req, res) => {
 app.post('/api/generate/stream', generateLimiter, async (req, res) => {
   const { product, platform = 'TikTok', tone = 'สนุก/กระตุ้น', category = 'OTOP', audience = 'ทั่วไป' } = req.body || {};
   if (!product?.trim()) return res.status(400).json({ error: 'product required' });
+
+  // Enforce the daily plan quota BEFORE opening the stream — this SSE endpoint previously
+  // skipped it, letting Free users generate unlimited captions past FREE_DAILY_LIMIT via /stream.
+  const quota = await checkQuota(req);
+  if (!quota.allowed) {
+    return res.status(429).json({
+      error: `ใช้สิทธิ์ฟรีครบ ${quota.limit} ชิ้นแล้ววันนี้ — อัพเกรดเป็น Pro (฿299/เดือน) เพื่อสร้างไม่จำกัด`,
+      code: 'QUOTA_EXCEEDED', plan: 'free', used: quota.used, limit: quota.limit, upgrade_url: '/payment?plan=pro',
+    });
+  }
 
   // SSE headers — ปิด buffering เพื่อให้ไหลทันที
   res.writeHead(200, {
@@ -1520,8 +2327,12 @@ app.post('/api/generate/stream', generateLimiter, async (req, res) => {
 สินค้า: "${String(product).slice(0, 200)}" · หมวด: ${category} · กลุ่มเป้าหมาย: ${audience}
 เขียนเป็นข้อความต่อเนื่อง (ไม่ต้องมีหัวข้อ/JSON) มี hook เปิดที่ดึงดูด · ประโยชน์ · call-to-action · อิโมจิพอเหมาะ · แฮชแท็ก 3-5 ตัวท้ายสุด`;
 
+  const t0 = Date.now();
+  const source = anthropic ? 'claude' : (gemini ? 'gemini' : 'mock');
+  let full = '';                            // accumulate output for #11 token estimate
+  const emit = (text) => { full += text; send('delta', { text }); };
   try {
-    send('start', { source: anthropic ? 'claude' : (gemini ? 'gemini' : 'mock') });
+    send('start', { source });
 
     if (anthropic) {
       const stream = await anthropic.messages.create({
@@ -1530,22 +2341,29 @@ app.post('/api/generate/stream', generateLimiter, async (req, res) => {
       });
       for await (const ev of stream) {
         if (closed) break;
-        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) send('delta', { text: ev.delta.text });
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text) emit(ev.delta.text);
       }
     } else if (gemini) {
       const result = await gemini.generateContentStream(prompt);
       for await (const chunk of result.stream) {
         if (closed) break;
-        const t = chunk.text(); if (t) send('delta', { text: t });
+        const t = chunk.text(); if (t) emit(t);
       }
     } else {
       // Mock — สตรีมทีละคำเพื่อให้เห็น UX จริง
       const mock = `🔥 หยุดเลื่อน! ${String(product).slice(0, 40)} ที่ทุกคนตามหา มาแล้ว ✨\n\nคุณภาพคัดเกรด ส่งตรงถึงมือคุณ ราคาที่จับต้องได้ รับประกันความพอใจ 💯\n\n👉 ทักแชทสั่งเลยวันนี้ ของมีจำนวนจำกัด!\n\n#${category} #ของดีบอกต่อ #Openthai_ai`;
       for (const word of mock.split(/(\s+)/)) {
         if (closed) break;
-        send('delta', { text: word });
+        emit(word);
         await new Promise(r => setTimeout(r, 35));
       }
+    }
+    // Count this generation against the daily quota (best-effort so a bookkeeping error
+    // never breaks a stream that already delivered content). Skipped if the client aborted.
+    if (!closed) {
+      try { await consumeQuota(req); } catch { /* quota bookkeeping best-effort */ }
+      recordAiUsage({ endpoint: '/api/generate/stream', ai_source: source, product, platform, category,
+        response_ms: Date.now() - t0, input_tokens: estTokens(prompt), output_tokens: estTokens(full) });
     }
     send('done', { ok: true });
   } catch (e) {
@@ -1617,11 +2435,7 @@ async function callAI(prompt, maxTokens = 1024, taskType = 'bulk') {
   return r.text || '';
 }
 
-function parseAIJson(text) {
-  const m = text.match(/\{[\s\S]*\}/);
-  if (m) return JSON.parse(m[0]);
-  throw new Error('no json');
-}
+// parseAIJson moved to ./ai-json.js (hardened: null-safe + ```json fence-aware; has a unit test).
 
 // ─── Per-provider callers สำหรับ OpenThaiAi Council (Claude · Gemini · Grok) ────
 async function callClaude(prompt, maxTokens = 700) {
@@ -1675,7 +2489,23 @@ function routerRollover() {
     routerState.byProvider = {}; routerState.health = { gemini: true, grok: true, claude: true }; routerState.failCount = {};
   }
 }
-const estTokens = (s) => Math.ceil((s || '').length / 4);
+// ประมาณจำนวน token — เดิมใช้ len/4 เท่ากันทุกภาษา แต่ภาษาไทย/CJK ถูก tokenize
+// หนาแน่นกว่าอักษรละตินมาก (ไทย ~1 token ต่อ 1-2 อักษร ไม่ใช่ 4) prompt ไทยจึงถูก
+// นับต่ำกว่าจริง ~2-3 เท่า ผลคือ routerState.spentUsd โตช้า → Eco Mode (คุมงบ/วัน)
+// เด้งช้าเกินไป แพลตฟอร์มที่เป็นภาษาไทยเป็นหลักจึงใช้จ่ายเกินงบจริงก่อนถูกจำกัด
+// แยกนับตามช่วงอักขระให้ใกล้ tokenizer จริงขึ้น (ยังเป็นค่าประมาณ)
+const estTokens = (s) => {
+  if (!s) return 0;
+  let thai = 0, cjk = 0, other = 0;
+  for (const ch of String(s)) {
+    const c = ch.codePointAt(0);
+    if (c >= 0x0e00 && c <= 0x0e7f) thai++;                                        // Thai
+    else if ((c >= 0x3000 && c <= 0x9fff) || (c >= 0xf900 && c <= 0xfaff)) cjk++;  // CJK
+    else other++;
+  }
+  // ไทย ~1 token/1.5 อักษร · CJK ~1 token/1.3 อักษร · อื่นๆ (ละติน/เลข/ช่องว่าง) ~1 token/4 อักษร
+  return Math.ceil(thai / 1.5 + cjk / 1.3 + other / 4);
+};
 const routerEco = () => routerState.spentUsd >= AI_DAILY_BUDGET_USD;
 
 async function routeAI(taskType, prompt, { maxTokens = 700 } = {}) {
@@ -1725,6 +2555,38 @@ app.get('/api/router/status', (req, res) => {
     tiers: ROUTER_TIERS,
     note: 'cost เป็นค่าประมาณต่อ 1k tokens · เกินงบ/วัน → Eco Mode (เฉพาะรุ่นถูก) · health รีเซ็ตรายวัน',
   });
+});
+
+// GET /api/ai-usage/admin/summary — สรุปต้นทุน/โทเคน AI จริงจากตาราง ai_usage_log (#11, Admin Key)
+// รวมยอดต่อ endpoint และต่อ ai_source จาก N แถวล่าสุด — ตอบว่า "ส่วนไหนกินโทเคนมากสุด"
+app.get('/api/ai-usage/admin/summary', adminLimiter, async (req, res) => {
+  const key = req.headers['x-admin-key'] || req.query.key;
+  if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  if (!_useSB) return res.json({ success: true, enabled: false, note: 'ยังไม่ได้ตั้ง SUPABASE_URL/SERVICE_KEY — logging ปิดอยู่', rows: 0 });
+  const limit = Math.min(5000, Math.max(1, parseInt(req.query.limit, 10) || 1000));
+  try {
+    const rows = await _sbReq('GET', '/ai_usage_log', {
+      params: { select: 'endpoint,ai_source,input_tokens,output_tokens,cost_usd,cost_thb,response_ms,critic_score,created_at', order: 'created_at.desc', limit },
+    });
+    const list = Array.isArray(rows) ? rows : [];
+    const bucket = () => ({ requests: 0, input_tokens: 0, output_tokens: 0, cost_usd: 0, cost_thb: 0 });
+    const byEndpoint = {}, bySource = {};
+    let totalCostUsd = 0, totalTokens = 0;
+    for (const r of list) {
+      const e = (byEndpoint[r.endpoint] ||= bucket());
+      const s = (bySource[r.ai_source] ||= bucket());
+      const it = Number(r.input_tokens) || 0, ot = Number(r.output_tokens) || 0, cu = Number(r.cost_usd) || 0, ct = Number(r.cost_thb) || 0;
+      for (const b of [e, s]) { b.requests++; b.input_tokens += it; b.output_tokens += ot; b.cost_usd = +(b.cost_usd + cu).toFixed(6); b.cost_thb = +(b.cost_thb + ct).toFixed(2); }
+      totalCostUsd = +(totalCostUsd + cu).toFixed(6); totalTokens += it + ot;
+    }
+    res.json({ success: true, enabled: true, sample_rows: list.length, total_tokens: totalTokens, total_cost_usd: totalCostUsd, total_cost_thb: +(totalCostUsd * USD_TO_THB).toFixed(2), by_endpoint: byEndpoint, by_source: bySource });
+  } catch (e) {
+    const msg = String(e.message || '');
+    if (/relation|does not exist|PGRST205|schema cache|not found|404/i.test(msg)) {
+      return res.json({ success: true, enabled: false, note: 'ตาราง ai_usage_log ยังไม่มี — รัน migration 003 ก่อน แล้วจึงเริ่มเก็บ log', rows: 0 });
+    }
+    res.status(500).json({ success: false, error: msg });
+  }
 });
 
 // POST /api/router/run — ส่งงานให้ router เลือกโมเดลถูกสุด/สลับค่ายอัตโนมัติ
@@ -1848,7 +2710,7 @@ ${context}
 // Uses Claude/Gemini's native tool-use APIs (see backend/agent-tools.js for the
 // schema + why this needs no fine-tuning). No mock fallback here — deciding
 // whether/which tool to call is a real model decision, not something safe to fake.
-const toolContext = () => ({ orders, disputes, skillsRegistry: SKILLS_REGISTRY, webhooks });
+const toolContext = () => ({ orders, disputes, skillsRegistry: SKILLS_REGISTRY, webhooks, seasonal: { productAngles: seasonalProductAngles, recommend: seasonalRecommend } });
 
 async function runAgentCommandClaude(message) {
   const first = await anthropic.messages.create({
@@ -2241,9 +3103,14 @@ function savePatterns(data) {
 
 app.post('/api/skills/learning/rate', generateLimiter, (req, res) => {
   const { content_type, platform, tone, rating, output_snippet = '' } = req.body || {};
-  if (!content_type || !rating || rating < 1 || rating > 5) return res.status(400).json({ error: 'content_type and rating (1-5) required' });
+  // Coerce THEN validate: the old check ran `rating < 1 || rating > 5` before Number(),
+  // so a non-numeric rating like "abc" passed (NaN comparisons are false) and then
+  // Number("abc")=NaN poisoned p.sum/p.avg for that pattern permanently (avg_rating → NaN,
+  // corrupting /learning/patterns and the enhance context that reads it).
+  const ratingNum = Number(rating);
+  if (!content_type || !Number.isFinite(ratingNum) || ratingNum < 1 || ratingNum > 5) return res.status(400).json({ error: 'content_type and rating (1-5) required' });
   const data = loadPatterns();
-  const entry = { content_type, platform: platform || 'ทั่วไป', tone: tone || 'ทั่วไป', rating: Number(rating), snippet: output_snippet.slice(0, 200), ts: Date.now() };
+  const entry = { content_type, platform: platform || 'ทั่วไป', tone: tone || 'ทั่วไป', rating: ratingNum, snippet: output_snippet.slice(0, 200), ts: Date.now() };
   data.ratings.push(entry);
   data.total = (data.total || 0) + 1;
   const key = `${content_type}|${platform || 'ทั่วไป'}`;
@@ -5229,7 +6096,11 @@ app.get('/api/line/status', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  ELEVENLABS TTS
 // ═══════════════════════════════════════════════════════════════════════════════
-app.post('/api/tts', express.json({ limit: '10kb' }), async (req, res) => {
+// TTS hits the PAID ElevenLabs API on the platform's key. It's public (no login — VoiceCommander can run
+// on public pages) and had no throttle, so anyone could POST in a loop and drain the ElevenLabs budget —
+// the same real-money exposure the AI/voice/competitor endpoints already cap. Rate-limit it too.
+const ttsLimiter = rateLimit({ windowMs: 60000, max: 20, message: { error: 'Text-to-speech rate limit exceeded' } });
+app.post('/api/tts', ttsLimiter, express.json({ limit: '10kb' }), async (req, res) => {
   const { text, voiceId } = req.body || {};
   if (!text) return res.status(400).json({ error: 'ต้องการ text' });
 
@@ -5560,7 +6431,14 @@ app.get('/api/system/charter', (req, res) => {
 });
 
 // ── 4. POST /api/system/auto-heal — manual trigger ──────────────────────────
-app.post('/api/system/auto-heal', async (req, res) => {
+// runWatchdog() loops all agents and re-runs any stale scheduled one (runAgent → real AI spend +
+// outbound webhooks). This is a UI button on the (non-admin) Agent page, so it can't require the admin
+// key without breaking that button — but it was completely unthrottled while every sibling system/cron
+// endpoint (news-rag-clear / daily-report / consumer-digest / autopost-process) is cron-or-admin gated.
+// A rate limiter is the right non-breaking control: the legitimate occasional click works; a loop that
+// thrashes agent re-runs / log spam is capped.
+const autoHealLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 6, message: { success: false, message: 'สั่ง auto-heal บ่อยเกินไป กรุณารอสักครู่' } });
+app.post('/api/system/auto-heal', autoHealLimiter, async (req, res) => {
   try {
     const healedThisRun = await runWatchdog();
     addLog('info', 'AutoHeal', '🔧 Manual auto-heal triggered');
@@ -5573,6 +6451,15 @@ app.post('/api/system/auto-heal', async (req, res) => {
 
 // ── 4b. GET /api/system/news-rag-clear — Vercel Cron trigger (ทุก 4 ชม.) ─────
 app.get('/api/system/news-rag-clear', (req, res) => {
+  // Cron-or-admin auth (same shape as daily-report / consumer-digest / autopost-process).
+  // It was world-callable; the impact is small (it just clears a cache) but an open endpoint
+  // still lets anyone thrash the news cache and force repeated external re-fetches. Cron hits
+  // it with GET + Authorization: Bearer $CRON_SECRET. No frontend/internal caller — cron-only.
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const adminOk = checkAdminKey(req.headers['x-admin-key'] || req.query.key);
+  const cronOk  = !!process.env.CRON_SECRET && bearerToken === process.env.CRON_SECRET;
+  if (!adminOk && !cronOk) return res.status(401).json({ success: false, message: adminDenyMessage() });
   newsCache.data = null;
   newsCache.ts   = 0;
   addLog('info', 'Scheduler', '📰 News RAG cache cleared via cron — ข้อมูลสด');
@@ -5718,6 +6605,17 @@ function saveConsents(data) {
   } catch (e) { console.error('Save consents error:', e.message); }
 }
 const consents = loadConsents();
+// Durable proof-of-consent: the record file lives in /tmp on Vercel and is wiped on every redeploy,
+// so a file-only store loses EVERY recorded consent each time we ship — and then we can't prove
+// anyone consented, the exact thing GAP-001 exists to guarantee (and both access + erasure read
+// this store). On boot, if Supabase is configured, hydrate the in-memory list from pdpa_consents
+// (restoring it after a /tmp wipe). If the table doesn't exist yet (owner hasn't run migration 009)
+// this fails quietly and we stay file-only — no regression; it becomes durable the moment 009 runs.
+if (_useSB) {
+  _sbReq('GET', '/pdpa_consents', { params: { select: '*' } })
+    .then((rows) => { if (Array.isArray(rows)) for (const r of rows) { if (!r?.email) continue; const i = consents.findIndex(c => c.email === r.email); if (i >= 0) consents[i] = r; else consents.push(r); } })
+    .catch((e) => console.warn('[pdpa-consents] Supabase hydrate failed, file-only:', e.message));
+}
 
 // GAP-001: บันทึก Consent ตาม PDPA มาตรา 19
 app.post('/api/privacy/consent', (req, res) => {
@@ -5725,43 +6623,200 @@ app.post('/api/privacy/consent', (req, res) => {
   if (!email || !purposes?.length) {
     return res.status(400).json({ success: false, message: 'ต้องระบุ email และ purposes' });
   }
-  const record = {
-    id:        Date.now().toString(),
-    email:     String(email).toLowerCase().trim().slice(0, 254),
-    ip:        ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
-    purposes:  Array.isArray(purposes) ? purposes : [purposes],
-    version:   version || '1.0',
-    consented: true,
-    ts:        new Date().toISOString(),
-  };
+  const record = buildConsentRecord({
+    email,
+    ip: ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown',
+    purposes,
+    version,
+  });
   // อัปเดตถ้ามีแล้ว
   const idx = consents.findIndex(c => c.email === record.email);
   if (idx >= 0) { consents[idx] = record; } else { consents.push(record); }
   saveConsents(consents);
+  // Persist to Supabase too, so the consent proof survives the next /tmp wipe (see boot hydrate).
+  if (_useSB) {
+    _sbReq('POST', '/pdpa_consents', { body: record, prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch((err) => console.warn('[pdpa-consents] Supabase upsert failed, file-only:', err.message));
+  }
   addLog('info', 'PDPA', `✅ Consent บันทึก: ${record.email} | purposes: ${record.purposes.join(',')}`);
   res.json({ success: true, message: 'บันทึกความยินยอมเรียบร้อย', id: record.id });
 });
 
 // GAP-002: สิทธิ์ขอลบข้อมูล (Right to Erasure — PDPA มาตรา 33)
-app.post('/api/privacy/erasure', rateLimit({ windowMs: 3600000, max: 5 }), (req, res) => {
+// เดิมลบข้อมูลทันทีจาก email ที่ส่งมาโดยไม่ตรวจสอบความเป็นเจ้าของเลย — ใครก็ตามที่รู้/เดา
+// อีเมลคนอื่นสามารถสั่งลบ waitlist/consent record ของคนนั้นได้โดยเจ้าตัวไม่รู้ตัวและไม่ยินยอม
+// (ตรงข้ามกับเจตนาของ PDPA ที่ต้องการปกป้อง ไม่ใช่เปิดช่องให้ทำลายข้อมูลคนอื่น) เปลี่ยนเป็น
+// ต้องยืนยันผ่านลิงก์ในอีเมลก่อน (pattern เดียวกับ unsubscribe ที่ verify แล้วสองรอบก่อนหน้านี้)
+app.post('/api/privacy/erasure', rateLimit({ windowMs: 3600000, max: 5 }), async (req, res) => {
   const { email } = req.body || {};
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ success: false, message: 'อีเมลไม่ถูกต้อง' });
   }
   const sanitized = email.toLowerCase().trim();
+  const confirmUrl = `${DOMAIN_URL}/api/privacy/erasure/confirm?email=${encodeURIComponent(sanitized)}&token=${unsubToken(sanitized, 'erasure')}`;
+
+  if (mailer) {
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        to: sanitized,
+        subject: '🗑️ ยืนยันการขอลบข้อมูลของคุณ — Openthai.ai',
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:520px;margin:0 auto;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#ef4444,#f59e0b);padding:24px;text-align:center;"><h1 style="margin:0;font-size:19px;">ยืนยันการขอลบข้อมูล</h1></div>
+          <div style="padding:24px;font-size:14px;line-height:1.7;">
+            <p>เราได้รับคำขอลบข้อมูลสำหรับอีเมลนี้ตามสิทธิ์ PDPA มาตรา 33 หากคุณเป็นผู้ส่งคำขอนี้จริง กดยืนยันด้านล่างเพื่อดำเนินการลบ</p>
+            <p style="text-align:center;margin:20px 0;"><a href="${confirmUrl}" style="background:#ef4444;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700;">ยืนยันการลบข้อมูล</a></p>
+            <p style="color:#94a3b8;font-size:12px;">หากคุณไม่ได้ส่งคำขอนี้ ไม่ต้องดำเนินการใดๆ ลิงก์นี้จะไม่มีผลหากไม่ถูกกด</p>
+          </div></div>`,
+      });
+    } catch (e) { console.error('[privacy/erasure] send error:', e.message); }
+  }
+  addLog('info', 'PDPA', `📧 Erasure confirmation ส่งให้ ${sanitized} (รอการยืนยันผ่านอีเมล)`);
+  res.json({ success: true, message: 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันการลบข้อมูลภายใน 30 วันตาม PDPA' });
+});
+
+// PDPA มาตรา 33 — ลบข้อมูลส่วนบุคคลให้ครบทุกที่ที่ funnel เก็บไว้จริง (เดิมลบแค่ waitlist + consents
+// ทำให้ผู้ผลิต/พันธมิตร/ลีด portal ถูกแจ้งว่า "ลบแล้ว" ทั้งที่ยังอยู่ครบ) รอบนี้เพิ่ม tenants (บัญชี
+// ธุรกิจ — เก็บ name/email/contactPhone) และ user_sync (blob ที่ key เป็นอีเมล) ที่ยังตกหล่นอยู่
+// หมายเหตุ: ประวัติการถอนเงิน (withdrawals) การชำระเงิน (payments) และสิทธิ์แพ็กเกจ (entitlements)
+// เป็นบันทึกธุรกรรม/สัญญาการเงิน จึงไม่ลบที่นี่ตามข้อยกเว้นเก็บตามกฎหมาย — แต่ยังแสดงให้เจ้าของ
+// ข้อมูลเห็นได้ผ่านสิทธิ์ขอเข้าถึง (/api/privacy/access) (ให้เจ้าของตัดสิน scope การเก็บ)
+async function performErasure(sanitized) {
   let removed = 0;
-
-  // ลบออกจาก waitlist
-  const wBefore = waitlist.length;
   const wIdx = waitlist.findIndex(w => w.email === sanitized);
-  if (wIdx >= 0) { waitlist.splice(wIdx, 1); saveWaitlist(waitlist); removed++; }
-
-  // ลบ consent record
+  if (wIdx >= 0) {
+    waitlist.splice(wIdx, 1); saveWaitlist(waitlist); removed++;
+    // Also delete from Supabase, else the erased email re-hydrates into memory on the next boot.
+    if (_useSB) { try { await _sbReq('DELETE', '/waitlist', { params: { email: `eq.${sanitized}` }, prefer: 'return=minimal' }); } catch (e) { console.error('[erasure] waitlist SB:', e.message); } }
+  }
   const cIdx = consents.findIndex(c => c.email === sanitized);
-  if (cIdx >= 0) { consents.splice(cIdx, 1); saveConsents(consents); removed++; }
+  if (cIdx >= 0) {
+    consents.splice(cIdx, 1); saveConsents(consents); removed++;
+    if (_useSB) { try { await _sbReq('DELETE', '/pdpa_consents', { params: { email: `eq.${sanitized}` }, prefer: 'return=minimal' }); } catch (e) { console.error('[erasure] pdpa_consents SB:', e.message); } }
+  }
+  try { removed += (await producers.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] producers:', e.message); }
+  try { removed += (await portalLeads.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] portalLeads:', e.message); }
+  try { removed += (tenants.eraseByEmail(sanitized)).removed || 0; } catch (e) { console.error('[erasure] tenants:', e.message); }
+  const affBefore = affiliates.length;
+  for (let i = affiliates.length - 1; i >= 0; i--) {
+    if ((affiliates[i].email || '').toLowerCase() === sanitized) affiliates.splice(i, 1);
+  }
+  if (affiliates.length < affBefore) {
+    _affFileSave(affiliates);
+    if (_useSB) {
+      try { await _sbReq('DELETE', '/affiliates', { params: { email: `eq.${sanitized}` }, prefer: 'return=minimal' }); }
+      catch (e) { console.error('[erasure] affiliates SB:', e.message); }
+    }
+    removed += (affBefore - affiliates.length);
+  }
+  // user_sync — cloud blob keyed by the user's email (blobs keyed by a username belong to a
+  // different identity and are erased under that identity's own request). Delete in both stores.
+  try {
+    if (_useSB) {
+      try { await _sbReq('DELETE', '/user_sync', { params: { user_key: `eq.${sanitized}` }, prefer: 'return=minimal' }); }
+      catch (e) { console.error('[erasure] user_sync SB:', e.message); }
+    }
+    if (_syncStore[sanitized]) { delete _syncStore[sanitized]; saveSyncFile(); removed++; }
+  } catch (e) { console.error('[erasure] user_sync:', e.message); }
+  return removed;
+}
 
-  addLog('info', 'PDPA', `🗑️ Erasure request: ${sanitized} — ลบแล้ว ${removed} รายการ`);
-  res.json({ success: true, message: `ดำเนินการลบข้อมูลแล้ว (${removed} รายการ) ภายใน 30 วันตาม PDPA`, removed });
+// GET = หน้ายืนยันเท่านั้น ไม่ลบข้อมูล — destructive action ต้องไม่เกิดบน GET เพราะ email
+// link-scanner/prefetch (Proofpoint, MS Safe Links ฯลฯ) ยิง GET ลิงก์ในอีเมลอัตโนมัติ จะลบข้อมูลผู้ใช้
+// อย่างถาวรก่อนเจ้าตัวจะกดจริง การลบจริงเกิดเฉพาะตอนกดปุ่ม → POST (bot ที่ทำแต่ GET จะไม่ทริกเกอร์)
+app.get('/api/privacy/erasure/confirm', unsubLimiter, (req, res) => {
+  const { email, token } = req.query;
+  if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const sanitized = String(email).toLowerCase().trim();
+  if (!safeTokenEqual(token, unsubToken(sanitized, 'erasure'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  const qs = `email=${encodeURIComponent(sanitized)}&token=${encodeURIComponent(String(token))}`;
+  res.send(`<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><body style="background:#0f0f1a;color:#f8fafc;"><div style="font-family:Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;line-height:1.7;padding:0 20px;">
+    <h2 style="color:#ef4444;">ยืนยันการลบข้อมูล</h2>
+    <p>คุณกำลังจะลบข้อมูลส่วนบุคคลทั้งหมดของ <strong>${escapeHtml(sanitized)}</strong> อย่างถาวรตาม PDPA — การกระทำนี้ย้อนกลับไม่ได้</p>
+    <button id="go" style="background:#ef4444;color:#fff;border:none;padding:12px 26px;border-radius:999px;font-size:16px;font-weight:700;cursor:pointer;">ยืนยันลบข้อมูลถาวร</button>
+    <p id="out" style="margin-top:18px;color:#94a3b8;"></p>
+    <script>
+      document.getElementById('go').onclick=function(){var b=this,o=document.getElementById('out');b.disabled=true;b.textContent='กำลังลบ...';fetch('/api/privacy/erasure/confirm?${qs}',{method:'POST'}).then(function(r){return r.json();}).then(function(d){if(d.success){b.style.display='none';o.textContent='✅ ลบข้อมูลเรียบร้อยแล้ว ('+d.removed+' รายการ)';}else{o.textContent='เกิดข้อผิดพลาด: '+(d.message||'');b.disabled=false;b.textContent='ยืนยันลบข้อมูลถาวร';}}).catch(function(){o.textContent='เชื่อมต่อไม่สำเร็จ ลองใหม่';b.disabled=false;b.textContent='ยืนยันลบข้อมูลถาวร';});};
+    </script>
+  </div></body></html>`);
+});
+
+// POST = ลบจริง (ต้องกดปุ่มบนหน้ายืนยันก่อน)
+app.post('/api/privacy/erasure/confirm', unsubLimiter, async (req, res) => {
+  const email = req.query.email || req.body?.email;
+  const token = req.query.token || req.body?.token;
+  if (!email || !token) return res.status(400).json({ success: false, message: 'ลิงก์ไม่ถูกต้อง' });
+  const sanitized = String(email).toLowerCase().trim();
+  if (!safeTokenEqual(token, unsubToken(sanitized, 'erasure'))) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
+  const removed = await performErasure(sanitized);
+  addLog('info', 'PDPA', `🗑️ Erasure ยืนยันแล้ว: ${sanitized} — ลบแล้ว ${removed} รายการ`);
+  res.json({ success: true, removed });
+});
+
+// POST /api/privacy/access — สิทธิ์ขอเข้าถึง/ขอสำเนาข้อมูลส่วนบุคคล (PDPA มาตรา 30)
+// นโยบายความเป็นส่วนตัว (/api/privacy/policy) ประกาศสิทธิ์ "ขอดูข้อมูล" ไว้ตั้งแต่ต้น แต่ไม่เคยมี
+// endpoint ให้ใช้จริง — มีแต่ erasure ยืนยันตัวตนด้วยอีเมล (โทเคน HMAC) แบบเดียวกับ erasure เพื่อ
+// ไม่ให้กลายเป็นช่องรั่วข้อมูล (ใครพิมพ์อีเมลก็ดึง PII ของคนอื่นได้)
+app.post('/api/privacy/access', rateLimit({ windowMs: 3600000, max: 5 }), async (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'อีเมลไม่ถูกต้อง' });
+  }
+  const sanitized = email.toLowerCase().trim();
+  const confirmUrl = `${DOMAIN_URL}/api/privacy/access/confirm?email=${encodeURIComponent(sanitized)}&token=${unsubToken(sanitized, 'access')}`;
+  if (mailer) {
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        to: sanitized,
+        subject: '📋 ยืนยันคำขอดูข้อมูลของคุณ — Openthai.ai',
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:520px;margin:0 auto;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#6366f1,#0ea5e9);padding:24px;text-align:center;"><h1 style="margin:0;font-size:19px;">ยืนยันคำขอดูข้อมูล</h1></div>
+          <div style="padding:24px;font-size:14px;line-height:1.7;">
+            <p>เราได้รับคำขอดูข้อมูลส่วนบุคคลของอีเมลนี้ตามสิทธิ์ PDPA มาตรา 30 หากคุณเป็นผู้ส่งคำขอนี้จริง กดยืนยันด้านล่างเพื่อดูสำเนาข้อมูลของคุณ</p>
+            <p style="text-align:center;margin:20px 0;"><a href="${confirmUrl}" style="background:#6366f1;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700;">ดูข้อมูลของฉัน</a></p>
+            <p style="color:#94a3b8;font-size:12px;">หากคุณไม่ได้ส่งคำขอนี้ ไม่ต้องดำเนินการใดๆ ลิงก์นี้จะไม่มีผลหากไม่ถูกกด</p>
+          </div></div>`,
+      });
+    } catch (e) { console.error('[privacy/access] send error:', e.message); }
+  }
+  addLog('info', 'PDPA', `📧 Access request ส่งให้ ${sanitized} (รอการยืนยันผ่านอีเมล)`);
+  res.json({ success: true, message: 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อดูสำเนาข้อมูลของคุณ' });
+});
+
+// GET /api/privacy/access/confirm — รวบรวมข้อมูลทั้งหมดที่ระบบเก็บของอีเมลนี้แล้วส่งกลับเป็น JSON
+// (สำเนาข้อมูล + รองรับสิทธิ์โอนย้ายข้อมูล มาตรา 31 ในตัว) ต่างจาก erasure ตรงที่ "รวม" บันทึก
+// การเงิน (ถอนเงิน/ออเดอร์) ด้วย เพราะเจ้าของข้อมูลมีสิทธิ์เห็นข้อมูลของตัวเองทั้งหมด
+app.get('/api/privacy/access/confirm', unsubLimiter, async (req, res) => {
+  const { email, token } = req.query;
+  if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const sanitized = String(email).toLowerCase().trim();
+  if (!safeTokenEqual(token, unsubToken(sanitized, 'access'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+
+  const records = {};
+  records.waitlist = waitlist.filter(w => (w.email || '').toLowerCase() === sanitized);
+  records.consents = consents.filter(c => (c.email || '').toLowerCase() === sanitized);
+  try { records.producers = (await producers.all()).filter(p => (p.email || '').toLowerCase() === sanitized); } catch (e) { console.error('[access] producers:', e.message); records.producers = []; }
+  try { records.portal_leads = (await portalLeads.all()).filter(l => (l.email || '').toLowerCase() === sanitized); } catch (e) { console.error('[access] portalLeads:', e.message); records.portal_leads = []; }
+  const myAff = affiliates.filter(a => (a.email || '').toLowerCase() === sanitized);
+  records.affiliates = myAff;
+  const myRefs = new Set(myAff.map(a => a.ref_code));
+  records.withdrawals = withdrawals.filter(w => myRefs.has(w.ref_code));
+  try { records.orders = (await orders.all()).filter(o => (o.contact || '').toLowerCase() === sanitized); } catch (e) { console.error('[access] orders:', e.message); records.orders = []; }
+  // Stores the access export previously missed even though this endpoint's contract is "everything
+  // we hold about you, financial records included": tenant business account (safeView strips the
+  // API-key hash), payments + plan entitlement (financial — retained past erasure but the subject
+  // still has the right to see them), and the cloud-sync blob keyed by this email.
+  try { records.tenants = tenants.findByEmail(sanitized); } catch (e) { console.error('[access] tenants:', e.message); records.tenants = []; }
+  records.payments = payments.filter(p => (p.email || '').toLowerCase() === sanitized);
+  const myEnt = entitlements[sanitized];
+  records.entitlements = myEnt ? [myEnt] : [];
+  try { const sd = await syncRead(sanitized); records.cloud_sync = (sd && Object.keys(sd).length) ? [sd] : []; } catch (e) { console.error('[access] cloud_sync:', e.message); records.cloud_sync = []; }
+
+  const total = Object.values(records).reduce((n, arr) => n + (Array.isArray(arr) ? arr.length : 0), 0);
+  addLog('info', 'PDPA', `📋 Access ยืนยันแล้ว: ${sanitized} — ส่งข้อมูล ${total} รายการ`);
+  res.setHeader('Content-Disposition', `attachment; filename="openthai-my-data-${sanitized}.json"`);
+  res.json({ success: true, email: sanitized, generated_at: new Date().toISOString(), total_records: total, records });
 });
 
 // GET /api/privacy/policy — ข้อมูล Privacy Policy สำหรับ frontend
@@ -5780,7 +6835,8 @@ app.get('/api/privacy/policy', (req, res) => {
     retention:   'ลบข้อมูลภายใน 3 ปีหลังยุติการใช้บริการ หรือเมื่อร้องขอ',
     rights:      ['ขอดูข้อมูล','แก้ไข','ลบ','โอนย้าย','คัดค้าน'],
     erasure_url: '/api/privacy/erasure',
-    pdpa_gaps_fixed: ['GAP-001: บันทึก consent record ✅','GAP-002: Right to erasure endpoint ✅'],
+    access_url: '/api/privacy/access',
+    pdpa_gaps_fixed: ['GAP-001: บันทึก consent record ✅','GAP-002: Right to erasure endpoint ✅','GAP-003: Right of access / data export endpoint ✅'],
     ts: new Date().toISOString(),
   });
 });
@@ -5965,7 +7021,7 @@ app.delete('/api/memory', memoryLimiter, (req, res) => {
 // stored back into the same vector memory as type:'feedback', linked by metadata.reviewed_item_id.
 // This is the real version of "HITL validation": no separate system, reuses what's already deployed.
 // GET /api/memory/admin/review-queue — list content items + whether they've been reviewed (Admin Key)
-app.get('/api/memory/admin/review-queue', (req, res) => {
+app.get('/api/memory/admin/review-queue', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const tenantId = req.query.tenantId || 'global';
@@ -5985,7 +7041,7 @@ app.get('/api/memory/admin/review-queue', (req, res) => {
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 // POST /api/memory/admin/review — submit a human rating/correction on a content item (Admin Key)
-app.post('/api/memory/admin/review', async (req, res) => {
+app.post('/api/memory/admin/review', adminLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const { tenantId = 'global', item_id, human_rating, note, corrected_text, reviewed_by } = req.body || {};
@@ -6014,8 +7070,18 @@ app.post('/api/memory/admin/review', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 const webhookLimiter = rateLimit({ windowMs: 60000, max: 20, message: { error: 'Webhook API rate limit' } });
 
-// POST /api/webhooks — ลงทะเบียน webhook
+// req.tenant ถูกตั้งค่าโดย requireTenant() middleware เท่านั้น (tenant-manager.js) ซึ่งไม่ได้
+// ผูกกับกลุ่ม /api/webhooks/* เลย — แปลว่า req.tenant เป็น undefined เสมอสำหรับทุก request
+// ที่มาถึงตรงนี้จริงๆ ทำให้ POST ด้านล่าง tenantId กลายเป็น 'global' เสมอ (ไม่ใช่แค่ fallback)
+// และ GET ด้านล่าง adminView กลายเป็น true เสมอ — ใครก็ตามที่ไม่ต้องล็อกอินสามารถลงทะเบียน
+// webhook แบบ global รับทุก event ของทั้งระบบ (ยอดขาย ค่าคอม ฯลฯ) แบบเงียบๆ ได้ตลอดไป จนกว่า
+// แอดมินจะสังเกตเห็นเอง — ไม่มีหน้า UI เรียก /api/webhooks* เลยสักหน้า (เหมือน DELETE ด้านล่างที่
+// ล็อกไปแล้วก่อนหน้านี้) จึงล็อกทั้งกลุ่มด้วย x-admin-key ได้โดยไม่กระทบของเดิม
+const webhooksAuth = (req, res) => { const key = req.headers['x-admin-key'] || req.query.key; if (!checkAdminKey(key)) { res.status(401).json({ success: false, message: adminDenyMessage() }); return false; } return true; };
+
+// POST /api/webhooks — ลงทะเบียน webhook (Admin Key)
 app.post('/api/webhooks', webhookLimiter, (req, res) => {
+  if (!webhooksAuth(req, res)) return;
   try {
     const { url, events, description } = req.body || {};
     const tenantId = req.tenant?.id || 'global';
@@ -6024,31 +7090,34 @@ app.post('/api/webhooks', webhookLimiter, (req, res) => {
   } catch (e) { res.status(400).json({ success: false, message: e.message }); }
 });
 
-// GET /api/webhooks — list webhooks
+// GET /api/webhooks — list webhooks (Admin Key)
 app.get('/api/webhooks', (req, res) => {
+  if (!webhooksAuth(req, res)) return;
   const tenantId = req.tenant?.id;
   const adminView = !tenantId; // admin sees all
   res.json({ success: true, data: webhooks.list({ tenantId, adminView }) });
 });
 
 // DELETE /api/webhooks/:id — unregister (Admin Key — ไม่มีหน้า UI เรียกอยู่ในปัจจุบัน จึงล็อกได้โดยไม่กระทบของเดิม)
-app.delete('/api/webhooks/:id', (req, res) => {
+app.delete('/api/webhooks/:id', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const result = webhooks.remove(req.params.id);
   res.json({ success: true, ...result });
 });
 
-// POST /api/webhooks/:id/test — fire test event
+// POST /api/webhooks/:id/test — fire test event (Admin Key)
 app.post('/api/webhooks/:id/test', async (req, res) => {
+  if (!webhooksAuth(req, res)) return;
   try {
     const result = await webhooks.test(req.params.id);
     res.json({ success: true, ...result });
   } catch (e) { res.status(404).json({ success: false, message: e.message }); }
 });
 
-// GET /api/webhooks/logs — delivery log (admin)
+// GET /api/webhooks/logs — delivery log (Admin Key)
 app.get('/api/webhooks/logs', (req, res) => {
+  if (!webhooksAuth(req, res)) return;
   res.json({ success: true, data: webhooks.logs({ limit: parseInt(req.query.limit) || 50 }) });
 });
 
@@ -6179,7 +7248,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
 });
 
 // ─── POST /api/auth/override — Admin Override Key (emergency) ─────────────────
-app.post('/api/auth/override', (req, res) => {
+app.post('/api/auth/override', authLimiter, (req, res) => {
   const { key } = req.body || {};
   if (!checkOverrideKey(key))
     return res.status(401).json({ error: 'Override key ไม่ถูกต้อง' });
@@ -6189,7 +7258,7 @@ app.post('/api/auth/override', (req, res) => {
 });
 
 // ─── POST /api/auth/recovery — One-time Recovery Code ────────────────────────
-app.post('/api/auth/recovery', (req, res) => {
+app.post('/api/auth/recovery', authLimiter, (req, res) => {
   const { code } = req.body || {};
   if (!code) return res.status(400).json({ error: 'กรุณาใส่ recovery code' });
 
@@ -6303,7 +7372,7 @@ app.put('/api/sync', requireAuth, express.json({ limit: '1mb' }), async (req, re
 
 // ─── GET /api/auth/recovery-codes/generate — สร้าง recovery codes ใหม่ ──────
 // ต้องใช้ ADMIN_OVERRIDE_KEY เพื่อขอ codes ใหม่
-app.post('/api/auth/recovery-codes/generate', (req, res) => {
+app.post('/api/auth/recovery-codes/generate', authLimiter, (req, res) => {
   const { key } = req.body || {};
   if (!checkOverrideKey(key))
     return res.status(401).json({ error: 'Override key ไม่ถูกต้อง' });
@@ -6348,6 +7417,84 @@ function saveAutopostLog(data) {
 
 const autopostQueue = loadAutopostQueue();
 const autopostLog   = loadAutopostLog();
+
+// ── Durable auto-post queue (Supabase primary / JSON file fallback) ───────────
+// autopost_queue.json lives in /tmp on Vercel: wiped on every redeploy AND private to each lambda
+// instance, so a scheduled post written by the POST invocation is invisible to the later
+// /api/autopost/process cron invocation → scheduled posts silently never fire in production. Persist
+// the queue to Supabase (migration 011) so due items survive redeploys and are shared across
+// invocations. Before the migration is applied it fails quietly and stays file-only (no regression).
+const _autopostToRow = (i) => ({
+  id: String(i.id),
+  product: i.product ? String(i.product).slice(0, 300) : '',
+  content: i.content || {},
+  platforms: i.platforms || ['line', 'facebook'],
+  schedule_at: i.schedule_at || new Date().toISOString(),
+  video_path: i.videoPath || null,
+  status: i.status || 'queued',
+  results: i.results || null,
+  created_at: i.created_at || new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+const _autopostFromRow = (r) => ({
+  id: String(r.id),
+  product: r.product || '',
+  content: r.content || {},
+  platforms: Array.isArray(r.platforms) ? r.platforms : ['line', 'facebook'],
+  schedule_at: r.schedule_at || new Date().toISOString(),
+  videoPath: r.video_path || null,
+  status: r.status || 'queued',
+  ...(r.results != null ? { results: r.results } : {}),
+  created_at: r.created_at || new Date().toISOString(),
+});
+// Save the file (always) + upsert this item to Supabase (when configured). One item at a time so a
+// status change (queued → sent/failed) is persisted immediately, not just batched at process end.
+function persistAutopost(item) {
+  saveAutopostQueue(autopostQueue);
+  if (_useSB) {
+    _sbReq('POST', '/autopost_queue', { params: { on_conflict: 'id' }, body: [_autopostToRow(item)], prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch((e) => console.warn('[autopost] Supabase upsert failed, file-only:', e.message));
+  }
+}
+// Return the items that are due to be sent now (status queued & schedule_at ≤ now). On Supabase, fetch
+// them directly so a fresh lambda (or one whose boot-hydrate hasn't finished) still sees scheduled
+// posts written by another invocation; merge each due row into the in-memory queue so status updates
+// and persistAutopost operate on the same object. Falls back to the in-memory filter if Supabase is
+// unavailable or the table doesn't exist yet.
+async function dueAutopostItems() {
+  const now = Date.now();
+  if (_useSB) {
+    try {
+      const rows = await _sbReq('GET', '/autopost_queue', { params: { status: 'eq.queued', schedule_at: `lte.${new Date().toISOString()}`, select: '*', order: 'schedule_at.asc', limit: '100' } });
+      if (Array.isArray(rows)) {
+        const byId = new Map(autopostQueue.map((i) => [String(i.id), i]));
+        const due = [];
+        for (const r of rows) {
+          let item = byId.get(String(r.id));
+          if (!item) { item = _autopostFromRow(r); autopostQueue.push(item); }
+          due.push(item);
+        }
+        return due;
+      }
+    } catch (e) {
+      console.warn('[autopost] Supabase due-fetch failed, using memory:', e.message);
+    }
+  }
+  return autopostQueue.filter((i) => i.status === 'queued' && new Date(i.schedule_at).getTime() <= now);
+}
+
+if (_useSB) {
+  _sbReq('GET', '/autopost_queue', { params: { select: '*', order: 'created_at.desc', limit: '500' } })
+    .then((rows) => {
+      if (!Array.isArray(rows)) return;
+      const have = new Set(autopostQueue.map((i) => String(i.id)));
+      for (const r of rows) {
+        const id = String(r.id);
+        if (!have.has(id)) { autopostQueue.push(_autopostFromRow(r)); have.add(id); }
+      }
+    })
+    .catch((e) => console.warn('[autopost] Supabase hydrate failed, file-only:', e.message));
+}
 
 // ── Platform Poster Functions ─────────────────────────────────────────────────
 
@@ -6461,13 +7608,13 @@ app.post('/api/autopost/queue', requireAuth, async (req, res) => {
     item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
     item.results = results;
     autopostQueue.push(item);
-    saveAutopostQueue(autopostQueue);
+    persistAutopost(item);
     return res.json({ success: true, message: 'โพสต์ทันที', item });
   }
 
-  // ถ้ามีเวลากำหนด → เข้า queue รอ cron ส่ง
+  // ถ้ามีเวลากำหนด → เข้า queue รอ cron ส่ง (persist ลง Supabase ให้รอด redeploy + เห็นข้าม invocation)
   autopostQueue.push(item);
-  saveAutopostQueue(autopostQueue);
+  persistAutopost(item);
   addLog('info', 'AutoPost', `📋 Queued: ${product} → ${platforms?.join('+')} @ ${item.schedule_at}`);
   res.json({ success: true, message: `เพิ่มใน queue แล้ว จะส่ง ${item.schedule_at}`, item });
 });
@@ -6529,31 +7676,42 @@ app.get('/api/autopost/status', (req, res) => {
 // ── Cron: ทุก 5 นาที ตรวจ queue ที่ถึงเวลา (local only) ─────────────────────
 if (!IS_VERCEL) {
   cron.schedule('*/5 * * * *', async () => {
-    const now = Date.now();
-    const pending = autopostQueue.filter(i => i.status === 'queued' && new Date(i.schedule_at).getTime() <= now);
+    const pending = await dueAutopostItems();
     for (const item of pending) {
       item.status = 'processing';
       const results = await dispatchAutoPost(item);
       item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
       item.results = results;
+      persistAutopost(item);
     }
-    if (pending.length > 0) saveAutopostQueue(autopostQueue);
   });
 }
 
 // ── Vercel Cron trigger: GET /api/autopost/process ────────────────────────────
 app.get('/api/autopost/process', async (req, res) => {
-  const now = Date.now();
-  const pending = autopostQueue.filter(i => i.status === 'queued' && new Date(i.schedule_at).getTime() <= now);
+  // Same auth shape as the daily-report / consumer-digest cron routes: this endpoint
+  // DISPATCHES queued social posts (dispatchAutoPost — real outbound actions), so it must
+  // not be world-callable. It had no auth at all, letting anyone force-send the whole queue.
+  // Vercel Cron hits it with GET + Authorization: Bearer $CRON_SECRET; admin panel may use
+  // x-admin-key. (No frontend/internal caller relies on it being open — cron-only.)
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const adminOk = checkAdminKey(req.headers['x-admin-key'] || req.query.key);
+  const cronOk  = !!process.env.CRON_SECRET && bearerToken === process.env.CRON_SECRET;
+  if (!adminOk && !cronOk) return res.status(401).json({ success: false, message: adminDenyMessage() });
+  // Pull due items from Supabase (survives redeploy + visible across lambda invocations); falls back
+  // to the in-memory queue when Supabase isn't configured. This is what makes scheduled posts actually
+  // fire on Vercel, where the file-only queue was invisible to this cron invocation.
+  const pending = await dueAutopostItems();
   let processed = 0;
   for (const item of pending) {
     item.status = 'processing';
     const results = await dispatchAutoPost(item);
     item.status = results.some(r => r.status === 'success') ? 'sent' : 'failed';
     item.results = results;
+    persistAutopost(item);
     processed++;
   }
-  if (processed > 0) saveAutopostQueue(autopostQueue);
   addLog('info', 'AutoPost', `🔄 Cron processed ${processed} queued posts`);
   res.json({ success: true, processed, ts: new Date().toISOString() });
 });
@@ -6571,10 +7729,70 @@ function saveVideoJobs(data) {
 }
 const videoJobs = loadVideoJobs();
 
+// ── Durable video jobs (Supabase primary / JSON file fallback) — migration 013 ────────────────
+// video_jobs.json lives in /tmp on Vercel: wiped on every redeploy AND private to each lambda instance,
+// so a job submitted to a paid video provider (real per-clip spend) becomes unpollable — GET
+// /api/video/jobs/:id/status returns 404 "job not found" after a redeploy or on another instance, and
+// the user can't retrieve the video they paid for. Persist jobs to Supabase so they survive redeploys
+// and are visible across invocations. Fails quietly / stays file-only before the migration is applied.
+const _videoToRow = (e) => ({
+  id: String(e.id),
+  form: e.form || {},
+  script: e.script || {},
+  job: e.job || {},
+  created_at: e.createdAt || new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+const _videoFromRow = (r) => ({
+  id: String(r.id),
+  form: r.form || {},
+  script: r.script || {},
+  job: r.job || {},
+  createdAt: r.created_at || new Date().toISOString(),
+});
+// Save the file (always) + upsert this job to Supabase (when configured), one at a time so a provider
+// status update is persisted immediately.
+function persistVideoJob(entry) {
+  saveVideoJobs(videoJobs);
+  if (_useSB && entry) {
+    _sbReq('POST', '/video_jobs', { params: { on_conflict: 'id' }, body: [_videoToRow(entry)], prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch((e) => console.warn('[video_jobs] Supabase upsert failed, file-only:', e.message));
+  }
+}
+// Find a job by id: memory first, then Supabase (so a poll works after a redeploy / on another lambda
+// where the in-memory list is empty). Merges the fetched job into memory so subsequent updates persist.
+async function findVideoJob(id) {
+  let entry = videoJobs.find((j) => j.id === id);
+  if (entry || !_useSB) return entry || null;
+  try {
+    const rows = await _sbReq('GET', '/video_jobs', { params: { id: `eq.${encodeURIComponent(id)}`, select: '*', limit: '1' } });
+    if (Array.isArray(rows) && rows[0]) { entry = _videoFromRow(rows[0]); videoJobs.unshift(entry); }
+  } catch (e) { console.warn('[video_jobs] Supabase lookup failed:', e.message); }
+  return entry || null;
+}
+
+if (_useSB) {
+  _sbReq('GET', '/video_jobs', { params: { select: '*', order: 'created_at.desc', limit: '200' } })
+    .then((rows) => {
+      if (!Array.isArray(rows)) return;
+      const have = new Set(videoJobs.map((j) => String(j.id)));
+      for (const r of rows) {
+        const id = String(r.id);
+        if (!have.has(id)) { videoJobs.push(_videoFromRow(r)); have.add(id); }
+      }
+    })
+    .catch((e) => console.warn('[video_jobs] Supabase hydrate failed, file-only:', e.message));
+}
+
 const videoLimiter = rateLimit({ windowMs: 60000, max: 10, message: { error: 'Video API rate limit — 10/min' } });
 
 // POST /api/video/generate — สร้าง Script + ส่งไป Video API
-app.post('/api/video/generate', videoLimiter, async (req, res) => {
+// Auth-gated: this submits a real job to a paid video provider (Runway/Pika/Kling/Luma/Veo) using
+// the PLATFORM's API keys — expensive per clip. The /video page is behind a client-side login
+// guard and already sends the Bearer login token, but the API itself was public (rate-limited
+// only), so anyone bypassing the SPA could drain the platform's video budget. requireAuth enforces
+// the same login the page already performs.
+app.post('/api/video/generate', requireAuth, videoLimiter, async (req, res) => {
   const form = req.body || {};
   if (!form.product?.trim()) return res.status(400).json({ error: 'product required' });
 
@@ -6597,7 +7815,7 @@ app.post('/api/video/generate', videoLimiter, async (req, res) => {
     // persist job
     const entry = { id: `vj_${Date.now()}`, form, script, job, createdAt: new Date().toISOString() };
     videoJobs.unshift(entry);
-    saveVideoJobs(videoJobs);
+    persistVideoJob(entry);
 
     // fire webhook
     webhooks.dispatch('video.generated', { jobId: entry.id, product: form.product, provider, score: script.criticScore }, null);
@@ -6609,15 +7827,15 @@ app.post('/api/video/generate', videoLimiter, async (req, res) => {
   }
 });
 
-// GET /api/video/jobs — รายการ jobs
-app.get('/api/video/jobs', (req, res) => {
+// GET /api/video/jobs — รายการ jobs (exposes every job's product + generated script → auth-gated)
+app.get('/api/video/jobs', requireAuth, (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 20, 100);
   res.json({ success: true, data: videoJobs.slice(0, limit) });
 });
 
 // GET /api/video/jobs/:id/status — poll provider status
-app.get('/api/video/jobs/:id/status', async (req, res) => {
-  const entry = videoJobs.find(j => j.id === req.params.id);
+app.get('/api/video/jobs/:id/status', requireAuth, async (req, res) => {
+  const entry = await findVideoJob(req.params.id);
   if (!entry) return res.status(404).json({ error: 'job not found' });
 
   const { job, form } = entry;
@@ -6630,7 +7848,7 @@ app.get('/api/video/jobs/:id/status', async (req, res) => {
   try {
     const status = await pollVideoJob(job.job_id, job.provider, apiKey || '');
     entry.job = { ...entry.job, ...status };
-    saveVideoJobs(videoJobs);
+    persistVideoJob(entry);
     res.json({ success: true, ...status });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -6659,19 +7877,7 @@ if (_useSB) {
 function savePayments(data) {
   try { writeFileSync(PAYMENTS_FILE, JSON.stringify(data.slice(0, 500), null, 2), 'utf8'); } catch (_) {}
   if (_useSB && data.length > 0) {
-    const rec = data[0];
-    const row = {
-      charge_id:  rec.charge_id || rec.subscription_id || `pay_${Date.now()}`,
-      email:      rec.email || null,
-      plan:       rec.plan || 'unknown',
-      method:     rec.method || 'unknown',
-      amount_thb: rec.amount_thb || null,
-      status:     rec.status || null,
-      paid:       !!rec.paid,
-      paid_at:    rec.paid_at || null,
-      mock_mode:  !!rec.mock_mode,
-      created_at: rec.createdAt || new Date().toISOString(),
-    };
+    const row = buildPaymentRow(data[0]);
     _sbReq('POST', '/payments', { body: [row], params: { on_conflict: 'charge_id' }, prefer: 'resolution=merge-duplicates,return=minimal' })
       .catch(e => console.warn('[payments] Supabase write failed:', e.message));
   }
@@ -6724,14 +7930,8 @@ function grantEntitlement(email, plan, { source = 'payment', subscription_id = n
 // เรียกได้จากทั้ง webhook และ status-poll — ป้องกันเครดิตซ้ำด้วย flag firstTime ฝั่งผู้เรียก
 // เลื่อน Tier อัตโนมัติตามจำนวนดีลสะสม — ยิ่งขายยิ่งได้ค่าคอมเพิ่ม
 // starter 20% (0-9) → pro 30% (10-49) → elite 40% (50+)
-const AFFILIATE_TIERS = [
-  { tier: 'elite',   min: 50, rate: 0.40 },
-  { tier: 'pro',     min: 10, rate: 0.30 },
-  { tier: 'starter', min: 0,  rate: 0.20 },
-];
-function tierForSales(sales) {
-  return AFFILIATE_TIERS.find(t => (sales || 0) >= t.min) || AFFILIATE_TIERS[AFFILIATE_TIERS.length - 1];
-}
+// AFFILIATE_TIERS + tierForSales are now in ./affiliate-tiers.js (imported at top)
+// so the money-critical tier boundaries can be unit-tested (test-affiliate-tiers.mjs).
 
 function creditAffiliateSale(refCode, amountThb, { charge_id = null, source = null } = {}) {
   if (!refCode || !(amountThb > 0)) return null;
@@ -6785,7 +7985,7 @@ function getEntitlement(email) {
 
 // ─── Usage quota — บังคับโควต้ารายวันตามแผน ───────────────────────────────────
 const FREE_DAILY_LIMIT = 3;          // Free = 3 ชิ้น/วัน (ตรงกับหน้า Pricing)
-const PAID_PLANS = new Set(['pro', 'premier']);
+const PAID_PLANS = new Set(['pro', 'premier', 'enterprise']);
 const _usage = new Map();            // key: "YYYY-MM-DD:identity" → count
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -6843,16 +8043,21 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
   if (planDef.price_thb === 0) return res.json({ success: true, plan, status: 'free', message: 'ไม่ต้องชำระเงิน' });
 
   // ส่วนลดจากรางวัลวงล้อ (spin "X% off") — ใช้ได้กับ one-time charge (ไม่รวม subscription)
+  // PEEK เท่านั้นตอนนี้ (ไม่ mark used) แล้ว consume เฉพาะเมื่อสร้าง charge สำเร็จจริง — เดิม consume
+  // ทิ้งตั้งแต่ต้น ถ้า Omise throw หรือบัตรถูกปฏิเสธ ส่วนลด spin ครั้งเดียวจะหายฟรีทั้งที่ยังไม่ได้จ่าย
+  const creditId = credits.identityFrom(req);
   let amount = planDef.price_thb;
   let discountPct = 0;
   if (method !== 'subscription') {
-    discountPct = await credits.consumeDiscount(credits.identityFrom(req));
+    discountPct = await credits.peekDiscount(creditId);
     if (discountPct > 0) amount = Math.max(1, Math.round(planDef.price_thb * (100 - discountPct) / 100));
   }
+  // ทำเครื่องหมายว่าใช้ส่วนลดแล้ว — เรียกเฉพาะบน success path (charge ออกจริง/บัตรไม่ถูกปฏิเสธ)
+  const burnDiscount = async () => { if (discountPct > 0) await credits.consumeDiscount(creditId); };
 
   if (!process.env.OMISE_SECRET_KEY) {
     // Mock mode — Omise ยังไม่ได้ตั้ง (dev/staging only). ห้ามใช้ใน production จริง
-    console.warn('[payment] ⚠️  OMISE_SECRET_KEY not set — running in MOCK mode. No real charge will be made. Set OMISE_SECRET_KEY + OMISE_PUBLIC_KEY + OMISE_PLAN_PRO + OMISE_PLAN_PREMIER + OMISE_WEBHOOK_SECRET in production.');
+    console.warn('[payment] ⚠️  OMISE_SECRET_KEY not set — running in MOCK mode. No real charge will be made. Set OMISE_SECRET_KEY + OMISE_PUBLIC_KEY + OMISE_PLAN_PRO + OMISE_PLAN_PREMIER + OMISE_PLAN_ENTERPRISE + OMISE_WEBHOOK_SECRET in production.');
     const isCard = method === 'card';
     const mock = {
       charge_id:     `mock_charge_${Date.now()}`,
@@ -6871,6 +8076,7 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
     const validEmail = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.toLowerCase() : null;
     payments.unshift({ ...mock, method, email: validEmail, paid_at: isCard ? new Date().toISOString() : null, createdAt: new Date().toISOString() });
     savePayments(payments);
+    await burnDiscount(); // mock charge issued → the discount is now used (parity with prod)
     if (isCard && validEmail) grantEntitlement(validEmail, plan, { source: 'mock-card' });
     return res.json({ success: true, ...mock });
   }
@@ -6884,6 +8090,7 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       });
       payments.unshift({ ...charge, plan, method, email: email || null, createdAt: new Date().toISOString() });
       savePayments(payments);
+      await burnDiscount(); // PromptPay QR issued at the discounted amount → consume the discount
       return res.json({ success: true, ...charge, plan, original_thb: planDef.price_thb, discount_pct: discountPct });
     }
 
@@ -6900,8 +8107,10 @@ app.post('/api/payment/create', paymentLimiter, async (req, res) => {
       payments.unshift({ ...charge, plan, method, email: email || null, paid_at: paidAt, createdAt: new Date().toISOString() });
       savePayments(payments);
       if (charge.status === 'failed') {
+        // บัตรถูกปฏิเสธ = ไม่มีการจ่ายเงิน → อย่าเผาส่วนลด ผู้ใช้ลองบัตรใหม่ได้ในราคาส่วนลดเดิม
         return res.status(402).json({ error: charge.failure_message || 'บัตรถูกปฏิเสธ กรุณาลองบัตรอื่น', charge_id: charge.charge_id });
       }
+      await burnDiscount(); // charge accepted (paid หรือรอ 3-D Secure) → consume the discount
       // ชำระสำเร็จทันที (ไม่ต้องทำ 3-D Secure) → ส่งใบเสร็จ + dispatch webhook
       if (charge.paid) {
         grantEntitlement(email, plan, { source: 'card' });
@@ -6981,33 +8190,109 @@ app.post('/api/quickpay/create', quickpayLimiter, async (req, res) => {
   }
 });
 
-// GET /api/payment/entitlement?email= — เช็คแผนที่ user มีสิทธิ์ใช้ตอนนี้
-app.get('/api/payment/entitlement', (req, res) => {
+// GET /api/payment/entitlement?email= — เช็คแผนที่ user มีสิทธิ์ใช้ตอนนี้ (read-only, ยัง
+// ระบุตัวตนแค่ด้วย email อยู่ — เก็บ rate limit เดิมไว้กันสแกนเดา email จำนวนมาก)
+const paymentAccountLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'ลองบ่อยเกินไป กรุณารอสักครู่' } });
+// จำกัดการเริ่มขอยกเลิกให้แคบกว่า entitlement (read) เพราะนี่คือจุดที่แตะเงินจริง —
+// budget เดียวกับ erasure (5 ครั้ง/ชม.) ซึ่งเป็น action ทำลาย/เปลี่ยนสถานะบัญชีจริงเหมือนกัน
+const paymentCancelLimiter = rateLimit({ windowMs: 3600000, max: 5, message: { error: 'ลองบ่อยเกินไป กรุณารอสักครู่' } });
+
+app.get('/api/payment/entitlement', paymentAccountLimiter, (req, res) => {
   const email = (req.query.email || '').trim();
   if (!email) return res.status(400).json({ error: 'ต้องการ email' });
   const ent = getEntitlement(email);
   res.json({ success: true, ...ent });
 });
 
-// POST /api/payment/cancel — ยกเลิก subscription (ใช้สิทธิ์ได้จนถึงวันหมดอายุ)
-app.post('/api/payment/cancel', async (req, res) => {
+// POST /api/payment/cancel — เดิมยกเลิก subscription จริงทันทีแค่รู้ email เดียว ไม่มีการยืนยัน
+// ตัวตนเลย ใครก็ตามที่รู้อีเมลลูกค้าที่จ่ายเงินจริงสามารถยกเลิกแทนเขาได้ (flagged ตั้งแต่ run 13,
+// รอการตัดสินใจของเจ้าของโปรเจกต์เพราะกระทบ UX ลูกค้าที่ใช้อยู่จริงทุกวันนี้ — ตอนนี้ตัดสินใจแล้ว
+// ว่ายอมรับการเพิ่ม email-confirmation-link แบบเดียวกับ erasure ได้) เปลี่ยนเป็น 2 ขั้นตอน:
+// ขั้นแรกแค่ส่งอีเมลยืนยัน ยังไม่ยกเลิกจริง ต้องกดลิงก์ในอีเมลก่อนถึงจะยกเลิกจริง (ด้านล่าง)
+app.post('/api/payment/cancel', paymentCancelLimiter, async (req, res) => {
   const email = (req.body?.email || '').trim();
   if (!email) return res.status(400).json({ error: 'ต้องการ email' });
-  const ent = entitlements[email.toLowerCase()];
+  const sanitized = email.toLowerCase();
+  const ent = entitlements[sanitized];
   if (!ent) return res.status(404).json({ error: 'ไม่พบสิทธิ์การใช้งานสำหรับอีเมลนี้' });
+  if (ent.status === 'cancelled') return res.status(400).json({ error: 'ยกเลิกไปแล้ว' });
 
+  const confirmUrl = `${DOMAIN_URL}/api/payment/cancel/confirm?email=${encodeURIComponent(sanitized)}&token=${unsubToken(sanitized, 'payment-cancel')}`;
+  if (mailer) {
+    try {
+      await mailer.sendMail({
+        from: `"Openthai.ai" <${process.env.SMTP_USER}>`,
+        to: sanitized,
+        subject: '⚠️ ยืนยันการยกเลิก subscription — Openthai.ai',
+        html: `<div style="font-family:Arial,sans-serif;background:#0f0f1a;color:#f8fafc;max-width:520px;margin:0 auto;border-radius:16px;overflow:hidden;">
+          <div style="background:linear-gradient(135deg,#ef4444,#f59e0b);padding:24px;text-align:center;"><h1 style="margin:0;font-size:19px;">ยืนยันการยกเลิก subscription</h1></div>
+          <div style="padding:24px;font-size:14px;line-height:1.7;">
+            <p>เราได้รับคำขอยกเลิก subscription แผน <strong>${ent.plan}</strong> สำหรับอีเมลนี้ หากคุณเป็นผู้ส่งคำขอนี้จริง กดยืนยันด้านล่างเพื่อดำเนินการยกเลิก (ยังใช้งานได้จนถึงวันหมดอายุตามปกติ)</p>
+            <p style="text-align:center;margin:20px 0;"><a href="${confirmUrl}" style="background:#ef4444;color:#fff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:700;">ยืนยันการยกเลิก</a></p>
+            <p style="color:#94a3b8;font-size:12px;">หากคุณไม่ได้ส่งคำขอนี้ ไม่ต้องดำเนินการใดๆ subscription จะยังทำงานตามปกติหากไม่กดยืนยัน</p>
+          </div></div>`,
+      });
+    } catch (e) { console.error('[payment/cancel] send error:', e.message); }
+  }
+  addLog('info', 'Entitlement', `📧 Cancel confirmation ส่งให้ ${sanitized} (รอการยืนยันผ่านอีเมล)`);
+  res.json({ success: true, message: 'ส่งอีเมลยืนยันแล้ว กรุณากดลิงก์ในอีเมลเพื่อยืนยันการยกเลิก' });
+});
+
+// ยกเลิก subscription จริง — เรียกจาก POST เท่านั้น (คืน {ok, code, error} หรือ {ok:true, plan, expires_at})
+async function performPaymentCancel(sanitized) {
+  const ent = entitlements[sanitized];
+  if (!ent) return { ok: false, code: 404, error: 'ไม่พบสิทธิ์การใช้งานสำหรับอีเมลนี้' };
+  if (ent.status === 'cancelled') return { ok: false, code: 400, error: 'ยกเลิกไปแล้ว' };
+  if (ent.subscription_id && process.env.OMISE_SECRET_KEY) {
+    await cancelSubscription(ent.subscription_id);
+  }
+  ent.status = 'cancelled';
+  ent.updated_at = new Date().toISOString();
+  saveEntitlements(entitlements);
+  addLog('info', 'Entitlement', `✅ ยกเลิก subscription ยืนยันแล้ว: ${sanitized}`);
+  return { ok: true, plan: ent.plan, expires_at: ent.expires_at };
+}
+
+// GET = หน้ายืนยันเท่านั้น ไม่ยกเลิกจริง — destructive action ต้องไม่เกิดบน GET เพราะ email
+// link-scanner/prefetch (Proofpoint, MS Safe Links ฯลฯ) ยิง GET ลิงก์ในอีเมลอัตโนมัติ จะยกเลิก
+// subscription ของลูกค้าที่จ่ายเงินจริงก่อนเจ้าตัวจะกดจริง (และไปยกเลิกที่ Omise ด้วย) การยกเลิก
+// จริงเกิดเฉพาะตอนกดปุ่ม → POST (bot ที่ทำแต่ GET จะไม่ทริกเกอร์) — pattern เดียวกับ erasure
+app.get('/api/payment/cancel/confirm', unsubLimiter, (req, res) => {
+  const { email, token } = req.query;
+  if (!email || !token) return res.status(400).send('ลิงก์ไม่ถูกต้อง');
+  const sanitized = String(email).toLowerCase().trim();
+  if (!safeTokenEqual(token, unsubToken(sanitized, 'payment-cancel'))) return res.status(403).send('ลิงก์ไม่ถูกต้องหรือหมดอายุ');
+  const ent = entitlements[sanitized];
+  if (!ent) return res.status(404).send('ไม่พบสิทธิ์การใช้งานสำหรับอีเมลนี้');
+  if (ent.status === 'cancelled') return res.send('<div style="font-family:sans-serif;max-width:480px;margin:60px auto;text-align:center;">ยกเลิกไปแล้วก่อนหน้านี้</div>');
+  const qs = `email=${encodeURIComponent(sanitized)}&token=${encodeURIComponent(String(token))}`;
+  const until = ent.expires_at ? new Date(ent.expires_at).toLocaleDateString('th-TH') : '-';
+  res.send(`<!doctype html><html lang="th"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><body style="background:#0f0f1a;color:#f8fafc;"><div style="font-family:Arial,sans-serif;max-width:480px;margin:60px auto;text-align:center;line-height:1.7;padding:0 20px;">
+    <h2 style="color:#ef4444;">ยืนยันการยกเลิก subscription</h2>
+    <p>คุณกำลังจะยกเลิก subscription แผน <strong>${escapeHtml(String(ent.plan || ''))}</strong> สำหรับ <strong>${escapeHtml(sanitized)}</strong> — ยังใช้งานได้จนถึง <strong>${escapeHtml(until)}</strong></p>
+    <button id="go" style="background:#ef4444;color:#fff;border:none;padding:12px 26px;border-radius:999px;font-size:16px;font-weight:700;cursor:pointer;">ยืนยันการยกเลิก</button>
+    <p id="out" style="margin-top:18px;color:#94a3b8;"></p>
+    <script>
+      document.getElementById('go').onclick=function(){var b=this,o=document.getElementById('out');b.disabled=true;b.textContent='กำลังยกเลิก...';fetch('/api/payment/cancel/confirm?${qs}',{method:'POST'}).then(function(r){return r.json();}).then(function(d){if(d.success){b.style.display='none';o.textContent='✅ ยืนยันและยกเลิกเรียบร้อยแล้ว — ใช้งานแผน '+(d.plan||'')+' ได้จนถึง '+(d.until||'');}else{o.textContent='เกิดข้อผิดพลาด: '+(d.message||'');b.disabled=false;b.textContent='ยืนยันการยกเลิก';}}).catch(function(){o.textContent='เชื่อมต่อไม่สำเร็จ ลองใหม่';b.disabled=false;b.textContent='ยืนยันการยกเลิก';});};
+    </script>
+  </div></body></html>`);
+});
+
+// POST = ยกเลิกจริง (ต้องกดปุ่มบนหน้ายืนยันก่อน)
+app.post('/api/payment/cancel/confirm', unsubLimiter, async (req, res) => {
+  const email = req.query.email || req.body?.email;
+  const token = req.query.token || req.body?.token;
+  if (!email || !token) return res.status(400).json({ success: false, message: 'ลิงก์ไม่ถูกต้อง' });
+  const sanitized = String(email).toLowerCase().trim();
+  if (!safeTokenEqual(token, unsubToken(sanitized, 'payment-cancel'))) return res.status(403).json({ success: false, message: 'ลิงก์ไม่ถูกต้องหรือหมดอายุ' });
   try {
-    if (ent.subscription_id && process.env.OMISE_SECRET_KEY) {
-      await cancelSubscription(ent.subscription_id);
-    }
-    ent.status = 'cancelled';
-    ent.updated_at = new Date().toISOString();
-    saveEntitlements(entitlements);
-    addLog('info', 'Entitlement', `ยกเลิก subscription ของ ${email}`);
-    res.json({ success: true, message: `ยกเลิกแล้ว — ใช้งานแผน ${ent.plan} ได้จนถึง ${new Date(ent.expires_at).toLocaleDateString('th-TH')}`, ...ent });
+    const r = await performPaymentCancel(sanitized);
+    if (!r.ok) return res.status(r.code).json({ success: false, message: r.error });
+    const until = r.expires_at ? new Date(r.expires_at).toLocaleDateString('th-TH') : '-';
+    res.json({ success: true, plan: r.plan, until });
   } catch (e) {
-    addLog('error', 'Payment', `Cancel failed: ${e.message}`);
-    res.status(500).json({ error: e.message });
+    addLog('error', 'Payment', `Cancel confirm failed: ${e.message}`);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาด กรุณาลองใหม่' });
   }
 });
 
@@ -7022,11 +8307,20 @@ app.get('/api/payment/status/:chargeId', async (req, res) => {
     // If paid → update payment record (ส่งใบเสร็จเฉพาะครั้งแรกที่เปลี่ยนเป็น paid)
     if (status.paid) {
       const firstTime = rec && !rec.paid_at;
-      if (firstTime) { rec.paid_at = status.paid_at; rec.status = 'successful'; savePayments(payments); }
-      webhooks.dispatch('payment.completed', { charge_id: req.params.chargeId, amount_thb: status.amount_thb, plan: rec?.plan }, null);
+      // ทุกอย่างใต้ if(firstTime) ทำครั้งเดียวตอนเปลี่ยนเป็น paid ครั้งแรก — รวม dispatch ด้วย
+      // เดิม dispatch อยู่นอก guard: client poll สถานะซ้ำ (frontend poll จนจ่าย + refresh) ทำให้
+      // subscriber ภายนอกได้ event 'payment.completed' ซ้ำต่อการจ่าย 1 ครั้ง (อาจ fulfill/แจ้งซ้ำ)
+      if (firstTime) {
+        rec.paid_at = status.paid_at; rec.status = 'successful'; savePayments(payments);
+        webhooks.dispatch('payment.completed', { charge_id: req.params.chargeId, amount_thb: status.amount_thb, plan: rec?.plan }, null);
+      }
       if (firstTime && rec?.email) {
         grantEntitlement(rec.email, rec.plan, { source: rec.method || 'promptpay' });
         sendPaymentReceipt(rec.email, { plan: rec.plan, amount_thb: status.amount_thb, charge_id: req.params.chargeId, paid_at: status.paid_at, method: rec.method });
+      }
+      // QuickPay (plan:null, อีเมลผู้ซื้ออยู่ใน buyer_email) — ใบเสร็จซื้อครั้งเดียว ไม่ใช่ template subscription
+      if (firstTime && rec?.kind === 'quickpay') {
+        sendQuickpayReceipt(rec, { amount_thb: status.amount_thb, charge_id: req.params.chargeId, paid_at: status.paid_at });
       }
       // เครดิตค่าคอม affiliate (เฉพาะครั้งแรก — รองรับ quickpay ที่จ่ายผ่าน ref link)
       if (firstTime) creditAffiliateSale(rec?.ref_code, status.amount_thb, { charge_id: req.params.chargeId, source: rec?.source });
@@ -7057,7 +8351,7 @@ app.get('/api/payment/history', requireAuth, (req, res) => {
 });
 
 // GET /api/admin/stats — overview stats จริงสำหรับ Admin Panel
-app.get('/api/admin/stats', (req, res) => {
+app.get('/api/admin/stats', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
 
@@ -7082,7 +8376,7 @@ app.get('/api/admin/stats', (req, res) => {
 });
 
 // GET /api/payment/admin/summary — สรุปยอดขาย (ใช้ Admin Key header เหมือน affiliate)
-app.get('/api/payment/admin/summary', (req, res) => {
+app.get('/api/payment/admin/summary', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
 
@@ -7149,7 +8443,7 @@ app.get('/api/admin/ops-summary', adminLimiter, async (req, res) => {
         ai_budget_usd: AI_DAILY_BUDGET_USD,
         ai_budget_used_pct: AI_DAILY_BUDGET_USD > 0 ? +(routerState.spentUsd / AI_DAILY_BUDGET_USD * 100).toFixed(1) : 0,
         ai_eco_mode: routerEco(),
-        note: 'ไม่รวมค่า hosting/database/SMTP/SMS — เช็ค dashboard ของ Vercel/Supabase/ผู้ให้บริการนั้นๆ โดยตรง',
+        note: 'รวมต้นทุน AI ทั้ง generate + router (ประมาณจากโทเคน) · ไม่รวมค่า hosting/database/SMTP/SMS — เช็ค dashboard ของ Vercel/Supabase/ผู้ให้บริการนั้นๆ โดยตรง',
       },
       revenue_inbound: {
         total_thb: sum(paid),
@@ -7182,7 +8476,11 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
     addLog('info', 'OmiseWebhook', `Event: ${key} — charge: ${data?.id}`);
     if (key === 'charge.complete' && data?.paid) {
       const rec = payments.find(p => p.charge_id === data.id);
-      if (rec && !rec.paid_at) {
+      // Omise ส่ง webhook แบบ at-least-once (redeliver ได้) — dispatch 'payment.completed' ต้องยิง
+      // ครั้งเดียวต่อการจ่าย ไม่งั้น subscriber ภายนอก process ซ้ำ เดิม dispatch อยู่ท้ายบล็อกแบบไม่ guard
+      // เลย จึงยิงซ้ำทุกครั้งที่ webhook เดิมถูกส่งมาใหม่ ตอนนี้ยิงใน 3 จุดตาม anchor กันซ้ำของแต่ละเคส
+      const recFirstPaid = rec && !rec.paid_at;
+      if (recFirstPaid) {
         rec.status = 'successful'; rec.paid_at = data.paid_at; savePayments(payments);
         const email = rec.email || data.metadata?.email;
         const amountThb = data.amount / 100;
@@ -7190,10 +8488,65 @@ app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), (req
           grantEntitlement(email, rec.plan, { source: 'webhook' });
           sendPaymentReceipt(email, { plan: rec.plan, amount_thb: amountThb, charge_id: data.id, paid_at: data.paid_at, method: rec.method });
         }
+        // QuickPay (plan:null, อีเมลผู้ซื้ออยู่ใน buyer_email) — ใบเสร็จซื้อครั้งเดียว
+        if (rec.kind === 'quickpay') {
+          sendQuickpayReceipt(rec, { amount_thb: amountThb, charge_id: data.id, paid_at: data.paid_at });
+        }
         // เครดิต affiliate ถ้าชำระผ่าน ref link (รองรับทั้ง plan + quickpay) — firstTime แล้วจาก !rec.paid_at
         creditAffiliateSale(rec.ref_code || data.metadata?.ref_code, amountThb, { charge_id: data.id, source: rec.source || data.metadata?.source });
+        // จุดที่ 1 (plan/quickpay/subscription-แรก ที่มี payments record) — anchor คือ paid_at
+        webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: amountThb, plan: rec.plan }, null);
       }
-      webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
+      // ร้านค้า (/api/shop/checkout): จ่ายด้วยบัตรจะ finalize ทันทีตอน checkout แต่ PromptPay
+      // จะจ่ายทีหลังผ่าน QR แล้วยืนยันมาที่ webhook นี้ เดิม handler เช็คเฉพาะ payments[]
+      // (subscription) เท่านั้น — ออเดอร์ร้านค้าไม่มี payments record จึงไม่เคยถูก finalize:
+      // ลูกค้าจ่าย PromptPay จริงแต่สต๊อกไม่ถูกตัดและออเดอร์ค้างสถานะ 'new' ตลอด ที่นี่จึง
+      // finalize ให้ (ตัดสต๊อก + ยืนยันออเดอร์) แบบ idempotent — ทำเฉพาะออเดอร์ที่ยังเป็น 'new'
+      // (ออเดอร์บัตรถูกตั้ง 'confirmed' ไปแล้ว จึงไม่ตัดสต๊อกซ้ำ)
+      const shopOrderId = data.metadata?.order_id;
+      const shopProductId = data.metadata?.product_id;
+      if (shopOrderId && shopProductId) {
+        (async () => {
+          try {
+            const ord = await orders.getOne(shopOrderId);
+            if (ord && ord.status === 'new') {
+              const q = Math.max(1, parseInt(data.metadata?.qty, 10) || 1);
+              // ใช้ channel จริงจาก metadata (เช่น ref:xxx ที่ลูกค้าเข้ามาผ่านลิงก์ affiliate)
+              // ให้ตรงกับเส้นบัตรที่ finalize แบบ sync — เดิม hardcode 'store' ทำให้ยอด PromptPay
+              // เสีย attribution ช่องทาง/ผู้แนะนำในรายงานสต๊อก
+              const shopChannel = (data.metadata?.channel || 'store').toString().slice(0, 40);
+              // เช่นเดียวกับเส้นบัตรใน finalizePaid: ตรวจผลการตัดสต๊อก — ถ้าสต๊อกหมดพอดีทั้งที่
+              // ลูกค้าจ่าย PromptPay จริงแล้ว อย่ายืนยันออเดอร์เป็นขายสำเร็จ อย่าจ่ายค่าคอม แต่ flag
+              // ให้คืนเงิน (ยังคง idempotent เพราะ guard status==='new' ด้านบน)
+              const adj = await inventory.adjust(shopProductId, -q, 'sale', `ชำระผ่าน PromptPay (ออเดอร์ ${shopOrderId})`, shopOrderId, shopChannel);
+              if (!adj.ok) {
+                await orders.setStatus(shopOrderId, 'cancelled', `ชำระ PromptPay สำเร็จแต่สต๊อกหมดพอดี — ต้องคืนเงินลูกค้า · charge ${data.id}`);
+                addLog('error', 'OmiseWebhook', `OVERSOLD: ออเดอร์ ${shopOrderId} จ่าย PromptPay แล้วแต่สต๊อก ${shopProductId} หมด — ต้องคืนเงิน (charge ${data.id})`);
+                // ลูกค้าจ่าย PromptPay แล้วแต่ระบบต้องยกเลิก — แจ้ง + ยืนยันว่ากำลังคืนเงิน
+                sendShopCancelled({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, order_id: shopOrderId, amount: data.amount / 100, reason: 'สินค้าหมดสต๊อกพอดีหลังชำระเงิน', refund_pending: true });
+              } else {
+                await orders.setStatus(shopOrderId, 'confirmed', 'ชำระเงินผ่าน PromptPay สำเร็จ');
+                // #9 — เครดิตคอมมิชชัน affiliate สำหรับร้านค้าจ่ายผ่าน PromptPay (channel = 'ref:CODE')
+                // guard ด้วย status==='new' ด้านบนแล้ว → idempotent จ่ายครั้งเดียว (เส้นบัตรจ่ายใน finalizePaid)
+                const shopRef = shopChannel.startsWith('ref:') ? shopChannel.slice(4) : null;
+                if (shopRef) creditAffiliateSale(shopRef, data.amount / 100, { charge_id: data.id, source: 'shop' });
+                // ใบยืนยันคำสั่งซื้อถึงลูกค้า (เส้น PromptPay) — เหมือนเส้นบัตรใน finalizePaid
+                sendShopReceipt({ contact: ord.contact, customer_name: ord.customer_name, product_name: ord.product_name, qty: q, amount: data.amount / 100, order_id: shopOrderId });
+                addLog('info', 'OmiseWebhook', `Shop order finalized: ${shopOrderId} (stock -${q})`);
+              }
+              // จุดที่ 2 (ร้านค้า) — anchor คือ guard status==='new' ด้านบน จ่ายจริงแล้วทั้งสองสาขา
+              // (ยืนยัน/oversold-cancel) → charge ถูกจ่ายจริง จึงยิง payment.completed ครั้งเดียวที่นี่
+              webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
+            }
+          } catch (e) { addLog('warn', 'OmiseWebhook', `shop finalize ${shopOrderId}: ${e.message}`); }
+        })();
+      }
+      // จุดที่ 3 — charge ที่ไม่มีทั้ง payments record และ shop order (เช่น รอบเรียกเก็บ subscription
+      // ที่เกิดซ้ำทุกเดือน — charge_id ต่างกันทุกงวดและไม่ถูกเก็บใน payments[]) ไม่มี anchor ให้ dedup
+      // จึงคง at-least-once ตามเดิม (พฤติกรรมเดิมของเคสนี้ไม่เปลี่ยน) — rec/shop มี anchor แล้วด้านบน
+      if (!rec && !shopOrderId) {
+        webhooks.dispatch('payment.completed', { charge_id: data.id, amount_thb: data.amount / 100 }, null);
+      }
     }
     res.json({ received: true });
   } catch (e) {
@@ -7270,19 +8623,46 @@ app.get('/api/n8n/status', (req, res) => {
 const corpLimiter = rateLimit({ windowMs: 60000, max: 30, message: { error: 'Corporate API rate limit' } });
 
 // GET /api/corporate/overview
-app.get('/api/corporate/overview', (req, res) => {
+app.get('/api/corporate/overview', requireAuth, (req, res) => {
   res.json({ success: true, departments: DEPARTMENTS, ts: new Date().toISOString() });
 });
 
+// ── AI Department Officers (เจ้าหน้าที่ AI ประจำฝ่าย) ─────────────────────────────
+// ทีมชั่วคราวจนกว่าจะจ้างคนจริง: แต่ละฝ่ายมีผู้ช่วย AI ที่ตอบในขอบเขตของฝ่ายนั้น
+// ฝ่ายวิชาชีพ (กฎหมาย/การเงิน/ตรวจสอบ ฯลฯ) จะแนบ disclaimer เสมอ — ไม่สวมรอยเป็นผู้เชี่ยวชาญ
+// มีใบอนุญาต และตอบได้แม้ไม่ได้ตั้ง AI key (ใช้ fallback เชิงกำหนดได้)
+app.get('/api/corporate/officers', requireAuth, (req, res) => {
+  res.json({ success: true, officers: Object.keys(DEPARTMENTS).map(officerFor) });
+});
+app.post('/api/corporate/officer/:dept', requireAuth, corpLimiter, async (req, res) => {
+  const dept = String(req.params.dept || '');
+  const question = req.body?.question;
+  if (!question || !String(question).trim()) return res.status(400).json({ success: false, error: 'ต้องระบุคำถาม (question)' });
+  const built = buildOfficerPrompt(dept, question);
+  if (!built) return res.status(400).json({ success: false, error: 'ไม่พบฝ่ายนี้' });
+  const o = officerFor(dept);
+  let answer = built.fallback, ai_used = 'none';
+  try {
+    const r = await callAI(built.prompt, 800);
+    if (r && r.ok && r.text) { answer = r.text; ai_used = r.provider || 'ai'; }
+  } catch (e) { addLog('warn', 'DeptOfficer', `${dept}: ${e.message}`); }
+  res.json({
+    success: true,
+    department: o.department, role: o.role, scope: o.scope,
+    ai_used, answer,
+    disclaimer: needsProfessionalDisclaimer(dept) ? DISCLAIMER : null,
+  });
+});
+
 // Board
-app.get('/api/corporate/board',   (req, res) => res.json({ success: true, data: corporate.getBoard() }));
+app.get('/api/corporate/board', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getBoard() }));
 app.patch('/api/corporate/board', requireAuth, corpLimiter, (req, res) => {
   corporate.saveBoard(req.body);
   res.json({ success: true });
 });
 
 // Compliance
-app.get('/api/corporate/compliance',   (req, res) => res.json({ success: true, data: corporate.getCompliance() }));
+app.get('/api/corporate/compliance', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getCompliance() }));
 app.patch('/api/corporate/compliance', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getCompliance();
   corporate.saveCompliance({ ...current, ...req.body });
@@ -7290,7 +8670,7 @@ app.patch('/api/corporate/compliance', requireAuth, corpLimiter, (req, res) => {
 });
 
 // IR
-app.get('/api/corporate/ir',   (req, res) => res.json({ success: true, data: corporate.getIR() }));
+app.get('/api/corporate/ir', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getIR() }));
 app.patch('/api/corporate/ir', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getIR();
   corporate.saveIR({ ...current, ...req.body });
@@ -7298,7 +8678,7 @@ app.patch('/api/corporate/ir', requireAuth, corpLimiter, (req, res) => {
 });
 
 // HR
-app.get('/api/corporate/hr',   (req, res) => res.json({ success: true, data: corporate.getHR() }));
+app.get('/api/corporate/hr', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getHR() }));
 app.patch('/api/corporate/hr', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getHR();
   corporate.saveHR({ ...current, ...req.body });
@@ -7306,7 +8686,7 @@ app.patch('/api/corporate/hr', requireAuth, corpLimiter, (req, res) => {
 });
 
 // ESG
-app.get('/api/corporate/esg',   (req, res) => res.json({ success: true, data: corporate.getESG() }));
+app.get('/api/corporate/esg', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getESG() }));
 app.patch('/api/corporate/esg', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getESG();
   corporate.saveESG({ ...current, ...req.body });
@@ -7314,7 +8694,7 @@ app.patch('/api/corporate/esg', requireAuth, corpLimiter, (req, res) => {
 });
 
 // Finance
-app.get('/api/corporate/finance',   (req, res) => res.json({ success: true, data: corporate.getFinance() }));
+app.get('/api/corporate/finance', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getFinance() }));
 app.patch('/api/corporate/finance', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getFinance();
   corporate.saveFinance({ ...current, ...req.body });
@@ -7322,7 +8702,7 @@ app.patch('/api/corporate/finance', requireAuth, corpLimiter, (req, res) => {
 });
 
 // Global Operations
-app.get('/api/corporate/global',   (req, res) => res.json({ success: true, data: corporate.getGlobalOps() }));
+app.get('/api/corporate/global', requireAuth,   (req, res) => res.json({ success: true, data: corporate.getGlobalOps() }));
 app.patch('/api/corporate/global', requireAuth, corpLimiter, (req, res) => {
   const current = corporate.getGlobalOps();
   corporate.saveGlobalOps({ ...current, ...req.body });
@@ -7330,36 +8710,36 @@ app.patch('/api/corporate/global', requireAuth, corpLimiter, (req, res) => {
 });
 
 // ── PR & Global Communications ────────────────────────────────────────────────
-app.get('/api/corporate/pr/releases',   (req, res) => res.json({ success: true, data: pr.getPressReleases() }));
+app.get('/api/corporate/pr/releases', requireAuth,   (req, res) => res.json({ success: true, data: pr.getPressReleases() }));
 app.patch('/api/corporate/pr/releases', requireAuth, corpLimiter, (req, res) => {
   pr.savePressReleases(req.body); res.json({ success: true });
 });
 
-app.get('/api/corporate/pr/contacts',   (req, res) => res.json({ success: true, data: pr.getMediaContacts() }));
+app.get('/api/corporate/pr/contacts', requireAuth,   (req, res) => res.json({ success: true, data: pr.getMediaContacts() }));
 app.patch('/api/corporate/pr/contacts', requireAuth, corpLimiter, (req, res) => {
   pr.saveMediaContacts(req.body); res.json({ success: true });
 });
 
-app.get('/api/corporate/pr/campaigns',   (req, res) => res.json({ success: true, data: pr.getCampaigns() }));
+app.get('/api/corporate/pr/campaigns', requireAuth,   (req, res) => res.json({ success: true, data: pr.getCampaigns() }));
 app.patch('/api/corporate/pr/campaigns', requireAuth, corpLimiter, (req, res) => {
   pr.saveCampaigns(req.body); res.json({ success: true });
 });
 
-app.get('/api/corporate/pr/kols',   (req, res) => res.json({ success: true, data: pr.getKOLs() }));
+app.get('/api/corporate/pr/kols', requireAuth,   (req, res) => res.json({ success: true, data: pr.getKOLs() }));
 app.patch('/api/corporate/pr/kols', requireAuth, corpLimiter, (req, res) => {
   pr.saveKOLs(req.body); res.json({ success: true });
 });
 
-app.get('/api/corporate/pr/crisis',   (req, res) => res.json({ success: true, data: pr.getCrisisPlan() }));
-app.get('/api/corporate/pr/newsletters', (req, res) => res.json({ success: true, data: pr.getNewsletters() }));
+app.get('/api/corporate/pr/crisis', requireAuth,   (req, res) => res.json({ success: true, data: pr.getCrisisPlan() }));
+app.get('/api/corporate/pr/newsletters', requireAuth, (req, res) => res.json({ success: true, data: pr.getNewsletters() }));
 
 // Command Center — Team Tasks + KPIs
-app.get('/api/corporate/tasks',   (req, res) => res.json({ success: true, data: pr.getTasks() }));
+app.get('/api/corporate/tasks', requireAuth,   (req, res) => res.json({ success: true, data: pr.getTasks() }));
 app.patch('/api/corporate/tasks', requireAuth, corpLimiter, (req, res) => {
   pr.saveTasks(req.body); res.json({ success: true });
 });
 
-app.get('/api/corporate/kpis',   (req, res) => res.json({ success: true, data: pr.getKPIs() }));
+app.get('/api/corporate/kpis', requireAuth,   (req, res) => res.json({ success: true, data: pr.getKPIs() }));
 app.patch('/api/corporate/kpis', requireAuth, corpLimiter, (req, res) => {
   pr.saveKPIs(req.body); res.json({ success: true });
 });
@@ -7412,13 +8792,14 @@ app.post('/api/line/webhook', express.raw({ type: 'application/json' }), async (
     return;
   }
 
-  // Signature check (skip if no secret configured — dev mode)
-  if (process.env.LINE_CHANNEL_SECRET && signature) {
-    const expected = createHmac('sha256', process.env.LINE_CHANNEL_SECRET).update(rawBodyBuf).digest('base64');
-    if (signature !== expected) {
-      addLog('warn', 'LINE', 'Webhook signature mismatch — ignored');
-      return;
-    }
+  // Signature check — FAILS CLOSED when a secret is configured. verifyLineSignature returns
+  // null only in dev mode (no LINE_CHANNEL_SECRET); with a secret set, a missing/empty/wrong
+  // signature returns false and the forged request is dropped (previously a missing header
+  // skipped the check entirely — an event-injection bypass). See line-signature.js.
+  const sigResult = verifyLineSignature(rawBodyBuf, signature, process.env.LINE_CHANNEL_SECRET);
+  if (sigResult === false) {
+    addLog('warn', 'LINE', 'Webhook signature missing or mismatched — ignored');
+    return;
   }
 
   const token = process.env.LINE_CHANNEL_TOKEN;
@@ -7524,7 +8905,13 @@ app.get('/api/line/users', requireAuth, async (req, res) => {
 });
 
 // POST /api/n8n/register-webhooks — auto-register n8n webhook URLs
-app.post('/api/n8n/register-webhooks', async (req, res) => {
+// Admin Key — เดิมไม่มีการตรวจสอบเลย รับ n8n_base_url จาก request body ตรงๆ แล้วเรียก
+// webhooks.register() ให้ทันที (tenantId: 'system') เท่ากับใครก็ตามส่ง URL ของตัวเองมาก็จะ
+// ได้รับ webhook จริงที่ dispatch เหตุการณ์ content.generated/agent.completed/payment.completed
+// ไปหา — ช่องโหว่แบบเดียวกับ /api/webhooks ที่เพิ่งแก้ไป แค่มาจากคนละทาง (bypass ผ่านฟังก์ชัน
+// register() ตรงๆ ไม่ผ่าน route ที่ล็อกไปแล้ว) ไม่มีหน้า UI เรียกอยู่เลย จึงล็อกได้โดยไม่กระทบ
+app.post('/api/n8n/register-webhooks', (req, res) => {
+  if (!webhooksAuth(req, res)) return;
   const { n8n_base_url } = req.body || {};
   const base = n8n_base_url || process.env.N8N_URL;
   if (!base) return res.status(400).json({ error: 'n8n_base_url required' });
@@ -7611,6 +8998,91 @@ function saveScheduler() {
   } catch (e) { console.error('[scheduler] save error:', e.message); }
 }
 
+// ── Durable scheduler queue (Supabase primary / JSON file fallback) — migration 012 ───────────
+// scheduler.json lives in /tmp on Vercel: wiped on every redeploy AND private to each lambda instance,
+// so a post the /api/scheduler/create invocation stores is invisible to the daily Vercel Cron
+// invocation (/api/scheduler/process) meant to broadcast it → scheduled LINE broadcasts silently never
+// fire in production. Persist the queue to Supabase so due posts survive redeploys and are visible
+// across invocations. Mirrors the autopost_queue durability fix. Fails quietly / stays file-only before
+// the migration is applied (no regression).
+const _schToRow = (p) => ({
+  id: String(p.id),
+  platform: p.platform || '',
+  content: p.content || '',
+  audience: p.audience || 'general',
+  language: p.language || 'thai',
+  scheduled_at: p.scheduled_at || new Date().toISOString(),
+  status: p.status || 'pending',
+  channel: p.channel || null,
+  error: p.error || null,
+  reach_mock: p.reach_mock != null ? p.reach_mock : null,
+  created_at: p.created_at || new Date().toISOString(),
+  published_at: p.published_at || null,
+  ready_at: p.ready_at || null,
+  updated_at: new Date().toISOString(),
+});
+const _schFromRow = (r) => ({
+  id: String(r.id),
+  platform: r.platform || '',
+  content: r.content || '',
+  audience: r.audience || 'general',
+  language: r.language || 'thai',
+  scheduled_at: r.scheduled_at || new Date().toISOString(),
+  status: r.status || 'pending',
+  ...(r.channel ? { channel: r.channel } : {}),
+  ...(r.error ? { error: r.error } : {}),
+  ...(r.reach_mock != null ? { reach_mock: r.reach_mock } : {}),
+  created_at: r.created_at || new Date().toISOString(),
+  ...(r.published_at ? { published_at: r.published_at } : {}),
+  ...(r.ready_at ? { ready_at: r.ready_at } : {}),
+});
+// Save the file (always) + upsert this post to Supabase (when configured), one at a time so a
+// pending → published/ready/failed transition is persisted immediately.
+function persistScheduler(post) {
+  saveScheduler();
+  if (_useSB && post) {
+    _sbReq('POST', '/scheduler_posts', { params: { on_conflict: 'id' }, body: [_schToRow(post)], prefer: 'resolution=merge-duplicates,return=minimal' })
+      .catch((e) => console.warn('[scheduler] Supabase upsert failed, file-only:', e.message));
+  }
+}
+// Posts due now (pending & scheduled_at ≤ now). On Supabase, fetch them directly so a fresh cron lambda
+// sees posts created by another invocation and after a redeploy; merge each into the in-memory store so
+// status updates and persistScheduler operate on the same object. Falls back to the in-memory filter.
+async function dueSchedulerPosts() {
+  const now = Date.now();
+  if (_useSB) {
+    try {
+      const rows = await _sbReq('GET', '/scheduler_posts', { params: { status: 'eq.pending', scheduled_at: `lte.${new Date().toISOString()}`, select: '*', order: 'scheduled_at.asc', limit: '100' } });
+      if (Array.isArray(rows)) {
+        const byId = new Map(schedulerStore.posts.map((p) => [String(p.id), p]));
+        const due = [];
+        for (const r of rows) {
+          let post = byId.get(String(r.id));
+          if (!post) { post = _schFromRow(r); schedulerStore.posts.unshift(post); }
+          due.push(post);
+        }
+        return due;
+      }
+    } catch (e) {
+      console.warn('[scheduler] Supabase due-fetch failed, using memory:', e.message);
+    }
+  }
+  return schedulerStore.posts.filter((p) => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
+}
+
+if (_useSB) {
+  _sbReq('GET', '/scheduler_posts', { params: { select: '*', order: 'created_at.desc', limit: '500' } })
+    .then((rows) => {
+      if (!Array.isArray(rows)) return;
+      const have = new Set(schedulerStore.posts.map((p) => String(p.id)));
+      for (const r of rows) {
+        const id = String(r.id);
+        if (!have.has(id)) { schedulerStore.posts.push(_schFromRow(r)); have.add(id); }
+      }
+    })
+    .catch((e) => console.warn('[scheduler] Supabase hydrate failed, file-only:', e.message));
+}
+
 app.post('/api/scheduler/create', generateLimiter, (req, res) => {
   const { platform, content, scheduled_at, audience, language = 'thai' } = req.body || {};
   if (!content?.trim() || !platform || !scheduled_at) return res.status(400).json({ error: 'content, platform, scheduled_at required' });
@@ -7621,14 +9093,13 @@ app.post('/api/scheduler/create', generateLimiter, (req, res) => {
   };
   schedulerStore.posts.unshift(post);
   if (schedulerStore.posts.length > 200) schedulerStore.posts = schedulerStore.posts.slice(0, 200);
-  saveScheduler();
+  persistScheduler(post);
   res.json({ ok: true, post });
 });
 
 // GET /api/scheduler/due — โพสต์ที่ถึงเวลาแล้วแต่ยังไม่ได้โพสต์ (pending + scheduled_at <= now)
-app.get('/api/scheduler/due', (req, res) => {
-  const now = Date.now();
-  const due = schedulerStore.posts.filter(p => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
+app.get('/api/scheduler/due', async (req, res) => {
+  const due = await dueSchedulerPosts();
   res.json({ ok: true, due, count: due.length });
 });
 
@@ -7637,8 +9108,10 @@ app.get('/api/scheduler/due', (req, res) => {
 // แพลตฟอร์มอื่น → mark 'ready' (ถึงเวลาโพสต์ — รอคุณกดโพสต์เอง, ToS ห้ามบอทโพสต์)
 // รองรับทั้ง GET (Vercel Cron / uptime pinger) และ POST (เรียกจากหน้าเว็บ)
 async function processScheduler(req, res) {
-  const now = Date.now();
-  const due = schedulerStore.posts.filter(p => p.status === 'pending' && new Date(p.scheduled_at).getTime() <= now);
+  // Pull due posts from Supabase (survives redeploy + visible across lambda invocations); falls back to
+  // the in-memory queue when Supabase isn't configured. This is what makes scheduled posts actually get
+  // processed on Vercel, where the file-only queue was invisible to the daily cron invocation.
+  const due = await dueSchedulerPosts();
   const result = { broadcast: [], ready: [], failed: [] };
   for (const post of due) {
     const isLine = ['line', 'line_oa', 'lineoa'].includes(String(post.platform).toLowerCase());
@@ -7653,8 +9126,9 @@ async function processScheduler(req, res) {
       post.status = 'ready'; post.ready_at = new Date().toISOString();
       result.ready.push(post.id);
     }
+    persistScheduler(post);
   }
-  if (due.length) { saveScheduler(); addLog('info', 'Scheduler', `process: broadcast ${result.broadcast.length} · ready ${result.ready.length} · failed ${result.failed.length}`); }
+  if (due.length) addLog('info', 'Scheduler', `process: broadcast ${result.broadcast.length} · ready ${result.ready.length} · failed ${result.failed.length}`);
   res.json({ ok: true, processed: due.length, ...result, ran_at: new Date().toISOString() });
 }
 app.post('/api/scheduler/process', processScheduler);
@@ -7668,24 +9142,36 @@ app.get('/api/scheduler/list', (req, res) => {
   res.json({ ok: true, posts, total: posts.length });
 });
 
-app.post('/api/scheduler/execute/:id', (req, res) => {
+// /api/scheduler/execute (manual "publish now" from the login-gated SchedulerPage) was the only
+// mutating scheduler route with NO rate limiter — every other mutation in the app goes through
+// express-rate-limit (backend/CLAUDE.md), and the destructive DELETE below is admin-gated. Because the
+// route is unauthenticated and shares the store the daily cron reads, an unthrottled caller could script
+// mass execute-by-id calls to flip queued posts to 'published' — including pre-empting a DUE LINE post so
+// processScheduler no longer sees it and the real LINE OA broadcast is suppressed. This limiter caps that
+// abuse without changing the auth model the UI relies on (a human clicking "publish now" stays well under
+// it). NOTE for owner: the deeper fix — authenticating execute + scoping the scheduler store per user so
+// one visitor can't touch another's queued posts — is a design change left for your decision (logged).
+const schedulerExecuteLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { ok: false, error: 'ดำเนินการบ่อยเกินไป กรุณารอสักครู่' } });
+app.post('/api/scheduler/execute/:id', schedulerExecuteLimiter, (req, res) => {
   const post = schedulerStore.posts.find(p => p.id === req.params.id);
   if (!post) return res.status(404).json({ error: 'post not found' });
   post.status = 'published';
   post.published_at = new Date().toISOString();
   post.reach_mock = Math.floor(Math.random() * 9000) + 1000;
-  saveScheduler();
+  persistScheduler(post);
   res.json({ ok: true, post });
 });
 
 // ลบโพสต์ในคิว Scheduler (Admin Key) — ต่างจาก /api/scheduler/process ที่ต้องเปิดไว้ให้ Vercel Cron ยิงได้
-app.delete('/api/scheduler/:id', (req, res) => {
+app.delete('/api/scheduler/:id', adminLimiter, (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
   const idx = schedulerStore.posts.findIndex(p => p.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'not found' });
   schedulerStore.posts.splice(idx, 1);
   saveScheduler();
+  // Remove from Supabase too so the deleted post can't re-hydrate on the next boot.
+  if (_useSB) _sbReq('DELETE', '/scheduler_posts', { params: { id: `eq.${encodeURIComponent(req.params.id)}` }, prefer: 'return=minimal' }).catch(() => {});
   res.json({ ok: true });
 });
 
@@ -7951,7 +9437,7 @@ USP: ${usp || 'คุณภาพไทยระดับส่งออก'}
 // Integration Hub  /api/integrations/*  — Priority #3-7 (LINE·FB·TikTok·Canva·Analytics)
 // Adapters เรียก Platform API จริงเมื่อมี credentials (env var) — ดู backend/integrations.js
 // ══════════════════════════════════════════════════════════════════════════════
-const integrations = createIntegrations({ addLog, limiter: generateLimiter });
+const integrations = createIntegrations({ addLog, limiter: generateLimiter, requireAdmin: invAuth });
 app.use(integrations.router);
 
 // ── Export app สำหรับ Vercel Serverless (api/index.js import ไปใช้) ──────────

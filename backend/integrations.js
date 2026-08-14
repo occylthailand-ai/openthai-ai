@@ -160,9 +160,16 @@ const ADAPTERS = {
 const envKeyOf = (a) => a._envKey || ({ line: 'LINE_CHANNEL_TOKEN', facebook: 'FB_PAGE_TOKEN', tiktok: 'TIKTOK_SHOP_KEY', canva: 'CANVA_API_KEY' }[a.id]) || '';
 
 // ── Factory ───────────────────────────────────────────────────────────────────
-export function createIntegrations({ addLog = () => {}, limiter } = {}) {
+export function createIntegrations({ addLog = () => {}, limiter, requireAdmin } = {}) {
   const router = express.Router();
   const list = Object.values(ADAPTERS);
+  // Admin gate for the state-changing / token-using routes. These act with the platform's OWN
+  // server-side social tokens (LINE broadcast to all followers, Facebook page post, Canva export),
+  // so they must be admin-only. Before this they were mounted with no auth at all — the React page
+  // was behind a login guard, but the API endpoints were public, so anyone could POST
+  // /api/integrations/line/publish and broadcast spam to every follower (only rate-limited). If no
+  // guard is provided (e.g. in a unit context) the routes stay open, matching the old behaviour.
+  const denyIfNotAdmin = (req, res) => !!requireAdmin && requireAdmin(req, res) === false;
 
   function status() {
     return list.map(a => ({
@@ -180,6 +187,7 @@ export function createIntegrations({ addLog = () => {}, limiter } = {}) {
 
   // POST /api/integrations/:id/test — ทดสอบการเชื่อมต่อจริง
   router.post('/api/integrations/:id/test', async (req, res) => {
+    if (denyIfNotAdmin(req, res)) return;
     const a = ADAPTERS[req.params.id];
     if (!a) return res.status(404).json({ ok: false, error: 'integration not found' });
     const result = await a.testConnection();
@@ -189,6 +197,7 @@ export function createIntegrations({ addLog = () => {}, limiter } = {}) {
 
   // POST /api/integrations/:id/publish — เผยแพร่จริง (หรือ queue ถ้ายังไม่ connect)
   const pub = async (req, res) => {
+    if (denyIfNotAdmin(req, res)) return;
     const a = ADAPTERS[req.params.id];
     if (!a) return res.status(404).json({ ok: false, error: 'integration not found' });
     const { content, to, link, productId } = req.body || {};
@@ -207,6 +216,7 @@ export function createIntegrations({ addLog = () => {}, limiter } = {}) {
 
   // POST /api/integrations/canva/export — สร้าง Canva Design จาก Catalog
   router.post('/api/integrations/canva/export', async (req, res) => {
+    if (denyIfNotAdmin(req, res)) return;
     if (!canvaAdapter.isConnected()) return res.json({ ok: true, status: 'queued', message: 'ตั้ง CANVA_API_KEY ใน env เพื่อ Export ไป Canva จริง' });
     const result = await canvaAdapter.exportDesign(req.body?.catalog || {});
     res.json({ ok: result.ok, ...result });

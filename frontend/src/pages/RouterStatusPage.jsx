@@ -5,6 +5,7 @@ import { apiUrl } from '../apiBase';
 // ── Smart Model Router — แดชบอร์ดต้นทุนโทเคน + สถานะ provider ────────────────────
 export default function RouterStatusPage() {
   const navigate = useNavigate();
+  useEffect(() => { document.title = 'Smart Model Router — Openthai.ai'; }, []);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
@@ -77,10 +78,10 @@ export default function RouterStatusPage() {
                   <span style={{ color: '#cbd5e1' }}>{order.join(' → ')}</span>
                 </div>
               ))}
-              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '10px', lineHeight: 1.6 }}>{data.note}</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '10px', lineHeight: 1.6 }}>{data.note}</div>
             </div>
 
-            <div style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.7 }}>
+            <div style={{ fontSize: '12px', color: '#94a3b8', lineHeight: 1.7 }}>
               💡 ตั้ง <code>AI_DAILY_BUDGET_USD</code> ใน Vercel เพื่อกำหนดเพดานงบ/วัน · ตั้ง key ของแต่ละค่าย (ANTHROPIC/GEMINI/XAI) เพื่อเปิดใช้ provider จริง — ระบบจะเลือกถูกสุด/สลับค่ายให้อัตโนมัติ
             </div>
           </>

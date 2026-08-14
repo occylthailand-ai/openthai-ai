@@ -1,41 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { consentLabel } from './consentLabel';
+import { benefitsTitle } from './sectionTitle';
+import { backLabel, backAria } from './backLabel';
 import { useNavigate } from 'react-router-dom';
-import { apiUrl } from '../../apiBase';
-
-const BUSINESS_TYPES = ['ตัวแทนจำหน่าย (Distributor)', 'ผู้ค้าส่ง (Wholesaler)', 'นายหน้า (Broker)', 'ตัวแทนขายต่อ (Reseller)', 'อื่นๆ'];
+import { submitLead, leadError } from './submitLead';
+import SeasonalAnglesPanel from './SeasonalAnglesPanel';
+// The `value` is the canonical string stored on the lead (unchanged); only the visible label is
+// localized so a non-Thai distributor isn't shown a Thai-only dropdown. Shared with the middleman
+// dashboard so the stored values stay in lockstep (single source of truth).
+import { BUSINESS_TYPES } from '../../data/businessTypes';
 
 const T = {
-  th: { title:'ทางเข้าคนกลาง / ตัวแทนจำหน่าย', sub:'ตัวแทนจำหน่าย ผู้ค้าส่ง นายหน้า และคนกลางทุกประเภท เข้าร่วมเครือข่ายกระจายสินค้า OpenThaiAi', benefits:['ราคาส่งพิเศษจากผู้ผลิตที่ผ่านการรับรอง','สิทธิ์ดูแลพื้นที่/ช่องทางจำหน่าย','การสนับสนุนด้านการตลาดและคอนเทนต์','เชื่อมต่อกับผู้ผลิตโดยตรง ไม่ผ่านคนกลางซ้ำซ้อน'], form:{ name:'ชื่อ/ชื่อบริษัท', country:'ประเทศ', business_type:'ประเภทธุรกิจ', region:'พื้นที่/ช่องทางที่ดูแล', email:'อีเมล', phone:'เบอร์โทร/WhatsApp', submit:'สมัครเป็นคนกลาง', ok:'ขอบคุณ! ทีมงานจะติดต่อกลับเพื่อยืนยันการเข้าร่วมเครือข่าย' } },
-  en: { title:'Distributor / Intermediary Portal', sub:'Distributors, wholesalers, brokers, and resellers of every kind — join the OpenThaiAi distribution network', benefits:['Special wholesale pricing from verified producers','Territory/channel rights','Marketing and content support','Direct connection to producers, no redundant middlemen'], form:{ name:'Name / Company Name', country:'Country', business_type:'Business Type', region:'Territory / Channel Covered', email:'Email', phone:'Phone / WhatsApp', submit:'Join as Distributor', ok:'Thank you! Our team will contact you to confirm your place in the network.' } },
-  zh: { title:'经销商/中间商门户', sub:'经销商、批发商、经纪人及各类中间商 — 加入OpenThaiAi分销网络', benefits:['来自认证生产商的特殊批发价','区域/渠道权益','营销与内容支持','直接对接生产商，减少中间环节'], form:{ name:'姓名/公司名称', country:'国家', business_type:'业务类型', region:'负责区域/渠道', email:'邮箱', phone:'电话/WhatsApp', submit:'注册为经销商', ok:'谢谢！我们的团队将与您联系以确认加入网络。' } },
+  th: { title:'ทางเข้าคนกลาง / ตัวแทนจำหน่าย', sub:'ตัวแทนจำหน่าย ผู้ค้าส่ง นายหน้า และคนกลางทุกประเภท เข้าร่วมเครือข่ายกระจายสินค้า OpenThaiAi', benefits:['ราคาส่งพิเศษจากผู้ผลิตที่ผ่านการรับรอง','สิทธิ์ดูแลพื้นที่/ช่องทางจำหน่าย','การสนับสนุนด้านการตลาดและคอนเทนต์','เชื่อมต่อกับผู้ผลิตโดยตรง ไม่ผ่านคนกลางซ้ำซ้อน'], form:{ name:'ชื่อ/ชื่อบริษัท', country:'ประเทศ', business_type:'ประเภทธุรกิจ', region:'พื้นที่/ช่องทางที่ดูแล', email:'อีเมล', phone:'เบอร์โทร/WhatsApp', submit:'สมัครเป็นคนกลาง', ok:'ขอบคุณ! ทีมงานจะติดต่อกลับเพื่อยืนยันการเข้าร่วมเครือข่าย', dashboard:'📦 ดูสินค้าที่กระจายได้และดีมานด์ในแดชบอร์ด →' } },
+  en: { title:'Distributor / Intermediary Portal', sub:'Distributors, wholesalers, brokers, and resellers of every kind — join the OpenThaiAi distribution network', benefits:['Special wholesale pricing from verified producers','Territory/channel rights','Marketing and content support','Direct connection to producers, no redundant middlemen'], form:{ name:'Name / Company Name', country:'Country', business_type:'Business Type', region:'Territory / Channel Covered', email:'Email', phone:'Phone / WhatsApp', submit:'Join as Distributor', ok:'Thank you! Our team will contact you to confirm your place in the network.', dashboard:'📦 See products to distribute & demand in the dashboard →' } },
+  zh: { title:'经销商/中间商门户', sub:'经销商、批发商、经纪人及各类中间商 — 加入OpenThaiAi分销网络', benefits:['来自认证生产商的特殊批发价','区域/渠道权益','营销与内容支持','直接对接生产商，减少中间环节'], form:{ name:'姓名/公司名称', country:'国家', business_type:'业务类型', region:'负责区域/渠道', email:'邮箱', phone:'电话/WhatsApp', submit:'注册为经销商', ok:'谢谢！我们的团队将与您联系以确认加入网络。', dashboard:'📦 在仪表板中查看可分销商品和需求 →' } },
 };
 
-const CONSENT_TEXT = {
-  th: <>ยินยอมให้เก็บและใช้ข้อมูลตาม<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#fdba74' }}>นโยบายความเป็นส่วนตัว (PDPA)</a></>,
-  en: <>I agree to the collection and use of my data per the <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#fdba74' }}>Privacy Policy (PDPA)</a></>,
-  zh: <>同意根据<a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color:'#fdba74' }}>隐私政策（PDPA）</a>收集和使用我的数据</>,
-};
 
 export default function MiddlemanPortalPage() {
   const [lang, setLang] = useState('th');
-  const [form, setForm] = useState({ name:'', country:'', business_type:BUSINESS_TYPES[0], region:'', email:'', phone:'' });
+  const [form, setForm] = useState({ name:'', country:'', business_type:BUSINESS_TYPES[0].value, region:'', email:'', phone:'' });
   const [sent, setSent] = useState(false);
   const [consent, setConsent] = useState(false);
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
   const t = T[lang];
+  useEffect(() => { document.title = t.title + ' — Openthai.ai'; document.documentElement.lang = lang; }, [t.title, lang]);
 
   const submit = async e => {
     e.preventDefault();
-    try { await fetch(apiUrl('/api/leads/submit'), { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...form, type:'middleman', lang}) }); } catch {}
+    setErr(''); setBusy(true);
+    const r = await submitLead({ ...form, type:'middleman', lang, consent });
+    setBusy(false);
+    if (!r.ok) { setErr(leadError(r, lang)); return; }
     setSent(true);
   };
 
   return (
     <div style={{ minHeight:'100vh', background:'#0a0a0f', color:'#fff', fontFamily:'system-ui,sans-serif' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 32px', borderBottom:'1px solid #1e1e2e' }}>
-        <button onClick={() => navigate('/portals')} style={{ background:'none', border:'1px solid #333', color:'#aaa', padding:'8px 16px', borderRadius:8, cursor:'pointer' }}>← กลับ</button>
+        <button onClick={() => navigate('/portals')} style={{ background:'none', border:'1px solid #333', color:'#aaa', padding:'8px 16px', borderRadius:8, cursor:'pointer' }} aria-label={backAria(lang)}>{backLabel(lang)}</button>
         <div style={{ display:'flex', gap:8 }}>
-          {['th','en','zh'].map(l => <button key={l} onClick={() => setLang(l)} style={{ background:lang===l?'#f97316':'none', border:'1px solid #333', color:'#fff', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:13 }}>{l==='th'?'ไทย':l==='en'?'English':'中文'}</button>)}
+          {['th','en','zh'].map(l => <button key={l} onClick={() => setLang(l)} type="button" aria-pressed={lang===l} style={{ background:lang===l?'#c35305':'none', border:'1px solid #333', color:'#fff', padding:'6px 12px', borderRadius:6, cursor:'pointer', fontSize:13 }}>{l==='th'?'ไทย':l==='en'?'English':'中文'}</button>)}
         </div>
       </div>
       <div style={{ maxWidth:960, margin:'0 auto', padding:'48px 32px' }}>
@@ -44,31 +51,33 @@ export default function MiddlemanPortalPage() {
           <h1 style={{ fontSize:36, fontWeight:800, color:'#f97316', margin:'0 0 12px' }}>{t.title}</h1>
           <p style={{ color:'#aaa', fontSize:18 }}>{t.sub}</p>
         </div>
+        <SeasonalAnglesPanel group="middleman" lang={lang} />
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1.2fr', gap:32 }}>
           <div>
-            <h3 style={{ color:'#f97316', marginBottom:20 }}>สิทธิประโยชน์</h3>
+            <h3 style={{ color:'#f97316', marginBottom:20 }}>{benefitsTitle(lang)}</h3>
             {t.benefits.map((b,i) => <div key={i} style={{ display:'flex', gap:12, marginBottom:14, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#f97316' }}>✓</span><span style={{ color:'#ddd' }}>{b}</span></div>)}
           </div>
           <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #f9731633' }}>
-            {sent ? <div style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p></div> :
+            {sent ? <div role="status" style={{ textAlign:'center', padding:32 }}><div style={{ fontSize:48 }}>✅</div><p style={{ color:'#10b981', marginTop:16 }}>{t.form.ok}</p><button type="button" onClick={() => navigate('/middleman/dashboard?email=' + encodeURIComponent(form.email))} style={{ marginTop:20, background:'#06b6d4', color:'#fff', border:'none', padding:'12px 22px', borderRadius:10, fontSize:15, fontWeight:700, cursor:'pointer' }}>{t.form.dashboard}</button></div> :
             <form onSubmit={submit}>
               {[['name',t.form.name],['country',t.form.country],['region',t.form.region],['email',t.form.email],['phone',t.form.phone]].map(([k,label]) => (
                 <div key={k} style={{ marginBottom:14 }}>
-                  <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
-                  <input required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
+                  <label htmlFor={k} style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{label}</label>
+                  <input id={k} type={k === 'email' ? 'email' : k === 'phone' ? 'tel' : 'text'} inputMode={k === 'phone' ? 'tel' : undefined} autoComplete={k === 'email' ? 'email' : k === 'phone' ? 'tel' : k === 'country' ? 'country-name' : undefined} required value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14, boxSizing:'border-box' }} />
                 </div>
               ))}
               <div style={{ marginBottom:14 }}>
-                <label style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.business_type}</label>
-                <select value={form.business_type} onChange={e=>setForm({...form,business_type:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
-                  {BUSINESS_TYPES.map(b => <option key={b} value={b}>{b}</option>)}
+                <label htmlFor="business_type" style={{ display:'block', color:'#aaa', fontSize:13, marginBottom:6 }}>{t.form.business_type}</label>
+                <select id="business_type" value={form.business_type} onChange={e=>setForm({...form,business_type:e.target.value})} style={{ width:'100%', background:'#1a1a2e', border:'1px solid #333', color:'#fff', padding:'10px 14px', borderRadius:8, fontSize:14 }}>
+                  {BUSINESS_TYPES.map(b => <option key={b.value} value={b.value}>{b[lang] || b.th}</option>)}
                 </select>
               </div>
               <label style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:14, fontSize:12, color:'#aaa', lineHeight:1.5, cursor:'pointer' }}>
                 <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} style={{ marginTop:2 }} />
-                <span>{CONSENT_TEXT[lang]}</span>
+                <span>{consentLabel(lang, '#fdba74')}</span>
               </label>
-              <button type="submit" disabled={!consent} style={{ width:'100%', background:'#f97316', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: consent ? 'pointer' : 'not-allowed', opacity: consent ? 1 : 0.5, marginTop:8 }}>{t.form.submit}</button>
+              {err && <div role="alert" style={{ background:'#3a1618', border:'1px solid #ef4444', color:'#fca5a5', padding:'10px 14px', borderRadius:8, fontSize:13, marginBottom:12 }}>⚠️ {err}</div>}
+              <button type="submit" disabled={!consent || busy} style={{ width:'100%', background:'#f97316', color:'#fff', border:'none', padding:'14px', borderRadius:10, fontSize:16, fontWeight:700, cursor: (consent && !busy) ? 'pointer' : 'not-allowed', opacity: (consent && !busy) ? 1 : 0.5, marginTop:8 }}>{busy ? '...' : t.form.submit}</button>
             </form>}
           </div>
         </div>

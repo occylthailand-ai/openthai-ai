@@ -2,9 +2,11 @@
 // PromptPay QR · Credit Card · Subscription Billing
 // Docs: https://docs.opn.ooo/
 
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
-const OMISE_API_URL = 'https://api.omise.co';
+// Overridable so a test can point the Omise REST calls at a local stub and exercise
+// the paid-charge / status-poll paths offline; production default is unchanged.
+const OMISE_API_URL = process.env.OMISE_API_URL || 'https://api.omise.co';
 
 // ── Omise REST helper ─────────────────────────────────────────────────────────
 async function omise(method, path, body = null, usePublicKey = false) {
@@ -30,9 +32,10 @@ async function omise(method, path, body = null, usePublicKey = false) {
 
 // ── Plans ─────────────────────────────────────────────────────────────────────
 export const SUBSCRIPTION_PLANS = {
-  free:    { name: 'Free',    price_thb: 0,   interval: null,    omise_plan_id: null },
-  pro:     { name: 'Pro',     price_thb: 20,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PRO     || null },
-  premier: { name: 'Premier', price_thb: 30,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PREMIER || null },
+  free:       { name: 'Free',       price_thb: 0,    interval: null,    omise_plan_id: null },
+  pro:        { name: 'Pro',        price_thb: 299,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PRO        || null },
+  premier:    { name: 'Premier',    price_thb: 599,  interval: 'month', omise_plan_id: process.env.OMISE_PLAN_PREMIER    || null },
+  enterprise: { name: 'Enterprise', price_thb: 1299, interval: 'month', omise_plan_id: process.env.OMISE_PLAN_ENTERPRISE || null },
 };
 
 // ── PromptPay QR Charge ───────────────────────────────────────────────────────
@@ -143,7 +146,16 @@ export function verifyOmiseWebhook(rawBody, signatureHeader) {
     return false;
   }
   const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
-  return signatureHeader === expected;
+  const provided = typeof signatureHeader === 'string' ? signatureHeader : '';
+  // Constant-time comparison so the expected HMAC can't be recovered via a
+  // response-timing side channel. timingSafeEqual requires equal-length
+  // buffers, so a length mismatch is rejected up front (and can't throw).
+  if (provided.length !== expected.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+  } catch {
+    return false;
+  }
 }
 
 // ── Create Omise Plans (run once at setup) ─────────────────────────────────────

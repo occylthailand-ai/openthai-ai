@@ -164,6 +164,10 @@ async function handleToolCall(toolName, args, baseUrl) {
 
 // ── MCP JSON-RPC dispatcher ───────────────────────────────────────────────────
 
+// Max JSON-RPC requests in a single batch. MCP clients (Claude Desktop, etc.) send one request at
+// a time; a real batch is small. This bounds the per-request fan-out (see the batch block below).
+const MAX_BATCH = 20;
+
 export async function handleMcp(req, res) {
   // Support both single request and batched requests
   const body = req.body;
@@ -236,8 +240,19 @@ export async function handleMcp(req, res) {
     }
   };
 
-  // Batch support
+  // Batch support — bounded. A JSON-RPC batch fans out to one processOne() per element, and
+  // several tools (generate_content, generate_ab_test, analyze_image, competitor_analyze) each
+  // proxy to a real AI call that costs money. The per-request mcpLimiter counts REQUESTS, not the
+  // tool calls inside a batch, so an unbounded `Promise.all(body.map(...))` let a single request
+  // fan out to thousands of concurrent AI calls (cost amplification + event-loop/provider-quota
+  // exhaustion). Cap the batch, and reject an empty batch (invalid per the JSON-RPC 2.0 spec).
   if (Array.isArray(body)) {
+    if (body.length === 0) {
+      return res.status(400).json({ jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Invalid Request — empty batch' } });
+    }
+    if (body.length > MAX_BATCH) {
+      return res.status(400).json({ jsonrpc: '2.0', id: null, error: { code: -32600, message: `Batch too large — max ${MAX_BATCH} requests per call` } });
+    }
     const results = (await Promise.all(body.map(processOne))).filter(Boolean);
     return res.json(results);
   }

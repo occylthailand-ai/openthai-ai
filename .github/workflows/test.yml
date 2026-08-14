@@ -51,6 +51,141 @@ jobs:
       - name: Syntax check
         working-directory: backend
         run: node --check server.js
+      - name: Unit tests (deterministic, no server)
+        working-directory: backend
+        run: |
+          npm run test:disputes
+          npm run test:portal-leads
+          npm run test:portal-welcome
+          npm run test:portal-welcome-cta
+          npm run test:affiliate-tiers
+          npm run test:affiliate-payout
+          npm run test:affiliate-public
+          npm run test:shop-receipt
+          npm run test:orders-track
+          npm run test:credits
+          npm run test:inventory
+          npm run test:producers
+          npm run test:token-verify
+          npm run test:webhook-retry
+          npm run test:affiliate-withdraw-math
+          npm run test:openrouter-map
+          npm run test:recovery-code
+          npm run test:tenant-login
+          npm run test:mcp-batch
+          npm run test:progress-kpi
+          npm run test:portal-leads-schema
+          npm run test:disputes-schema
+          npm run test:producers-schema
+          npm run test:affiliate-row
+          npm run test:affiliates-schema
+          npm run test:sb-column-fallback
+          npm run test:portal-leads-fallback
+          npm run test:seasonal
+          npm run test:dept-officers
+          npm run test:openapi
+          npm run test:agent-tools
+          npm run test:digest-match
+          npm run test:order-stock-guard
+          npm run test:order-price-authority
+          npm run test:order-confirm
+          npm run test:order-cancel-restock
+          npm run test:html-escape
+          npm run test:omise-webhook-verify
+          npm run test:ai-json
+          npm run test:pdpa-consent-schema
+          npm run test:payments-schema
+          npm run test:migration-coverage
+          npm run test:full-migration-columns
+          npm run test:skills-endpoints
+          npm run test:api-contract
+          npm run test:auth-ratelimit
+          npm run test:portal-welcome-coverage
+          npm run test:line-signature
+      - name: Learning-feedback test (self-contained — rating aggregation + NaN-rejection guard)
+        working-directory: backend
+        run: npm run test:learning-patterns
+      - name: AI-usage logging test (self-contained — spawns server + mock Supabase)
+        working-directory: backend
+        run: npm run test:ai-usage
+      - name: Discount-charge test (self-contained — spin discount burned only on a real charge)
+        working-directory: backend
+        run: npm run test:discount-charge
+      - name: Payment-status idempotency test (self-contained — payment.completed fires once per poll-to-paid)
+        working-directory: backend
+        run: npm run test:payment-status-idempotent
+      - name: Webhook idempotency test (self-contained — payment.completed fires once per redelivered charge.complete)
+        working-directory: backend
+        run: npm run test:webhook-idempotent
+      - name: Shop PromptPay commission test (self-contained — charge.complete webhook credits the affiliate once, idempotent)
+        working-directory: backend
+        run: npm run test:shop-commission-promptpay
+      - name: Integrations auth test (self-contained — publish/test require the admin key)
+        working-directory: backend
+        run: npm run test:integrations-auth
+      - name: Video auth test (self-contained — video generation requires login; mock provider ok)
+        working-directory: backend
+        run: npm run test:video-auth
+      - name: Corporate auth test (self-contained — internal corporate reads require login)
+        working-directory: backend
+        run: npm run test:corporate-auth
+      - name: Affiliate withdraw-confirm test (self-contained — HMAC gate + GET bot-safe + POST idempotent)
+        working-directory: backend
+        run: npm run test:withdraw-confirm
+      - name: PDPA tenant erasure/access test (self-contained — data-subject rights cover the tenant account + cloud-sync blob)
+        working-directory: backend
+        run: npm run test:pdpa-tenant
+      - name: PDPA access↔erasure parity guard (source-parsing — every store the data export shows is erased or a documented financial-retention exception)
+        working-directory: backend
+        run: npm run test:privacy-parity
+      - name: Broadcast opt-out durability test (self-contained — spawns server + mock Supabase; the newsletter unsubscribe list survives a /tmp wipe)
+        working-directory: backend
+        run: npm run test:broadcast-unsub
+      - name: PDPA consent durability test (self-contained — spawns server + mock Supabase; the proof-of-consent record survives a /tmp wipe)
+        working-directory: backend
+        run: npm run test:consent-durability
+      - name: Waitlist durability test (self-contained — spawns server + mock Supabase; landing-page email signups survive a /tmp wipe + PDPA erasure deletes them)
+        working-directory: backend
+        run: npm run test:waitlist-durability
+      - name: Auto-post queue durability test (self-contained — spawns server + mock Supabase; scheduled social posts survive a /tmp wipe and fire across lambda invocations)
+        working-directory: backend
+        run: npm run test:autopost-durability
+      - name: Scheduler durability test (self-contained — spawns server + mock Supabase; /api/scheduler/* posts survive a /tmp wipe and the daily cron processes them across lambda invocations)
+        working-directory: backend
+        run: npm run test:scheduler-durability
+      - name: Scheduler execute rate-limit test (self-contained — spawns server; the unauthenticated manual "publish now" is throttled so it can't be scripted to mass-mutate the shared queue / suppress due broadcasts)
+        working-directory: backend
+        run: npm run test:scheduler-execute-ratelimit
+      - name: Video jobs durability test (self-contained — spawns server + mock Supabase; a submitted paid video job stays pollable after a /tmp wipe and across lambda invocations)
+        working-directory: backend
+        run: npm run test:video-jobs-durability
+      - name: Confirm-link secret test (self-contained — spawns server; one-click confirm links are unforgeable in prod, never signed with a hardcoded fallback)
+        working-directory: backend
+        run: npm run test:confirm-token-secret
+      - name: Default-admin test (self-contained — spawns server; the guessable admin/1234 default is never a live login in production)
+        working-directory: backend
+        run: npm run test:admin-default-login
+      - name: Tenant-token secret test (self-contained — tenant JWTs are never signed with a source-visible constant; fail closed in prod without JWT_SECRET)
+        working-directory: backend
+        run: npm run test:tenant-token-secret
+      - name: AI department-officer endpoint test (self-contained — auth gate, professional disclaimer, offline fallback)
+        working-directory: backend
+        run: npm run test:dept-officer-endpoint
+      - name: Producer-search privacy test (self-contained — the public directory search never leaks producer email, incl. the empty-query harvest case)
+        working-directory: backend
+        run: npm run test:producer-search-privacy
+      - name: Producer dashboard feed test (self-contained — /api/producers/my-orders returns own orders + income summary, excludes cancelled from revenue, never leaks buyer PII)
+        working-directory: backend
+        run: npm run test:producer-my-orders
+      - name: Consumer dashboard feed test (self-contained — /api/portals/consumer/my returns interest-matched recommendations, falls back when none match, never leaks the producer's private email)
+        working-directory: backend
+        run: npm run test:consumer-my
+      - name: Middleman dashboard feed test (self-contained — /api/portals/middleman/my returns distributable catalog + aggregate demand counts, never leaks a producer or buyer email/name)
+        working-directory: backend
+        run: npm run test:middleman-my
+      - name: Skills smoke test (self-contained — every /api/skills endpoint returns 200 on the mock AI path)
+        working-directory: backend
+        run: npm run test:smoke
       - name: Boot + health smoke test
         working-directory: backend
         run: |
@@ -70,6 +205,48 @@ jobs:
           echo "─── server.log ───"; cat /tmp/server.log
           kill $SERVER_PID 2>/dev/null || true
           exit 1
+      - name: E2E — shop-commission money guard (#9)
+        working-directory: backend
+        run: |
+          OPENTHAI_DATA_DIR=/tmp/shopcomm-data ADMIN_KEY=ci-admin PORT=8898 node server.js > /tmp/shop-server.log 2>&1 &
+          SP=$!
+          for i in $(seq 1 20); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8898/api/health || echo 000)" = "200" ] && break
+            sleep 1
+          done
+          TEST_BASE=http://127.0.0.1:8898 ADMIN_KEY=ci-admin node scripts/test-shop-commission.mjs
+          RC=$?
+          kill $SP 2>/dev/null || true
+          if [ "$RC" != "0" ]; then echo "─── shop-server.log ───"; cat /tmp/shop-server.log; fi
+          exit $RC
+      - name: E2E — affiliate commission flow (signup→quickpay→webhook→credit→tier promotion)
+        working-directory: backend
+        run: |
+          OMISE_WEBHOOK_SECRET=testsecret ADMIN_KEY=ci-admin PORT=8897 node server.js > /tmp/aff-server.log 2>&1 &
+          SP=$!
+          for i in $(seq 1 20); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8897/api/health || echo 000)" = "200" ] && break
+            sleep 1
+          done
+          TEST_BASE=http://127.0.0.1:8897 OMISE_WEBHOOK_SECRET=testsecret node scripts/test-affiliate-flow.mjs
+          RC=$?
+          kill $SP 2>/dev/null || true
+          if [ "$RC" != "0" ]; then echo "─── aff-server.log ───"; cat /tmp/aff-server.log; fi
+          exit $RC
+      - name: E2E — revenue system (captions · model-router · council · affiliate attribution/tiers · scheduler · webhook-signature)
+        working-directory: backend
+        run: |
+          OMISE_WEBHOOK_SECRET=testsecret ADMIN_KEY=ci-admin DISABLE_RATE_LIMIT=1 PORT=8896 node server.js > /tmp/rev-server.log 2>&1 &
+          SP=$!
+          for i in $(seq 1 20); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8896/api/health || echo 000)" = "200" ] && break
+            sleep 1
+          done
+          TEST_BASE=http://127.0.0.1:8896 OMISE_WEBHOOK_SECRET=testsecret ADMIN_KEY=ci-admin node scripts/test-revenue-system.mjs
+          RC=$?
+          kill $SP 2>/dev/null || true
+          if [ "$RC" != "0" ]; then echo "─── rev-server.log ───"; cat /tmp/rev-server.log; fi
+          exit $RC
 
   # ── Quality: ตรวจ hardcoded secrets ────────────────────────────────────────
   quality:

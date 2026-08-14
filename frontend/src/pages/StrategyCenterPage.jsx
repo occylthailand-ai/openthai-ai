@@ -119,7 +119,7 @@ function Stars({ n, max = 5, color = '#6366f1' }) {
           transition: 'background 0.2s',
         }} />
       ))}
-      {n === 0 && <span style={{ fontSize: 10, color: '#475569', marginLeft: 4 }}>N/A</span>}
+      {n === 0 && <span style={{ fontSize: 10, color: '#7c8797', marginLeft: 4 }}>N/A</span>}
     </div>
   );
 }
@@ -137,7 +137,7 @@ function TabBtn({ id, label, active, onClick, color }) {
     <button onClick={() => onClick(id)} style={{
       background: active ? `${color}20` : 'transparent',
       border: active ? `1px solid ${color}60` : '1px solid rgba(255,255,255,0.1)',
-      borderRadius: 10, color: active ? '#fff' : '#64748b',
+      borderRadius: 10, color: active ? '#fff' : '#94a3b8',
       cursor: 'pointer', fontSize: 13, fontWeight: active ? 700 : 400,
       padding: '8px 14px', whiteSpace: 'nowrap', transition: 'all .2s',
     }}>{label}</button>
@@ -184,18 +184,18 @@ export default function StrategyCenterPage() {
                   Strategy & Competitive Intelligence Center
                 </h1>
               </div>
-              <p style={{ color: '#64748b', margin: 0, fontSize: 14 }}>
+              <p style={{ color: '#94a3b8', margin: 0, fontSize: 14 }}>
                 OpenThai AI vs 8 Global Giants · 15 มิติ · GAP Analysis · Roadmap · Vision 2028
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <div style={{ textAlign: 'center', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 12, padding: '10px 16px' }}>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#10b981' }}>9/15</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>มิติที่นำโลก</div>
+                <div style={{ fontSize: 11, color: '#94a3b8' }}>มิติที่นำโลก</div>
               </div>
               <div style={{ textAlign: 'center', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, padding: '10px 16px' }}>
                 <div style={{ fontSize: 22, fontWeight: 900, color: '#ef4444' }}>4/15</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>ต้องปิด Gap</div>
+                <div style={{ fontSize: 11, color: '#94a3b8' }}>ต้องปิด Gap</div>
               </div>
             </div>
           </div>
@@ -211,20 +211,20 @@ export default function StrategyCenterPage() {
         {/* ── TAB: Compare ──────────────────────────────────────────────────── */}
         {tab === 'compare' && (
           <>
-            <div style={{ marginBottom: 16, fontSize: 13, color: '#64748b' }}>
+            <div style={{ marginBottom: 16, fontSize: 13, color: '#94a3b8' }}>
               ⭐ = เต็ม 5 คะแนน · ⚫ = ไม่รองรับ · คลิกชื่อคู่แข่งเพื่อ Highlight คอลัมน์
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid rgba(99,102,241,0.4)' }}>
-                    <th style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 11, minWidth: 180 }}>มิติ / Dimension</th>
+                    <th style={{ padding: '10px 14px', textAlign: 'left', color: '#94a3b8', fontWeight: 600, fontSize: 11, minWidth: 180 }}>มิติ / Dimension</th>
                     <th style={{ padding: '10px 14px', textAlign: 'center', color: '#10b981', fontWeight: 800, background: 'rgba(16,185,129,0.08)', minWidth: 100 }}>
                       🇹🇭 OpenThai AI
                     </th>
                     {COMPETITORS.map(c => (
                       <th key={c.id} onClick={() => setFocusCols(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])}
-                        style={{ padding: '10px 10px', textAlign: 'center', color: focusCols.includes(c.id) ? c.color : '#64748b', fontWeight: 600, fontSize: 11, cursor: 'pointer', minWidth: 90, background: focusCols.includes(c.id) ? `${c.color}10` : 'transparent', transition: 'all .2s' }}>
+                        style={{ padding: '10px 10px', textAlign: 'center', color: focusCols.includes(c.id) ? c.color : '#94a3b8', fontWeight: 600, fontSize: 11, cursor: 'pointer', minWidth: 90, background: focusCols.includes(c.id) ? `${c.color}10` : 'transparent', transition: 'all .2s' }}>
                         {c.icon} {c.name}
                       </th>
                     ))}
@@ -248,7 +248,7 @@ export default function StrategyCenterPage() {
                           const isFocus = focusCols.includes(k);
                           return (
                             <td key={k} style={{ padding: '9px 10px', textAlign: 'center', background: isFocus ? `${comp?.color}08` : 'transparent' }}>
-                              <Stars n={v} color={isFocus ? comp?.color : '#475569'} />
+                              <Stars n={v} color={isFocus ? comp?.color : '#7c8797'} />
                             </td>
                           );
                         })}
@@ -263,7 +263,7 @@ export default function StrategyCenterPage() {
                       {DIMENSIONS.reduce((s, d) => s + d.us, 0)}
                     </td>
                     {['canva','jasper','hubspot','hootsuite','chatgpt','shopify','semrush','alibaba'].map(k => (
-                      <td key={k} style={{ padding: '10px 10px', textAlign: 'center', fontWeight: 700, color: '#64748b', fontSize: 14 }}>
+                      <td key={k} style={{ padding: '10px 10px', textAlign: 'center', fontWeight: 700, color: '#94a3b8', fontSize: 14 }}>
                         {DIMENSIONS.reduce((s, d) => s + (d[k] ?? 0), 0)}
                       </td>
                     ))}
@@ -322,7 +322,7 @@ export default function StrategyCenterPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                       <MoatBar pct={m.strength} color={m.color} />
                     </div>
-                    <div style={{ fontSize: 12, color: '#64748b', paddingLeft: 30 }}>{m.desc}</div>
+                    <div style={{ fontSize: 12, color: '#94a3b8', paddingLeft: 30 }}>{m.desc}</div>
                   </div>
                 ))}
               </div>
@@ -365,7 +365,7 @@ export default function StrategyCenterPage() {
                       <span style={{ fontSize: 13, color: '#e2e8f0', fontWeight: 600 }}>{g.label}</span>
                       <span style={{ fontSize: 10, background: `${g.color}20`, color: g.color, borderRadius: 4, padding: '1px 6px', fontWeight: 700, whiteSpace: 'nowrap' }}>{g.urgency.toUpperCase()}</span>
                     </div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>{g.gap}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{g.gap}</div>
                     <div style={{ fontSize: 12, color: g.color, marginTop: 4, fontWeight: 600 }}>→ {g.action}</div>
                   </div>
                 ))}
@@ -378,7 +378,7 @@ export default function StrategyCenterPage() {
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                     {['Gap ที่พบ','Strategic Outcome','Timeline','Priority'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
+                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: '#94a3b8', fontWeight: 600, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -432,7 +432,7 @@ export default function StrategyCenterPage() {
                 ].map((y, i) => (
                   <div key={i} style={{ background: `${y.color}08`, border: `1px solid ${y.color}25`, borderRadius: 12, padding: '16px' }}>
                     <div style={{ fontWeight: 800, color: y.color, fontSize: 16, marginBottom: 4 }}>{y.year}</div>
-                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>{y.label}</div>
+                    <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 10 }}>{y.label}</div>
                     {[['SaaS', y.saas], ['Export Commission', y.commission], ['B2G', y.gov]].map(([k, v]) => (
                       <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
                         <span style={{ color: '#94a3b8' }}>{k}</span>
@@ -467,7 +467,7 @@ export default function StrategyCenterPage() {
                     </div>
                   ))}
                 </div>
-                <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${q.color}20`, fontSize: 12, color: '#475569' }}>
+                <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${q.color}20`, fontSize: 12, color: '#7c8797' }}>
                   {q.items.filter(i => i.done).length}/{q.items.length} เสร็จแล้ว
                 </div>
               </div>
@@ -526,7 +526,7 @@ export default function StrategyCenterPage() {
                 <div key={i} style={{ ...s.card, borderLeft: `3px solid ${g.color}`, marginBottom: 0, display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'center' }}>
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 6 }}>"{g.campaign}"</div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>Platform: <span style={{ color: '#94a3b8' }}>{g.platform}</span> · Target: <span style={{ color: '#94a3b8' }}>{g.target}</span></div>
+                    <div style={{ fontSize: 12, color: '#94a3b8' }}>Platform: <span style={{ color: '#94a3b8' }}>{g.platform}</span> · Target: <span style={{ color: '#94a3b8' }}>{g.target}</span></div>
                   </div>
                   <button style={{ background: `${g.color}20`, border: `1px solid ${g.color}40`, borderRadius: 8, color: g.color, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '8px 14px', whiteSpace: 'nowrap' }} onClick={() => navigate('/global-pr')}>
                     สร้างสื่อ →
@@ -547,7 +547,7 @@ export default function StrategyCenterPage() {
                   <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '12px 14px' }}>
                     <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 13, marginBottom: 4 }}>{p.title}</div>
                     <div style={{ fontSize: 12, color: '#6366f1', marginBottom: 4 }}>{p.slug}</div>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>Keyword: {p.keyword}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>Keyword: {p.keyword}</div>
                     <div style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>~{p.volume} searches</div>
                   </div>
                 ))}
@@ -591,7 +591,7 @@ export default function StrategyCenterPage() {
                     <div style={{ fontSize: 24 }}>{c.flag}</div>
                     <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 13, marginTop: 4 }}>{c.country}</div>
                     <div style={{ fontSize: 11, color: c.color, fontWeight: 700 }}>{c.lang}</div>
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{c.status}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{c.status}</div>
                   </div>
                 ))}
               </div>
