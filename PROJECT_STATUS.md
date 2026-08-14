@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-14T08:43:09.638Z · branch `claude/daily-reporter-improvements-8vc9ct` (693 commit(s) ahead of main)
+Generated: 2026-08-14T09:41:13.679Z · branch `claude/daily-reporter-improvements-8vc9ct` (696 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 912 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 915 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,40 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+## 2026-08-14 — i18n(earn): make the /earn earning hub trilingual (th/en/zh) + leak guard
+
+Standing-order loop (market entry / consent-based funnel). Continued the public-page i18n pass
+(after /about, /404, /contact) by auditing the remaining Thai-only public surfaces. Found /earn
+(EarnHubPage) — a HOMEPAGE HERO CTA ("💸 หารายได้") and a shareable earning/affiliate landing
+(/earn?ref=CODE) that reads ?ref and counts the affiliate click — shipped fully hardcoded in Thai
+(~190 Thai runs, zero useLang/i18n). So an affiliate sharing that link, or a non-Thai visitor
+landing on it, saw an all-Thai revenue funnel: the ฿1,000/day goal hero, the TikTok/offer cards,
+the ready-to-ship products card, all six become-affiliate CTAs, the share box, and the 24/7 flow.
+(/affiliate-programs is the same gap and is the next candidate; deferred to keep this round one
+well-verified page.)
+
+FIX: internationalized to th/en/zh via useLang + a local T dict (same proven pattern as
+About/Contact/404 — no in-page switcher, follows the global app lang). Values that interpolate the
+currency goal/price (heroGoal, heroSubB, buyCta, flowNoteB) are functions of the formatted number,
+so the ฿ amounts stay correct in every language; the downstream /pay label (t.payItemLabel) is
+localized too. No backend/logic touched — the ref handling, click-count, product load and pay links
+are unchanged.
+
+NOT DONE (flagged, point 8 — legal implications): /privacy (PrivacyPage) and /terms (TermsPage)
+are the last two Thai-only public pages, but they are BINDING LEGAL TEXT (a PDPA privacy policy and
+terms of service). Translating them myself would create English/Chinese legal text that could state
+something legally different from the Thai — a legal-implications fork. The standard safe pattern is a
+"provided for convenience; the Thai version governs" disclaimer plus a reviewed translation. This is
+an owner decision, not mine to ship unilaterally — recommend the owner confirm the approach (and who
+signs off on the legal wording) before I internationalize those two.
+
+VERIFIED BY RUNNING: new earnHubNoThaiLeak.test.jsx 5/5 (renders forced to en/zh with ?ref=TEST to
+exercise the affiliate-ref badge, and a stubbed /api/shop/products with an English-named product to
+exercise the products card; fails on any bare-Thai run outside <svg>, ฿ stripped first); full frontend
+suite 614/614 (was 609, +5); vite build clean. Mutation-checked: restoring a Thai literal into the en
+dict turns the guard RED, revert -> green. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79). No auto-merge.
 
 ## 2026-08-13 — content/SEO(faq): correct the overstated AI-skill count (was "over 35"; real registry = 35) + drift guard
 
@@ -6860,14 +6894,14 @@ claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- dce2b26 docs(decisions): log the trilingual /contact page (19 seconds ago)
-- 841829b i18n(contact): make the public /contact page trilingual (th/en/zh) (35 seconds ago)
-- b0acec8 chore: sync PROJECT_STATUS.md [skip ci] (47 minutes ago)
-- ae7fd3d docs(decisions): log the trilingual 404 recovery page (48 minutes ago)
-- 8470ee9 i18n(404): make the NotFoundPage recovery page trilingual (th/en/zh) (48 minutes ago)
-- 4cc475f chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
-- e7c0037 docs(decisions): log the funnel autofill (autoComplete) pass (4 hours ago)
-- 0b0cde8 feat(forms): add browser-autofill hints across the signup + order funnel (4 hours ago)
+- 2b10a02 docs(decisions): log the trilingual /earn hub + flag /privacy,/terms as owner-gated legal text (32 seconds ago)
+- b4a4155 i18n(earn): make the /earn earning hub trilingual (th/en/zh) (59 seconds ago)
+- eeaf110 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- dce2b26 docs(decisions): log the trilingual /contact page (58 minutes ago)
+- 841829b i18n(contact): make the public /contact page trilingual (th/en/zh) (59 minutes ago)
+- b0acec8 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- ae7fd3d docs(decisions): log the trilingual 404 recovery page (2 hours ago)
+- 8470ee9 i18n(404): make the NotFoundPage recovery page trilingual (th/en/zh) (2 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6889,8 +6923,8 @@ claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 285,
-  "memory_mb": "19.8",
+  "uptime_sec": 0,
+  "memory_mb": "19.2",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
