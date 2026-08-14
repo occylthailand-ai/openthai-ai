@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-08-13T23:39:41.652Z · branch `claude/daily-reporter-improvements-8vc9ct` (678 commit(s) ahead of main)
+Generated: 2026-08-14T02:19:18.245Z · branch `claude/daily-reporter-improvements-8vc9ct` (681 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 897 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 900 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -6718,6 +6718,41 @@ Process note: mid-round I ran `git reset --hard origin/...` on an unpushed worki
 edits; re-applied them from context, re-ran the full verification, and committed BEFORE syncing this time.
 Lesson: never reset --hard with uncommitted work — commit or stash first, then rebase.
 
+---
+
+## 2026-08-13 — fix(scheduler): rate-limit the unauthenticated execute endpoint + FLAG deeper design to owner
+
+Real gap from code scan (point 2/3). POST /api/scheduler/execute/:id — the manual "publish now" the
+login-gated SchedulerPage calls (with no auth header) — was the only MUTATING scheduler route with no
+rate limiter at all (create uses generateLimiter; the destructive DELETE is admin-gated). That breaks the
+repo's own rule (backend/CLAUDE.md: every route group must go through express-rate-limit).
+
+Why it matters beyond convention: execute is unauthenticated and mutates the SHARED schedulerStore that
+the daily Vercel cron (processScheduler) reads. processScheduler actually broadcasts DUE LINE posts to the
+real LINE OA (lineBroadcast) when LINE_CHANNEL_TOKEN is set. An unthrottled caller could script
+execute-by-id (ids are enumerable via the open GET /api/scheduler/list) to flip a due LINE post to
+'published' BEFORE the cron runs, so dueSchedulerPosts() no longer returns it and the real broadcast is
+silently suppressed — a genuine integrity/availability issue, not just cosmetic.
+
+Shipped (safe, non-breaking, verified): schedulerExecuteLimiter (30 / 15 min) on execute. A human
+clicking "publish now" stays well under it; a scripted burst gets 429. No auth-model change, so
+SchedulerPage keeps working and no test that exercises the scheduler is affected. New self-contained test
+test-scheduler-execute-ratelimit (5/5, boots WITHOUT DISABLE_RATE_LIMIT so the limiter is live) — single
+execute still 200, burst trips 429 at the cap; wired into package.json + CI. scheduler-durability still
+12/12; server boots (health 200).
+
+STOPPED at the deeper fork per point 8 — needs the owner's decision (NOT done here):
+- Should /api/scheduler/execute (and the open GET /api/scheduler/list) be AUTHENTICATED? SchedulerPage is
+  a login-gated console but calls these with no token (raw fetch, not apiFetch), and AdminPage reads list
+  with no admin key — so adding auth would require deciding the identity model and updating those callers.
+- Should the scheduler store be SCOPED PER USER? Today it's one global array: any visitor can see and
+  execute every other visitor's queued posts. Per-user scoping is a real design change.
+- Recommendation: authenticate execute against the logged-in user (x-user-email via apiFetch) and scope
+  posts by owner; keep DELETE admin-only. Awaiting the owner's call before touching the auth model.
+
+Repo: openthai-ai (backend). Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79 open, not
+duplicated). No auto-merge.
+
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 35 skill endpoints found in backend source
@@ -6727,14 +6762,14 @@ Lesson: never reset --hard with uncommitted work — commit or stash first, then
 - ℹ️ **15 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_broadcast_unsubscribes.sql, 009_pdpa_consents.sql, 010_waitlist.sql, 011_autopost_queue.sql, 012_scheduler_posts.sql, 013_video_jobs.sql, 014_match_requests.sql
 
 ## Recent commits
-- 73874dc docs(decisions): log the /api/catalog producer-email privacy fix (17 seconds ago)
-- 8ba7873 chore: sync PROJECT_STATUS.md [skip ci] (17 seconds ago)
-- 469d77c fix(privacy): stop the public /api/catalog from leaking every producer's email (PDPA) (84 seconds ago)
-- 03951de chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
-- 8584553 docs(decisions): log main-site og:locale:alternate prerender change (65 minutes ago)
-- 0f59b00 seo(main-site): declare og:locale:alternate on every prerendered route (EN/ZH) (65 minutes ago)
-- 8234591 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 219b403 docs(decisions): log landing og:locale:alternate + this round's verify-first findings (2 hours ago)
+- 4addf69 docs(decisions): log scheduler execute rate-limit fix + owner-flagged design fork (19 seconds ago)
+- 3daf765 fix(scheduler): rate-limit the unauthenticated execute endpoint (anti-abuse) (40 seconds ago)
+- de56e8e chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 73874dc docs(decisions): log the /api/catalog producer-email privacy fix (3 hours ago)
+- 8ba7873 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 469d77c fix(privacy): stop the public /api/catalog from leaking every producer's email (PDPA) (3 hours ago)
+- 03951de chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
+- 8584553 docs(decisions): log main-site og:locale:alternate prerender change (4 hours ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -6757,7 +6792,7 @@ Lesson: never reset --hard with uncommitted work — commit or stash first, then
   "last_watchdog": null,
   "system_logs": 2,
   "uptime_sec": 0,
-  "memory_mb": "19.3",
+  "memory_mb": "19.4",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -6951,7 +6986,7 @@ Lesson: never reset --hard with uncommitted work — commit or stash first, then
 | `sb-column-fallback.js` | 46 | Supabase missing-column fallback (shared, testable) |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `seasonal-engine.js` | 389 | Openthai.ai — Seasonal demand engine (24 solar terms 节气 × climate zone → product categories) |
-| `server.js` | 9444 | Vercel serverless detection |
+| `server.js` | 9454 | Vercel serverless detection |
 | `shop-receipt.js` | 121 | Openthai Store customer emails — extracted so the "does this buyer get an email, and |
 | `tenant-manager.js` | 289 | Each tenant (store/business) gets: |
 | `token-verify.js` | 26 | Constant-time comparison for the one-click confirm-link tokens (unsubscribe, |
