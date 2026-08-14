@@ -6761,3 +6761,29 @@ name) stays type="text" — 14/14. Full frontend vitest 576/576 (was 562); produ
 Repo: openthai-ai (frontend). Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79 open, not
 duplicated). No auto-merge. (Prior round's scheduler execute auth/per-user-scoping fork is still awaiting
 the owner's decision — not touched.)
+
+---
+
+## 2026-08-13 — feat(forms): browser-autofill hints across the signup + order funnel
+
+Continues the mobile-conversion work on the #1-priority funnel (point 2). Last round gave the portal
+inputs correct keyboard types; this round adds autoComplete so a returning visitor's browser / password
+manager can autofill — a distinct lever (autofill vs keyboard) that touches fields input-type never did
+(name, country, address), and one that measurably lifts mobile form completion. autoComplete is a hint,
+never validation, so it can't break input.
+
+Change (frontend only, 11 pages):
+- All 9 portal signup forms: email -> autoComplete="email", phone -> "tel", country -> "country-name"
+  (unambiguous tokens). The "name" field is deliberately left alone — it's the COMPANY name on the
+  producer form but a PERSON on the others, so a single shared token would be wrong on one of them.
+- Buyer order forms (CatalogPage OrderModal + StorePage): customer name -> "name", delivery address ->
+  "street-address". The contact field is intentionally free-form ("@line / email / 08x") and maps to no
+  single autofill token, so it's untouched (and stays type="text", correct).
+
+Verified by running: portalInputTypes test extended 14 -> 37 — every portal email is autoComplete="email",
+every phone "tel", every country "country-name" when present, and the exported OrderModal's name/address
+carry name/street-address. Full frontend vitest 599/599 (was 576); production build passes. Pushed to
+claude/daily-reporter-improvements-8vc9ct (PR #79 open, not duplicated). No auto-merge.
+
+(Still awaiting the owner on the earlier point-8 fork: scheduler execute auth + per-user store scoping —
+not touched.)
