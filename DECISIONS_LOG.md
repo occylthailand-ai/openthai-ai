@@ -9,6 +9,40 @@ Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
+## 2026-08-14 — i18n(earn): make the /earn earning hub trilingual (th/en/zh) + leak guard
+
+Standing-order loop (market entry / consent-based funnel). Continued the public-page i18n pass
+(after /about, /404, /contact) by auditing the remaining Thai-only public surfaces. Found /earn
+(EarnHubPage) — a HOMEPAGE HERO CTA ("💸 หารายได้") and a shareable earning/affiliate landing
+(/earn?ref=CODE) that reads ?ref and counts the affiliate click — shipped fully hardcoded in Thai
+(~190 Thai runs, zero useLang/i18n). So an affiliate sharing that link, or a non-Thai visitor
+landing on it, saw an all-Thai revenue funnel: the ฿1,000/day goal hero, the TikTok/offer cards,
+the ready-to-ship products card, all six become-affiliate CTAs, the share box, and the 24/7 flow.
+(/affiliate-programs is the same gap and is the next candidate; deferred to keep this round one
+well-verified page.)
+
+FIX: internationalized to th/en/zh via useLang + a local T dict (same proven pattern as
+About/Contact/404 — no in-page switcher, follows the global app lang). Values that interpolate the
+currency goal/price (heroGoal, heroSubB, buyCta, flowNoteB) are functions of the formatted number,
+so the ฿ amounts stay correct in every language; the downstream /pay label (t.payItemLabel) is
+localized too. No backend/logic touched — the ref handling, click-count, product load and pay links
+are unchanged.
+
+NOT DONE (flagged, point 8 — legal implications): /privacy (PrivacyPage) and /terms (TermsPage)
+are the last two Thai-only public pages, but they are BINDING LEGAL TEXT (a PDPA privacy policy and
+terms of service). Translating them myself would create English/Chinese legal text that could state
+something legally different from the Thai — a legal-implications fork. The standard safe pattern is a
+"provided for convenience; the Thai version governs" disclaimer plus a reviewed translation. This is
+an owner decision, not mine to ship unilaterally — recommend the owner confirm the approach (and who
+signs off on the legal wording) before I internationalize those two.
+
+VERIFIED BY RUNNING: new earnHubNoThaiLeak.test.jsx 5/5 (renders forced to en/zh with ?ref=TEST to
+exercise the affiliate-ref badge, and a stubbed /api/shop/products with an English-named product to
+exercise the products card; fails on any bare-Thai run outside <svg>, ฿ stripped first); full frontend
+suite 614/614 (was 609, +5); vite build clean. Mutation-checked: restoring a Thai literal into the en
+dict turns the guard RED, revert -> green. Committed + pushed to
+`claude/daily-reporter-improvements-8vc9ct` (PR #79). No auto-merge.
+
 ## 2026-08-13 — content/SEO(faq): correct the overstated AI-skill count (was "over 35"; real registry = 35) + drift guard
 
 Standing-order loop (content/SEO + honesty). Audited the FAQ (frontend/src/data/faqContent.js), which
