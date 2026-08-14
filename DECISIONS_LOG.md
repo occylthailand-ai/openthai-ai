@@ -6737,3 +6737,27 @@ STOPPED at the deeper fork per point 8 — needs the owner's decision (NOT done 
 
 Repo: openthai-ai (backend). Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79 open, not
 duplicated). No auto-merge.
+
+---
+
+## 2026-08-13 — fix(portals): mobile-correct input types on the consent-signup forms
+
+Real UX gap from code scan (point 2 — the consent-signup funnel is the #1 listed priority, and the
+audience is mostly on phones). 7 of the 9 portal signup forms rendered every field, including email and
+phone, as the default type="text". On mobile that gives the email field a full QWERTY keyboard (no "@"
+shortcut, no native email validation) and the phone field letters instead of a numeric keypad — avoidable
+friction on the exact funnel we want to convert. ConsumerPortalPage and CreatorPortalPage already passed a
+proper type; this brings the other seven in line.
+
+Change (frontend only, 7 portal pages): the mapped input derives its type from the field key —
+email -> type="email", phone -> type="tel" + inputMode="tel" (no strict format so international numbers
+still pass), everything else stays type="text". Non-email/phone fields (company name, country, agency,
+position, etc.) unchanged. Producer had two input blocks; both updated.
+
+Verified by running: new portalInputTypes test renders all nine portals and asserts every email input is
+type="email", every phone input is type="tel" with inputMode tel, and a plain field (producer company
+name) stays type="text" — 14/14. Full frontend vitest 576/576 (was 562); production build passes.
+
+Repo: openthai-ai (frontend). Pushed to claude/daily-reporter-improvements-8vc9ct (PR #79 open, not
+duplicated). No auto-merge. (Prior round's scheduler execute auth/per-user-scoping fork is still awaiting
+the owner's decision — not touched.)
