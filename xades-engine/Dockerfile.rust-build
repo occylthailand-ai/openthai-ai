@@ -1,0 +1,28 @@
+# Build stage: compile xades_rust_core PyO3 extension
+# Usage: docker build -f Dockerfile.rust-build -o dist/rust .
+FROM python:3.11-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential curl pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --default-toolchain stable --profile minimal
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install maturin
+RUN pip install maturin==1.5.1
+
+WORKDIR /build/native/xades_rust_core
+COPY native/xades_rust_core/Cargo.toml ./
+COPY native/xades_rust_core/src/ ./src/
+
+# Run Rust tests first
+RUN cargo test --release
+
+# Build the .pyd/.so wheel
+RUN maturin build --release --out /wheels
+
+FROM scratch AS export
+COPY --from=builder /wheels /

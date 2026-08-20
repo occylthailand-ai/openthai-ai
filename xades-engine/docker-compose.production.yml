@@ -1,0 +1,191 @@
+version: "3.8"
+
+# Production deployment — OpenThai eTax XAdES Verification Engine
+# ใช้งาน: docker compose -f docker-compose.production.yml up -d
+
+services:
+  xades-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: openthai/xades-api:${VERSION:-latest}
+    container_name: openthai-xades-api
+    restart: always
+    ports:
+      - "${API_PORT:-8080}:8080"
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PYTHONPATH: /app/src
+      # เติม URL จริงจาก CPS ของ CA/ETDA ก่อน production:
+      ETDA_OCSP_URL: ${ETDA_OCSP_URL:-}
+      ETDA_CRL_URL: ${ETDA_CRL_URL:-}
+    volumes:
+      - api-logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: "${API_CPU_LIMIT:-2.0}"
+          memory: "${API_MEM_LIMIT:-512M}"
+        reservations:
+          cpus: "0.25"
+          memory: "128M"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 8s
+      start_period: 20s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    networks:
+      - xades-internal
+      - xades-public
+
+  xades-dashboard:
+    image: nginx:1.27-alpine
+    container_name: openthai-xades-dashboard
+    restart: always
+    ports:
+      - "${DASHBOARD_PORT:-8090}:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      xades-api:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - xades-public
+
+  # หมวด 6 — Peppol Gateway (Drivers/Adapters)
+  peppol-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.peppol
+    image: openthai/peppol-gateway:${VERSION:-latest}
+    container_name: openthai-peppol-gateway
+    restart: always
+    ports:
+      - "${PEPPOL_PORT:-8001}:8001"
+    environment:
+      PEPPOL_ENV: ${PEPPOL_ENV:-test}
+      PEPPOL_SENDER_ID: ${PEPPOL_SENDER_ID:-}
+      PEPPOL_CERT_PATH: /certs/services/peppol-gateway.crt
+      PEPPOL_KEY_PATH: /certs/services/peppol-gateway.key
+      RD_API_KEY: ${RD_API_KEY:-}
+      RD_API_SECRET: ${RD_API_SECRET:-}
+      RD_TAXPAYER_ID: ${RD_TAXPAYER_ID:-}
+    volumes:
+      - peppol-certs:/certs:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 8s
+      start_period: 20s
+      retries: 3
+    networks:
+      - xades-internal
+      - xades-public
+
+  # หมวด 5 — SoftHSM2 (Firmware/PKI)
+  softhsm2:
+    image: openthai/softhsm2:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.hsm
+    container_name: openthai-softhsm2
+    restart: always
+    environment:
+      HSM_TOKEN_LABEL: ${HSM_TOKEN_LABEL:-openthai-etax}
+      HSM_SO_PIN: ${HSM_SO_PIN:-}
+      HSM_USER_PIN: ${HSM_USER_PIN:-}
+    volumes:
+      - hsm-tokens:/var/lib/softhsm/tokens
+      - ./hsm/init-hsm.sh:/docker-entrypoint.sh:ro
+    networks:
+      - xades-internal
+
+  # หมวด 10 — Prometheus + Grafana + Alertmanager (Monitoring)
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: openthai-prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../openthai-ai/telemetry/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - ../openthai-ai/telemetry/alerts.yaml:/etc/prometheus/alerts.yaml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - xades-internal
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: openthai-alertmanager
+    restart: always
+    ports:
+      - "9093:9093"
+    volumes:
+      - ../openthai-ai/telemetry/alertmanager.yaml:/etc/alertmanager/alertmanager.yml:ro
+    networks:
+      - xades-internal
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: openthai-grafana
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-changeme}
+      GF_SERVER_DOMAIN: grafana.openthai.ai
+      GF_SMTP_ENABLED: "true"
+      GF_SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com:587}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../openthai-ai/telemetry/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../openthai-ai/telemetry/grafana/provisioning:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - xades-internal
+      - xades-public
+
+  # (Optional) Redis cache สำหรับ shared revocation cache ใน multi-instance
+  # xades-redis:
+  #   image: redis:7-alpine
+  #   restart: always
+  #   networks:
+  #     - xades-internal
+
+volumes:
+  api-logs:
+    driver: local
+  peppol-certs:
+    driver: local
+  hsm-tokens:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  xades-internal:
+    driver: bridge
+    internal: true
+  xades-public:
+    driver: bridge
