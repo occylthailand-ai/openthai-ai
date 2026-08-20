@@ -1,0 +1,69 @@
+{
+  "title": "XAdES Engine — หมวด 1 Core Engine",
+  "uid": "xades-engine-v1",
+  "tags": ["xades", "e-tax", "openthai"],
+  "timezone": "Asia/Bangkok",
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Verification Rate (req/min)",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "rate(xades_verification_total[1m]) * 60", "legendFormat": "req/min" }],
+      "fieldConfig": { "defaults": { "unit": "reqps", "color": { "mode": "thresholds" },
+        "thresholds": { "steps": [{"color":"green","value":0},{"color":"yellow","value":50},{"color":"red","value":100}] }
+      }}
+    },
+    {
+      "id": 2, "type": "stat", "title": "Error Rate (%)",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "rate(xades_verification_total{status='error'}[5m]) / rate(xades_verification_total[5m]) * 100" }],
+      "fieldConfig": { "defaults": { "unit": "percent",
+        "thresholds": { "steps": [{"color":"green","value":0},{"color":"yellow","value":2},{"color":"red","value":5}] }
+      }}
+    },
+    {
+      "id": 3, "type": "stat", "title": "P95 Latency (ms)",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "histogram_quantile(0.95, rate(xades_verification_duration_seconds_bucket[5m])) * 1000" }],
+      "fieldConfig": { "defaults": { "unit": "ms",
+        "thresholds": { "steps": [{"color":"green","value":0},{"color":"yellow","value":5000},{"color":"red","value":15000}] }
+      }}
+    },
+    {
+      "id": 4, "type": "stat", "title": "XAdES-A Archival Verified",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [{ "expr": "sum(xades_verification_total{level='A', status='ok'})" }],
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "fixedColor": "blue", "mode": "fixed" } }}
+    },
+    {
+      "id": 5, "type": "timeseries", "title": "Verification Volume by Level",
+      "gridPos": { "x": 0, "y": 4, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "rate(xades_verification_total{status='ok'}[5m])", "legendFormat": "{{level}} OK" },
+        { "expr": "rate(xades_verification_total{status='error'}[5m])", "legendFormat": "{{level}} Error" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }}
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "C14N Processing Time (Rust Core)",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, rate(c14n_duration_seconds_bucket[5m])) * 1000", "legendFormat": "P50" },
+        { "expr": "histogram_quantile(0.95, rate(c14n_duration_seconds_bucket[5m])) * 1000", "legendFormat": "P95" },
+        { "expr": "histogram_quantile(0.99, rate(c14n_duration_seconds_bucket[5m])) * 1000", "legendFormat": "P99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" }}
+    },
+    {
+      "id": 7, "type": "timeseries", "title": "OCSP / CRL Revocation Check",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "rate(ocsp_check_total{status='good'}[5m])", "legendFormat": "OCSP Good" },
+        { "expr": "rate(ocsp_check_total{status='revoked'}[5m])", "legendFormat": "OCSP Revoked" },
+        { "expr": "rate(crl_check_total[5m])", "legendFormat": "CRL Check" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" }}
+    }
+  ]
+}

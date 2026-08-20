@@ -1,0 +1,24 @@
+# หมวด 10 — Grafana Datasource Provisioning
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    jsonData:
+      timeInterval: "15s"
+
+  - name: PostgreSQL
+    type: postgres
+    url: "${POSTGRES_HOST}:5432"
+    user: "${POSTGRES_USER}"
+    secureJsonData:
+      password: "${POSTGRES_PASSWORD}"
+    jsonData:
+      database: "${POSTGRES_DB}"
+      sslmode: "require"
+      maxOpenConns: 5
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+      postgresVersion: 1500

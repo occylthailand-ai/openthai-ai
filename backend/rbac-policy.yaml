@@ -1,0 +1,137 @@
+# หมวด 4 — OS / Security: RBAC Policy Configuration
+# Zero Trust: ไม่ไว้วางใจใคร ตรวจสอบทุก request
+# บทบาทและสิทธิ์ทุกอย่างต้องประกาศที่นี่
+
+version: "1.0"
+updated: "2026-08-20"
+
+# ===== ROLES =====
+roles:
+  superadmin:
+    description: "Mythos — ผู้บัญชาการสูงสุด"
+    inherits: [admin]
+    permissions: ["*"]  # สิทธิ์ทั้งหมด
+
+  admin:
+    description: "ผู้ดูแลระบบ"
+    inherits: [platform_operator]
+    permissions:
+      - "vault:read"
+      - "vault:write"
+      - "audit:read"
+      - "users:manage"
+      - "ledger:read"
+
+  platform_operator:
+    description: "ทีม OpenThai.ai"
+    inherits: [member]
+    permissions:
+      - "analytics:read"
+      - "affiliate:manage"
+      - "products:approve"
+      - "pcr:read"
+
+  producer:
+    description: "กลุ่ม 1 — ผู้ผลิต"
+    inherits: [member]
+    permissions:
+      - "products:create"
+      - "products:update:own"
+      - "orders:read:own"
+      - "invoice:submit"
+      - "xades:verify"
+
+  intermediary:
+    description: "กลุ่ม 2 — คนกลาง"
+    inherits: [member]
+    permissions:
+      - "orders:create"
+      - "orders:read:own"
+      - "shipment:track"
+      - "contract:sign"
+      - "xades:verify"
+
+  consumer:
+    description: "กลุ่ม 4 — ผู้บริโภค"
+    inherits: [member]
+    permissions:
+      - "welfare:check"
+      - "products:read"
+      - "orders:create"
+      - "orders:read:own"
+      - "dispute:create"
+
+  professional:
+    description: "กลุ่ม 6 — สายวิชาชีพ"
+    inherits: [member]
+    permissions:
+      - "knowledge:read:professional"
+      - "rag:query:professional"
+      - "xades:verify"
+
+  affiliate:
+    description: "Affiliate Partner (Non-MLM, ≤ 2 ชั้น)"
+    inherits: [member]
+    permissions:
+      - "affiliate:track:own"
+      - "commission:read:own"
+      - "products:read"
+
+  member:
+    description: "ผู้ใช้ทั่วไป"
+    permissions:
+      - "profile:read:own"
+      - "profile:update:own"
+      - "products:read"
+      - "ai:chat"
+      - "ai:query"
+
+  guest:
+    description: "ผู้เยี่ยมชม (ไม่ได้ login)"
+    permissions:
+      - "products:read:public"
+      - "ai:demo"
+
+# ===== RESOURCES & ACTIONS =====
+resources:
+  vault:        [read, write, rotate, delete]
+  users:        [read, create, update, delete, manage]
+  products:     [read, create, update, delete, approve]
+  orders:       [read, create, update, cancel]
+  invoice:      [submit, read, verify]
+  xades:        [verify, sign]
+  affiliate:    [track, manage, read]
+  commission:   [read, approve, reject]
+  analytics:    [read, export]
+  audit:        [read, export]
+  ledger:       [read, write]
+  pcr:          [read, create]
+  knowledge:    [read, write, delete]
+  rag:          [query, ingest]
+  welfare:      [check, apply]
+  dispute:      [create, read, update]
+  shipment:     [track, update]
+  contract:     [sign, read]
+  ai:           [chat, query, demo]
+  profile:      [read, update]
+
+# ===== CONSTRAINTS =====
+constraints:
+  affiliate_depth_max: 2           # Non-MLM: จ่ายได้สูงสุด 2 ชั้น
+  commission_basis: "sale_only"    # จ่ายจากยอดขายจริงเท่านั้น ห้ามจ่ายจากค่าสมัคร
+  data_residency: "TH"             # ข้อมูลอ่อนไหวต้องอยู่ในไทย (Sovereign by Default)
+  session_ttl_minutes: 60
+  refresh_token_days: 30
+  mfa_required_roles: [admin, superadmin, platform_operator]
+
+# ===== DENY LIST =====
+deny:
+  - resource: "vault"
+    action: "*"
+    roles: [guest, consumer, affiliate]
+  - resource: "ledger"
+    action: "write"
+    roles: [producer, intermediary, consumer, professional, affiliate, member]
+  - resource: "users"
+    action: "delete"
+    roles: [platform_operator]
