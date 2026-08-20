@@ -87,7 +87,7 @@
 | ตัวเลขกรณีศึกษาในหนังสือยังไม่มีที่มา (42%, 60%, 35%, 3.2 เท่า) | เผยแพร่แล้วถูกท้วงติงได้ | content-localization + legal |
 | ชื่อโมเดลบน Hugging Face ยังไม่ยืนยันว่าตรงของจริง | เอกสารเทคนิคใช้ไม่ได้ | ai-ml-engineer |
 | ยังไม่มี Thai Eval Suite | อ้างว่า "ลดโทเคน 50%" โดยไม่มีเบนช์มาร์กสาธารณะ | ai-ml-engineer |
-| ยังไม่มี staging environment | Deploy ตรง prod เสี่ยงสูง | devops-sre |
+| ~~ยังไม่มี staging environment~~ | ✅ สร้างแล้ว `docker-compose.staging.yml` 20 ส.ค. 2569 | devops-sre |
 
 ---
 
@@ -124,9 +124,10 @@
 - [ ] จัดทำ dashboard KPI สำหรับ Accuracy, Latency, Conversion, Trust score
 
 #### D. Secret Hygiene
-- [ ] ย้าย API key / secret / credential ออกจาก repo
-- [ ] เพิ่ม `.gitignore` สำหรับไฟล์ที่มีความอ่อนไหว
-- [ ] ใช้ secret manager หรือ environment vault แทนไฟล์ข้อความบน repo
+- [x] ~~ย้าย API key / secret / credential ออกจาก repo~~ ✅ gitignore ครอบคลุมแล้ว 20 ส.ค. 2569
+- [x] ~~เพิ่ม `.gitignore` สำหรับไฟล์ที่มีความอ่อนไหว~~ ✅ .env.*, *passwords*.csv, *API KEY*.txt
+- [x] ~~ใช้ secret manager หรือ environment vault~~ ✅ vault.js (AES-256-GCM) + SoftHSM2
+- [ ] **Rotate GitHub OAuth token** (gho_1NZ...USG7 — ต้อง revoke ที่ GitHub Settings ด่วน)
 - [ ] Rotate keys และตรวจทุก 90 วัน
 - [ ] ตรวจสอบความลับที่ค้างอยู่ใน logs / cache / backup
 
