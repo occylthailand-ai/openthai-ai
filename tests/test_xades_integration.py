@@ -20,11 +20,13 @@ import unittest
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+_TESTS_DIR_EARLY = Path(__file__).parent
+if str(_TESTS_DIR_EARLY) not in sys.path:
+    sys.path.insert(0, str(_TESTS_DIR_EARLY))
+
 # ── Import helpers ────────────────────────────────────────────────────────────
 
-_TESTS_DIR = Path(__file__).parent
-if str(_TESTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_TESTS_DIR))
+_TESTS_DIR = _TESTS_DIR_EARLY
 
 from helpers_der import (
     decode_b64_der,
@@ -38,6 +40,11 @@ from helpers_der import (
     needs_engine as _needs_engine_mark,
     needs_asn1  as _needs_asn1_mark,
     _HAS_ASN1CRYPTO,
+)
+from helpers_asn1_der_extra import (
+    validate_der_integer_content,
+    validate_der_boolean_content,
+    validate_der_generalized_time,
 )
 
 # ── xades-engine import (fallback) ────────────────────────────────────────────
@@ -559,6 +566,123 @@ class TestArchiveReadinessScore(unittest.TestCase):
 
     def test_evidence_false_both_zero(self):
         self.assertFalse(has_archival_evidence(0, 0))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# F. ASN.1 primitive validators (ไม่ต้องใช้ engine)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestDerIntegerContent(unittest.TestCase):
+    """validate_der_integer_content() — two's-complement minimal"""
+
+    # ── valid ─────────────────────────────────────────────────────────────────
+
+    def test_single_zero(self):
+        self.assertTrue(validate_der_integer_content(b"\x00"))
+
+    def test_positive_no_leading_zero(self):
+        self.assertTrue(validate_der_integer_content(b"\x01"))
+        self.assertTrue(validate_der_integer_content(b"\x7F"))
+
+    def test_positive_needs_leading_zero(self):
+        # 0x00 0x80 = +128 (necessary 0x00 to keep MSB=0)
+        self.assertTrue(validate_der_integer_content(b"\x00\x80"))
+        self.assertTrue(validate_der_integer_content(b"\x00\xFF"))
+
+    def test_negative_valid(self):
+        # 0x80 = -128, 0xFF = -1
+        self.assertTrue(validate_der_integer_content(b"\x80"))
+        self.assertTrue(validate_der_integer_content(b"\xFF"))
+
+    # ── invalid ───────────────────────────────────────────────────────────────
+
+    def test_empty_content(self):
+        self.assertFalse(validate_der_integer_content(b""))
+
+    def test_unnecessary_leading_zero_positive(self):
+        # 0x00 0x01 — ควรเขียน 0x01 เท่านั้น
+        self.assertFalse(validate_der_integer_content(b"\x00\x01"))
+        self.assertFalse(validate_der_integer_content(b"\x00\x7F"))
+
+    def test_unnecessary_leading_ff_negative(self):
+        # 0xFF 0x80 — ควรเขียน 0x80 เท่านั้น
+        self.assertFalse(validate_der_integer_content(b"\xFF\x80"))
+        self.assertFalse(validate_der_integer_content(b"\xFF\xFF"))
+
+
+class TestDerBooleanContent(unittest.TestCase):
+    """validate_der_boolean_content() — DER stricter than BER"""
+
+    def test_false_0x00(self):
+        self.assertTrue(validate_der_boolean_content(b"\x00"))
+
+    def test_true_0xff(self):
+        self.assertTrue(validate_der_boolean_content(b"\xFF"))
+
+    def test_ber_true_non_zero_rejected(self):
+        # BER ยอม 0x01/0x42 เป็น TRUE แต่ DER ไม่ยอม
+        self.assertFalse(validate_der_boolean_content(b"\x01"))
+        self.assertFalse(validate_der_boolean_content(b"\x42"))
+        self.assertFalse(validate_der_boolean_content(b"\xFE"))
+
+    def test_empty_rejected(self):
+        self.assertFalse(validate_der_boolean_content(b""))
+
+    def test_two_bytes_rejected(self):
+        self.assertFalse(validate_der_boolean_content(b"\x00\xFF"))
+        self.assertFalse(validate_der_boolean_content(b"\xFF\x00"))
+
+
+class TestDerGeneralizedTime(unittest.TestCase):
+    """validate_der_generalized_time() — DER strict form"""
+
+    # ── valid ─────────────────────────────────────────────────────────────────
+
+    def test_valid_utc(self):
+        self.assertTrue(validate_der_generalized_time("20250822120000Z"))
+
+    def test_valid_midnight(self):
+        self.assertTrue(validate_der_generalized_time("20250101000000Z"))
+
+    def test_valid_end_of_day(self):
+        self.assertTrue(validate_der_generalized_time("20251231235959Z"))
+
+    # ── invalid format ────────────────────────────────────────────────────────
+
+    def test_missing_z(self):
+        self.assertFalse(validate_der_generalized_time("20250822120000"))
+
+    def test_fractional_seconds(self):
+        # DER ห้าม .123
+        self.assertFalse(validate_der_generalized_time("20250822120000.123Z"))
+
+    def test_timezone_offset(self):
+        # ห้าม +07:00
+        self.assertFalse(validate_der_generalized_time("20250822120000+0700"))
+
+    def test_utc_time_format(self):
+        # UTCTime (YYMMDD) ไม่ใช่ GeneralizedTime (YYYYMMDD)
+        self.assertFalse(validate_der_generalized_time("250822120000Z"))
+
+    # ── invalid range ─────────────────────────────────────────────────────────
+
+    def test_month_zero(self):
+        self.assertFalse(validate_der_generalized_time("20250022120000Z"))
+
+    def test_month_thirteen(self):
+        self.assertFalse(validate_der_generalized_time("20251322120000Z"))
+
+    def test_day_zero(self):
+        self.assertFalse(validate_der_generalized_time("20250100120000Z"))
+
+    def test_hour_24(self):
+        self.assertFalse(validate_der_generalized_time("20250822240000Z"))
+
+    def test_minute_60(self):
+        self.assertFalse(validate_der_generalized_time("20250822126000Z"))
+
+    def test_second_60(self):
+        self.assertFalse(validate_der_generalized_time("20250822120060Z"))
 
 
 if __name__ == "__main__":
