@@ -39,6 +39,8 @@ import BoardPage from './pages/corporate/BoardPage';
 import PRCommsPage from './pages/corporate/PRCommsPage';
 import CommandCenterPage from './pages/corporate/CommandCenterPage';
 import ProducerOnboardingPage from './pages/ProducerOnboardingPage';
+import ConsumerPortalPage from './pages/ConsumerPortalPage';
+import IntermediaryPortalPage from './pages/IntermediaryPortalPage';
 import ProducerAdminPage from './pages/ProducerAdminPage';
 import ErrorHunterPage from './pages/ErrorHunterPage';
 import CreativeGuildPage from './pages/CreativeGuildPage';
@@ -131,6 +133,10 @@ function App() {
             <Route path="/corporate/command"     element={isAuthenticated ? <CommandCenterPage />     : <Navigate to="/login" />} />
             {/* Creative Guild — Public */}
             <Route path="/creative-guild" element={<CreativeGuildPage />} />
+            {/* Consumer Portal — Public (กลุ่ม 4: ผู้บริโภค) */}
+            <Route path="/consumer" element={<ConsumerPortalPage />} />
+            {/* Intermediary Portal — Public (กลุ่ม 2: คนกลาง) */}
+            <Route path="/intermediary" element={<IntermediaryPortalPage />} />
             {/* Producer Onboarding — Public */}
             <Route path="/producer" element={<ProducerOnboardingPage />} />
             {/* Producer Admin — Login required */}

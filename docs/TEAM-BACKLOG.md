@@ -5,25 +5,28 @@
 
 ---
 
-## 🧭 ผังทีม 15 ตัว
+## 🧭 ผังทีม 19 ตัว (อัปเดต 21 ส.ค. 2569)
 
 ```
-                        Mythos (Founder & Commander)
-                                   │
-                          chief-of-staff (เสนาธิการ)
-                                   │
-        ┌──────────────────────────┼──────────────────────────┐
-        │                          │                          │
-  หน่วยรบตามผู้ใช้ (6)         หน่วยสร้าง (6)            หน่วยกำกับ (3)
-        │                          │                          │
-  producer-agent            ai-ml-engineer            legal-compliance 🛑
-  intermediary-agent        backend-engineer          content-localization
-  platform-agent            frontend-engineer         growth-community
-  consumer-agent            data-analytics
-  ecosystem-agent           devops-sre
-  professional-agent        security-guard
+                          Mythos (Founder & Commander)
+                                       │
+                              chief-of-staff (เสนาธิการ)
+                                       │
+   ┌──────────┬──────────────┬─────────┴──────────┬──────────────┐
+   │          │              │                    │              │
+หน่วยรบ (6)  หน่วยสร้าง (7) หน่วยกำกับ (3)  หน่วยค้นคว้า (1) หน่วยขาย (1)
+   │          │              │                    │              │
+producer    ai-ml-engineer  legal-compliance 🛑  tech-scout    sales-agent
+intermediary backend-engineer content-localization
+platform    frontend-engineer growth-community
+consumer    data-analytics
+ecosystem   devops-sre
+professional security-guard
+            blockchain-web3
 
 🛑 = มีอำนาจหยุดงานที่สุ่มเสี่ยงผิดกฎหมาย
+🔭 tech-scout = ส่ง Innovation Brief เข้า Board ทุกเดือน
+💧 sales-agent = "เหมือนน้ำ" — B2B/B2G/B2C/Partnership ครบวงจร
 ```
 
 ## 📊 ตารางความครอบคลุม 6 กลุ่มผู้ใช้
@@ -31,9 +34,9 @@
 | กลุ่ม | Agent เจ้าของ | สถานะในหนังสือ | สถานะในระบบ |
 |---|---|---|---|
 | 1. ผู้ผลิต | producer-agent | ✅ บทที่ 4.1 | 🟡 Producer Portal มีแล้ว |
-| 2. คนกลางทุกประเภท | intermediary-agent | 🟡 บท 4.2 ครอบคลุมแค่โลจิสติกส์ | 🔴 ยังไม่มี Portal |
+| 2. คนกลางทุกประเภท | intermediary-agent | 🟡 บท 4.2 ครอบคลุมแค่โลจิสติกส์ | ✅ Intermediary Portal MVP `/intermediary` (22 ส.ค. 69) |
 | 3. แพลตฟอร์ม | platform-agent | ✅ บทที่ 4.3 | ✅ 7 Portal |
-| 4. ผู้บริโภค | consumer-agent | ✅ บทที่ 4.4 | 🔴 ยังไม่มีหน้าเฉพาะ |
+| 4. ผู้บริโภค | consumer-agent | ✅ บทที่ 4.4 | ✅ Consumer Portal MVP `/consumer` (22 ส.ค. 69) |
 | 5. ชุมชน/นักพัฒนา/รัฐ | ecosystem-agent | ✅ บทที่ 4.5 | 🟡 Gov Portal มีแล้ว |
 | 6. **สายงานวิชาชีพ** | professional-agent | 🔴 **ยังไม่มีในหนังสือเลย** | 🔴 ยังไม่มี |
 
@@ -68,6 +71,33 @@
 | 2.10 | ข้อสอบ PDPA/ความปลอดภัย 20 ข้อ ใช้เป็นเกณฑ์ผ่าน 30 วันแรก | `legal-compliance` + `security-guard` | 1.4 ✅ | ✅ เสร็จ 6 ส.ค. 2569 | `docs/onboarding-exam-pdpa-security.md` |
 | 2.11 | ชุดทดสอบ "จับคำหลอน" สำหรับประเมิน Level 0 | `ai-ml-engineer` | 1.4 ✅ | ✅ เสร็จแล้ว | `docs/hallucination-test-suite.md` |
 | 2.12 | สำรวจกรอบค่าตอบแทนต่อ Level จากตลาดจริง (ห้ามเดาตัวเลข) | Mythos | 1.4 ✅ | ⏸ รอ Mythos | — |
+
+## 🔭 คลื่นงานที่ 3 — หน่วยใหม่เริ่มงาน (อัปเดต 21 ส.ค. 2569)
+
+| # | งาน | มอบให้ | ผลลัพธ์ | สถานะ |
+|---|---|---|---|---|
+| 3.1 | Technology Radar ฉบับแรก — จัดกลุ่ม Adopt/Trial/Assess/Hold สำหรับ AI/ML, Platform, Data/Privacy, RegTech ที่เกี่ยวกับ OpenThai.ai | `tech-scout` | `docs/tech-radar-q3-2569.md` | ✅ เสร็จ 21 ส.ค. 2569 |
+| 3.2 | Innovation Brief ชุดแรก 3 เรื่อง — เลือกเทคโนโลยีที่กระทบ roadmap มากที่สุด พร้อม Build/Buy/Partner recommendation | `tech-scout` | `docs/innovation-brief-aug2569.md` | ✅ เสร็จ 21 ส.ค. 2569 |
+| 3.3 | Sales Playbook ฉบับ OpenThai.ai — B2B/B2G/B2C/Partner พร้อม Proposal template, Pipeline tracker และ Objection handling | `sales-agent` | `docs/sales-playbook.md` | ✅ เสร็จ 21 ส.ค. 2569 |
+| 3.4 | B2G Pilot Proposal template — สำหรับยื่นหน่วยงานรัฐที่อยากทดสอบ OpenThai.ai ก่อนซื้อ | `sales-agent` + `legal-compliance` | `docs/b2g-pilot-proposal-template.md` | ✅ เสร็จ 21 ส.ค. 2569 |
+| 3.5 | กำหนดโครงสร้าง Innovation Board — ใครเป็นสมาชิก วาระประชุม ขั้นตอนรับ Brief เข้า/ออก | `chief-of-staff` | `docs/innovation-board-charter.md` | ✅ ร่างเสร็จ 21 ส.ค. 2569 — รอ Mythos กำหนดสมาชิกเพื่อ activate |
+| 3.6 | Competitive Positioning — ตอบ "ต่างจาก Typhoon/NECTEC อย่างไร?" สำหรับ media/investor | `tech-scout` + `chief-of-staff` | `docs/competitive-positioning.md` | ✅ เสร็จ 21 ส.ค. 2569 |
+| 3.7 | PDPA Compliance Signoff — checklist ก่อน launch + gap analysis ที่ยังขาด | `legal-compliance` | `docs/pdpa-compliance-signoff.md` | ✅ ร่างเสร็จ 21 ส.ค. 2569 — รอ legal ที่ปรึกษาภายนอกรับรอง |
+| 3.8 | Developer Onboarding — quick start 30 นาที สำหรับนักพัฒนา community | `ecosystem-agent` | `docs/developer-onboarding.md` | ✅ เสร็จ 21 ส.ค. 2569 |
+| 3.9 | Investor One-Pager — fundraising brief สำหรับ VC/Angel/กองทุนรัฐ | `chief-of-staff` | `docs/investor-one-pager.md` | ✅ เสร็จ 21 ส.ค. 2569 |
+
+## 🏛️ คลื่นงานที่ 4 — Innovation Board เปิดปฏิบัติการ (อัปเดต 22 ส.ค. 2569)
+
+| # | งาน | มอบให้ | ผลลัพธ์ | สถานะ |
+|---|---|---|---|---|
+| 4.1 | คำสั่งแต่งตั้ง Board 5 ที่นั่ง + ลงนาม Mythos | `chief-of-staff` | `docs/innovation-board-appointment.md` | ✅ ร่างเสร็จ 22 ส.ค. 2569 — **รอ Mythos กำหนดชื่อจริงและลงนาม** |
+| 4.2 | Flash Brief RegTech — PDPA Tool, e-Tax AI, Legal AI โอกาสและ case studies โลก | `tech-scout` | `docs/flash-brief-regtech.md` | ✅ เสร็จ 22 ส.ค. 2569 — รอ Board ตัดสินใจ 3 คำถาม |
+| 4.3 | PDPA Compliance Assistant prototype — Product แรก ถ้า Board อนุมัติ | `ai-ml-engineer` + `backend-engineer` | — | 🔴 รอมติ Board |
+| 4.4 | Flash Brief: BoT RegTech Sandbox — ควร apply เข้า sandbox ไหม? | `tech-scout` + `legal-compliance` | `docs/flash-brief-bot-sandbox.md` | ✅ เสร็จ 22 ส.ค. 2569 — รอ Board ตอบ 3 คำถาม |
+| 4.5 | บันทึกมติ Innovation Board ครั้งแรก | `chief-of-staff` | `docs/innovation-board-decisions.md` | 🔴 รอ Board ประชุม |
+| 4.6 | Product Roadmap 12 เดือน — 4 Phase พร้อม Definition of Done | `chief-of-staff` | `docs/product-roadmap.md` | ✅ เสร็จ 22 ส.ค. 2569 |
+| 4.7 | Thai Corpus Strategy — แผนรวบรวมข้อมูล, legal sources, data pipeline, tokenizer | `ai-ml-engineer` + `legal-compliance` | `docs/thai-corpus-strategy.md` | ✅ เสร็จ 22 ส.ค. 2569 |
+| 4.8 | Flash Brief: Partnership Strategy — มหาวิทยาลัย + Cloud Provider | `tech-scout` | `docs/flash-brief-partnerships.md` | 🔴 ถัดไป |
 
 ## 🚧 รอ Mythos อนุมัติก่อนทำ
 
@@ -134,23 +164,27 @@
 ### 2. ทำต่อ: ปิดช่องว่างตาม 6 กลุ่มผู้ใช้
 
 #### กลุ่มที่ 2 — คนกลางทุกประเภท
-- [ ] ขยายแผนจาก “โลจิสติกส์” เป็น 7 ประเภทจริง
-- [ ] วาง user flow, pain point และ offer สำหรับแต่ละประเภท
-- [ ] สร้าง Intermediary Portal MVP
-  - [ ] ตัวแทนจำหน่าย
-  - [ ] นายหน้า
-  - [ ] ผู้ส่งออก/นำเข้า
-  - [ ] คลังสินค้า
-  - [ ] ผู้จัดจำหน่าย
-  - [ ] ผู้ประสานการค้า
-  - [ ] ผู้ดูแลโซ่อุปทาน
+- [x] ขยายแผนจาก “โลจิสติกส์” เป็น 7 ประเภทจริง
+- [x] วาง user flow, pain point และ offer สำหรับแต่ละประเภท
+- [x] **สร้าง Intermediary Portal MVP** ✅ เสร็จ 22 ส.ค. 2569 → `frontend/src/pages/IntermediaryPortalPage.jsx` (route: `/intermediary`)
+  - [x] ตัวแทนจำหน่าย
+  - [x] นายหน้า
+  - [x] ผู้ส่งออก/นำเข้า (พร้อม HS Code search + Incoterms 2020)
+  - [x] คลังสินค้า
+  - [x] ผู้จัดจำหน่าย
+  - [x] ผู้ประสานการค้า
+  - [x] ผู้ดูแลโซ่อุปทาน
+- [ ] เชื่อม `/api/intermediary/register` กับ backend จริง
+- [ ] เชื่อม `/api/intermediary/hs-code` กับ AI/customs API
 
 #### กลุ่มที่ 4 — ผู้บริโภค
-- [ ] สร้าง Consumer Portal MVP
-- [ ] เพิ่มฟังก์ชันค้นหาสินค้า
-- [ ] เพิ่มตรวจสิทธิ/รับสิทธิแบบเรียลไทม์
+- [x] **สร้าง Consumer Portal MVP** ✅ เสร็จ 22 ส.ค. 2569 → `frontend/src/pages/ConsumerPortalPage.jsx` (route: `/consumer`)
+  - [x] ตรวจสิทธิ์สวัสดิการ (6 โปรแกรม: บัตรคนจน, ประกันสังคม, เบี้ยผู้สูงอายุ, เบี้ยคนพิการ, เงินอุดหนุนบุตร, กอช.)
+  - [x] เปรียบเทียบสินค้าอัจฉริยะ (พร้อม guardrail disclaimer)
+  - [x] ย่อยสัญญา/TOS
+  - [x] หน้าสิทธิผู้บริโภค (4 สาย + hotline)
+- [ ] เชื่อม `/api/consumer/compare` + `/api/consumer/summarize-contract` กับ AI backend
 - [ ] เพิ่มระบบรีวิวและความน่าเชื่อถือ
-- [ ] วางแผนฟังก์ชันการใช้งานที่ตรงตามความต้องการจริง
 
 #### กลุ่มที่ 6 — สายวิชาชีพ
 - [ ] เลือก 2–3 กลุ่มก่อน เช่น ทนายความ / แพทย์ / นักบัญชี
