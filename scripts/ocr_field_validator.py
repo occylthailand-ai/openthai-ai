@@ -79,9 +79,17 @@ _AMOUNT_PATTERN = re.compile(
 
 def _validate_tax_id(raw: str) -> FieldResult:
     """
-    ตรวจสอบเลขประจำตัวผู้เสียภาษี 13 หลัก
-    สูตร: sum(digit[i] × (13-i) for i in 0..11) → check = (11 - sum%11) % 11
-    หมายเหตุ: หากผลลัพธ์ check >= 10 → หมายเลขผิดรูปแบบ
+    ตรวจสอบเลขประจำตัวผู้เสียภาษี 13 หลัก (กรมสรรพากร / กรมพัฒนาธุรกิจการค้า)
+
+    สูตรอย่างเป็นทางการ (1-indexed):
+      Sum = Σ d[i] × (14 − i)  สำหรับ i = 1..12
+          = d[0]×13 + d[1]×12 + … + d[11]×2   (0-indexed)
+      Check digit = (11 − Sum % 11) % 10
+
+    ตัวอย่าง: 0105563000990
+      Sum = 0×13+1×12+0×11+5×10+5×9+6×8+3×7+0×6+0×5+0×4+9×3+9×2
+          = 0+12+0+50+45+48+21+0+0+0+27+18 = 221
+      (11 − 221%11) % 10 = (11 − 1) % 10 = 0  ✓ ตรงกับหลักที่ 13
     """
     digits = re.sub(r'[\s\-]', '', raw)
     result = FieldResult(field_name="tax_id", raw_value=raw, normalized=digits)
@@ -91,23 +99,17 @@ def _validate_tax_id(raw: str) -> FieldResult:
         result.message = f"ต้องเป็นตัวเลข 13 หลัก พบ {len(digits)} หลัก"
         return result
 
-    if digits[0] == "0":
-        result.confidence = "error"
-        result.message = "หลักแรกเป็น 0 — ไม่ใช่รูปแบบเลขผู้เสียภาษีไทย"
-        return result
-
+    # น้ำหนัก 13 ลงไปถึง 2 (positions 0..11)
     total = sum(int(digits[i]) * (13 - i) for i in range(12))
-    check = (11 - (total % 11)) % 11
+    expected = (11 - (total % 11)) % 10   # ← % 10 ไม่ใช่ % 11
+    actual = int(digits[12])
 
-    if check >= 10:
-        result.confidence = "error"
-        result.message = "โครงสร้างเลขผิดปกติ (check digit overflow)"
-        return result
-
-    if check != int(digits[12]):
+    if expected != actual:
         result.confidence = "error"
         result.message = (
-            f"Check digit ไม่ตรง: คาดหวัง {check} แต่พบ {digits[12]}"
+            f"Check digit ไม่ถูกต้อง — ระบุมา: {actual}, "
+            f"ค่าที่ถูกต้องตามสูตร: {expected} "
+            f"(sum={total}, {total}%11={total%11}, (11−{total%11})%10={expected})"
         )
         return result
 
@@ -118,7 +120,7 @@ def _validate_tax_id(raw: str) -> FieldResult:
     result.normalized = formatted
     result.valid = True
     result.confidence = "ok"
-    result.message = "ผ่าน check digit"
+    result.message = f"ผ่าน check digit (sum={total}, expected={expected})"
     return result
 
 
@@ -195,7 +197,7 @@ def _cross_validate_amounts(
     before_vat: float,
     vat: float,
     total: float,
-    tolerance: float = 0.05,   # 5% tolerance สำหรับค่าปัดเศษ
+    tolerance_baht: float = 0.05,   # 0.05 บาท — รองรับค่าปัดทศนิยม
 ) -> FieldResult:
     result = FieldResult(field_name="cross_check", raw_value="")
     expected_vat = round(before_vat * 0.07, 2)
@@ -204,15 +206,15 @@ def _cross_validate_amounts(
     total_diff = abs(total - expected_total)
 
     issues = []
-    if vat_diff > before_vat * tolerance:
+    if vat_diff > tolerance_baht:
         issues.append(
             f"VAT ไม่ตรง: พบ {vat:,.2f} คาดหวัง {expected_vat:,.2f}"
-            f" (diff {vat_diff:,.2f})"
+            f" (diff {vat_diff:.2f} บาท)"
         )
-    if total_diff > before_vat * tolerance:
+    if total_diff > tolerance_baht:
         issues.append(
             f"ยอดรวมไม่ตรง: พบ {total:,.2f} คาดหวัง {expected_total:,.2f}"
-            f" (diff {total_diff:,.2f})"
+            f" (diff {total_diff:.2f} บาท)"
         )
 
     if issues:
