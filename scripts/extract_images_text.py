@@ -75,9 +75,9 @@ PRESETS: dict[str, OCRPreset] = {
         description="ฉลากสินค้า / OTOP — PSM 11 sparse text",
     ),
     "dense": OCRPreset(
-        psm=4, oem=1, target_dpi=300, denoise=False,
+        psm=6, oem=1, target_dpi=300, denoise=True,
         extra_config="-c preserve_interword_spaces=1",
-        description="เอกสารข้อความแน่น — PSM 4 single column",
+        description="เอกสารข้อความแน่น — PSM 6 + Otsu (สัญญา รายงาน)",
     ),
     "oneline": OCRPreset(
         psm=7, oem=1, target_dpi=300, denoise=False,
@@ -351,8 +351,8 @@ def _parse_args() -> argparse.Namespace:
                    help="ค้นหารูปในโฟลเดอร์ย่อยด้วย")
     p.add_argument("--no-preprocess", action="store_true",
                    help="ข้ามการปรับภาพก่อน OCR")
-    p.add_argument("--preset", choices=list(PRESETS.keys()), default="auto",
-                   help="เลือก preset ตามประเภทเอกสาร (default: auto)")
+    p.add_argument("--preset", choices=list(PRESETS.keys()), default="invoice",
+                   help="เลือก preset ตามประเภทเอกสาร (default: invoice)")
     # Override แต่ละค่า (ใช้แทน preset ถ้าระบุ)
     p.add_argument("--psm", type=int,
                    help="Tesseract PSM mode 0-13 (ข้าม preset)")
