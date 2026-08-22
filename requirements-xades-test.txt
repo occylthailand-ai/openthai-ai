@@ -1,0 +1,20 @@
+# XAdES Test Suite — Pinned dependencies
+# อัปเดต: 2026-08-22
+# วัตถุประสงค์: ให้ผล DER test คงที่ข้าม Python 3.10/3.11/3.12
+# อัปเดตด้วย: pip-compile requirements-xades-test.in
+
+# ── XML / DER ─────────────────────────────────────────────────────────────────
+lxml==5.3.0
+asn1crypto==1.5.1
+pyasn1==0.6.1
+pyasn1-modules==0.4.1
+
+# ── Cryptography ──────────────────────────────────────────────────────────────
+cryptography==44.0.2
+
+# ── HTTP (TSA requests) ───────────────────────────────────────────────────────
+requests==2.32.3
+
+# ── Test runner ───────────────────────────────────────────────────────────────
+pytest==8.3.4
+pytest-timeout==2.3.1
