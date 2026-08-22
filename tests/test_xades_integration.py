@@ -29,9 +29,13 @@ if str(_TESTS_DIR) not in sys.path:
 from helpers_der import (
     decode_b64_der,
     is_parseable_der,
+    is_valid_der_sequence,
     assert_parseable_der,
     minimal_der_sequence,
     try_parse_asn1,
+    calculate_archive_readiness_score,
+    needs_engine as _needs_engine_mark,
+    needs_asn1  as _needs_asn1_mark,
     _HAS_ASN1CRYPTO,
 )
 
@@ -66,14 +70,9 @@ def _try_import_engine():
 (XAdESAExtractor, _is_valid_der, has_archival_evidence,
  verify_xades_t_timestamp, _ENGINE_OK) = _try_import_engine()
 
-needs_engine = unittest.skipUnless(
-    _ENGINE_OK,
-    "xades-engine ไม่พบ — รัน: pip install -e xades-engine/src"
-)
-needs_asn1 = unittest.skipUnless(
-    _HAS_ASN1CRYPTO,
-    "asn1crypto ไม่ได้ติดตั้ง — รัน: pip install asn1crypto"
-)
+# pytest.mark variants from helpers_der (work on unittest.TestCase under pytest)
+needs_engine = _needs_engine_mark
+needs_asn1   = _needs_asn1_mark
 
 # ── Namespace / Algorithm constants ──────────────────────────────────────────
 
@@ -376,6 +375,155 @@ class TestVerifierGateIntegration(unittest.TestCase):
         root = ET.fromstring(xxe)
         text = ET.tostring(root, encoding="unicode")
         self.assertNotIn("/etc/passwd", text)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# D. DER Structure — negative tests (ไม่ต้องใช้ engine หรือ asn1crypto)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestDerStructureValidation(unittest.TestCase):
+    """
+    ตรวจ is_valid_der_sequence() แบบ white-box
+    ครอบคลุม: short-form, long-form, truncated, over-declared, wrong tag
+    """
+
+    # ── short-form ────────────────────────────────────────────────────────────
+
+    def test_short_form_valid(self):
+        raw = bytes([0x30, 20]) + bytes(20)
+        self.assertTrue(is_valid_der_sequence(raw, min_len=11))
+
+    def test_short_form_truncated(self):
+        # declared content_len=20 แต่มีแค่ 10 bytes
+        raw = bytes([0x30, 20]) + bytes(10)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    def test_short_form_exact_boundary(self):
+        # header(2) + content(0) = 2 bytes — ผ่าน structure แต่ fail min_len=11
+        raw = bytes([0x30, 0])
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+        # min_len=2 ควรผ่าน
+        self.assertTrue(is_valid_der_sequence(raw, min_len=2))
+
+    # ── long-form ─────────────────────────────────────────────────────────────
+
+    def test_long_form_1byte_valid(self):
+        payload = bytes(200)
+        raw = bytes([0x30, 0x81, 200]) + payload   # 0x81 = 1 length byte
+        self.assertTrue(is_valid_der_sequence(raw, min_len=11))
+
+    def test_long_form_2bytes_valid(self):
+        payload = bytes(400)
+        # 0x82 = 2 length bytes, 400 = 0x0190
+        raw = bytes([0x30, 0x82, 0x01, 0x90]) + payload
+        self.assertTrue(is_valid_der_sequence(raw, min_len=11))
+
+    def test_long_form_n_zero_indefinite(self):
+        # 0x80 = indefinite length — ไม่ใช่ DER valid
+        raw = bytes([0x30, 0x80]) + bytes(30)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    def test_long_form_length_bytes_missing(self):
+        # 0x82 แปลว่า n=2 แต่ stream หมดก่อนมี 2 bytes
+        raw = bytes([0x30, 0x82, 0x01])            # ขาด 1 byte
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    def test_long_form_n_too_large(self):
+        # n=5 เกิน limit 4
+        raw = bytes([0x30, 0x85]) + bytes(30)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    # ── over-declared length ──────────────────────────────────────────────────
+
+    def test_over_declared_short_form(self):
+        # declared 100 bytes of content แต่มีแค่ 20 bytes จริง
+        raw = bytes([0x30, 100]) + bytes(20)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    def test_over_declared_long_form(self):
+        # declared 1000 bytes (0x03E8) แต่ actual payload แค่ 50 bytes
+        raw = bytes([0x30, 0x82, 0x03, 0xE8]) + bytes(50)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    # ── wrong ASN.1 tag ───────────────────────────────────────────────────────
+
+    def test_wrong_tag_integer(self):
+        raw = bytes([0x02, 20]) + bytes(20)        # INTEGER (0x02) ไม่ใช่ SEQUENCE
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    def test_wrong_tag_octet_string(self):
+        raw = bytes([0x04, 20]) + bytes(20)        # OCTET STRING (0x04)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    def test_wrong_tag_set(self):
+        raw = bytes([0x31, 20]) + bytes(20)        # SET (0x31)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    # ── edge cases ────────────────────────────────────────────────────────────
+
+    def test_empty_bytes(self):
+        self.assertFalse(is_valid_der_sequence(b"", min_len=11))
+
+    def test_single_byte_tag_only(self):
+        self.assertFalse(is_valid_der_sequence(bytes([0x30]), min_len=11))
+
+    def test_min_len_enforcement(self):
+        # 12 bytes valid structurally แต่ fail ถ้า min_len=50
+        raw = bytes([0x30, 10]) + bytes(10)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=50))
+        self.assertTrue(is_valid_der_sequence(raw, min_len=11))
+
+    def test_minimal_der_sequence_helper_passes(self):
+        # fixture helper ต้อง generate ของที่ผ่าน validator เสมอ
+        for size in (20, 50, 127, 128, 200):
+            raw = minimal_der_sequence(size)
+            self.assertTrue(
+                is_valid_der_sequence(raw, min_len=11),
+                f"minimal_der_sequence({size}) ควรผ่าน validator"
+            )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# E. Archive Readiness Score (ไม่ต้องใช้ engine)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestArchiveReadinessScore(unittest.TestCase):
+    """ตรวจ calculate_archive_readiness_score() สอดคล้องกับ XAdESAExtractor"""
+
+    def test_full_score(self):
+        # 2 certs + 1 revocation → 0.5 + 0.5 = 1.0
+        self.assertAlmostEqual(
+            calculate_archive_readiness_score(2, 1), 1.0
+        )
+
+    def test_single_cert_single_rev(self):
+        # 1 cert (0.25) + 1 rev (0.5) = 0.75 < 0.8 threshold
+        self.assertAlmostEqual(
+            calculate_archive_readiness_score(1, 1), 0.75
+        )
+
+    def test_no_cert_no_rev(self):
+        self.assertAlmostEqual(
+            calculate_archive_readiness_score(0, 0), 0.0
+        )
+
+    def test_cert_capped_at_half(self):
+        # cert_count=10 → capped at 0.5
+        score = calculate_archive_readiness_score(10, 1)
+        self.assertAlmostEqual(score, 1.0)
+
+    def test_rev_capped_at_half(self):
+        score = calculate_archive_readiness_score(2, 100)
+        self.assertAlmostEqual(score, 1.0)
+
+    def test_threshold_boundary(self):
+        # score >= 0.8 → is_archival_ready per xades_a.py
+        self.assertGreaterEqual(
+            calculate_archive_readiness_score(2, 1), 0.8
+        )
+        self.assertLess(
+            calculate_archive_readiness_score(1, 1), 0.8
+        )
 
 
 if __name__ == "__main__":
