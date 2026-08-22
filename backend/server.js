@@ -25,6 +25,7 @@ import {
 } from './omise-payment.js';
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { createPRSystem } from './pr-communications.js';
+import { createConsentRouter } from './consent.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -1360,6 +1361,9 @@ Warnings: ${recentWarns.slice(0,3).map(w=>w.message).join(' | ') || 'ไม่�
   }
   return res.json({ status:'healthy', health_score:78, issues:[], recommendations:['ระบบทำงานปกติ'], auto_fixed:[], source:'fallback', ts:new Date().toISOString() });
 });
+
+// ─── PDPA Consent Management — พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 ────────
+app.use('/api/consent', createConsentRouter(WRITE_DATA_DIR));
 
 // ─── Health check (v2) ────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

@@ -41,6 +41,7 @@ import CommandCenterPage from './pages/corporate/CommandCenterPage';
 import ProducerOnboardingPage from './pages/ProducerOnboardingPage';
 import ConsumerPortalPage from './pages/ConsumerPortalPage';
 import IntermediaryPortalPage from './pages/IntermediaryPortalPage';
+import ConsentBanner from './components/ConsentBanner';
 import ProducerAdminPage from './pages/ProducerAdminPage';
 import ErrorHunterPage from './pages/ErrorHunterPage';
 import CreativeGuildPage from './pages/CreativeGuildPage';
@@ -84,6 +85,7 @@ function App() {
       <ToastProvider>
         <Router>
           <ScrollToTop />
+          <ConsentBanner />
           <Routes>
             <Route
               path="/login"
