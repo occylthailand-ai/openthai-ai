@@ -234,16 +234,49 @@ def _build_tess_config(preset: OCRPreset) -> str:
     return " ".join(parts)
 
 
+def _ocr_with_confidence(
+    img,
+    lang: str,
+    tess_config: str,
+    conf_threshold: int = 60,
+) -> tuple[str, float, list[str]]:
+    """
+    OCR พร้อม confidence score ต่อคำ
+    คืน: (text, avg_confidence, low_conf_words)
+    conf_threshold: คำที่ต่ำกว่านี้จะถูก flag ให้ Human Review
+    """
+    import pytesseract
+    from pytesseract import Output
+
+    data = pytesseract.image_to_data(
+        img, lang=lang, config=tess_config, output_type=Output.DICT
+    )
+    words_conf = [
+        (str(t).strip(), int(c))
+        for t, c in zip(data["text"], data["conf"])
+        if str(t).strip() and int(c) != -1
+    ]
+    if not words_conf:
+        return "", 0.0, []
+
+    text = pytesseract.image_to_string(img, lang=lang, config=tess_config).strip()
+    valid = [(t, c) for t, c in words_conf if c >= 0]
+    avg_conf = sum(c for _, c in valid) / len(valid) if valid else 0.0
+    low_conf = [t for t, c in valid if 0 < c < conf_threshold]
+    return text, avg_conf, low_conf
+
+
 def process_all_images(
     assets_dir: Path,
     output_file: Path,
     lang: str = "tha+eng",
     recursive: bool = False,
     do_preprocess: bool = True,
-    preset: OCRPreset = PRESETS["auto"],
+    preset: OCRPreset = PRESETS["invoice"],
+    conf_threshold: int = 60,
+    show_confidence: bool = True,
 ) -> None:
     from PIL import Image
-    import pytesseract
 
     if not assets_dir.exists():
         assets_dir.mkdir(parents=True, exist_ok=True)
@@ -262,12 +295,13 @@ def process_all_images(
     tess_config = _build_tess_config(preset)
     print(f"[START] พบ {len(image_files)} ไฟล์")
     print(f"        lang={lang} | config='{tess_config}' | preprocess={do_preprocess}")
-    print(f"        preset: {preset.description}")
+    print(f"        preset: {preset.description} | conf_threshold={conf_threshold}%")
 
     results: list[str] = []
     success = 0
     failed = 0
     empty = 0
+    human_review = 0
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     for idx, img_path in enumerate(image_files, start=1):
@@ -278,20 +312,49 @@ def process_all_images(
             orig_size = img.size
             if do_preprocess:
                 img = _preprocess(img, preset)
-            text = pytesseract.image_to_string(img, lang=lang, config=tess_config).strip()
-            char_count = len(text)
-            status = "ok" if char_count > 0 else "empty"
-            if status == "empty":
-                empty += 1
+
+            if show_confidence:
+                text, avg_conf, low_conf = _ocr_with_confidence(
+                    img, lang, tess_config, conf_threshold
+                )
             else:
+                import pytesseract
+                text = pytesseract.image_to_string(img, lang=lang, config=tess_config).strip()
+                avg_conf = -1.0
+                low_conf = []
+
+            char_count = len(text)
+            needs_review = avg_conf >= 0 and avg_conf < conf_threshold
+            if needs_review:
+                human_review += 1
+
+            if char_count == 0:
+                status = "empty"
+                empty += 1
+            elif needs_review:
+                status = "review"
                 success += 1
-            print(f"→ {char_count:,} ตัวอักษร [{status}]")
-            results.append(
-                f"## ไฟล์ที่ {idx}: `{rel}`\n\n"
+            else:
+                status = "ok"
+                success += 1
+
+            conf_str = f"{avg_conf:.1f}%" if avg_conf >= 0 else "N/A"
+            print(f"→ {char_count:,} ตัวอักษร | conf {conf_str} [{status}]")
+
+            # สร้าง section Markdown
+            meta = (
                 f"> ขนาดภาพ: {orig_size[0]}×{orig_size[1]}px"
                 f" | ตัวอักษร: {char_count:,}"
+                f" | confidence: **{conf_str}**"
                 f" | สถานะ: `{status}`"
-                f" | config: `{tess_config}`\n\n"
+            )
+            if needs_review and low_conf:
+                meta += f"\n> ⚠️ คำที่ confidence ต่ำ (< {conf_threshold}%): `{', '.join(low_conf[:10])}`"
+                if len(low_conf) > 10:
+                    meta += f" ... (+{len(low_conf)-10} คำ)"
+
+            results.append(
+                f"## ไฟล์ที่ {idx}: `{rel}`\n\n{meta}\n\n"
                 f"```text\n{text if text else '(ว่าง — ไม่พบข้อความ)'}\n```\n\n---\n"
             )
         except Exception as exc:
@@ -312,18 +375,18 @@ def process_all_images(
             f"| ภาษา OCR | `{lang}` |\n"
             f"| Tesseract config | `{tess_config}` |\n"
             f"| Preset | {preset.description} |\n"
-            f"| สำเร็จ (มีข้อความ) | {success} |\n"
-            f"| ว่าง (ไม่พบข้อความ) | {empty} |\n"
+            f"| Confidence threshold | {conf_threshold}% |\n"
+            f"| สำเร็จ (ok) | {success - human_review} |\n"
+            f"| ต้องตรวจ Human Review | {human_review} |\n"
+            f"| ว่าง | {empty} |\n"
             f"| ล้มเหลว | {failed} |\n"
             f"| รวมทั้งหมด | {len(image_files)} |\n\n"
             "---\n\n"
         )
         f.writelines(results)
 
-    print(f"\n[DONE] สำเร็จ {success} | ว่าง {empty} | ล้มเหลว {failed} | รวม {len(image_files)}")
+    print(f"\n[DONE] ok {success - human_review} | review {human_review} | ว่าง {empty} | error {failed}")
     print(f"       ผลลัพธ์: {output_file}")
-
-    # แนะนำ preset อื่นถ้ามีภาพว่างมาก
     if empty > len(image_files) // 2:
         print("\n[TIP] มีภาพว่างมาก ลองเปลี่ยน preset:")
         for name, p in PRESETS.items():
@@ -353,6 +416,10 @@ def _parse_args() -> argparse.Namespace:
                    help="ข้ามการปรับภาพก่อน OCR")
     p.add_argument("--preset", choices=list(PRESETS.keys()), default="invoice",
                    help="เลือก preset ตามประเภทเอกสาร (default: invoice)")
+    p.add_argument("--conf-threshold", type=int, default=60, metavar="PCT",
+                   help="Confidence %% ขั้นต่ำ — ต่ำกว่านี้ flag Human Review (default: 60)")
+    p.add_argument("--no-confidence", action="store_true",
+                   help="ข้าม confidence scoring (เร็วกว่า — ไม่แสดง review flag)")
     # Override แต่ละค่า (ใช้แทน preset ถ้าระบุ)
     p.add_argument("--psm", type=int,
                    help="Tesseract PSM mode 0-13 (ข้าม preset)")
@@ -393,4 +460,6 @@ if __name__ == "__main__":
         recursive=args.recursive,
         do_preprocess=not args.no_preprocess,
         preset=preset,
+        conf_threshold=args.conf_threshold,
+        show_confidence=not args.no_confidence,
     )
