@@ -46,6 +46,16 @@ from helpers_asn1_der_extra import (
     validate_der_boolean_content,
     validate_der_generalized_time,
 )
+from helpers_rfc3161 import (
+    ID_SIGNED_DATA,
+    ID_CT_TST_INFO,
+    OID_SIGNED_DATA_TLV,
+    OID_TST_INFO_TLV,
+    has_outer_signed_data_oid,
+    has_encap_tst_info_oid,
+    extract_tst_oids,
+    build_minimal_tst_der,
+)
 
 # ── xades-engine import (fallback) ────────────────────────────────────────────
 
@@ -683,6 +693,109 @@ class TestDerGeneralizedTime(unittest.TestCase):
 
     def test_second_60(self):
         self.assertFalse(validate_der_generalized_time("20250822120060Z"))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# G. RFC 3161 TimeStampToken OID layers (ไม่ต้องใช้ engine)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestTSTTokenOidLayers(unittest.TestCase):
+    """
+    ตรวจ OID สองชั้นใน RFC 3161 TimeStampToken
+      Outer ContentInfo.contentType = id-signedData (1.2.840.113549.1.7.2)
+      Inner eContentType            = id-ct-TSTInfo (1.2.840.113549.1.9.16.1.4)
+    """
+
+    def setUp(self):
+        self.tst_der = build_minimal_tst_der()
+
+    # ── fixture sanity ────────────────────────────────────────────────────────
+
+    def test_fixture_is_valid_der_sequence(self):
+        self.assertTrue(
+            is_valid_der_sequence(self.tst_der, min_len=11),
+            "build_minimal_tst_der() ต้องผ่าน DER structure check"
+        )
+
+    def test_fixture_starts_with_sequence_tag(self):
+        self.assertEqual(self.tst_der[0], 0x30)
+
+    # ── OID layer detection (extract_tst_oids) ────────────────────────────────
+
+    def test_outer_content_type_is_signed_data(self):
+        oids = extract_tst_oids(self.tst_der)
+        self.assertEqual(
+            oids["content_type"], ID_SIGNED_DATA,
+            "outer ContentInfo.contentType ต้องเป็น id-signedData"
+        )
+
+    def test_encap_content_type_is_tst_info(self):
+        oids = extract_tst_oids(self.tst_der)
+        self.assertEqual(
+            oids["encap_content_type"], ID_CT_TST_INFO,
+            "eContentType ต้องเป็น id-ct-TSTInfo"
+        )
+
+    # ── byte-level presence checks ────────────────────────────────────────────
+
+    def test_has_outer_signed_data_oid_true(self):
+        self.assertTrue(has_outer_signed_data_oid(self.tst_der))
+
+    def test_has_encap_tst_info_oid_true(self):
+        self.assertTrue(has_encap_tst_info_oid(self.tst_der))
+
+    # ── negative: wrong outer OID ─────────────────────────────────────────────
+
+    def test_wrong_outer_oid_detected(self):
+        # id-data (1.2.840.113549.1.7.1) ต่างจาก id-signedData ที่ byte สุดท้าย
+        bad_outer = OID_SIGNED_DATA_TLV[:-1] + bytes([0x01])  # .7.1 ไม่ใช่ .7.2
+        bad_tst   = self.tst_der.replace(OID_SIGNED_DATA_TLV, bad_outer)
+        self.assertFalse(
+            has_outer_signed_data_oid(bad_tst),
+            "id-data ต้องไม่ผ่าน outer OID check"
+        )
+        oids = extract_tst_oids(bad_tst)
+        self.assertNotEqual(oids["content_type"], ID_SIGNED_DATA)
+
+    # ── negative: wrong inner OID ─────────────────────────────────────────────
+
+    def test_wrong_encap_oid_detected(self):
+        # เปลี่ยน id-ct-TSTInfo byte สุดท้าย (.4 → .99) ทำให้ match ล้มเหลว
+        bad_inner = OID_TST_INFO_TLV[:-1] + bytes([0x63])  # 0x63 = 99
+        bad_tst   = self.tst_der.replace(OID_TST_INFO_TLV, bad_inner)
+        self.assertFalse(
+            has_encap_tst_info_oid(bad_tst),
+            "OID ที่แก้ไขต้องไม่ผ่าน encap OID check"
+        )
+        oids = extract_tst_oids(bad_tst)
+        self.assertNotEqual(oids["encap_content_type"], ID_CT_TST_INFO)
+
+    # ── negative: empty input ─────────────────────────────────────────────────
+
+    def test_empty_bytes_returns_none_oids(self):
+        oids = extract_tst_oids(b"")
+        self.assertIsNone(oids["content_type"])
+        self.assertIsNone(oids["encap_content_type"])
+
+    def test_empty_bytes_no_outer_oid(self):
+        self.assertFalse(has_outer_signed_data_oid(b""))
+
+    def test_empty_bytes_no_encap_oid(self):
+        self.assertFalse(has_encap_tst_info_oid(b""))
+
+    # ── OID encoding constants ────────────────────────────────────────────────
+
+    def test_oid_signed_data_tlv_length(self):
+        # 06 tag (1) + 09 length (1) + 9 content bytes = 11 bytes
+        self.assertEqual(len(OID_SIGNED_DATA_TLV), 11)
+        self.assertEqual(OID_SIGNED_DATA_TLV[0], 0x06)
+        self.assertEqual(OID_SIGNED_DATA_TLV[1], 0x09)
+
+    def test_oid_tst_info_tlv_length(self):
+        # 06 tag (1) + 0b length (1) + 11 content bytes = 13 bytes
+        self.assertEqual(len(OID_TST_INFO_TLV), 13)
+        self.assertEqual(OID_TST_INFO_TLV[0], 0x06)
+        self.assertEqual(OID_TST_INFO_TLV[1], 0x0b)
 
 
 if __name__ == "__main__":
