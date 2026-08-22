@@ -95,7 +95,12 @@ def is_valid_der_sequence(raw_bytes: bytes, min_len: int = 50) -> bool:
             return False
         if len(raw_bytes) < 2 + n:    # bytes ไม่พอสำหรับ length field
             return False
+        if raw_bytes[2] == 0x00:       # leading zero — DER ห้าม (non-minimal)
+            return False
         content_len = int.from_bytes(raw_bytes[2:2 + n], "big")
+        # DER minimal encoding: ถ้า content_len ≤ 127 ต้องใช้ short-form
+        if content_len <= 0x7F:
+            return False
         header_len  = 2 + n
 
     total_len = header_len + content_len
@@ -201,6 +206,14 @@ def minimal_der_sequence(payload_len: int = 20) -> bytes:
 
 
 # ── Scoring helper (mirrors xades_a.py formula) ───────────────────────────────
+
+
+def has_archival_evidence(cert_count: int, rev_count: int) -> bool:
+    """
+    XAdES-XL/A readiness gate:
+    ต้องมีทั้ง CertificateValues และ RevocationValues อย่างน้อยอย่างละ 1
+    """
+    return cert_count > 0 and rev_count > 0
 
 
 def calculate_archive_readiness_score(cert_count: int, rev_count: int) -> float:

@@ -33,6 +33,7 @@ from helpers_der import (
     assert_parseable_der,
     minimal_der_sequence,
     try_parse_asn1,
+    has_archival_evidence,
     calculate_archive_readiness_score,
     needs_engine as _needs_engine_mark,
     needs_asn1  as _needs_asn1_mark,
@@ -482,6 +483,25 @@ class TestDerStructureValidation(unittest.TestCase):
                 f"minimal_der_sequence({size}) ควรผ่าน validator"
             )
 
+    # ── DER encoding rules (non-minimal / leading zero) ──────────────────────
+
+    def test_long_form_indefinite_0x80(self):
+        # 0x80 = indefinite length — BER แต่ไม่ใช่ DER
+        raw = bytes([0x30, 0x80]) + bytes(30)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    def test_long_form_non_minimal_0x81_0x7F(self):
+        # 0x81 0x7F encodes 127 ใน long-form
+        # DER กำหนดให้ใช้ short-form (0x30 0x7F) เท่านั้นเมื่อ length ≤ 127
+        raw = bytes([0x30, 0x81, 0x7F]) + bytes(127)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
+    def test_long_form_leading_zero_0x82_0x00_0x80(self):
+        # 0x82 0x00 0x80 = leading zero ใน 2-byte length (ค่า = 128)
+        # DER กำหนดห้าม leading zero: ต้องเขียน 0x81 0x80 แทน
+        raw = bytes([0x30, 0x82, 0x00, 0x80]) + bytes(128)
+        self.assertFalse(is_valid_der_sequence(raw, min_len=11))
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # E. Archive Readiness Score (ไม่ต้องใช้ engine)
@@ -524,6 +544,21 @@ class TestArchiveReadinessScore(unittest.TestCase):
         self.assertLess(
             calculate_archive_readiness_score(1, 1), 0.8
         )
+
+    # ── has_archival_evidence gate ────────────────────────────────────────────
+
+    def test_evidence_true_when_both_present(self):
+        self.assertTrue(has_archival_evidence(1, 1))
+        self.assertTrue(has_archival_evidence(3, 2))
+
+    def test_evidence_false_no_cert(self):
+        self.assertFalse(has_archival_evidence(0, 1))
+
+    def test_evidence_false_no_rev(self):
+        self.assertFalse(has_archival_evidence(1, 0))
+
+    def test_evidence_false_both_zero(self):
+        self.assertFalse(has_archival_evidence(0, 0))
 
 
 if __name__ == "__main__":
