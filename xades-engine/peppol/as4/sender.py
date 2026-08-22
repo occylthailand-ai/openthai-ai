@@ -158,15 +158,25 @@ class AS4Sender:
 
 def lookup_access_point(receiver_peppol_id: str, doc_type_id: str, environment: str = "test") -> str:
     """
-    ค้นหา Access Point URL ของผู้รับผ่าน Peppol SMP
+    ค้นหา Access Point URL ของผู้รับผ่าน DNS SML → SMP (Peppol 4-Corner)
     Returns: endpoint URL
+
+    ใช้ PeppolSMPResolver (DNS-based) ก่อน — fallback ไปยัง direct SMP URL
+    หาก resolver ล้มเหลวหรือ dependencies ไม่ครบ
     """
+    from .smp_resolver import PeppolSMPResolver
+
+    resolver = PeppolSMPResolver(environment=environment)
+    result = resolver.resolve(receiver_peppol_id, doc_type_id)
+
+    if result.get("as4_endpoint"):
+        return result["as4_endpoint"]
+
+    # Legacy fallback: direct SMP URL (เดิม)
     smp_base = PEPPOL_TEST_SMP if environment == "test" else PEPPOL_PROD_SMP
-    scheme, value = receiver_peppol_id.split(":", 1)
-    smp_url = f"{smp_base}/{scheme}:{value}/services/{doc_type_id}"
+    smp_url = f"{smp_base}/{receiver_peppol_id}/services/{doc_type_id}"
     response = httpx.get(smp_url, timeout=10.0)
     response.raise_for_status()
-    # Parse SMP XML response — extract EndpointURI
     root = etree.fromstring(response.content)
     ns = {'smp': 'http://busdox.org/serviceMetadata/publishing/1.0/'}
     endpoints = root.findall('.//smp:EndpointURI', ns)
