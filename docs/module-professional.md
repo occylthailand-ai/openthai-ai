@@ -661,3 +661,64 @@
 4. **ยังไม่ได้สัมภาษณ์ผู้ใช้จริง** ความเจ็บปวดที่เขียนไว้มาจากการวิเคราะห์ลักษณะงาน ต้องยืนยันกับผู้ใช้จริงก่อนสร้าง
 5. **ยังไม่ได้ออกแบบหน้าจอและ flow การอนุมัติ** ที่เป็นรูปธรรม
 6. **ยังไม่ได้เขียนเป็นเนื้อหาหนังสือ** — การรวมเข้าหนังสือเป็นบทที่ 7 และการปรับบทที่ 4 จาก 5 กลุ่มเป็น 6 กลุ่ม เป็นงาน 2.1 ของ `content-localization`
+
+---
+
+# 👔 สายที่ 6: HR / บุคลากรและองค์กร (เพิ่มเติม 23 ส.ค. 2569)
+
+> Blueprint นี้มาจาก HR Framework 13 หมวดที่พบในคลังความรู้ของทีม
+> ผู้ใช้หลัก: HR Manager, HRBP, ผู้บริหาร People Analytics, Talent Acquisition
+
+**สภาที่เกี่ยวข้อง:** ไม่มีสภาวิชาชีพบังคับ แต่มีกฎหมายแรงงานกำกับ
+**กฎหมายหลัก:** พ.ร.บ.คุ้มครองแรงงาน พ.ศ. 2541 · พ.ร.บ.แรงงานสัมพันธ์ พ.ศ. 2518 · PDPA (ข้อมูลพนักงาน)
+*(ต้องตรวจสอบเลขมาตราจากตัวบทก่อนเผยแพร่)*
+
+## 6.1 HR Framework 13 หมวดที่ OpenThai AI ช่วยได้
+
+| หมวด | งานที่ AI ช่วยได้ | ระดับ |
+|---|---|---|
+| 01 HR Framework & 3-Layer Model | สรุป framework อธิบายให้ผู้บริหารเข้าใจ สร้าง visual 1 หน้า | L1 |
+| 02 HR Strategy & Governance | ร่างนโยบาย HR ตามบริบทองค์กร แนะนำ best practice | L2 |
+| 03 Organization Design & Job Architecture | ช่วยออกแบบโครงสร้างองค์กร เปรียบเทียบ Job Family กับ benchmark ตลาด | L2 |
+| 04 HRIS & Process Automation | เขียน spec ระบบ HRIS วิเคราะห์ process ที่ automate ได้ | L1 |
+| 05 Talent Acquisition System | ร่าง Job Description มาตรฐาน สร้าง Interview scorecard | L1–L2 |
+| 06 Onboarding System | สร้าง onboarding checklist แผน 30/60/90 วัน | L1 |
+| 07 Performance Management | ร่าง KPI template ตาม OKR / BSC ช่วย calibrate | L2 |
+| 08 Learning & Development (L&D) | สร้าง learning path ตาม competency gap วิเคราะห์ TNA | L2 |
+| 09 Compensation & Benefits | เปรียบเทียบโครงสร้างค่าตอบแทนกับ market (ถ้ามีข้อมูลใน RAG) | L2 |
+| 10 Employee Engagement & Culture | สร้างแบบสำรวจ engagement วิเคราะห์ผลและสร้าง action plan | L2 |
+| 11 Employee Relations & Compliance | ตรวจสอบนโยบายว่าสอดคล้องกฎหมายแรงงานหรือไม่ (ต้องผ่านกฎหมายตรวจ) | L2–L3 |
+| 12 Offboarding & Retention | สร้าง exit interview template วิเคราะห์ turnover pattern | L1–L2 |
+| 13 People Analytics & Roadmap | ช่วย query และตีความข้อมูล HR metrics สร้าง dashboard spec | L2 |
+
+## 6.2 Use Case ที่มีมูลค่าสูงสุดสำหรับ HR ไทย
+
+| # | งาน | กลไกที่ช่วยได้ | ข้อจำกัด |
+|---|---|---|---|
+| H1 | ร่าง Job Description 50 ตำแหน่งพร้อมกัน | batch generation + template | HR ต้องตรวจและปรับก่อนโพสต์ |
+| H2 | แปลนโยบาย HR จาก EN→TH คงศัพท์แรงงานไทย | Thai-first translation | ต้องตรวจสอบกับกฎหมายไทย |
+| H3 | สร้าง onboarding document ชุดใหม่จาก template | ลดเวลาจาก 3 วัน เหลือ 3 ชั่วโมง | ต้องผ่าน HR Manager approve |
+| H4 | วิเคราะห์ turnover จาก exit interview ที่ HR อัพโหลด | text analysis → insight | ข้อมูลพนักงาน ต้องจัดการตาม PDPA |
+| H5 | ร่าง Performance Improvement Plan (PIP) | ลดเวลาเขียนตั้งแต่ต้น | ต้องผ่าน HR + Legal approve ก่อนส่ง |
+
+## 6.3 เส้นแบ่ง — สิ่งที่ AI ห้ามทำในสาย HR
+
+| ❌ ห้าม | เหตุผล |
+|---|---|
+| ตัดสินใจไล่ออก เลื่อนขั้น หรือโยกย้ายพนักงาน | เป็นการใช้ดุลพินิจของผู้จัดการ มีผลทางกฎหมาย |
+| เข้าถึงข้อมูลเงินเดือนรายบุคคลโดยไม่มี consent | PDPA มาตรา 19 — ต้องมีฐานทางกฎหมาย |
+| ตีความข้อพิพาทแรงงานหรือให้ความเห็นทางกฎหมาย | ต้องผ่านทนายความด้านแรงงาน |
+| สร้าง blacklist พนักงาน หรือโปรไฟล์ที่อาจเลือกปฏิบัติ | ขัด พ.ร.บ.คุ้มครองแรงงาน + อาจเข้าข่ายละเมิด |
+
+## 6.4 ข้อมูลที่ต้องมีใน RAG สาย HR
+
+- กฎหมายแรงงานไทยฉบับปัจจุบัน (พ.ร.บ.คุ้มครองแรงงาน + ประกาศกระทรวง)
+- มาตรฐาน PDPA สำหรับข้อมูลพนักงาน (หลักเกณฑ์ของ PDPC)
+- ข้อมูล salary benchmark ที่มีสิทธิ์ใช้ (ถ้ามี)
+- template นโยบาย HR มาตรฐานของแต่ละองค์กร (เพิ่มโดยผู้ใช้)
+
+## 6.5 สิ่งที่ยังต้องทำ
+
+- [ ] สัมภาษณ์ HR Manager จากอย่างน้อย 3 บริษัทขนาดต่าง ๆ ก่อน build
+- [ ] ตรวจสอบว่า Use Case H4/H5 ต้องการ legal sign-off ก่อนปล่อยหรือไม่
+- [ ] ออกแบบ consent flow สำหรับข้อมูลพนักงานที่เข้าสู่ระบบ
