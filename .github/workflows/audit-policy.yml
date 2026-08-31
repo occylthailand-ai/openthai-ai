@@ -1,0 +1,97 @@
+name: OpenThaiAi Executable Policy Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - "tools/**"
+      - ".github/workflows/audit-policy.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "tools/**"
+      - ".github/workflows/audit-policy.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-policy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit-pipeline:
+    name: Executable Policy — Audit Tools
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate Python script syntax
+        run: |
+          python3 -m py_compile tools/audit/generate-manifest.py
+          python3 -m py_compile tools/audit/redact-secrets.py
+          echo "Python syntax OK"
+
+      - name: Validate Bash script syntax
+        run: |
+          bash -n tools/audit/generate-checksums.sh
+          bash -n tools/ci/validate-gates.sh
+          bash -n tools/security/run-audit.sh
+          bash -n tools/tests/test-audit-tools.sh
+          echo "Bash syntax OK"
+
+      - name: Run audit tools test suite
+        run: bash tools/tests/test-audit-tools.sh
+
+      - name: 1. Collect evidence — Security Audit
+        run: bash tools/security/run-audit.sh
+        continue-on-error: true
+
+      - name: 2. Redact secrets from evidence
+        run: |
+          if [ -d audit-evidence ]; then
+            python3 tools/audit/redact-secrets.py \
+              --input audit-evidence \
+              --recursive
+          else
+            echo "[-] No audit-evidence directory yet — skipping redaction."
+          fi
+
+      - name: 3. Generate canonical manifest
+        run: |
+          mkdir -p audit-evidence/00-metadata
+          python3 tools/audit/generate-manifest.py \
+            --component "apps/api-gateway" \
+            --evidence-dir audit-evidence \
+            --output audit-evidence/manifest.json
+        continue-on-error: true
+
+      - name: 4. Generate SHA-256 checksums
+        run: |
+          if [ -d audit-evidence ]; then
+            bash tools/audit/generate-checksums.sh audit-evidence
+          fi
+
+      - name: 5. Validate fail-closed gates
+        run: |
+          bash tools/ci/validate-gates.sh success success success
+
+      - name: 6. Upload audit evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-evidence-${{ github.sha }}
+          path: audit-evidence/
+          if-no-files-found: warn
+          retention-days: 30

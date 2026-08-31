@@ -5,16 +5,19 @@ tools/audit/redact-secrets.py
 Redacts sensitive secrets from audit evidence files before they are
 packaged into a CI artifact or stored long-term.
 
+Covers: general KEY=value / JSON pairs, Bearer/JWT tokens, GitHub tokens,
+OpenAI API keys, AWS Access Key IDs, and PEM private keys.
+
 Usage:
-    # Redact a single file
+    # Single file
     python3 tools/audit/redact-secrets.py --input path/to/file.json
 
-    # Redact an entire directory recursively
+    # Entire directory (recursive)
     python3 tools/audit/redact-secrets.py --input audit-evidence/ --recursive
 
 Exit codes:
-    0  processing completed (including graceful skips)
-    1  unexpected error during processing
+    0  processing completed
+    1  path not found or unexpected error
 """
 
 import argparse
@@ -22,36 +25,41 @@ import os
 import re
 import sys
 
-SENSITIVE_KEYS = [
-    "PASSWORD",
-    "PASSWD",
-    "SECRET",
-    "TOKEN",
-    "API_KEY",
-    "APIKEY",
-    "ACCESS_KEY",
-    "PRIVATE_KEY",
-    "DATABASE_URL",
-    "AUTHORIZATION",
-    "COOKIE",
-    "SESSION",
-    "POSTGRES_PASSWORD",
-    "REDIS_URL",
-    "AUTH",
+# Each entry: (compiled_pattern, replacement_string_or_None)
+# None = use the group-preserving replacer for KEY=value patterns
+_PATTERNS: list[tuple[re.Pattern, str | None]] = [
+    # General keywords: KEY=value, KEY = value, "KEY": "value", KEY: 'value'
+    (
+        re.compile(
+            r"(?i)(password|passwd|secret|token|api_key|apikey|access_key"
+            r"|database_url|authorization|cookie|session|postgres_password"
+            r"|redis_url|private_key|auth)"
+            # Optional closing key-quote handles JSON "KEY": "value" format
+            # where PASSWORD is followed by " (key closing quote) before :
+            r"\"?(\s*=\s*|\s*:\s*['\"]?)([^'\"\n\s}]+)",
+        ),
+        None,  # group-preserving
+    ),
+    # ****** JWT tokens
+    (re.compile(r"(?i)bearer\s+[a-zA-Z0-9_\-.]+"), "[REDACTED_BEARER]"),
+    # GitHub tokens: ghp_, gho_, ghu_, ghs_, ghr_
+    (re.compile(r"gh[pousr]_[a-zA-Z0-9]{36,}"), "[REDACTED_GH_TOKEN]"),
+    # OpenAI API keys
+    (re.compile(r"sk-[a-zA-Z0-9]{20,}"), "[REDACTED_OPENAI_KEY]"),
+    # AWS Access Key IDs
+    (re.compile(r"AKIA[0-9A-Z]{16}"), "[REDACTED_AWS_KEY]"),
+    # PEM private keys (multi-line)
+    (
+        re.compile(
+            r"-----BEGIN[A-Z\s]+PRIVATE KEY-----[\s\S]*?-----END[A-Z\s]+PRIVATE KEY-----",
+            re.DOTALL,
+        ),
+        "[REDACTED_PRIVATE_KEY]",
+    ),
 ]
 
-# shell/env style:  KEY=value  or  KEY="value"
-_PATTERN_ENV = re.compile(
-    r"(?P<key>" + "|".join(re.escape(k) for k in SENSITIVE_KEYS) + r")"
-    r"(?P<eq>\s*=\s*)(?P<val>['\"]?[^'\"\n\s]+['\"]?)",
-    re.IGNORECASE,
-)
-# JSON style:  "key": "value"
-_PATTERN_JSON = re.compile(
-    r'(?P<key>"(?:' + "|".join(re.escape(k) for k in SENSITIVE_KEYS) + r')"'
-    r"\s*:\s*\")(?P<val>[^\"]*)(?P<close>\")",
-    re.IGNORECASE,
-)
+# Directories to always skip (integrity checksums must not be modified)
+_SKIP_DIRS = {"05-integrity", "04-integrity"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -60,72 +68,80 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--input", required=True,
-        help="Path to audit-evidence directory or a single file"
+        help="Path to audit-evidence directory or a single file",
     )
     parser.add_argument(
         "--recursive", action="store_true",
-        help="Recursively process all files in the directory"
+        help="Recursively process all files in the directory",
     )
     return parser.parse_args()
 
 
+def _group_replacer(match: re.Match) -> str:
+    groups = match.groups()
+    if len(groups) >= 3:
+        return f"{groups[0]}{groups[1]}[REDACTED]"
+    return "[REDACTED]"
+
+
 def redact_content(text: str) -> str:
-    text = _PATTERN_ENV.sub(r"\g<key>\g<eq>[REDACTED]", text)
-    text = _PATTERN_JSON.sub(r"\g<key>[REDACTED]\g<close>", text)
+    for pattern, replacement in _PATTERNS:
+        if replacement is None:
+            text = pattern.sub(_group_replacer, text)
+        else:
+            text = pattern.sub(replacement, text)
     return text
 
 
-def process_file(filepath: str) -> None:
+def process_file(path: str) -> None:
     try:
-        with open(filepath, encoding="utf-8", errors="ignore") as f:
+        with open(path, encoding="utf-8", errors="ignore") as f:
             original = f.read()
     except OSError as exc:
-        print(f"[-] Cannot read {filepath}: {exc}")
+        print(f"[-] Cannot read {path}: {exc}")
         return
 
     sanitised = redact_content(original)
     if sanitised == original:
-        print(f"[~] No sensitive values found: {filepath}")
+        print(f"[~] No sensitive values found: {path}")
         return
 
-    with open(filepath, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write(sanitised)
-    print(f"[✓] Redacted secrets in file: {filepath}")
+    print(f"[✓] Redacted secrets in file: {path}")
 
 
-def main() -> int:
-    args = parse_args()
-    errors = 0
+def process_path(path: str, recursive: bool) -> None:
+    if os.path.isfile(path):
+        # Skip integrity directories even for single-file calls
+        if any(skip in path for skip in _SKIP_DIRS):
+            print(f"[-] Skipping integrity dir file: {path}")
+            return
+        process_file(path)
 
-    if os.path.isfile(args.input):
-        try:
-            process_file(args.input)
-        except Exception as exc:  # noqa: BLE001
-            print(f"[X] Error: {exc}", file=sys.stderr)
-            errors += 1
-
-    elif os.path.isdir(args.input):
-        if not args.recursive:
-            print(
-                f"[!] {args.input} is a directory — use --recursive to process all files."
-            )
-            return 1
-        for root, dirs, files in os.walk(args.input):
-            # Skip integrity directory to avoid corrupting checksums
-            dirs[:] = [d for d in dirs if d not in ("05-integrity", "04-integrity")]
+    elif os.path.isdir(path):
+        if not recursive:
+            print(f"[!] {path} is a directory — use --recursive to process all files.")
+            sys.exit(1)
+        for root, dirs, files in os.walk(path):
+            # Prune skip dirs in-place so os.walk doesn't descend into them
+            dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
             for filename in files:
                 filepath = os.path.join(root, filename)
                 try:
                     process_file(filepath)
                 except Exception as exc:  # noqa: BLE001
                     print(f"[-] Skipping {filepath}: {exc}")
-
     else:
-        print(f"[X] Path not found: {args.input}", file=sys.stderr)
-        return 1
+        print(f"[X] Path not found: {path}", file=sys.stderr)
+        sys.exit(1)
 
-    print("[✓] Secret redaction process completed.")
-    return 1 if errors else 0
+
+def main() -> int:
+    args = parse_args()
+    process_path(args.input, args.recursive)
+    print("[✓] Secret redaction process completed safely.")
+    return 0
 
 
 if __name__ == "__main__":

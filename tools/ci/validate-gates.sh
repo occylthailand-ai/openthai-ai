@@ -1,19 +1,17 @@
 #!/usr/bin/env bash
 # tools/ci/validate-gates.sh
 # ---------------------------
-# Fail-closed gate validator.  Validates that all three CI stage results
-# equal "success" (raw GitHub Actions output) and prints a final verdict.
+# Fail-closed gate validator with three-tier exit-code contract:
+#   0  VERIFIED_GREEN_BUILD — all gates success
+#   1  FAILED               — one or more gates failed/skipped
+#   2  CONFIG_ERROR         — gate status unresolved (unknown)
 #
-# Usage (positional args — matches GitHub Actions needs.*.result values):
+# Usage (positional args):
 #   bash tools/ci/validate-gates.sh <quality_result> <docker_result> <security_result>
 #
 # Usage (environment variables):
 #   QUALITY_GATE=success DOCKER_GATE=success SECURITY_GATE=success \
 #     bash tools/ci/validate-gates.sh
-#
-# Exit codes:
-#   0  VERIFIED_GREEN_BUILD
-#   1  FAILED
 set -euo pipefail
 
 QUALITY_GATE="${1:-${QUALITY_GATE:-unknown}}"
@@ -21,12 +19,22 @@ DOCKER_GATE="${2:-${DOCKER_GATE:-unknown}}"
 SECURITY_GATE="${3:-${SECURITY_GATE:-unknown}}"
 
 echo "========================================="
-echo "      OpenThaiAi Fail-Closed Gate        "
+echo " OpenThaiAi Fail-Closed Gate Engine      "
 echo "========================================="
 echo "Quality Gate       : ${QUALITY_GATE}"
 echo "Docker Integration : ${DOCKER_GATE}"
 echo "Security Gate      : ${SECURITY_GATE}"
 echo "-----------------------------------------"
+
+# Exit 2 — CONFIG_ERROR: any gate status is unresolved
+if [ "${QUALITY_GATE}" = "unknown" ] || \
+   [ "${DOCKER_GATE}"   = "unknown" ] || \
+   [ "${SECURITY_GATE}" = "unknown" ]; then
+  echo "[-] Configuration/Execution Error: Gate status unresolved (unknown)."
+  echo "FINAL VERDICT: CONFIG_ERROR"
+  echo "========================================="
+  exit 2
+fi
 
 FAIL=0
 
@@ -57,6 +65,7 @@ if [ "${FAIL}" -eq 0 ]; then
   echo "========================================="
   exit 0
 else
+  echo "[X] Gate failure detected."
   echo "FINAL VERDICT: FAILED"
   echo "========================================="
   exit 1

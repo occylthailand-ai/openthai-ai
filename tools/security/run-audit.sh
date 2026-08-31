@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # tools/security/run-audit.sh
 # ----------------------------
-# Runs pnpm (or npm) dependency security audit and writes JSON report.
-# Detects lockfile type automatically; fails if HIGH or CRITICAL vulnerabilities
-# are found.
+# Runs pnpm (or npm) dependency security audit.
+# Fails if HIGH or CRITICAL vulnerabilities are found.
+# Writes JSON report to audit-evidence/04-security/npm-audit.json.
 #
 # Usage:
 #   bash tools/security/run-audit.sh [--output-dir DIR] [--level LEVEL]
@@ -26,12 +26,12 @@ done
 
 mkdir -p "${AUDIT_DIR}"
 
-echo "[*] Running npm dependency security audit (--audit-level ${LEVEL})..."
+echo "[*] Running dependency security audit (--audit-level ${LEVEL})..."
 
 if [ -f "pnpm-lock.yaml" ]; then
   echo "[*] Detected pnpm lockfile — using pnpm audit"
   pnpm audit --audit-level "${LEVEL}" --json \
-    > "${AUDIT_DIR}/npm-audit.json" 2>/dev/null || {
+    > "${AUDIT_DIR}/npm-audit.json" || {
     echo "[X] High or critical vulnerabilities detected by pnpm audit!"
     exit 1
   }
@@ -39,19 +39,16 @@ if [ -f "pnpm-lock.yaml" ]; then
 elif [ -f "package-lock.json" ]; then
   echo "[*] Detected npm lockfile — using npm audit"
   npm audit --audit-level="${LEVEL}" --json \
-    > "${AUDIT_DIR}/npm-audit.json" 2>/dev/null || {
+    > "${AUDIT_DIR}/npm-audit.json" || {
     echo "[X] High or critical vulnerabilities detected by npm audit!"
     exit 1
   }
 
 else
   echo "[!] No lockfile found — writing empty-pass audit result."
-  cat > "${AUDIT_DIR}/npm-audit.json" << JSON_EOF
-{
-  "vulnerabilities": {},
-  "note": "No package manager lockfile found. Audit skipped safely."
-}
-JSON_EOF
+  printf '{"vulnerabilities": {}, "note": "No package manager lockfile found, audit skipped safely."}\n' \
+    > "${AUDIT_DIR}/npm-audit.json"
+  echo "[!] Audit completed with default status."
 fi
 
 echo "[✓] Security audit report saved to ${AUDIT_DIR}/npm-audit.json"
