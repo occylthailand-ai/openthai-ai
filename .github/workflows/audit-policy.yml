@@ -7,26 +7,40 @@ on:
       - develop
     paths:
       - "tools/**"
+      - "apps/api-gateway/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
       - ".github/workflows/audit-policy.yml"
   pull_request:
     branches:
       - main
+      - develop
     paths:
       - "tools/**"
+      - "apps/api-gateway/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
       - ".github/workflows/audit-policy.yml"
 
 permissions:
   contents: read
 
 concurrency:
-  group: audit-policy-${{ github.ref }}
+  group: audit-policy-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+
+# ──────────────────────────────────────────────────────────────────────────────
+# GATE 1 — QUALITY: syntax checks + test suite
+# ──────────────────────────────────────────────────────────────────────────────
 jobs:
-  audit-pipeline:
-    name: Executable Policy — Audit Tools
+  quality-gate:
+    name: "Gate 1 — Quality"
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -54,44 +68,203 @@ jobs:
       - name: Run audit tools test suite
         run: bash tools/tests/test-audit-tools.sh
 
-      - name: 1. Collect evidence — Security Audit
-        run: bash tools/security/run-audit.sh
-        continue-on-error: true
-
-      - name: 2. Redact secrets from evidence
+      - name: Collect quality evidence
+        if: always()
         run: |
-          if [ -d audit-evidence ]; then
-            python3 tools/audit/redact-secrets.py \
-              --input audit-evidence \
-              --recursive
+          mkdir -p audit-evidence/01-quality
+          echo "Test suite completed at $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            > audit-evidence/01-quality/test-run.txt
+
+      - name: Upload quality evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-quality-evidence-${{ github.sha }}
+          path: audit-evidence/01-quality/
+          if-no-files-found: warn
+          retention-days: 30
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# GATE 2 — DOCKER: build validation (stub — passes when Dockerfile exists)
+# ──────────────────────────────────────────────────────────────────────────────
+  docker-gate:
+    name: "Gate 2 — Docker Build Validation"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check Dockerfile exists
+        run: |
+          if [ -f "apps/api-gateway/Dockerfile" ]; then
+            echo "[✓] Dockerfile found: apps/api-gateway/Dockerfile"
           else
-            echo "[-] No audit-evidence directory yet — skipping redaction."
+            echo "[X] apps/api-gateway/Dockerfile not found"
+            exit 1
           fi
 
-      - name: 3. Generate canonical manifest
+      - name: Collect docker evidence
+        if: always()
+        run: |
+          mkdir -p audit-evidence/02-integration
+          ls -la apps/api-gateway/Dockerfile \
+            > audit-evidence/02-integration/dockerfile-check.txt 2>&1 || true
+          echo "Docker gate checked at $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            >> audit-evidence/02-integration/dockerfile-check.txt
+
+      - name: Upload docker evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-docker-evidence-${{ github.sha }}
+          path: audit-evidence/02-integration/
+          if-no-files-found: warn
+          retention-days: 30
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# GATE 3 — SECURITY: dependency audit + secret scan
+# ──────────────────────────────────────────────────────────────────────────────
+  security-gate:
+    name: "Gate 3 — Security"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Prepare security evidence directory
+        run: mkdir -p audit-evidence/04-security
+
+      - name: Run dependency audit
+        run: bash tools/security/run-audit.sh --output-dir audit-evidence/04-security
+
+      - name: Check for hardcoded secrets
+        run: |
+          if grep -rEn \
+            "(api_key|secret_key|password)\s*[:=]\s*['\"][a-zA-Z0-9_-]{20,}['\"]" \
+            tools/ apps/ --include="*.py" --include="*.sh" --include="*.ts" \
+            2>/dev/null \
+            | grep -vE "process\.env|REDACTED|PLACEHOLDER|example|xxx"; then
+            echo "[X] Hardcoded secret pattern detected"
+            exit 1
+          fi
+          echo "[✓] No hardcoded secrets found"
+
+      - name: Upload security evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-security-evidence-${{ github.sha }}
+          path: audit-evidence/04-security/
+          if-no-files-found: warn
+          retention-days: 30
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# GATE 4 — FINAL GATE: download all evidence, write manifest, validate
+# Uses ${{ needs.*.result }} — no hardcoded "success"
+# ──────────────────────────────────────────────────────────────────────────────
+  audit-final-gate:
+    name: "Gate 4 — Final Audit Gate"
+    if: always()
+    needs:
+      - quality-gate
+      - docker-gate
+      - security-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Create audit evidence directories
         run: |
           mkdir -p audit-evidence/00-metadata
+          mkdir -p audit-evidence/01-quality
+          mkdir -p audit-evidence/02-integration
+          mkdir -p audit-evidence/03-security
+          mkdir -p audit-evidence/04-security
+          mkdir -p audit-evidence/05-integrity
+
+      - name: Download quality evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: audit-quality-evidence-*
+          path: audit-evidence/01-quality
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Download docker evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: audit-docker-evidence-*
+          path: audit-evidence/02-integration
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Download security evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: audit-security-evidence-*
+          path: audit-evidence/04-security
+          merge-multiple: true
+        continue-on-error: true
+
+      - name: Redact secrets from evidence
+        run: |
+          python3 tools/audit/redact-secrets.py \
+            --input audit-evidence \
+            --recursive
+
+      - name: Generate canonical manifest
+        env:
+          QUALITY_RESULT: ${{ needs.quality-gate.result }}
+          DOCKER_RESULT: ${{ needs.docker-gate.result }}
+          SECURITY_RESULT: ${{ needs.security-gate.result }}
+        run: |
           python3 tools/audit/generate-manifest.py \
             --component "apps/api-gateway" \
             --evidence-dir audit-evidence \
             --output audit-evidence/manifest.json
         continue-on-error: true
 
-      - name: 4. Generate SHA-256 checksums
-        run: |
-          if [ -d audit-evidence ]; then
-            bash tools/audit/generate-checksums.sh audit-evidence
-          fi
+      - name: Generate SHA-256 checksums
+        run: bash tools/audit/generate-checksums.sh audit-evidence
 
-      - name: 5. Validate fail-closed gates
+      - name: Validate fail-closed gates
         run: |
-          bash tools/ci/validate-gates.sh success success success
+          bash tools/ci/validate-gates.sh \
+            "${{ needs.quality-gate.result }}" \
+            "${{ needs.docker-gate.result }}" \
+            "${{ needs.security-gate.result }}"
 
-      - name: 6. Upload audit evidence artifacts
+      - name: Upload unified audit bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: audit-evidence-${{ github.sha }}
+          name: audit-evidence-bundle-${{ github.sha }}
           path: audit-evidence/
           if-no-files-found: warn
-          retention-days: 30
+          retention-days: 90
