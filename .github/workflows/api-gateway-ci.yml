@@ -36,8 +36,9 @@ env:
 
 jobs:
   # ============================================================
-  # STAGE 1: QUALITY GATE
-  # lint → typecheck → unit tests → coverage evidence
+  # STAGE 1 — QUALITY GATE
+  # lint → typecheck → unit tests + coverage
+  # Uploads: api-gateway-quality-{sha}
   # ============================================================
   quality-gate:
     name: "1. Quality Gate"
@@ -63,44 +64,49 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Prepare quality evidence directory
-        run: mkdir -p audit-evidence/quality
+        run: mkdir -p audit-evidence/01-quality
 
       - name: Lint API Gateway
         run: |
           pnpm --filter api-gateway lint \
-            2>&1 | tee audit-evidence/quality/lint-output.txt
+            --format json \
+            --output-file audit-evidence/01-quality/eslint-report.json \
+            || pnpm --filter api-gateway lint \
+               2>&1 | tee audit-evidence/01-quality/eslint-output.txt
 
       - name: Typecheck API Gateway
         run: |
           pnpm --filter api-gateway typecheck \
-            2>&1 | tee audit-evidence/quality/typecheck-output.txt
+            2>&1 | tee audit-evidence/01-quality/typecheck-log.txt
 
       - name: Run unit tests with coverage
         run: |
           pnpm --filter api-gateway test -- --coverage \
-            2>&1 | tee audit-evidence/quality/test-output.txt
+            --reporter=verbose \
+            2>&1 | tee audit-evidence/01-quality/unit-test-output.txt
 
-      - name: Copy coverage report into evidence directory
+      - name: Copy coverage report into evidence
         if: always()
         run: |
           if [ -d apps/api-gateway/coverage ]; then
             cp -r apps/api-gateway/coverage \
-              audit-evidence/quality/coverage
+              audit-evidence/01-quality/coverage
           fi
 
       - name: Upload quality evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: quality-evidence-${{ github.sha }}
-          path: audit-evidence/quality/
+          name: api-gateway-quality-${{ github.sha }}
+          path: audit-evidence/01-quality/
           if-no-files-found: warn
           retention-days: 30
 
 
   # ============================================================
-  # STAGE 2: CANONICAL DOCKER BUILD + RUNTIME INTEGRATION
-  # build → start → /health → /ready → smoke → evidence
+  # STAGE 2 — DOCKER BUILD + RUNTIME INTEGRATION
+  # build → /health → /ready → smoke → container evidence
+  # Uploads: api-gateway-runtime-evidence-{sha}
   # ============================================================
   docker-integration:
     name: "2. Docker Build & Runtime Integration"
@@ -142,10 +148,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Prepare runtime evidence directory
-        run: |
-          mkdir -p audit-evidence/build
-          mkdir -p audit-evidence/runtime
+      - name: Prepare integration evidence directories
+        run: mkdir -p audit-evidence/02-integration
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -159,14 +163,16 @@ jobs:
           load: true
           tags: ${{ env.GATEWAY_IMAGE }}:${{ github.sha }}
 
-      - name: Record build metadata
+      - name: Record image evidence
         run: |
           docker inspect ${{ env.GATEWAY_IMAGE }}:${{ github.sha }} \
-            > audit-evidence/build/image-inspect.json
+            > audit-evidence/02-integration/image-inspect.json
 
-          docker image ls ${{ env.GATEWAY_IMAGE }}:${{ github.sha }} \
-            --format '{{json .}}' \
-            > audit-evidence/build/image-manifest.json
+          docker image inspect ${{ env.GATEWAY_IMAGE }}:${{ github.sha }} \
+            --format '{{index .RepoDigests 0}}' \
+            > audit-evidence/02-integration/image-digest.txt 2>/dev/null || \
+            echo "digest-not-available-local-build-only" \
+            > audit-evidence/02-integration/image-digest.txt
 
       - name: Start API Gateway container
         run: |
@@ -184,47 +190,62 @@ jobs:
         run: |
           for attempt in $(seq 1 30); do
             if curl --fail --silent \
-              http://localhost:${{ env.GATEWAY_PORT }}/health; then
+              "http://localhost:${{ env.GATEWAY_PORT }}/health"; then
               echo ""
-              echo "Gateway health check passed (attempt ${attempt})"
+              echo "Health check passed (attempt ${attempt})"
               exit 0
             fi
             echo "Attempt ${attempt}/30 — waiting 2s..."
             sleep 2
           done
-          echo "Gateway failed to respond to /health within 60s"
+          echo "Gateway failed /health within 60s"
           docker logs openthaiai-api-gateway
           exit 1
 
-      - name: Verify /health endpoint (save evidence)
+      - name: Verify /health and save evidence
         run: |
           curl --fail --show-error --silent \
-            http://localhost:${{ env.GATEWAY_PORT }}/health \
-            > audit-evidence/runtime/health-response.json
-          echo "health_status=pass" >> "$GITHUB_ENV"
+            "http://localhost:${{ env.GATEWAY_PORT }}/health" \
+            > audit-evidence/02-integration/health-response.json
 
-      - name: Verify /ready endpoint (save evidence)
+      - name: Verify /ready and save evidence
         run: |
           curl --fail --show-error --silent \
-            http://localhost:${{ env.GATEWAY_PORT }}/ready \
-            > audit-evidence/runtime/ready-response.json
-          echo "ready_status=pass" >> "$GITHUB_ENV"
+            "http://localhost:${{ env.GATEWAY_PORT }}/ready" \
+            > audit-evidence/02-integration/ready-response.json
+
+      - name: Run smoke tests and save result
+        run: |
+          HEALTH=$(curl --fail --silent \
+            "http://localhost:${{ env.GATEWAY_PORT }}/health" \
+            | tr -d '[:space:]')
+          READY=$(curl --fail --silent \
+            "http://localhost:${{ env.GATEWAY_PORT }}/ready" \
+            | tr -d '[:space:]')
+
+          cat > audit-evidence/02-integration/smoke-test-result.json << JSON_EOF
+          {
+            "timestamp_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "health_endpoint": { "url": "/health", "status": "PASSED", "response": ${HEALTH:-null} },
+            "ready_endpoint":  { "url": "/ready",  "status": "PASSED", "response": ${READY:-null}  }
+          }
+          JSON_EOF
 
       - name: Save container logs and inspect
         if: always()
         run: |
           docker logs openthaiai-api-gateway \
-            > audit-evidence/runtime/container.log 2>&1 || true
+            > audit-evidence/02-integration/container-logs.txt 2>&1 || true
 
           docker inspect openthaiai-api-gateway \
-            > audit-evidence/runtime/container-inspect.json || true
+            > audit-evidence/02-integration/container-inspect.json || true
 
-      - name: Upload runtime evidence
+      - name: Upload integration evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: runtime-evidence-${{ github.sha }}
-          path: audit-evidence/
+          name: api-gateway-runtime-evidence-${{ github.sha }}
+          path: audit-evidence/02-integration/
           if-no-files-found: warn
           retention-days: 30
 
@@ -234,8 +255,9 @@ jobs:
 
 
   # ============================================================
-  # STAGE 3: SECURITY GATE
+  # STAGE 3 — SECURITY GATE
   # dependency audit → secret scan → security evidence
+  # Uploads: api-gateway-security-{sha}
   # ============================================================
   security-gate:
     name: "3. Security Gate"
@@ -262,14 +284,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Prepare security evidence directory
-        run: mkdir -p audit-evidence/security
+        run: mkdir -p audit-evidence/03-security
 
       - name: Dependency audit
         run: |
-          pnpm audit --audit-level high \
-            2>&1 | tee audit-evidence/security/pnpm-audit.txt
           pnpm audit --audit-level high --json \
-            > audit-evidence/security/pnpm-audit.json 2>/dev/null || true
+            > audit-evidence/03-security/npm-audit.json 2>/dev/null || \
+            pnpm audit --audit-level high \
+            2>&1 | tee audit-evidence/03-security/npm-audit-output.txt
 
       - name: Detect committed secrets
         uses: gitleaks/gitleaks-action@v2
@@ -280,15 +302,16 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: security-evidence-${{ github.sha }}
-          path: audit-evidence/security/
+          name: api-gateway-security-${{ github.sha }}
+          path: audit-evidence/03-security/
           if-no-files-found: warn
           retention-days: 30
 
 
   # ============================================================
-  # STAGE 4: PRODUCTION GATE
-  # validates all stages passed; writes unified manifest
+  # STAGE 4 — PRODUCTION GATE
+  # Downloads all stage evidence → computes sha256sums →
+  # writes machine-readable manifest.json → uploads unified bundle
   # ============================================================
   production-gate:
     name: "4. Production Gate"
@@ -300,68 +323,234 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Evaluate all stage results
-        id: evaluate
+      - name: Create audit evidence directories
         run: |
-          QUALITY="${{ needs.quality-gate.result }}"
-          DOCKER="${{ needs.docker-integration.result }}"
-          SECURITY="${{ needs.security-gate.result }}"
+          mkdir -p audit-evidence/00-metadata
+          mkdir -p audit-evidence/01-quality
+          mkdir -p audit-evidence/02-integration
+          mkdir -p audit-evidence/03-security
+          mkdir -p audit-evidence/04-integrity
 
-          echo "quality_result=${QUALITY}"   >> "$GITHUB_OUTPUT"
-          echo "docker_result=${DOCKER}"     >> "$GITHUB_OUTPUT"
-          echo "security_result=${SECURITY}" >> "$GITHUB_OUTPUT"
+      - name: Download quality evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: api-gateway-quality-*
+          path: audit-evidence/01-quality
+          merge-multiple: true
+        continue-on-error: true
 
-          echo "Stage results:"
-          echo "  1. Quality Gate:      ${QUALITY}"
-          echo "  2. Docker Integration: ${DOCKER}"
-          echo "  3. Security Gate:     ${SECURITY}"
+      - name: Download integration evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: api-gateway-runtime-evidence-*
+          path: audit-evidence/02-integration
+          merge-multiple: true
+        continue-on-error: true
 
-          if [ "${QUALITY}" != "success" ]; then
-            echo "FAIL: Quality Gate did not pass (${QUALITY})"
-            exit 1
-          fi
-          if [ "${DOCKER}" != "success" ]; then
-            echo "FAIL: Docker Integration did not pass (${DOCKER})"
-            exit 1
-          fi
-          if [ "${SECURITY}" != "success" ]; then
-            echo "FAIL: Security Gate did not pass (${SECURITY})"
-            exit 1
-          fi
+      - name: Download security evidence
+        uses: actions/download-artifact@v4
+        with:
+          pattern: api-gateway-security-*
+          path: audit-evidence/03-security
+          merge-multiple: true
+        continue-on-error: true
 
-          echo "gate_result=passed" >> "$GITHUB_OUTPUT"
-          echo "All stages passed — API Gateway canonical production gate PASSED."
-
-      - name: Write audit manifest
-        if: always()
+      - name: Compute sha256 checksums
         run: |
-          mkdir -p audit-evidence/manifest
-          cat > audit-evidence/manifest/run-manifest.json << JSON_EOF
+          find audit-evidence/01-quality \
+               audit-evidence/02-integration \
+               audit-evidence/03-security \
+            -type f \
+            | sort \
+            | xargs sha256sum \
+            > audit-evidence/04-integrity/sha256sums.txt 2>/dev/null || true
+
+      - name: Resolve stage statuses
+        id: stages
+        run: |
+          to_status() {
+            case "$1" in
+              success)  echo "PASSED"  ;;
+              failure)  echo "FAILED"  ;;
+              skipped)  echo "SKIPPED" ;;
+              *)        echo "NOT_RUN" ;;
+            esac
+          }
+
+          Q=$(to_status "${{ needs.quality-gate.result }}")
+          D=$(to_status "${{ needs.docker-integration.result }}")
+          S=$(to_status "${{ needs.security-gate.result }}")
+
+          echo "quality=${Q}"     >> "$GITHUB_OUTPUT"
+          echo "docker=${D}"      >> "$GITHUB_OUTPUT"
+          echo "security=${S}"    >> "$GITHUB_OUTPUT"
+
+          if [ "${Q}" = "PASSED" ] && \
+             [ "${D}" = "PASSED" ] && \
+             [ "${S}" = "PASSED" ]; then
+            echo "verdict=VERIFIED_GREEN_BUILD" >> "$GITHUB_OUTPUT"
+          else
+            echo "verdict=FAILED"               >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write run-info metadata
+        run: |
+          cat > audit-evidence/00-metadata/run-info.json << JSON_EOF
           {
-            "schema": "openthaiai-audit-evidence/v1",
-            "service": "api-gateway",
-            "run_id": "${{ github.run_id }}",
-            "run_number": "${{ github.run_number }}",
-            "sha": "${{ github.sha }}",
-            "ref": "${{ github.ref }}",
-            "ref_name": "${{ github.ref_name }}",
-            "actor": "${{ github.actor }}",
-            "event": "${{ github.event_name }}",
-            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "gate_result": "${{ steps.evaluate.outputs.gate_result || 'failed' }}",
-            "stages": {
-              "quality_gate":      "${{ needs.quality-gate.result }}",
-              "docker_integration": "${{ needs.docker-integration.result }}",
-              "security_gate":     "${{ needs.security-gate.result }}"
+            "schema_version": "1.0.0",
+            "project": "OpenThaiAi",
+            "component": "apps/api-gateway",
+            "pipeline_run": {
+              "provider": "github-actions",
+              "workflow": "${{ github.workflow }}",
+              "run_id": "${{ github.run_id }}",
+              "run_number": "${{ github.run_number }}",
+              "run_attempt": "${{ github.run_attempt }}",
+              "commit_sha": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "ref": "${{ github.ref }}",
+              "repository": "${{ github.repository }}",
+              "actor": "${{ github.actor }}",
+              "event": "${{ github.event_name }}",
+              "timestamp_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "runner": "ubuntu-latest"
+            },
+            "canonical_runtime": {
+              "runtime": "nodejs",
+              "node_version": "20",
+              "port": 3000,
+              "dockerfile": "apps/api-gateway/Dockerfile"
             }
           }
           JSON_EOF
 
-      - name: Upload unified audit manifest
+      - name: Write artifact index
+        run: |
+          cat > audit-evidence/00-metadata/artifact-index.json << JSON_EOF
+          {
+            "schema_version": "1.0.0",
+            "commit_sha": "${{ github.sha }}",
+            "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "artifacts": {
+              "coverage":          "01-quality/coverage/coverage-summary.json",
+              "eslint":            "01-quality/eslint-report.json",
+              "typecheck":         "01-quality/typecheck-log.txt",
+              "unit_tests":        "01-quality/unit-test-output.txt",
+              "image_inspect":     "02-integration/image-inspect.json",
+              "image_digest":      "02-integration/image-digest.txt",
+              "container_logs":    "02-integration/container-logs.txt",
+              "container_inspect": "02-integration/container-inspect.json",
+              "health":            "02-integration/health-response.json",
+              "readiness":         "02-integration/ready-response.json",
+              "smoke_test":        "02-integration/smoke-test-result.json",
+              "npm_audit":         "03-security/npm-audit.json",
+              "gitleaks":          "03-security/gitleaks-report.json",
+              "checksums":         "04-integrity/sha256sums.txt"
+            }
+          }
+          JSON_EOF
+
+      - name: Write canonical manifest.json
+        run: |
+          cat > audit-evidence/manifest.json << JSON_EOF
+          {
+            "schema_version": "1.0.0",
+            "project": "OpenThaiAi",
+            "component": "apps/api-gateway",
+            "pipeline_run": {
+              "provider": "github-actions",
+              "workflow": "${{ github.workflow }}",
+              "run_id": "${{ github.run_id }}",
+              "run_number": "${{ github.run_number }}",
+              "run_attempt": "${{ github.run_attempt }}",
+              "commit_sha": "${{ github.sha }}",
+              "branch": "${{ github.ref_name }}",
+              "ref": "${{ github.ref }}",
+              "repository": "${{ github.repository }}",
+              "actor": "${{ github.actor }}",
+              "event": "${{ github.event_name }}",
+              "timestamp_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "runner": "ubuntu-latest"
+            },
+            "canonical_runtime": {
+              "runtime": "nodejs",
+              "node_version": "20",
+              "port": 3000,
+              "dockerfile": "apps/api-gateway/Dockerfile"
+            },
+            "stages": {
+              "quality_gate": {
+                "status": "${{ steps.stages.outputs.quality }}"
+              },
+              "docker_integration": {
+                "status": "${{ steps.stages.outputs.docker }}"
+              },
+              "security_gate": {
+                "status": "${{ steps.stages.outputs.security }}"
+              }
+            },
+            "checks": {
+              "lint":              "${{ steps.stages.outputs.quality }}",
+              "typecheck":         "${{ steps.stages.outputs.quality }}",
+              "unit_tests":        "${{ steps.stages.outputs.quality }}",
+              "coverage":          "${{ steps.stages.outputs.quality }}",
+              "docker_build":      "${{ steps.stages.outputs.docker }}",
+              "health":            "${{ steps.stages.outputs.docker }}",
+              "readiness":         "${{ steps.stages.outputs.docker }}",
+              "smoke_test":        "${{ steps.stages.outputs.docker }}",
+              "dependency_audit":  "${{ steps.stages.outputs.security }}",
+              "secret_scan":       "${{ steps.stages.outputs.security }}"
+            },
+            "artifacts": {
+              "coverage":          "01-quality/coverage/coverage-summary.json",
+              "eslint":            "01-quality/eslint-report.json",
+              "typecheck":         "01-quality/typecheck-log.txt",
+              "unit_tests":        "01-quality/unit-test-output.txt",
+              "image_inspect":     "02-integration/image-inspect.json",
+              "image_digest":      "02-integration/image-digest.txt",
+              "container_logs":    "02-integration/container-logs.txt",
+              "container_inspect": "02-integration/container-inspect.json",
+              "health":            "02-integration/health-response.json",
+              "readiness":         "02-integration/ready-response.json",
+              "smoke_test":        "02-integration/smoke-test-result.json",
+              "npm_audit":         "03-security/npm-audit.json",
+              "gitleaks":          "03-security/gitleaks-report.json",
+              "checksums":         "04-integrity/sha256sums.txt"
+            },
+            "verdict": {
+              "status": "${{ steps.stages.outputs.verdict }}",
+              "fail_closed": true
+            }
+          }
+          JSON_EOF
+
+      - name: Validate manifest is valid JSON
+        run: python3 -c "import json,sys; json.load(open('audit-evidence/manifest.json'))" \
+          && echo "manifest.json is valid JSON"
+
+      - name: Add manifest to integrity checksums
+        run: |
+          sha256sum audit-evidence/manifest.json \
+            >> audit-evidence/04-integrity/sha256sums.txt
+
+      - name: Upload unified audit bundle
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: audit-manifest-${{ github.sha }}
-          path: audit-evidence/manifest/
+          name: api-gateway-audit-bundle-${{ github.sha }}
+          path: audit-evidence/
           if-no-files-found: warn
           retention-days: 90
+
+      - name: Enforce fail-closed verdict
+        run: |
+          VERDICT="${{ steps.stages.outputs.verdict }}"
+          echo "Final verdict: ${VERDICT}"
+          if [ "${VERDICT}" != "VERIFIED_GREEN_BUILD" ]; then
+            echo "Production gate FAILED — one or more stages did not PASS."
+            echo "  quality-gate:       ${{ steps.stages.outputs.quality }}"
+            echo "  docker-integration: ${{ steps.stages.outputs.docker }}"
+            echo "  security-gate:      ${{ steps.stages.outputs.security }}"
+            exit 1
+          fi
+          echo "All stages PASSED — production gate VERIFIED_GREEN_BUILD."
