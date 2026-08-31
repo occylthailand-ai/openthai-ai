@@ -1,0 +1,156 @@
+{
+  "title": "OpenThaiAI Pipeline Observability",
+  "uid": "openthaiai-pipeline-v1",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": { "from": "now-3h", "to": "now" },
+  "timezone": "Asia/Bangkok",
+  "tags": ["openthaiai", "pipeline", "keda"],
+  "panels": [
+    {
+      "id": 1,
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "title": "Queue Depth (current)",
+      "type": "stat",
+      "targets": [{ "expr": "openthaiai_queue_depth", "legendFormat": "Queue" }],
+      "options": {
+        "colorMode": "background",
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 50 },
+            { "color": "red", "value": 100 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 2,
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "title": "Ready Worker Pods",
+      "type": "stat",
+      "targets": [{
+        "expr": "kube_deployment_status_replicas_ready{deployment=\"arbitrage-worker\"}",
+        "legendFormat": "Ready"
+      }],
+      "options": { "colorMode": "value" }
+    },
+    {
+      "id": 3,
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "title": "Error Rate (5m)",
+      "type": "stat",
+      "targets": [{
+        "expr": "rate(openthaiai_failed_tasks_total[5m])",
+        "legendFormat": "Errors/s"
+      }],
+      "options": {
+        "colorMode": "background",
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 0.1 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "title": "P95 Latency (10m)",
+      "type": "stat",
+      "targets": [{
+        "expr": "histogram_quantile(0.95, rate(openthaiai_pipeline_duration_seconds_bucket[10m]))",
+        "legendFormat": "P95"
+      }],
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "options": {
+        "colorMode": "background",
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 10 },
+            { "color": "red", "value": 30 }
+          ]
+        }
+      }
+    },
+    {
+      "id": 5,
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "title": "Queue Depth Over Time",
+      "type": "timeseries",
+      "targets": [{ "expr": "openthaiai_queue_depth", "legendFormat": "Lead Queue" }],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "color": { "mode": "palette-classic" } }
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single" }
+      }
+    },
+    {
+      "id": 6,
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "title": "Worker Pod Autoscaling",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "kube_deployment_status_replicas_ready{deployment=\"arbitrage-worker\"}",
+          "legendFormat": "Ready Pods"
+        },
+        {
+          "expr": "kube_deployment_status_replicas{deployment=\"arbitrage-worker\"}",
+          "legendFormat": "Desired Pods"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 7,
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "title": "Pipeline Latency Distribution (P50 / P95 / P99)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(openthaiai_pipeline_duration_seconds_bucket[5m]))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(openthaiai_pipeline_duration_seconds_bucket[5m]))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(openthaiai_pipeline_duration_seconds_bucket[5m]))",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 8,
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "title": "Failed Tasks / DLQ Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(openthaiai_failed_tasks_total[5m])",
+          "legendFormat": "Errors/s"
+        },
+        {
+          "expr": "increase(openthaiai_failed_tasks_total[1h])",
+          "legendFormat": "Errors (1h total)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "red", "mode": "fixed" }
+        }
+      }
+    }
+  ]
+}
