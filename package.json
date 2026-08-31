@@ -2,6 +2,7 @@
   "name": "openthai-ai",
   "version": "1.0.0",
   "type": "module",
+  "packageManager": "pnpm@9",
   "description": "Openthai.ai — AI platform for Thai SMEs (content, commerce, matching)",
   "scripts": {
     "test":          "npm run test:unit && npm run test:backend && npm run test:types",

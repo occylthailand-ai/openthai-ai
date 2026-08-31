@@ -1,0 +1,268 @@
+name: OpenThaiAi API Gateway CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "apps/api-gateway/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/api-gateway-ci.yml"
+
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-gateway-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "9"
+  GATEWAY_IMAGE: openthaiai-api-gateway
+  GATEWAY_PORT: "3000"
+
+jobs:
+  quality:
+    name: Lint, Typecheck and Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint API Gateway
+        run: pnpm --filter api-gateway lint
+
+      - name: Typecheck API Gateway
+        run: pnpm --filter api-gateway typecheck
+
+      - name: Run unit tests
+        run: |
+          pnpm --filter api-gateway test \
+            -- --coverage
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-gateway-coverage
+          path: apps/api-gateway/coverage/
+          if-no-files-found: warn
+
+
+  docker-build:
+    name: Canonical Docker Build
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI_DB_USER: openthaiai
+      CI_DB_PASS: ci_only_password
+      CI_DB_HOST: openthaiai-ci-postgres
+      CI_DB_NAME: openthaiai_ci
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build canonical Gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api-gateway/Dockerfile
+          push: false
+          load: true
+          tags: ${{ env.GATEWAY_IMAGE }}:${{ github.sha }}
+
+      - name: Start PostgreSQL
+        run: |
+          docker run -d \
+            --name openthaiai-ci-postgres \
+            -e POSTGRES_DB=openthaiai_ci \
+            -e POSTGRES_USER=openthaiai \
+            -e POSTGRES_PASSWORD=ci_only_password \
+            postgres:16-alpine
+
+      - name: Start Redis
+        run: |
+          docker run -d \
+            --name openthaiai-ci-redis \
+            redis:7-alpine
+
+      - name: Create CI network
+        run: |
+          docker network create openthaiai-ci || true
+
+          docker network connect openthaiai-ci \
+            openthaiai-ci-postgres
+
+          docker network connect openthaiai-ci \
+            openthaiai-ci-redis
+
+      - name: Start API Gateway
+        run: |
+          docker run -d \
+            --name openthaiai-api-gateway \
+            --network openthaiai-ci \
+            -p 3000:3000 \
+            -e NODE_ENV=test \
+            -e PORT=3000 \
+            -e DATABASE_URL="postgresql://${CI_DB_USER}:${CI_DB_PASS}@${CI_DB_HOST}:5432/${CI_DB_NAME}" \
+            -e REDIS_URL=redis://openthaiai-ci-redis:6379 \
+            ${{ env.GATEWAY_IMAGE }}:${{ github.sha }}
+
+      - name: Verify health endpoint
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --fail \
+              --silent \
+              http://localhost:3000/health; then
+              echo "Gateway health check passed"
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          echo "Gateway health check failed"
+          docker logs openthaiai-api-gateway
+          exit 1
+
+      - name: Verify readiness endpoint
+        run: |
+          curl \
+            --fail \
+            --show-error \
+            http://localhost:3000/ready
+
+      - name: Run smoke tests
+        run: |
+          curl \
+            --fail \
+            --show-error \
+            http://localhost:3000/health
+
+          curl \
+            --fail \
+            --show-error \
+            http://localhost:3000/ready
+
+      - name: Save Gateway logs
+        if: always()
+        run: |
+          mkdir -p audit-artifacts
+
+          docker logs openthaiai-api-gateway \
+            > audit-artifacts/api-gateway.log 2>&1 || true
+
+          docker inspect openthaiai-api-gateway \
+            > audit-artifacts/api-gateway-inspect.json || true
+
+      - name: Upload Gateway audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-gateway-audit-${{ github.sha }}
+          path: audit-artifacts/
+          if-no-files-found: warn
+
+      - name: Cleanup containers
+        if: always()
+        run: |
+          docker rm -f openthaiai-api-gateway || true
+          docker rm -f openthaiai-ci-postgres || true
+          docker rm -f openthaiai-ci-redis || true
+          docker network rm openthaiai-ci || true
+
+
+  security:
+    name: Security Gates
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Dependency audit
+        run: pnpm audit --audit-level high
+
+      - name: Detect committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+  gateway-gate:
+    name: API Gateway Production Gate
+    if: always()
+    needs:
+      - quality
+      - docker-build
+      - security
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate required jobs
+        run: |
+          if [ "${{ needs.quality.result }}" != "success" ]; then
+            echo "Quality gate failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.docker-build.result }}" != "success" ]; then
+            echo "Docker/runtime gate failed"
+            exit 1
+          fi
+
+          if [ "${{ needs.security.result }}" != "success" ]; then
+            echo "Security gate failed"
+            exit 1
+          fi
+
+          echo "API Gateway canonical production gate passed."
