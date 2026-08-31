@@ -52,10 +52,10 @@ resource "kubectl_manifest" "scaled_object" {
         kind       = "Deployment"
         name       = var.worker_deployment_name
       }
-      pollingInterval  = 15
+      pollingInterval  = 10
       cooldownPeriod   = 300
       minReplicaCount  = 2
-      maxReplicaCount  = 10
+      maxReplicaCount  = 12
 
       advanced = {
         restoreToOriginalReplicaCount = false
@@ -86,7 +86,7 @@ resource "kubectl_manifest" "scaled_object" {
         metadata = {
           address    = "${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
           listName   = "openthaiai:arbitrage:queue"
-          listLength = "5"
+          listLength = "10"
         }
       }]
     }

@@ -1,0 +1,21 @@
+{
+  "label_schema": {
+    "description": "BIO tagging scheme for Thai commercial NER (quantity, unit, budget extraction)",
+    "version": "1.0",
+    "labels": [
+      { "id": 0, "name": "O",        "description": "Outside — non-entity token" },
+      { "id": 1, "name": "B-QTY",    "description": "Beginning of quantity (e.g. 50, ร้อย, สอง)" },
+      { "id": 2, "name": "I-QTY",    "description": "Inside of quantity (multi-token span)" },
+      { "id": 3, "name": "B-UNIT",   "description": "Beginning of unit (e.g. กระปุก, ชิ้น, กล่อง, โหล)" },
+      { "id": 4, "name": "I-UNIT",   "description": "Inside of unit (multi-token unit)" },
+      { "id": 5, "name": "B-BUDGET", "description": "Beginning of budget/price (e.g. 2,000, สี่พัน)" },
+      { "id": 6, "name": "I-BUDGET", "description": "Inside of budget (e.g. บาท, THB following a number)" }
+    ],
+    "notes": [
+      "Comma-separated numbers are treated as one token (e.g. '2,000' → single B-BUDGET token)",
+      "Currency word following a number (e.g. 'บาท') carries I-BUDGET if it belongs to the same span",
+      "Spoken-form numbers (e.g. 'ร้อย', 'สองพัน') are tagged the same as numeric tokens",
+      "Typo variants (e.g. 'กรปุก', 'กะปุก') must also be annotated correctly"
+    ]
+  }
+}
