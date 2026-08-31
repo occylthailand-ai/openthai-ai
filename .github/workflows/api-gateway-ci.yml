@@ -1,9 +1,18 @@
-name: OpenThaiAi API Gateway CI
+name: API Gateway Canonical CI/CD
 
 on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    tags:
+      - "v*"
+
   pull_request:
     branches:
       - main
+      - master
       - develop
     paths:
       - "apps/api-gateway/**"
@@ -12,18 +21,11 @@ on:
       - "pnpm-workspace.yaml"
       - ".github/workflows/api-gateway-ci.yml"
 
-  push:
-    branches:
-      - main
-      - develop
-    tags:
-      - "v*"
-
 permissions:
   contents: read
 
 concurrency:
-  group: api-gateway-${{ github.ref }}
+  group: api-gateway-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -33,8 +35,12 @@ env:
   GATEWAY_PORT: "3000"
 
 jobs:
-  quality:
-    name: Lint, Typecheck and Unit Tests
+  # ============================================================
+  # STAGE 1: QUALITY GATE
+  # lint → typecheck → unit tests → coverage evidence
+  # ============================================================
+  quality-gate:
+    name: "1. Quality Gate"
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -56,40 +62,90 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare quality evidence directory
+        run: mkdir -p audit-evidence/quality
+
       - name: Lint API Gateway
-        run: pnpm --filter api-gateway lint
+        run: |
+          pnpm --filter api-gateway lint \
+            2>&1 | tee audit-evidence/quality/lint-output.txt
 
       - name: Typecheck API Gateway
-        run: pnpm --filter api-gateway typecheck
-
-      - name: Run unit tests
         run: |
-          pnpm --filter api-gateway test \
-            -- --coverage
+          pnpm --filter api-gateway typecheck \
+            2>&1 | tee audit-evidence/quality/typecheck-output.txt
 
-      - name: Upload coverage
+      - name: Run unit tests with coverage
+        run: |
+          pnpm --filter api-gateway test -- --coverage \
+            2>&1 | tee audit-evidence/quality/test-output.txt
+
+      - name: Copy coverage report into evidence directory
+        if: always()
+        run: |
+          if [ -d apps/api-gateway/coverage ]; then
+            cp -r apps/api-gateway/coverage \
+              audit-evidence/quality/coverage
+          fi
+
+      - name: Upload quality evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: api-gateway-coverage
-          path: apps/api-gateway/coverage/
+          name: quality-evidence-${{ github.sha }}
+          path: audit-evidence/quality/
           if-no-files-found: warn
+          retention-days: 30
 
 
-  docker-build:
-    name: Canonical Docker Build
-    needs: quality
+  # ============================================================
+  # STAGE 2: CANONICAL DOCKER BUILD + RUNTIME INTEGRATION
+  # build → start → /health → /ready → smoke → evidence
+  # ============================================================
+  docker-integration:
+    name: "2. Docker Build & Runtime Integration"
+    needs: quality-gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       CI_DB_USER: openthaiai
       CI_DB_PASS: ci_only_password
-      CI_DB_HOST: openthaiai-ci-postgres
+      CI_DB_HOST: localhost
       CI_DB_NAME: openthaiai_ci
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: openthaiai_ci
+          POSTGRES_USER: openthaiai
+          POSTGRES_PASSWORD: ci_only_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U openthaiai -d openthaiai_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Prepare runtime evidence directory
+        run: |
+          mkdir -p audit-evidence/build
+          mkdir -p audit-evidence/runtime
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -103,110 +159,87 @@ jobs:
           load: true
           tags: ${{ env.GATEWAY_IMAGE }}:${{ github.sha }}
 
-      - name: Start PostgreSQL
+      - name: Record build metadata
         run: |
-          docker run -d \
-            --name openthaiai-ci-postgres \
-            -e POSTGRES_DB=openthaiai_ci \
-            -e POSTGRES_USER=openthaiai \
-            -e POSTGRES_PASSWORD=ci_only_password \
-            postgres:16-alpine
+          docker inspect ${{ env.GATEWAY_IMAGE }}:${{ github.sha }} \
+            > audit-evidence/build/image-inspect.json
 
-      - name: Start Redis
-        run: |
-          docker run -d \
-            --name openthaiai-ci-redis \
-            redis:7-alpine
+          docker image ls ${{ env.GATEWAY_IMAGE }}:${{ github.sha }} \
+            --format '{{json .}}' \
+            > audit-evidence/build/image-manifest.json
 
-      - name: Create CI network
-        run: |
-          docker network create openthaiai-ci || true
-
-          docker network connect openthaiai-ci \
-            openthaiai-ci-postgres
-
-          docker network connect openthaiai-ci \
-            openthaiai-ci-redis
-
-      - name: Start API Gateway
+      - name: Start API Gateway container
         run: |
           docker run -d \
             --name openthaiai-api-gateway \
-            --network openthaiai-ci \
-            -p 3000:3000 \
+            -p ${{ env.GATEWAY_PORT }}:${{ env.GATEWAY_PORT }} \
             -e NODE_ENV=test \
-            -e PORT=3000 \
+            -e PORT=${{ env.GATEWAY_PORT }} \
             -e DATABASE_URL="postgresql://${CI_DB_USER}:${CI_DB_PASS}@${CI_DB_HOST}:5432/${CI_DB_NAME}" \
-            -e REDIS_URL=redis://openthaiai-ci-redis:6379 \
+            -e REDIS_URL="redis://localhost:6379" \
+            --network host \
             ${{ env.GATEWAY_IMAGE }}:${{ github.sha }}
 
-      - name: Verify health endpoint
+      - name: Wait for /health endpoint
         run: |
           for attempt in $(seq 1 30); do
-            if curl --fail \
-              --silent \
-              http://localhost:3000/health; then
-              echo "Gateway health check passed"
+            if curl --fail --silent \
+              http://localhost:${{ env.GATEWAY_PORT }}/health; then
+              echo ""
+              echo "Gateway health check passed (attempt ${attempt})"
               exit 0
             fi
-
+            echo "Attempt ${attempt}/30 — waiting 2s..."
             sleep 2
           done
-
-          echo "Gateway health check failed"
+          echo "Gateway failed to respond to /health within 60s"
           docker logs openthaiai-api-gateway
           exit 1
 
-      - name: Verify readiness endpoint
+      - name: Verify /health endpoint (save evidence)
         run: |
-          curl \
-            --fail \
-            --show-error \
-            http://localhost:3000/ready
+          curl --fail --show-error --silent \
+            http://localhost:${{ env.GATEWAY_PORT }}/health \
+            > audit-evidence/runtime/health-response.json
+          echo "health_status=pass" >> "$GITHUB_ENV"
 
-      - name: Run smoke tests
+      - name: Verify /ready endpoint (save evidence)
         run: |
-          curl \
-            --fail \
-            --show-error \
-            http://localhost:3000/health
+          curl --fail --show-error --silent \
+            http://localhost:${{ env.GATEWAY_PORT }}/ready \
+            > audit-evidence/runtime/ready-response.json
+          echo "ready_status=pass" >> "$GITHUB_ENV"
 
-          curl \
-            --fail \
-            --show-error \
-            http://localhost:3000/ready
-
-      - name: Save Gateway logs
+      - name: Save container logs and inspect
         if: always()
         run: |
-          mkdir -p audit-artifacts
-
           docker logs openthaiai-api-gateway \
-            > audit-artifacts/api-gateway.log 2>&1 || true
+            > audit-evidence/runtime/container.log 2>&1 || true
 
           docker inspect openthaiai-api-gateway \
-            > audit-artifacts/api-gateway-inspect.json || true
+            > audit-evidence/runtime/container-inspect.json || true
 
-      - name: Upload Gateway audit evidence
+      - name: Upload runtime evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: api-gateway-audit-${{ github.sha }}
-          path: audit-artifacts/
+          name: runtime-evidence-${{ github.sha }}
+          path: audit-evidence/
           if-no-files-found: warn
+          retention-days: 30
 
-      - name: Cleanup containers
+      - name: Cleanup container
         if: always()
-        run: |
-          docker rm -f openthaiai-api-gateway || true
-          docker rm -f openthaiai-ci-postgres || true
-          docker rm -f openthaiai-ci-redis || true
-          docker network rm openthaiai-ci || true
+        run: docker rm -f openthaiai-api-gateway || true
 
 
-  security:
-    name: Security Gates
-    needs: quality
+  # ============================================================
+  # STAGE 3: SECURITY GATE
+  # dependency audit → secret scan → security evidence
+  # ============================================================
+  security-gate:
+    name: "3. Security Gate"
+    needs: quality-gate
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -228,41 +261,107 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare security evidence directory
+        run: mkdir -p audit-evidence/security
+
       - name: Dependency audit
-        run: pnpm audit --audit-level high
+        run: |
+          pnpm audit --audit-level high \
+            2>&1 | tee audit-evidence/security/pnpm-audit.txt
+          pnpm audit --audit-level high --json \
+            > audit-evidence/security/pnpm-audit.json 2>/dev/null || true
 
       - name: Detect committed secrets
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload security evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-evidence-${{ github.sha }}
+          path: audit-evidence/security/
+          if-no-files-found: warn
+          retention-days: 30
 
-  gateway-gate:
-    name: API Gateway Production Gate
+
+  # ============================================================
+  # STAGE 4: PRODUCTION GATE
+  # validates all stages passed; writes unified manifest
+  # ============================================================
+  production-gate:
+    name: "4. Production Gate"
     if: always()
     needs:
-      - quality
-      - docker-build
-      - security
-
+      - quality-gate
+      - docker-integration
+      - security-gate
     runs-on: ubuntu-latest
 
     steps:
-      - name: Validate required jobs
+      - name: Evaluate all stage results
+        id: evaluate
         run: |
-          if [ "${{ needs.quality.result }}" != "success" ]; then
-            echo "Quality gate failed"
+          QUALITY="${{ needs.quality-gate.result }}"
+          DOCKER="${{ needs.docker-integration.result }}"
+          SECURITY="${{ needs.security-gate.result }}"
+
+          echo "quality_result=${QUALITY}"   >> "$GITHUB_OUTPUT"
+          echo "docker_result=${DOCKER}"     >> "$GITHUB_OUTPUT"
+          echo "security_result=${SECURITY}" >> "$GITHUB_OUTPUT"
+
+          echo "Stage results:"
+          echo "  1. Quality Gate:      ${QUALITY}"
+          echo "  2. Docker Integration: ${DOCKER}"
+          echo "  3. Security Gate:     ${SECURITY}"
+
+          if [ "${QUALITY}" != "success" ]; then
+            echo "FAIL: Quality Gate did not pass (${QUALITY})"
+            exit 1
+          fi
+          if [ "${DOCKER}" != "success" ]; then
+            echo "FAIL: Docker Integration did not pass (${DOCKER})"
+            exit 1
+          fi
+          if [ "${SECURITY}" != "success" ]; then
+            echo "FAIL: Security Gate did not pass (${SECURITY})"
             exit 1
           fi
 
-          if [ "${{ needs.docker-build.result }}" != "success" ]; then
-            echo "Docker/runtime gate failed"
-            exit 1
-          fi
+          echo "gate_result=passed" >> "$GITHUB_OUTPUT"
+          echo "All stages passed — API Gateway canonical production gate PASSED."
 
-          if [ "${{ needs.security.result }}" != "success" ]; then
-            echo "Security gate failed"
-            exit 1
-          fi
+      - name: Write audit manifest
+        if: always()
+        run: |
+          mkdir -p audit-evidence/manifest
+          cat > audit-evidence/manifest/run-manifest.json << JSON_EOF
+          {
+            "schema": "openthaiai-audit-evidence/v1",
+            "service": "api-gateway",
+            "run_id": "${{ github.run_id }}",
+            "run_number": "${{ github.run_number }}",
+            "sha": "${{ github.sha }}",
+            "ref": "${{ github.ref }}",
+            "ref_name": "${{ github.ref_name }}",
+            "actor": "${{ github.actor }}",
+            "event": "${{ github.event_name }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "gate_result": "${{ steps.evaluate.outputs.gate_result || 'failed' }}",
+            "stages": {
+              "quality_gate":      "${{ needs.quality-gate.result }}",
+              "docker_integration": "${{ needs.docker-integration.result }}",
+              "security_gate":     "${{ needs.security-gate.result }}"
+            }
+          }
+          JSON_EOF
 
-          echo "API Gateway canonical production gate passed."
+      - name: Upload unified audit manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-manifest-${{ github.sha }}
+          path: audit-evidence/manifest/
+          if-no-files-found: warn
+          retention-days: 90
