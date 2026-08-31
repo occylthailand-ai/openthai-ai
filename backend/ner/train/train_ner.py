@@ -41,39 +41,63 @@ BASE_MODEL  = "airesearch/wangchanberta-base-att-spm-uncased"
 # --------------------------------------------------------------------------- #
 # Subword alignment: propagate the label of the first subtoken only
 # --------------------------------------------------------------------------- #
-def align_labels_with_tokens(tokenized, labels: list[int]) -> list[int]:
-    aligned = []
+def align_labels_with_tokens(words: list[str], labels: list[int],
+                             tokenizer, max_length: int = 128) -> dict:
+    """
+    Tokenize a word-split sentence and align word-level labels to subword tokens.
+
+    Labels for continuation subtokens (and special tokens) are set to -100 so the
+    cross-entropy loss ignores them — only the *first* subtoken of each word
+    contributes to training signal.
+
+    Returns the full BatchEncoding so it can be used directly as model input.
+    """
+    tokenized = tokenizer(
+        words,
+        is_split_into_words=True,
+        return_offsets_mapping=True,
+        padding="max_length",
+        max_length=max_length,
+        truncation=True,
+    )
+
+    aligned: list[int] = []
     prev_word_id = None
+
     for word_id in tokenized.word_ids():
         if word_id is None:
-            aligned.append(-100)          # special token → ignore in loss
+            aligned.append(-100)            # [CLS] / [SEP] / padding → skip
         elif word_id != prev_word_id:
-            aligned.append(labels[word_id])  # first subtoken → real label
+            aligned.append(labels[word_id]) # first subtoken → real label
         else:
-            aligned.append(-100)          # continuation subtoken → ignored
+            aligned.append(-100)            # continuation subtoken → skip
         prev_word_id = word_id
-    return aligned
+
+    tokenized["labels"] = aligned
+    tokenized.pop("offset_mapping")         # not needed by the Trainer
+    return tokenized
 
 
 def tokenize_and_align(examples, tokenizer):
-    tokenized = tokenizer(
-        examples["tokens"],
-        truncation=True,
-        is_split_into_words=True,
-        padding=False,
-    )
-    tokenized["labels"] = [
-        align_labels_with_tokens(
-            tokenizer(
-                tokens,
-                truncation=True,
-                is_split_into_words=True,
-            ),
-            tags,
-        )
-        for tokens, tags in zip(examples["tokens"], examples["ner_tags"])
-    ]
-    return tokenized
+    """Batch-compatible wrapper for dataset.map(batched=True)."""
+    all_input_ids, all_attention_mask, all_token_type_ids, all_labels = [], [], [], []
+
+    for tokens, tags in zip(examples["tokens"], examples["ner_tags"]):
+        enc = align_labels_with_tokens(tokens, tags, tokenizer)
+        all_input_ids.append(enc["input_ids"])
+        all_attention_mask.append(enc["attention_mask"])
+        if "token_type_ids" in enc:
+            all_token_type_ids.append(enc["token_type_ids"])
+        all_labels.append(enc["labels"])
+
+    result = {
+        "input_ids":      all_input_ids,
+        "attention_mask": all_attention_mask,
+        "labels":         all_labels,
+    }
+    if all_token_type_ids:
+        result["token_type_ids"] = all_token_type_ids
+    return result
 
 
 # --------------------------------------------------------------------------- #

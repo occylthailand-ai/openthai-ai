@@ -100,22 +100,39 @@ class NERRequest(BaseModel):
 
 
 class EntitySpan(BaseModel):
-    entity: str          # QTY | UNIT | BUDGET
-    value:  str          # extracted text
-    score:  float        # confidence 0–1
+    entity: str               # QTY | UNIT | BUDGET  (internal field)
+    entity_group: str         # alias used by downstream pipeline
+    value:  str               # extracted text
+    score:  float             # confidence 0–1  (internal field)
+    confidence: float         # alias for score, used by pipeline callers
     start:  Optional[int] = None   # token start index (word-level)
     end:    Optional[int] = None   # token end index (inclusive)
 
 
 class NERResponse(BaseModel):
-    raw_text:  str
-    entities:  list[EntitySpan]
-    model_mode: str      # "transformer" | "mock"
+    raw_text:   str
+    entities:   list[EntitySpan]
+    model_mode: str   # "transformer" | "mock"
+    status:     str   # "SUCCESS" | "ERROR"
 
 
 # --------------------------------------------------------------------------- #
 # Inference helpers
 # --------------------------------------------------------------------------- #
+def _make_span(label: str, tokens: list[str], scores: list[float],
+               start: int, end: int) -> "EntitySpan":
+    avg_score = round(sum(scores) / len(scores), 4)
+    return EntitySpan(
+        entity=label,
+        entity_group=label,
+        value=" ".join(tokens),
+        score=avg_score,
+        confidence=avg_score,
+        start=start,
+        end=end,
+    )
+
+
 def _group_bio_spans(tokens: list[str], tag_ids: list[int],
                      scores: list[float]) -> list[EntitySpan]:
     """Convert BIO tag sequence to entity spans (word-level)."""
@@ -129,13 +146,8 @@ def _group_bio_spans(tokens: list[str], tag_ids: list[int],
         label = ID2LABEL.get(tag_id, "O")
         if label.startswith("B-"):
             if current_label:
-                spans.append(EntitySpan(
-                    entity=current_label,
-                    value=" ".join(current_tokens),
-                    score=round(sum(current_scores) / len(current_scores), 4),
-                    start=start_idx,
-                    end=i - 1,
-                ))
+                spans.append(_make_span(current_label, current_tokens,
+                                        current_scores, start_idx, i - 1))
             current_label  = label[2:]
             current_tokens = [tok]
             current_scores = [score]
@@ -145,25 +157,15 @@ def _group_bio_spans(tokens: list[str], tag_ids: list[int],
             current_scores.append(score)
         else:
             if current_label:
-                spans.append(EntitySpan(
-                    entity=current_label,
-                    value=" ".join(current_tokens),
-                    score=round(sum(current_scores) / len(current_scores), 4),
-                    start=start_idx,
-                    end=i - 1,
-                ))
+                spans.append(_make_span(current_label, current_tokens,
+                                        current_scores, start_idx, i - 1))
             current_label  = None
             current_tokens = []
             current_scores = []
 
     if current_label:
-        spans.append(EntitySpan(
-            entity=current_label,
-            value=" ".join(current_tokens),
-            score=round(sum(current_scores) / len(current_scores), 4),
-            start=start_idx,
-            end=len(tokens) - 1,
-        ))
+        spans.append(_make_span(current_label, current_tokens,
+                                current_scores, start_idx, len(tokens) - 1))
 
     return spans
 
@@ -218,11 +220,11 @@ def _infer_mock(text: str) -> list[EntitySpan]:
 
     for i, w in enumerate(words):
         if qty_pattern.match(w):
-            spans.append(EntitySpan(entity="QTY",    value=w, score=0.75, start=i, end=i))
+            spans.append(_make_span("QTY",    [w], [0.75], i, i))
         elif unit_pattern.match(w):
-            spans.append(EntitySpan(entity="UNIT",   value=w, score=0.80, start=i, end=i))
+            spans.append(_make_span("UNIT",   [w], [0.80], i, i))
         elif budget_pattern.match(w) and any(c.isdigit() for c in w):
-            spans.append(EntitySpan(entity="BUDGET", value=w, score=0.70, start=i, end=i))
+            spans.append(_make_span("BUDGET", [w], [0.70], i, i))
 
     return spans
 
@@ -254,7 +256,8 @@ def extract_entities(payload: NERRequest):
             entities = _infer_mock(text)
 
         NER_REQUESTS.labels(status="success").inc()
-        return NERResponse(raw_text=text, entities=entities, model_mode=mode)
+        return NERResponse(raw_text=text, entities=entities, model_mode=mode,
+                           status="SUCCESS")
 
     except Exception as exc:
         NER_REQUESTS.labels(status="error").inc()

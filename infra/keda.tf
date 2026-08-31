@@ -55,7 +55,7 @@ resource "kubectl_manifest" "scaled_object" {
       pollingInterval  = 10
       cooldownPeriod   = 300
       minReplicaCount  = 2
-      maxReplicaCount  = 12
+      maxReplicaCount  = 15
 
       advanced = {
         restoreToOriginalReplicaCount = false
