@@ -17,6 +17,7 @@ const TikTokFeedPage = lazy(() => import('./pages/TikTokFeedPage'));
 const FacebookFeedPage = lazy(() => import('./pages/FacebookFeedPage'));
 const AIGeneratorPage = lazy(() => import('./pages/AIGeneratorPage'));
 const AIToolsHub = lazy(() => import('./pages/AIToolsHub'));
+const MetaToolsmithPage = lazy(() => import('./pages/MetaToolsmithPage'));
 const AffiliatePage = lazy(() => import('./pages/AffiliatePage'));
 const AffiliateDashboard = lazy(() => import('./pages/AffiliateDashboard'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
@@ -151,6 +152,7 @@ function App() {
             />
             <Route path="/ai-generator" element={isAuthenticated ? <AIGeneratorPage /> : <Navigate to="/login" />} />
             <Route path="/ai-tools" element={isAuthenticated ? <AIToolsHub /> : <Navigate to="/login" />} />
+            <Route path="/meta-toolsmith" element={isAuthenticated ? <MetaToolsmithPage /> : <Navigate to="/login" />} />
             <Route path="/agent" element={isAuthenticated ? <AgentPage /> : <Navigate to="/login" />} />
             <Route path="/skills" element={isAuthenticated ? <AISkillsPage /> : <Navigate to="/login" />} />
             <Route path="/skills-catalog" element={isAuthenticated ? <SkillsCatalogPage /> : <Navigate to="/login" />} />

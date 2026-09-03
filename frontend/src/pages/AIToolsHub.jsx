@@ -4,6 +4,17 @@ import { Logo } from '../components/Logo';
 
 const TOOLS = [
   {
+    id: 'meta-toolsmith',
+    icon: '🧰',
+    name: 'Meta-Toolsmith v1.2',
+    desc: 'Forge 13 artifacts · Healer หยุด forbidden patterns · Quorum/Gates/OCI validator ครบในหน้าเดียว',
+    tags: ['Forge', 'Quorum', 'OCI'],
+    color: '#0ea5e9',
+    status: 'live',
+    route: '/meta-toolsmith',
+    badge: 'NEW',
+  },
+  {
     id: 'generator',
     icon: '⚡',
     name: 'AI Content Generator',
