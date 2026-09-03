@@ -1,0 +1,356 @@
+#!/usr/bin/env python3
+import argparse
+import hashlib
+import json
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse
+
+ARTIFACTS = [
+    ["fastapi-endpoint", "FastAPI endpoint", "services/meta_toolsmith/main.py"],
+    ["helm-chart", "Helm chart", "charts/meta-toolsmith/README.bundle.txt"],
+    ["oci-pusher", "OCI pusher", "scripts/push-oci.sh"],
+    ["ota-release-cli", "ota-release CLI", "tools/ota-release.mjs"],
+    ["skill-module", "Skill module", "skills/meta-toolsmith.js"],
+    ["qdrant-ingestor", "Qdrant ingestor", "pipelines/qdrant_ingestor.py"],
+    ["network-policy", "NetworkPolicy", "deploy/network-policy.yaml"],
+    ["hpa-pdb", "HPA + PDB", "deploy/hpa-pdb.yaml"],
+    ["contract-test", "Contract test", "tests/meta-toolsmith.contract.test.mjs"],
+    ["lock-manifest", "Lock manifest", "locks/meta-toolsmith.lock.json"],
+    ["gate-verifier", "Gate verifier", "tools/gate-verifier.mjs"],
+    ["monitoring-rule", "Monitoring / PrometheusRule", "deploy/prometheus-rule.yaml"],
+    ["docs-v12-oci", "docs/04-V12-OCI", "docs/04-V12-OCI.md"],
+]
+
+FORBIDDEN = ["rm -rf /", "DROP TABLE", "exec(base64"]
+
+STATE = {
+    "counters": {
+        "forge_total": 0,
+        "forge_rollback_total": 0,
+        "healer_runs_total": 0,
+        "healer_blocks_total": 0,
+        "oci_validation_total": 0,
+        "oci_reject_total": 0,
+        "lock_writes_total": 0,
+        "ledger_freeze_total": 0,
+        "g9_preflight_total": 0,
+        "g9_pass_total": 0,
+    },
+    "ledger": [],
+    "ledger_frozen": False,
+}
+
+
+def sha256_hex(text):
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def stable_json(data):
+    return json.dumps(data, sort_keys=True, separators=(",", ":"))
+
+
+def validate_oci(ref):
+    ref = (ref or "").strip()
+    if not ref:
+        return {"ok": False, "message": "Enter an OCI reference first."}
+    if "@sha256:" in ref:
+        digest = ref.split("@sha256:", 1)[1]
+        if len(digest) == 64 and all(ch in "0123456789abcdefABCDEF" for ch in digest):
+            return {"ok": True, "message": "Digest-pinned OCI reference accepted."}
+    if ref.endswith(":latest"):
+        return {"ok": False, "message": "Tags are rejected. Use @sha256:<64hex> only."}
+    if ref.rsplit(":", 1)[-1].count(".") == 2 and ref.rsplit(":", 1)[-1].replace(".", "").isdigit():
+        return {"ok": False, "message": "Tags are rejected. Use @sha256:<64hex> only."}
+    if ":" in ref and "@sha256:" not in ref:
+        return {"ok": False, "message": "Mutable tags are not allowed. Replace the tag with a digest pin."}
+    return {"ok": False, "message": "Invalid OCI reference. Expected image@sha256:<64hex>."}
+
+
+def forge_content(kind, ctx):
+    service = ctx.get("serviceName", "meta-toolsmith")
+    namespace = ctx.get("namespace", "openthai-system")
+    digest = ctx.get("imageDigest", "sha256:" + "a" * 64)
+    if kind == "fastapi-endpoint":
+        return f"from fastapi import FastAPI\napp = FastAPI(title='{service}', version='1.3.0')\n"
+    if kind == "helm-chart":
+        return f"apiVersion: v2\nname: meta-toolsmith\nnamespace: {namespace}\nimage: ghcr.io/openthai-ai/{service}@{digest}\n"
+    if kind == "oci-pusher":
+        return f"oras push ghcr.io/openthai-ai/{service}@{digest}\n"
+    if kind == "ota-release-cli":
+        return "node tools/ota-release.mjs sha256:...\n"
+    if kind == "skill-module":
+        return "export const metaToolsmithSkill = { id: 'meta-toolsmith-v13' }\n"
+    if kind == "qdrant-ingestor":
+        return "def ingest(points):\n    return points\n"
+    if kind == "network-policy":
+        return f"kind: NetworkPolicy\nmetadata:\n  namespace: {namespace}\n"
+    if kind == "hpa-pdb":
+        return "kind: HorizontalPodAutoscaler\n---\nkind: PodDisruptionBudget\n"
+    if kind == "contract-test":
+        return "assert.match(ref, /^.+@sha256:/)\n"
+    if kind == "lock-manifest":
+        return stable_json({"schemaVersion": "1.3", "imageDigest": digest})
+    if kind == "gate-verifier":
+        return "export function deriveG10(gates) { return ['G6','G7','G8','G9'].every((k) => gates[k]) }\n"
+    if kind == "monitoring-rule":
+        return "groups:\n- name: meta-toolsmith.rules\n"
+    return f"# 04 — V1.3 OCI Release Discipline\n\nOnly {service}@{digest}\n"
+
+
+def generate_all(ctx, existing_paths):
+    conflicts = [path for _, _, path in ARTIFACTS if path in existing_paths]
+    if conflicts:
+        STATE["counters"]["forge_rollback_total"] += 1
+        return {"ok": False, "rolledBack": True, "conflicts": conflicts, "generated": []}
+    generated = []
+    for kind, label, path in ARTIFACTS:
+        generated.append({"id": kind, "label": label, "fileName": path, "content": forge_content(kind, ctx)})
+    STATE["counters"]["forge_total"] += len(generated)
+    return {"ok": True, "rolledBack": False, "conflicts": [], "generated": generated}
+
+
+def healer_scan(name, text, mode):
+    STATE["counters"]["healer_runs_total"] += 1
+    for pattern in FORBIDDEN:
+        if pattern in text:
+            STATE["counters"]["healer_blocks_total"] += 1
+            return {"halted": True, "alert": f"FORBIDDEN: {pattern} in {name}", "issues": [{"severity": "critical", "label": pattern}]}
+    lower = text.lower()
+    critical = ("privileged: true" in lower) or (":latest" in text)
+    issues = []
+    if "privileged: true" in lower:
+        issues.append({"severity": "critical", "label": "Privileged container requested"})
+    if ":latest" in text:
+        issues.append({"severity": "critical", "label": "Mutable image tag detected"})
+    if critical:
+        STATE["counters"]["healer_blocks_total"] += 1
+    return {"halted": critical, "alert": "BLOCKED: critical healer issues" if critical else "", "issues": issues}
+
+
+def build_lock(ctx):
+    service = ctx.get("serviceName", "meta-toolsmith")
+    namespace = ctx.get("namespace", "openthai-system")
+    digest = ctx.get("imageDigest", "sha256:" + "a" * 64)
+    helm_lock = stable_json({"kind": "HelmLock", "service": service, "namespace": namespace, "image": f"ghcr.io/openthai-ai/{service}@{digest}"})
+    oci_lock = stable_json({"kind": "OciLock", "service": service, "image": f"ghcr.io/openthai-ai/{service}@{digest}"})
+    helm_hash = sha256_hex(helm_lock)
+    oci_hash = sha256_hex(oci_lock)
+    canonical = f"META-QUORUM|role=release|helm_lock_sha256={helm_hash}|oci_lock_sha256={oci_hash}"
+    return helm_lock, oci_lock, helm_hash, oci_hash, canonical
+
+
+def verify_ledger():
+    prev_hash = None
+    for entry in STATE["ledger"]:
+        if entry.get("prev_hash") != prev_hash:
+            return False, "prev_hash mismatch"
+        current_hash = entry.get("hash")
+        payload = dict(entry)
+        payload.pop("hash", None)
+        if current_hash != sha256_hex(stable_json(payload)):
+            return False, "hash mismatch"
+        prev_hash = current_hash
+    return True, ""
+
+
+def append_ledger(payload):
+    ok, reason = verify_ledger()
+    if not ok:
+        STATE["ledger_frozen"] = True
+        STATE["counters"]["ledger_freeze_total"] += 1
+        return {"ok": False, "frozen": True, "reason": reason}
+    prev_hash = STATE["ledger"][-1]["hash"] if STATE["ledger"] else None
+    entry = {"ts": "preview", "prev_hash": prev_hash, **payload}
+    entry["hash"] = sha256_hex(stable_json(entry))
+    STATE["ledger"].append(entry)
+    STATE["counters"]["lock_writes_total"] += 1
+    return {"ok": True, "frozen": False, "entry": entry, "entries": STATE["ledger"]}
+
+
+def run_g9_preflight(body):
+    checks = [
+        ["digest", bool(body.get("digest")), "Digest evidence present"],
+        ["provenance", bool(body.get("provenance")), "Provenance evidence present"],
+        ["quorum", bool(body.get("quorumPassed")), "Quorum passed"],
+        ["cosign", bool(body.get("cosignVerified")), "Cosign registry verification present"],
+        ["cluster", bool(body.get("clusterEvidence")), "Helm cluster evidence present"],
+    ]
+    STATE["counters"]["g9_preflight_total"] += 1
+    passed = all(ok for _, ok, _ in checks)
+    if passed:
+        STATE["counters"]["g9_pass_total"] += 1
+    return {
+        "checks": [{"id": key, "ok": ok, "label": label} for key, ok, label in checks],
+        "pass": passed,
+        "helmCommand": "helm upgrade meta-toolsmith ./charts/meta-toolsmith --dry-run=server" if passed else "",
+        "blockedReason": "" if passed else "BLOCKED until real digest, provenance, quorum, Cosign, and cluster evidence exist.",
+    }
+
+
+def metrics_text():
+    gates = {"G6": 0, "G7": 0, "G8": 0, "G9": STATE["counters"]["g9_pass_total"] > 0, "G10": 0}
+    return "\n".join([
+        "# HELP meta_toolsmith_forge_total Total forge operations",
+        "# TYPE meta_toolsmith_forge_total counter",
+        f"meta_toolsmith_forge_total {STATE['counters']['forge_total']}",
+        "# HELP meta_toolsmith_forge_rollback_total Total batch rollbacks caused by conflicts",
+        "# TYPE meta_toolsmith_forge_rollback_total counter",
+        f"meta_toolsmith_forge_rollback_total {STATE['counters']['forge_rollback_total']}",
+        "# HELP meta_toolsmith_healer_runs_total Total healer runs",
+        "# TYPE meta_toolsmith_healer_runs_total counter",
+        f"meta_toolsmith_healer_runs_total {STATE['counters']['healer_runs_total']}",
+        "# HELP meta_toolsmith_healer_blocks_total Total healer hard blocks",
+        "# TYPE meta_toolsmith_healer_blocks_total counter",
+        f"meta_toolsmith_healer_blocks_total {STATE['counters']['healer_blocks_total']}",
+        "# HELP meta_toolsmith_oci_validation_total Total OCI validations",
+        "# TYPE meta_toolsmith_oci_validation_total counter",
+        f"meta_toolsmith_oci_validation_total {STATE['counters']['oci_validation_total']}",
+        "# HELP meta_toolsmith_oci_reject_total Total rejected OCI references",
+        "# TYPE meta_toolsmith_oci_reject_total counter",
+        f"meta_toolsmith_oci_reject_total {STATE['counters']['oci_reject_total']}",
+        "# HELP meta_toolsmith_lock_writes_total Total lock ledger writes",
+        "# TYPE meta_toolsmith_lock_writes_total counter",
+        f"meta_toolsmith_lock_writes_total {STATE['counters']['lock_writes_total']}",
+        "# HELP meta_toolsmith_ledger_freeze_total Total ledger freeze events",
+        "# TYPE meta_toolsmith_ledger_freeze_total counter",
+        f"meta_toolsmith_ledger_freeze_total {STATE['counters']['ledger_freeze_total']}",
+        "# HELP meta_toolsmith_g9_preflight_total Total G9 preflight runs",
+        "# TYPE meta_toolsmith_g9_preflight_total counter",
+        f"meta_toolsmith_g9_preflight_total {STATE['counters']['g9_preflight_total']}",
+        "# HELP meta_toolsmith_g9_pass_total Total successful G9 preflights",
+        "# TYPE meta_toolsmith_g9_pass_total counter",
+        f"meta_toolsmith_g9_pass_total {STATE['counters']['g9_pass_total']}",
+        "# HELP meta_toolsmith_ledger_frozen Ledger frozen flag",
+        "# TYPE meta_toolsmith_ledger_frozen gauge",
+        f"meta_toolsmith_ledger_frozen {1 if STATE['ledger_frozen'] else 0}",
+        "# HELP meta_toolsmith_authoritative_gate Authoritative gate state",
+        "# TYPE meta_toolsmith_authoritative_gate gauge",
+        f"meta_toolsmith_authoritative_gate{{gate=\"G6\"}} {gates['G6']}",
+        f"meta_toolsmith_authoritative_gate{{gate=\"G7\"}} {gates['G7']}",
+        f"meta_toolsmith_authoritative_gate{{gate=\"G8\"}} {gates['G8']}",
+        f"meta_toolsmith_authoritative_gate{{gate=\"G9\"}} {1 if gates['G9'] else 0}",
+        f"meta_toolsmith_authoritative_gate{{gate=\"G10\"}} {gates['G10']}",
+        "",
+    ])
+
+
+HTML = """<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meta-Toolsmith v1.3 Preview</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#020617;color:#e2e8f0;margin:0;padding:24px}
+.wrap{max-width:1100px;margin:0 auto}.card{background:#111827;border:1px solid #334155;border-radius:16px;padding:18px;margin-bottom:18px}
+textarea,input{width:100%;box-sizing:border-box;background:#020617;color:#e2e8f0;border:1px solid #334155;border-radius:10px;padding:10px;margin-top:8px}
+button{background:linear-gradient(135deg,#6366f1,#0ea5e9);color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer;margin-top:10px}
+pre{background:#020617;border:1px solid #1e293b;border-radius:12px;padding:12px;white-space:pre-wrap;overflow:auto}
+</style></head>
+<body><div class="wrap">
+<div class="card"><h1>Meta-Toolsmith v1.3 Preview</h1><p>Fallback preview server using Python standard library only.</p></div>
+<div class="card"><h2>Forge</h2><textarea id="forgeExisting" placeholder="existing paths, one per line"></textarea><button onclick="callForge()">Generate all</button><pre id="forgeOut"></pre></div>
+<div class="card"><h2>Healer</h2><textarea id="healerText" placeholder="paste manifest or source"></textarea><button onclick="callHealer()">Scan</button><pre id="healerOut"></pre></div>
+<div class="card"><h2>OCI</h2><input id="ociRef" value="ghcr.io/openthai-ai/meta-toolsmith@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"><button onclick="callOci()">Validate</button><pre id="ociOut"></pre></div>
+<div class="card"><h2>Lock</h2><button onclick="callLock()">Build lock bundle</button><button onclick="tamperLedger()">Tamper ledger</button><pre id="lockOut"></pre></div>
+<div class="card"><h2>G9 preflight</h2><button onclick="callPreflight()">Run preflight</button><pre id="preflightOut"></pre></div>
+<div class="card"><h2>Metrics</h2><pre id="metricsOut"></pre></div>
+</div>
+<script>
+async function post(path, body){const r=await fetch(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});return [r.status, await r.json()]}
+async function refreshMetrics(){document.getElementById('metricsOut').textContent=await (await fetch('/metrics')).text()}
+async function callForge(){const [s,d]=await post('/api/forge',{context:{serviceName:'meta-toolsmith',namespace:'openthai-system',imageDigest:'sha256:'+'a'.repeat(64)},existingPaths:document.getElementById('forgeExisting').value.split('\\n').map(v=>v.trim()).filter(Boolean)});document.getElementById('forgeOut').textContent=JSON.stringify({status:s,...d},null,2);refreshMetrics()}
+async function callHealer(){const [s,d]=await post('/api/healer',{name:'inline-input',text:document.getElementById('healerText').value,mode:'release'});document.getElementById('healerOut').textContent=JSON.stringify({status:s,...d},null,2);refreshMetrics()}
+async function callOci(){const [s,d]=await post('/api/oci',{ref:document.getElementById('ociRef').value});document.getElementById('ociOut').textContent=JSON.stringify({status:s,...d},null,2);refreshMetrics()}
+async function callLock(){const [s,d]=await post('/api/lock',{context:{serviceName:'meta-toolsmith',namespace:'openthai-system',imageDigest:'sha256:'+'a'.repeat(64)}});document.getElementById('lockOut').textContent=JSON.stringify({status:s,...d},null,2);refreshMetrics()}
+async function tamperLedger(){const [s,d]=await post('/api/lock',{tamper:true});document.getElementById('lockOut').textContent=JSON.stringify({status:s,...d},null,2);refreshMetrics()}
+async function callPreflight(){const [s,d]=await post('/api/g9-preflight',{digest:true,provenance:false,quorumPassed:false,cosignVerified:false,clusterEvidence:false});document.getElementById('preflightOut').textContent=JSON.stringify({status:s,...d},null,2);refreshMetrics()}
+refreshMetrics()
+</script></body></html>"""
+
+
+class Handler(BaseHTTPRequestHandler):
+    def _json(self, status, payload):
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _text(self, status, body, ctype="text/plain; charset=utf-8"):
+        data = body.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self):
+        path = urlparse(self.path).path
+        if path in ("/", "/preview"):
+            return self._text(200, HTML, "text/html; charset=utf-8")
+        if path == "/metrics":
+            return self._text(200, metrics_text(), "text/plain; version=0.0.4; charset=utf-8")
+        return self._json(404, {"ok": False, "error": "not found"})
+
+    def do_POST(self):
+        path = urlparse(self.path).path
+        raw = self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        try:
+            body = json.loads(raw.decode("utf-8"))
+        except UnicodeDecodeError:
+            STATE["counters"]["healer_blocks_total"] += 1
+            return self._json(415, {"ok": False, "error": "non-UTF-8 request body blocked"})
+        except json.JSONDecodeError:
+            return self._json(400, {"ok": False, "error": "invalid json"})
+
+        if path == "/api/forge":
+            return self._json(200, generate_all(body.get("context", {}), body.get("existingPaths", [])))
+        if path == "/api/healer":
+            return self._json(200, healer_scan(body.get("name", "inline-input"), body.get("text", ""), body.get("mode", "source")))
+        if path == "/api/oci":
+            STATE["counters"]["oci_validation_total"] += 1
+            result = validate_oci(body.get("ref", ""))
+            if not result["ok"]:
+                STATE["counters"]["oci_reject_total"] += 1
+            return self._json(200, result)
+        if path == "/api/lock":
+            if body.get("tamper"):
+                if STATE["ledger"]:
+                    STATE["ledger"][0]["prev_hash"] = "tampered"
+                    STATE["ledger_frozen"] = True
+                    STATE["counters"]["ledger_freeze_total"] += 1
+                return self._json(200, {"ok": False, "frozen": True, "entries": STATE["ledger"]})
+            if STATE["ledger_frozen"]:
+                return self._json(423, {"ok": False, "frozen": True, "error": "ledger frozen"})
+            helm_lock, oci_lock, helm_hash, oci_hash, canonical = build_lock(body.get("context", {}))
+            append = append_ledger({
+                "kind": "lock_bundle",
+                "service": body.get("context", {}).get("serviceName", "meta-toolsmith"),
+                "canonicalMessage": canonical,
+                "helm_lock_sha256": helm_hash,
+                "oci_lock_sha256": oci_hash,
+            })
+            return self._json(200 if append["ok"] else 423, {
+                **append,
+                "helmLock": helm_lock,
+                "ociLock": oci_lock,
+                "helmHash": helm_hash,
+                "ociHash": oci_hash,
+                "canonicalMessage": canonical,
+            })
+        if path == "/api/g9-preflight":
+            return self._json(200, run_g9_preflight(body))
+        return self._json(404, {"ok": False, "error": "not found"})
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8080)
+    args = parser.parse_args()
+    server = ThreadingHTTPServer((args.host, args.port), Handler)
+    print(f"Meta-Toolsmith ota-preview listening on http://{args.host}:{args.port}/preview")
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

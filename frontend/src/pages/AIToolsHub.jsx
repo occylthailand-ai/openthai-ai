@@ -6,9 +6,9 @@ const TOOLS = [
   {
     id: 'meta-toolsmith',
     icon: '🧰',
-    name: 'Meta-Toolsmith v1.2',
-    desc: 'Forge 13 artifacts · Healer หยุด forbidden patterns · Quorum/Gates/OCI validator ครบในหน้าเดียว',
-    tags: ['Forge', 'Quorum', 'OCI'],
+    name: 'Meta-Toolsmith v1.3',
+    desc: 'Forge 13 artifacts · batch rollback · JSONL locks · G9 preflight · ota-preview fallback',
+    tags: ['Forge', 'Quorum', 'Preview'],
     color: '#0ea5e9',
     status: 'live',
     route: '/meta-toolsmith',

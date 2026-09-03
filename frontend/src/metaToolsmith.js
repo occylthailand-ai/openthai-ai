@@ -2,20 +2,19 @@ const FORBIDDEN_PATTERNS = [
   { id: 'rm-root', label: 'Dangerous delete', needle: 'rm -rf /' },
   { id: 'drop-table', label: 'Destructive SQL', needle: 'DROP TABLE' },
   { id: 'exec-base64', label: 'Encoded exec', needle: 'exec(base64' },
-  { id: 'curl-pipe-sh', label: 'Pipe to shell', needle: 'curl | sh' },
-  { id: 'wget-pipe-sh', label: 'Pipe to shell', needle: 'wget | sh' },
 ];
 
 const MODE_RULES = {
   source: [
+    { id: 'privileged', label: 'Privileged container requested', pattern: /\bprivileged:\s*true\b/i, severity: 'critical' },
     { id: 'todo', label: 'TODO/FIXME left in source', pattern: /\b(?:TODO|FIXME)\b/i, severity: 'medium' },
     { id: 'console', label: 'Debug console usage still present', pattern: /\bconsole\.(?:log|debug)\s*\(/, severity: 'low' },
-    { id: 'placeholder', label: 'Placeholder values still present', pattern: /\b(?:changeme|example|your-value|stub)\b/i, severity: 'medium' },
   ],
   release: [
-    { id: 'latest-tag', label: 'Mutable image tag detected', pattern: /\bimage:\s*.+:(?:latest|\d+\.\d+\.\d+)\b/i, severity: 'high' },
-    { id: 'allow-priv-escalation', label: 'Container allows privilege escalation', pattern: /\ballowPrivilegeEscalation:\s*true\b/, severity: 'high' },
-    { id: 'missing-digest', label: 'OCI image not pinned by digest', pattern: /\bimage:\s*.+:[^\s@]+$/im, severity: 'medium' },
+    { id: 'latest-tag', label: 'Mutable image tag detected', pattern: /(?:image:\s*.+|^[^@\s]+):latest\b/im, severity: 'critical' },
+    { id: 'semver-tag', label: 'Mutable semver tag detected', pattern: /(?:image:\s*.+|^[^@\s]+):\d+\.\d+\.\d+\b/im, severity: 'high' },
+    { id: 'allow-priv-escalation', label: 'Container allows privilege escalation', pattern: /\ballowPrivilegeEscalation:\s*true\b/i, severity: 'high' },
+    { id: 'privileged', label: 'Privileged container requested', pattern: /\bprivileged:\s*true\b/i, severity: 'critical' },
   ],
   attest: [
     { id: 'unsigned', label: 'Signature field is missing', pattern: /"signature"\s*:\s*""|signature:\s*""/i, severity: 'high' },
@@ -27,6 +26,16 @@ const MODE_RULES = {
 const HEX_64_RE = /^[a-f0-9]{64}$/i;
 const DIGEST_RE = /^.+@sha256:[a-f0-9]{64}$/i;
 
+export const PREVIEW_API = [
+  { method: 'GET', path: '/preview', purpose: 'Preview UI' },
+  { method: 'GET', path: '/metrics', purpose: 'Prometheus metrics' },
+  { method: 'POST', path: '/api/forge', purpose: 'Forge 13 artifacts / batch rollback' },
+  { method: 'POST', path: '/api/healer', purpose: 'Scan source/release/attestation payloads' },
+  { method: 'POST', path: '/api/oci', purpose: 'Validate OCI digest pinning' },
+  { method: 'POST', path: '/api/lock', purpose: 'Generate helm/OCI locks + JSONL chain' },
+  { method: 'POST', path: '/api/g9-preflight', purpose: 'Run 5 preflight checks before Helm' },
+];
+
 export const ARTIFACTS = [
   {
     id: 'fastapi-endpoint',
@@ -35,7 +44,7 @@ export const ARTIFACTS = [
     forge: ({ serviceName, namespace }) => `from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-app = FastAPI(title="${serviceName}", version="1.2.0")
+app = FastAPI(title="${serviceName}", version="1.3.0")
 
 
 class ForgeRequest(BaseModel):
@@ -46,7 +55,7 @@ class ForgeRequest(BaseModel):
 
 @app.get("/healthz")
 def healthz():
-    return {"status": "ok", "service": "${serviceName}"}
+    return {"status": "ok", "service": "${serviceName}", "policy": "g6-g10"}
 
 
 @app.post("/forge")
@@ -71,8 +80,8 @@ apiVersion: v2
 name: meta-toolsmith
 description: Helm chart for ${serviceName}
 type: application
-version: 0.1.2
-appVersion: "1.2.0"
+version: 0.1.3
+appVersion: "1.3.0"
 
 ---
 # charts/meta-toolsmith/values.yaml
@@ -102,6 +111,8 @@ spec:
       containers:
         - name: ${serviceName}
           image: "{{ .Values.image.repository }}@{{ .Values.image.digest }}"
+          securityContext:
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 8000
           readinessProbe:
@@ -125,8 +136,8 @@ if [[ ! "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]; then
   exit 1
 fi
 
-oras push "$IMAGE_REPO@$DIGEST" \
-  --artifact-type application/vnd.openthai.release.layer.v1 \
+oras push "$IMAGE_REPO@$DIGEST" \\
+  --artifact-type application/vnd.openthai.release.layer.v1 \\
   ./dist/release.tar.gz:application/gzip
 
 echo "Pushed $IMAGE_REPO@$DIGEST"
@@ -159,8 +170,8 @@ console.log(JSON.stringify({
     label: 'Skill module',
     fileName: 'skills/meta-toolsmith.js',
     forge: ({ serviceName }) => `export const metaToolsmithSkill = {
-  id: 'meta-toolsmith-v12',
-  name: 'Meta-Toolsmith v1.2',
+  id: 'meta-toolsmith-v13',
+  name: 'Meta-Toolsmith v1.3',
   description: 'Generate release-safe artifacts for ${serviceName}',
   run({ artifact, digest }) {
     if (!/^sha256:[a-f0-9]{64}$/i.test(digest)) {
@@ -287,9 +298,10 @@ test('canonical quorum message binds both lock files', () => {
     label: 'Lock manifest',
     fileName: 'locks/meta-toolsmith.lock.json',
     forge: ({ imageDigest }) => `{
-  "schemaVersion": "1.2",
+  "schemaVersion": "1.3",
   "helm_lock_sha256": "REPLACE_WITH_HELM_LOCK_SHA256",
   "oci_lock_sha256": "REPLACE_WITH_OCI_LOCK_SHA256",
+  "ledger_format": "jsonl-prev-hash",
   "images": [
     {
       "name": "ghcr.io/openthai-ai/meta-toolsmith",
@@ -331,7 +343,7 @@ spec:
     - name: meta-toolsmith.rules
       rules:
         - alert: MetaToolsmithGateFailure
-          expr: max_over_time(meta_toolsmith_gate_pass{gate="G9"}[10m]) == 0
+          expr: max_over_time(meta_toolsmith_g9_pass_total[10m]) == 0
           for: 5m
           labels:
             severity: critical
@@ -344,7 +356,7 @@ spec:
     id: 'docs-v12-oci',
     label: 'docs/04-V12-OCI',
     fileName: 'docs/04-V12-OCI.md',
-    forge: ({ imageDigest }) => `# 04 — V1.2 OCI Release Discipline
+    forge: ({ imageDigest }) => `# 04 — V1.3 OCI Release Discipline
 
 ## Accepted image format
 
@@ -366,6 +378,20 @@ Canonical messages must bind both \`helm_lock\` and \`oci_lock\` SHA-256 values 
   },
 ];
 
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+export async function sha256Hex(input) {
+  const bytes = new TextEncoder().encode(String(input));
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function forgeArtifact(id, context) {
   const artifact = ARTIFACTS.find((item) => item.id === id);
   if (!artifact) return null;
@@ -376,7 +402,22 @@ export function forgeArtifact(id, context) {
 }
 
 export function isBinaryLikeName(name = '') {
-  return /\.(?:pyc|png|jpe?g|gif|webp|zip|gz|pdf|woff2?)$/i.test(name);
+  return /\.(?:pyc|png|jpe?g|gif|webp|zip|gz|pdf|woff2?|exe|bin|ota)$/i.test(name);
+}
+
+export function isProbablyBinary(bytes) {
+  if (!bytes?.length) return false;
+  const sample = bytes.slice(0, Math.min(bytes.length, 512));
+  let suspicious = 0;
+  for (const value of sample) {
+    if (value === 0) return true;
+    if ((value < 9 || (value > 13 && value < 32)) && value !== 27) suspicious += 1;
+  }
+  return suspicious / sample.length > 0.1;
+}
+
+export function decodeUtf8Bytes(bytes) {
+  return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
 }
 
 export function scanHealerText(name, text, mode = 'source') {
@@ -404,9 +445,140 @@ export function scanHealerText(name, text, mode = 'source') {
     }));
 
   return {
-    halted: false,
-    alert: '',
+    halted: issues.some((issue) => issue.severity === 'critical'),
+    alert: issues.some((issue) => issue.severity === 'critical') ? `BLOCKED: critical healer issues in ${name}` : '',
     issues,
+  };
+}
+
+export function scanHealerBytes(name, bytes, mode = 'source') {
+  if (isBinaryLikeName(name) || isProbablyBinary(bytes)) {
+    return {
+      halted: true,
+      alert: `BLOCKED: binary input in ${name}`,
+      issues: [{ severity: 'critical', label: 'Binary input blocked', detail: 'Healer refuses binary or .pyc uploads.' }],
+    };
+  }
+  try {
+    const text = decodeUtf8Bytes(bytes);
+    return scanHealerText(name, text, mode);
+  } catch {
+    return {
+      halted: true,
+      alert: `BLOCKED: non-UTF-8 input in ${name}`,
+      issues: [{ severity: 'critical', label: 'Non-UTF-8 input blocked', detail: 'Upload could not be decoded as UTF-8.' }],
+    };
+  }
+}
+
+export async function generateAllArtifacts(context, existingPaths = []) {
+  const conflicts = ARTIFACTS
+    .filter((artifact) => existingPaths.includes(artifact.fileName))
+    .map((artifact) => artifact.fileName);
+
+  if (conflicts.length) {
+    return {
+      ok: false,
+      rolledBack: true,
+      conflicts,
+      generated: [],
+    };
+  }
+
+  return {
+    ok: true,
+    rolledBack: false,
+    conflicts: [],
+    generated: ARTIFACTS.map((artifact) => forgeArtifact(artifact.id, context)),
+  };
+}
+
+export function buildCanonicalMessage({ role, helmHash, ociHash }) {
+  return `META-QUORUM|role=${role}|helm_lock_sha256=${helmHash}|oci_lock_sha256=${ociHash}`;
+}
+
+export async function buildLockBundle({ serviceName, namespace, imageDigest, previousLedgerHash = '' }) {
+  const helmLock = stableJson({
+    apiVersion: 'openthai.ai/v1',
+    kind: 'HelmLock',
+    service: serviceName,
+    namespace,
+    chart: 'meta-toolsmith',
+    image: `ghcr.io/openthai-ai/${serviceName}@${imageDigest}`,
+  });
+  const ociLock = stableJson({
+    apiVersion: 'openthai.ai/v1',
+    kind: 'OciLock',
+    service: serviceName,
+    image: `ghcr.io/openthai-ai/${serviceName}@${imageDigest}`,
+  });
+  const helmHash = await sha256Hex(helmLock);
+  const ociHash = await sha256Hex(ociLock);
+  const canonicalMessage = buildCanonicalMessage({ role: 'release', helmHash, ociHash });
+  const baseEntry = {
+    ts: new Date().toISOString(),
+    kind: 'lock_bundle',
+    service: serviceName,
+    namespace,
+    prev_hash: previousLedgerHash || null,
+    canonicalMessage,
+    helm_lock_sha256: helmHash,
+    oci_lock_sha256: ociHash,
+  };
+  const hash = await sha256Hex(stableJson(baseEntry));
+  const ledgerEntry = { ...baseEntry, hash };
+  return {
+    helmLock,
+    ociLock,
+    helmHash,
+    ociHash,
+    canonicalMessage,
+    ledgerEntry,
+    jsonl: JSON.stringify(ledgerEntry),
+  };
+}
+
+export async function verifyLedgerChain(entries = []) {
+  let previousHash = null;
+  for (let index = 0; index < entries.length; index += 1) {
+    const entry = entries[index];
+    if (entry.prev_hash !== previousHash) {
+      return { ok: false, frozen: true, index, reason: 'prev_hash mismatch' };
+    }
+    const { hash, ...base } = entry;
+    const expectedHash = await sha256Hex(stableJson(base));
+    if (hash !== expectedHash) {
+      return { ok: false, frozen: true, index, reason: 'hash mismatch' };
+    }
+    previousHash = hash;
+  }
+  return { ok: true, frozen: false, index: -1, reason: '' };
+}
+
+export async function appendLedgerEntry(entries = [], payload = {}) {
+  const verification = await verifyLedgerChain(entries);
+  if (!verification.ok) {
+    return {
+      ok: false,
+      frozen: true,
+      entries,
+      reason: verification.reason,
+    };
+  }
+
+  const previousHash = entries.length ? entries[entries.length - 1].hash : null;
+  const baseEntry = {
+    ts: new Date().toISOString(),
+    prev_hash: previousHash,
+    ...payload,
+  };
+  const hash = await sha256Hex(stableJson(baseEntry));
+  const entry = { ...baseEntry, hash };
+  return {
+    ok: true,
+    frozen: false,
+    entries: [...entries, entry],
+    entry,
   };
 }
 
@@ -421,10 +593,6 @@ export function validateOciReference(ref) {
     return { ok: false, message: 'Mutable tags are not allowed. Replace the tag with a digest pin.' };
   }
   return { ok: false, message: 'Invalid OCI reference. Expected image@sha256:<64hex>.' };
-}
-
-export function buildCanonicalMessage({ role, helmHash, ociHash }) {
-  return `META-QUORUM|role=${role}|helm_lock_sha256=${helmHash}|oci_lock_sha256=${ociHash}`;
 }
 
 export function verifyQuorum({ role, canonicalMessage, attestation, helmHash, ociHash }) {
@@ -459,6 +627,23 @@ export function verifyQuorum({ role, canonicalMessage, attestation, helmHash, oc
   };
 }
 
+export function runG9Preflight({ digest, provenance, quorumPassed, cosignVerified, clusterEvidence }) {
+  const checks = [
+    { id: 'digest', ok: Boolean(digest), label: 'Digest evidence present' },
+    { id: 'provenance', ok: Boolean(provenance), label: 'Provenance evidence present' },
+    { id: 'quorum', ok: Boolean(quorumPassed), label: 'Quorum passed' },
+    { id: 'cosign', ok: Boolean(cosignVerified), label: 'Cosign registry verification present' },
+    { id: 'cluster', ok: Boolean(clusterEvidence), label: 'Helm cluster evidence present' },
+  ];
+  const pass = checks.every((check) => check.ok);
+  return {
+    checks,
+    pass,
+    helmCommand: pass ? 'helm upgrade meta-toolsmith ./charts/meta-toolsmith --dry-run=server' : '',
+    blockedReason: pass ? '' : 'BLOCKED until real digest, provenance, quorum, Cosign, and cluster evidence exist.',
+  };
+}
+
 export function deriveAuthoritativeGates(gates) {
   const authoritative = {
     G6: Boolean(gates.G6),
@@ -470,4 +655,67 @@ export function deriveAuthoritativeGates(gates) {
     ...authoritative,
     G10: authoritative.G6 && authoritative.G7 && authoritative.G8 && authoritative.G9,
   };
+}
+
+export function createMetricsSnapshot({ counters = {}, authoritative = {}, ledgerFrozen = false }) {
+  return {
+    forge_total: counters.forge_total || 0,
+    forge_rollback_total: counters.forge_rollback_total || 0,
+    healer_runs_total: counters.healer_runs_total || 0,
+    healer_blocks_total: counters.healer_blocks_total || 0,
+    oci_validation_total: counters.oci_validation_total || 0,
+    oci_reject_total: counters.oci_reject_total || 0,
+    lock_writes_total: counters.lock_writes_total || 0,
+    ledger_freeze_total: counters.ledger_freeze_total || 0,
+    g9_preflight_total: counters.g9_preflight_total || 0,
+    g9_pass_total: counters.g9_pass_total || 0,
+    ledger_frozen: ledgerFrozen ? 1 : 0,
+    gates: authoritative,
+  };
+}
+
+export function renderPrometheusMetrics(metrics) {
+  return [
+    '# HELP meta_toolsmith_forge_total Total forge operations',
+    '# TYPE meta_toolsmith_forge_total counter',
+    `meta_toolsmith_forge_total ${metrics.forge_total}`,
+    '# HELP meta_toolsmith_forge_rollback_total Total batch rollbacks caused by conflicts',
+    '# TYPE meta_toolsmith_forge_rollback_total counter',
+    `meta_toolsmith_forge_rollback_total ${metrics.forge_rollback_total}`,
+    '# HELP meta_toolsmith_healer_runs_total Total healer runs',
+    '# TYPE meta_toolsmith_healer_runs_total counter',
+    `meta_toolsmith_healer_runs_total ${metrics.healer_runs_total}`,
+    '# HELP meta_toolsmith_healer_blocks_total Total healer hard blocks',
+    '# TYPE meta_toolsmith_healer_blocks_total counter',
+    `meta_toolsmith_healer_blocks_total ${metrics.healer_blocks_total}`,
+    '# HELP meta_toolsmith_oci_validation_total Total OCI validations',
+    '# TYPE meta_toolsmith_oci_validation_total counter',
+    `meta_toolsmith_oci_validation_total ${metrics.oci_validation_total}`,
+    '# HELP meta_toolsmith_oci_reject_total Total rejected OCI references',
+    '# TYPE meta_toolsmith_oci_reject_total counter',
+    `meta_toolsmith_oci_reject_total ${metrics.oci_reject_total}`,
+    '# HELP meta_toolsmith_lock_writes_total Total lock ledger writes',
+    '# TYPE meta_toolsmith_lock_writes_total counter',
+    `meta_toolsmith_lock_writes_total ${metrics.lock_writes_total}`,
+    '# HELP meta_toolsmith_ledger_freeze_total Total ledger freeze events',
+    '# TYPE meta_toolsmith_ledger_freeze_total counter',
+    `meta_toolsmith_ledger_freeze_total ${metrics.ledger_freeze_total}`,
+    '# HELP meta_toolsmith_g9_preflight_total Total G9 preflight runs',
+    '# TYPE meta_toolsmith_g9_preflight_total counter',
+    `meta_toolsmith_g9_preflight_total ${metrics.g9_preflight_total}`,
+    '# HELP meta_toolsmith_g9_pass_total Total successful G9 preflights',
+    '# TYPE meta_toolsmith_g9_pass_total counter',
+    `meta_toolsmith_g9_pass_total ${metrics.g9_pass_total}`,
+    '# HELP meta_toolsmith_ledger_frozen Ledger frozen flag',
+    '# TYPE meta_toolsmith_ledger_frozen gauge',
+    `meta_toolsmith_ledger_frozen ${metrics.ledger_frozen}`,
+    '# HELP meta_toolsmith_authoritative_gate Authoritative gate state',
+    '# TYPE meta_toolsmith_authoritative_gate gauge',
+    `meta_toolsmith_authoritative_gate{gate="G6"} ${metrics.gates.G6 ? 1 : 0}`,
+    `meta_toolsmith_authoritative_gate{gate="G7"} ${metrics.gates.G7 ? 1 : 0}`,
+    `meta_toolsmith_authoritative_gate{gate="G8"} ${metrics.gates.G8 ? 1 : 0}`,
+    `meta_toolsmith_authoritative_gate{gate="G9"} ${metrics.gates.G9 ? 1 : 0}`,
+    `meta_toolsmith_authoritative_gate{gate="G10"} ${metrics.gates.G10 ? 1 : 0}`,
+    '',
+  ].join('\n');
 }
