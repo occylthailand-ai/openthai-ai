@@ -299,6 +299,119 @@ const THAILAND_GAP_DRILLDOWNS = [
   { label: '🎥 Trend-to-marketplace bridge', gap: 'TikTok/Facebook content ยังไม่ต่อ Shopee/Lazada แบบครบลูป', action: 'เชื่อม script, listing, voucher, retargeting', urgency: 'moderate', color: '#f59e0b', journeyId: 'tiktok-creator-sme' },
 ];
 
+const PLATFORM_COST_REGISTRY = [
+  { id: 'line', name: 'LINE OA', color: '#06c755', commissionRate: 0, paymentRate: 0.005, logisticsRate: 0.04, note: 'แชทคอมเมิร์ซตรง ไม่มี marketplace commission', capability: 'Consent required' },
+  { id: 'tiktok', name: 'TikTok Shop', color: '#fe2c55', commissionRate: 0.05, paymentRate: 0.02, logisticsRate: 0.05, note: 'คอมมิชชัน + ค่าโปร/affiliate สูงถ้าไลฟ์หนัก', capability: 'Audit + consent' },
+  { id: 'shopee', name: 'Shopee', color: '#f97316', commissionRate: 0.085, paymentRate: 0.025, logisticsRate: 0.045, note: 'มีค่าธรรมเนียม marketplace + payment + campaign pressure', capability: 'Audit gated' },
+  { id: 'lazada', name: 'Lazada', color: '#0ea5e9', commissionRate: 0.075, paymentRate: 0.022, logisticsRate: 0.04, note: 'เหมาะร้านทางการ/พรีเมียมมากกว่าแข่งราคา', capability: 'Audit gated' },
+  { id: 'facebook', name: 'Facebook', color: '#1877f2', commissionRate: 0.02, paymentRate: 0.005, logisticsRate: 0.04, note: 'ต้นทุนหลักอยู่ที่ ads และทีมตอบ inbox', capability: 'Consent required' },
+  { id: 'instagram', name: 'Instagram', color: '#e1306c', commissionRate: 0.025, paymentRate: 0.005, logisticsRate: 0.04, note: 'ต้นทุน content/creator เด่นกว่าค่าธรรมเนียมตรง', capability: 'Consent required' },
+  { id: 'google', name: 'Google', color: '#34a853', commissionRate: 0.015, paymentRate: 0.005, logisticsRate: 0.04, note: 'ค่าใช้จ่ายหลักคือ ads/SEO และ attribution gap', capability: 'Available + consent' },
+  { id: 'alibaba', name: 'Alibaba / 1688', color: '#ff6a00', commissionRate: 0.03, paymentRate: 0.015, logisticsRate: 0.08, note: 'ต้องบวก landed cost, ภาษี, ค่าขนส่ง, และ margin safety', capability: 'Audit + docs' },
+];
+
+const CHANNEL_CAPABILITY_NEGOTIATOR = [
+  { id: 'line', name: 'LINE', color: '#06c755', apis: [{ label: 'Messaging API', status: 'available' }, { label: 'Audience sync', status: 'consent' }, { label: 'Broadcast analytics', status: 'audit' }, { label: 'Payment capture', status: 'unavailable' }] },
+  { id: 'tiktok', name: 'TikTok', color: '#fe2c55', apis: [{ label: 'Content planning', status: 'available' }, { label: 'Shop listing', status: 'audit' }, { label: 'Creator data', status: 'consent' }, { label: 'Direct wallet control', status: 'unavailable' }] },
+  { id: 'shopee', name: 'Shopee', color: '#f97316', apis: [{ label: 'Catalog sync', status: 'audit' }, { label: 'Order sync', status: 'audit' }, { label: 'Buyer re-engagement', status: 'consent' }, { label: 'Ad campaign control', status: 'unavailable' }] },
+  { id: 'google', name: 'Google', color: '#34a853', apis: [{ label: 'Business Profile', status: 'available' }, { label: 'Ads attribution import', status: 'audit' }, { label: 'Lead routing', status: 'consent' }, { label: 'LINE identity join', status: 'unavailable' }] },
+  { id: 'alibaba', name: 'Alibaba', color: '#ff6a00', apis: [{ label: 'Catalog mapping', status: 'audit' }, { label: 'Inquiry workflow', status: 'available' }, { label: 'Importer profile data', status: 'consent' }, { label: 'Thai tax clearance', status: 'unavailable' }] },
+];
+
+const LIFE_PLATFORM_GROUPS = [
+  { title: 'Discovery Platforms', color: '#34a853', items: ['Google', 'TikTok', 'Facebook', 'Instagram'], detail: 'เก่งเรื่องหา demand แต่ไม่ถือเส้นทางไทยจนจบการขาย' },
+  { title: 'Marketplace Platforms', color: '#f97316', items: ['Shopee', 'Lazada', 'Amazon', 'Pinduoduo'], detail: 'เก่งเรื่อง conversion แต่ไม่รู้บริบทครัวเรือนไทยและ repeat sale ผ่านแชท' },
+  { title: 'Messaging Platforms', color: '#06c755', items: ['LINE', 'WhatsApp'], detail: 'เก่งปิดการขายและดูแลลูกค้า แต่ไม่ผูก search / tax / cost / fulfillment ครบ' },
+  { title: 'Trade & Enterprise Platforms', color: '#6366f1', items: ['Alibaba', 'Microsoft'], detail: 'เก่ง B2B และ workflow แต่ไม่จับ livelihood ไทยตั้งแต่ต้นน้ำถึงปลายน้ำ' },
+];
+
+const THAI_LIFE_GAPS = [
+  'Household Ledger ที่เห็นเงินจริงเข้า-ออกระดับครัวเรือน',
+  'OTOP Demand Pool ที่รวมดีมานด์จากหลายช่องทางแล้วกระจายกลับชุมชน',
+  'Thai Product Notes สำหรับบันทึกบริบทสินค้าและเรื่องเล่าท้องถิ่น',
+  'Assisted Mode สำหรับผู้ใช้ที่ไม่ถนัดดิจิทัลหรือมีเวลาจำกัด',
+  'Search-to-LINE attribution graph แบบไทย',
+  '1688 landed cost + HS code + e-Tax guardrail',
+  'PromptPay + parcel evidence chain สำหรับการค้ารายวัน',
+];
+
+const THAI_LIFE_OUTCOMES = [
+  { title: 'SME รายได้สุทธิ +20–35%', color: '#10b981', detail: 'ลดคอมมิชชันเกินจำเป็น ปรับโฆษณา และตั้งราคาจากต้นทุนจริง' },
+  { title: 'เวลาทำบัญชีลด 60%', color: '#6366f1', detail: 'รวมรายรับ รายจ่าย ค่าธรรมเนียม และหลักฐานการชำระเงินไว้จุดเดียว' },
+  { title: 'ตอบลูกค้าเร็วขึ้น 3x', color: '#06c755', detail: 'มี assisted reply, follow-up, และ consent-aware CRM' },
+  { title: 'สูญเสียจากต้นทุนผิดลด 25%', color: '#f97316', detail: 'คำนวณ landed cost, HS code, และ margin ก่อนนำเข้า/ยิงโปร' },
+  { title: 'ชุมชนท้องถิ่นเข้าถึงตลาดใหม่', color: '#ec4899', detail: 'สินค้าไทยถูกแปลงเป็น SEO, catalog, และ buyer-ready content ได้เร็วขึ้น' },
+];
+
+const NET_INCOME_PY = `def net_income(gross_revenue, commission_rate, cogs, ads, shipping, packaging, misc=0):\n    commission = gross_revenue * commission_rate\n    net = gross_revenue - commission - cogs - ads - shipping - packaging - misc\n    return {\n        "gross_revenue": gross_revenue,\n        "commission": commission,\n        "net_income": net,\n        "margin_pct": 0 if gross_revenue == 0 else (net / gross_revenue) * 100,\n    }`;
+
+const CONSENT_LEDGER_PY = `from dataclasses import dataclass, field\nfrom datetime import datetime\n\n@dataclass\nclass ConsentLedger:\n    records: list[dict] = field(default_factory=list)\n\n    def grant(self, platform, purpose, subject_id):\n        self.records.append({\n            "platform": platform,\n            "purpose": purpose,\n            "subject_id": subject_id,\n            "status": "granted",\n            "recorded_at": datetime.utcnow().isoformat() + "Z",\n        })\n\n    def withdraw(self, platform, subject_id, section="PDPA มาตรา 33"):\n        self.records.append({\n            "platform": platform,\n            "subject_id": subject_id,\n            "status": "withdrawn",\n            "legal_basis": section,\n            "recorded_at": datetime.utcnow().isoformat() + "Z",\n        })`;
+
+const HOUSEHOLD_LEDGER_PY = `from dataclasses import dataclass, field\n\n@dataclass\nclass HouseholdLedger:\n    income: list[dict] = field(default_factory=list)\n    expenses: list[dict] = field(default_factory=list)\n\n    def add_income(self, source, amount):\n        self.income.append({"source": source, "amount": amount})\n\n    def add_expense(self, category, amount):\n        self.expenses.append({"category": category, "amount": amount})\n\n    def net_position(self):\n        total_income = sum(item["amount"] for item in self.income)\n        total_expense = sum(item["amount"] for item in self.expenses)\n        return total_income - total_expense`;
+
+const CONSENT_PLATFORM_OPTIONS = [
+  { id: 'line', name: 'LINE OA', color: '#06c755' },
+  { id: 'tiktok', name: 'TikTok Shop', color: '#fe2c55' },
+  { id: 'shopee', name: 'Shopee', color: '#f97316' },
+  { id: 'google', name: 'Google', color: '#34a853' },
+  { id: 'alibaba', name: 'Alibaba / 1688', color: '#ff6a00' },
+];
+
+function formatMoney(value) {
+  return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', maximumFractionDigits: 0 }).format(Number.isFinite(value) ? value : 0);
+}
+
+function computeIncomeModel(input, platform) {
+  const grossRevenue = Number(input.grossRevenue) || 0;
+  const cogs = Number(input.cogs) || 0;
+  const ads = Number(input.ads) || 0;
+  const shipping = Number(input.shipping) || 0;
+  const packaging = Number(input.packaging) || 0;
+  const misc = Number(input.misc) || 0;
+  const commission = grossRevenue * (platform?.commissionRate ?? 0);
+  const paymentFee = grossRevenue * (platform?.paymentRate ?? 0);
+  const logisticsFee = grossRevenue * (platform?.logisticsRate ?? 0);
+  const totalCosts = commission + paymentFee + logisticsFee + cogs + ads + shipping + packaging + misc;
+  const netIncome = grossRevenue - totalCosts;
+  const marginPct = grossRevenue > 0 ? (netIncome / grossRevenue) * 100 : 0;
+
+  return {
+    grossRevenue,
+    cogs,
+    ads,
+    shipping,
+    packaging,
+    misc,
+    commission,
+    paymentFee,
+    logisticsFee,
+    totalCosts,
+    netIncome,
+    marginPct,
+  };
+}
+
+function getIncomeInsights(model) {
+  const insights = [];
+  const gross = model.grossRevenue || 1;
+
+  if ((model.ads / gross) > 0.2) insights.push('ค่าโฆษณาสูงเกิน 20% ของยอดขาย ควรปรับ creative, targeting หรือดัน organic/LINE repeat มากขึ้น');
+  if (((model.shipping + model.logisticsFee) / gross) > 0.12) insights.push('ค่าส่งและโลจิสติกส์สูง ควรทบทวนขนาดพัสดุ โปรโมชั่นส่งฟรี และพาร์ตเนอร์ขนส่ง');
+  if ((model.cogs / gross) > 0.55) insights.push('ต้นทุนสินค้ากินสัดส่วนสูง ควรปรับ bundle, MOQ หรือ negotiated sourcing');
+  if ((model.commission / gross) > 0.07) insights.push('ค่า commission สูง ควรผลัก repeat sale ไปยัง LINE/CRM เพื่อลดการพึ่ง marketplace');
+  if (model.marginPct < 15) insights.push('กำไรสุทธิต่ำกว่า 15% ควรปรับราคา ลดต้นทุนแฝง หรือเพิ่มยอดจากลูกค้าเดิม');
+  if (!insights.length) insights.push('โครงสร้างต้นทุนยังสมดุล ใช้ข้อมูลนี้ต่อยอดเพื่อขยายยอดขายโดยไม่เสีย margin');
+
+  return insights;
+}
+
+function statusTone(status) {
+  if (status === 'available') return { label: 'ใช้ได้จริง', color: '#10b981' };
+  if (status === 'audit') return { label: 'ต้องผ่าน audit', color: '#f59e0b' };
+  if (status === 'consent') return { label: 'ต้องมี consent', color: '#6366f1' };
+  return { label: 'ทำไม่ได้', color: '#ef4444' };
+}
+
 const VISION = [
   { year: '2026', title: "Thailand's #1 AI Marketing Platform", desc: 'Thai Exporters · OTOP · SME · Agriculture · 7 Continents · Launch 20/12', icon: '🇹🇭', color: '#10b981' },
   { year: '2027', title: 'ASEAN Export Intelligence OS', desc: 'Vietnam · Indonesia · Malaysia · Philippines · TH+EN+ZH+ID+VI+MY+TL', icon: '🌏', color: '#6366f1' },
@@ -361,6 +474,10 @@ function TabBtn({ id, label, active, onClick, color }) {
 const TABS = [
   { id: 'compare',   label: '⚔️ เปรียบเทียบ',     color: '#6366f1' },
   { id: 'thailand',  label: '🇹🇭 Thailand vs Platforms', color: '#14b8a6' },
+  { id: 'income',    label: '💰 รายได้สุทธิ',      color: '#22c55e' },
+  { id: 'fees',      label: '📋 ค่าธรรมเนียม',     color: '#f97316' },
+  { id: 'consent',   label: '🔐 Consent Ledger', color: '#8b5cf6' },
+  { id: 'life',      label: '🌱 ชีวิต',          color: '#06b6d4' },
   { id: 'people',    label: '🧑‍🤝‍🧑 คน',          color: '#22c55e' },
   { id: 'advantage', label: '🛡️ จุดแข็งเรา',      color: '#10b981' },
   { id: 'gap',       label: '⚠️ Gap Analysis',     color: '#f59e0b' },
@@ -375,10 +492,45 @@ export default function StrategyCenterPage() {
   const [tab, setTab] = useState('compare');
   const [focusCols, setFocusCols] = useState([]);
   const [selectedJourneyId, setSelectedJourneyId] = useState(THAI_LIVED_JOURNEYS[0].id);
+  const [incomePlatformId, setIncomePlatformId] = useState(PLATFORM_COST_REGISTRY[0].id);
+  const [costFocusId, setCostFocusId] = useState(PLATFORM_COST_REGISTRY[0].id);
+  const [capabilityFocusId, setCapabilityFocusId] = useState(CHANNEL_CAPABILITY_NEGOTIATOR[0].id);
+  const [consentRecords, setConsentRecords] = useState(() => CONSENT_PLATFORM_OPTIONS.map((item) => ({
+    ...item,
+    purpose: item.id === 'line' ? 'Broadcast + CRM' : 'Analytics + order routing',
+    status: item.id === 'line' || item.id === 'google' ? 'granted' : 'pending',
+    updatedAt: '2026-09-03T12:00:00Z',
+  })));
+  const [incomeInput, setIncomeInput] = useState({
+    grossRevenue: 50000,
+    cogs: 22000,
+    ads: 6000,
+    shipping: 2500,
+    packaging: 1000,
+    misc: 1500,
+  });
   const navigate = useNavigate();
 
   const activeTab = TABS.find(t => t.id === tab);
   const selectedJourney = THAI_LIVED_JOURNEYS.find((item) => item.id === selectedJourneyId) ?? THAI_LIVED_JOURNEYS[0];
+  const incomePlatform = PLATFORM_COST_REGISTRY.find((item) => item.id === incomePlatformId) ?? PLATFORM_COST_REGISTRY[0];
+  const costFocus = PLATFORM_COST_REGISTRY.find((item) => item.id === costFocusId) ?? PLATFORM_COST_REGISTRY[0];
+  const capabilityFocus = CHANNEL_CAPABILITY_NEGOTIATOR.find((item) => item.id === capabilityFocusId) ?? CHANNEL_CAPABILITY_NEGOTIATOR[0];
+  const incomeModel = computeIncomeModel(incomeInput, incomePlatform);
+  const incomeInsights = getIncomeInsights(incomeModel);
+  const grantedConsents = consentRecords.filter((item) => item.status === 'granted').length;
+
+  const updateIncomeField = (key, value) => {
+    setIncomeInput((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateConsentStatus = (id, status) => {
+    setConsentRecords((current) => current.map((item) => (
+      item.id === id
+        ? { ...item, status, updatedAt: new Date().toISOString() }
+        : item
+    )));
+  };
 
   const s = {
     page: { minHeight: '100vh', background: '#080812', color: '#fff', fontFamily: 'system-ui, sans-serif' },
@@ -487,6 +639,242 @@ export default function StrategyCenterPage() {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+          </>
+        )}
+
+        {tab === 'income' && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px,1.1fr) minmax(280px,0.9fr)', gap: 14, marginBottom: 14 }}>
+              <div style={s.card}>
+                <h3 style={{ ...s.h3, color: '#86efac' }}>💰 Net Income Calculator</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#94a3b8' }}>
+                    Platform
+                    <select value={incomePlatformId} onChange={(e) => setIncomePlatformId(e.target.value)} style={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 10, padding: '10px 12px' }}>
+                      {PLATFORM_COST_REGISTRY.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                    </select>
+                  </label>
+                  {[
+                    ['grossRevenue', 'ยอดขายรวม'],
+                    ['cogs', 'ต้นทุนสินค้า'],
+                    ['ads', 'ค่าโฆษณา'],
+                    ['shipping', 'ค่าส่งตรง'],
+                    ['packaging', 'แพ็กกิ้ง'],
+                    ['misc', 'อื่น ๆ'],
+                  ].map(([key, label]) => (
+                    <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#94a3b8' }}>
+                      {label}
+                      <input
+                        type="number"
+                        min="0"
+                        value={incomeInput[key]}
+                        onChange={(e) => updateIncomeField(key, e.target.value)}
+                        style={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 10, padding: '10px 12px' }}
+                      />
+                    </label>
+                  ))}
+                </div>
+                <div style={{ marginTop: 12, fontSize: 12, color: incomePlatform.color }}>
+                  Commission จะอัปเดตอัตโนมัติตาม {incomePlatform.name}: {(incomePlatform.commissionRate * 100).toFixed(1)}%
+                </div>
+              </div>
+
+              <div style={{ ...s.card, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.25)' }}>
+                <h3 style={{ ...s.h3, color: '#86efac' }}>📊 รายได้สุทธิทันที</h3>
+                {[
+                  ['ยอดขายรวม', incomeModel.grossRevenue, '#fff'],
+                  ['Commission', incomeModel.commission, incomePlatform.color],
+                  ['Payment fee', incomeModel.paymentFee, '#a78bfa'],
+                  ['Logistics overhead', incomeModel.logisticsFee, '#38bdf8'],
+                  ['ต้นทุนรวม', incomeModel.totalCosts, '#fca5a5'],
+                  ['กำไรสุทธิ', incomeModel.netIncome, incomeModel.netIncome >= 0 ? '#86efac' : '#fca5a5'],
+                ].map(([label, value, color]) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                    <span style={{ color: '#94a3b8' }}>{label}</span>
+                    <span style={{ color, fontWeight: 700 }}>{formatMoney(value)}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#94a3b8', fontSize: 12 }}>Net margin</span>
+                  <span style={{ color: incomeModel.marginPct >= 15 ? '#10b981' : '#ef4444', fontWeight: 900, fontSize: 20 }}>{incomeModel.marginPct.toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px,1fr) minmax(320px,1fr)', gap: 14 }}>
+              <div style={s.card}>
+                <h3 style={{ ...s.h3, color: '#a5b4fc' }}>🧠 Cost Insights</h3>
+                {incomeInsights.map((insight) => (
+                  <div key={insight} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <span style={{ color: '#22c55e' }}>•</span>
+                    <span style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>{insight}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ ...s.card, background: 'rgba(15,23,42,0.8)' }}>
+                <h3 style={{ ...s.h3, color: '#fbbf24' }}>🐍 Python: net_income()</h3>
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, color: '#e2e8f0', lineHeight: 1.6 }}>{NET_INCOME_PY}</pre>
+              </div>
+            </div>
+          </>
+        )}
+
+        {tab === 'fees' && (
+          <>
+            <div style={{ ...s.card, background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.25)' }}>
+              <h3 style={{ ...s.h3, color: '#fdba74' }}>📋 Platform Cost Registry</h3>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                      {['Platform', 'Commission', 'Payment', 'Logistics', 'หมายเหตุ'].map((head) => (
+                        <th key={head} style={{ padding: '8px 10px', textAlign: 'left', color: '#94a3b8', fontWeight: 600 }}>{head}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {PLATFORM_COST_REGISTRY.map((item) => (
+                      <tr key={item.id} onClick={() => setCostFocusId(item.id)} style={{ cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', background: costFocusId === item.id ? `${item.color}12` : 'transparent' }}>
+                        <td style={{ padding: '10px', color: item.color, fontWeight: 700 }}>{item.name}</td>
+                        <td style={{ padding: '10px', color: '#e2e8f0' }}>{(item.commissionRate * 100).toFixed(1)}%</td>
+                        <td style={{ padding: '10px', color: '#e2e8f0' }}>{(item.paymentRate * 100).toFixed(1)}%</td>
+                        <td style={{ padding: '10px', color: '#e2e8f0' }}>{(item.logisticsRate * 100).toFixed(1)}%</td>
+                        <td style={{ padding: '10px', color: '#94a3b8' }}>{item.note}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px,0.8fr) minmax(320px,1.2fr)', gap: 14 }}>
+              <div style={s.card}>
+                <h3 style={{ ...s.h3, color: costFocus.color }}>🔎 Cost Focus: {costFocus.name}</h3>
+                <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.7, marginBottom: 10 }}>{costFocus.note}</div>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span style={{ color: '#94a3b8' }}>Commission</span><span style={{ color: '#fff' }}>{(costFocus.commissionRate * 100).toFixed(1)}%</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span style={{ color: '#94a3b8' }}>Payment</span><span style={{ color: '#fff' }}>{(costFocus.paymentRate * 100).toFixed(1)}%</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span style={{ color: '#94a3b8' }}>Logistics overhead</span><span style={{ color: '#fff' }}>{(costFocus.logisticsRate * 100).toFixed(1)}%</span></div>
+                </div>
+              </div>
+
+              <div style={{ ...s.card, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                <h3 style={{ ...s.h3, color: '#c4b5fd' }}>🤝 Channel Capability Negotiator</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  {CHANNEL_CAPABILITY_NEGOTIATOR.map((item) => (
+                    <button key={item.id} onClick={() => setCapabilityFocusId(item.id)} style={{ background: capabilityFocusId === item.id ? `${item.color}20` : 'transparent', border: `1px solid ${capabilityFocusId === item.id ? `${item.color}50` : 'rgba(255,255,255,0.1)'}`, borderRadius: 999, color: capabilityFocusId === item.id ? item.color : '#94a3b8', cursor: 'pointer', padding: '8px 12px', fontSize: 12, fontWeight: 700 }}>
+                      {item.name}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 10 }}>
+                  {capabilityFocus.apis.map((api) => {
+                    const tone = statusTone(api.status);
+                    return (
+                      <div key={api.label} style={{ background: `${tone.color}10`, border: `1px solid ${tone.color}25`, borderRadius: 10, padding: '12px 14px' }}>
+                        <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 13, marginBottom: 6 }}>{api.label}</div>
+                        <div style={{ color: tone.color, fontSize: 12, fontWeight: 700 }}>{tone.label}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {tab === 'consent' && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px,1fr) minmax(320px,1fr)', gap: 14, marginBottom: 14 }}>
+              <div style={{ ...s.card, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.25)' }}>
+                <h3 style={{ ...s.h3, color: '#c4b5fd' }}>🔐 Consent Ledger</h3>
+                <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6, marginBottom: 12 }}>
+                  บันทึก consent แยกตามแพลตฟอร์ม และถอนความยินยอมตาม PDPA มาตรา 33 ได้ทันที
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                  <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ color: '#10b981', fontWeight: 900, fontSize: 20 }}>{grantedConsents}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>granted</div>
+                  </div>
+                  <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ color: '#ef4444', fontWeight: 900, fontSize: 20 }}>{consentRecords.filter((item) => item.status === 'withdrawn').length}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>withdrawn</div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {consentRecords.map((item) => (
+                    <div key={item.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '12px 14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 8 }}>
+                        <div>
+                          <div style={{ color: item.color, fontWeight: 800, fontSize: 13 }}>{item.name}</div>
+                          <div style={{ color: '#94a3b8', fontSize: 11 }}>{item.purpose}</div>
+                        </div>
+                        <span style={{ fontSize: 11, color: item.status === 'granted' ? '#10b981' : item.status === 'withdrawn' ? '#ef4444' : '#f59e0b', fontWeight: 700 }}>
+                          {item.status.toUpperCase()}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button onClick={() => updateConsentStatus(item.id, 'granted')} style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 8, color: '#10b981', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: '7px 10px' }}>Grant consent</button>
+                        <button onClick={() => updateConsentStatus(item.id, 'withdrawn')} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: '7px 10px' }}>Withdraw (PDPA 33)</button>
+                      </div>
+                      <div style={{ marginTop: 8, fontSize: 11, color: '#64748b' }}>ล่าสุด: {item.updatedAt}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div style={{ ...s.card, background: 'rgba(15,23,42,0.85)' }}>
+                  <h3 style={{ ...s.h3, color: '#fbbf24' }}>🐍 Python: ConsentLedger</h3>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, color: '#e2e8f0', lineHeight: 1.6 }}>{CONSENT_LEDGER_PY}</pre>
+                </div>
+                <div style={{ ...s.card, background: 'rgba(15,23,42,0.85)' }}>
+                  <h3 style={{ ...s.h3, color: '#67e8f9' }}>🐍 Python: HouseholdLedger</h3>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, color: '#e2e8f0', lineHeight: 1.6 }}>{HOUSEHOLD_LEDGER_PY}</pre>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {tab === 'life' && (
+          <>
+            <div style={{ ...s.card, background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.25)' }}>
+              <h3 style={{ ...s.h3, color: '#67e8f9' }}>🌱 4 กลุ่มแพลตฟอร์มโลกเทียบไทย</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12 }}>
+                {LIFE_PLATFORM_GROUPS.map((group) => (
+                  <div key={group.title} style={{ background: `${group.color}10`, border: `1px solid ${group.color}25`, borderRadius: 12, padding: '14px 16px' }}>
+                    <div style={{ color: group.color, fontWeight: 800, fontSize: 14, marginBottom: 6 }}>{group.title}</div>
+                    <div style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 1.6, marginBottom: 8 }}>{group.detail}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {group.items.map((item) => <Tag key={item} text={item} color={group.color} />)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px,1fr) minmax(320px,1fr)', gap: 14 }}>
+              <div style={s.card}>
+                <h3 style={{ ...s.h3, color: '#a5b4fc' }}>🧩 7 สิ่งที่ยังไม่มีใครทำ</h3>
+                {THAI_LIFE_GAPS.map((item) => (
+                  <div key={item} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <span style={{ color: '#6366f1' }}>•</span>
+                    <span style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ ...s.card, background: 'linear-gradient(135deg,rgba(16,185,129,0.08),rgba(236,72,153,0.08))', border: '1px solid rgba(16,185,129,0.25)' }}>
+                <h3 style={{ ...s.h3, color: '#86efac' }}>🎯 5 เป้าหมายวัดผลได้จริง</h3>
+                {THAI_LIFE_OUTCOMES.map((item) => (
+                  <div key={item.title} style={{ background: `${item.color}10`, border: `1px solid ${item.color}25`, borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
+                    <div style={{ color: item.color, fontWeight: 800, fontSize: 13, marginBottom: 4 }}>{item.title}</div>
+                    <div style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 1.6 }}>{item.detail}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </>
         )}
