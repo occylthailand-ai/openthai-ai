@@ -192,17 +192,111 @@ const THAILAND_PLATFORM_MATRIX = [
   {
     id: 'google', icon: '🔎', name: 'Google', color: '#34a853', fit: 84, category: 'Search + discovery',
     strongest: ['search intent', 'maps', 'SEO', 'ads scale'],
-    differences: ['สินค้าไทยต้องมีคำค้นไทย + อังกฤษ + จีนควบกัน', 'local search และ trust signals สำคัญมาก'],
-    missing: ['multilingual SEO สำหรับสินค้าไทย', 'landing page + schema + map-ready content'],
-    add: ['Google SEO pack 3 ภาษา', 'local business profile / schema assistant'],
+    differences: ['สินค้าไทยต้องมีคำค้นไทย + อังกฤษ + จีนควบกัน', 'Google เป็นจุดเริ่มต้น แต่ร้านไทยมักไปปิดการขายต่อใน LINE'],
+    missing: ['place_id ยังไม่ผูกกับ LINE OA journey', 'gclid ยังไม่รวมกับ fbclid/ttclid เพื่อวัด ROI ไทยแบบครบ funnel'],
+    add: ['Google SEO pack 3 ภาษา', 'search-to-LINE attribution bridge + place/schema assistant'],
   },
   {
     id: 'alibaba', icon: '🏢', name: 'Alibaba', color: '#ff6a00', fit: 81, category: 'B2B export',
     strongest: ['B2B sourcing', 'MOQ/export discovery', 'international buyer access'],
-    differences: ['Alibaba เป็นจีน-first ไม่ได้เล่าไทย-first ให้', 'ผู้ผลิตไทยต้องการ catalog + HS code + trust narrative ที่เฉพาะกว่า'],
-    missing: ['Thai exporter onboarding layer', 'catalog mapping ไทย → Alibaba fields'],
-    add: ['Alibaba-ready export catalog', 'trade inquiry response assistant'],
+    differences: ['Alibaba/1688 เป็น supply chain ขาเข้าที่ใหญ่มาก แต่ไม่มองต้นทุนไทยปลายทางแบบครบวง', 'ผู้ผลิตไทยต้องการ catalog + trust narrative + compliance ที่แปลเป็นภาษาธุรกิจไทยได้'],
+    missing: ['HS code + landed cost + e-Tax layer สำหรับผู้ประกอบการไทย', 'catalog mapping ไทย → Alibaba/1688 fields พร้อม guardrail กำไร'],
+    add: ['Alibaba-ready export/import cost pack', 'trade inquiry response assistant + landed-margin calculator'],
   },
+];
+
+const THAI_LIFE_FLOWS = [
+  {
+    id: 'search-to-chat',
+    title: 'Search → Chat → Pay → Delivery',
+    color: '#34a853',
+    summary: 'เส้นชีวิตคนไทยที่เริ่มจาก Google แล้วจบที่ LINE / PromptPay / ขนส่งท้องถิ่น',
+    steps: ['Google Search / Maps', 'LINE OA / แชทขาย', 'PromptPay / โอน', 'Kerry / Flash / ไปรษณีย์'],
+    gap: 'ยังไม่มีระบบเดียวที่มอง attribution, แชท, ชำระเงิน, และ fulfillment ครบ',
+  },
+  {
+    id: 'import-to-marketplace',
+    title: '1688 Import → Thai Marketplace',
+    color: '#ff6a00',
+    summary: 'ร้านไทยส่อง Alibaba/1688, คิดต้นทุน, นำเข้า, แล้วไปขาย Shopee/Lazada ก่อนปิดลูกค้าซ้ำที่ LINE',
+    steps: ['Alibaba / 1688', 'Landed cost / HS code', 'Shopee / Lazada', 'LINE repeat sale'],
+    gap: 'ต้นทุนจริง, ภาษี, และ margin guardrail ยังไม่ถูกร้อยเข้าด้วยกัน',
+  },
+  {
+    id: 'social-to-commerce',
+    title: 'Content → Live → Marketplace',
+    color: '#fe2c55',
+    summary: 'TikTok/Facebook สร้าง demand แต่การแปลงเป็น listing, voucher, และ follow-up ยังขาดชั้นเชื่อมไทย',
+    steps: ['TikTok / Facebook', 'Live / Creator Review', 'Shopee / Lazada Offer', 'LINE Follow-up'],
+    gap: 'ยังไม่มี trend-to-order workflow สำหรับบริบทไทยแบบครบลูป',
+  },
+  {
+    id: 'export-b2b',
+    title: 'Thai Catalog → Global Buyer',
+    color: '#10b981',
+    summary: 'ผู้ผลิตไทยต้องแปลงเรื่องราว, มาตรฐาน, และเอกสาร ไปสู่ buyer journey ข้ามประเทศ',
+    steps: ['Thai Product Story', 'HS / Compliance / SEO', 'Alibaba / Amazon / Google', 'WhatsApp / LINE / Buyer Reply'],
+    gap: 'ไม่มี co-pilot ที่ถือทั้ง story, compliance, และ follow-up พร้อมกัน',
+  },
+];
+
+const THAI_PEOPLE_SEGMENTS = [
+  { id: 'farmer', icon: '🌾', name: 'เกษตรกรส่งออก', size: '2.7M ครัวเรือน', impact: 95, color: '#10b981', gains: ['ขายได้มูลค่าสูงขึ้น', 'เข้าถึงตลาดต่างประเทศ', 'ลดการพึ่งพาพ่อค้าคนกลาง'] },
+  { id: 'otop', icon: '🏺', name: 'ผู้ผลิต OTOP', size: 'หลายหมื่นชุมชน', impact: 92, color: '#8b5cf6', gains: ['เล่าเรื่องสินค้าได้ดีขึ้น', 'ขยายยอดขายออนไลน์', 'เพิ่มรายได้ชุมชน'] },
+  { id: 'sme', icon: '🏪', name: 'SME ท้องถิ่น', size: '3.1M ราย', impact: 90, color: '#6366f1', gains: ['วัด ROI ได้จริง', 'รวมช่องทางขายไว้จุดเดียว', 'ลดต้นทุนการตลาด'] },
+  { id: 'importer', icon: '📦', name: 'ร้านนำเข้า 1688', size: 'โตต่อเนื่อง', impact: 88, color: '#f97316', gains: ['คิด landed cost แม่นขึ้น', 'รู้ margin ก่อนสั่งเข้า', 'ลดของค้างสต็อก'] },
+  { id: 'creator', icon: '🎥', name: 'ครีเอเตอร์/ไลฟ์สด', size: 'เศรษฐกิจ creator โตเร็ว', impact: 84, color: '#fe2c55', gains: ['ได้ brief ตรงสินค้า', 'ขายผ่าน live ง่ายขึ้น', 'เพิ่ม conversion'] },
+  { id: 'tourism', icon: '🧳', name: 'ธุรกิจท่องเที่ยวชุมชน', size: 'จังหวัดรองจำนวนมาก', impact: 82, color: '#06b6d4', gains: ['ค้นหาเจอง่ายขึ้น', 'รับลูกค้าต่างชาติได้ดีขึ้น', 'เชื่อม Maps + LINE ได้'] },
+  { id: 'export-agent', icon: '🤝', name: 'ตัวแทนส่งออก/B2B', size: '42K บริษัท', impact: 87, color: '#f59e0b', gains: ['ตอบ buyer เร็วขึ้น', 'ทำ catalog + quote ง่ายขึ้น', 'ปิดดีลเร็วขึ้น'] },
+  { id: 'citizen', icon: '🏠', name: 'ครัวเรือนผู้บริโภค', size: 'หลายสิบล้านคน', impact: 78, color: '#22c55e', gains: ['เข้าถึงสินค้าคุณภาพ', 'บริการรวดเร็วขึ้น', 'รายได้ท้องถิ่นหมุนกลับชุมชน'] },
+];
+
+const THAI_LIVED_JOURNEYS = [
+  {
+    id: 'lamphun-otop',
+    person: 'เกษตรกร OTOP ลำพูน',
+    color: '#8b5cf6',
+    impact: 94,
+    journey: ['ถ่ายรูปสินค้า', 'ค้นหาคำขายใน Google', 'รับออเดอร์ผ่าน LINE', 'ส่งพัสดุ Flash/Kerry'],
+    gaps: ['ไม่มีคำอธิบาย 3 ภาษา', 'ไม่รู้ว่าคีย์เวิร์ดไหนพาลูกค้ามา', 'ตอบแชทไม่ทันช่วงไลฟ์/โปร'],
+    fix: ['SEO + catalog 3 ภาษา', 'Google-to-LINE attribution', 'reply assistant + order summary'],
+  },
+  {
+    id: '1688-import-shop',
+    person: 'ร้านนำเข้าจาก 1688',
+    color: '#ff6a00',
+    impact: 91,
+    journey: ['ส่อง 1688/Alibaba', 'คำนวณต้นทุน', 'ลง Shopee/Lazada', 'ปิดลูกค้าซ้ำผ่าน LINE'],
+    gaps: ['HS code / ภาษี / shipping รวมไม่ครบ', 'ตั้งราคาขายจากต้นทุนผิด', 'ไม่มี guardrail ก่อนยิงโปร'],
+    fix: ['landed cost calculator', 'margin-safe pricing recommendation', 'LINE repeat sale workflow'],
+  },
+  {
+    id: 'tiktok-creator-sme',
+    person: 'SME ที่ขายผ่าน TikTok + Shopee',
+    color: '#fe2c55',
+    impact: 89,
+    journey: ['จับเทรนด์ TikTok', 'ทำคลิป/ไลฟ์', 'แปลงเป็น listing', 'เก็บลูกค้ากลับมาที่ LINE'],
+    gaps: ['ไม่มี brief ไทยที่ผูกกับสินค้า', 'listing/caption ไม่ต่อกัน', 'โปรจากคลิปไป marketplace หลุดระหว่างทาง'],
+    fix: ['trend-to-script engine', 'caption-to-listing bridge', 'voucher + retargeting playbook'],
+  },
+  {
+    id: 'b2b-exporter',
+    person: 'ผู้ส่งออกสินค้าไทย B2B',
+    color: '#10b981',
+    impact: 90,
+    journey: ['ทำ catalog', 'ดัน SEO/Google', 'ลง Alibaba/Amazon', 'คุย buyer ใน WhatsApp/LINE'],
+    gaps: ['เอกสาร compliance ไม่ครบ', 'story ไทยไม่แปลเป็น trust narrative', 'ตอบ buyer ช้าและไม่เป็นระบบ'],
+    fix: ['export document pack', 'trust-content generator', 'buyer reply co-pilot'],
+  },
+];
+
+const THAILAND_GAP_DRILLDOWNS = [
+  { label: '📊 Cross-platform attribution ไทย', gap: 'Google gclid ยังไม่ผูกกับ LINE OA และ fbclid/ttclid', action: 'สร้าง Thai commerce attribution graph', urgency: 'critical', color: '#ef4444', journeyId: 'lamphun-otop' },
+  { label: '💬 Chat-commerce orchestration', gap: 'เส้นทาง Facebook/TikTok → LINE → PromptPay ยังแยกกัน', action: 'เชื่อม inbox, OA, payment proof, และ order state', urgency: 'critical', color: '#ef4444', journeyId: 'tiktok-creator-sme' },
+  { label: '📦 1688 landed cost intelligence', gap: 'Alibaba/1688 ยังไม่มี HS code + landed cost + e-Tax ชั้นไทย', action: 'เพิ่ม cost pack และ margin guardrail', urgency: 'critical', color: '#ef4444', journeyId: '1688-import-shop' },
+  { label: '🚚 Fulfillment visibility', gap: 'PromptPay และ Kerry/Flash ยังไม่ถูกรวมเป็น evidence เดียว', action: 'รวม payment + parcel checkpoints', urgency: 'critical', color: '#ef4444', journeyId: 'lamphun-otop' },
+  { label: '🌐 Export compliance workflow', gap: 'catalog ไทยยังไม่ไหลต่อไป Amazon/Alibaba พร้อม buyer follow-up', action: 'ทำ export pack + reply co-pilot', urgency: 'moderate', color: '#f59e0b', journeyId: 'b2b-exporter' },
+  { label: '🎥 Trend-to-marketplace bridge', gap: 'TikTok/Facebook content ยังไม่ต่อ Shopee/Lazada แบบครบลูป', action: 'เชื่อม script, listing, voucher, retargeting', urgency: 'moderate', color: '#f59e0b', journeyId: 'tiktok-creator-sme' },
 ];
 
 const VISION = [
@@ -235,6 +329,22 @@ function MoatBar({ pct, color }) {
   );
 }
 
+function ScoreBar({ score, color }) {
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 999, height: 8, overflow: 'hidden' }}>
+      <div style={{ background: color, height: '100%', width: `${score}%`, borderRadius: 999, transition: 'width 0.3s ease' }} />
+    </div>
+  );
+}
+
+function Tag({ text, color }) {
+  return (
+    <span style={{ fontSize: 11, color, background: `${color}15`, border: `1px solid ${color}25`, borderRadius: 999, padding: '3px 8px', lineHeight: 1.4 }}>
+      {text}
+    </span>
+  );
+}
+
 function TabBtn({ id, label, active, onClick, color }) {
   return (
     <button onClick={() => onClick(id)} style={{
@@ -251,6 +361,7 @@ function TabBtn({ id, label, active, onClick, color }) {
 const TABS = [
   { id: 'compare',   label: '⚔️ เปรียบเทียบ',     color: '#6366f1' },
   { id: 'thailand',  label: '🇹🇭 Thailand vs Platforms', color: '#14b8a6' },
+  { id: 'people',    label: '🧑‍🤝‍🧑 คน',          color: '#22c55e' },
   { id: 'advantage', label: '🛡️ จุดแข็งเรา',      color: '#10b981' },
   { id: 'gap',       label: '⚠️ Gap Analysis',     color: '#f59e0b' },
   { id: 'revenue',   label: '💰 Revenue Streams',  color: '#ec4899' },
@@ -263,9 +374,11 @@ const TABS = [
 export default function StrategyCenterPage() {
   const [tab, setTab] = useState('compare');
   const [focusCols, setFocusCols] = useState([]);
+  const [selectedJourneyId, setSelectedJourneyId] = useState(THAI_LIVED_JOURNEYS[0].id);
   const navigate = useNavigate();
 
   const activeTab = TABS.find(t => t.id === tab);
+  const selectedJourney = THAI_LIVED_JOURNEYS.find((item) => item.id === selectedJourneyId) ?? THAI_LIVED_JOURNEYS[0];
 
   const s = {
     page: { minHeight: '100vh', background: '#080812', color: '#fff', fontFamily: 'system-ui, sans-serif' },
@@ -289,7 +402,7 @@ export default function StrategyCenterPage() {
                 </h1>
               </div>
               <p style={{ color: '#64748b', margin: 0, fontSize: 14 }}>
-                OpenThai AI vs global platforms + Thailand context · GAP Analysis · Roadmap · Vision 2028
+                OpenThai AI vs global platforms + Thailand life journeys · GAP Analysis · People impact · Vision 2028
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -380,6 +493,24 @@ export default function StrategyCenterPage() {
 
         {tab === 'thailand' && (
           <>
+            <div style={{ ...s.card, background: 'linear-gradient(135deg,rgba(20,184,166,0.1),rgba(52,168,83,0.08))', border: '1px solid rgba(20,184,166,0.25)' }}>
+              <h3 style={{ ...s.h3, color: '#5eead4' }}>🧭 ภาพรวมที่ชัดที่สุดของไทย</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 12 }}>
+                {THAI_LIFE_FLOWS.map((flow) => (
+                  <div key={flow.id} style={{ background: `${flow.color}10`, border: `1px solid ${flow.color}25`, borderRadius: 12, padding: '14px 16px' }}>
+                    <div style={{ fontWeight: 800, color: flow.color, fontSize: 14, marginBottom: 6 }}>{flow.title}</div>
+                    <div style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}>{flow.summary}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                      {flow.steps.map((step) => <Tag key={step} text={step} color={flow.color} />)}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#f8fafc' }}>
+                      <span style={{ color: '#fbbf24', fontWeight: 700 }}>Gap:</span> {flow.gap}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div style={{ ...s.card, background: 'rgba(20,184,166,0.06)', border: '1px solid rgba(20,184,166,0.25)' }}>
               <h3 style={{ ...s.h3, color: '#5eead4' }}>🇹🇭 Thailand Reality Map</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 10 }}>
@@ -472,6 +603,103 @@ export default function StrategyCenterPage() {
           </>
         )}
 
+        {tab === 'people' && (
+          <>
+            <div style={{ ...s.card, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.25)' }}>
+              <h3 style={{ ...s.h3, color: '#86efac' }}>🧑‍🤝‍🧑 8 กลุ่มคนที่ได้ประโยชน์โดยตรง</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12 }}>
+                {THAI_PEOPLE_SEGMENTS.map((person) => (
+                  <div key={person.id} style={{ background: `${person.color}10`, border: `1px solid ${person.color}25`, borderRadius: 12, padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 24, marginBottom: 4 }}>{person.icon}</div>
+                        <div style={{ color: person.color, fontWeight: 800, fontSize: 14 }}>{person.name}</div>
+                        <div style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>{person.size}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ color: person.color, fontWeight: 900, fontSize: 24 }}>{person.impact}</div>
+                        <div style={{ color: '#64748b', fontSize: 10 }}>impact</div>
+                      </div>
+                    </div>
+                    <ScoreBar score={person.impact} color={person.color} />
+                    <div style={{ marginTop: 10 }}>
+                      {person.gains.map((gain) => (
+                        <div key={gain} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                          <span style={{ color: person.color }}>✓</span>
+                          <span style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.6 }}>{gain}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ ...s.card, background: 'linear-gradient(135deg,rgba(99,102,241,0.08),rgba(34,197,94,0.08))', border: '1px solid rgba(99,102,241,0.25)' }}>
+              <h3 style={{ ...s.h3, color: '#a5b4fc' }}>🛤️ 4 เส้นทางชีวิตจริง</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 10, marginBottom: 12 }}>
+                {THAI_LIVED_JOURNEYS.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setSelectedJourneyId(item.id)}
+                    style={{
+                      textAlign: 'left',
+                      background: selectedJourneyId === item.id ? `${item.color}18` : 'rgba(255,255,255,0.03)',
+                      border: selectedJourneyId === item.id ? `1px solid ${item.color}45` : '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 12,
+                      padding: '12px 14px',
+                      color: '#fff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                      <div style={{ color: item.color, fontWeight: 800, fontSize: 13 }}>{item.person}</div>
+                      <div style={{ color: item.color, fontWeight: 900 }}>{item.impact}</div>
+                    </div>
+                    <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>{item.journey.join(' → ')}</div>
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ background: `${selectedJourney.color}10`, border: `1px solid ${selectedJourney.color}25`, borderRadius: 12, padding: '16px 18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ color: selectedJourney.color, fontWeight: 900, fontSize: 16 }}>{selectedJourney.person}</div>
+                    <div style={{ color: '#94a3b8', fontSize: 12, marginTop: 4 }}>impact score {selectedJourney.impact} · journey จริงที่ควรยกระดับก่อน</div>
+                  </div>
+                  <button
+                    onClick={() => setTab('gap')}
+                    style={{ background: `${selectedJourney.color}20`, border: `1px solid ${selectedJourney.color}40`, borderRadius: 8, color: selectedJourney.color, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '8px 12px' }}
+                  >
+                    ดู gap ที่เกี่ยวข้อง →
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 12 }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Journey</div>
+                    {selectedJourney.journey.map((step) => (
+                      <div key={step} style={{ fontSize: 12, color: '#e2e8f0', marginBottom: 6 }}>• {step}</div>
+                    ))}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Gap ปัจจุบัน</div>
+                    {selectedJourney.gaps.map((step) => (
+                      <div key={step} style={{ fontSize: 12, color: '#fca5a5', marginBottom: 6 }}>⚠ {step}</div>
+                    ))}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>OpenThai fix</div>
+                    {selectedJourney.fix.map((step) => (
+                      <div key={step} style={{ fontSize: 12, color: '#86efac', marginBottom: 6 }}>✓ {step}</div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* ── TAB: Advantage ────────────────────────────────────────────────── */}
         {tab === 'advantage' && (
           <>
@@ -549,15 +777,7 @@ export default function StrategyCenterPage() {
               </div>
               <div>
                 <h3 style={{ ...s.h3, color: '#ef4444' }}>⚠️ Gap ที่ต้องปิด (4 Critical + 3 Moderate)</h3>
-                {[
-                  { label: '🎨 Design Tools', gap: 'vs Canva ⭐⭐⭐⭐⭐', action: 'Canva API Integration', urgency: 'critical', color: '#ef4444' },
-                  { label: '📊 Real Analytics', gap: 'vs HubSpot ⭐⭐⭐⭐⭐', action: 'Platform Insight API Q3', urgency: 'critical', color: '#ef4444' },
-                  { label: '📅 API Scheduler จริง', gap: 'vs Hootsuite ⭐⭐⭐⭐⭐', action: 'LINE/FB/TikTok OAuth Q2', urgency: 'critical', color: '#ef4444' },
-                  { label: '🛒 E-commerce Backend', gap: 'vs Shopify ⭐⭐⭐⭐', action: 'TikTok Shop Integration Q2', urgency: 'critical', color: '#ef4444' },
-                  { label: '📱 Mobile Native App', gap: 'vs Canva/Buffer', action: 'PWA → Native Q3', urgency: 'moderate', color: '#f59e0b' },
-                  { label: '🖼️ AI Image Generate', gap: 'vs Adobe Firefly', action: 'SD Server Q3', urgency: 'moderate', color: '#f59e0b' },
-                  { label: '👥 Team Collaboration', gap: 'vs HubSpot', action: 'Workspace + Roles Q2', urgency: 'moderate', color: '#f59e0b' },
-                ].map((g, i) => (
+                {THAILAND_GAP_DRILLDOWNS.map((g, i) => (
                   <div key={i} style={{ background: `${g.color}08`, border: `1px solid ${g.color}25`, borderRadius: 8, padding: '9px 12px', marginBottom: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                       <span style={{ fontSize: 13, color: '#e2e8f0', fontWeight: 600 }}>{g.label}</span>
@@ -565,12 +785,41 @@ export default function StrategyCenterPage() {
                     </div>
                     <div style={{ fontSize: 11, color: '#64748b' }}>{g.gap}</div>
                     <div style={{ fontSize: 12, color: g.color, marginTop: 4, fontWeight: 600 }}>→ {g.action}</div>
+                    <button
+                      onClick={() => setSelectedJourneyId(g.journeyId)}
+                      style={{ marginTop: 8, background: `${g.color}20`, border: `1px solid ${g.color}35`, borderRadius: 8, color: g.color, cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: '6px 10px' }}
+                    >
+                      ⚡ หลอมช่องว่างนี้
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
 
             <div style={{ ...s.card, marginTop: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+                <h3 style={{ ...s.h3, marginBottom: 0 }}>🔬 Deep Dive: {selectedJourney.person}</h3>
+                <button
+                  onClick={() => setTab('people')}
+                  style={{ background: `${selectedJourney.color}20`, border: `1px solid ${selectedJourney.color}40`, borderRadius: 8, color: selectedJourney.color, cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '8px 12px' }}
+                >
+                  เปิดแท็บ คน →
+                </button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 12, marginBottom: 14 }}>
+                <div style={{ background: `${selectedJourney.color}10`, border: `1px solid ${selectedJourney.color}25`, borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Journey จริง</div>
+                  {selectedJourney.journey.map((step) => <div key={step} style={{ fontSize: 12, color: '#e2e8f0', marginBottom: 6 }}>• {step}</div>)}
+                </div>
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Gap ปัจจุบัน</div>
+                  {selectedJourney.gaps.map((step) => <div key={step} style={{ fontSize: 12, color: '#fca5a5', marginBottom: 6 }}>⚠ {step}</div>)}
+                </div>
+                <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 6 }}>Fix ที่ควรทำ</div>
+                  {selectedJourney.fix.map((step) => <div key={step} style={{ fontSize: 12, color: '#86efac', marginBottom: 6 }}>✓ {step}</div>)}
+                </div>
+              </div>
               <h3 style={s.h3}>📊 GAP → OUTCOME Matrix</h3>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
