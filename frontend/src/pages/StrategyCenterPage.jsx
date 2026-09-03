@@ -102,6 +102,109 @@ const GROWTH_HACKS = [
   { campaign: '"HubSpot ฿3,000+/เดือน — เราทำได้ทุกอย่างในราคา ฿299"', platform: 'Google Ads · SEO', target: 'SME เจ้าของกิจการ', color: '#f59e0b' },
 ];
 
+const THAILAND_NEEDS = [
+  { key: 'thai', label: 'ภาษาไทยจริง + สำเนียง + บริบทท้องถิ่น', color: '#10b981' },
+  { key: 'social', label: 'Social commerce + แชทปิดการขาย', color: '#6366f1' },
+  { key: 'marketplace', label: 'Marketplace conversion + affiliate', color: '#f59e0b' },
+  { key: 'ads', label: 'Ads / SEO / discovery scale', color: '#06b6d4' },
+  { key: 'export', label: 'Cross-border / B2B / catalog export', color: '#ec4899' },
+  { key: 'ops', label: 'CRM / analytics / workflow / enterprise ops', color: '#f97316' },
+];
+
+const THAILAND_PLATFORM_MATRIX = [
+  {
+    id: 'facebook', icon: '👥', name: 'Facebook', color: '#1877f2', fit: 86, category: 'Social + community',
+    strongest: ['community reach', 'ads targeting', 'group commerce'],
+    differences: ['ไทยใช้เพจ + กลุ่ม + inbox ปิดการขายหนักกว่าตะวันตก', 'คอนเทนต์ยาวและ social proof ยังสำคัญมากในไทย'],
+    missing: ['workflow สำหรับ reply/inbox ไทยแบบไว', 'เชื่อม lead → LINE/OA → order เป็นเส้นเดียว'],
+    add: ['FB lead sync เข้า OpenThai CRM', 'template สำหรับโพสต์ขายแบบไทย + คอมเมนต์ปิดการขาย'],
+  },
+  {
+    id: 'tiktok', icon: '▶️', name: 'TikTok', color: '#fe2c55', fit: 92, category: 'Video commerce',
+    strongest: ['viral discovery', 'creator commerce', 'short video conversion'],
+    differences: ['ไทยพึ่ง hook 3 วินาที + live ขาย + creator review มาก', 'สินค้าท้องถิ่นต้องเล่าเรื่องชุมชน/ที่มาเพิ่ม'],
+    missing: ['brief ที่ผูกสินค้าไทยกับ trend รายวัน', 'flow จาก script → shoot → caption → shop listing'],
+    add: ['trend-to-script engine รายสินค้าไทย', 'creator brief + live selling checklist'],
+  },
+  {
+    id: 'shopee', icon: '🟠', name: 'Shopee', color: '#f97316', fit: 89, category: 'Marketplace',
+    strongest: ['conversion intent', 'promo mechanics', 'affiliate/e-commerce ops'],
+    differences: ['ไทยตอบสนองต่อ flash sale, voucher, free shipping สูงมาก', 'หน้าร้านต้องใช้ภาพ/หัวข้อ/รีวิวแบบ local มากกว่า generic marketplace'],
+    missing: ['listing optimizer ภาษาไทย', 'price-pack-bundle recommendation สำหรับผู้ขายไทย'],
+    add: ['Shopee title/attribute optimizer', 'campaign calendar + voucher strategy'],
+  },
+  {
+    id: 'lazada', icon: '🔵', name: 'Lazada', color: '#0ea5e9', fit: 78, category: 'Marketplace',
+    strongest: ['official store trust', 'mid-to-premium catalog', 'campaign commerce'],
+    differences: ['ผู้ซื้อไทยมองความน่าเชื่อถือร้านและข้อมูลสินค้าละเอียดมาก', 'สินค้าพรีเมียมต้องมี comparison ชัดเจน'],
+    missing: ['brand-style listing assistant', 'เปรียบเทียบจุดเด่นสินค้าไทยกับคู่แข่งในหน้าเดียว'],
+    add: ['premium catalog formatter', 'comparison block generator สำหรับ Lazada'],
+  },
+  {
+    id: 'instagram', icon: '📸', name: 'Instagram', color: '#e1306c', fit: 74, category: 'Visual brand',
+    strongest: ['brand perception', 'reels', 'creator aesthetics'],
+    differences: ['ตลาดไทยต้องผสม beauty/aspirational กับ CTA ขายจริง', 'ภาษาไทยบนภาพและ caption ต้องดู natural ไม่แข็ง'],
+    missing: ['visual storytelling สำหรับสินค้าไทย', 'reels/caption ที่บาลานซ์แบรนด์กับ conversion'],
+    add: ['IG visual brief + Thai caption tone presets', 'UGC/reels storyboard สำหรับ SME'],
+  },
+  {
+    id: 'whatsapp', icon: '🟢', name: 'WhatsApp', color: '#22c55e', fit: 57, category: 'Messaging',
+    strongest: ['global chat', 'cross-border buyer follow-up', 'direct negotiation'],
+    differences: ['ในไทย LINE แข็งแรงกว่าอย่างมาก', 'WhatsApp สำคัญเมื่อออกต่างประเทศมากกว่าขายในประเทศ'],
+    missing: ['cross-border conversation kit', 'buyer follow-up ภาษาอังกฤษ/อาหรับ/อินโด'],
+    add: ['export chat assistant', 'handoff จาก catalog ไทยไป WhatsApp follow-up'],
+  },
+  {
+    id: 'xiaohongshu', icon: '📕', name: 'Xiaohongshu', color: '#ef4444', fit: 68, category: 'China discovery',
+    strongest: ['lifestyle discovery', 'Chinese trust content', 'review-driven intent'],
+    differences: ['คนจีนต้องการ narrative แบบ review/community ไม่ใช่ hard sell ตรงๆ', 'สินค้าไทยต้องแปลบริบทและความน่าเชื่อถือให้เข้าระบบจีน'],
+    missing: ['Chinese-localized product storytelling', 'social proof สำหรับนักท่องเที่ยว/consumer จีน'],
+    add: ['Xiaohongshu note generator', 'จีนย่อ/จีนเต็ม + trust claims formatter'],
+  },
+  {
+    id: 'pinduoduo', icon: '🧺', name: 'Pinduoduo', color: '#dc2626', fit: 49, category: 'Price commerce',
+    strongest: ['price sensitivity', 'bulk demand', 'group buying'],
+    differences: ['ไม่เหมาะกับ positioning สินค้าไทยทุกประเภท โดยเฉพาะ premium/OTOP story-first', 'เน้นราคาหนักกว่าแบรนด์'],
+    missing: ['SKU strategy สำหรับสินค้าที่แข่งขันด้วยราคาได้จริง', 'rule ว่าสินค้าไทยแบบไหนควร/ไม่ควรลง'],
+    add: ['channel-fit scorer', 'bulk pack / margin guardrail'],
+  },
+  {
+    id: 'amazon', icon: '🛒', name: 'Amazon', color: '#f59e0b', fit: 71, category: 'Global marketplace',
+    strongest: ['global reach', 'search intent', 'fulfillment standards'],
+    differences: ['Amazon ต้องข้อมูลสินค้าเชิงมาตรฐานและ compliance มากกว่า social commerce ไทย', 'คีย์เวิร์ดและรีวิวมีผลสูงกว่าการ live ขาย'],
+    missing: ['export catalog compliance pack', 'SEO copy + attribute completeness สำหรับตลาด US/EU'],
+    add: ['Amazon listing/export doc builder', 'review acquisition and catalog QA flow'],
+  },
+  {
+    id: 'microsoft', icon: '🪟', name: 'Microsoft', color: '#2563eb', fit: 58, category: 'Enterprise stack',
+    strongest: ['copilot/workflow', 'B2B productivity', 'enterprise trust'],
+    differences: ['ไม่ใช่ consumer commerce platform ตรงๆ', 'มีประโยชน์ฝั่ง internal ops มากกว่าหาลูกค้าไทยปลายทาง'],
+    missing: ['SME workflow bridge', 'เอกสาร/approval/reporting ที่เชื่อมกับงานขายไทย'],
+    add: ['Excel/Teams export', 'proposal/report co-pilot สำหรับ B2G/B2B ไทย'],
+  },
+  {
+    id: 'line', icon: '💚', name: 'LINE', color: '#06c755', fit: 95, category: 'Thai messaging',
+    strongest: ['Thai chat commerce', 'OA broadcast', 'trust + repeat purchase'],
+    differences: ['ไทยใช้ LINE เป็น CRM/lightweight sales desk จริง', 'ต้องตอบเร็ว ส่งบรอดแคสต์ และปิดการขายในแชท'],
+    missing: ['OA sync ที่ลึกกว่าเดิม', 'segmentation + follow-up ไทยอัตโนมัติ'],
+    add: ['LINE OA campaign orchestration', 'rich menu / broadcast / sales funnel analytics'],
+  },
+  {
+    id: 'google', icon: '🔎', name: 'Google', color: '#34a853', fit: 84, category: 'Search + discovery',
+    strongest: ['search intent', 'maps', 'SEO', 'ads scale'],
+    differences: ['สินค้าไทยต้องมีคำค้นไทย + อังกฤษ + จีนควบกัน', 'local search และ trust signals สำคัญมาก'],
+    missing: ['multilingual SEO สำหรับสินค้าไทย', 'landing page + schema + map-ready content'],
+    add: ['Google SEO pack 3 ภาษา', 'local business profile / schema assistant'],
+  },
+  {
+    id: 'alibaba', icon: '🏢', name: 'Alibaba', color: '#ff6a00', fit: 81, category: 'B2B export',
+    strongest: ['B2B sourcing', 'MOQ/export discovery', 'international buyer access'],
+    differences: ['Alibaba เป็นจีน-first ไม่ได้เล่าไทย-first ให้', 'ผู้ผลิตไทยต้องการ catalog + HS code + trust narrative ที่เฉพาะกว่า'],
+    missing: ['Thai exporter onboarding layer', 'catalog mapping ไทย → Alibaba fields'],
+    add: ['Alibaba-ready export catalog', 'trade inquiry response assistant'],
+  },
+];
+
 const VISION = [
   { year: '2026', title: "Thailand's #1 AI Marketing Platform", desc: 'Thai Exporters · OTOP · SME · Agriculture · 7 Continents · Launch 20/12', icon: '🇹🇭', color: '#10b981' },
   { year: '2027', title: 'ASEAN Export Intelligence OS', desc: 'Vietnam · Indonesia · Malaysia · Philippines · TH+EN+ZH+ID+VI+MY+TL', icon: '🌏', color: '#6366f1' },
@@ -147,6 +250,7 @@ function TabBtn({ id, label, active, onClick, color }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'compare',   label: '⚔️ เปรียบเทียบ',     color: '#6366f1' },
+  { id: 'thailand',  label: '🇹🇭 Thailand vs Platforms', color: '#14b8a6' },
   { id: 'advantage', label: '🛡️ จุดแข็งเรา',      color: '#10b981' },
   { id: 'gap',       label: '⚠️ Gap Analysis',     color: '#f59e0b' },
   { id: 'revenue',   label: '💰 Revenue Streams',  color: '#ec4899' },
@@ -185,7 +289,7 @@ export default function StrategyCenterPage() {
                 </h1>
               </div>
               <p style={{ color: '#64748b', margin: 0, fontSize: 14 }}>
-                OpenThai AI vs 8 Global Giants · 15 มิติ · GAP Analysis · Roadmap · Vision 2028
+                OpenThai AI vs global platforms + Thailand context · GAP Analysis · Roadmap · Vision 2028
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -270,6 +374,100 @@ export default function StrategyCenterPage() {
                   </tr>
                 </tfoot>
               </table>
+            </div>
+          </>
+        )}
+
+        {tab === 'thailand' && (
+          <>
+            <div style={{ ...s.card, background: 'rgba(20,184,166,0.06)', border: '1px solid rgba(20,184,166,0.25)' }}>
+              <h3 style={{ ...s.h3, color: '#5eead4' }}>🇹🇭 Thailand Reality Map</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 10 }}>
+                {THAILAND_NEEDS.map((need) => (
+                  <div key={need.key} style={{ background: `${need.color}10`, border: `1px solid ${need.color}25`, borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ color: need.color, fontWeight: 700, fontSize: 12, marginBottom: 4 }}>THAILAND NEED</div>
+                    <div style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.6 }}>{need.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(320px,1fr))', gap: 14, marginBottom: 14 }}>
+              {THAILAND_PLATFORM_MATRIX.map((item) => (
+                <div key={item.id} style={{ ...s.card, borderTop: `3px solid ${item.color}`, marginBottom: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 22 }}>{item.icon}</span>
+                        <div style={{ fontWeight: 800, fontSize: 15, color: item.color }}>{item.name}</div>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{item.category}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 900, fontSize: 24, color: item.color }}>{item.fit}</div>
+                      <div style={{ fontSize: 10, color: '#64748b' }}>Thailand fit</div>
+                    </div>
+                  </div>
+
+                  <ScoreBar score={item.fit} color={item.color} />
+
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>แข็งที่สุด</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {item.strongest.map((point) => <Tag key={point} text={point} color={item.color} />)}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>มีข้อแตกอย่างไร</div>
+                    {item.differences.map((point) => (
+                      <div key={point} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                        <span style={{ color: item.color }}>•</span>
+                        <span style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.6 }}>{point}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>ขาดอะไร</div>
+                    {item.missing.map((point) => (
+                      <div key={point} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                        <span style={{ color: '#f59e0b' }}>⚠</span>
+                        <span style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.6 }}>{point}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>สมควรเสริมอะไร</div>
+                    {item.add.map((point) => (
+                      <div key={point} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                        <span style={{ color: '#10b981' }}>✓</span>
+                        <span style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.6 }}>{point}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ ...s.card, background: 'linear-gradient(135deg,rgba(99,102,241,0.08),rgba(16,185,129,0.08))', border: '1px solid rgba(99,102,241,0.25)' }}>
+              <h3 style={{ ...s.h3, color: '#a5b4fc' }}>🎯 สิ่งที่ OpenThai ควรเสริมก่อน</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 10 }}>
+                {[
+                  { title: 'LINE OA orchestration', why: 'ช่องทางไทยที่ fit สูงสุดและใช้ปิดการขายจริง', color: '#06c755' },
+                  { title: 'TikTok + Shopee workflow', why: 'ช่วยเปลี่ยน trend เป็นยอดขายใน social commerce ไทย', color: '#fe2c55' },
+                  { title: 'Google SEO 3 ภาษา', why: 'ทำให้สินค้าค้นหาเจอทั้งไทย-อังกฤษ-จีน', color: '#34a853' },
+                  { title: 'Alibaba / Amazon export pack', why: 'เปิด B2B + cross-border สำหรับผู้ผลิตไทย', color: '#ff6a00' },
+                  { title: 'Facebook inbox CRM', why: 'เก็บ lead/comment/inbox ไว้ใน flow เดียว', color: '#1877f2' },
+                  { title: 'China-localized content layer', why: 'ปิดช่องว่าง Xiaohongshu/Pinduoduo/จีน consumer discovery', color: '#ef4444' },
+                ].map((row) => (
+                  <div key={row.title} style={{ background: `${row.color}10`, border: `1px solid ${row.color}25`, borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ color: row.color, fontWeight: 800, fontSize: 13, marginBottom: 6 }}>{row.title}</div>
+                    <div style={{ color: '#cbd5e1', fontSize: 12, lineHeight: 1.6 }}>{row.why}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </>
         )}
