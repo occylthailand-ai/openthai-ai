@@ -343,9 +343,34 @@ const THAI_LIFE_OUTCOMES = [
   { title: 'ชุมชนท้องถิ่นเข้าถึงตลาดใหม่', color: '#ec4899', detail: 'สินค้าไทยถูกแปลงเป็น SEO, catalog, และ buyer-ready content ได้เร็วขึ้น' },
 ];
 
+const LIFE_AXIS_OPTIONS = [
+  { id: 'incomeLeft', label: 'รายได้เหลือ', color: '#10b981' },
+  { id: 'access', label: 'การเข้าถึง', color: '#06b6d4' },
+  { id: 'dignity', label: 'ศักดิ์ศรี', color: '#8b5cf6' },
+  { id: 'coverage', label: 'ความทั่วถึง', color: '#f59e0b' },
+  { id: 'timeSaved', label: 'เวลาที่ประหยัด', color: '#ef4444' },
+];
+
+const LIFE_AXIS_PLATFORM_SCORES = [
+  { id: 'openthai', name: 'OpenThaiAi', color: '#10b981', category: 'Thai-first OS', incomeLeft: 95, access: 92, dignity: 94, coverage: 90, timeSaved: 93 },
+  { id: 'line', name: 'LINE', color: '#06c755', category: 'Messaging', incomeLeft: 82, access: 90, dignity: 79, coverage: 88, timeSaved: 84 },
+  { id: 'google', name: 'Google', color: '#34a853', category: 'Discovery', incomeLeft: 70, access: 95, dignity: 72, coverage: 93, timeSaved: 88 },
+  { id: 'facebook', name: 'Facebook', color: '#1877f2', category: 'Social', incomeLeft: 68, access: 89, dignity: 66, coverage: 86, timeSaved: 71 },
+  { id: 'tiktok', name: 'TikTok', color: '#fe2c55', category: 'Video commerce', incomeLeft: 74, access: 87, dignity: 64, coverage: 84, timeSaved: 77 },
+  { id: 'shopee', name: 'Shopee', color: '#f97316', category: 'Marketplace', incomeLeft: 61, access: 86, dignity: 63, coverage: 82, timeSaved: 69 },
+  { id: 'lazada', name: 'Lazada', color: '#0ea5e9', category: 'Marketplace', incomeLeft: 63, access: 76, dignity: 67, coverage: 74, timeSaved: 68 },
+  { id: 'instagram', name: 'Instagram', color: '#e1306c', category: 'Visual brand', incomeLeft: 58, access: 78, dignity: 71, coverage: 70, timeSaved: 62 },
+  { id: 'whatsapp', name: 'WhatsApp', color: '#22c55e', category: 'Messaging', incomeLeft: 65, access: 61, dignity: 74, coverage: 60, timeSaved: 66 },
+  { id: 'xiaohongshu', name: 'Xiaohongshu', color: '#ef4444', category: 'China discovery', incomeLeft: 59, access: 57, dignity: 68, coverage: 53, timeSaved: 55 },
+  { id: 'pinduoduo', name: 'Pinduoduo', color: '#dc2626', category: 'Price commerce', incomeLeft: 52, access: 64, dignity: 48, coverage: 58, timeSaved: 60 },
+  { id: 'amazon', name: 'Amazon', color: '#f59e0b', category: 'Global marketplace', incomeLeft: 64, access: 75, dignity: 70, coverage: 72, timeSaved: 67 },
+  { id: 'microsoft', name: 'Microsoft', color: '#2563eb', category: 'Enterprise stack', incomeLeft: 57, access: 62, dignity: 73, coverage: 55, timeSaved: 79 },
+  { id: 'alibaba', name: 'Alibaba', color: '#ff6a00', category: 'B2B trade', incomeLeft: 69, access: 73, dignity: 65, coverage: 69, timeSaved: 64 },
+];
+
 const NET_INCOME_PY = `def net_income(gross_revenue, commission_rate, cogs, ads, shipping, packaging, misc=0):\n    commission = gross_revenue * commission_rate\n    net = gross_revenue - commission - cogs - ads - shipping - packaging - misc\n    return {\n        "gross_revenue": gross_revenue,\n        "commission": commission,\n        "net_income": net,\n        "margin_pct": 0 if gross_revenue == 0 else (net / gross_revenue) * 100,\n    }`;
 
-const CONSENT_LEDGER_PY = `from dataclasses import dataclass, field\nfrom datetime import datetime\n\n@dataclass\nclass ConsentLedger:\n    records: list[dict] = field(default_factory=list)\n\n    def grant(self, platform, purpose, subject_id):\n        self.records.append({\n            "platform": platform,\n            "purpose": purpose,\n            "subject_id": subject_id,\n            "status": "granted",\n            "recorded_at": datetime.utcnow().isoformat() + "Z",\n        })\n\n    def withdraw(self, platform, subject_id, section="PDPA มาตรา 33"):\n        self.records.append({\n            "platform": platform,\n            "subject_id": subject_id,\n            "status": "withdrawn",\n            "legal_basis": section,\n            "recorded_at": datetime.utcnow().isoformat() + "Z",\n        })`;
+const CONSENT_LEDGER_PY = `from dataclasses import dataclass, field\nfrom datetime import datetime\nimport hashlib, hmac, json\n\n@dataclass\nclass ConsentLedger:\n    secret: bytes\n    records: list[dict] = field(default_factory=list)\n\n    def _append(self, platform, subject_id, action, purpose=None, section=None):\n        prev_hash = self.records[-1]["entry_hash"] if self.records else "GENESIS"\n        payload = {\n            "platform": platform,\n            "subject_id": subject_id,\n            "purpose": purpose,\n            "action": action,\n            "legal_basis": section,\n            "recorded_at": datetime.utcnow().isoformat() + "Z",\n        }\n        entry_hash = hmac.new(self.secret, f"{prev_hash}|{json.dumps(payload, ensure_ascii=False, sort_keys=True)}".encode(), hashlib.sha256).hexdigest()\n        self.records.append({\n            "id": f"consent-{len(self.records)+1}",\n            "prev_hash": prev_hash,\n            "entry_hash": entry_hash,\n            "payload": payload,\n        })\n\n    def grant(self, platform, purpose, subject_id):\n        self._append(platform, subject_id, "granted", purpose=purpose)\n\n    def withdraw_19(self, platform, subject_id):\n        self._append(platform, subject_id, "withdraw_19", section="PDPA §19")\n\n    def erase_33(self, platform, subject_id):\n        self._append(platform, subject_id, "erase_33", section="PDPA §33")`;
 
 const HOUSEHOLD_LEDGER_PY = `from dataclasses import dataclass, field\n\n@dataclass\nclass HouseholdLedger:\n    income: list[dict] = field(default_factory=list)\n    expenses: list[dict] = field(default_factory=list)\n\n    def add_income(self, source, amount):\n        self.income.append({"source": source, "amount": amount})\n\n    def add_expense(self, category, amount):\n        self.expenses.append({"category": category, "amount": amount})\n\n    def net_position(self):\n        total_income = sum(item["amount"] for item in self.income)\n        total_expense = sum(item["amount"] for item in self.expenses)\n        return total_income - total_expense`;
 
@@ -357,11 +382,171 @@ const CONSENT_PLATFORM_OPTIONS = [
   { id: 'alibaba', name: 'Alibaba / 1688', color: '#ff6a00' },
 ];
 
+const CONSENT_ACTION_LABELS = {
+  granted: 'Grant',
+  withdraw_19: 'ถอนยินยอม §19',
+  erase_33: 'ลบข้อมูล §33',
+};
+
 function formatMoney(value) {
   return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', maximumFractionDigits: 0 }).format(Number.isFinite(value) ? value : 0);
 }
 
-function computeIncomeModel(input, platform) {
+function encodeHex(bytes) {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function decodeHex(hex) {
+  return new Uint8Array((hex.match(/.{1,2}/g) || []).map((chunk) => parseInt(chunk, 16)));
+}
+
+function createSessionSecret() {
+  if (globalThis.crypto?.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    globalThis.crypto.getRandomValues(bytes);
+    return encodeHex(bytes);
+  }
+  return encodeHex(new TextEncoder().encode(`${Date.now()}-${Math.random()}`)).slice(0, 32);
+}
+
+function buildEmvField(id, value) {
+  const text = String(value);
+  return `${id}${String(text.length).padStart(2, '0')}${text}`;
+}
+
+export function crc16Ccitt(text) {
+  let crc = 0xffff;
+  for (let i = 0; i < text.length; i += 1) {
+    crc ^= text.charCodeAt(i) << 8;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xffff;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+
+function normalizePromptPayPhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length === 13) return { ok: false, error: 'PromptPay tool นี้ไม่รับเลขบัตรประชาชน 13 หลัก' };
+  if (!/^0\d{9}$/.test(digits)) return { ok: false, error: 'กรอกเบอร์มือถือไทย 10 หลักที่ขึ้นต้นด้วย 0' };
+  return { ok: true, digits, international: `0066${digits.slice(1)}`, masked: `${digits.slice(0, 3)}-***-${digits.slice(-3)}` };
+}
+
+function normalizeAmount(amount) {
+  const numeric = Number(amount);
+  if (!Number.isFinite(numeric) || numeric <= 0) return null;
+  return numeric.toFixed(2).replace(/\.00$/, '');
+}
+
+function thaiIntegerText(number) {
+  const digits = ['ศูนย์', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
+  const positions = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน'];
+  if (number === 0) return digits[0];
+  if (number >= 1000000) {
+    const millions = Math.floor(number / 1000000);
+    const remainder = number % 1000000;
+    return `${thaiIntegerText(millions)}ล้าน${remainder ? thaiIntegerText(remainder) : ''}`;
+  }
+  let result = '';
+  const chars = String(number).split('').map(Number);
+  chars.forEach((digit, index) => {
+    if (digit === 0) return;
+    const position = chars.length - index - 1;
+    if (position === 0 && digit === 1 && chars.length > 1) {
+      result += 'เอ็ด';
+      return;
+    }
+    if (position === 1) {
+      if (digit === 1) {
+        result += 'สิบ';
+        return;
+      }
+      if (digit === 2) {
+        result += 'ยี่สิบ';
+        return;
+      }
+    }
+    result += `${digits[digit]}${positions[position] || ''}`;
+  });
+  return result.replace('หนึ่งสิบ', 'สิบ');
+}
+
+export function amountToThaiText(amount) {
+  const numeric = Number(amount) || 0;
+  const whole = Math.floor(numeric);
+  const satang = Math.round((numeric - whole) * 100);
+  const bahtText = `${thaiIntegerText(whole)}บาท`;
+  if (satang === 0) return `${bahtText}ถ้วน`;
+  return `${bahtText}${thaiIntegerText(satang)}สตางค์`;
+}
+
+export function buildPromptPayPayload({ phone, amount, merchantName = 'OPENTHAI AI', city = 'BANGKOK' }) {
+  const normalizedPhone = normalizePromptPayPhone(phone);
+  if (!normalizedPhone.ok) {
+    return { ok: false, error: normalizedPhone.error };
+  }
+
+  const normalizedAmount = normalizeAmount(amount);
+  if (!normalizedAmount) {
+    return { ok: false, error: 'จำนวนเงินต้องมากกว่า 0' };
+  }
+
+  const merchantAccount = buildEmvField('00', 'A000000677010111') + buildEmvField('01', normalizedPhone.international);
+  const body = [
+    buildEmvField('00', '01'),
+    buildEmvField('01', '12'),
+    buildEmvField('29', merchantAccount),
+    buildEmvField('53', '764'),
+    buildEmvField('54', normalizedAmount),
+    buildEmvField('58', 'TH'),
+    buildEmvField('59', merchantName.slice(0, 25).toUpperCase()),
+    buildEmvField('60', city.slice(0, 15).toUpperCase()),
+    '6304',
+  ].join('');
+  const crc = crc16Ccitt(body);
+
+  return {
+    ok: true,
+    payload: `${body}${crc}`,
+    crc,
+    maskedPhone: normalizedPhone.masked,
+    amountText: amountToThaiText(Number(amount)),
+  };
+}
+
+export function buildQrVisualMatrix(payload, size = 21) {
+  const matrix = Array.from({ length: size }, () => Array.from({ length: size }, () => false));
+  const stampFinder = (row, col) => {
+    for (let y = 0; y < 7; y += 1) {
+      for (let x = 0; x < 7; x += 1) {
+        const onBorder = y === 0 || y === 6 || x === 0 || x === 6;
+        const inCore = y >= 2 && y <= 4 && x >= 2 && x <= 4;
+        matrix[row + y][col + x] = onBorder || inCore;
+      }
+    }
+  };
+
+  stampFinder(0, 0);
+  stampFinder(0, size - 7);
+  stampFinder(size - 7, 0);
+
+  const bits = payload.split('').flatMap((char) => char.charCodeAt(0).toString(2).padStart(8, '0').split('').map((bit) => bit === '1'));
+  let cursor = 0;
+
+  for (let row = 0; row < size; row += 1) {
+    for (let col = 0; col < size; col += 1) {
+      const inFinder = (row < 7 && col < 7) || (row < 7 && col >= size - 7) || (row >= size - 7 && col < 7);
+      if (inFinder) continue;
+      matrix[row][col] = bits[cursor % bits.length];
+      cursor += 1;
+    }
+  }
+
+  return matrix;
+}
+
+export function computeIncomeModel(input, platform) {
   const grossRevenue = Number(input.grossRevenue) || 0;
   const cogs = Number(input.cogs) || 0;
   const ads = Number(input.ads) || 0;
@@ -391,15 +576,36 @@ function computeIncomeModel(input, platform) {
   };
 }
 
-function getIncomeInsights(model) {
+export function getIncomeAlerts(model) {
+  const alerts = [];
+  const gross = model.grossRevenue || 1;
+
+  if ((model.commission / gross) >= 0.1) {
+    alerts.push({ level: 'warn', text: 'Commission ≥10% ของยอดขาย ควรลดการพึ่ง marketplace หรือดัน repeat sale ผ่าน LINE' });
+  }
+  if ((model.ads / gross) >= 0.15) {
+    alerts.push({ level: 'warn', text: 'ค่าโฆษณา ≥15% ของยอดขาย ควรทบทวน creative, targeting และใช้ลูกค้าเดิมให้มากขึ้น' });
+  }
+  if (model.netIncome < 0) {
+    alerts.push({ level: 'danger', text: 'ขาดทุนอยู่ตอนนี้ ระบบไม่แนะนำเพิ่มงบโฆษณา จนกว่าจะลดต้นทุนหรือปรับราคาได้ก่อน' });
+  }
+  if (!alerts.length) {
+    alerts.push({ level: 'ok', text: 'ต้นทุนหลักยังอยู่ในกรอบปลอดภัยสำหรับ pre-pilot' });
+  }
+
+  return alerts;
+}
+
+export function getIncomeInsights(model) {
   const insights = [];
   const gross = model.grossRevenue || 1;
 
-  if ((model.ads / gross) > 0.2) insights.push('ค่าโฆษณาสูงเกิน 20% ของยอดขาย ควรปรับ creative, targeting หรือดัน organic/LINE repeat มากขึ้น');
+  if ((model.ads / gross) >= 0.15) insights.push('ค่าโฆษณาแตะระดับเตือน ควรปรับ creative, targeting และวัดผลรายแคมเปญให้ละเอียดขึ้น');
   if (((model.shipping + model.logisticsFee) / gross) > 0.12) insights.push('ค่าส่งและโลจิสติกส์สูง ควรทบทวนขนาดพัสดุ โปรโมชั่นส่งฟรี และพาร์ตเนอร์ขนส่ง');
   if ((model.cogs / gross) > 0.55) insights.push('ต้นทุนสินค้ากินสัดส่วนสูง ควรปรับ bundle, MOQ หรือ negotiated sourcing');
-  if ((model.commission / gross) > 0.07) insights.push('ค่า commission สูง ควรผลัก repeat sale ไปยัง LINE/CRM เพื่อลดการพึ่ง marketplace');
-  if (model.marginPct < 15) insights.push('กำไรสุทธิต่ำกว่า 15% ควรปรับราคา ลดต้นทุนแฝง หรือเพิ่มยอดจากลูกค้าเดิม');
+  if ((model.commission / gross) >= 0.1) insights.push('ค่า commission แตะระดับเตือน ควรออกแบบเส้นทางซื้อซ้ำผ่าน LINE/CRM ให้มากขึ้น');
+  if (model.netIncome < 0) insights.push('ตอนนี้ต้องหยุดเพิ่มงบโฆษณา แล้วแก้ต้นทุน/ราคา/commission ก่อนเพื่อกลับมาเป็นบวก');
+  if (model.netIncome >= 0 && model.marginPct < 15) insights.push('กำไรสุทธิต่ำกว่า 15% ควรปรับราคา ลดต้นทุนแฝง หรือเพิ่มยอดจากลูกค้าเดิม');
   if (!insights.length) insights.push('โครงสร้างต้นทุนยังสมดุล ใช้ข้อมูลนี้ต่อยอดเพื่อขยายยอดขายโดยไม่เสีย margin');
 
   return insights;
@@ -410,6 +616,59 @@ function statusTone(status) {
   if (status === 'audit') return { label: 'ต้องผ่าน audit', color: '#f59e0b' };
   if (status === 'consent') return { label: 'ต้องมี consent', color: '#6366f1' };
   return { label: 'ทำไม่ได้', color: '#ef4444' };
+}
+
+async function hmacSha256Hex(secretHex, message) {
+  const key = await globalThis.crypto.subtle.importKey(
+    'raw',
+    decodeHex(secretHex),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await globalThis.crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+  return encodeHex(new Uint8Array(signature));
+}
+
+export async function verifyConsentChain(entries, secretHex) {
+  let previousHash = 'GENESIS';
+  for (const entry of entries) {
+    if (entry.prev_hash !== previousHash) {
+      return { ok: false, reason: `Broken prev_hash at ${entry.id}` };
+    }
+    const expectedHash = await hmacSha256Hex(secretHex, `${entry.prev_hash}|${JSON.stringify(entry.payload)}`);
+    if (entry.entry_hash !== expectedHash) {
+      return { ok: false, reason: `Broken entry_hash at ${entry.id}` };
+    }
+    previousHash = entry.entry_hash;
+  }
+  return { ok: true };
+}
+
+export async function appendConsentLedgerEntry(entries, secretHex, payload) {
+  const verification = await verifyConsentChain(entries, secretHex);
+  if (!verification.ok) {
+    return { ok: false, frozen: true, reason: verification.reason, entries };
+  }
+  const prevHash = entries.length ? entries[entries.length - 1].entry_hash : 'GENESIS';
+  const entryPayload = { ...payload, timestamp: new Date().toISOString() };
+  const entryHash = await hmacSha256Hex(secretHex, `${prevHash}|${JSON.stringify(entryPayload)}`);
+  const entry = {
+    id: `consent-${entries.length + 1}`,
+    prev_hash: prevHash,
+    entry_hash: entryHash,
+    payload: entryPayload,
+  };
+  return { ok: true, frozen: false, entry, entries: [...entries, entry] };
+}
+
+export function tamperConsentLedger(entries) {
+  if (!entries.length) return entries;
+  return entries.map((entry, index) => (index === 0 ? { ...entry, prev_hash: 'tampered' } : entry));
+}
+
+export function rankLifePlatforms(axisId) {
+  return [...LIFE_AXIS_PLATFORM_SCORES].sort((a, b) => (b[axisId] ?? 0) - (a[axisId] ?? 0));
 }
 
 const VISION = [
@@ -475,6 +734,7 @@ const TABS = [
   { id: 'compare',   label: '⚔️ เปรียบเทียบ',     color: '#6366f1' },
   { id: 'thailand',  label: '🇹🇭 Thailand vs Platforms', color: '#14b8a6' },
   { id: 'income',    label: '💰 รายได้สุทธิ',      color: '#22c55e' },
+  { id: 'promptpay', label: '📱 PromptPay QR',    color: '#0ea5e9' },
   { id: 'fees',      label: '📋 ค่าธรรมเนียม',     color: '#f97316' },
   { id: 'consent',   label: '🔐 Consent Ledger', color: '#8b5cf6' },
   { id: 'life',      label: '🌱 ชีวิต',          color: '#06b6d4' },
@@ -493,14 +753,25 @@ export default function StrategyCenterPage() {
   const [focusCols, setFocusCols] = useState([]);
   const [selectedJourneyId, setSelectedJourneyId] = useState(THAI_LIVED_JOURNEYS[0].id);
   const [incomePlatformId, setIncomePlatformId] = useState(PLATFORM_COST_REGISTRY[0].id);
+  const [lifeAxisId, setLifeAxisId] = useState(LIFE_AXIS_OPTIONS[0].id);
   const [costFocusId, setCostFocusId] = useState(PLATFORM_COST_REGISTRY[0].id);
   const [capabilityFocusId, setCapabilityFocusId] = useState(CHANNEL_CAPABILITY_NEGOTIATOR[0].id);
-  const [consentRecords, setConsentRecords] = useState(() => CONSENT_PLATFORM_OPTIONS.map((item) => ({
+  const [consentProfiles, setConsentProfiles] = useState(() => CONSENT_PLATFORM_OPTIONS.map((item) => ({
     ...item,
     purpose: item.id === 'line' ? 'Broadcast + CRM' : 'Analytics + order routing',
     status: item.id === 'line' || item.id === 'google' ? 'granted' : 'pending',
     updatedAt: '2026-09-03T12:00:00Z',
   })));
+  const [consentLedgerEntries, setConsentLedgerEntries] = useState([]);
+  const [consentLedgerFrozen, setConsentLedgerFrozen] = useState(false);
+  const [consentLedgerStatus, setConsentLedgerStatus] = useState('');
+  const [consentSecret] = useState(() => createSessionSecret());
+  const [promptPayInput, setPromptPayInput] = useState({
+    phone: '0812345678',
+    amount: 1000,
+    merchantName: 'OPENTHAI AI',
+    city: 'BANGKOK',
+  });
   const [incomeInput, setIncomeInput] = useState({
     grossRevenue: 50000,
     cogs: 22000,
@@ -517,19 +788,64 @@ export default function StrategyCenterPage() {
   const costFocus = PLATFORM_COST_REGISTRY.find((item) => item.id === costFocusId) ?? PLATFORM_COST_REGISTRY[0];
   const capabilityFocus = CHANNEL_CAPABILITY_NEGOTIATOR.find((item) => item.id === capabilityFocusId) ?? CHANNEL_CAPABILITY_NEGOTIATOR[0];
   const incomeModel = computeIncomeModel(incomeInput, incomePlatform);
+  const incomeAlerts = getIncomeAlerts(incomeModel);
   const incomeInsights = getIncomeInsights(incomeModel);
-  const grantedConsents = consentRecords.filter((item) => item.status === 'granted').length;
+  const grantedConsents = consentProfiles.filter((item) => item.status === 'granted').length;
+  const promptPayModel = buildPromptPayPayload(promptPayInput);
+  const promptPayMatrix = promptPayModel.ok ? buildQrVisualMatrix(promptPayModel.payload) : [];
+  const rankedLifePlatforms = rankLifePlatforms(lifeAxisId);
 
   const updateIncomeField = (key, value) => {
     setIncomeInput((current) => ({ ...current, [key]: value }));
   };
 
-  const updateConsentStatus = (id, status) => {
-    setConsentRecords((current) => current.map((item) => (
+  const updatePromptPayField = (key, value) => {
+    setPromptPayInput((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateConsentStatus = async (id, action) => {
+    if (consentLedgerFrozen) {
+      setConsentLedgerStatus('Consent chain ถูก freeze แล้ว จึงไม่รับ entry ใหม่');
+      return;
+    }
+
+    const profile = consentProfiles.find((item) => item.id === id);
+    if (!profile) return;
+
+    const result = await appendConsentLedgerEntry(consentLedgerEntries, consentSecret, {
+      platform: profile.name,
+      platform_id: profile.id,
+      purpose: profile.purpose,
+      action,
+    });
+
+    if (!result.ok) {
+      setConsentLedgerFrozen(true);
+      setConsentLedgerStatus(`หยุดเขียนทันที: ${result.reason}`);
+      return;
+    }
+
+    setConsentLedgerEntries(result.entries);
+    setConsentProfiles((current) => current.map((item) => (
       item.id === id
-        ? { ...item, status, updatedAt: new Date().toISOString() }
+        ? {
+            ...item,
+            status: action === 'erase_33' ? 'erased' : action === 'withdraw_19' ? 'withdrawn' : 'granted',
+            updatedAt: result.entry.payload.timestamp,
+          }
         : item
     )));
+    setConsentLedgerStatus(`${profile.name}: ${CONSENT_ACTION_LABELS[action]}`);
+  };
+
+  const onTamperConsentLedger = async () => {
+    const tampered = tamperConsentLedger(consentLedgerEntries);
+    setConsentLedgerEntries(tampered);
+    const verification = await verifyConsentChain(tampered, consentSecret);
+    if (!verification.ok) {
+      setConsentLedgerFrozen(true);
+      setConsentLedgerStatus(`Consent chain ถูกแก้ไข — freeze การเขียนทันที (${verification.reason})`);
+    }
   };
 
   const s = {
@@ -703,6 +1019,22 @@ export default function StrategyCenterPage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px,1fr) minmax(320px,1fr)', gap: 14 }}>
+              <div style={{ ...s.card, background: 'rgba(15,23,42,0.82)' }}>
+                <h3 style={{ ...s.h3, color: '#fbbf24' }}>🚨 Automatic Alerts</h3>
+                {incomeAlerts.map((alert) => {
+                  const tone = alert.level === 'danger'
+                    ? { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.25)', color: '#fca5a5', label: 'BLOCK' }
+                    : alert.level === 'warn'
+                      ? { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)', color: '#fbbf24', label: 'WARN' }
+                      : { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.25)', color: '#86efac', label: 'OK' };
+                  return (
+                    <div key={alert.text} style={{ background: tone.bg, border: `1px solid ${tone.border}`, borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+                      <div style={{ color: tone.color, fontWeight: 800, fontSize: 11, marginBottom: 4 }}>{tone.label}</div>
+                      <div style={{ color: '#e2e8f0', fontSize: 13, lineHeight: 1.6 }}>{alert.text}</div>
+                    </div>
+                  );
+                })}
+              </div>
               <div style={s.card}>
                 <h3 style={{ ...s.h3, color: '#a5b4fc' }}>🧠 Cost Insights</h3>
                 {incomeInsights.map((insight) => (
@@ -712,9 +1044,70 @@ export default function StrategyCenterPage() {
                   </div>
                 ))}
               </div>
-              <div style={{ ...s.card, background: 'rgba(15,23,42,0.8)' }}>
+              <div style={{ ...s.card, background: 'rgba(15,23,42,0.8)', gridColumn: '1 / -1' }}>
                 <h3 style={{ ...s.h3, color: '#fbbf24' }}>🐍 Python: net_income()</h3>
                 <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, color: '#e2e8f0', lineHeight: 1.6 }}>{NET_INCOME_PY}</pre>
+              </div>
+            </div>
+          </>
+        )}
+
+        {tab === 'promptpay' && (
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px,0.95fr) minmax(320px,1.05fr)', gap: 14 }}>
+              <div style={s.card}>
+                <h3 style={{ ...s.h3, color: '#7dd3fc' }}>📱 PromptPay QR</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#94a3b8' }}>
+                    เบอร์ PromptPay (มือถือเท่านั้น)
+                    <input value={promptPayInput.phone} onChange={(e) => updatePromptPayField('phone', e.target.value)} style={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 10, padding: '10px 12px' }} />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#94a3b8' }}>
+                    จำนวนเงิน
+                    <input type="number" min="1" value={promptPayInput.amount} onChange={(e) => updatePromptPayField('amount', e.target.value)} style={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 10, padding: '10px 12px' }} />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#94a3b8' }}>
+                    Merchant Name
+                    <input value={promptPayInput.merchantName} onChange={(e) => updatePromptPayField('merchantName', e.target.value)} style={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 10, padding: '10px 12px' }} />
+                  </label>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: '#94a3b8' }}>
+                    City
+                    <input value={promptPayInput.city} onChange={(e) => updatePromptPayField('city', e.target.value)} style={{ background: 'rgba(15,23,42,0.9)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: 10, padding: '10px 12px' }} />
+                  </label>
+                </div>
+                <div style={{ marginTop: 12, fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
+                  สร้าง EMVCo payload + CRC16-CCITT ในเครื่องเท่านั้น และไม่บันทึกเบอร์โทรลง log
+                </div>
+                <div style={{ marginTop: 8, fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
+                  รองรับเฉพาะเบอร์มือถือไทย 10 หลัก และไม่รับเลขบัตรประชาชน 13 หลัก
+                </div>
+              </div>
+
+              <div style={{ ...s.card, background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.25)' }}>
+                <h3 style={{ ...s.h3, color: '#7dd3fc' }}>🧾 EMVCo Output</h3>
+                {promptPayModel.ok ? (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16, alignItems: 'start' }}>
+                      <div style={{ background: '#fff', borderRadius: 12, padding: 10, width: 220 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${promptPayMatrix.length || 21}, 1fr)`, gap: 1 }}>
+                          {promptPayMatrix.flatMap((row, rowIndex) => row.map((cell, cellIndex) => (
+                            <div key={`${rowIndex}-${cellIndex}`} style={{ width: 8, height: 8, background: cell ? '#111827' : '#ffffff' }} />
+                          )))}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, color: '#e2e8f0', marginBottom: 8 }}>จำนวนเงิน: <span style={{ color: '#7dd3fc', fontWeight: 700 }}>{amountToThaiText(promptPayInput.amount)}</span></div>
+                        <div style={{ fontSize: 13, color: '#e2e8f0', marginBottom: 8 }}>เบอร์ที่ใช้: <span style={{ color: '#7dd3fc', fontWeight: 700 }}>{promptPayModel.maskedPhone}</span></div>
+                        <div style={{ fontSize: 13, color: '#e2e8f0', marginBottom: 8 }}>CRC16-CCITT: <span style={{ color: '#fbbf24', fontWeight: 700 }}>{promptPayModel.crc}</span></div>
+                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 11, color: '#cbd5e1', lineHeight: 1.6, background: 'rgba(15,23,42,0.9)', borderRadius: 10, padding: 12 }}>{promptPayModel.payload}</pre>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, padding: '12px 14px', color: '#fca5a5', fontSize: 13 }}>
+                    {promptPayModel.error}
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -788,9 +1181,9 @@ export default function StrategyCenterPage() {
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px,1fr) minmax(320px,1fr)', gap: 14, marginBottom: 14 }}>
               <div style={{ ...s.card, background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.25)' }}>
-                <h3 style={{ ...s.h3, color: '#c4b5fd' }}>🔐 Consent Ledger</h3>
+                <h3 style={{ ...s.h3, color: '#c4b5fd' }}>🔐 Consent Chain Ledger</h3>
                 <div style={{ fontSize: 13, color: '#cbd5e1', lineHeight: 1.6, marginBottom: 12 }}>
-                  บันทึก consent แยกตามแพลตฟอร์ม และถอนความยินยอมตาม PDPA มาตรา 33 ได้ทันที
+                  HMAC-SHA256 ผูกทุก entry เข้าหากัน หาก chain ถูกแก้ไข ระบบจะหยุดเขียนทันที
                 </div>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
                   <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '10px 12px' }}>
@@ -798,25 +1191,35 @@ export default function StrategyCenterPage() {
                     <div style={{ fontSize: 11, color: '#94a3b8' }}>granted</div>
                   </div>
                   <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ color: '#ef4444', fontWeight: 900, fontSize: 20 }}>{consentRecords.filter((item) => item.status === 'withdrawn').length}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>withdrawn</div>
+                    <div style={{ color: '#ef4444', fontWeight: 900, fontSize: 20 }}>{consentProfiles.filter((item) => item.status === 'withdrawn' || item.status === 'erased').length}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>restricted</div>
+                  </div>
+                  <div style={{ background: consentLedgerFrozen ? 'rgba(239,68,68,0.12)' : 'rgba(99,102,241,0.12)', border: `1px solid ${consentLedgerFrozen ? 'rgba(239,68,68,0.2)' : 'rgba(99,102,241,0.2)'}`, borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ color: consentLedgerFrozen ? '#ef4444' : '#a5b4fc', fontWeight: 900, fontSize: 20 }}>{consentLedgerEntries.length}</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8' }}>{consentLedgerFrozen ? 'frozen' : 'entries'}</div>
                   </div>
                 </div>
+                {consentLedgerStatus && (
+                  <div style={{ marginBottom: 12, background: consentLedgerFrozen ? 'rgba(239,68,68,0.12)' : 'rgba(99,102,241,0.12)', border: `1px solid ${consentLedgerFrozen ? 'rgba(239,68,68,0.25)' : 'rgba(99,102,241,0.25)'}`, borderRadius: 10, padding: '10px 12px', color: consentLedgerFrozen ? '#fca5a5' : '#c4b5fd', fontSize: 12 }}>
+                    {consentLedgerStatus}
+                  </div>
+                )}
                 <div style={{ display: 'grid', gap: 10 }}>
-                  {consentRecords.map((item) => (
+                  {consentProfiles.map((item) => (
                     <div key={item.id} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '12px 14px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 8 }}>
                         <div>
                           <div style={{ color: item.color, fontWeight: 800, fontSize: 13 }}>{item.name}</div>
                           <div style={{ color: '#94a3b8', fontSize: 11 }}>{item.purpose}</div>
                         </div>
-                        <span style={{ fontSize: 11, color: item.status === 'granted' ? '#10b981' : item.status === 'withdrawn' ? '#ef4444' : '#f59e0b', fontWeight: 700 }}>
+                        <span style={{ fontSize: 11, color: item.status === 'granted' ? '#10b981' : item.status === 'pending' ? '#f59e0b' : '#ef4444', fontWeight: 700 }}>
                           {item.status.toUpperCase()}
                         </span>
                       </div>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button onClick={() => updateConsentStatus(item.id, 'granted')} style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 8, color: '#10b981', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: '7px 10px' }}>Grant consent</button>
-                        <button onClick={() => updateConsentStatus(item.id, 'withdrawn')} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: '7px 10px' }}>Withdraw (PDPA 33)</button>
+                        <button disabled={consentLedgerFrozen} onClick={() => updateConsentStatus(item.id, 'granted')} style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 8, color: '#10b981', cursor: consentLedgerFrozen ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 700, padding: '7px 10px', opacity: consentLedgerFrozen ? 0.5 : 1 }}>Grant</button>
+                        <button disabled={consentLedgerFrozen} onClick={() => updateConsentStatus(item.id, 'withdraw_19')} style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 8, color: '#fbbf24', cursor: consentLedgerFrozen ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 700, padding: '7px 10px', opacity: consentLedgerFrozen ? 0.5 : 1 }}>ถอนยินยอม §19</button>
+                        <button disabled={consentLedgerFrozen} onClick={() => updateConsentStatus(item.id, 'erase_33')} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', cursor: consentLedgerFrozen ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 700, padding: '7px 10px', opacity: consentLedgerFrozen ? 0.5 : 1 }}>ลบข้อมูล §33</button>
                       </div>
                       <div style={{ marginTop: 8, fontSize: 11, color: '#64748b' }}>ล่าสุด: {item.updatedAt}</div>
                     </div>
@@ -825,6 +1228,24 @@ export default function StrategyCenterPage() {
               </div>
 
               <div style={{ display: 'grid', gap: 14 }}>
+                <div style={{ ...s.card, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginBottom: 12 }}>
+                    <h3 style={{ ...s.h3, color: '#c4b5fd', marginBottom: 0 }}>⛓️ Chain Entries</h3>
+                    <button disabled={consentLedgerFrozen || !consentLedgerEntries.length} onClick={onTamperConsentLedger} style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', cursor: consentLedgerFrozen || !consentLedgerEntries.length ? 'not-allowed' : 'pointer', fontSize: 11, fontWeight: 700, padding: '7px 10px', opacity: consentLedgerFrozen || !consentLedgerEntries.length ? 0.5 : 1 }}>Tamper chain</button>
+                  </div>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {consentLedgerEntries.length ? consentLedgerEntries.map((entry) => (
+                      <div key={entry.id} style={{ background: 'rgba(15,23,42,0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '10px 12px' }}>
+                        <div style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 12, marginBottom: 4 }}>{entry.id} · {CONSENT_ACTION_LABELS[entry.payload.action]}</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>prev_hash · {entry.prev_hash}</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>entry_hash · {entry.entry_hash}</div>
+                        <div style={{ fontSize: 11, color: '#cbd5e1' }}>{entry.payload.platform} · {entry.payload.timestamp}</div>
+                      </div>
+                    )) : (
+                      <div style={{ color: '#94a3b8', fontSize: 12 }}>ยังไม่มี entry — กด action ด้านซ้ายเพื่อเริ่ม chain</div>
+                    )}
+                  </div>
+                </div>
                 <div style={{ ...s.card, background: 'rgba(15,23,42,0.85)' }}>
                   <h3 style={{ ...s.h3, color: '#fbbf24' }}>🐍 Python: ConsentLedger</h3>
                   <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12, color: '#e2e8f0', lineHeight: 1.6 }}>{CONSENT_LEDGER_PY}</pre>
@@ -850,6 +1271,36 @@ export default function StrategyCenterPage() {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {group.items.map((item) => <Tag key={item} text={item} color={group.color} />)}
                     </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ ...s.card, background: 'rgba(15,23,42,0.85)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+                <h3 style={{ ...s.h3, color: '#67e8f9', marginBottom: 0 }}>📊 ชีวิต 5 แกน · 14 แพลตฟอร์ม</h3>
+                <div style={{ fontSize: 11, color: '#fbbf24', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 999, padding: '6px 10px' }}>
+                  pre-pilot ยังไม่กล่าวอ้างผลจริง
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                {LIFE_AXIS_OPTIONS.map((axis) => (
+                  <button key={axis.id} onClick={() => setLifeAxisId(axis.id)} style={{ background: lifeAxisId === axis.id ? `${axis.color}20` : 'transparent', border: `1px solid ${lifeAxisId === axis.id ? `${axis.color}55` : 'rgba(255,255,255,0.1)'}`, borderRadius: 999, color: lifeAxisId === axis.id ? axis.color : '#94a3b8', cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: '8px 12px' }}>
+                    {axis.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 10 }}>
+                {rankedLifePlatforms.map((item, index) => (
+                  <div key={item.id} style={{ background: `${item.color}10`, border: `1px solid ${item.color}25`, borderRadius: 12, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                      <div>
+                        <div style={{ color: item.color, fontWeight: 800, fontSize: 13 }}>{index + 1}. {item.name}</div>
+                        <div style={{ fontSize: 11, color: '#64748b' }}>{item.category}</div>
+                      </div>
+                      <div style={{ color: item.color, fontWeight: 900, fontSize: 24 }}>{item[lifeAxisId]}</div>
+                    </div>
+                    <ScoreBar score={item[lifeAxisId]} color={item.color} />
                   </div>
                 ))}
               </div>
