@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiUrl } from '../apiBase';
+import { apiFetch, apiUrl } from '../apiBase';
 import { useLang } from '../i18n';
+
+const productKey = (product) => `${encodeURIComponent(product?.producer || '')}::${encodeURIComponent(product?.product_name || '')}`;
+const getErrorMessage = (payload, fallback) => payload?.error || fallback;
 
 export default function CatalogPage() {
   const navigate = useNavigate();
@@ -11,7 +14,7 @@ export default function CatalogPage() {
 
   useEffect(() => {
     document.title = 'ตลาดสินค้าไทย — Openthai.ai';
-    fetch(apiUrl('/api/catalog')).then(r => r.json()).then(d => setProducts(d.products || [])).catch(() => setProducts([]));
+    apiFetch('/api/catalog').then((r) => r.json()).then((d) => setProducts(d.products || [])).catch(() => setProducts([]));
   }, []);
 
   return (
@@ -42,15 +45,15 @@ export default function CatalogPage() {
         )}
         {products && products.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 18 }}>
-            {products.map((p, i) => (
-              <div key={p.email + i} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category || 'สินค้าไทย'}</div>
-                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{p.product_name}</div>
-                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>{t('mk.cat.by')} {p.producer}</div>
-                {p.description && <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, marginBottom: 12, flex: 1 }}>{p.description}</div>}
+            {products.map((product) => (
+              <div key={productKey(product)} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{product.category || 'สินค้าไทย'}</div>
+                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{product.product_name}</div>
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>{t('mk.cat.by')} {product.producer}</div>
+                {product.description && <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, marginBottom: 12, flex: 1 }}>{product.description}</div>}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                  <span style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{p.price ? `฿${Number(p.price).toLocaleString('th-TH')}` : t('mk.cat.ask')}</span>
-                  <button onClick={() => setOrder(p)} style={{ ...primaryBtn, padding: '9px 18px', fontSize: 13 }}>{t('mk.cat.order')}</button>
+                  <span style={{ fontSize: 20, fontWeight: 900, color: '#10b981' }}>{product.price ? `฿${Number(product.price).toLocaleString('th-TH')}` : t('mk.cat.ask')}</span>
+                  <button onClick={() => setOrder(product)} style={{ ...primaryBtn, padding: '9px 18px', fontSize: 13 }}>{t('mk.cat.order')}</button>
                 </div>
               </div>
             ))}
@@ -69,23 +72,33 @@ function OrderModal({ product, onClose, t }) {
   const [done, setDone] = useState(false);
   const [orderId, setOrderId] = useState('');
   const [err, setErr] = useState('');
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const total = product.price ? Number(product.price) * (parseInt(form.qty, 10) || 1) : null;
 
   const submit = async (e) => {
     e.preventDefault();
     if (busy) return;
     if (!form.customer_name.trim() || !form.contact.trim()) { setErr(t('mk.ord.err')); return; }
-    setBusy(true); setErr('');
+    setBusy(true);
+    setErr('');
     try {
-      const res = await fetch(apiUrl('/api/orders'), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ producer_email: product.email, product_name: product.product_name, price: product.price, ...form }),
+      const res = await apiFetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ producer: product.producer, product_name: product.product_name, ...form }),
       });
       const d = await res.json();
-      if (d.success) { setOrderId(d.id || ''); setDone(true); } else setErr(d.error || t('mk.ord.err'));
-    } catch { setErr('เชื่อมต่อไม่ได้ ลองใหม่'); }
-    finally { setBusy(false); }
+      if (d.success) {
+        setOrderId(d.id || '');
+        setDone(true);
+      } else {
+        setErr(getErrorMessage(d, t('mk.ord.err')));
+      }
+    } catch {
+      setErr('เชื่อมต่อไม่ได้ ลองใหม่');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
