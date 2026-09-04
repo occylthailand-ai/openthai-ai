@@ -74,6 +74,18 @@ export function createProducers(dataDir) {
     return Object.values(store).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
   }
 
+  function toPublicProduct(p) {
+    if (p?.status !== 'approved' || !p?.product_name) return null;
+    return {
+      producer: p.company,
+      product_name: p.product_name,
+      price: p.price,
+      category: p.category,
+      description: p.description,
+      stock: (p.stock == null ? null : p.stock),
+    };
+  }
+
   // อัปเดตสถานะผู้ผลิต (admin อนุมัติ/ปฏิเสธ)
   async function setStatus(email, status) {
     const e = (email || '').toString().trim().toLowerCase();
@@ -94,8 +106,8 @@ export function createProducers(dataDir) {
   async function catalog() {
     const list = await all();
     return list
-      .filter((p) => p.status === 'approved' && p.product_name)
-      .map((p) => ({ producer: p.company, email: p.email, product_name: p.product_name, price: p.price, category: p.category, description: p.description, website: p.website, stock: (p.stock == null ? null : p.stock) }));
+      .map(toPublicProduct)
+      .filter(Boolean);
   }
 
   async function summary() {
@@ -124,12 +136,11 @@ export function createProducers(dataDir) {
   router.get('/api/producers/search', wrap(async (req, res) => {
     const q = (req.query.q || '').toString().trim().toLowerCase();
     const cat = (req.query.category || '').toString().trim();
-    const list = (await all()).filter((p) => p.status === 'approved');
-    const matched = list.filter((p) => {
+    const matched = (await catalog()).filter((p) => {
       if (cat && cat !== 'ทั้งหมด' && p.category !== cat) return false;
       if (!q) return true;
-      return [p.company, p.product_name, p.description, p.category].some((f) => (f || '').toString().toLowerCase().includes(q));
-    }).map((p) => ({ company: p.company, category: p.category, product_name: p.product_name, price: p.price, description: p.description, website: p.website, email: p.email, stock: (p.stock == null ? null : p.stock) }));
+      return [p.producer, p.product_name, p.description, p.category].some((f) => (f || '').toString().toLowerCase().includes(q));
+    });
     res.json({ success: true, count: matched.length, producers: matched });
   }));
 
