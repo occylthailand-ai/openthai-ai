@@ -1,6 +1,5 @@
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import express from 'express';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -68,17 +67,25 @@ function seedProducers(dataDir) {
   }, null, 2), 'utf8');
 }
 
-async function withServer(router, run) {
-  const app = express();
-  app.use(router);
-  const server = await new Promise((resolve) => {
-    const instance = app.listen(0, () => resolve(instance));
-  });
-  try {
-    return await run(`http://127.0.0.1:${server.address().port}`);
-  } finally {
-    await new Promise((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
-  }
+async function callJsonRoute(router, method, path, query = {}) {
+  const layer = router.stack.find((entry) => entry.route?.path === path && entry.route.methods?.[method]);
+  assert.ok(layer, `route not found: ${method.toUpperCase()} ${path}`);
+
+  let statusCode = 200;
+  let body;
+  const res = {
+    status(code) {
+      statusCode = code;
+      return this;
+    },
+    json(payload) {
+      body = payload;
+      return this;
+    },
+  };
+
+  await layer.route.stack[0].handle({ query }, res);
+  return { statusCode, body };
 }
 
 const tempRoot = mkdtempSync(join(tmpdir(), 'producers-public-'));
@@ -107,21 +114,19 @@ describe('producer public mapper hotfix', () => {
     seedProducers(dataDir);
     const producers = createProducers(dataDir);
 
-    await withServer(producers.router, async (baseUrl) => {
-      const res = await fetch(`${baseUrl}/api/producers/search?q=jasmine`);
-      const body = await res.json();
+    const { statusCode, body } = await callJsonRoute(producers.router, 'get', '/api/producers/search', { q: 'jasmine' });
 
-      assert.equal(body.success, true);
-      assert.equal(body.count, 1);
-      assert.deepEqual(body.producers, [{
-        producer: 'Approved Farm',
-        product_name: 'Jasmine Rice',
-        price: 120,
-        category: 'เกษตร',
-        description: 'Fresh jasmine rice',
-        stock: 15,
-      }]);
-    });
+    assert.equal(statusCode, 200);
+    assert.equal(body.success, true);
+    assert.equal(body.count, 1);
+    assert.deepEqual(body.producers, [{
+      producer: 'Approved Farm',
+      product_name: 'Jasmine Rice',
+      price: 120,
+      category: 'เกษตร',
+      description: 'Fresh jasmine rice',
+      stock: 15,
+    }]);
   });
 
   it('search miss returns an empty array without leaking email', async () => {
@@ -129,15 +134,13 @@ describe('producer public mapper hotfix', () => {
     seedProducers(dataDir);
     const producers = createProducers(dataDir);
 
-    await withServer(producers.router, async (baseUrl) => {
-      const res = await fetch(`${baseUrl}/api/producers/search?q=does-not-exist`);
-      const body = await res.json();
+    const { statusCode, body } = await callJsonRoute(producers.router, 'get', '/api/producers/search', { q: 'does-not-exist' });
 
-      assert.equal(body.success, true);
-      assert.equal(body.count, 0);
-      assert.deepEqual(body.producers, []);
-      assert.equal(JSON.stringify(body).includes('email'), false);
-    });
+    assert.equal(statusCode, 200);
+    assert.equal(body.success, true);
+    assert.equal(body.count, 0);
+    assert.deepEqual(body.producers, []);
+    assert.equal(JSON.stringify(body).includes('email'), false);
   });
 
   it('empty search returns only approved products with product_name', async () => {
@@ -145,15 +148,13 @@ describe('producer public mapper hotfix', () => {
     seedProducers(dataDir);
     const producers = createProducers(dataDir);
 
-    await withServer(producers.router, async (baseUrl) => {
-      const res = await fetch(`${baseUrl}/api/producers/search`);
-      const body = await res.json();
+    const { statusCode, body } = await callJsonRoute(producers.router, 'get', '/api/producers/search');
 
-      assert.equal(body.success, true);
-      assert.equal(body.count, 1);
-      assert.deepEqual(body.producers.map((p) => p.producer), ['Approved Farm']);
-      assert.equal(JSON.stringify(body).includes('email'), false);
-    });
+    assert.equal(statusCode, 200);
+    assert.equal(body.success, true);
+    assert.equal(body.count, 1);
+    assert.deepEqual(body.producers.map((p) => p.producer), ['Approved Farm']);
+    assert.equal(JSON.stringify(body).includes('email'), false);
   });
 
   it('internal all and summary still retain producer PII', async () => {
