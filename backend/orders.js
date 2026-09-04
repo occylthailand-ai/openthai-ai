@@ -8,7 +8,24 @@ import { join } from 'path';
 // new → confirmed → packed → shipped → out_for_delivery → delivered (/ cancelled)
 const ORDER_STATUS = ['new', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
 const ESCROW_STATUS = ['none', 'held', 'released', 'refunded'];
-const clip = (s, n = 300) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
+function stripTags(value) {
+  let out = '';
+  let inTag = false;
+  for (const ch of value) {
+    if (ch === '<') {
+      inTag = true;
+      continue;
+    }
+    if (ch === '>') {
+      inTag = false;
+      continue;
+    }
+    if (!inTag) out += ch;
+  }
+  return out;
+}
+
+const clip = (s, n = 300) => (typeof s === 'string' ? stripTags(s).trim().slice(0, n) : '');
 const lookupError = (status, code, error) => ({ ok: false, status, code, error });
 
 function publicOrder(order) {
