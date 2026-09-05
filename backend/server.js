@@ -91,7 +91,10 @@ const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
 const producers = createProducers(WRITE_DATA_DIR);
-const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
+const orders    = createOrders(WRITE_DATA_DIR, {
+  getProducers: async () => producers.all(),
+  onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } },
+});
 const disputes  = createDisputes(WRITE_DATA_DIR, {
   orders, callAI, parseAIJson,
   notify: {

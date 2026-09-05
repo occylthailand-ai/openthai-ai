@@ -43,7 +43,7 @@ export default function CatalogPage() {
         {products && products.length > 0 && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 18 }}>
             {products.map((p, i) => (
-              <div key={p.email + i} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
+              <div key={`${p.producer || 'producer'}-${p.product_name || 'product'}-${i}`} style={{ ...card, display: 'flex', flexDirection: 'column' }}>
                 <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>{p.category || 'สินค้าไทย'}</div>
                 <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{p.product_name}</div>
                 <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>{t('mk.cat.by')} {p.producer}</div>
@@ -80,7 +80,7 @@ function OrderModal({ product, onClose, t }) {
     try {
       const res = await fetch(apiUrl('/api/orders'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ producer_email: product.email, product_name: product.product_name, price: product.price, ...form }),
+        body: JSON.stringify({ producer: product.producer, product_name: product.product_name, price: product.price, ...form }),
       });
       const d = await res.json();
       if (d.success) { setOrderId(d.id || ''); setDone(true); } else setErr(d.error || t('mk.ord.err'));

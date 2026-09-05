@@ -95,7 +95,7 @@ export function createProducers(dataDir) {
     const list = await all();
     return list
       .filter((p) => p.status === 'approved' && p.product_name)
-      .map((p) => ({ producer: p.company, email: p.email, product_name: p.product_name, price: p.price, category: p.category, description: p.description, website: p.website, stock: (p.stock == null ? null : p.stock) }));
+      .map((p) => ({ producer: p.company, product_name: p.product_name, price: p.price, category: p.category, description: p.description, website: p.website, stock: (p.stock == null ? null : p.stock) }));
   }
 
   async function summary() {

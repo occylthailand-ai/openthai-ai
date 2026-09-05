@@ -50,14 +50,42 @@ export function createOrders(dataDir, opts = {}) {
   }
 
   const hist = (status, note) => ({ status, at: new Date().toISOString(), note: note || '' });
+  const norm = (s) => (s || '').toString().trim().toLowerCase();
+
+  async function resolveApprovedProducer(input) {
+    if (typeof opts.getProducers !== 'function') {
+      return { ok: false, code: 'PRODUCT_NOT_FOUND', error: 'PRODUCT_NOT_FOUND' };
+    }
+    const producer = clip(input.producer, 120);
+    const product_name = clip(input.product_name, 120);
+    if (!producer || !product_name) {
+      return { ok: false, code: 'PRODUCT_NOT_FOUND', error: 'PRODUCT_NOT_FOUND' };
+    }
+    const list = await opts.getProducers();
+    const matched = (Array.isArray(list) ? list : []).filter((p) =>
+      norm(p?.status) === 'approved'
+      && norm(p?.company) === norm(producer)
+      && norm(p?.product_name) === norm(product_name)
+      && norm(p?.email)
+    );
+    if (matched.length === 0) return { ok: false, code: 'PRODUCT_NOT_FOUND', error: 'PRODUCT_NOT_FOUND' };
+    if (matched.length > 1) return { ok: false, code: 'AMBIGUOUS_PRODUCT', error: 'AMBIGUOUS_PRODUCT' };
+    return { ok: true, producer_email: norm(matched[0].email) };
+  }
 
   async function place(input) {
     const qty = Math.max(1, Math.min(9999, parseInt(input.qty, 10) || 1));
     const price = Number(input.price) > 0 ? Number(input.price) : null;
     const now = new Date().toISOString();
+    let producer_email = clip(input.producer_email, 120).toLowerCase();
+    if (!producer_email) {
+      const r = await resolveApprovedProducer(input);
+      if (!r.ok) return r;
+      producer_email = r.producer_email;
+    }
     const rec = {
       id: `ord_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      producer_email: clip(input.producer_email, 120).toLowerCase(),
+      producer_email,
       product_name: clip(input.product_name, 120),
       customer_name: clip(input.customer_name, 80),
       contact: clip(input.contact, 120),
@@ -168,7 +196,10 @@ export function createOrders(dataDir, opts = {}) {
 
   router.post('/api/orders', orderLimiter, wrap(async (req, res) => {
     const r = await place(req.body || {});
-    if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    if (!r.ok) {
+      const status = r.code === 'PRODUCT_NOT_FOUND' ? 404 : r.code === 'AMBIGUOUS_PRODUCT' ? 409 : 400;
+      return res.status(status).json({ success: false, error: r.error, ...(r.code ? { code: r.code } : {}) });
+    }
     res.json({ success: true, id: r.id, message: 'รับคำสั่งซื้อแล้ว ติดตามสถานะได้ที่หน้า Track ด้วยเลขออเดอร์ + ช่องทางติดต่อ' });
   }));
 
