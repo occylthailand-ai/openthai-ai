@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-05T07:54:37.973Z · branch `claude/adb-developer-options-iwlihh` (0 commit(s) ahead of main)
+Generated: 2026-09-05T07:56:51.153Z · branch `claude/adb-developer-options-iwlihh` (1 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 83 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 221 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -643,6 +643,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **9 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_vault_ledger.sql
 
 ## Recent commits
+- 06ca38d docs: เพิ่มไฟล์อ้างอิง ADB Developer Options สำหรับรุ่น V2427T (52 seconds ago)
 - 61475aa feat: หมวด 2-6, 10, 12 — โค้ดครบ 7 หมวดที่ขาด (2 weeks ago)
 - e37f988 feat(enterprise): request-ID tracing, structured logging, error handler, audit trail (#90) (5 weeks ago)
 - 6657b77 feat: structured logger, migration tracker, auth tests (#89) (5 weeks ago)
@@ -650,9 +651,46 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - 352f694 feat(claude): OpenHands-style microagents + tool scripts (#87) (5 weeks ago)
 - a545554 feat(responsive): dashboard bottom tab bar + responsive grids for all screen sizes (#85) (5 weeks ago)
 - b0379f2 feat(dashboard): add 🔄 จับคู่ tab with live matching widget (5 weeks ago)
-- d558a41 Add B2B2C, C2B, G2G, G2B matching types (#83) (5 weeks ago)
 
-## Production health (⚠️ HTTP 403)
+## Production health (✅ reachable)
+```json
+{
+  "status": "ok",
+  "version": "2.1.0",
+  "charter_version": 2,
+  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
+  "ai_primary": "✅ Claude Haiku",
+  "ai_fallback": "✅ Gemini Flash Latest",
+  "ai_active": "claude-haiku-4-5-20251001",
+  "google_oauth": true,
+  "affiliates": 0,
+  "waitlist": 0,
+  "agents": 0,
+  "active_agents": 0,
+  "line_oa": true,
+  "elevenlabs": false,
+  "watchdog": "idle",
+  "last_watchdog": null,
+  "system_logs": 2,
+  "uptime_sec": 0,
+  "memory_mb": "20.1",
+  "services": {
+    "news_rag": "✅ Active",
+    "news_rag_refresh": "✅ Auto cache clear every 4h",
+    "competitor_analysis": "✅ Active",
+    "tts": "⚠️ No API Key",
+    "line_oa": "✅ Active",
+    "auto_heal": "✅ Active (every 30 min)",
+    "agent_cron": "✅ Active (every hour)",
+    "watchdog": "✅ Active",
+    "diagnostics": "✅ Active",
+    "persistence": "✅ system_log + agents.json + agent_checkpoint",
+    "vector_memory": "✅ Active (semantic long-term memory)",
+    "webhook_system": "✅ Active (0 registered)",
+    "multi_tenant": "✅ Active (0 tenants)"
+  }
+}
+```
 
 ## Skills registry (35 total, 33 active, 2 need setup)
 | ID | Name | Endpoint | Status |
