@@ -59,6 +59,9 @@ export default function CouncilPage() {
   const [businessSelector, setBusinessSelector] = useState(null);
   const [selectorLoading, setSelectorLoading] = useState(false);
   const [selectorError, setSelectorError] = useState('');
+  const [autopilotStatus, setAutopilotStatus] = useState(null);
+  const [autopilotLoading, setAutopilotLoading] = useState(false);
+  const [autopilotError, setAutopilotError] = useState('');
   const loadingRef = useRef(false);
   const lastEmergencyRef = useRef(0);
 
@@ -192,6 +195,47 @@ export default function CouncilPage() {
     }
   };
 
+  const loadAutopilotStatus = async () => {
+    setAutopilotError('');
+    try {
+      const res = await fetch(apiUrl('/api/council/autopilot/status'));
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'โหลดสถานะ autopilot ไม่สำเร็จ');
+      setAutopilotStatus(data);
+    } catch (e) {
+      setAutopilotError(e.message);
+    }
+  };
+
+  const runAutopilotTick = async (force = false) => {
+    if (loadingRef.current) return;
+    setAutopilotLoading(true); setAutopilotError('');
+    loadingRef.current = true;
+    setError(''); setLoading(true); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/council/autopilot/tick'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ includeBridgeVoices, bridgeVoiceLimit: 12, inviteAll, publishPlaybook, force }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'autopilot tick ไม่สำเร็จ');
+      if (!data.skipped && data.meeting) {
+        setResult({ ...data.meeting, selector: data.selector, playbook: data.playbook, bridge_publish: data.bridge_publish });
+        setBusinessSelector({ success: true, kpi: data.kpi, selector: data.selector, playbook: data.playbook, bridge_publish: data.bridge_publish });
+      }
+      if (data.state) setAutopilotStatus({ success: true, ...data.state, cooldown_left_ms: data.cooldown_left_ms || 0 });
+      await loadKpiAlert();
+    } catch (e) {
+      setAutopilotError(e.message);
+      setError(e.message);
+    } finally {
+      setAutopilotLoading(false);
+      setLoading(false);
+      loadingRef.current = false;
+    }
+  };
+
   useEffect(() => {
     if (!autoRunEnabled) return;
     const iv = setInterval(() => {
@@ -205,9 +249,11 @@ export default function CouncilPage() {
   useEffect(() => {
     loadKpiAlert();
     loadBusinessSelector();
+    loadAutopilotStatus();
     const iv = setInterval(() => {
       loadKpiAlert();
       loadBusinessSelector();
+      loadAutopilotStatus();
     }, 30000);
     return () => clearInterval(iv);
   }, []);
@@ -301,6 +347,31 @@ export default function CouncilPage() {
               <input type="checkbox" checked={publishPlaybook} onChange={e => setPublishPlaybook(e.target.checked)} />
               ส่งแผนงาน 5 ตัวทำงานขึ้น council-bridge อัตโนมัติ
             </label>
+          </div>
+        </div>
+
+        <div style={{ ...card, border: '1px solid rgba(16,185,129,0.35)', background: 'rgba(16,185,129,0.08)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>🤖 Council Autopilot Tick</div>
+            <button onClick={loadAutopilotStatus} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#cbd5e1', fontSize: 12, cursor: 'pointer' }}>
+              รีเฟรชสถานะ
+            </button>
+          </div>
+          {autopilotStatus && (
+            <div style={{ fontSize: 12, color: '#cbd5e1', lineHeight: 1.6 }}>
+              สถานะล่าสุด: <strong style={{ color: '#6ee7b7' }}>{String(autopilotStatus.last_status || 'idle').toUpperCase()}</strong>
+              {' '}· โหมด: <strong>{autopilotStatus.last_mode || '-'}</strong>
+              {' '}· cooldown คงเหลือ: {Math.ceil(Number(autopilotStatus.cooldown_left_ms || 0) / 1000)} วินาที
+            </div>
+          )}
+          {autopilotError && <div style={{ marginTop: 8, fontSize: 12, color: '#fca5a5' }}>{autopilotError}</div>}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+            <button onClick={() => runAutopilotTick(false)} disabled={loading || autopilotLoading} style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer' }}>
+              {autopilotLoading ? 'กำลังรัน…' : '▶️ รัน autopilot tick'}
+            </button>
+            <button onClick={() => runAutopilotTick(true)} disabled={loading || autopilotLoading} style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.25)', background: 'transparent', color: '#e2e8f0', fontSize: 12, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
+              ⏭️ บังคับรันทันที
+            </button>
           </div>
         </div>
 

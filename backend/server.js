@@ -1745,7 +1745,16 @@ const COUNCIL_PERSONAS = {
 const COUNCIL_BRIDGE_TENANT = 'council-bridge';
 const CORE_COUNCIL_AUTHORS = new Set(['user', 'claude', 'gemini', 'grok']);
 const COUNCIL_INVITE_COOLDOWN_MS = 5 * 60 * 1000;
+const COUNCIL_AUTOPILOT_COOLDOWN_MS = 10 * 60 * 1000;
 let lastCouncilInviteTs = 0;
+let councilAutopilotState = {
+  last_run_at: null,
+  last_mode: null,
+  last_topic: null,
+  last_status: 'idle',
+  cooldown_ms: COUNCIL_AUTOPILOT_COOLDOWN_MS,
+  last_result: null,
+};
 
 function getBridgeVoices(limit = 8) {
   try {
@@ -1947,6 +1956,65 @@ async function postPlaybookToBridge({ selector, playbook, kpi }) {
   return { posted: true, id: result?.id || null };
 }
 
+async function runCouncilAutopilotTick({
+  includeBridgeVoices = true,
+  bridgeVoiceLimit = 12,
+  inviteAll = true,
+  publishPlaybook = true,
+  thresholds = {},
+  force = false,
+} = {}) {
+  const now = Date.now();
+  const lastRunTs = councilAutopilotState.last_run_at ? Date.parse(councilAutopilotState.last_run_at) : 0;
+  const sinceLast = now - (Number.isFinite(lastRunTs) ? lastRunTs : 0);
+  if (!force && lastRunTs && sinceLast < COUNCIL_AUTOPILOT_COOLDOWN_MS) {
+    return {
+      skipped: true,
+      reason: 'cooldown',
+      cooldown_left_ms: COUNCIL_AUTOPILOT_COOLDOWN_MS - sinceLast,
+      state: councilAutopilotState,
+    };
+  }
+
+  const kpi = await getCouncilKpiAlert(thresholds || {});
+  const selector = getCouncilBusinessSelector(kpi);
+  const playbook = buildBusinessExecutionPlaybook(selector, kpi);
+
+  let mode = 'strategy';
+  let topic = `โหมดทำเงินที่แนะนำ: ${selector.primary.name} — ช่วยแตกแผน 24 ชั่วโมงให้ทำเงินจริงเร็วที่สุด โดยยึด KPI ปัจจุบัน`;
+  if (kpi.status === 'red') {
+    mode = 'emergency';
+    topic = `ประชุมฉุกเฉิน: KPI RED — กู้รายได้และแก้คอขวดภายใน 24 ชั่วโมง`;
+  }
+
+  const meeting = await runCouncilMeeting({
+    topic: topic.slice(0, 2000),
+    includeBridgeVoices,
+    bridgeVoiceLimit,
+    inviteAll,
+    emergency: kpi.status === 'red' ? kpi : null,
+  });
+
+  let bridgePublish = { posted: false };
+  if (publishPlaybook) bridgePublish = await postPlaybookToBridge({ selector, playbook, kpi });
+
+  councilAutopilotState = {
+    last_run_at: new Date().toISOString(),
+    last_mode: mode,
+    last_topic: topic,
+    last_status: kpi.status,
+    cooldown_ms: COUNCIL_AUTOPILOT_COOLDOWN_MS,
+    last_result: {
+      kpi_status: kpi.status,
+      selector_primary: selector.primary?.id || null,
+      bridge_publish: bridgePublish,
+      voices: meeting.voices?.length || 0,
+    },
+  };
+
+  return { skipped: false, mode, kpi, selector, playbook, bridge_publish: bridgePublish, meeting, state: councilAutopilotState };
+}
+
 function mockCouncilVoice(provider, topic) {
   const t = topic.length > 60 ? topic.slice(0, 60) + '…' : topic;
   const M = {
@@ -2032,6 +2100,36 @@ app.get('/api/council/business-selector', async (req, res) => {
     const playbook = buildBusinessExecutionPlaybook(selector, kpi);
     res.json({ success: true, kpi, selector, playbook });
   } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.get('/api/council/autopilot/status', (req, res) => {
+  const now = Date.now();
+  const lastRunTs = councilAutopilotState.last_run_at ? Date.parse(councilAutopilotState.last_run_at) : 0;
+  const sinceLast = now - (Number.isFinite(lastRunTs) ? lastRunTs : 0);
+  const cooldownLeft = lastRunTs ? Math.max(0, COUNCIL_AUTOPILOT_COOLDOWN_MS - sinceLast) : 0;
+  res.json({ success: true, ...councilAutopilotState, cooldown_left_ms: cooldownLeft, ts: new Date().toISOString() });
+});
+
+app.post('/api/council/autopilot/tick', generateLimiter, async (req, res) => {
+  try {
+    const includeBridgeVoices = req.body?.includeBridgeVoices !== false;
+    const bridgeVoiceLimit = Math.min(20, Math.max(0, parseInt(req.body?.bridgeVoiceLimit, 10) || 12));
+    const inviteAll = req.body?.inviteAll !== false;
+    const publishPlaybook = req.body?.publishPlaybook !== false;
+    const force = req.body?.force === true;
+    const result = await runCouncilAutopilotTick({
+      includeBridgeVoices,
+      bridgeVoiceLimit,
+      inviteAll,
+      publishPlaybook,
+      thresholds: req.body?.thresholds || {},
+      force,
+    });
+    res.json({ success: true, ...result });
+  } catch (e) {
+    addLog('warn', 'CouncilAutopilot', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
