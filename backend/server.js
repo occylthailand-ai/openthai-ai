@@ -1886,6 +1886,67 @@ function getCouncilBusinessSelector(kpi) {
   };
 }
 
+function buildBusinessExecutionPlaybook(selector, kpi) {
+  const modelId = selector?.primary?.id || 'matrix_content';
+  const modelName = selector?.primary?.name || 'Matrix Content Monetization';
+  const metrics = kpi?.metrics || {};
+  const linesByModel = {
+    matrix_content: [
+      { owner: 'Researcher', task: 'คัด 5 เทรนด์/คีย์เวิร์ดที่มีโอกาสปิดดีลเร็วใน 24 ชั่วโมง' },
+      { owner: 'Creator', task: 'ผลิตโพสต์/คลิปขายอย่างน้อย 12 ชิ้น พร้อม CTA ชัดเจน' },
+      { owner: 'Ops Agent', task: 'ผูกลิงก์ affiliate + ติดแท็ก source ให้ทุกช่องทางอัตโนมัติ' },
+      { owner: 'Support', task: 'ตั้งชุดตอบ FAQ + คัดลีดร้อนส่งเข้าห้องสั่งซื้อทันที' },
+      { owner: 'Builder', task: 'ปรับ landing/offer ให้ชำระเงินง่ายที่สุดใน 2 คลิก' },
+    ],
+    micro_saas: [
+      { owner: 'Researcher', task: 'ยืนยัน pain point 1 เรื่องที่ลูกค้าพร้อมจ่ายรายเดือน' },
+      { owner: 'Creator', task: 'ทำหน้าอธิบายคุณค่า + ตัวอย่างผลลัพธ์ก่อน/หลังใช้เครื่องมือ' },
+      { owner: 'Ops Agent', task: 'ตั้ง onboarding + email automation ทดลองใช้→สมัครจ่าย' },
+      { owner: 'Support', task: 'ตั้ง bot รับปัญหา onboarding แล้วตอบอัตโนมัติภายใน 5 นาที' },
+      { owner: 'Builder', task: 'เร่งฟีเจอร์ MVP ที่ลดเวลางานลูกค้าได้ทันที' },
+    ],
+    digital_product: [
+      { owner: 'Researcher', task: 'คัดหัวข้อดิจิทัลโปรดักต์ที่ดีมานด์สูงและคู่แข่งต่ำ' },
+      { owner: 'Creator', task: 'ผลิตแพ็กขาย (โพสต์+วิดีโอ+อีเมล) สำหรับสินค้าดิจิทัล 1 ชุด' },
+      { owner: 'Ops Agent', task: 'ตั้งระบบส่งไฟล์/คอร์สอัตโนมัติหลังชำระเงิน' },
+      { owner: 'Support', task: 'เตรียมบทตอบคำถามก่อนซื้อและหลังซื้อเพื่อลด refund' },
+      { owner: 'Builder', task: 'ปรับคุณภาพสินค้าดิจิทัลหลักและเพิ่มเวอร์ชัน upsell' },
+    ],
+    cross_border: [
+      { owner: 'Researcher', task: 'เลือก 1 ตลาดต่างประเทศที่ conversion มีแนวโน้มสูงสุด' },
+      { owner: 'Creator', task: 'ทำคอนเทนต์ขายและโฆษณาแบบ localized อย่างน้อย 2 ภาษา' },
+      { owner: 'Ops Agent', task: 'ตั้ง workflow fulfillment + tracking + timezone follow-up อัตโนมัติ' },
+      { owner: 'Support', task: 'เปิดชุดตอบลูกค้าต่างประเทศตามเวลาท้องถิ่น' },
+      { owner: 'Builder', task: 'ปรับ checkout/currency/copy ให้เหมาะกับตลาดเป้าหมาย' },
+    ],
+  };
+  const tasks = linesByModel[modelId] || linesByModel.matrix_content;
+  return {
+    model_id: modelId,
+    model_name: modelName,
+    objective: `ทำให้ KPI ดีขึ้นใน 24 ชั่วโมง (รายได้24ชม.=฿${Number(metrics.revenue_24h || 0).toLocaleString()}, ลีด24ชม.=${Number(metrics.leads_24h || 0)})`,
+    tasks,
+    ts: new Date().toISOString(),
+  };
+}
+
+async function postPlaybookToBridge({ selector, playbook, kpi }) {
+  const text = [
+    `📋 Council Playbook อัตโนมัติ: ${selector?.primary?.name || '-'}`,
+    `เหตุผล: ${selector?.rationale || '-'}`,
+    `KPI: รายได้24ชม.=฿${Number(kpi?.metrics?.revenue_24h || 0).toLocaleString()} · ลีด24ชม.=${Number(kpi?.metrics?.leads_24h || 0)} · dispute_overdue=${Number(kpi?.metrics?.disputes_overdue || 0)}`,
+    '',
+    ...((playbook?.tasks || []).map((t, i) => `${i + 1}) ${t.owner}: ${t.task}`)),
+  ].join('\n');
+  const result = await memory.store({
+    tenantId: COUNCIL_BRIDGE_TENANT,
+    type: 'note',
+    text: text.slice(0, 4000),
+    metadata: { author: 'business-selector-bot', source: 'api/council/business-selector' },
+  });
+  return { posted: true, id: result?.id || null };
+}
+
 function mockCouncilVoice(provider, topic) {
   const t = topic.length > 60 ? topic.slice(0, 60) + '…' : topic;
   const M = {
@@ -1968,7 +2029,8 @@ app.get('/api/council/business-selector', async (req, res) => {
       minLeads24h: Number.isFinite(minLeads24h) ? minLeads24h : undefined,
     });
     const selector = getCouncilBusinessSelector(kpi);
-    res.json({ success: true, kpi, selector });
+    const playbook = buildBusinessExecutionPlaybook(selector, kpi);
+    res.json({ success: true, kpi, selector, playbook });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -2004,8 +2066,10 @@ app.post('/api/council/business-selector/run', generateLimiter, async (req, res)
     const includeBridgeVoices = req.body?.includeBridgeVoices !== false;
     const bridgeVoiceLimit = Math.min(20, Math.max(0, parseInt(req.body?.bridgeVoiceLimit, 10) || 12));
     const inviteAll = req.body?.inviteAll !== false;
+    const publishPlaybook = req.body?.publishPlaybook === true;
     const kpi = await getCouncilKpiAlert(req.body?.thresholds || {});
     const selector = getCouncilBusinessSelector(kpi);
+    const playbook = buildBusinessExecutionPlaybook(selector, kpi);
     const topic = String(req.body?.topic || '').trim() || `โหมดทำเงินที่แนะนำ: ${selector.primary.name} — ช่วยแตกแผน 24 ชั่วโมงให้ทำเงินจริงเร็วที่สุด โดยยึด KPI ปัจจุบัน`;
     const payload = await runCouncilMeeting({
       topic: topic.slice(0, 2000),
@@ -2014,7 +2078,9 @@ app.post('/api/council/business-selector/run', generateLimiter, async (req, res)
       inviteAll,
       emergency: kpi.status === 'red' ? kpi : null,
     });
-    res.json({ ...payload, selector });
+    let bridgePublish = { posted: false };
+    if (publishPlaybook) bridgePublish = await postPlaybookToBridge({ selector, playbook, kpi });
+    res.json({ ...payload, selector, playbook, bridge_publish: bridgePublish });
   } catch (e) {
     addLog('warn', 'CouncilBusinessSelector', e.message);
     res.status(500).json({ success: false, error: e.message });

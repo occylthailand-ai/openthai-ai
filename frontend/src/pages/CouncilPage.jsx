@@ -52,6 +52,7 @@ export default function CouncilPage() {
   const [autoRunSeconds, setAutoRunSeconds] = useState(180);
   const [autoEmergency, setAutoEmergency] = useState(true);
   const [autoBusinessSelector, setAutoBusinessSelector] = useState(false);
+  const [publishPlaybook, setPublishPlaybook] = useState(true);
   const [kpiAlert, setKpiAlert] = useState(null);
   const [kpiLoading, setKpiLoading] = useState(false);
   const [kpiError, setKpiError] = useState('');
@@ -170,12 +171,18 @@ export default function CouncilPage() {
       const res = await fetch(apiUrl('/api/council/business-selector/run'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ includeBridgeVoices, bridgeVoiceLimit: 12, inviteAll }),
+        body: JSON.stringify({ includeBridgeVoices, bridgeVoiceLimit: 12, inviteAll, publishPlaybook }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'รันโหมดเลือกธุรกิจไม่สำเร็จ');
       setResult(data);
-      setBusinessSelector({ success: true, kpi: data.emergency || businessSelector?.kpi || null, selector: data.selector });
+      setBusinessSelector({
+        success: true,
+        kpi: data.emergency || businessSelector?.kpi || null,
+        selector: data.selector,
+        playbook: data.playbook || businessSelector?.playbook || null,
+        bridge_publish: data.bridge_publish || null,
+      });
       await loadKpiAlert();
     } catch (e) {
       setError(e.message);
@@ -267,6 +274,18 @@ export default function CouncilPage() {
               โหมดแนะนำ: <strong style={{ color: '#a5b4fc' }}>{businessSelector.selector.primary?.name}</strong>
               <div style={{ marginTop: 4, color: '#cbd5e1' }}>{businessSelector.selector.primary?.focus}</div>
               <div style={{ marginTop: 6, fontSize: 12, color: '#94a3b8' }}>{businessSelector.selector.rationale}</div>
+              {businessSelector.playbook?.tasks?.length > 0 && (
+                <div style={{ marginTop: 8, fontSize: 12, color: '#cbd5e1', display: 'grid', gap: 4 }}>
+                  {businessSelector.playbook.tasks.map((t, i) => (
+                    <div key={i}>• <strong>{t.owner}:</strong> {t.task}</div>
+                  ))}
+                </div>
+              )}
+              {businessSelector.bridge_publish?.posted && (
+                <div style={{ marginTop: 8, fontSize: 12, color: '#6ee7b7' }}>
+                  ✅ ส่ง playbook ขึ้น council-bridge แล้ว
+                </div>
+              )}
             </div>
           )}
           {selectorError && <div style={{ marginTop: 8, fontSize: 12, color: '#fca5a5' }}>{selectorError}</div>}
@@ -277,6 +296,10 @@ export default function CouncilPage() {
             <label style={{ fontSize: 12, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}>
               <input type="checkbox" checked={autoBusinessSelector} onChange={e => setAutoBusinessSelector(e.target.checked)} />
               ให้ระบบเลือกโหมดทำเงินอัตโนมัติทุกรอบ
+            </label>
+            <label style={{ fontSize: 12, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={publishPlaybook} onChange={e => setPublishPlaybook(e.target.checked)} />
+              ส่งแผนงาน 5 ตัวทำงานขึ้น council-bridge อัตโนมัติ
             </label>
           </div>
         </div>
