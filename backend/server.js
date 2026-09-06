@@ -5466,17 +5466,20 @@ function saveSysLogs(data) {
 }
 
 const sysLogs = loadSysLogs();
+const sanitizeLogField = (v, max = 500) => String(v ?? '').replace(/[\r\n\t]/g, ' ').slice(0, max);
 
 function addLog(level, source, message, detail = null) {
-  const entry = { ts: new Date().toISOString(), level, source, message, ...(detail ? { detail } : {}) };
+  const safeSource = sanitizeLogField(source, 80);
+  const safeMessage = sanitizeLogField(message, 2000);
+  const entry = { ts: new Date().toISOString(), level, source: safeSource, message: safeMessage, ...(detail ? { detail } : {}) };
   sysLogs.unshift(entry);
   if (sysLogs.length > MAX_LOGS) sysLogs.splice(MAX_LOGS);
   saveSysLogs(sysLogs);
   if (level === 'error') {
-    console.error(`[${source}] ${message}`, detail || '');
-    webhooks.dispatch('system.error', { source, message, detail: detail || null });
+    console.error(`[${safeSource}] ${safeMessage}`, detail || '');
+    webhooks.dispatch('system.error', { source: safeSource, message: safeMessage, detail: detail || null });
   } else {
-    console.log(`[${source}] ${message}`);
+    console.log(`[${safeSource}] ${safeMessage}`);
   }
 }
 

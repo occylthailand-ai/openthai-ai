@@ -55,8 +55,9 @@ function hashEmbed(text) {
   const tokens = text.toLowerCase().replace(/[^฀-๿a-z0-9\s]/g, '').split(/\s+/);
   const vec = new Float32Array(128).fill(0);
   for (const t of tokens) {
+    const token = t.slice(0, 128);
     let h = 5381;
-    for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) >>> 0;
+    for (let i = 0; i < token.length; i++) h = ((h << 5) + h + token.charCodeAt(i)) >>> 0;
     vec[h % 128] += 1;
   }
   // L2 normalise
