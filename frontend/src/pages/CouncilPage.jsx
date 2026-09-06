@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiUrl } from '../apiBase';
 
@@ -47,6 +47,10 @@ export default function CouncilPage() {
   const [bridgeLoading, setBridgeLoading] = useState(false);
   const [bridgeError, setBridgeError] = useState('');
   const [includeBridgeVoices, setIncludeBridgeVoices] = useState(true);
+  const [inviteAll, setInviteAll] = useState(true);
+  const [autoRunEnabled, setAutoRunEnabled] = useState(false);
+  const [autoRunSeconds, setAutoRunSeconds] = useState(180);
+  const loadingRef = useRef(false);
 
   const loadBridgeNotes = async () => {
     try {
@@ -80,19 +84,29 @@ export default function CouncilPage() {
   };
 
   const run = async (t) => {
+    if (loadingRef.current) return;
     const q = (t ?? topic).trim();
     if (!q) { setError('พิมพ์หัวข้อที่จะให้ที่ประชุมวิเคราะห์ก่อน'); return; }
+    loadingRef.current = true;
     setError(''); setLoading(true); setResult(null);
     try {
       const res = await fetch(apiUrl('/api/council'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: q, includeBridgeVoices, bridgeVoiceLimit: 12 }),
+        body: JSON.stringify({ topic: q, includeBridgeVoices, bridgeVoiceLimit: 12, inviteAll }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'ที่ประชุมขัดข้อง');
       setResult(data);
-    } catch (e) { setError(e.message); } finally { setLoading(false); }
+    } catch (e) { setError(e.message); } finally { setLoading(false); loadingRef.current = false; }
   };
+
+  useEffect(() => {
+    if (!autoRunEnabled) return;
+    const iv = setInterval(() => {
+      if (topic.trim()) run();
+    }, Math.max(30, autoRunSeconds) * 1000);
+    return () => clearInterval(iv);
+  }, [autoRunEnabled, autoRunSeconds, topic, includeBridgeVoices, inviteAll]);
 
   const bg = 'linear-gradient(135deg, #0f0f1a 0%, #1a0a2e 50%, #0a1628 100%)';
   const card = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '20px' };
@@ -130,6 +144,34 @@ export default function CouncilPage() {
             />
             รวมที่นั่งจากโน้ต <code>council-bridge</code> ในรอบประชุมนี้ (สูงสุด 12 ที่นั่งล่าสุด)
           </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 13, color: '#cbd5e1' }}>
+            <input
+              type="checkbox"
+              checked={inviteAll}
+              onChange={e => setInviteAll(e.target.checked)}
+            />
+            เชิญทุกฝ่ายอัตโนมัติผ่าน <code>council-bridge</code> เมื่อเริ่มประชุม
+          </label>
+          <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button
+              onClick={() => setAutoRunEnabled(v => !v)}
+              style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: autoRunEnabled ? 'rgba(16,185,129,0.2)' : 'transparent', color: autoRunEnabled ? '#6ee7b7' : '#cbd5e1', fontSize: 12, cursor: 'pointer', fontWeight: 700 }}
+            >
+              {autoRunEnabled ? '⏸️ หยุดรันอัตโนมัติ' : '▶️ รันอัตโนมัติต่อเนื่อง'}
+            </button>
+            <label style={{ fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+              ทุก
+              <input
+                type="number"
+                min={30}
+                step={30}
+                value={autoRunSeconds}
+                onChange={e => setAutoRunSeconds(Number(e.target.value) || 180)}
+                style={{ width: 80, padding: '6px 8px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.04)', color: '#fff' }}
+              />
+              วินาที
+            </label>
+          </div>
           <button onClick={() => run()} disabled={loading}
             style={{ width: '100%', marginTop: '14px', padding: '15px', borderRadius: '12px', border: 'none', background: loading ? '#374151' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontSize: '16px', fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer' }}>
             {loading ? '🏛️ ที่ประชุมกำลังวิเคราะห์…' : '🏛️ เริ่มประชุม'}

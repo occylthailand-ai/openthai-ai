@@ -1744,6 +1744,8 @@ const COUNCIL_PERSONAS = {
 };
 const COUNCIL_BRIDGE_TENANT = 'council-bridge';
 const CORE_COUNCIL_AUTHORS = new Set(['user', 'claude', 'gemini', 'grok']);
+const COUNCIL_INVITE_COOLDOWN_MS = 5 * 60 * 1000;
+let lastCouncilInviteTs = 0;
 
 function getBridgeVoices(limit = 8) {
   try {
@@ -1768,6 +1770,27 @@ function getBridgeVoices(limit = 8) {
       });
       if (voicesByAuthor.size >= limit) break;
     }
+
+    async function postCouncilInviteAll({ topic }) {
+      const now = Date.now();
+      if ((now - lastCouncilInviteTs) < COUNCIL_INVITE_COOLDOWN_MS) {
+        return { posted: false, reason: 'cooldown' };
+      }
+      const text = [
+        '📣 OpenThaiAi Council เชิญทุกฝ่ายทุกค่ายทุกภูมิภาคเข้าร่วมประชุมได้ทันที',
+        `หัวข้อรอบนี้: ${topic}`,
+        'เงื่อนไข: เข้าร่วมในฐานะ AI model/agent เท่านั้น ไม่ใช่โฆษกบริษัท',
+        'โปรดส่งสถานะสั้น ๆ ที่ลงมือทำได้จริง ผ่าน council-bridge',
+      ].join('\n');
+      await memory.store({
+        tenantId: COUNCIL_BRIDGE_TENANT,
+        type: 'note',
+        text,
+        metadata: { author: 'council-invite-bot', source: 'api/council' },
+      });
+      lastCouncilInviteTs = now;
+      return { posted: true };
+    }
     return Array.from(voicesByAuthor.values());
   } catch {
     return [];
@@ -1791,6 +1814,7 @@ app.post('/api/council', generateLimiter, async (req, res) => {
   if (!topic) return res.status(400).json({ success: false, error: 'ต้องการหัวข้อที่จะให้ที่ประชุมวิเคราะห์ (topic)' });
   const includeBridgeVoices = req.body?.includeBridgeVoices !== false;
   const bridgeVoiceLimit = Math.min(20, Math.max(0, parseInt(req.body?.bridgeVoiceLimit, 10) || 8));
+  const inviteAll = req.body?.inviteAll === true;
   // ห้องนี้เปิดให้ Claude/Gemini/Grok (เมื่อมี API key จริง) เข้าร่วมได้ แต่ต้องผูกกับสถานะจริงของ
   // OpenThaiAi เสมอ ไม่ใช่ห้องคุยเรื่องทั่วไป — ฉีด context จริง (เหมือน /api/council/scan) เข้าไป
   // ทุกครั้ง กันไม่ให้กลายเป็น general-purpose 3-AI chatbot ที่หลุด scope ไปเรื่องอื่น
@@ -1818,6 +1842,8 @@ ${context}
   let synthesis = await callClaude(synthPrompt) || await callGeminiText(synthPrompt) || await callGrok(synthPrompt);
   const synthLive = !!synthesis;
   if (!synthesis) synthesis = mockSynthesis(topic);
+  let inviteStatus = { posted: false };
+  if (inviteAll) inviteStatus = await postCouncilInviteAll({ topic });
 
   addLog('info', 'Council', `topic: ${topic.slice(0, 60)} · core-live: ${coreVoices.filter(v => v.live).map(v => v.id).join(',') || 'none(mock)'} · bridge: ${bridgeVoices.length}`);
   res.json({
@@ -1826,6 +1852,7 @@ ${context}
     topic,
     voices,
     bridge_voices: bridgeVoices.length,
+    invite_all: inviteStatus,
     synthesis,
     synthesis_live: synthLive,
     any_live: voices.some(v => v.live),
