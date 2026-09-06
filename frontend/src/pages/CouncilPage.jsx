@@ -51,9 +51,13 @@ export default function CouncilPage() {
   const [autoRunEnabled, setAutoRunEnabled] = useState(false);
   const [autoRunSeconds, setAutoRunSeconds] = useState(180);
   const [autoEmergency, setAutoEmergency] = useState(true);
+  const [autoBusinessSelector, setAutoBusinessSelector] = useState(false);
   const [kpiAlert, setKpiAlert] = useState(null);
   const [kpiLoading, setKpiLoading] = useState(false);
   const [kpiError, setKpiError] = useState('');
+  const [businessSelector, setBusinessSelector] = useState(null);
+  const [selectorLoading, setSelectorLoading] = useState(false);
+  const [selectorError, setSelectorError] = useState('');
   const loadingRef = useRef(false);
   const lastEmergencyRef = useRef(0);
 
@@ -144,18 +148,60 @@ export default function CouncilPage() {
     }
   };
 
+  const loadBusinessSelector = async () => {
+    setSelectorLoading(true); setSelectorError('');
+    try {
+      const res = await fetch(apiUrl('/api/council/business-selector?minRevenue24h=1000&minLeads24h=3'));
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'โหลด business selector ไม่สำเร็จ');
+      setBusinessSelector(data);
+    } catch (e) {
+      setSelectorError(e.message);
+    } finally {
+      setSelectorLoading(false);
+    }
+  };
+
+  const runSelectedStrategy = async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    setError(''); setLoading(true); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/council/business-selector/run'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ includeBridgeVoices, bridgeVoiceLimit: 12, inviteAll }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'รันโหมดเลือกธุรกิจไม่สำเร็จ');
+      setResult(data);
+      setBusinessSelector({ success: true, kpi: data.emergency || businessSelector?.kpi || null, selector: data.selector });
+      await loadKpiAlert();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+      loadingRef.current = false;
+    }
+  };
+
   useEffect(() => {
     if (!autoRunEnabled) return;
     const iv = setInterval(() => {
       if (autoEmergency && kpiAlert?.status === 'red') { runEmergency(); return; }
+      if (autoBusinessSelector) { runSelectedStrategy(); return; }
       if (topic.trim()) run();
     }, Math.max(30, autoRunSeconds) * 1000);
     return () => clearInterval(iv);
-  }, [autoRunEnabled, autoRunSeconds, topic, includeBridgeVoices, inviteAll, autoEmergency, kpiAlert?.status]);
+  }, [autoRunEnabled, autoRunSeconds, topic, includeBridgeVoices, inviteAll, autoEmergency, autoBusinessSelector, kpiAlert?.status]);
 
   useEffect(() => {
     loadKpiAlert();
-    const iv = setInterval(loadKpiAlert, 30000);
+    loadBusinessSelector();
+    const iv = setInterval(() => {
+      loadKpiAlert();
+      loadBusinessSelector();
+    }, 30000);
     return () => clearInterval(iv);
   }, []);
 
@@ -205,6 +251,32 @@ export default function CouncilPage() {
             <label style={{ fontSize: 12, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}>
               <input type="checkbox" checked={autoEmergency} onChange={e => setAutoEmergency(e.target.checked)} />
               ไฟแดงแล้วเรียกประชุมฉุกเฉินอัตโนมัติ
+            </label>
+          </div>
+        </div>
+
+        <div style={{ ...card, border: '1px solid rgba(99,102,241,0.35)', background: 'rgba(99,102,241,0.08)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>🧠 Auto Business Selector</div>
+            <button onClick={loadBusinessSelector} disabled={selectorLoading} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#cbd5e1', fontSize: 12, cursor: 'pointer' }}>
+              {selectorLoading ? 'กำลังเลือก…' : 'รีเฟรชโหมด'}
+            </button>
+          </div>
+          {businessSelector?.selector && (
+            <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.6 }}>
+              โหมดแนะนำ: <strong style={{ color: '#a5b4fc' }}>{businessSelector.selector.primary?.name}</strong>
+              <div style={{ marginTop: 4, color: '#cbd5e1' }}>{businessSelector.selector.primary?.focus}</div>
+              <div style={{ marginTop: 6, fontSize: 12, color: '#94a3b8' }}>{businessSelector.selector.rationale}</div>
+            </div>
+          )}
+          {selectorError && <div style={{ marginTop: 8, fontSize: 12, color: '#fca5a5' }}>{selectorError}</div>}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+            <button onClick={runSelectedStrategy} disabled={loading} style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer' }}>
+              🚀 รันประชุมตามโหมดทำเงินที่แนะนำ
+            </button>
+            <label style={{ fontSize: 12, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={autoBusinessSelector} onChange={e => setAutoBusinessSelector(e.target.checked)} />
+              ให้ระบบเลือกโหมดทำเงินอัตโนมัติทุกรอบ
             </label>
           </div>
         </div>

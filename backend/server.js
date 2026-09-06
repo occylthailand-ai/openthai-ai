@@ -1833,6 +1833,59 @@ async function getCouncilKpiAlert(thresholds = {}) {
   };
 }
 
+function getCouncilBusinessSelector(kpi) {
+  const metrics = kpi?.metrics || {};
+  const revenue24h = Number(metrics.revenue_24h) || 0;
+  const leads24h = Number(metrics.leads_24h) || 0;
+  const overdue = Number(metrics.disputes_overdue) || 0;
+  const openDisputes = Number(metrics.disputes_open) || 0;
+  const status = String(kpi?.status || 'green');
+
+  const matrix = {
+    id: 'matrix_content',
+    name: 'Matrix Content Monetization',
+    focus: 'เร่งทราฟฟิกหลายช่องทาง + affiliate conversion',
+    trigger: leads24h < 3 || revenue24h < 1000,
+  };
+  const microSaas = {
+    id: 'micro_saas',
+    name: 'Micro-SaaS & AI Wrapper',
+    focus: 'เพิ่มรายได้ recurring จากบริการเฉพาะกลุ่ม',
+    trigger: revenue24h >= 1000 && leads24h >= 3,
+  };
+  const digital = {
+    id: 'digital_product',
+    name: 'Digital Product & IP',
+    focus: 'ขายสินค้าดิจิทัล/คอร์ส/แพ็ก prompt margin สูง',
+    trigger: leads24h >= 5,
+  };
+  const crossBorder = {
+    id: 'cross_border',
+    name: 'Cross-Border Commerce Automation',
+    focus: 'ขยายตลาดต่างประเทศ + localization อัตโนมัติ',
+    trigger: status === 'green' && openDisputes < 5,
+  };
+  const all = [matrix, microSaas, digital, crossBorder];
+  const ordered = all
+    .map((m) => ({ ...m, score: (m.trigger ? 2 : 0) + (status === 'red' && m.id === 'matrix_content' ? 2 : 0) + (status === 'yellow' && m.id === 'micro_saas' ? 1 : 0) + (overdue > 0 && m.id === 'cross_border' ? -1 : 0) }))
+    .sort((a, b) => b.score - a.score);
+  const primary = ordered[0];
+  const backup = ordered.slice(1, 3);
+  const rationale = [
+    `KPI=${status.toUpperCase()}`,
+    `รายได้24ชม.=฿${revenue24h.toLocaleString()}`,
+    `ลีด24ชม.=${leads24h}`,
+    `ข้อพิพาทค้างSLA=${overdue}`,
+  ].join(' · ');
+  return {
+    primary,
+    backup,
+    portfolio: ordered.map(({ id, name, focus, score }) => ({ id, name, focus, score })),
+    rationale,
+    ts: new Date().toISOString(),
+  };
+}
+
 function mockCouncilVoice(provider, topic) {
   const t = topic.length > 60 ? topic.slice(0, 60) + '…' : topic;
   const M = {
@@ -1906,6 +1959,21 @@ app.get('/api/council/kpi-alert', async (req, res) => {
   }
 });
 
+app.get('/api/council/business-selector', async (req, res) => {
+  try {
+    const minRevenue24h = parseInt(req.query.minRevenue24h, 10);
+    const minLeads24h = parseInt(req.query.minLeads24h, 10);
+    const kpi = await getCouncilKpiAlert({
+      minRevenue24h: Number.isFinite(minRevenue24h) ? minRevenue24h : undefined,
+      minLeads24h: Number.isFinite(minLeads24h) ? minLeads24h : undefined,
+    });
+    const selector = getCouncilBusinessSelector(kpi);
+    res.json({ success: true, kpi, selector });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.post('/api/council', generateLimiter, async (req, res) => {
   const topic = String(req.body?.topic || '').trim().slice(0, 2000);
   if (!topic) return res.status(400).json({ success: false, error: 'ต้องการหัวข้อที่จะให้ที่ประชุมวิเคราะห์ (topic)' });
@@ -1927,6 +1995,28 @@ app.post('/api/council/emergency', generateLimiter, async (req, res) => {
     res.json(payload);
   } catch (e) {
     addLog('warn', 'CouncilEmergency', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/council/business-selector/run', generateLimiter, async (req, res) => {
+  try {
+    const includeBridgeVoices = req.body?.includeBridgeVoices !== false;
+    const bridgeVoiceLimit = Math.min(20, Math.max(0, parseInt(req.body?.bridgeVoiceLimit, 10) || 12));
+    const inviteAll = req.body?.inviteAll !== false;
+    const kpi = await getCouncilKpiAlert(req.body?.thresholds || {});
+    const selector = getCouncilBusinessSelector(kpi);
+    const topic = String(req.body?.topic || '').trim() || `โหมดทำเงินที่แนะนำ: ${selector.primary.name} — ช่วยแตกแผน 24 ชั่วโมงให้ทำเงินจริงเร็วที่สุด โดยยึด KPI ปัจจุบัน`;
+    const payload = await runCouncilMeeting({
+      topic: topic.slice(0, 2000),
+      includeBridgeVoices,
+      bridgeVoiceLimit,
+      inviteAll,
+      emergency: kpi.status === 'red' ? kpi : null,
+    });
+    res.json({ ...payload, selector });
+  } catch (e) {
+    addLog('warn', 'CouncilBusinessSelector', e.message);
     res.status(500).json({ success: false, error: e.message });
   }
 });
