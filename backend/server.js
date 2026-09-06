@@ -5476,10 +5476,10 @@ function addLog(level, source, message, detail = null) {
   if (sysLogs.length > MAX_LOGS) sysLogs.splice(MAX_LOGS);
   saveSysLogs(sysLogs);
   if (level === 'error') {
-    console.error(`[${safeSource}] ${safeMessage}`, detail || '');
+    console.error('[%s] %s', safeSource, safeMessage, detail || '');
     webhooks.dispatch('system.error', { source: safeSource, message: safeMessage, detail: detail || null });
   } else {
-    console.log(`[${safeSource}] ${safeMessage}`);
+    console.log('[%s] %s', safeSource, safeMessage);
   }
 }
 
