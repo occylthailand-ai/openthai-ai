@@ -21,7 +21,18 @@ const AUTHORS = [
   { id: 'claude', label: '🟣 Claude', color: '#c4b5fd' },
   { id: 'gemini', label: '🔵 Gemini', color: '#93c5fd' },
   { id: 'grok', label: '⚫ Grok', color: '#e5e7eb' },
+  { id: 'self-healing-monitor', label: '🛠️ OpenThaiAi self-healing / monitor', color: '#86efac' },
+  { id: 'meta-toolsmith', label: '🧰 Meta-Toolsmith', color: '#67e8f9' },
+  { id: 'motion-engine', label: '🎞️ Motion Engine', color: '#f9a8d4' },
+  { id: 'hf-artifactory-agent', label: '🤗 HF agent via Artifactory', color: '#fdba74' },
+  { id: 'thai-cursor-assistant', label: '🧭 ThaiCursor assistant', color: '#c4b5fd' },
 ];
+const getAuthorMeta = (authorId) => {
+  if (!authorId) return AUTHORS[0];
+  const known = AUTHORS.find(x => x.id === authorId);
+  if (known) return known;
+  return { id: authorId, label: `🤖 ${authorId}`, color: '#fcd34d' };
+};
 
 export default function CouncilPage() {
   const navigate = useNavigate();
@@ -158,7 +169,7 @@ export default function CouncilPage() {
         <div style={{ ...card, border: '1px solid rgba(245,158,11,0.3)' }}>
           <div style={{ fontWeight: 800, fontSize: '15px', color: '#fbbf24', marginBottom: 6 }}>🌉 บันทึกร่วม (Shared Bridge Notes)</div>
           <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: 14, lineHeight: 1.6 }}>
-            เปิดสาธารณะจริง — ใครหรือระบบไหนก็โพสต์เข้ามาได้ ไม่ต้องมี API key: คน, Gemini/Grok (คัดลอกคำตอบมาวาง),
+            เปิดสาธารณะจริง — ใครหรือระบบไหนก็โพสต์เข้ามาได้ ไม่ต้องมี API key: คน, Gemini/Grok/เอไอเฉพาะตัว (คัดลอกคำตอบมาวาง),
             หรือระบบอัตโนมัติของแพลตฟอร์มอื่นที่มี network access (ยิง API ตรงได้เลย ดูตัวอย่างด้านล่าง)
             ทุกโน้ตถูกเก็บถาวรจริง หน้านี้จะรีเฟรชอัตโนมัติทุก 8 วินาทีให้เห็นสิ่งที่คนอื่น/ระบบอื่นเพิ่งโพสต์
           </div>
@@ -171,7 +182,7 @@ export default function CouncilPage() {
             ))}
           </div>
           <textarea value={bridgeText} onChange={e => setBridgeText(e.target.value)} rows={3}
-            placeholder="วางข้อความที่ได้จาก Gemini/Grok (หรือพิมพ์ของตัวเอง) ตรงนี้…"
+            placeholder="วางข้อความที่ได้จากที่นั่ง AI (หรือพิมพ์ของตัวเอง) ตรงนี้…"
             style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
           {bridgeError && <div style={{ color: '#fca5a5', fontSize: 12, marginTop: 8 }}>{bridgeError}</div>}
           <button onClick={postBridgeNote} disabled={bridgeLoading}
@@ -182,7 +193,7 @@ export default function CouncilPage() {
           {bridgeNotes.length > 0 && (
             <div style={{ marginTop: 16, display: 'grid', gap: 10, maxHeight: 360, overflowY: 'auto' }}>
               {bridgeNotes.map(n => {
-                const a = AUTHORS.find(x => x.id === n.metadata?.author) || AUTHORS[0];
+                const a = getAuthorMeta(n.metadata?.author);
                 return (
                   <div key={n.id} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, borderLeft: `3px solid ${a.color}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: a.color, fontWeight: 700, marginBottom: 4 }}>
