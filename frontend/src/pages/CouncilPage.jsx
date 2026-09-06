@@ -50,7 +50,12 @@ export default function CouncilPage() {
   const [inviteAll, setInviteAll] = useState(true);
   const [autoRunEnabled, setAutoRunEnabled] = useState(false);
   const [autoRunSeconds, setAutoRunSeconds] = useState(180);
+  const [autoEmergency, setAutoEmergency] = useState(true);
+  const [kpiAlert, setKpiAlert] = useState(null);
+  const [kpiLoading, setKpiLoading] = useState(false);
+  const [kpiError, setKpiError] = useState('');
   const loadingRef = useRef(false);
+  const lastEmergencyRef = useRef(0);
 
   const loadBridgeNotes = async () => {
     try {
@@ -100,13 +105,59 @@ export default function CouncilPage() {
     } catch (e) { setError(e.message); } finally { setLoading(false); loadingRef.current = false; }
   };
 
+  const loadKpiAlert = async () => {
+    setKpiLoading(true); setKpiError('');
+    try {
+      const res = await fetch(apiUrl('/api/council/kpi-alert?minRevenue24h=1000&minLeads24h=3'));
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'โหลด KPI ไม่สำเร็จ');
+      setKpiAlert(data);
+    } catch (e) {
+      setKpiError(e.message);
+    } finally {
+      setKpiLoading(false);
+    }
+  };
+
+  const runEmergency = async () => {
+    if (loadingRef.current) return;
+    const now = Date.now();
+    if (now - lastEmergencyRef.current < 120000) return;
+    lastEmergencyRef.current = now;
+    loadingRef.current = true;
+    setError(''); setLoading(true); setResult(null);
+    try {
+      const res = await fetch(apiUrl('/api/council/emergency'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ includeBridgeVoices, bridgeVoiceLimit: 12, inviteAll }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'ประชุมฉุกเฉินขัดข้อง');
+      setResult(data);
+      await loadKpiAlert();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+      loadingRef.current = false;
+    }
+  };
+
   useEffect(() => {
     if (!autoRunEnabled) return;
     const iv = setInterval(() => {
+      if (autoEmergency && kpiAlert?.status === 'red') { runEmergency(); return; }
       if (topic.trim()) run();
     }, Math.max(30, autoRunSeconds) * 1000);
     return () => clearInterval(iv);
-  }, [autoRunEnabled, autoRunSeconds, topic, includeBridgeVoices, inviteAll]);
+  }, [autoRunEnabled, autoRunSeconds, topic, includeBridgeVoices, inviteAll, autoEmergency, kpiAlert?.status]);
+
+  useEffect(() => {
+    loadKpiAlert();
+    const iv = setInterval(loadKpiAlert, 30000);
+    return () => clearInterval(iv);
+  }, []);
 
   const bg = 'linear-gradient(135deg, #0f0f1a 0%, #1a0a2e 50%, #0a1628 100%)';
   const card = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', padding: '20px' };
@@ -123,6 +174,38 @@ export default function CouncilPage() {
         <div style={{ ...card, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.25)' }}>
           <div style={{ fontSize: '14px', color: '#cbd5e1', lineHeight: 1.6 }}>
             ห้องประชุมที่ AI หลายเจ้าช่วยกันวิเคราะห์: <strong style={{ color: '#c4b5fd' }}>🟣 Claude</strong> (สถาปัตยกรรม/ความปลอดภัย) · <strong style={{ color: '#93c5fd' }}>🔵 Gemini</strong> (ตลาด/ข้อมูล) · <strong style={{ color: '#e5e7eb' }}>⚫ Grok</strong> (การเติบโต) + ที่นั่งทั่วโลกจาก <code>council-bridge</code> → แล้วสังเคราะห์เป็นข้อสรุปร่วม
+          </div>
+        </div>
+
+        <div style={{ ...card, border: `1px solid ${kpiAlert?.status === 'red' ? 'rgba(239,68,68,0.4)' : kpiAlert?.status === 'yellow' ? 'rgba(245,158,11,0.4)' : 'rgba(16,185,129,0.35)'}`, background: kpiAlert?.status === 'red' ? 'rgba(239,68,68,0.08)' : 'rgba(16,185,129,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>🚨 Night Gate KPI Alert</div>
+            <button onClick={loadKpiAlert} disabled={kpiLoading} style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#cbd5e1', fontSize: 12, cursor: 'pointer' }}>
+              {kpiLoading ? 'กำลังโหลด…' : 'รีเฟรช KPI'}
+            </button>
+          </div>
+          {kpiAlert && (
+            <div style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.6 }}>
+              สถานะ: <strong style={{ color: kpiAlert.status === 'red' ? '#fca5a5' : kpiAlert.status === 'yellow' ? '#fbbf24' : '#6ee7b7' }}>{String(kpiAlert.status || '').toUpperCase()}</strong>
+              {' '}· รายได้ 24ชม. ฿{Number(kpiAlert.metrics?.revenue_24h || 0).toLocaleString()}
+              {' '}· ลีด 24ชม. {Number(kpiAlert.metrics?.leads_24h || 0)}
+              {' '}· ข้อพิพาทค้าง SLA {Number(kpiAlert.metrics?.disputes_overdue || 0)}
+            </div>
+          )}
+          {kpiAlert?.alerts?.length > 0 && (
+            <div style={{ marginTop: 8, fontSize: 12, color: '#fecaca' }}>
+              {kpiAlert.alerts.map((a, i) => <div key={i}>• {a.message}</div>)}
+            </div>
+          )}
+          {kpiError && <div style={{ marginTop: 8, fontSize: 12, color: '#fca5a5' }}>{kpiError}</div>}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+            <button onClick={runEmergency} disabled={loading} style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer' }}>
+              🚨 เรียกประชุมฉุกเฉินทันที
+            </button>
+            <label style={{ fontSize: 12, color: '#cbd5e1', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="checkbox" checked={autoEmergency} onChange={e => setAutoEmergency(e.target.checked)} />
+              ไฟแดงแล้วเรียกประชุมฉุกเฉินอัตโนมัติ
+            </label>
           </div>
         </div>
 

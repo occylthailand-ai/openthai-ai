@@ -1770,31 +1770,67 @@ function getBridgeVoices(limit = 8) {
       });
       if (voicesByAuthor.size >= limit) break;
     }
-
-    async function postCouncilInviteAll({ topic }) {
-      const now = Date.now();
-      if ((now - lastCouncilInviteTs) < COUNCIL_INVITE_COOLDOWN_MS) {
-        return { posted: false, reason: 'cooldown' };
-      }
-      const text = [
-        '📣 OpenThaiAi Council เชิญทุกฝ่ายทุกค่ายทุกภูมิภาคเข้าร่วมประชุมได้ทันที',
-        `หัวข้อรอบนี้: ${topic}`,
-        'เงื่อนไข: เข้าร่วมในฐานะ AI model/agent เท่านั้น ไม่ใช่โฆษกบริษัท',
-        'โปรดส่งสถานะสั้น ๆ ที่ลงมือทำได้จริง ผ่าน council-bridge',
-      ].join('\n');
-      await memory.store({
-        tenantId: COUNCIL_BRIDGE_TENANT,
-        type: 'note',
-        text,
-        metadata: { author: 'council-invite-bot', source: 'api/council' },
-      });
-      lastCouncilInviteTs = now;
-      return { posted: true };
-    }
     return Array.from(voicesByAuthor.values());
   } catch {
     return [];
   }
+}
+
+async function postCouncilInviteAll({ topic }) {
+  const now = Date.now();
+  if ((now - lastCouncilInviteTs) < COUNCIL_INVITE_COOLDOWN_MS) {
+    return { posted: false, reason: 'cooldown' };
+  }
+  const text = [
+    '📣 OpenThaiAi Council เชิญทุกฝ่ายทุกค่ายทุกภูมิภาคเข้าร่วมประชุมได้ทันที',
+    `หัวข้อรอบนี้: ${topic}`,
+    'เงื่อนไข: เข้าร่วมในฐานะ AI model/agent เท่านั้น ไม่ใช่โฆษกบริษัท',
+    'โปรดส่งสถานะสั้น ๆ ที่ลงมือทำได้จริง ผ่าน council-bridge',
+  ].join('\n');
+  await memory.store({
+    tenantId: COUNCIL_BRIDGE_TENANT,
+    type: 'note',
+    text,
+    metadata: { author: 'council-invite-bot', source: 'api/council' },
+  });
+  lastCouncilInviteTs = now;
+  return { posted: true };
+}
+
+async function getCouncilKpiAlert(thresholds = {}) {
+  const minRevenue24h = Number(thresholds.minRevenue24h ?? 1000);
+  const minLeads24h = Number(thresholds.minLeads24h ?? 3);
+  const [orderSummary, disputeSummary, portalLeadList] = await Promise.all([
+    orders.summary(),
+    disputes.summary(),
+    portalLeads.all(),
+  ]);
+  const now = Date.now();
+  const in24h = (ts) => (Date.parse(ts || '') || 0) >= (now - 24 * 60 * 60 * 1000);
+  const revenue24h = (orderSummary.recent || [])
+    .filter((o) => in24h(o.created_at) && o.status !== 'cancelled')
+    .reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
+  const leads24h = (portalLeadList || []).filter((l) => in24h(l.created_at)).length;
+  const overdueDisputes = Number(disputeSummary.overdue_count) || 0;
+  const openDisputes = Number(disputeSummary.open_count) || 0;
+
+  const alerts = [];
+  if (overdueDisputes > 0) alerts.push({ severity: 'red', code: 'dispute_overdue', message: `ข้อพิพาทค้าง SLA ${overdueDisputes} รายการ` });
+  if (revenue24h < minRevenue24h) alerts.push({ severity: 'red', code: 'revenue_low_24h', message: `รายได้ 24ชม. ${revenue24h.toLocaleString()} ต่ำกว่าเป้า ${minRevenue24h.toLocaleString()}` });
+  if (leads24h < minLeads24h) alerts.push({ severity: leads24h === 0 ? 'red' : 'yellow', code: 'lead_low_24h', message: `ลีดใหม่ 24ชม. ${leads24h} ต่ำกว่าเป้า ${minLeads24h}` });
+  if (openDisputes >= 5) alerts.push({ severity: 'yellow', code: 'dispute_backlog', message: `ข้อพิพาทเปิดค้าง ${openDisputes} รายการ` });
+
+  const status = alerts.some((a) => a.severity === 'red')
+    ? 'red'
+    : alerts.some((a) => a.severity === 'yellow') ? 'yellow' : 'green';
+
+  return {
+    status,
+    alerts,
+    metrics: { revenue_24h: revenue24h, leads_24h: leads24h, disputes_open: openDisputes, disputes_overdue: overdueDisputes },
+    thresholds: { minRevenue24h, minLeads24h },
+    ts: new Date().toISOString(),
+  };
 }
 
 function mockCouncilVoice(provider, topic) {
@@ -1809,20 +1845,15 @@ function mockCouncilVoice(provider, topic) {
 function mockSynthesis(topic) {
   return `📋 ข้อสรุปร่วม OpenThaiAi Council\nหัวข้อ: ${topic}\n\nแผนปฏิบัติให้เป็นที่ยอมรับในตลาดโลก:\n1) ความน่าเชื่อถือก่อน (Claude): security + test + readiness ครบ → พาร์ตเนอร์กล้าใช้\n2) เจาะ niche + i18n (Gemini): เริ่มจาก AI คอนเทนต์ไทย→อาเซียน ทำหลายภาษา + SEO\n3) โตด้วย viral loop (Grok): affiliate/referral + leaderboard + ออกฟีเจอร์เด่นที่คู่แข่งไม่มี\n4) วัดผลด้วยข้อมูลจริง: ติดตาม conversion/retention แล้ววนปรับ\n\n⚠️ หมายเหตุ: นี่คือโหมดจำลอง (ยังไม่ได้ตั้ง API key ของ AI) — ตั้ง ANTHROPIC_API_KEY / GEMINI_API_KEY / XAI_API_KEY เพื่อให้ AI จริงทั้ง 3 เจ้าวิเคราะห์`;
 }
-app.post('/api/council', generateLimiter, async (req, res) => {
-  const topic = String(req.body?.topic || '').trim().slice(0, 2000);
-  if (!topic) return res.status(400).json({ success: false, error: 'ต้องการหัวข้อที่จะให้ที่ประชุมวิเคราะห์ (topic)' });
-  const includeBridgeVoices = req.body?.includeBridgeVoices !== false;
-  const bridgeVoiceLimit = Math.min(20, Math.max(0, parseInt(req.body?.bridgeVoiceLimit, 10) || 8));
-  const inviteAll = req.body?.inviteAll === true;
-  // ห้องนี้เปิดให้ Claude/Gemini/Grok (เมื่อมี API key จริง) เข้าร่วมได้ แต่ต้องผูกกับสถานะจริงของ
-  // OpenThaiAi เสมอ ไม่ใช่ห้องคุยเรื่องทั่วไป — ฉีด context จริง (เหมือน /api/council/scan) เข้าไป
-  // ทุกครั้ง กันไม่ให้กลายเป็น general-purpose 3-AI chatbot ที่หลุด scope ไปเรื่องอื่น
+async function runCouncilMeeting({ topic, includeBridgeVoices = true, bridgeVoiceLimit = 8, inviteAll = false, emergency = null }) {
   const context = await buildScanContext();
+  const emergencyLine = emergency?.status === 'red'
+    ? `\n\nโหมดฉุกเฉิน: KPI ขึ้นไฟแดง ให้โฟกัสแผนกู้ตัวเลขใน 24 ชั่วโมงก่อนเสมอ\nสรุปไฟแดง:\n${(emergency.alerts || []).map((a) => `- ${a.message}`).join('\n')}`
+    : '';
   const base = `คุณกำลังร่วมประชุมในห้อง "OpenThaiAi Command Room" กับ AI เจ้าอื่น ห้องนี้มีไว้คุยเรื่อง OpenThaiAi เท่านั้น
 
 สถานะจริงของ OpenThaiAi (อ้างอิงข้อมูลนี้เสมอ ห้ามมโนข้อเท็จจริงเพิ่ม):
-${context}
+${context}${emergencyLine}
 
 หัวข้อที่ต้องวิเคราะห์ (ต้องเชื่อมโยงกับ OpenThaiAi เท่านั้น ถ้าหัวข้อไม่เกี่ยวกับ OpenThaiAi ให้ตอบว่าห้องนี้คุยได้เฉพาะเรื่อง OpenThaiAi แทน): ${topic}
 ตอบเป็นภาษาไทย สั้นกระชับ เป็นข้อ ๆ (3-5 ข้อ) ในมุมที่คุณถนัด พร้อมข้อเสนอที่ลงมือทำได้จริง โดยอิงจากสถานะจริงข้างต้น`;
@@ -1833,31 +1864,71 @@ ${context}
   ]);
   const coreVoices = [
     { id: 'claude', ...COUNCIL_PERSONAS.claude, live: !!claude, text: claude || mockCouncilVoice('claude', topic) },
-    { id: 'gemini', ...COUNCIL_PERSONAS.gemini, live: !!gem,    text: gem    || mockCouncilVoice('gemini', topic) },
-    { id: 'grok',   ...COUNCIL_PERSONAS.grok,   live: !!grok,   text: grok   || mockCouncilVoice('grok', topic) },
+    { id: 'gemini', ...COUNCIL_PERSONAS.gemini, live: !!gem, text: gem || mockCouncilVoice('gemini', topic) },
+    { id: 'grok', ...COUNCIL_PERSONAS.grok, live: !!grok, text: grok || mockCouncilVoice('grok', topic) },
   ];
   const bridgeVoices = includeBridgeVoices ? getBridgeVoices(bridgeVoiceLimit) : [];
   const voices = [...coreVoices, ...bridgeVoices];
-  const synthPrompt = `ในฐานะผู้ดำเนินการประชุม OpenThaiAi จงสังเคราะห์ความเห็นจากที่นั่ง AI ${voices.length} ที่นั่งต่อไปนี้ ให้เป็น "ข้อสรุปร่วม + แผนปฏิบัติ 3-5 ข้อ" ที่ทำให้ OpenThaiAi เป็นที่ยอมรับในตลาดโลก ตอบไทย กระชับ ลงมือทำได้จริง:\n\n${voices.map(v => `[${v.name}]\n${v.text}`).join('\n\n')}`;
+  const synthPrompt = `ในฐานะผู้ดำเนินการประชุม OpenThaiAi จงสังเคราะห์ความเห็นจากที่นั่ง AI ${voices.length} ที่นั่งต่อไปนี้ ให้เป็น "ข้อสรุปร่วม + แผนปฏิบัติ 3-5 ข้อ" ที่ทำให้ OpenThaiAi เป็นที่ยอมรับในตลาดโลก ตอบไทย กระชับ ลงมือทำได้จริง:\n\n${voices.map((v) => `[${v.name}]\n${v.text}`).join('\n\n')}`;
   let synthesis = await callClaude(synthPrompt) || await callGeminiText(synthPrompt) || await callGrok(synthPrompt);
   const synthLive = !!synthesis;
   if (!synthesis) synthesis = mockSynthesis(topic);
   let inviteStatus = { posted: false };
   if (inviteAll) inviteStatus = await postCouncilInviteAll({ topic });
 
-  addLog('info', 'Council', `topic: ${topic.slice(0, 60)} · core-live: ${coreVoices.filter(v => v.live).map(v => v.id).join(',') || 'none(mock)'} · bridge: ${bridgeVoices.length}`);
-  res.json({
+  addLog('info', 'Council', `topic: ${topic.slice(0, 60)} · core-live: ${coreVoices.filter((v) => v.live).map((v) => v.id).join(',') || 'none(mock)'} · bridge: ${bridgeVoices.length}`);
+  return {
     success: true,
     room: 'OpenThaiAi',
     topic,
     voices,
     bridge_voices: bridgeVoices.length,
     invite_all: inviteStatus,
+    emergency,
     synthesis,
     synthesis_live: synthLive,
-    any_live: voices.some(v => v.live),
+    any_live: voices.some((v) => v.live),
     ts: new Date().toISOString(),
-  });
+  };
+}
+
+app.get('/api/council/kpi-alert', async (req, res) => {
+  try {
+    const minRevenue24h = parseInt(req.query.minRevenue24h, 10);
+    const minLeads24h = parseInt(req.query.minLeads24h, 10);
+    const kpi = await getCouncilKpiAlert({
+      minRevenue24h: Number.isFinite(minRevenue24h) ? minRevenue24h : undefined,
+      minLeads24h: Number.isFinite(minLeads24h) ? minLeads24h : undefined,
+    });
+    res.json({ success: true, ...kpi });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+app.post('/api/council', generateLimiter, async (req, res) => {
+  const topic = String(req.body?.topic || '').trim().slice(0, 2000);
+  if (!topic) return res.status(400).json({ success: false, error: 'ต้องการหัวข้อที่จะให้ที่ประชุมวิเคราะห์ (topic)' });
+  const includeBridgeVoices = req.body?.includeBridgeVoices !== false;
+  const bridgeVoiceLimit = Math.min(20, Math.max(0, parseInt(req.body?.bridgeVoiceLimit, 10) || 8));
+  const inviteAll = req.body?.inviteAll === true;
+  const payload = await runCouncilMeeting({ topic, includeBridgeVoices, bridgeVoiceLimit, inviteAll });
+  res.json(payload);
+});
+
+app.post('/api/council/emergency', generateLimiter, async (req, res) => {
+  try {
+    const includeBridgeVoices = req.body?.includeBridgeVoices !== false;
+    const bridgeVoiceLimit = Math.min(20, Math.max(0, parseInt(req.body?.bridgeVoiceLimit, 10) || 12));
+    const inviteAll = req.body?.inviteAll !== false;
+    const kpi = await getCouncilKpiAlert(req.body?.thresholds || {});
+    const topic = String(req.body?.topic || '').trim() || `ประชุมฉุกเฉิน: KPI ${kpi.status.toUpperCase()} — ช่วยเสนอแผนกู้รายได้และแก้คอขวดใน 24 ชั่วโมง`;
+    const payload = await runCouncilMeeting({ topic: topic.slice(0, 2000), includeBridgeVoices, bridgeVoiceLimit, inviteAll, emergency: kpi });
+    res.json(payload);
+  } catch (e) {
+    addLog('warn', 'CouncilEmergency', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // ─── Council Scan Room — 3 AI วิเคราะห์ "สถานะจริงของโปรเจกต์" ไม่ใช่หัวข้อลอยๆ ───
