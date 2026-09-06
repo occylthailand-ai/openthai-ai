@@ -1742,6 +1742,38 @@ const COUNCIL_PERSONAS = {
   gemini: { name: 'Gemini (Google)',    role: 'ข้อมูล · ตลาด · SEO · การสเกล',        icon: '🔵' },
   grok:   { name: 'Grok (xAI)',         role: 'การเติบโต · ไอเดียกล้าได้กล้าเสีย · เรียลไทม์', icon: '⚫' },
 };
+const COUNCIL_BRIDGE_TENANT = 'council-bridge';
+const CORE_COUNCIL_AUTHORS = new Set(['user', 'claude', 'gemini', 'grok']);
+
+function getBridgeVoices(limit = 8) {
+  try {
+    if (limit <= 0) return [];
+    const totalLimit = Math.min(200, Math.max(50, limit * 5));
+    const notes = memory.list({ tenantId: COUNCIL_BRIDGE_TENANT, type: 'note', limit: totalLimit }).memories || [];
+    const voicesByAuthor = new Map();
+    for (const note of notes) {
+      const authorRaw = String(note?.metadata?.author || '').trim();
+      const authorId = (authorRaw || 'unknown').toLowerCase();
+      if (CORE_COUNCIL_AUTHORS.has(authorId)) continue;
+      const text = String(note?.text || '').trim();
+      if (!text || voicesByAuthor.has(authorId)) continue;
+      voicesByAuthor.set(authorId, {
+        id: `bridge:${authorId}`,
+        name: `Bridge · ${authorRaw || authorId}`,
+        role: 'ที่นั่ง AI ภายนอก/เฉพาะตัว (ผ่าน council-bridge)',
+        icon: '🌐',
+        live: true,
+        source: 'bridge',
+        text: text.slice(0, 2000),
+      });
+      if (voicesByAuthor.size >= limit) break;
+    }
+    return Array.from(voicesByAuthor.values());
+  } catch {
+    return [];
+  }
+}
+
 function mockCouncilVoice(provider, topic) {
   const t = topic.length > 60 ? topic.slice(0, 60) + '…' : topic;
   const M = {
@@ -1757,6 +1789,8 @@ function mockSynthesis(topic) {
 app.post('/api/council', generateLimiter, async (req, res) => {
   const topic = String(req.body?.topic || '').trim().slice(0, 2000);
   if (!topic) return res.status(400).json({ success: false, error: 'ต้องการหัวข้อที่จะให้ที่ประชุมวิเคราะห์ (topic)' });
+  const includeBridgeVoices = req.body?.includeBridgeVoices !== false;
+  const bridgeVoiceLimit = Math.min(20, Math.max(0, parseInt(req.body?.bridgeVoiceLimit, 10) || 8));
   // ห้องนี้เปิดให้ Claude/Gemini/Grok (เมื่อมี API key จริง) เข้าร่วมได้ แต่ต้องผูกกับสถานะจริงของ
   // OpenThaiAi เสมอ ไม่ใช่ห้องคุยเรื่องทั่วไป — ฉีด context จริง (เหมือน /api/council/scan) เข้าไป
   // ทุกครั้ง กันไม่ให้กลายเป็น general-purpose 3-AI chatbot ที่หลุด scope ไปเรื่องอื่น
@@ -1773,18 +1807,30 @@ ${context}
   const [claude, gem, grok] = await Promise.all([
     callClaude(persona('claude')), callGeminiText(persona('gemini')), callGrok(persona('grok')),
   ]);
-  const voices = [
+  const coreVoices = [
     { id: 'claude', ...COUNCIL_PERSONAS.claude, live: !!claude, text: claude || mockCouncilVoice('claude', topic) },
     { id: 'gemini', ...COUNCIL_PERSONAS.gemini, live: !!gem,    text: gem    || mockCouncilVoice('gemini', topic) },
     { id: 'grok',   ...COUNCIL_PERSONAS.grok,   live: !!grok,   text: grok   || mockCouncilVoice('grok', topic) },
   ];
-  const synthPrompt = `ในฐานะผู้ดำเนินการประชุม OpenThaiAi จงสังเคราะห์ความเห็นจาก AI 3 เจ้าต่อไปนี้ ให้เป็น "ข้อสรุปร่วม + แผนปฏิบัติ 3-5 ข้อ" ที่ทำให้ OpenThaiAi เป็นที่ยอมรับในตลาดโลก ตอบไทย กระชับ ลงมือทำได้จริง:\n\n${voices.map(v => `[${v.name}]\n${v.text}`).join('\n\n')}`;
+  const bridgeVoices = includeBridgeVoices ? getBridgeVoices(bridgeVoiceLimit) : [];
+  const voices = [...coreVoices, ...bridgeVoices];
+  const synthPrompt = `ในฐานะผู้ดำเนินการประชุม OpenThaiAi จงสังเคราะห์ความเห็นจากที่นั่ง AI ${voices.length} ที่นั่งต่อไปนี้ ให้เป็น "ข้อสรุปร่วม + แผนปฏิบัติ 3-5 ข้อ" ที่ทำให้ OpenThaiAi เป็นที่ยอมรับในตลาดโลก ตอบไทย กระชับ ลงมือทำได้จริง:\n\n${voices.map(v => `[${v.name}]\n${v.text}`).join('\n\n')}`;
   let synthesis = await callClaude(synthPrompt) || await callGeminiText(synthPrompt) || await callGrok(synthPrompt);
   const synthLive = !!synthesis;
   if (!synthesis) synthesis = mockSynthesis(topic);
 
-  addLog('info', 'Council', `topic: ${topic.slice(0, 60)} · live: ${voices.filter(v => v.live).map(v => v.id).join(',') || 'none(mock)'}`);
-  res.json({ success: true, room: 'OpenThaiAi', topic, voices, synthesis, synthesis_live: synthLive, any_live: voices.some(v => v.live), ts: new Date().toISOString() });
+  addLog('info', 'Council', `topic: ${topic.slice(0, 60)} · core-live: ${coreVoices.filter(v => v.live).map(v => v.id).join(',') || 'none(mock)'} · bridge: ${bridgeVoices.length}`);
+  res.json({
+    success: true,
+    room: 'OpenThaiAi',
+    topic,
+    voices,
+    bridge_voices: bridgeVoices.length,
+    synthesis,
+    synthesis_live: synthLive,
+    any_live: voices.some(v => v.live),
+    ts: new Date().toISOString(),
+  });
 });
 
 // ─── Council Scan Room — 3 AI วิเคราะห์ "สถานะจริงของโปรเจกต์" ไม่ใช่หัวข้อลอยๆ ───

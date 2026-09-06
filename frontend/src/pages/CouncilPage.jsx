@@ -46,6 +46,7 @@ export default function CouncilPage() {
   const [bridgeNotes, setBridgeNotes] = useState([]);
   const [bridgeLoading, setBridgeLoading] = useState(false);
   const [bridgeError, setBridgeError] = useState('');
+  const [includeBridgeVoices, setIncludeBridgeVoices] = useState(true);
 
   const loadBridgeNotes = async () => {
     try {
@@ -85,7 +86,7 @@ export default function CouncilPage() {
     try {
       const res = await fetch(apiUrl('/api/council'), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic: q }),
+        body: JSON.stringify({ topic: q, includeBridgeVoices, bridgeVoiceLimit: 12 }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'ที่ประชุมขัดข้อง');
@@ -107,7 +108,7 @@ export default function CouncilPage() {
 
         <div style={{ ...card, background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.25)' }}>
           <div style={{ fontSize: '14px', color: '#cbd5e1', lineHeight: 1.6 }}>
-            ห้องประชุมที่ AI 3 เจ้าช่วยกันวิเคราะห์: <strong style={{ color: '#c4b5fd' }}>🟣 Claude</strong> (สถาปัตยกรรม/ความปลอดภัย) · <strong style={{ color: '#93c5fd' }}>🔵 Gemini</strong> (ตลาด/ข้อมูล) · <strong style={{ color: '#e5e7eb' }}>⚫ Grok</strong> (การเติบโต) → แล้วสังเคราะห์เป็นข้อสรุปร่วม
+            ห้องประชุมที่ AI หลายเจ้าช่วยกันวิเคราะห์: <strong style={{ color: '#c4b5fd' }}>🟣 Claude</strong> (สถาปัตยกรรม/ความปลอดภัย) · <strong style={{ color: '#93c5fd' }}>🔵 Gemini</strong> (ตลาด/ข้อมูล) · <strong style={{ color: '#e5e7eb' }}>⚫ Grok</strong> (การเติบโต) + ที่นั่งทั่วโลกจาก <code>council-bridge</code> → แล้วสังเคราะห์เป็นข้อสรุปร่วม
           </div>
         </div>
 
@@ -121,6 +122,14 @@ export default function CouncilPage() {
             ))}
           </div>
           {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '10px', color: '#fca5a5', marginTop: '12px', fontSize: '13px' }}>{error}</div>}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 13, color: '#cbd5e1' }}>
+            <input
+              type="checkbox"
+              checked={includeBridgeVoices}
+              onChange={e => setIncludeBridgeVoices(e.target.checked)}
+            />
+            รวมที่นั่งจากโน้ต <code>council-bridge</code> ในรอบประชุมนี้ (สูงสุด 12 ที่นั่งล่าสุด)
+          </label>
           <button onClick={() => run()} disabled={loading}
             style={{ width: '100%', marginTop: '14px', padding: '15px', borderRadius: '12px', border: 'none', background: loading ? '#374151' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', fontSize: '16px', fontWeight: 800, cursor: loading ? 'not-allowed' : 'pointer' }}>
             {loading ? '🏛️ ที่ประชุมกำลังวิเคราะห์…' : '🏛️ เริ่มประชุม'}
@@ -136,9 +145,16 @@ export default function CouncilPage() {
                     <span style={{ fontWeight: 800, fontSize: '15px' }}>{v.icon} {v.name}</span>
                     <div style={{ fontSize: '12px', color: '#94a3b8' }}>{v.role}</div>
                   </div>
-                  <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '10px', background: v.live ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', color: v.live ? '#6ee7b7' : '#fbbf24', whiteSpace: 'nowrap' }}>
-                    {v.live ? '🟢 LIVE' : '🟡 จำลอง'}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {v.source === 'bridge' && (
+                      <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '10px', background: 'rgba(56,189,248,0.15)', color: '#7dd3fc', whiteSpace: 'nowrap' }}>
+                        🌐 BRIDGE
+                      </span>
+                    )}
+                    <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '10px', background: v.live ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', color: v.live ? '#6ee7b7' : '#fbbf24', whiteSpace: 'nowrap' }}>
+                      {v.live ? '🟢 LIVE' : '🟡 จำลอง'}
+                    </span>
+                  </div>
                 </div>
                 <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit', fontSize: '14px', color: '#e5e7eb', lineHeight: 1.65 }}>{v.text}</pre>
               </div>
