@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # รัน test suite
 # ใช้: bash .claude/tools/run-tests.sh [suite]
-# suite: unit | middleware | types | smoke | affiliate | revenue | e2e | all (default: unit)
+# suite: unit | middleware | types | smoke | affiliate | revenue | blueprint | e2e | all (default: unit)
 
 set -euo pipefail
 
@@ -38,6 +38,10 @@ case "$SUITE" in
     cd "$BACKEND_DIR"
     npm run test:revenue
     ;;
+  blueprint)
+    cd "$BACKEND_DIR"
+    npm run test:blueprint
+    ;;
   e2e)
     cd "$ROOT"
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npx --prefix frontend playwright test
@@ -60,10 +64,13 @@ case "$SUITE" in
     echo ""
     echo "--- revenue ---"
     cd "$BACKEND_DIR" && npm run test:revenue && cd "$ROOT"
+    echo ""
+    echo "--- blueprint ---"
+    cd "$BACKEND_DIR" && npm run test:blueprint && cd "$ROOT"
     ;;
   *)
     echo "❌ Unknown suite: $SUITE"
-    echo "   Valid: unit | middleware | types | smoke | affiliate | revenue | e2e | all"
+    echo "   Valid: unit | middleware | types | smoke | affiliate | revenue | blueprint | e2e | all"
     exit 1
     ;;
 esac
