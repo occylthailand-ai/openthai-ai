@@ -1,0 +1,390 @@
+{
+  "meta": {
+    "id": "content-blueprint",
+    "version": 1,
+    "title_th": "พิมพ์เขียวโครงสร้างเนื้อหา OpenThaiAi",
+    "title_en": "OpenThaiAi Content Blueprint",
+    "description_th": "โครงสร้างเนื้อหา 8 หมวดที่จัดหมวดหมู่ใหม่เป็นลำดับขั้น — กรอบ Maslow + มิติดิจิทัล เชื่อมกับ 7 กลุ่มอุตสาหกรรม ใช้เป็นแผนที่พัฒนาต่อยอดคอนเทนต์ สกิล และหมวดสินค้าของแพลตฟอร์ม",
+    "description_en": "8-part hierarchical content structure — Maslow framework + digital dimension linked to 7 industry domains. Machine-readable map for developing platform content, skills, and catalog categories.",
+    "source": "Integrated content structure provided 2026-09-07 (re-categorized, de-duplicated)",
+    "updated": "2026-09-07"
+  },
+  "maslow_levels": [
+    {
+      "id": "L1",
+      "name_th": "กายภาพ",
+      "name_en": "Physiological",
+      "items_th": ["ปัจจัยสี่", "อาหาร", "น้ำ", "อากาศ", "การนอนหลับ", "เครื่องนุ่งห่ม"],
+      "digital_th": ["แอปพลิเคชันสั่งอาหาร (Food Delivery)", "ซื้อสินค้าออนไลน์", "ติดตามการนอนและสุขภาพ"]
+    },
+    {
+      "id": "L2",
+      "name_th": "ความมั่นคงปลอดภัย",
+      "name_en": "Safety",
+      "items_th": ["ความปลอดภัยในชีวิต", "สุขภาพ", "ทรัพย์สิน", "หน้าที่การงาน"],
+      "digital_th": ["ธนาคารออนไลน์ (Mobile Banking)", "กล้องวงจรปิดผ่านแอป", "ระบบประกันและข้อมูลสุขภาพ"]
+    },
+    {
+      "id": "L3",
+      "name_th": "ความรักและสังคม",
+      "name_en": "Social & Belonging",
+      "items_th": ["ครอบครัว", "มิตรภาพ", "ความผูกพัน", "การเป็นส่วนหนึ่งของกลุ่ม"],
+      "digital_th": ["เครือข่ายสังคมออนไลน์ (Social Media)", "แพลตฟอร์มชุมชนเสมือนจริง"]
+    },
+    {
+      "id": "L4",
+      "name_th": "การยอมรับนับถือ",
+      "name_en": "Esteem",
+      "items_th": ["ความเคารพในตนเอง", "ความสำเร็จ", "การได้รับการยกย่องจากผู้อื่น"],
+      "digital_th": ["ยอดไลก์", "ยอดแชร์", "จำนวนผู้ติดตาม", "สถานะทางดิจิทัล"]
+    },
+    {
+      "id": "L5",
+      "name_th": "ความสมบูรณ์ของชีวิต",
+      "name_en": "Self-Actualization",
+      "items_th": ["การบรรลุศักยภาพสูงสุด", "ความคิดสร้างสรรค์", "การเติมเต็มตนเอง"],
+      "digital_th": ["คลังความรู้ออนไลน์", "การสร้างสรรค์คอนเทนต์"]
+    },
+    {
+      "id": "L6",
+      "name_th": "การก้าวข้ามตัวตน",
+      "name_en": "Self-Transcendence",
+      "items_th": ["การอุทิศตนเพื่อผู้อื่น", "สังคม", "จิตวิญญาณ", "สิ่งแวดล้อม"],
+      "digital_th": ["การระดมทุนเพื่อสังคมและสิ่งแวดล้อม", "คอนเทนต์เพื่อสาธารณประโยชน์"]
+    }
+  ],
+  "maslow_notes": [
+    { "id": "N1", "name_th": "ความยืดหยุ่น", "name_en": "Flexibility", "text_th": "มนุษย์สามารถข้ามขั้นได้ เช่น ยอมอดเพื่อสร้างผลงานศิลปะหรืออุดมการณ์" },
+    { "id": "N2", "name_th": "มิติทางวัฒนธรรม", "name_en": "Culture", "text_th": "สังคมกลุ่มนิยม (Collectivism) มักให้คุณค่ากับขั้นสังคมและการยอมรับก่อนขั้นตนเอง" },
+    { "id": "N3", "name_th": "สุขภาวะดิจิทัล", "name_en": "Digital Well-being", "text_th": "การสร้างสมดุลระหว่างชีวิตออนไลน์และชีวิตจริง" }
+  ],
+  "domains": [
+    {
+      "id": "D2",
+      "icon": "🌾",
+      "name_th": "ระบบอาหารและนวัตกรรมเกษตร",
+      "name_en": "Food Systems & AgTech",
+      "maslow": ["L1"],
+      "related_skills": ["S2", "S19", "S20", "S31"],
+      "routes": ["/catalog", "/supply-chain"],
+      "sections": [
+        {
+          "id": "D2.1",
+          "name_th": "ต้นน้ำ",
+          "name_en": "AgTech & Sourcing",
+          "items": [
+            { "th": "เกษตรแม่นยำ", "en": "Precision agriculture" },
+            { "th": "ปศุสัตว์อัจฉริยะ", "en": "Smart livestock" },
+            { "th": "แหล่งวัตถุดิบใหม่", "en": "Novel ingredient sourcing" },
+            { "th": "โดรนสำรวจ/พ่นปุ๋ย", "en": "Survey/spraying drones" },
+            { "th": "เซนเซอร์ IoT วัดดิน-น้ำ", "en": "IoT soil & water sensors" },
+            { "th": "AI ออกแบบโปรตีนพืช (Plant-based) และ Precision Fermentation", "en": "AI-designed plant-based protein & precision fermentation" }
+          ]
+        },
+        {
+          "id": "D2.2",
+          "name_th": "กลางน้ำ",
+          "name_en": "Food Processing",
+          "items": [
+            { "th": "Automation 4.0", "en": "Automation 4.0" },
+            { "th": "ระบบควบคุมความเย็น", "en": "Refrigeration control" },
+            { "th": "SCADA", "en": "SCADA" },
+            { "th": "หุ่นยนต์จับอาหาร Food-grade", "en": "Food-grade handling robots" },
+            { "th": "กล้อง AI คัดแยกสี/สิ่งแปลกปลอม", "en": "AI vision color/foreign-object sorting" },
+            { "th": "ตรวจสอบย้อนกลับด้วย Blockchain", "en": "Blockchain traceability" }
+          ]
+        },
+        {
+          "id": "D2.3",
+          "name_th": "โลจิสติกส์ห่วงโซ่ความเย็น",
+          "name_en": "Cold Chain & Logistics",
+          "items": [
+            { "th": "Active Cold Chain", "en": "Active cold chain" },
+            { "th": "คลังสินค้าอัตโนมัติ", "en": "Automated warehouses" },
+            { "th": "เซนเซอร์ IoT ติดตามอุณหภูมิตู้คอนเทนเนอร์", "en": "IoT container temperature tracking" },
+            { "th": "อัลกอริทึมจัดการสินค้าแบบ FEFO (First-Expired, First-Out)", "en": "FEFO (First-Expired, First-Out) algorithms" }
+          ]
+        },
+        {
+          "id": "D2.4",
+          "name_th": "ปลายน้ำ",
+          "name_en": "Retail & FoodService",
+          "items": [
+            { "th": "Smart POS", "en": "Smart POS" },
+            { "th": "Smart Packaging", "en": "Smart packaging" },
+            { "th": "HealthTech", "en": "HealthTech" },
+            { "th": "ตรวจสต็อกวัตถุดิบอัตโนมัติ", "en": "Automatic ingredient stock checks" },
+            { "th": "บรรจุภัณฑ์อัจฉริยะเปลี่ยนสีตามความสด", "en": "Freshness-indicating smart packaging" },
+            { "th": "แอปโภชนาการเฉพาะบุคคล (Personalized Nutrition)", "en": "Personalized nutrition apps" }
+          ]
+        },
+        {
+          "id": "D2.5",
+          "name_th": "เศรษฐกิจหมุนเวียน",
+          "name_en": "Circular Economy",
+          "items": [
+            { "th": "Food Surplus Platform", "en": "Food surplus platforms" },
+            { "th": "Upcycling System", "en": "Upcycling systems" },
+            { "th": "ตัวกลางส่งต่ออาหารส่วนเกิน", "en": "Surplus-food redistribution brokers" },
+            { "th": "AI วิเคราะห์ขยะอาหารในครัว", "en": "AI kitchen food-waste analytics" },
+            { "th": "แปรรูปของเหลือทิ้งเป็นสารอาหาร/ชีวภาพ", "en": "Waste-to-nutrient/bio conversion" }
+          ]
+        },
+        {
+          "id": "D2.6",
+          "name_th": "ปลูกพืชไร้ดินและเกษตรควบคุมสภาพแวดล้อม",
+          "name_en": "Hydroponics & Controlled Environment",
+          "items": [
+            { "th": "รูปแบบการให้น้ำ: NFT (ฟิล์มบาง), DFT (แช่สารละลาย), Aeroponics (พ่นหมอก), Drip Irrigation (น้ำหยด)", "en": "Irrigation modes: NFT, DFT, aeroponics, drip irrigation" },
+            { "th": "เซนเซอร์วัด EC (ความเข้มข้นปุ๋ย), pH (กรด-ด่าง), DO (ออกซิเจนละลายน้ำ), อุณหภูมิน้ำ (Chiller)", "en": "EC / pH / DO / water-temperature (chiller) sensor automation" },
+            { "th": "โรงเรือนปิด (Plant Factory): Smart Grow Lights (Full Spectrum), ม่านน้ำระบายความร้อน (EVAP), ระบบจ่ายก๊าซ CO2", "en": "Plant factory: full-spectrum smart grow lights, EVAP cooling, CO2 dosing" }
+          ]
+        }
+      ],
+      "development": {
+        "next_steps_th": [
+          "เพิ่มหมวดสินค้าเกษตร/อาหารแปรรูปใน catalog พร้อมข้อมูลตรวจสอบย้อนกลับของผู้ผลิต",
+          "สร้างชุดคอนเทนต์ให้ผู้ผลิต OTOP เล่าเรื่องต้นน้ำ-ปลายน้ำของสินค้าตนเอง",
+          "ต่อยอด Supply Chain AI (S19) ให้ครอบคลุม cold chain และ FEFO สำหรับสินค้าอาหารสด"
+        ]
+      }
+    },
+    {
+      "id": "D3",
+      "icon": "🏠",
+      "name_th": "ระบบควบคุม เทคโนโลยีอัตโนมัติ และเซนเซอร์",
+      "name_en": "Control Systems, Automation & Sensors",
+      "maslow": ["L1", "L2"],
+      "related_skills": [],
+      "routes": [],
+      "sections": [
+        {
+          "id": "D3.1",
+          "name_th": "ระบบบ้านและอาคารอัจฉริยะ",
+          "name_en": "Smart Home & Buildings",
+          "items": [
+            { "th": "ไฟและพลังงาน: หลอดไฟ Smart RGB, ปลั๊กวัดพลังงาน, สวิตช์อัตโนมัติ, มอเตอร์ม่านไฟฟ้า", "en": "Lighting & energy: smart RGB bulbs, energy-metering plugs, auto switches, curtain motors" },
+            { "th": "ความปลอดภัย: กลอนประตูดิจิทัล (Smart Door Lock), กล้องวงจรปิด AI, กริ่งประตูวิดีโอ, ตู้เซฟแจ้งเตือนผ่านมือถือ", "en": "Security: smart door locks, AI CCTV, video doorbells, app-alert safes" },
+            { "th": "เซนเซอร์สภาพแวดล้อม: ตรวจจับความเคลื่อนไหว (mmWave Presence), ควัน/แก๊สรั่ว, น้ำรั่วซึม", "en": "Environment sensors: mmWave presence, smoke/gas leak, water leak" },
+            { "th": "เครื่องใช้ไฟฟ้าและศูนย์กลาง: ตู้เย็น AI, หุ่นยนต์ดูดฝุ่น LiDAR, ลำโพงสั่งการด้วยเสียง (Smart Hub)", "en": "Appliances & hub: AI fridges, LiDAR robot vacuums, voice smart hubs" }
+          ]
+        },
+        {
+          "id": "D3.2",
+          "name_th": "ระบบควบคุมอุณหภูมิในอุตสาหกรรม",
+          "name_en": "Industrial Temperature Control",
+          "items": [
+            { "th": "เทคโนโลยีควบคุม: On-Off Control, PID Control (ความแม่นยำสูง), Smart IoT Control", "en": "Control tech: on-off, high-precision PID, smart IoT control" },
+            { "th": "Thermocouple: ช่วงวัดกว้าง (-200°C ถึง 1800°C) ทนทาน สำหรับเตาหลอมและเครื่องจักร", "en": "Thermocouple: wide range (-200°C to 1800°C), rugged, furnaces & machinery" },
+            { "th": "RTD (PT100): แม่นยำสูงมาก สำหรับห้องแล็บ อุตสาหกรรมยา และอาหาร", "en": "RTD (PT100): very high accuracy for labs, pharma, food" },
+            { "th": "Thermistor (NTC/PTC): ตอบสนองไว ราคาประหยัด สำหรับเครื่องใช้ไฟฟ้าทั่วไป", "en": "Thermistor (NTC/PTC): fast, low-cost, consumer appliances" },
+            { "th": "Infrared: วัดแบบไม่สัมผัส สำหรับตรวจสอบเครื่องจักรและคัดกรองอุณหภูมิ", "en": "Infrared: non-contact machine inspection & temperature screening" }
+          ]
+        },
+        {
+          "id": "D3.3",
+          "name_th": "การจัดการสิ่งแวดล้อม อุทกวิทยา และภัยพิบัติ",
+          "name_en": "Environment, Hydrology & Disaster Management",
+          "items": [
+            { "th": "ป่าไม้: โดรนติด LiDAR ประเมินมวลชีวภาพ, กล้องความร้อนเฝ้าระวังไฟป่า, ดาวเทียมตรวจจับการบุกรุก", "en": "Forestry: LiDAR drones for biomass, thermal wildfire watch, satellite encroachment detection" },
+            { "th": "น้ำ: เรดาร์วัดระดับน้ำเรียลไทม์, เซนเซอร์เตือนภัยน้ำหลาก, ประตูระบายน้ำอัตโนมัติ", "en": "Water: real-time radar level gauges, flash-flood sensors, automated floodgates" },
+            { "th": "โครงสร้างพื้นฐาน: เซนเซอร์วัดการเคลื่อนตัวของชั้นดิน (Inclinometer), โดรนสำรวจรอยร้าวเขื่อนและสะพาน", "en": "Infrastructure: inclinometers for ground movement, drone crack inspection of dams & bridges" }
+          ]
+        }
+      ],
+      "development": {
+        "next_steps_th": [
+          "เปิดหมวดสินค้า Smart Home ใน catalog + โปรแกรม affiliate สินค้า IoT",
+          "ชุดคอนเทนต์รีวิว/เปรียบเทียบอุปกรณ์สมาร์ทโฮมภาษาไทยสำหรับครีเอเตอร์",
+          "คอนเทนต์ให้ความรู้เกษตรกร: เซนเซอร์น้ำ-ดินราคาประหยัดใช้จริง"
+        ]
+      }
+    },
+    {
+      "id": "D4",
+      "icon": "🚦",
+      "name_th": "ระบบคมนาคม โลจิสติกส์ และการจราจรอัจฉริยะ",
+      "name_en": "ITS, Logistics & Mobility",
+      "maslow": ["L1", "L2"],
+      "related_skills": ["S19"],
+      "routes": ["/supply-chain"],
+      "sections": [
+        {
+          "id": "D4.1",
+          "name_th": "ระบบสัญญาณไฟจราจรอัจฉริยะ",
+          "name_en": "Adaptive Traffic Signal Control (ATSC)",
+          "items": [
+            { "th": "วงจรการทำงาน: ตรวจจับปริมาณรถ (กล้อง AI/Loop) → วิเคราะห์ความหนาแน่น → คำนวณจังหวะไฟ (Optimization Algorithm) → สั่งการปรับเปลี่ยนอัตโนมัติ", "en": "Loop: detect volume (AI cameras/loops) → analyze density → optimize timing → auto-adjust" },
+            { "th": "Anti-Gridlock: ตัดไฟเขียวทันทีเมื่อท้ายแถวติดขัด ป้องกันรถล็อกกลางสี่แยก", "en": "Anti-gridlock: cut green on downstream blockage to keep intersections clear" },
+            { "th": "Green Wave: เชื่อมโยงสัญญาณไฟเขียวต่อเนื่องตลอดแนวถนนสายหลัก", "en": "Green wave: coordinated greens along arterials" },
+            { "th": "Midnight Flashing / On-Demand: สลับสัญญาณตามความต้องการจริงในชั่วโมงการจราจรเบาบาง", "en": "Midnight flashing / on-demand signals in light traffic" }
+          ]
+        },
+        {
+          "id": "D4.2",
+          "name_th": "โลจิสติกส์และการขนส่งอัตโนมัติ",
+          "name_en": "Logistics & Autonomous Transport",
+          "items": [
+            { "th": "คลังสินค้า: หุ่นยนต์ AGV/AMR, เครนจัดเก็บแนวสูง (AS/RS), ซอฟต์แวร์จัดการคลัง (WMS)", "en": "Warehouse: AGV/AMR robots, AS/RS cranes, WMS" },
+            { "th": "ขนส่งทางบก: GPS Telematics, ซอฟต์แวร์วางแผนเส้นทาง (TMS), ขบวนรถบรรทุกกึ่งอัตโนมัติ (Platooning)", "en": "Road: GPS telematics, TMS route planning, truck platooning" },
+            { "th": "Last-Mile: โดรนขนส่งพัสดุและเวชภัณฑ์, ตู้ล็อกเกอร์รับพัสดุอัจฉริยะ 24 ชม.", "en": "Last-mile: parcel/medical drones, 24-hour smart lockers" },
+            { "th": "ขนส่งมวลชน: แพลตฟอร์มรวมการเดินทาง (MaaS), ระบบอาณัติสัญญาณรถไฟความเร็วสูง (CBTC)", "en": "Mass transit: MaaS platforms, CBTC rail signaling" }
+          ]
+        }
+      ],
+      "development": {
+        "next_steps_th": [
+          "เพิ่มข้อมูลตัวเลือกขนส่ง/ติดตามพัสดุในหน้า track ให้ผู้ซื้อเห็นสถานะจริง",
+          "คอนเทนต์ค่าส่งและ last-mile สำหรับพ่อค้าแม่ค้าออนไลน์ (เลือกขนส่งยังไงให้คุ้ม)"
+        ]
+      }
+    },
+    {
+      "id": "D5",
+      "icon": "🩺",
+      "name_th": "เทคโนโลยีสุขภาพ การแพทย์ และสิ่งทออัจฉริยะ",
+      "name_en": "HealthTech, Medical & Smart Textiles",
+      "maslow": ["L1", "L2"],
+      "related_skills": [],
+      "routes": [],
+      "sections": [
+        {
+          "id": "D5.1",
+          "name_th": "นวัตกรรมทางการแพทย์",
+          "name_en": "Healthcare 4.0",
+          "items": [
+            { "th": "ส่วนหน้าและข้อมูล: ระบบสารสนเทศโรงพยาบาล (HIS), ตู้ Kiosk ยืนยันสิทธิ์, การแพทย์ทางไกล (Telemedicine), ใบสั่งยาอิเล็กทรอนิกส์ (E-Prescription)", "en": "Front & data: HIS, eligibility kiosks, telemedicine, e-prescriptions" },
+            { "th": "วินิจฉัยและรักษา: AI วิเคราะห์ภาพถ่ายรังสี (X-ray/CT), พยาธิวิทยาดิจิทัล, หุ่นยนต์ช่วยผ่าตัดความแม่นยำสูง (เช่น Da Vinci)", "en": "Diagnosis & treatment: AI radiology (X-ray/CT), digital pathology, surgical robots (e.g. Da Vinci)" },
+            { "th": "ติดตามผู้ป่วย: อุปกรณ์ IoMT, นาฬิกา/แหวนตรวจ ECG, ระบบตรวจจับการล้ม", "en": "Monitoring: IoMT devices, ECG watches/rings, fall detection" }
+          ]
+        },
+        {
+          "id": "D5.2",
+          "name_th": "สิ่งทออัจฉริยะและเครื่องนุ่งห่ม",
+          "name_en": "Smart Textiles & E-Textiles",
+          "items": [
+            { "th": "วัสดุศาสตร์: เส้นใยปรับอุณหภูมิ (PCMs), ผ้านาโนสะท้อนน้ำ/ทำความสะอาดตัวเอง, เส้นด้ายนำไฟฟ้า (Conductive Yarns)", "en": "Materials: PCM fibers, self-cleaning nano fabrics, conductive yarns" },
+            { "th": "เสื้อผ้าชีวภาพ: ชุดกีฬาวัดคลื่นกล้ามเนื้อ (EMG), ชุดผู้สูงอายุ/ผู้ป่วยตรวจสัญญาณชีพ, ชุดคลุมท้องตรวจการหดรัดตัวของมดลูก", "en": "Bio-wear: EMG sportswear, vital-sign wear for elders/patients, contraction-sensing maternity wear" },
+            { "th": "ชุดนิรภัย/อุตสาหกรรม: เสื้อปรับอุณหภูมิร้อน-เย็น, เกราะของเหลวนอน-นิวโทเนียน, ป้ายดิจิทัลติดตามการรีไซเคิล (Digital Product Passports)", "en": "Safety/industrial: heating-cooling suits, non-Newtonian impact armor, digital product passports" }
+          ]
+        }
+      ],
+      "development": {
+        "next_steps_th": [
+          "ชุดคอนเทนต์สินค้าสุขภาพ/สมุนไพรไทยที่เชื่อมเทรนด์ HealthTech",
+          "หมวดสิ่งทอ OTOP + เรื่องเล่านวัตกรรมผ้าไทย (ต่อยอดจุดแข็งผ้าไหมของแพลตฟอร์ม)"
+        ]
+      }
+    },
+    {
+      "id": "D6",
+      "icon": "✈️",
+      "name_th": "การท่องเที่ยว บริการ และระบบการตลาดพันธมิตร",
+      "name_en": "Travel, Hospitality & Affiliate Marketing",
+      "maslow": ["L2", "L3", "L4"],
+      "related_skills": ["S10", "S18", "S24", "S30"],
+      "routes": ["/affiliate", "/trending"],
+      "sections": [
+        {
+          "id": "D6.1",
+          "name_th": "การบริการและการท่องเที่ยว",
+          "name_en": "Travel & Hospitality Tech",
+          "items": [
+            { "th": "กระจายห้องพักและการจอง: ระบบเครือข่ายสากล (GDS), แพลตฟอร์มจองที่พัก (OTA), Channel Manager เชื่อมสต็อกห้องพัก", "en": "Distribution & booking: GDS, OTA platforms, channel managers" },
+            { "th": "การจัดการโรงแรม: ซอฟต์แวร์บริหารที่พัก (PMS), กุญแจดิจิทัลบนมือถือ (Digital Key), ปรับไฟ-แอร์อัตโนมัติเมื่อเช็คอิน", "en": "Hotel ops: PMS, mobile digital keys, auto room presets on check-in" },
+            { "th": "การจัดการประสบการณ์: Dynamic Pricing ตามอุปสงค์, แผนที่นำทาง AR/VR, กล้อง AI วัดความหนาแน่นนักท่องเที่ยว", "en": "Experience: demand-based dynamic pricing, AR/VR wayfinding, AI crowd analytics" }
+          ]
+        },
+        {
+          "id": "D6.2",
+          "name_th": "ระบบตัวแทนขายและการตลาดพันธมิตร",
+          "name_en": "Affiliate Marketing",
+          "items": [
+            { "th": "กลไกติดตามยอด: Affiliate Link + SubID, คุกกี้บันทึกระยะเวลา, Server-to-Server / Postback URL", "en": "Tracking: affiliate link + SubID, cookie windows, server-to-server postback" },
+            { "th": "โมเดลผลตอบแทน: จ่ายตามยอดขาย (CPS), จ่ายตามรายชื่อผู้สนใจ (CPL), ส่วนแบ่งหลายชั้น (Multi-Tier) + AI ตรวจจับการทุจริตคลิก", "en": "Payout models: CPS, CPL, multi-tier + AI click-fraud detection" }
+          ]
+        }
+      ],
+      "development": {
+        "next_steps_th": [
+          "ต่อยอดระบบ affiliate จริงของแพลตฟอร์ม: เพิ่ม SubID reporting และหน้าเปรียบเทียบโมเดล CPS/CPL",
+          "ชุดคอนเทนต์โปรโมตที่พัก/ท่องเที่ยวชุมชนสำหรับครีเอเตอร์สายท่องเที่ยว"
+        ]
+      }
+    },
+    {
+      "id": "D7",
+      "icon": "🔐",
+      "name_th": "โครงสร้างพื้นฐานไอที ระบบชำระเงิน และการจัดการภาษี",
+      "name_en": "IT Infrastructure, Payments & Digital Tax",
+      "maslow": ["L2"],
+      "related_skills": ["S20", "S23"],
+      "routes": ["/payment", "/pricing"],
+      "sections": [
+        {
+          "id": "D7.1",
+          "name_th": "ระบบเทคโนโลยีสารสนเทศองค์กร",
+          "name_en": "IT Infrastructure & Security",
+          "items": [
+            { "th": "โครงสร้างและประมวลผล: Data Center ในองค์กร, Cloud Computing (Public/Private/Hybrid), Virtualization", "en": "Compute: on-prem data centers, public/private/hybrid cloud, virtualization" },
+            { "th": "ความมั่นคงไซเบอร์: กำแพงไฟยุคใหม่ (NGFW), EDR/XDR, Zero Trust (IAM), ศูนย์ SOC/SIEM 24 ชม.", "en": "Cybersecurity: NGFW, EDR/XDR, zero-trust IAM, 24/7 SOC/SIEM" },
+            { "th": "การจัดการข้อมูล: Data Lake, ระบบ ERP, ซอฟต์แวร์ CRM", "en": "Data: data lakes, ERP, CRM" }
+          ]
+        },
+        {
+          "id": "D7.2",
+          "name_th": "ระบบการชำระเงินดิจิทัล",
+          "name_en": "Payment Systems",
+          "items": [
+            { "th": "จุดขายและออนไลน์: Contactless/NFC, Thai QR PromptPay, Payment Gateway, E-Wallet, ซื้อก่อนจ่ายทีหลัง (BNPL)", "en": "POS & online: contactless/NFC, Thai QR PromptPay, gateways, e-wallets, BNPL" },
+            { "th": "ระหว่างสถาบัน: โอนมูลค่าสูงทันที (RTGS/BAHTNET), หักบัญชีอัตโนมัติ (ACH), โอนข้ามพรมแดน (SWIFT/Blockchain)", "en": "Interbank: RTGS/BAHTNET, ACH, cross-border SWIFT/blockchain" },
+            { "th": "ความปลอดภัยการเงิน: Tokenization (แปลงเลขบัตร), 3D Secure ยืนยันตัวตน, AI ป้องกันการทุจริตธุรกรรม", "en": "Security: tokenization, 3D Secure, AI transaction fraud prevention" }
+          ]
+        },
+        {
+          "id": "D7.3",
+          "name_th": "การจัดการภาษีอิเล็กทรอนิกส์",
+          "name_en": "Digital Tax Systems",
+          "items": [
+            { "th": "เอกสารและแพลตฟอร์ม: e-Tax Invoice & e-Receipt, e-Withholding Tax, ยื่นแบบออนไลน์ (E-Filing) พร้อมข้อมูลลดหย่อนอัตโนมัติ (Pre-filled Tax)", "en": "Documents: e-tax invoice & e-receipt, e-withholding tax, pre-filled e-filing" },
+            { "th": "ตรวจสอบและคำนวณ: Big Data Analytics + Web Scraping ตรวจความผิดปกติของงบการเงิน, Tax Engine เชื่อมต่อ ERP", "en": "Audit & calc: big-data anomaly detection, ERP-connected tax engines" }
+          ]
+        }
+      ],
+      "development": {
+        "next_steps_th": [
+          "คอนเทนต์ให้ความรู้แม่ค้าออนไลน์: PromptPay, e-Tax Invoice และภาษีขายของออนไลน์",
+          "ต่อยอดระบบชำระเงิน Omise เดิม: ใบเสร็จอิเล็กทรอนิกส์ต่อออเดอร์"
+        ]
+      }
+    },
+    {
+      "id": "D8",
+      "icon": "🎬",
+      "name_th": "การวางแผนและผสานสื่ออินเตอร์แอคทีฟ",
+      "name_en": "Rich Media Integration",
+      "maslow": ["L4", "L5"],
+      "related_skills": ["S1", "S4", "S11", "S14"],
+      "routes": ["/calendar", "/trending"],
+      "sections": [
+        {
+          "id": "D8.1",
+          "name_th": "ขั้นตอนการวางแผนสื่อ",
+          "name_en": "Media Planning Steps",
+          "items": [
+            { "th": "ขั้นที่ 1 กำหนดวัตถุประสงค์: ให้ความรู้ สื่อสารแบรนด์ หรือกระตุ้นยอดขาย", "en": "Step 1 — Objective: educate, brand, or drive sales" },
+            { "th": "ขั้นที่ 2 เลือกรูปแบบสื่อ: วิดีโอสั้น กราฟิกเคลื่อนไหว ปุ่มโต้ตอบ (Interactive CTA)", "en": "Step 2 — Format: short video, motion graphics, interactive CTA" },
+            { "th": "ขั้นที่ 3 ความเข้ากันได้: ตรวจขนาดไฟล์และความเร็วโหลดบนมือถือและเดสก์ท็อป", "en": "Step 3 — Compatibility: file size & load speed on mobile and desktop" },
+            { "th": "ขั้นที่ 4 ทดสอบและประเมินผล: วัด Engagement Rate และความลื่นไหลการแสดงผล", "en": "Step 4 — Test & measure: engagement rate and rendering smoothness" }
+          ]
+        }
+      ],
+      "development": {
+        "next_steps_th": [
+          "ผูก 4 ขั้นตอนนี้เข้ากับ AI Generator เดิม: เลือกวัตถุประสงค์ก่อนสร้างคอนเทนต์ทุกครั้ง",
+          "เพิ่มตัววัด Engagement Rate ต่อโพสต์ในหน้า analytics"
+        ]
+      }
+    }
+  ]
+}

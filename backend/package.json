@@ -14,7 +14,8 @@
     "test:affiliate": "node scripts/test-affiliate-flow.mjs",
     "test:revenue": "node scripts/test-revenue-system.mjs",
     "test:health": "node scripts/test-health-auth.mjs",
-    "test:all": "npm run test:health && npm run test:smoke && npm run test:affiliate && npm run test:revenue"
+    "test:blueprint": "node scripts/test-content-blueprint.mjs",
+    "test:all": "npm run test:health && npm run test:smoke && npm run test:affiliate && npm run test:revenue && npm run test:blueprint"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
