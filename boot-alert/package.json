@@ -1,0 +1,14 @@
+{
+  "name": "boot-alert",
+  "version": "1.0.0",
+  "description": "แจ้งเตือน SMS เข้ามือถือเมื่อเครื่องถูกเปิด (boot)",
+  "type": "module",
+  "bin": { "boot-alert": "notify.js" },
+  "scripts": {
+    "setup": "node setup.js",
+    "test-sms": "node notify.js --test",
+    "once": "node notify.js --once",
+    "start": "node notify.js"
+  },
+  "engines": { "node": ">=18" }
+}
