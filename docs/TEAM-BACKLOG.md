@@ -38,7 +38,7 @@ professional security-guard
 | 3. แพลตฟอร์ม | platform-agent | ✅ บทที่ 4.3 | ✅ 7 Portal |
 | 4. ผู้บริโภค | consumer-agent | ✅ บทที่ 4.4 | ✅ Consumer Portal MVP `/consumer` (22 ส.ค. 69) |
 | 5. ชุมชน/นักพัฒนา/รัฐ | ecosystem-agent | ✅ บทที่ 4.5 | 🟡 Gov Portal มีแล้ว |
-| 6. **สายงานวิชาชีพ** | professional-agent | 🔴 **ยังไม่มีในหนังสือเลย** | 🔴 ยังไม่มี |
+| 6. **สายงานวิชาชีพ** | professional-agent | 🔴 ยังไม่มีในหนังสือ | ✅ Professional Portal MVP `/professional` (8 ก.ย. 2569) |
 
 **ช่องว่างใหญ่ที่สุด:** กลุ่มที่ 6 (วิชาชีพ) และกลุ่มที่ 2 ที่ครอบคลุมไม่ครบทุกประเภทคนกลาง
 
@@ -97,7 +97,27 @@ professional security-guard
 | 4.5 | บันทึกมติ Innovation Board ครั้งแรก | `chief-of-staff` | `docs/innovation-board-decisions.md` | 🔴 รอ Board ประชุม |
 | 4.6 | Product Roadmap 12 เดือน — 4 Phase พร้อม Definition of Done | `chief-of-staff` | `docs/product-roadmap.md` | ✅ เสร็จ 22 ส.ค. 2569 |
 | 4.7 | Thai Corpus Strategy — แผนรวบรวมข้อมูล, legal sources, data pipeline, tokenizer | `ai-ml-engineer` + `legal-compliance` | `docs/thai-corpus-strategy.md` | ✅ เสร็จ 22 ส.ค. 2569 |
-| 4.8 | Flash Brief: Partnership Strategy — มหาวิทยาลัย + Cloud Provider | `tech-scout` | `docs/flash-brief-partnerships.md` | 🔴 ถัดไป |
+| 4.8 | Flash Brief: Partnership Strategy — มหาวิทยาลัย + Cloud Provider | `tech-scout` | `docs/flash-brief-partnerships.md` | ✅ เสร็จ 8 ก.ย. 2569 |
+
+## 🚀 คลื่นงานที่ 5 — Dev-Loop Automation (เริ่ม 8 ก.ย. 2569)
+
+| # | งาน | มอบให้ | ผลลัพธ์ | สถานะ |
+|---|---|---|---|---|
+| 5.1 | Professional Portal MVP Spec — สเปกและ UX Flow สำหรับ 3 สายวิชาชีพ | `professional-agent` + `frontend-engineer` | `docs/professional-portal-spec.md` | ✅ เสร็จ 8 ก.ย. 2569 |
+| 5.2 | API Stub Spec — endpoints สำหรับ Intermediary และ Consumer Portal | `backend-engineer` | `docs/api-stub-spec.md` | ✅ เสร็จ 8 ก.ย. 2569 |
+| 5.3 | Wave 5 Progress Report — สรุปสถานะโครงการ | `chief-of-staff` | `docs/wave5-progress-report.md` | ✅ เสร็จ 8 ก.ย. 2569 |
+| 5.4 | Thai Model Development Roadmap — M0 ถึง M3 | `ai-ml-engineer` | `docs/thai-model-dev-roadmap.md` | ✅ เสร็จ 8 ก.ย. 2569 |
+| 5.5 | Affiliate Non-MLM Technical Spec | `blockchain-web3` + `legal-compliance` | `docs/affiliate-technical-spec.md` | ✅ เสร็จ 8 ก.ย. 2569 |
+| 5.6 | **Dev-Loop Tool** — ระบบ autonomous development | `devops-sre` | `tools/openthai_dev_loop.py` | ✅ เสร็จ 8 ก.ย. 2569 |
+
+## 🌊 คลื่นงานที่ 6 — Professional Portal + Thai Eval + Glossary (เสร็จ 8 ก.ย. 2569)
+
+| # | งาน | มอบให้ | ผลลัพธ์ | สถานะ |
+|---|---|---|---|---|
+| 6.1 | Professional Portal React Component — 3 สายวิชาชีพ (ทนาย/แพทย์/บัญชี) | `frontend-engineer` | `frontend/src/pages/ProfessionalPortalPage.jsx` | ✅ เสร็จ 8 ก.ย. 2569 |
+| 6.2 | Thai Eval Suite v1 — 50 test cases ครอบคลุม 5 มิติ | `ai-ml-engineer` | `docs/thai-eval-suite-v1.json` | ✅ เสร็จ 8 ก.ย. 2569 |
+| 6.3 | Dev Glossary — พจนานุกรมคำวัดดิจิทัล 50 คำ | `content-localization` | `docs/dev-glossary.md` | ✅ เสร็จ 8 ก.ย. 2569 |
+| 6.4 | Civic Canon Infographic Spec — สเปกแผนผัง 3 ศาสนา | `content-localization` | `docs/civic-canon-infographic-spec.md` | ✅ เสร็จ 8 ก.ย. 2569 |
 
 ## 🚧 รอ Mythos อนุมัติก่อนทำ
 

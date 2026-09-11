@@ -35,12 +35,14 @@ from helpers_der import (
     assert_parseable_der,
     minimal_der_sequence,
     try_parse_asn1,
-    has_archival_evidence,
+    has_archival_evidence as _helpers_has_archival_evidence,
     calculate_archive_readiness_score,
     needs_engine as _needs_engine_mark,
     needs_asn1  as _needs_asn1_mark,
     _HAS_ASN1CRYPTO,
 )
+# compat alias — engine import below may shadow the module-level name
+has_archival_evidence = _helpers_has_archival_evidence
 from helpers_asn1_der_extra import (
     validate_der_integer_content,
     validate_der_boolean_content,
@@ -390,9 +392,14 @@ class TestVerifierGateIntegration(unittest.TestCase):
         xxe = b"""<?xml version='1.0'?>
 <!DOCTYPE r [<!ENTITY x SYSTEM "file:///etc/passwd">]>
 <Invoice xmlns:ds="http://www.w3.org/2000/09/xmldsig#">&x;</Invoice>"""
-        root = ET.fromstring(xxe)
-        text = ET.tostring(root, encoding="unicode")
-        self.assertNotIn("/etc/passwd", text)
+        try:
+            root = ET.fromstring(xxe)
+            # If parsing succeeded, entity must NOT have been expanded
+            text = ET.tostring(root, encoding="unicode")
+            self.assertNotIn("/etc/passwd", text)
+        except ET.ParseError:
+            # ParseError = ET refused external entity entirely — XXE guard works
+            pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -565,17 +572,17 @@ class TestArchiveReadinessScore(unittest.TestCase):
     # ── has_archival_evidence gate ────────────────────────────────────────────
 
     def test_evidence_true_when_both_present(self):
-        self.assertTrue(has_archival_evidence(1, 1))
-        self.assertTrue(has_archival_evidence(3, 2))
+        self.assertTrue(_helpers_has_archival_evidence(1, 1))
+        self.assertTrue(_helpers_has_archival_evidence(3, 2))
 
     def test_evidence_false_no_cert(self):
-        self.assertFalse(has_archival_evidence(0, 1))
+        self.assertFalse(_helpers_has_archival_evidence(0, 1))
 
     def test_evidence_false_no_rev(self):
-        self.assertFalse(has_archival_evidence(1, 0))
+        self.assertFalse(_helpers_has_archival_evidence(1, 0))
 
     def test_evidence_false_both_zero(self):
-        self.assertFalse(has_archival_evidence(0, 0))
+        self.assertFalse(_helpers_has_archival_evidence(0, 0))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

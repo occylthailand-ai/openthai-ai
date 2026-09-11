@@ -81,5 +81,25 @@ def check_non_mlm_compliance(affiliate_id: str, commission_chain: list) -> bool:
 4. ประเมินผลกระทบและแจ้ง User ที่เกี่ยวข้อง
 5. รายงาน Regulatory Body หากจำเป็น (ภายใน 72 ชม. — PDPA requirement)
 
+## 8. XAdES-T vs PDPA — จุดตัดในระบบ e-Tax
+
+> อ้างอิง: ขมธอ. 3-2560 (ETDA) + พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562
+
+| มิติ | มาตรฐาน XAdES-T (ขมธอ. 3-2560) | กรอบ PDPA |
+|---|---|---|
+| **หน่วยงานกำกับ** | ETDA + กรมสรรพากร (ม.86/4 ประมวลรัษฎากร) | สคส. |
+| **วัตถุประสงค์** | พิสูจน์ความแท้จริง ผูกพันทางภาษี | คุ้มครองสิทธิส่วนตัวของบุคคล |
+| **จุดวิกฤตใน Data Flow** | RFC 3161 TST จาก ETDA-approved TSA | Access Control + เข้ารหัส PII |
+| **การจัดเก็บ** | XML/PDF ≥ 5 ปี ตามกฎหมายภาษี | เก็บเท่าจำเป็น + Log การเข้าถึง |
+| **จุดเชื่อม** | Signature Wrapper ใน Host-to-Host (Phase 2) | ข้อมูลผู้ซื้อใน XML ห้ามใช้นอกออกเอกสารภาษี |
+| **ความขัดแย้งที่ต้องระวัง** | ต้องเก็บ ≥ 5 ปี | PDPA แนะนำลบเมื่อหมดวัตถุประสงค์ |
+| **การแก้ความขัดแย้ง** | ฐานกฎหมาย "การปฏิบัติตามกฎหมาย" (ม.86/4) | ระบุใน Privacy Notice: "เก็บ 5 ปีตามกฎหมายภาษี" |
+
+### กฎเหล็ก XAdES-T + PDPA
+
+- ห้ามนำ PII จาก XML e-Tax (ชื่อ/ที่อยู่/เลขประจำตัวผู้ซื้อ) ไปใช้นอกเหนือวัตถุประสงค์ออกใบกำกับภาษี
+- Signing Key (CA cert + private key) ต้องเก็บใน Vault — ห้าม commit ใน repository
+- ระบบ Archival ต้องมี Access Log และ Role-Based Access Control ก่อน deploy
+
 ---
-*อัปเดต: มิถุนายน 2569 | Chief Legal Guild, OpenThai.ai*
+*อัปเดต: 23 ส.ค. 2569 | Chief Legal Guild, OpenThai.ai*
