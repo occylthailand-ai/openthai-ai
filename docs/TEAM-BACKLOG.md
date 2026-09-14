@@ -155,11 +155,25 @@ python tools/openthai_dev_loop.py --dry-run --loop  # ทดสอบโดย�
 | # | งาน | มอบให้ | ผลลัพธ์ | สถานะ |
 |---|---|---|---|---|
 | 8.1 | Consumer AI Integration — เชื่อม welfare check + contract summary กับ Anthropic API จริง | `backend-engineer` | `backend/api/consumer_ai.py` | ✅ เสร็จ 14 ก.ย. 2569 |
-| 8.2 | Baseline Eval Run — รัน Thai Eval Suite กับ claude-haiku และบันทึกผลเป็น baseline | `ai-ml-engineer` | `docs/eval-baseline-wave8.md` | 🔴 ยังไม่เริ่ม |
+| 8.2 | Baseline Eval Run — รัน Thai Eval Suite กับ claude-haiku และบันทึกผลเป็น baseline | `ai-ml-engineer` | `docs/eval-baseline-wave8.md` | ✅ เสร็จ 14 ก.ย. 2569 (mock run — รอ API key เพื่อรันจริง) |
 | 8.3 | Uptime Kuma Deployment — deploy monitoring จริงด้วย Docker Compose | `devops-sre` | `ops/docker-compose.monitoring.yml` + `ops/monitoring-setup.md` | ✅ เสร็จ 14 ก.ย. 2569 |
 | 8.4 | GitHub Org Setup Checklist + Community Channels | `ecosystem-agent` | `docs/community-launch-checklist.md` | ✅ เสร็จ 14 ก.ย. 2569 |
 | 8.5 | Shared Navigation + Auth Layer Spec | `frontend-engineer` | `docs/shared-nav-auth-spec.md` | ✅ เสร็จ 14 ก.ย. 2569 |
 | 8.6 | Affiliate Commission Engine Stub | `blockchain-web3` | `backend/affiliate/commission_engine.py` | ✅ เสร็จ 14 ก.ย. 2569 (ผ่าน 5 tests) |
+
+## 🔧 คลื่นงานที่ 9 — Frontend Integration (เริ่ม 14 ก.ย. 2569)
+
+> Wave นี้เน้น **ต่อหน้าจอเข้ากับ backend จริง** — Portal ทุกตัวต้องเรียก API ได้จริง ไม่ใช่ static mock
+> รัน: `python tools/openthai_dev_loop.py --wave 9`
+
+| # | งาน | มอบให้ | ผลลัพธ์ | สถานะ |
+|---|---|---|---|---|
+| 9.1 | AppShell Component — implement TopNav + PortalSwitcher Phase 1 (ไม่มี auth) | `frontend-engineer` | `frontend/src/components/AppShell.jsx` | 🔴 ยังไม่เริ่ม |
+| 9.2 | Consumer Portal API Wiring — เชื่อม UI กับ consumer_ai.py endpoints | `frontend-engineer` + `backend-engineer` | แก้ `ConsumerPortalPage.jsx` | 🔴 ยังไม่เริ่ม |
+| 9.3 | Intermediary HS Code Search — เชื่อม UI กับ AI ค้นหา HS Code | `frontend-engineer` + `backend-engineer` | แก้ `IntermediaryPortalPage.jsx` | 🔴 ยังไม่เริ่ม |
+| 9.4 | Makefile — รวม dev commands ให้ครบ (frontend, backend, monitoring, test) | `devops-sre` | `Makefile` ที่ root | ✅ เสร็จ 14 ก.ย. 2569 |
+| 9.5 | Wave 8 Real Eval Run — รัน eval กับ API key จริงเมื่อ Mythos ตั้งค่า | `ai-ml-engineer` | `docs/eval-baseline-wave8-real.md` | ⏸ รอ ANTHROPIC_API_KEY |
+| 9.6 | Intermediary AI Integration — เชื่อม trade-doc summary กับ Anthropic API | `backend-engineer` | `backend/api/intermediary_ai.py` | 🔴 ยังไม่เริ่ม |
 
 ---
 

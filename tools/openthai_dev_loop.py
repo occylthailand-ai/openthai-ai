@@ -844,6 +844,192 @@ models:
 เสิร์ฟกลุ่มผู้ใช้: กลุ่ม 2 คนกลาง + กลุ่ม 3 แพลตฟอร์ม
 """,
     },
+
+    # ==================== Wave 9 — Frontend Integration ====================
+
+    "9.1": {
+        "wave": 9,
+        "desc": "AppShell Component — TopNav + PortalSwitcher Phase 1 (ไม่มี auth)",
+        "agent": "frontend-engineer",
+        "output": "frontend/src/components/AppShell.jsx",
+        "prompt": """\
+implement AppShell React component สำหรับ OpenThai.ai
+
+อ้างอิง docs/shared-nav-auth-spec.md (Wave 8) สำหรับ design spec
+
+สร้างไฟล์: frontend/src/components/AppShell.jsx
+
+Phase 1 (ไม่มี auth):
+1. **AppShell** — wrapper ครอบทุก page
+   - รับ props: portalId, lang, children
+   - render: TopNav + children
+
+2. **TopNav** — แถบด้านบน
+   - Logo: "OpenThai.ai" + ชื่อ portal ปัจจุบัน
+   - PortalSwitcher dropdown
+   - LangSwitcher: TH/ZH/EN
+   - placeholder "เข้าสู่ระบบ" button (disabled — Phase 2)
+
+3. **PortalSwitcher** — dropdown เลือก portal
+   - 7 portals: ผู้ผลิต, คนกลาง, ผู้บริโภค, วิชาชีพ, หน่วยงานรัฐ, Affiliate, Creator
+   - navigate ด้วย react-router Link
+   - highlight portal ปัจจุบัน
+
+Style: Tailwind CSS
+Thai-first: default lang = "th"
+Mobile-first: hamburger menu สำหรับ width < 768px
+
+ตัวอย่าง usage ใน ConsumerPortalPage.jsx:
+```jsx
+import AppShell from '../components/AppShell'
+// ครอบ content เดิม
+<AppShell portalId="consumer">...</AppShell>
+```
+
+เสิร์ฟกลุ่มผู้ใช้: ทุกกลุ่ม
+""",
+    },
+
+    "9.2": {
+        "wave": 9,
+        "desc": "Consumer Portal API Wiring — เชื่อม UI กับ consumer_ai.py endpoints จริง",
+        "agent": "frontend-engineer",
+        "output": "frontend/src/pages/ConsumerPortalPage.jsx",
+        "prompt": """\
+แก้ไข ConsumerPortalPage.jsx ให้เรียก API จริง (ไม่ใช่ mock)
+
+backend endpoints (จาก backend/api/routes_wave7.py + consumer_ai.py):
+- POST /api/consumer/welfare/check — ตรวจสิทธิสวัสดิการ
+- POST /api/consumer/contract/summarize — ย่อสัญญา
+
+งานที่ต้องทำ:
+1. แก้ welfare checker form:
+   - เพิ่ม fields: อายุ, รายได้/เดือน, มีบุตรอายุต่ำกว่า 6 ปี, มีบัตรคนพิการ
+   - submit → POST /api/consumer/welfare/check
+   - แสดงผล: สวัสดิการที่มีสิทธิ์ + ลิงก์
+
+2. แก้ contract summarizer:
+   - textarea รับ contract text (max 10,000 ตัวอักษร)
+   - submit → POST /api/consumer/contract/summarize
+   - แสดง 5 หมวด: หน้าที่, สิทธิ, ข้อห้าม, ความเสี่ยง, วันสำคัญ
+
+3. Error handling:
+   - แสดง error ภาษาไทย ถ้า API ไม่ตอบ
+   - Loading state ระหว่างรอ
+   - PDPA disclaimer ก่อน submit
+
+ใช้ fetch() หรือ axios (ตามที่ project ใช้อยู่แล้ว)
+
+เสิร์ฟกลุ่มผู้ใช้: กลุ่ม 4 ผู้บริโภค
+""",
+    },
+
+    "9.3": {
+        "wave": 9,
+        "desc": "Intermediary HS Code Search — เชื่อม UI กับ AI ค้นหา HS Code",
+        "agent": "backend-engineer",
+        "output": "backend/api/intermediary_ai.py",
+        "prompt": """\
+implement HS Code Search สำหรับ Intermediary Portal
+
+สร้าง backend/api/intermediary_ai.py:
+
+**HSCodeSearcher** class:
+- รับ: query string ภาษาไทยหรืออังกฤษ ("กุ้งแช่แข็ง", "frozen shrimp")
+- ใช้ Claude ค้นหา HS Code ที่เหมาะสมพร้อมอธิบาย
+- return: list ของ candidate codes พร้อม description, import duty (ถ้าทราบ)
+
+prompt strategy:
+```
+คุณเป็นผู้เชี่ยวชาญ Harmonized System ของ World Customs Organization
+ผู้ใช้ถามหา HS Code สำหรับ: {query}
+
+ตอบในรูปแบบ JSON:
+{{
+  "candidates": [
+    {{"code": "0306.17", "description": "...", "notes": "...", "confidence": "high/medium/low"}},
+    ...
+  ],
+  "disclaimer": "กรุณายืนยันกับกรมศุลกากรก่อนใช้ในเอกสารทางการ"
+}}
+```
+
+เพิ่ม endpoint ใน routes_wave7.py:
+GET /api/intermediary/hs-code?query=กุ้งแช่แข็ง
+
+เสิร์ฟกลุ่มผู้ใช้: กลุ่ม 2 คนกลาง (ผู้ส่งออก/นำเข้า)
+""",
+    },
+
+    "9.4": {
+        "wave": 9,
+        "desc": "Makefile — รวม dev commands ให้ครบ (frontend, backend, monitoring, test)",
+        "agent": "devops-sre",
+        "output": "Makefile",
+        "prompt": """\
+สร้าง Makefile ที่ root ของ project OpenThai.ai
+
+ต้องมี targets:
+# Development
+- make dev              — รัน frontend + backend พร้อมกัน
+- make frontend         — รัน frontend dev server (Next.js)
+- make backend          — รัน backend (uvicorn FastAPI)
+
+# Testing
+- make test             — รัน tests ทั้งหมด
+- make test-backend     — pytest backend/
+- make test-frontend    — npm test
+- make eval             — รัน thai_eval_runner.py
+
+# Monitoring
+- make monitoring-up    — start uptime-kuma
+- make monitoring-down  — stop uptime-kuma
+- make monitoring-status — ดู logs
+
+# Build & Deploy (ต้องขออนุมัติ Mythos ก่อน)
+- make build            — build production artifacts
+# make deploy          — DISABLED: ต้องขออนุมัติ Mythos ก่อนทุกครั้ง
+
+# Maintenance
+- make clean            — ลบ __pycache__, .next, node_modules/.cache
+- make check-secrets    — rg "ghp_|gho_|sk-|AKIA" ทั้ง repo
+- make help             — แสดง targets ทั้งหมด
+
+ใช้ .PHONY สำหรับทุก targets
+ใส่ comment ภาษาไทยอธิบายแต่ละ target
+ตรวจ OS compatibility: Windows (PowerShell) + Linux/Mac
+
+เสิร์ฟกลุ่มผู้ใช้: กลุ่ม 3 แพลตฟอร์ม + ทีม Dev
+""",
+    },
+
+    "9.6": {
+        "wave": 9,
+        "desc": "Intermediary AI Integration — เชื่อม trade-doc summary กับ Anthropic API",
+        "agent": "backend-engineer",
+        "output": "backend/api/intermediary_ai.py",
+        "prompt": """\
+implement Trade Document Summarizer สำหรับ Intermediary Portal
+
+เพิ่มใน backend/api/intermediary_ai.py (หรือสร้างใหม่ถ้า 9.3 ยังไม่เสร็จ):
+
+**TradeDocSummarizer** class:
+- รับ: เอกสารการค้า text (Invoice, Bill of Lading, Letter of Credit)
+- ตรวจจับประเภทเอกสารอัตโนมัติ
+- สรุปใน 5 ส่วน:
+  1. ประเภทเอกสาร + คู่สัญญา
+  2. สินค้า + ปริมาณ + มูลค่า
+  3. เงื่อนไขการส่งมอบ (Incoterms)
+  4. การชำระเงิน + กำหนดชำระ
+  5. เงื่อนไขพิเศษ + ความเสี่ยง
+
+PDPA: ห้าม log ข้อมูลบริษัทหรือมูลค่าสัญญา
+โมเดล: claude-haiku-4-5-20251001
+Max input: 5,000 ตัวอักษร
+
+เสิร์ฟกลุ่มผู้ใช้: กลุ่ม 2 คนกลาง (คนนำเข้า/ส่งออก)
+""",
+    },
 }
 
 
