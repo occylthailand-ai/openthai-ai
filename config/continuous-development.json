@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "runtimeDir": ".openthai-cde",
+  "canonicalLedger": "config/canonical-specs-ledger.json",
+  "actors": {
+    "workerId": "worker:local-command",
+    "criticId": "critic:quality-gates"
+  },
+  "execution": {
+    "enabled": false,
+    "defaultDryRun": true,
+    "allowWorkspaceMutation": false
+  },
+  "policy": {
+    "workspaceRoots": [
+      "."
+    ],
+    "allowedExecutables": [
+      "git",
+      "node"
+    ],
+    "maximumTimeoutMs": 900000,
+    "maximumOutputBytes": 1048576
+  },
+  "commands": {
+    "inspect-changes": {
+      "executable": "git",
+      "args": [
+        "diff",
+        "--stat"
+      ],
+      "cwd": ".",
+      "timeoutMs": 30000,
+      "expectedExitCodes": [
+        0
+      ],
+      "readOnly": true
+    },
+    "syntax-check-engine": {
+      "executable": "node",
+      "args": [
+        "--check",
+        "scripts/continuous-development/engine.mjs"
+      ],
+      "cwd": ".",
+      "timeoutMs": 30000,
+      "expectedExitCodes": [
+        0
+      ],
+      "readOnly": true
+    },
+    "repository-diff-check": {
+      "executable": "git",
+      "args": [
+        "diff",
+        "--check"
+      ],
+      "cwd": ".",
+      "timeoutMs": 30000,
+      "expectedExitCodes": [
+        0
+      ],
+      "readOnly": true
+    },
+    "hardcoded-secret-scan": {
+      "executable": "node",
+      "args": [
+        "scripts/scan-hardcoded-secrets.mjs"
+      ],
+      "cwd": ".",
+      "timeoutMs": 30000,
+      "expectedExitCodes": [
+        0
+      ],
+      "readOnly": true
+    },
+    "backend-typecheck": {
+      "executable": "node",
+      "args": [
+        "backend/node_modules/typescript/bin/tsc",
+        "--noEmit",
+        "-p",
+        "backend/tsconfig.json"
+      ],
+      "cwd": ".",
+      "timeoutMs": 180000,
+      "expectedExitCodes": [
+        0
+      ],
+      "readOnly": true
+    },
+    "frontend-tests": {
+      "executable": "node",
+      "args": [
+        "frontend/node_modules/vitest/vitest.mjs",
+        "run"
+      ],
+      "cwd": ".",
+      "timeoutMs": 300000,
+      "expectedExitCodes": [
+        0
+      ],
+      "readOnly": true
+    },
+    "backend-smoke": {
+      "executable": "node",
+      "args": [
+        "backend/scripts/smoke-skills.mjs"
+      ],
+      "cwd": ".",
+      "timeoutMs": 300000,
+      "expectedExitCodes": [
+        0
+      ],
+      "readOnly": true
+    }
+  },
+  "actions": [
+    "inspect-changes"
+  ],
+  "scheduler": {
+    "intervalMs": 60000,
+    "maximumBackoffMs": 900000,
+    "lockStaleMs": 300000
+  }
+}

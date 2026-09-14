@@ -100,6 +100,7 @@ oracleJdk-25/
 
 # Output/generated folders
 outputs/
+.openthai-cde/
 
 # Misc non-source files
 *.skill

@@ -6,7 +6,16 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "sdk:gen": "node sdk-gen.js",
-    "sdk:watch": "node --watch sdk-gen.js"
+    "sdk:watch": "node --watch sdk-gen.js",
+    "preflight": "node preflight.js",
+    "test:types": "tsc --noEmit",
+    "test:middleware": "node --test middleware/__tests__",
+    "test:smoke": "node scripts/smoke-skills.mjs",
+    "test:affiliate": "node scripts/test-affiliate-flow.mjs",
+    "test:revenue": "node scripts/test-revenue-system.mjs",
+    "test:health": "node scripts/test-health-auth.mjs",
+    "test:blueprint": "node scripts/test-content-blueprint.mjs",
+    "test:all": "npm run test:health && npm run test:smoke && npm run test:affiliate && npm run test:revenue && npm run test:blueprint"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
