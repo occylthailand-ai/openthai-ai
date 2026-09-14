@@ -18,11 +18,15 @@ ANTHROPIC_API_KEY.txt
 *API KEY*.txt
 *api key*.txt
 *API_KEY*.txt
+# Fail-safe: ครอบคลุม .env* ทุก subdirectory (ต้องอยู่ก่อน exception ด้านล่าง)
+**/.env*
 backend/.env.*
 .env.*
 .env.staging
 .env.production
 .env.development
+# Exception อยู่สุดท้ายเสมอ เพื่อ override ทุก pattern ข้างบน
+!**/.env.example
 # Passwords & credentials — ห้าม commit เด็ดขาด
 Google\ Passwords*.csv
 *Passwords*.csv
