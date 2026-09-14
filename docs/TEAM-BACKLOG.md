@@ -119,6 +119,50 @@ professional security-guard
 | 6.3 | Dev Glossary — พจนานุกรมคำวัดดิจิทัล 50 คำ | `content-localization` | `docs/dev-glossary.md` | ✅ เสร็จ 8 ก.ย. 2569 |
 | 6.4 | Civic Canon Infographic Spec — สเปกแผนผัง 3 ศาสนา | `content-localization` | `docs/civic-canon-infographic-spec.md` | ✅ เสร็จ 8 ก.ย. 2569 |
 
+## ⚙️ คลื่นงานที่ 7 — Infrastructure & Real Work (เริ่ม 12 ก.ย. 2569)
+
+> Wave นี้เน้น **implement จริง** ไม่ใช่ planning — ทำได้ทันทีไม่รอ Mythos
+> รัน: `python tools/openthai_dev_loop.py --wave 7` หรือ `--loop` เพื่อรันต่อเนื่อง
+
+| # | งาน | มอบให้ | ผลลัพธ์ | สถานะ |
+|---|---|---|---|---|
+| 7.1 | Secret Hygiene Guide — ขั้นตอน rotate credentials อย่างปลอดภัย | `security-guard` | `docs/secret-rotation-guide.md` | ✅ เสร็จ 12 ก.ย. 2569 |
+| 7.2 | FastAPI Backend Stubs — implement Intermediary + Consumer API endpoints | `backend-engineer` | `backend/api/routes_wave7.py` | ✅ เสร็จ 12 ก.ย. 2569 |
+| 7.3 | PDPA Audit Report — ตรวจ data flow ทุก Portal สร้าง pass/fail checklist | `legal-compliance` | `docs/pdpa-audit-wave7.md` | ✅ เสร็จ 12 ก.ย. 2569 |
+| 7.4 | Thai Eval Runner Script — Python รัน Thai-eval-suite กับ LLM endpoint | `ai-ml-engineer` | `tools/thai_eval_runner.py` | ✅ เสร็จ 12 ก.ย. 2569 |
+| 7.5 | Monitoring & Health Check Spec — status page + alert สำหรับทุก Portal | `devops-sre` | `docs/monitoring-spec.md` | ✅ เสร็จ 12 ก.ย. 2569 |
+| 7.6 | KPI Dashboard Spec — 5 ตัวชี้วัดพร้อมวิธีวัดที่มีแหล่งที่มาจริง | `data-analytics` | `docs/kpi-dashboard-spec.md` | ✅ เสร็จ 12 ก.ย. 2569 |
+| 7.7 | Content Audit — ตรวจและแก้ตัวเลขลอยในหนังสือหลัก | `content-localization` | `docs/content-audit-floating-numbers.md` | ✅ เสร็จ 12 ก.ย. 2569 |
+| 7.8 | Community Strategy — แผนสร้าง Open Source community Thai developers | `ecosystem-agent` | `docs/community-strategy.md` | ✅ เสร็จ 12 ก.ย. 2569 |
+| 7.9 | Wave 7 Summary — สรุป + อัปเดต backlog | `chief-of-staff` | `docs/wave7-summary.md` | ✅ เสร็จ 14 ก.ย. 2569 |
+
+**Dev-Loop v3 commands:**
+```bash
+python tools/openthai_dev_loop.py --status          # ดูสถานะทุกงาน
+python tools/openthai_dev_loop.py --run 7.1         # รันงานเดียว
+python tools/openthai_dev_loop.py --wave 7          # รัน Wave 7 ทั้งหมด
+python tools/openthai_dev_loop.py --wave 8          # รัน Wave 8 ทั้งหมด
+python tools/openthai_dev_loop.py --loop            # รันต่อเนื่องไม่หยุด
+python tools/openthai_dev_loop.py --loop --interval 600  # loop ทุก 10 นาที
+python tools/openthai_dev_loop.py --dry-run --loop  # ทดสอบโดยไม่ใช้ API
+```
+
+## 🔗 คลื่นงานที่ 8 — Connect & Prove (เริ่ม 14 ก.ย. 2569)
+
+> Wave นี้เน้น **เชื่อมต่อของจริง + พิสูจน์ด้วยตัวเลขจริง** — stub ทุกตัวใน Wave 7 ต้องมี integration จริง
+> รัน: `python tools/openthai_dev_loop.py --wave 8`
+
+| # | งาน | มอบให้ | ผลลัพธ์ | สถานะ |
+|---|---|---|---|---|
+| 8.1 | Consumer AI Integration — เชื่อม welfare check + contract summary กับ Anthropic API จริง | `backend-engineer` | `backend/api/consumer_ai.py` | ✅ เสร็จ 14 ก.ย. 2569 |
+| 8.2 | Baseline Eval Run — รัน Thai Eval Suite กับ claude-haiku และบันทึกผลเป็น baseline | `ai-ml-engineer` | `docs/eval-baseline-wave8.md` | 🔴 ยังไม่เริ่ม |
+| 8.3 | Uptime Kuma Deployment — deploy monitoring จริงด้วย Docker Compose | `devops-sre` | `ops/docker-compose.monitoring.yml` + `ops/monitoring-setup.md` | ✅ เสร็จ 14 ก.ย. 2569 |
+| 8.4 | GitHub Org Setup Checklist + Community Channels | `ecosystem-agent` | `docs/community-launch-checklist.md` | ✅ เสร็จ 14 ก.ย. 2569 |
+| 8.5 | Shared Navigation + Auth Layer Spec | `frontend-engineer` | `docs/shared-nav-auth-spec.md` | ✅ เสร็จ 14 ก.ย. 2569 |
+| 8.6 | Affiliate Commission Engine Stub | `blockchain-web3` | `backend/affiliate/commission_engine.py` | ✅ เสร็จ 14 ก.ย. 2569 (ผ่าน 5 tests) |
+
+---
+
 ## 🚧 รอ Mythos อนุมัติก่อนทำ
 
 | งาน | เหตุผล |

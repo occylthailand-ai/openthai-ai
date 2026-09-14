@@ -1,0 +1,43 @@
+version: "3.9"
+
+# OpenThai.ai — Monitoring Stack (Wave 8, Task 8.3)
+# ใช้ uptime-kuma: lightweight, self-hosted, รัน on-prem ได้
+# วิธีรัน: docker compose -f ops/docker-compose.monitoring.yml up -d
+# เปิดหน้าเว็บ: http://localhost:3001
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: openthai-uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    environment:
+      - TZ=Asia/Bangkok
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001', r => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # optional: nginx reverse proxy สำหรับ HTTPS
+  # ปิด comment เมื่อต้องการ domain จริง
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: openthai-nginx-monitor
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/monitor.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - uptime-kuma
+
+volumes:
+  uptime-kuma-data:
+    name: openthai-monitoring-data
