@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AppShell from '../components/AppShell'
 
 const TYPES = [
   {
@@ -106,11 +107,8 @@ export default function IntermediaryPortalPage() {
     if (!hsCode.trim()) return
     setHsLoading(true)
     try {
-      const res = await fetch('/api/intermediary/hs-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: hsCode })
-      })
+      const params = new URLSearchParams({ q: hsCode })
+      const res = await fetch(`/api/intermediary/hs-code?${params}`)
       if (res.ok) setHsResult(await res.json())
       else setHsResult({ error: 'ไม่พบผลลัพธ์' })
     } catch {
@@ -121,6 +119,7 @@ export default function IntermediaryPortalPage() {
 
   if (selected) {
     return (
+      <AppShell portalId="intermediary">
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-8 px-4">
@@ -186,11 +185,27 @@ export default function IntermediaryPortalPage() {
                     </button>
                   </div>
                   {hsResult && (
-                    <div className="mt-4 bg-blue-50 rounded-xl p-4 text-sm text-gray-700">
+                    <div className="mt-4">
                       {hsResult.error ? (
-                        <span className="text-red-600">{hsResult.error}</span>
+                        <div className="bg-red-50 rounded-xl p-4 text-sm text-red-700">{hsResult.error}</div>
                       ) : (
-                        <pre className="whitespace-pre-wrap">{JSON.stringify(hsResult, null, 2)}</pre>
+                        <div className="space-y-3">
+                          {(hsResult.results || []).map((r, i) => (
+                            <div key={i} className="bg-blue-50 rounded-xl p-4 text-sm">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-bold text-blue-700">{r.hs_code}</span>
+                                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                                  อากรทั่วไป {r.duty_rate_general} / ASEAN {r.duty_rate_asean}
+                                </span>
+                              </div>
+                              <p className="text-gray-700">{r.description_th}</p>
+                              <p className="text-gray-400 text-xs">{r.description_en} | หน่วย: {r.unit}</p>
+                            </div>
+                          ))}
+                          {hsResult.source && (
+                            <p className="text-xs text-gray-400">{hsResult.source}</p>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
@@ -312,11 +327,13 @@ export default function IntermediaryPortalPage() {
           )}
         </div>
       </div>
+      </AppShell>
     )
   }
 
   // Type selector (landing)
   return (
+    <AppShell portalId="intermediary">
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-10 px-4 text-center">
         <div className="text-5xl mb-3">🔗</div>
@@ -368,5 +385,6 @@ export default function IntermediaryPortalPage() {
         </div>
       </div>
     </div>
+    </AppShell>
   )
 }

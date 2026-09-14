@@ -168,12 +168,12 @@ python tools/openthai_dev_loop.py --dry-run --loop  # ทดสอบโดย�
 
 | # | งาน | มอบให้ | ผลลัพธ์ | สถานะ |
 |---|---|---|---|---|
-| 9.1 | AppShell Component — implement TopNav + PortalSwitcher Phase 1 (ไม่มี auth) | `frontend-engineer` | `frontend/src/components/AppShell.jsx` | 🔴 ยังไม่เริ่ม |
-| 9.2 | Consumer Portal API Wiring — เชื่อม UI กับ consumer_ai.py endpoints | `frontend-engineer` + `backend-engineer` | แก้ `ConsumerPortalPage.jsx` | 🔴 ยังไม่เริ่ม |
-| 9.3 | Intermediary HS Code Search — เชื่อม UI กับ AI ค้นหา HS Code | `frontend-engineer` + `backend-engineer` | แก้ `IntermediaryPortalPage.jsx` | 🔴 ยังไม่เริ่ม |
+| 9.1 | AppShell Component — implement TopNav + PortalSwitcher Phase 1 (ไม่มี auth) | `frontend-engineer` | `frontend/src/components/AppShell.jsx` | ✅ เสร็จ 14 ก.ย. 2569 |
+| 9.2 | Consumer Portal API Wiring — เชื่อม UI กับ consumer_ai.py endpoints | `frontend-engineer` + `backend-engineer` | แก้ `ConsumerPortalPage.jsx` | ✅ เสร็จ 14 ก.ย. 2569 |
+| 9.3 | Intermediary HS Code Search — เชื่อม UI กับ AI ค้นหา HS Code | `frontend-engineer` + `backend-engineer` | แก้ `IntermediaryPortalPage.jsx` | ✅ เสร็จ 14 ก.ย. 2569 |
 | 9.4 | Makefile — รวม dev commands ให้ครบ (frontend, backend, monitoring, test) | `devops-sre` | `Makefile` ที่ root | ✅ เสร็จ 14 ก.ย. 2569 |
 | 9.5 | Wave 8 Real Eval Run — รัน eval กับ API key จริงเมื่อ Mythos ตั้งค่า | `ai-ml-engineer` | `docs/eval-baseline-wave8-real.md` | ⏸ รอ ANTHROPIC_API_KEY |
-| 9.6 | Intermediary AI Integration — เชื่อม trade-doc summary กับ Anthropic API | `backend-engineer` | `backend/api/intermediary_ai.py` | 🔴 ยังไม่เริ่ม |
+| 9.6 | Intermediary AI Integration — เชื่อม trade-doc summary กับ Anthropic API | `backend-engineer` | `backend/api/intermediary_ai.py` | ✅ เสร็จ 14 ก.ย. 2569 |
 
 ---
 
