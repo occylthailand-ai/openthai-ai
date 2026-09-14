@@ -53,6 +53,7 @@ import AffiliateEveryonePage from './pages/AffiliateEveryonePage';
 import InvestorGuidePage from './pages/InvestorGuidePage';
 import GlobalConnectPage from './pages/GlobalConnectPage';
 import TaxCalculatorPage from './pages/TaxCalculatorPage';
+import ProfessionalPortalPage from './pages/ProfessionalPortalPage';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -139,6 +140,8 @@ function App() {
             <Route path="/consumer" element={<ConsumerPortalPage />} />
             {/* Intermediary Portal — Public (กลุ่ม 2: คนกลาง) */}
             <Route path="/intermediary" element={<IntermediaryPortalPage />} />
+            {/* Professional Portal — Public (กลุ่ม 6: วิชาชีพ) */}
+            <Route path="/professional" element={<ProfessionalPortalPage />} />
             {/* Producer Onboarding — Public */}
             <Route path="/producer" element={<ProducerOnboardingPage />} />
             {/* Producer Admin — Login required */}
