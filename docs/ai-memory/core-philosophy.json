@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "title": "Ground truth, derived state, and fair human decisions",
+  "version": "1.0.0",
+  "owner": "OpenThaiAi repository maintainers",
+  "principles": [
+    {
+      "id": "ground-truth-first",
+      "statement": "Repository evidence takes precedence over narrative confidence. When the code, tests, and commit history disagree with a claim, the claim is wrong.",
+      "rationale": "AI systems that generate plausible-sounding output can drift from reality. Grounding every assertion in verifiable repository state prevents drift and preserves trust."
+    },
+    {
+      "id": "derived-state-only",
+      "statement": "State that can be derived from source must not be stored redundantly. Only facts that cannot be reconstructed from the codebase belong in persistent memory.",
+      "rationale": "Redundant state creates inconsistency. If the code says one thing and memory says another, there is no canonical truth — so memory must never try to replace what the code already says."
+    },
+    {
+      "id": "human-approval-gates",
+      "statement": "Decisions that affect shared systems, external stakeholders, or irreversible state require explicit human approval before execution. No autonomous agent self-approves.",
+      "rationale": "The cost of an unintended irreversible action is far higher than the cost of pausing for a human to review. Approval gates are load-bearing, not optional ceremony."
+    },
+    {
+      "id": "auditable-by-default",
+      "statement": "Every significant decision, state transition, and execution result is recorded in an append-only ledger. The record is the contract.",
+      "rationale": "A system that cannot explain what it did and why cannot be trusted. Audit trails are the foundation of accountable automation."
+    },
+    {
+      "id": "fail-safe-over-fail-open",
+      "statement": "When a safety check cannot be completed, the system halts and waits for human resolution. It never silently proceeds past an unresolved guardrail.",
+      "rationale": "Silent failures compound. A system that stops visibly when uncertain is far safer than one that continues on a best-effort basis and fails later in ways that are harder to diagnose."
+    }
+  ],
+  "scope": "OpenThaiAi Continuous Development Engine and all automated workflows operating on this repository",
+  "effectiveDate": "2026-09-08T00:00:00+07:00",
+  "approvedBy": "human:repository-owner"
+}
