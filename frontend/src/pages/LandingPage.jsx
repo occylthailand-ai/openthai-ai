@@ -115,17 +115,23 @@ export default function LandingPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif", overflowX: 'hidden' }}>
+      <style>{`
+        @media (max-width: 480px) {
+          .landing-nav-ghost { display: none !important; }
+          .landing-demo-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
 
       {/* ── NAV ─────────────────────────────────────────────────────────── */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(8,8,18,0.85)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '14px 5%', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
           <LogoEmblem size={32} />
-          <span style={{ fontWeight: 900, fontSize: 18, background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Openthai.ai</span>
-          <span style={{ fontSize: 11, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 20, padding: '2px 8px', color: '#a5b4fc' }}>v9.0</span>
+          <span style={{ fontWeight: 900, fontSize: 18, background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', whiteSpace: 'nowrap' }}>Openthai.ai</span>
+          <span className="landing-nav-ghost" style={{ fontSize: 11, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 20, padding: '2px 8px', color: '#a5b4fc', whiteSpace: 'nowrap' }}>v9.0</span>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button onClick={() => navigate('/affiliate')} style={ghostBtn}>💰 Affiliate</button>
-          <button onClick={() => navigate('/pricing')} style={ghostBtn}>ราคา</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+          <button onClick={() => navigate('/affiliate')} style={ghostBtn} className="landing-nav-ghost">💰 Affiliate</button>
+          <button onClick={() => navigate('/pricing')} style={ghostBtn} className="landing-nav-ghost">ราคา</button>
           <button onClick={() => navigate('/login')} style={ghostBtn}>Login</button>
           <button onClick={handleFreeStart} style={ctaPrimary}>ใช้ฟรีตอนนี้ →</button>
         </div>
@@ -188,7 +194,7 @@ export default function LandingPage() {
             <span style={{ fontSize: 12, color: '#475569', marginLeft: 8 }}>Openthai.ai Generator — ผ้าไหมอุบล</span>
           </div>
           <div style={{ padding: 24 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div className="landing-demo-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
               <div style={demoBox}>
                 <div style={demoLabel}>🎣 Hook</div>
                 <div style={demoText}>ทำไมผ้าไหมอุบลถึงแพงกว่าที่อื่น? เฉลยตอนท้าย!</div>
