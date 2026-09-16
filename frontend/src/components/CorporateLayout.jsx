@@ -15,6 +15,7 @@ const NAV = [
     { icon: '💰', label: 'Finance & Accounting', route: '/corporate/finance' },
     { icon: '👥', label: 'Human Resources',      route: '/corporate/hr' },
     { icon: '🤖', label: 'Technology & AI',      route: '/corporate/it' },
+    { icon: '🛠️', label: 'Department Tool Builder', route: '/corporate/tools' },
     { icon: '📢', label: 'Marketing & Sales',    route: '/corporate/marketing' },
     { icon: '📦', label: 'Procurement',          route: '/corporate/procurement' },
     { icon: '🌏', label: 'Global Operations',    route: '/corporate/global' },

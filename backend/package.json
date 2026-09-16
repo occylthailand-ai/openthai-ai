@@ -15,7 +15,8 @@
     "test:revenue": "node scripts/test-revenue-system.mjs",
     "test:health": "node scripts/test-health-auth.mjs",
     "test:blueprint": "node scripts/test-content-blueprint.mjs",
-    "test:all": "npm run test:health && npm run test:smoke && npm run test:affiliate && npm run test:revenue && npm run test:blueprint"
+    "test:department-tools": "node scripts/test-department-tool-builder.mjs",
+    "test:all": "npm run test:health && npm run test:smoke && npm run test:affiliate && npm run test:revenue && npm run test:blueprint && npm run test:department-tools"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",

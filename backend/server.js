@@ -37,6 +37,7 @@ import { createProgressTracker } from './progress-tracker.js';
 import { createIntegrations } from './integrations.js';
 import { createMatching } from './matching.js';
 import { registerBlueprintRoutes } from './content-blueprint.js';
+import { registerDepartmentToolBuilderRoutes } from './department-tool-builder.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -4843,6 +4844,9 @@ const SKILLS_REGISTRY = [
   { id: 'S36', name: 'Content Blueprint',     category: 'blueprint',   endpoint: '/api/blueprint',               method: 'GET',  inputs: [],                               status: 'active' },
   { id: 'S37', name: 'Blueprint Coverage Radar', category: 'blueprint', endpoint: '/api/blueprint/coverage',     method: 'GET',  inputs: [],                               status: 'active' },
   { id: 'S38', name: 'Blueprint Development Brief', category: 'blueprint', endpoint: '/api/blueprint/develop',   method: 'POST', inputs: ['node_id', 'goal'],              status: 'active' },
+  { id: 'S39', name: 'Department Tool Registry', category: 'department', endpoint: '/api/department-tools', method: 'GET', inputs: [], status: 'active' },
+  { id: 'S40', name: 'Department Tool Brief', category: 'department', endpoint: '/api/department-tools/develop', method: 'POST', inputs: ['department_id', 'goal'], status: 'active' },
+  { id: 'S41', name: 'Department Tool Batch Builder', category: 'department', endpoint: '/api/department-tools/develop-all', method: 'POST', inputs: ['goal'], status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4862,6 +4866,16 @@ app.get('/api/skills', (req, res) => {
 
 // ── Content Blueprint (S36-S38) — พิมพ์เขียวเนื้อหา 8 หมวด · ดู backend/content-blueprint.js ──
 registerBlueprintRoutes(app, {
+  limiter: generateLimiter,
+  getSkillsRegistry: () => SKILLS_REGISTRY,
+  callAI,
+  parseAIJson,
+  addLog,
+});
+
+
+// ── Department Tool Builder (S39-S41) — registry + safe batch briefs for requested departments ──
+registerDepartmentToolBuilderRoutes(app, {
   limiter: generateLimiter,
   getSkillsRegistry: () => SKILLS_REGISTRY,
   callAI,

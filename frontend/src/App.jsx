@@ -47,6 +47,7 @@ const CouncilPage = lazy(() => import('./pages/CouncilPage'));
 const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
 const RouterStatusPage = lazy(() => import('./pages/RouterStatusPage'));
 const CorporateDashboard = lazy(() => import('./pages/corporate/CorporateDashboard'));
+const DepartmentToolsPage = lazy(() => import('./pages/corporate/DepartmentToolsPage'));
 const InvestorRelationsPage = lazy(() => import('./pages/corporate/InvestorRelationsPage'));
 const CompliancePage = lazy(() => import('./pages/corporate/CompliancePage'));
 const ESGPage = lazy(() => import('./pages/corporate/ESGPage'));
@@ -211,6 +212,7 @@ function App() {
             <Route path="/router" element={<RouterStatusPage />} />
             {/* Corporate System — Public Company */}
             <Route path="/corporate"             element={isAuthenticated ? <CorporateDashboard />    : <Navigate to="/login" />} />
+            <Route path="/corporate/tools"       element={isAuthenticated ? <DepartmentToolsPage />    : <Navigate to="/login" />} />
             <Route path="/corporate/board"       element={isAuthenticated ? <BoardPage />             : <Navigate to="/login" />} />
             <Route path="/corporate/ir"          element={isAuthenticated ? <InvestorRelationsPage /> : <Navigate to="/login" />} />
             <Route path="/corporate/compliance"  element={isAuthenticated ? <CompliancePage />        : <Navigate to="/login" />} />
