@@ -47,11 +47,11 @@ export default function DepartmentToolsPage() {
       .then((r) => r.json())
       .then((d) => {
         if (d.success) setOverview(d);
-        else setError(t('dtb.error.load'));
+        else setError('load');
       })
-      .catch(() => setError(t('dtb.error.load')))
+      .catch(() => setError('load'))
       .finally(() => setLoading(false));
-  }, [t]);
+  }, []);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -116,14 +116,14 @@ export default function DepartmentToolsPage() {
               <div style={{ fontSize: '18px', fontWeight: 800, color: '#c7d2fe' }}>{t('dtb.hero.title')}</div>
               <div style={{ fontSize: '13px', color: '#cbd5e1', marginTop: '6px', lineHeight: 1.7 }}>{t('dtb.hero.desc')}</div>
             </div>
-            <button onClick={runAll} disabled={running === 'all' || !overview} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '10px', padding: '10px 16px', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={runAll} disabled={running === 'all' || !overview} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '10px', padding: '10px 16px', color: '#fff', fontWeight: 700, cursor: running === 'all' || !overview ? 'not-allowed' : 'pointer', opacity: running === 'all' || !overview ? 0.65 : 1 }}>
               {running === 'all' ? t('dtb.btn.runningAll') : t('dtb.btn.runAll')}
             </button>
           </div>
         </div>
 
         {loading && <div style={card}>{t('dtb.loading')}</div>}
-        {!loading && error && <div style={{ ...card, color: '#fca5a5' }}>⚠️ {error}</div>}
+        {!loading && error && <div style={{ ...card, color: '#fca5a5' }}>⚠️ {t('dtb.error.load')}</div>}
 
         {overview && (
           <>
@@ -200,7 +200,7 @@ export default function DepartmentToolsPage() {
                       </div>
                     </div>
 
-                    <button onClick={() => runSingle(dept.id)} disabled={running === dept.id} style={{ marginTop: '14px', background: 'rgba(99,102,241,0.14)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: '10px', padding: '9px 14px', color: '#c7d2fe', fontWeight: 700, cursor: 'pointer' }}>
+                    <button onClick={() => runSingle(dept.id)} disabled={running === dept.id} style={{ marginTop: '14px', background: 'rgba(99,102,241,0.14)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: '10px', padding: '9px 14px', color: '#c7d2fe', fontWeight: 700, cursor: running === dept.id ? 'not-allowed' : 'pointer', opacity: running === dept.id ? 0.65 : 1 }}>
                       {running === dept.id ? t('dtb.btn.runningOne') : t('dtb.btn.runOne')}
                     </button>
 
