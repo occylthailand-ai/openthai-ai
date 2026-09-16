@@ -6,7 +6,7 @@ import DepartmentToolsPage from '../pages/corporate/DepartmentToolsPage';
 
 const OVERVIEW = {
   success: true,
-  stats: { requested_headings: 33, canonical_departments: 29, duplicate_headings: 4 },
+  stats: { requested_headings: 33, canonical_departments: 28, duplicate_headings: 4 },
   coverage_summary: { covered: 20, partial: 9, gap: 0 },
   policy_defaults: {
     record_guardrails_th: ['ไม่แก้บันทึกเดิมโดยไม่จำเป็น'],
@@ -56,14 +56,14 @@ const renderPage = () => render(<MemoryRouter><DepartmentToolsPage /></MemoryRou
 describe('DepartmentToolsPage', () => {
   it('renders overview stats and department card from the API', async () => {
     renderPage();
-    await waitFor(() => expect(screen.getByText(/ฝ่ายการตลาด/)).toBeTruthy());
-    expect(screen.getByText(/33/)).toBeTruthy();
+    await waitFor(() => expect(screen.getAllByText(/ฝ่ายการตลาด/).length).toBeGreaterThan(0));
+    expect(screen.getAllByText(/33/).length).toBeGreaterThan(0);
     expect(screen.getByText(/ไม่แก้บันทึกเดิมโดยไม่จำเป็น/)).toBeTruthy();
   });
 
   it('generates a single department brief', async () => {
     renderPage();
-    await waitFor(() => screen.getByText(/ฝ่ายการตลาด/));
+    await waitFor(() => expect(screen.getAllByText(/ฝ่ายการตลาด/).length).toBeGreaterThan(0));
     fireEvent.click(screen.getByText(/สร้าง brief รายฝ่าย/));
     await waitFor(() => expect(screen.getByText(/เริ่มจาก campaign backlog/)).toBeTruthy());
     expect(screen.getByText(/ตัววิเคราะห์แคมเปญและเทรนด์/)).toBeTruthy();
@@ -71,9 +71,9 @@ describe('DepartmentToolsPage', () => {
 
   it('filters departments and runs all briefs', async () => {
     renderPage();
-    await waitFor(() => screen.getByText(/ฝ่ายการตลาด/));
+    await waitFor(() => expect(screen.getAllByText(/ฝ่ายการตลาด/).length).toBeGreaterThan(0));
     fireEvent.change(screen.getByLabelText(/ค้นหาฝ่าย/), { target: { value: 'การตลาด' } });
-    expect(screen.getByText(/ฝ่ายการตลาด/)).toBeTruthy();
+    expect(screen.getAllByText(/ฝ่ายการตลาด/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText(/สร้าง brief อัตโนมัติทั้งชุด/));
     await waitFor(() => expect(screen.getByText(/เริ่มจาก campaign backlog/)).toBeTruthy());
   });

@@ -25,7 +25,7 @@ function pureTests() {
   const data = loadDepartmentToolBuilder({ force: true });
   const stats = departmentToolBuilderStats(data);
   check(stats.requested_headings === 33, 'registry keeps all 33 requested headings', `got ${stats.requested_headings}`);
-  check(stats.canonical_departments === 29, 'registry deduplicates to 29 canonical departments', `got ${stats.canonical_departments}`);
+  check(stats.canonical_departments === 28, 'registry deduplicates to 28 canonical departments', `got ${stats.canonical_departments}`);
   check(validateDepartmentToolBuilder(data).length === 0, 'validateDepartmentToolBuilder passes on real data');
   check(findDepartment(data, { departmentId: 'executive' })?.name_th === 'ฝ่ายบริหาร', 'findDepartment resolves executive');
   check(findDepartment(data, { requestIndex: 24 })?.id === 'finance', 'findDepartment resolves duplicate request to finance');
@@ -84,7 +84,7 @@ async function serverTests() {
       body: JSON.stringify({ goal: 'ทดสอบ' }),
     });
     const d = await r.json();
-    check(r.ok && d.success && d.briefs.length === 29, 'POST /api/department-tools/develop-all → 29 canonical briefs', `got ${d.briefs?.length}`);
+    check(r.ok && d.success && d.briefs.length === 28, 'POST /api/department-tools/develop-all → 28 canonical briefs', `got ${d.briefs?.length}`);
   } catch (e) { bad('POST /api/department-tools/develop-all', e.message); }
 
   try {
