@@ -60,6 +60,19 @@ function mockFetch(url) {
   return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
 }
 
+function failingFetch(kind) {
+  return (url) => {
+    const target = String(url);
+    if (target.includes('/develop-all') && kind === 'all') {
+      return Promise.resolve({ ok: false, json: () => Promise.resolve({ success: false }) });
+    }
+    if (target.includes('/develop') && kind === 'single') {
+      return Promise.resolve({ ok: false, json: () => Promise.resolve({ success: false }) });
+    }
+    return mockFetch(url);
+  };
+}
+
 beforeEach(() => { vi.stubGlobal('fetch', vi.fn(mockFetch)); });
 afterEach(() => { vi.unstubAllGlobals(); });
 
@@ -89,6 +102,22 @@ describe('DepartmentToolsPage', () => {
     expect(screen.queryByText(/ฝ่ายการเงินและบัญชี/)).toBeNull();
     fireEvent.click(screen.getByText(/สร้าง brief อัตโนมัติทั้งชุด/));
     await waitFor(() => expect(screen.getByText(/เริ่มจาก campaign backlog/)).toBeTruthy());
+  });
+
+  it('shows an error message when single brief generation fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(failingFetch('single')));
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText(/ฝ่ายการตลาด/).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getAllByText(/สร้าง brief รายฝ่าย/)[0]);
+    await waitFor(() => expect(screen.getByText(/สร้าง brief รายฝ่ายไม่สำเร็จ/)).toBeTruthy());
+  });
+
+  it('shows an error message when batch brief generation fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(failingFetch('all')));
+    renderPage();
+    await waitFor(() => expect(screen.getAllByText(/ฝ่ายการตลาด/).length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByText(/สร้าง brief อัตโนมัติทั้งชุด/));
+    await waitFor(() => expect(screen.getByText(/สร้าง brief อัตโนมัติทั้งชุดไม่สำเร็จ/)).toBeTruthy());
   });
 
   it('shows an error message when the API is unreachable', async () => {

@@ -1,5 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useLang } from '../i18n';
 import { Logo } from './Logo';
 
 const NAV = [
@@ -15,7 +16,7 @@ const NAV = [
     { icon: '💰', label: 'Finance & Accounting', route: '/corporate/finance' },
     { icon: '👥', label: 'Human Resources',      route: '/corporate/hr' },
     { icon: '🤖', label: 'Technology & AI',      route: '/corporate/it' },
-    { icon: '🛠️', label: 'Department Tool Builder', route: '/corporate/tools' },
+    { icon: '🛠️', labelKey: 'corporate.nav.tools', label: 'Department Tool Builder', route: '/corporate/tools' },
     { icon: '📢', label: 'Marketing & Sales',    route: '/corporate/marketing' },
     { icon: '📦', label: 'Procurement',          route: '/corporate/procurement' },
     { icon: '🌏', label: 'Global Operations',    route: '/corporate/global' },
@@ -34,6 +35,7 @@ const NAV = [
 const CorporateLayout = ({ children, title, subtitle }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLang();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -74,7 +76,7 @@ const CorporateLayout = ({ children, title, subtitle }) => {
                   <button key={item.route} onClick={() => navigate(item.route)}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: collapsed ? '10px' : '9px 12px', borderRadius: '8px', border: 'none', background: active ? 'rgba(99,102,241,0.2)' : 'transparent', color: active ? '#a5b4fc' : '#9ca3af', cursor: 'pointer', fontSize: '13px', fontWeight: active ? 700 : 400, textAlign: 'left', justifyContent: collapsed ? 'center' : 'flex-start', marginBottom: '2px', transition: 'all 0.15s' }}>
                     <span style={{ fontSize: '16px', flexShrink: 0 }}>{item.icon}</span>
-                    {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>}
+                    {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.labelKey ? t(item.labelKey) : item.label}</span>}
                     {active && !collapsed && <span style={{ marginLeft: 'auto', width: '6px', height: '6px', borderRadius: '50%', background: '#6366f1', flexShrink: 0 }} />}
                   </button>
                 );

@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import CorporateLayout from '../../components/CorporateLayout';
 import { apiUrl } from '../../apiBase';
+import { useLang } from '../../i18n';
 
 const DEPT_CARDS = [
   { icon: '👑', label: 'Board of Directors',   route: '/corporate/board',      color: '#f59e0b', status: 'Active', members: 3 },
@@ -38,6 +39,7 @@ const statusColor = s => ({ active: '#10b981', expanding: '#f59e0b', planned: '#
 
 const CorporateDashboard = () => {
   const navigate = useNavigate();
+  const { t } = useLang();
   const [health, setHealth] = useState(null);
 
   useEffect(() => {
@@ -118,7 +120,7 @@ const CorporateDashboard = () => {
         </div>
       </div>
 
-      <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '16px', padding: '18px 20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}><div><div style={{ fontSize: '15px', fontWeight: 800, color: '#c7d2fe' }}>🛠️ Department Tool Builder</div><div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', maxWidth: '720px' }}>แปลงโจทย์รายฝ่ายเป็น registry กลาง จับคู่สกิลที่มีอยู่ และสร้าง brief อัตโนมัติแบบไม่แก้บันทึกเดิมโดยไม่จำเป็น</div></div><button onClick={() => navigate('/corporate/tools')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '10px', padding: '10px 16px', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>เปิดเครื่องมือ →</button></div>
+      <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '16px', padding: '18px 20px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}><div><div style={{ fontSize: '15px', fontWeight: 800, color: '#c7d2fe' }}>{t('corporate.toolsCta.title')}</div><div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', maxWidth: '720px' }}>{t('corporate.toolsCta.desc')}</div></div><button onClick={() => navigate('/corporate/tools')} style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '10px', padding: '10px 16px', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>{t('corporate.toolsCta.button')}</button></div>
 
       {/* Department Grid */}
       <h3 style={{ margin: '0 0 14px', fontSize: '15px', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '1px' }}>แผนกทั้งหมด</h3>

@@ -39,6 +39,7 @@ export default function DepartmentToolsPage() {
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState('');
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
   const [q, setQ] = useState('');
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export default function DepartmentToolsPage() {
     apiFetch('/api/department-tools')
       .then((r) => r.json())
       .then((d) => {
-        if (d.success) setOverview(d);
+        if (d.success) { setOverview(d); setError(''); }
         else setError('load');
       })
       .catch(() => setError('load'))
@@ -82,9 +83,14 @@ export default function DepartmentToolsPage() {
         body: JSON.stringify({ department_id: departmentId, goal: t('dtb.goal.default') }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setBriefs((prev) => ({ ...prev, [departmentId]: data }));
+        setActionError('');
+      } else {
+        setActionError('single');
       }
+    } catch {
+      setActionError('single');
     } finally {
       setRunning('');
     }
@@ -99,9 +105,14 @@ export default function DepartmentToolsPage() {
         body: JSON.stringify({ goal: t('dtb.goal.default') }),
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setBriefs(Object.fromEntries((data.briefs || []).map((brief) => [brief.department_id, brief])));
+        setActionError('');
+      } else {
+        setActionError('all');
       }
+    } catch {
+      setActionError('all');
     } finally {
       setRunning('');
     }
@@ -124,6 +135,7 @@ export default function DepartmentToolsPage() {
 
         {loading && <div style={card}>{t('dtb.loading')}</div>}
         {!loading && error && <div style={{ ...card, color: '#fca5a5' }}>⚠️ {t('dtb.error.load')}</div>}
+        {!!actionError && <div style={{ ...card, color: '#fca5a5' }}>⚠️ {t(actionError === 'all' ? 'dtb.error.batch' : 'dtb.error.single')}</div>}
 
         {overview && (
           <>
