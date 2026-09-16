@@ -37,6 +37,7 @@ import { createProgressTracker } from './progress-tracker.js';
 import { createIntegrations } from './integrations.js';
 import { createMatching } from './matching.js';
 import { registerBlueprintRoutes } from './content-blueprint.js';
+import aiTeamsRouter from './ai-teams-routes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -4859,6 +4860,9 @@ app.get('/api/skills', (req, res) => {
     ts: new Date().toISOString(),
   });
 });
+
+// ── AI Teams — 28 department AI agents + Master Overseer ──────────────────────
+app.use('/api/ai-teams', aiTeamsRouter);
 
 // ── Content Blueprint (S36-S38) — พิมพ์เขียวเนื้อหา 8 หมวด · ดู backend/content-blueprint.js ──
 registerBlueprintRoutes(app, {
