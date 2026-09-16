@@ -1,0 +1,78 @@
+{
+  "_comment": "AI Teams configuration for OpenThaiAi. Edit status here to activate/deactivate teams. backend/ai-teams.js reads ACTIVE_TEAM_IDS at module load.",
+  "currentPhase": "A",
+  "liveMoney": false,
+  "phaseA": {
+    "label": "MVP 5 ทีม + Control Tower",
+    "activeTeams": [
+      "marketing-team",
+      "sales-team",
+      "finance-team",
+      "supply-chain-team",
+      "master-overseer"
+    ],
+    "gates": {
+      "G1_policy_gate": "active",
+      "G2_evidence_ledger": "active",
+      "G3_human_approval": "active",
+      "G4_live_money": "closed"
+    }
+  },
+  "phaseB": {
+    "label": "เพิ่มทีมสนับสนุน",
+    "plannedTeams": [
+      "learning-team",
+      "hr-team",
+      "pr-team",
+      "admin-team",
+      "executive-team",
+      "operations-team",
+      "it-team",
+      "producer-acquisition-team",
+      "quality-team",
+      "testing-team",
+      "warehouse-team",
+      "procurement-team",
+      "internal-coord-team",
+      "information-team",
+      "progress-team",
+      "international-team",
+      "rd-team"
+    ]
+  },
+  "phaseC": {
+    "label": "เปิดรับเงินจริง + Enterprise Teams",
+    "plannedTeams": [
+      "investor-relations-team",
+      "governance-team",
+      "audit-team",
+      "legal-team",
+      "strategy-team",
+      "sustainability-team"
+    ],
+    "gates": {
+      "G4_live_money": "planned"
+    }
+  },
+  "autopilot": {
+    "development": {
+      "mode": "active",
+      "scope": "development-only",
+      "description": "Claude Code session — gำลังพัฒนาโค้ด ไม่กระทบ Production"
+    },
+    "production": {
+      "mode": "manual",
+      "scope": "phase-A-teams-only",
+      "description": "Phase A production system — 5 teams + Control Tower, Sandbox mode",
+      "liveMoney": false
+    }
+  },
+  "endpoints": {
+    "list_all": "GET /api/ai-teams",
+    "list_active": "GET /api/ai-teams?status=active",
+    "list_planned": "GET /api/ai-teams?status=planned",
+    "dispatch": "POST /api/ai-teams/dispatch",
+    "control_tower": "POST /api/ai-teams/overseer",
+    "run_team": "POST /api/ai-teams/:teamId/run"
+  }
+}
