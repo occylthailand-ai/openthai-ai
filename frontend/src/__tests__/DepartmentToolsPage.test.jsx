@@ -24,6 +24,18 @@ const OVERVIEW = {
       status: 'covered',
       skills: [{ id: 'S10', name: 'Trend Analyzer', status: 'active' }],
     },
+    {
+      id: 'finance',
+      name_th: 'ฝ่ายการเงินและบัญชี',
+      name_en: 'Finance and Accounting',
+      icon: '💰',
+      cluster: 'finance',
+      summary_th: 'วิเคราะห์การเงิน',
+      request_count: 2,
+      requests: [{ index: 15, label_th: 'ฝ่ายการเงิน' }],
+      status: 'partial',
+      skills: [{ id: 'S23', name: 'Break-even Planner', status: 'active' }],
+    },
   ],
 };
 
@@ -64,7 +76,7 @@ describe('DepartmentToolsPage', () => {
   it('generates a single department brief', async () => {
     renderPage();
     await waitFor(() => expect(screen.getAllByText(/ฝ่ายการตลาด/).length).toBeGreaterThan(0));
-    fireEvent.click(screen.getByText(/สร้าง brief รายฝ่าย/));
+    fireEvent.click(screen.getAllByText(/สร้าง brief รายฝ่าย/)[0]);
     await waitFor(() => expect(screen.getByText(/เริ่มจาก campaign backlog/)).toBeTruthy());
     expect(screen.getByText(/ตัววิเคราะห์แคมเปญและเทรนด์/)).toBeTruthy();
   });
@@ -74,6 +86,7 @@ describe('DepartmentToolsPage', () => {
     await waitFor(() => expect(screen.getAllByText(/ฝ่ายการตลาด/).length).toBeGreaterThan(0));
     fireEvent.change(screen.getByLabelText(/ค้นหาฝ่าย/), { target: { value: 'การตลาด' } });
     expect(screen.getAllByText(/ฝ่ายการตลาด/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/ฝ่ายการเงินและบัญชี/)).toBeNull();
     fireEvent.click(screen.getByText(/สร้าง brief อัตโนมัติทั้งชุด/));
     await waitFor(() => expect(screen.getByText(/เริ่มจาก campaign backlog/)).toBeTruthy());
   });

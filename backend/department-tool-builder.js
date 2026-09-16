@@ -125,6 +125,7 @@ export function computeDepartmentCoverage(data, skillsRegistry = []) {
       icon: dept.icon,
       cluster: dept.cluster,
       summary_th: dept.summary_th,
+      summary_en: dept.summary_en || dept.summary_th,
       corporate_links: dept.corporate_links || [],
       request_count: (requestMap.get(dept.id) || []).length,
       requests: requestMap.get(dept.id) || [],
@@ -153,6 +154,7 @@ function mockDevelopBrief(data, coverageEntry, goal) {
     title_en: coverageEntry.name_en,
     goal: goal || 'สร้างเครื่องมือย่อยที่ใช้ได้จริงและปลอดภัยต่อบันทึก',
     mission_th: coverageEntry.summary_th,
+    mission_en: coverageEntry.summary_en || coverageEntry.summary_th,
     related_requests: coverageEntry.requests,
     corporate_links: coverageEntry.corporate_links,
     existing_skills: skillNames,
@@ -165,8 +167,11 @@ function mockDevelopBrief(data, coverageEntry, goal) {
       'ยืนยัน guardrails เรื่องบันทึก/หลักฐานก่อนนำไปใช้จริง',
     ],
     record_guardrails: defaults.record_guardrails_th || [],
+    record_guardrails_en: defaults.record_guardrails_en || defaults.record_guardrails_th || [],
     execution_loop: defaults.execution_loop_th || [],
+    execution_loop_en: defaults.execution_loop_en || defaults.execution_loop_th || [],
     definition_of_done: defaults.definition_of_done_th || [],
+    definition_of_done_en: defaults.definition_of_done_en || defaults.definition_of_done_th || [],
     first_action: coverageEntry.first_action_th,
   };
 }
@@ -195,7 +200,7 @@ export function registerDepartmentToolBuilderRoutes(app, {
 
   app.get('/api/department-tools/search', lim, (req, res) => {
     const q = String(req.query.q || '').trim();
-    if (!q) return res.status(400).json({ success: false, error: 'ต้องระบุคำค้น ?q=' });
+    if (!q) return res.status(400).json({ success: false, error: 'ต้องระบุคำค้น ?q=', error_en: 'missing ?q search query' });
     const results = searchDepartmentToolBuilder(data, q);
     res.json({ success: true, q, count: results.length, results });
   });
@@ -203,11 +208,19 @@ export function registerDepartmentToolBuilderRoutes(app, {
   app.post('/api/department-tools/develop', lim, async (req, res) => {
     const { department_id, request_index, goal } = req.body || {};
     if (!department_id?.trim() && request_index == null) {
-      return res.status(400).json({ success: false, error: 'department_id or request_index required' });
+      return res.status(400).json({
+        success: false,
+        error: 'ต้องระบุ department_id หรือ request_index',
+        error_en: 'department_id or request_index required',
+      });
     }
     const department = findDepartment(data, { departmentId: department_id?.trim(), requestIndex: request_index });
     if (!department) {
-      return res.status(404).json({ success: false, error: 'ไม่พบฝ่ายที่ต้องการพัฒนา' });
+      return res.status(404).json({
+        success: false,
+        error: 'ไม่พบฝ่ายที่ต้องการพัฒนา',
+        error_en: 'department not found',
+      });
     }
     const coverage = computeDepartmentCoverage(data, getSkillsRegistry());
     const entry = coverage.departments.find((d) => d.id === department.id);

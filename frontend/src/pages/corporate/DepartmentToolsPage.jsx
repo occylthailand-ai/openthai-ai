@@ -69,6 +69,9 @@ export default function DepartmentToolsPage() {
 
   const statusText = (status) => t(`dtb.status.${status}`);
   const clusterText = (cluster) => t(`dtb.cluster.${cluster}`);
+  const policyGuardrails = lang === 'th'
+    ? (overview?.policy_defaults?.record_guardrails_th || [])
+    : (overview?.policy_defaults?.record_guardrails_en || overview?.policy_defaults?.record_guardrails_th || []);
 
   const runSingle = async (departmentId) => {
     setRunning(departmentId);
@@ -142,7 +145,7 @@ export default function DepartmentToolsPage() {
             <div style={card}>
               <div style={{ fontSize: '14px', fontWeight: 800, marginBottom: '10px' }}>{t('dtb.guardrails.title')}</div>
               <ul style={{ margin: 0, paddingLeft: '18px', color: '#cbd5e1', lineHeight: 1.7, fontSize: '13px' }}>
-                {(overview.policy_defaults?.record_guardrails_th || []).map((line) => <li key={line}>{line}</li>)}
+                {policyGuardrails.map((line) => <li key={line}>{line}</li>)}
               </ul>
             </div>
 
@@ -173,7 +176,7 @@ export default function DepartmentToolsPage() {
                       </span>
                     </div>
 
-                    <div style={{ fontSize: '13px', color: '#cbd5e1', marginTop: '10px', lineHeight: 1.6 }}>{dept.summary_th}</div>
+                    <div style={{ fontSize: '13px', color: '#cbd5e1', marginTop: '10px', lineHeight: 1.6 }}>{lang === 'th' ? dept.summary_th : (dept.summary_en || dept.summary_th)}</div>
 
                     <div style={{ marginTop: '12px' }}>
                       <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>{t('dtb.requestedHeadings')}</div>
@@ -206,7 +209,7 @@ export default function DepartmentToolsPage() {
                         <div style={{ fontSize: '11px', color: '#64748b' }}>{t('dtb.source')}: {brief.source}</div>
                         <div>
                           <div style={{ fontSize: '12px', fontWeight: 700, color: '#a5b4fc', marginBottom: '4px' }}>{t('dtb.brief.mission')}</div>
-                          <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.6 }}>{brief.mission_th}</div>
+                          <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.6 }}>{lang === 'th' ? brief.mission_th : (brief.mission_en || brief.mission_th)}</div>
                         </div>
                         <div>
                           <div style={{ fontSize: '12px', fontWeight: 700, color: '#a5b4fc', marginBottom: '4px' }}>{t('dtb.brief.tools')}</div>
@@ -223,7 +226,7 @@ export default function DepartmentToolsPage() {
                         <div>
                           <div style={{ fontSize: '12px', fontWeight: 700, color: '#fbbf24', marginBottom: '4px' }}>{t('dtb.brief.guardrails')}</div>
                           <ul style={{ margin: 0, paddingLeft: '18px', color: '#fde68a', lineHeight: 1.7, fontSize: '13px' }}>
-                            {(brief.record_guardrails || []).map((item) => <li key={item}>{item}</li>)}
+                            {((lang === 'th' ? brief.record_guardrails : (brief.record_guardrails_en || brief.record_guardrails)) || []).map((item) => <li key={item}>{item}</li>)}
                           </ul>
                         </div>
                         <div style={{ fontSize: '13px', color: '#86efac' }}><strong>{t('dtb.brief.firstAction')}</strong> {brief.first_action}</div>

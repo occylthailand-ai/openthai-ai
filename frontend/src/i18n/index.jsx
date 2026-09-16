@@ -785,7 +785,7 @@ const translations = {
     'dtb.title': '🛠️ 部门工具构建器',
     'dtb.subtitle': '将各部门需求整理成统一注册表，映射现有技能，并安全生成自动化 brief',
     'dtb.hero.title': '基于真实系统数据自动完成全部标题',
-    'dtb.hero.desc': '该工具把 33 个需求标题归并为 29 个标准部门，复用平台中已存在的技能，并连续生成 brief，同时避免不必要地改写已有记录。',
+    'dtb.hero.desc': '该工具把 33 个需求标题归并为 28 个标准部门，复用平台中已存在的技能，并连续生成 brief，同时避免不必要地改写已有记录。',
     'dtb.loading': '正在加载部门工具...',
     'dtb.error.load': '加载部门工具数据失败',
     'dtb.goal.default': '构建实用且对记录安全的子工具',
