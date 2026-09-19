@@ -1,0 +1,160 @@
+#!/usr/bin/env node
+// ── Content Blueprint Tool — เครื่องมือพัฒนาต่อยอดจากพิมพ์เขียวเนื้อหา 8 หมวด ────
+// ใช้: node scripts/blueprint-tool.mjs <validate|stats|coverage|export>
+//
+//   validate  ตรวจโครงสร้าง JSON + cross-check ว่า related_skills มีจริงใน
+//             SKILLS_REGISTRY (backend/server.js) และ routes มีจริงใน App.jsx
+//             — exit 1 ถ้าไม่ผ่าน (ใช้เป็น CI gate ได้ เหมือน generate-project-status)
+//   stats     สรุปจำนวนหมวด/หมวดย่อย/รายการ
+//   coverage  ตารางความครอบคลุม: หมวดไหนมีสกิลรองรับแล้ว หมวดไหนยังเป็นช่องว่าง
+//   export    เขียน docs/CONTENT_BLUEPRINT.md (เอกสาร generated — ห้ามแก้มือ)
+//
+// ปรัชญาเดียวกับ scripts/generate-project-status.mjs: เอกสาร/คำกล่าวอ้างต้อง
+// derive จากโค้ดจริง ไม่ใช่ความจำของผู้ช่วย AI คนใดคนหนึ่ง
+import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import {
+  loadBlueprint, validateBlueprint, blueprintStats, computeCoverage,
+} from '../backend/content-blueprint.js';
+
+const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
+const readSafe = (p) => { try { return readFileSync(join(ROOT, p), 'utf8'); } catch { return ''; } };
+
+// ── Parse SKILLS_REGISTRY จาก backend/server.js (regex เดียวกับ generate-project-status.mjs)
+function parseSkills() {
+  const src = readSafe('backend/server.js');
+  const start = src.indexOf('const SKILLS_REGISTRY');
+  if (start < 0) return [];
+  const end = src.indexOf('\n];', start);
+  const block = src.slice(start, end);
+  const skills = [];
+  const re = /id:\s*'([^']+)'[^}]*?name:\s*'([^']+)'[^}]*?category:\s*'([^']+)'[^}]*?endpoint:\s*'([^']+)'[^}]*?method:\s*'([^']+)'[^}]*?status:\s*'([^']+)'/g;
+  let m;
+  while ((m = re.exec(block))) skills.push({ id: m[1], name: m[2], category: m[3], endpoint: m[4], method: m[5], status: m[6] });
+  return skills;
+}
+
+// ── Parse route paths จาก frontend/src/App.jsx ────────────────────────────────
+function parseRoutePaths() {
+  const src = readSafe('frontend/src/App.jsx');
+  return [...src.matchAll(/<Route\s+path="([^"]+)"/g)].map((m) => m[1]);
+}
+
+function cmdValidate() {
+  const problems = [];
+  let bp;
+  try {
+    bp = loadBlueprint({ force: true });
+  } catch (e) {
+    console.error(`❌ ${e.message}`);
+    process.exit(1);
+  }
+  problems.push(...validateBlueprint(bp));
+
+  const skills = parseSkills();
+  const skillIds = new Set(skills.map((s) => s.id));
+  const routePaths = new Set(parseRoutePaths());
+  for (const d of bp.domains) {
+    for (const sid of d.related_skills || []) {
+      if (!skillIds.has(sid)) problems.push(`domain ${d.id}: related skill "${sid}" not found in SKILLS_REGISTRY (backend/server.js)`);
+    }
+    for (const r of d.routes || []) {
+      if (!routePaths.has(r)) problems.push(`domain ${d.id}: route "${r}" not found in frontend/src/App.jsx`);
+    }
+  }
+  if (!skillIds.size) problems.push('could not parse SKILLS_REGISTRY from backend/server.js');
+  if (!routePaths.size) problems.push('could not parse routes from frontend/src/App.jsx');
+
+  if (problems.length) {
+    console.error(`❌ Content Blueprint validation failed (${problems.length}):`);
+    problems.forEach((p) => console.error(`   - ${p}`));
+    process.exit(1);
+  }
+  const st = blueprintStats(bp);
+  console.log(`✅ Content Blueprint valid — ${st.domains} domains, ${st.sections} sections, ${st.items} items; all related_skills resolve in SKILLS_REGISTRY (${skillIds.size} skills), all routes exist in App.jsx (${routePaths.size} routes)`);
+}
+
+function cmdStats() {
+  const bp = loadBlueprint();
+  const st = blueprintStats(bp);
+  console.log(`📊 ${bp.meta.title_th} (v${st.version})`);
+  console.log(`   Maslow levels: ${st.maslow_levels} · Domains: ${st.domains} · Sections: ${st.sections} · Items: ${st.items}`);
+  for (const d of bp.domains) {
+    const items = d.sections.reduce((n, s) => n + s.items.length, 0);
+    console.log(`   ${d.icon} ${d.id} ${d.name_th} — ${d.sections.length} sections, ${items} items, maslow ${d.maslow.join('+')}`);
+  }
+}
+
+function cmdCoverage() {
+  const bp = loadBlueprint();
+  const cov = computeCoverage(bp, parseSkills());
+  const badge = { covered: '🟢', partial: '🟡', gap: '🔴' };
+  console.log(`🎯 Coverage: ${cov.summary.covered} covered · ${cov.summary.partial} partial · ${cov.summary.gap} gap`);
+  for (const d of cov.domains) {
+    const sk = d.skills.map((s) => `${s.id}${s.found ? '' : '?'}`).join(',') || '-';
+    console.log(`   ${badge[d.status]} ${d.id} ${d.name_th} — skills: ${sk} · routes: ${d.routes.join(',') || '-'}`);
+    if (d.status !== 'covered' && d.next_steps_th.length) console.log(`      ↳ ต่อยอด: ${d.next_steps_th[0]}`);
+  }
+}
+
+function cmdExport() {
+  const bp = loadBlueprint();
+  const cov = computeCoverage(bp, parseSkills());
+  const badge = { covered: '🟢 covered', partial: '🟡 partial', gap: '🔴 gap' };
+  const L = [];
+  L.push(`# ${bp.meta.title_th} — Content Blueprint`);
+  L.push('');
+  L.push(`> Generated by \`node scripts/blueprint-tool.mjs export\` — do not edit by hand.`);
+  L.push(`> Source of truth: \`backend/data/content-blueprint.json\` (v${bp.meta.version}) · API: \`GET /api/blueprint\``);
+  L.push('');
+  L.push(bp.meta.description_th);
+  L.push('');
+
+  L.push(`## กรอบแนวคิด: ลำดับขั้นความต้องการ + มิติดิจิทัล`);
+  L.push('| ขั้น | ความต้องการ | ตัวอย่างดิจิทัล |');
+  L.push('|---|---|---|');
+  for (const lv of bp.maslow_levels) {
+    L.push(`| ${lv.id} | **${lv.name_th}** (${lv.name_en}) — ${lv.items_th.join(', ')} | ${lv.digital_th.join(', ')} |`);
+  }
+  L.push('');
+  for (const n of bp.maslow_notes) L.push(`- **${n.name_th} (${n.name_en}):** ${n.text_th}`);
+  L.push('');
+
+  L.push(`## สรุปความครอบคลุม (เทียบกับ SKILLS_REGISTRY จริง)`);
+  L.push('| หมวด | สถานะ | สกิลที่รองรับ | Routes |');
+  L.push('|---|---|---|---|');
+  for (const d of cov.domains) {
+    L.push(`| ${d.icon} ${d.id} ${d.name_th} | ${badge[d.status]} | ${d.skills.map((s) => s.id).join(', ') || '—'} | ${d.routes.map((r) => `\`${r}\``).join(', ') || '—'} |`);
+  }
+  L.push('');
+
+  for (const d of bp.domains) {
+    const c = cov.domains.find((x) => x.id === d.id);
+    L.push(`## ${d.icon} ${d.id} — ${d.name_th}`);
+    L.push(`*${d.name_en}* · Maslow: ${d.maslow.join(', ')} · สถานะ: ${badge[c.status]}`);
+    L.push('');
+    for (const sec of d.sections) {
+      L.push(`### ${sec.id} ${sec.name_th} (${sec.name_en})`);
+      for (const it of sec.items) L.push(`- ${it.th}`);
+      L.push('');
+    }
+    if (d.development?.next_steps_th?.length) {
+      L.push(`**แนวทางพัฒนาต่อยอดบนแพลตฟอร์ม:**`);
+      for (const s of d.development.next_steps_th) L.push(`- ${s}`);
+      L.push('');
+    }
+  }
+
+  const out = join(ROOT, 'docs', 'CONTENT_BLUEPRINT.md');
+  writeFileSync(out, L.join('\n') + '\n', 'utf8');
+  console.log(`✅ wrote docs/CONTENT_BLUEPRINT.md (${L.length} lines)`);
+}
+
+const cmd = process.argv[2] || 'validate';
+const commands = { validate: cmdValidate, stats: cmdStats, coverage: cmdCoverage, export: cmdExport };
+if (!commands[cmd]) {
+  console.error(`❌ unknown command "${cmd}" — use: validate | stats | coverage | export`);
+  process.exit(1);
+}
+commands[cmd]();

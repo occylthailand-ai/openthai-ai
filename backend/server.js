@@ -36,6 +36,7 @@ import { createInventory } from './inventory.js';
 import { createProgressTracker } from './progress-tracker.js';
 import { createIntegrations } from './integrations.js';
 import { createMatching } from './matching.js';
+import { registerBlueprintRoutes } from './content-blueprint.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -4839,6 +4840,9 @@ const SKILLS_REGISTRY = [
   { id: 'S33', name: 'Bundle & Upsell Designer', category: 'commerce', endpoint: '/api/skills/bundle',         method: 'POST', inputs: ['product', 'category', 'price'], status: 'active' },
   { id: 'S34', name: 'FAQ & Auto-Reply Builder', category: 'support', endpoint: '/api/skills/faq',             method: 'POST', inputs: ['product', 'category', 'channel'], status: 'active' },
   { id: 'S35', name: 'Broadcast & Re-engagement', category: 'retention', endpoint: '/api/skills/broadcast',     method: 'POST', inputs: ['product', 'category', 'channel'], status: 'active' },
+  { id: 'S36', name: 'Content Blueprint',     category: 'blueprint',   endpoint: '/api/blueprint',               method: 'GET',  inputs: [],                               status: 'active' },
+  { id: 'S37', name: 'Blueprint Coverage Radar', category: 'blueprint', endpoint: '/api/blueprint/coverage',     method: 'GET',  inputs: [],                               status: 'active' },
+  { id: 'S38', name: 'Blueprint Development Brief', category: 'blueprint', endpoint: '/api/blueprint/develop',   method: 'POST', inputs: ['node_id', 'goal'],              status: 'active' },
 ];
 
 app.get('/api/skills', (req, res) => {
@@ -4854,6 +4858,15 @@ app.get('/api/skills', (req, res) => {
     skills,
     ts: new Date().toISOString(),
   });
+});
+
+// ── Content Blueprint (S36-S38) — พิมพ์เขียวเนื้อหา 8 หมวด · ดู backend/content-blueprint.js ──
+registerBlueprintRoutes(app, {
+  limiter: generateLimiter,
+  getSkillsRegistry: () => SKILLS_REGISTRY,
+  callAI,
+  parseAIJson,
+  addLog,
 });
 
 

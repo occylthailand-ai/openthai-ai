@@ -56,3 +56,4 @@ before touching that area:
 | `bash .claude/tools/refresh-status.sh` | Regenerate PROJECT_STATUS.md |
 | `bash .claude/tools/lint-check.sh [file]` | ESLint on file or git-staged files |
 | `bash .claude/tools/db-status.sh` | Check Supabase env vars + connectivity |
+| `bash .claude/tools/blueprint.sh [cmd]` | Content Blueprint: validate/stats/coverage/export (docs/CONTENT_BLUEPRINT.md) |

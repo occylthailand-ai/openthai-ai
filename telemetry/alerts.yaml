@@ -1,0 +1,157 @@
+# หมวด 10 — Cooling / Observability: Prometheus Alerting Rules
+# ใช้กับ Alertmanager — ส่งแจ้งเตือนผ่าน LINE / Slack / Email
+
+groups:
+  # ===== XAdES Engine Alerts =====
+  - name: xades_engine
+    interval: 30s
+    rules:
+      - alert: XAdESVerificationErrorHigh
+        expr: rate(xades_verification_total{status="error"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "XAdES verification error rate สูง"
+          description: "Error rate > 10% ใน 5 นาทีที่ผ่านมา ({{ $value | humanizePercentage }})"
+
+      - alert: XAdESLatencyHigh
+        expr: histogram_quantile(0.95, rate(xades_verification_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "XAdES verification ช้าผิดปกติ"
+          description: "P95 latency = {{ $value | humanizeDuration }} (เกิน 30s)"
+
+      - alert: XAdESEngineDown
+        expr: up{job="xades-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: devops
+        annotations:
+          summary: "XAdES Engine หยุดทำงาน"
+          description: "ไม่สามารถ scrape metrics จาก xades-api ได้"
+
+  # ===== API Server Alerts =====
+  - name: api_server
+    interval: 30s
+    rules:
+      - alert: APIErrorRateHigh
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "API 5xx error rate > 5%"
+          description: "{{ $value | humanizePercentage }} ของ requests ตอบ 5xx"
+
+      - alert: APILatencyHigh
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "API P99 latency > 5s"
+
+      - alert: RateLimitHit
+        expr: rate(http_requests_total{status="429"}[1m]) > 10
+        for: 1m
+        labels:
+          severity: info
+          team: backend
+        annotations:
+          summary: "Rate limit ถูก trigger บ่อย (> 10 req/min)"
+
+  # ===== Database Alerts =====
+  - name: database
+    interval: 60s
+    rules:
+      - alert: PostgreSQLDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: devops
+        annotations:
+          summary: "PostgreSQL หยุดทำงาน"
+
+      - alert: PostgreSQLConnectionsHigh
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+        annotations:
+          summary: "PostgreSQL connections > 80"
+          description: "Active connections: {{ $value }}"
+
+      - alert: PostgreSQLSlowQueries
+        expr: rate(pg_stat_statements_total_time[5m]) / rate(pg_stat_statements_calls[5m]) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "PostgreSQL มี slow queries (avg > 1s)"
+
+  # ===== Infrastructure Alerts =====
+  - name: infrastructure
+    interval: 60s
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 10m
+        labels:
+          severity: warning
+          team: devops
+        annotations:
+          summary: "CPU usage สูงเกิน 85%"
+          description: "Instance {{ $labels.instance }}: {{ $value | humanize }}%"
+
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          team: devops
+        annotations:
+          summary: "Memory usage > 90%"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 10
+        for: 10m
+        labels:
+          severity: warning
+          team: devops
+        annotations:
+          summary: "Disk เหลือน้อยกว่า 10%"
+          description: "Mountpoint {{ $labels.mountpoint }} เหลือ {{ $value | humanize }}%"
+
+  # ===== Security Alerts =====
+  - name: security
+    interval: 30s
+    rules:
+      - alert: AuthFailureSpike
+        expr: rate(auth_failures_total[5m]) > 20
+        for: 2m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Auth failures สูงผิดปกติ — อาจเป็น brute force"
+          description: "{{ $value }} failures/s ใน 5 นาทีที่ผ่านมา"
+
+      - alert: VaultAccessAnomaly
+        expr: rate(vault_access_log_total{action="read"}[5m]) > 50
+        for: 1m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Vault access rate สูงผิดปกติ"

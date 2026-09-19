@@ -11,6 +11,36 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-09-07 — Content Blueprint: pasted 8-part content structure encoded as a real tool, not prose
+A large re-categorized content taxonomy was pasted into the session (Maslow
+hierarchy + digital needs, food/AgTech, IoT & sensors, ITS/mobility,
+health/textiles, travel + affiliate, IT/payments/tax, rich media) with the ask
+"เขียนโค้ดสร้างเครื่องมือเพื่อการพัฒนาต่อยอด". Per lesson_01_verify_before_build,
+it was treated as **content data to serve, not claims about the repo** —
+nothing in it was assumed to already exist here.
+
+Decision: encode it once as machine-readable data and build tooling around it,
+instead of another hand-maintained markdown doc that drifts:
+
+- `backend/data/content-blueprint.json` — single source of truth (6 Maslow
+  levels, 7 domains D2–D8, 19 sections, 73 items, th/en).
+- `backend/content-blueprint.js` + 6 endpoints under `/api/blueprint*`
+  (browse/tree/node/search/coverage/develop), registered as skills S36–S38.
+  `/coverage` cross-references each domain against the live SKILLS_REGISTRY —
+  covered/partial/gap is *computed from the code*, never hand-written.
+  `/develop` follows the existing callAI → mock-fallback pattern.
+- `scripts/blueprint-tool.mjs` (validate|stats|coverage|export) — `validate`
+  fails loudly if a domain references a skill ID or frontend route that
+  doesn't exist (same philosophy as generate-project-status.mjs); `export`
+  writes generated `docs/CONTENT_BLUEPRINT.md`.
+- `/blueprint` public frontend page; suites `test:blueprint` (29 checks) +
+  4 vitest page tests.
+
+Explicitly NOT done (scope honesty): no IoT/hardware integrations, no
+traffic-signal or hospital systems — D3/D5 show as coverage *gaps*, and the
+tool's job is to surface them as content/catalog opportunities for the real
+platform (Thai producers, THB, Omise, Supabase).
+
 ### 2026-07-03 — Fixed a real CI bug: shallow checkout was silently corrupting PROJECT_STATUS.md's git-history line
 Found by accident while investigating a "there are uncommitted changes"
 prompt — the working-tree diff showed the *currently committed* (on `main`,

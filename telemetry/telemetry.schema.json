@@ -1,0 +1,492 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.openthai.ai/v1/telemetry.schema.json",
+  "title": "OpenThaiAI OpenTelemetry Configuration Schema",
+  "description": "Configuration schema for OpenTelemetry observability across OpenThaiAI services",
+  "type": "object",
+  "required": ["telemetry"],
+  "properties": {
+    "telemetry": {
+      "type": "object",
+      "required": [
+        "service_name",
+        "exporter",
+        "endpoint"
+      ],
+      "properties": {
+        "service_name": {
+          "type": "string",
+          "description": "Service identifier in observability system",
+          "pattern": "^[a-z0-9-]+$",
+          "minLength": 3,
+          "maxLength": 50,
+          "examples": [
+            "ai-script-generator",
+            "quarantine-validator",
+            "compliance-checker",
+            "dpo-trainer"
+          ]
+        },
+        "service_version": {
+          "type": "string",
+          "description": "Service semantic version",
+          "pattern": "^v?\\d+\\.\\d+\\.\\d+(-[a-z0-9]+)?$",
+          "examples": ["1.0.0", "v2026.3.0", "1.2.3-alpha"]
+        },
+        "environment": {
+          "type": "string",
+          "enum": ["development", "staging", "production"],
+          "default": "development",
+          "description": "Deployment environment"
+        },
+        "exporter": {
+          "type": "string",
+          "enum": [
+            "otlp-grpc",
+            "otlp-http",
+            "jaeger",
+            "prometheus",
+            "datadog",
+            "cloudtrace",
+            "aws-xray"
+          ],
+          "description": "Telemetry exporter backend"
+        },
+        "endpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "Telemetry collector endpoint",
+          "examples": [
+            "otel-collector.openthai.internal:4317",
+            "http://localhost:4318",
+            "https://api.datadog.com/v2/traces"
+          ]
+        },
+        "headers": {
+          "type": "object",
+          "description": "Custom headers for exporter (auth tokens, etc.)",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "examples": [
+            {
+              "dd-api-key": "YOUR_DATADOG_API_KEY",
+              "authorization": "Bearer YOUR_TOKEN"
+            }
+          ]
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300,
+          "default": 10,
+          "description": "Export timeout in seconds"
+        },
+        "batch_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 512,
+          "description": "Number of spans per batch"
+        },
+        "max_queue_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000,
+          "default": 2048,
+          "description": "Maximum spans in queue"
+        },
+        "tracing": {
+          "type": "object",
+          "description": "Distributed tracing configuration",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable/disable tracing"
+            },
+            "sampling_rate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.1,
+              "description": "Sampling rate (0.0-1.0). 1.0 = 100% sample all traces"
+            },
+            "sampling_strategy": {
+              "type": "string",
+              "enum": [
+                "always_on",
+                "always_off",
+                "trace_id_ratio",
+                "parent_based",
+                "custom"
+              ],
+              "default": "trace_id_ratio",
+              "description": "Trace sampling strategy"
+            },
+            "propagator": {
+              "type": "string",
+              "enum": [
+                "tracecontext",
+                "jaeger",
+                "xray",
+                "ottracer",
+                "b3",
+                "b3multi"
+              ],
+              "default": "tracecontext",
+              "description": "Trace context propagation format"
+            },
+            "max_span_attributes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 128,
+              "description": "Maximum attributes per span"
+            },
+            "max_span_events": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 128,
+              "description": "Maximum events per span"
+            },
+            "max_span_links": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000,
+              "default": 32,
+              "description": "Maximum links per span"
+            },
+            "record_exception_stack_traces": {
+              "type": "boolean",
+              "default": true,
+              "description": "Include stack traces in exception spans"
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "description": "Metrics collection configuration",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable/disable metrics"
+            },
+            "interval_ms": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 3600000,
+              "default": 10000,
+              "description": "Metrics export interval in milliseconds"
+            },
+            "histogram_boundaries": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "default": [
+                0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10
+              ],
+              "description": "Histogram bucket boundaries (seconds)"
+            },
+            "collect_jvm_metrics": {
+              "type": "boolean",
+              "default": false,
+              "description": "Collect JVM metrics if applicable"
+            },
+            "collect_runtime_metrics": {
+              "type": "boolean",
+              "default": true,
+              "description": "Collect runtime metrics (CPU, memory)"
+            },
+            "collect_host_metrics": {
+              "type": "boolean",
+              "default": false,
+              "description": "Collect host-level metrics"
+            }
+          }
+        },
+        "logging": {
+          "type": "object",
+          "description": "Logging configuration",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable/disable structured logging"
+            },
+            "level": {
+              "type": "string",
+              "enum": ["DEBUG", "INFO", "WARN", "ERROR"],
+              "default": "INFO",
+              "description": "Minimum log level"
+            },
+            "format": {
+              "type": "string",
+              "enum": ["json", "text"],
+              "default": "json",
+              "description": "Log output format"
+            },
+            "include_trace_context": {
+              "type": "boolean",
+              "default": true,
+              "description": "Include trace_id and span_id in logs"
+            },
+            "exclude_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Paths to exclude from logging (regex patterns)",
+              "examples": [
+                "/health",
+                "/metrics",
+                "^/static/.*"
+              ]
+            }
+          }
+        },
+        "resource_attributes": {
+          "type": "object",
+          "description": "Resource attributes for all telemetry",
+          "properties": {
+            "service_namespace": {
+              "type": "string",
+              "description": "Kubernetes namespace or logical service group"
+            },
+            "deployment_environment": {
+              "type": "string",
+              "description": "Deployment environment name"
+            },
+            "cluster_name": {
+              "type": "string",
+              "description": "Kubernetes cluster name"
+            },
+            "pod_name": {
+              "type": "string",
+              "description": "Kubernetes pod name"
+            },
+            "container_id": {
+              "type": "string",
+              "description": "Container/Docker ID"
+            },
+            "host_name": {
+              "type": "string",
+              "description": "Hostname"
+            }
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "instrumentation": {
+          "type": "object",
+          "description": "Instrumentation configuration for specific libraries",
+          "properties": {
+            "grpc": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "record_message_size": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "record_message_count": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            },
+            "http": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "record_request_headers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Headers to capture in spans"
+                },
+                "record_response_headers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "database": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "record_sql_statements": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Record full SQL (be careful with sensitive data)"
+                }
+              }
+            },
+            "cache": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "record_cache_keys": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            },
+            "messaging": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "record_message_attributes": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            }
+          }
+        },
+        "sampling_rules": {
+          "type": "array",
+          "description": "Custom sampling rules per service/endpoint",
+          "items": {
+            "type": "object",
+            "properties": {
+              "match": {
+                "type": "object",
+                "properties": {
+                  "service_name": {
+                    "type": "string"
+                  },
+                  "span_name": {
+                    "type": "string"
+                  },
+                  "attribute": {
+                    "type": "object"
+                  }
+                }
+              },
+              "sampling_percentage": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          }
+        },
+        "alerting": {
+          "type": "object",
+          "description": "Alert rules and thresholds",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "alert_rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "condition": {
+                    "type": "string",
+                    "description": "PromQL or similar query"
+                  },
+                  "threshold": {
+                    "type": "number"
+                  },
+                  "duration": {
+                    "type": "string",
+                    "description": "How long condition must be true",
+                    "examples": ["5m", "1h", "30s"]
+                  },
+                  "severity": {
+                    "type": "string",
+                    "enum": ["info", "warning", "critical"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "privacy": {
+          "type": "object",
+          "description": "Privacy and data redaction settings",
+          "properties": {
+            "redact_pii": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically redact PII in spans/logs"
+            },
+            "redaction_patterns": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "pattern": {
+                    "type": "string",
+                    "description": "Regex pattern to match"
+                  },
+                  "replacement": {
+                    "type": "string",
+                    "default": "[REDACTED]"
+                  }
+                }
+              },
+              "examples": [
+                {
+                  "name": "national_id",
+                  "pattern": "\\b[1-9][0-9]{12}\\b",
+                  "replacement": "[ID_REDACTED]"
+                },
+                {
+                  "name": "phone",
+                  "pattern": "\\b0[0-9]{8,9}\\b",
+                  "replacement": "[PHONE_REDACTED]"
+                }
+              ]
+            },
+            "exclude_attributes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Attribute names to never export",
+              "examples": [
+                "db.password",
+                "api.key",
+                "auth.token"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

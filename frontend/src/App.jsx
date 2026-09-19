@@ -35,6 +35,7 @@ const AgentPage = lazy(() => import('./pages/AgentPage'));
 const AISkillsPage = lazy(() => import('./pages/AISkillsPage'));
 const TrendingPage = lazy(() => import('./pages/TrendingPage'));
 const ContentCalendarPage = lazy(() => import('./pages/ContentCalendarPage'));
+const ContentBlueprintPage = lazy(() => import('./pages/ContentBlueprintPage'));
 const VoiceCommandPage = lazy(() => import('./pages/VoiceCommandPage'));
 const VideoGeneratorPage = lazy(() => import('./pages/VideoGeneratorPage'));
 const PaymentPage = lazy(() => import('./pages/PaymentPage'));
@@ -191,6 +192,7 @@ function App() {
             {/* New feature pages — public */}
             <Route path="/trending" element={<TrendingPage />} />
             <Route path="/calendar" element={<ContentCalendarPage />} />
+            <Route path="/blueprint" element={<ContentBlueprintPage />} />
             <Route path="/brand" element={<BrandMemoryPage />} />
             <Route path="/voice" element={<VoiceCommandPage />} />
             <Route path="/video" element={isAuthenticated ? <VideoGeneratorPage /> : <Navigate to="/login" />} />

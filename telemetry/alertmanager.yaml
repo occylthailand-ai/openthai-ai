@@ -1,0 +1,80 @@
+# หมวด 10 — Cooling / Observability: Alertmanager Configuration
+# ส่งแจ้งเตือนผ่าน LINE Notify, Slack, Email
+
+global:
+  resolve_timeout: 5m
+  smtp_from: "alerts@openthai.ai"
+  smtp_smarthost: "smtp.gmail.com:587"
+  smtp_auth_username: "${SMTP_USER}"
+  smtp_auth_password: "${SMTP_PASS}"
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  group_by: ['alertname', 'team']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-channel'
+      continue: true
+    - match:
+        team: security
+      receiver: 'security-channel'
+      continue: true
+    - match:
+        team: devops
+      receiver: 'devops-channel'
+
+receivers:
+  - name: 'default'
+    line_configs:
+      - token: "${LINE_NOTIFY_TOKEN}"
+        message: |
+          🔔 [OpenThai AI] {{ .GroupLabels.alertname }}
+          {{ range .Alerts }}• {{ .Annotations.summary }}{{ end }}
+
+  - name: 'critical-channel'
+    line_configs:
+      - token: "${LINE_NOTIFY_CRITICAL_TOKEN}"
+        message: |
+          🚨 CRITICAL: {{ .GroupLabels.alertname }}
+          {{ range .Alerts }}
+          ▸ {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_CRITICAL}"
+        channel: '#alerts-critical'
+        title: '🚨 {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        color: 'danger'
+
+  - name: 'security-channel'
+    line_configs:
+      - token: "${LINE_NOTIFY_SECURITY_TOKEN}"
+        message: |
+          🔐 SECURITY ALERT: {{ .GroupLabels.alertname }}
+          {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+    email_configs:
+      - to: "security@openthai.ai"
+        subject: '[SECURITY] {{ .GroupLabels.alertname }}'
+        body: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+
+  - name: 'devops-channel'
+    slack_configs:
+      - api_url: "${SLACK_WEBHOOK_DEVOPS}"
+        channel: '#infra-alerts'
+        title: '⚙️ {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'team']
