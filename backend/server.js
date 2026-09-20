@@ -38,6 +38,7 @@ import { createIntegrations } from './integrations.js';
 import { createMatching } from './matching.js';
 import { registerBlueprintRoutes } from './content-blueprint.js';
 import digitalBankRouter from './digital-bank.js';
+import bankPhase2Router from './bank-phase2.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -4868,6 +4869,7 @@ const bankLimiter = rateLimit({
   message: { success: false, error: 'ธนาคารดิจิทัล: คำขอมากเกินไป กรุณารอสักครู่' },
 });
 app.use('/api/bank', bankLimiter, digitalBankRouter);
+app.use('/api/bank', bankLimiter, bankPhase2Router);
 
 // ── Content Blueprint (S36-S38) — พิมพ์เขียวเนื้อหา 8 หมวด · ดู backend/content-blueprint.js ──
 registerBlueprintRoutes(app, {

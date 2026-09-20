@@ -117,16 +117,22 @@ function Alert({ msg, type = 'info' }) {
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'dashboard', label: '📊 Dashboard' },
-  { id: 'accounts',  label: '🏦 บัญชี' },
-  { id: 'transfer',  label: '💸 โอนเงิน' },
-  { id: 'products',  label: '🧩 ผลิตภัณฑ์' },
-  { id: 'staking',   label: '🔒 Staking' },
-  { id: 'cards',     label: '💳 บัตร' },
-  { id: 'fx',        label: '🌐 อัตราแลกเปลี่ยน' },
-  { id: 'mbridge',   label: '🌏 mBridge' },
-  { id: 'advisor',   label: '🤖 AI Advisor' },
-  { id: 'kyc',       label: '🪪 KYC' },
+  { id: 'dashboard',   label: '📊 Dashboard' },
+  { id: 'accounts',    label: '🏦 บัญชี' },
+  { id: 'transfer',    label: '💸 โอนเงิน' },
+  { id: 'products',    label: '🧩 ผลิตภัณฑ์' },
+  { id: 'loans',       label: '🏛️ สินเชื่อ' },
+  { id: 'insurance',   label: '🛡️ ประกัน' },
+  { id: 'invest',      label: '📈 การลงทุน' },
+  { id: 'bills',       label: '📄 ชำระบิล' },
+  { id: 'trade',       label: '🚢 Trade Finance' },
+  { id: 'payroll',     label: '👥 เงินเดือน' },
+  { id: 'staking',     label: '🔒 Staking' },
+  { id: 'cards',       label: '💳 บัตร' },
+  { id: 'fx',          label: '🌐 FX' },
+  { id: 'mbridge',     label: '🌏 mBridge' },
+  { id: 'advisor',     label: '🤖 AI Advisor' },
+  { id: 'kyc',         label: '🪪 KYC' },
 ];
 
 // ─── Dashboard Tab ────────────────────────────────────────────────────────────
@@ -900,6 +906,690 @@ function KYCTab() {
   );
 }
 
+// ─── Loans Tab ────────────────────────────────────────────────────────────────
+
+function LoansTab() {
+  const [loans, setLoans] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [form, setForm] = useState({ loan_type: 'sme', amount: '', term_months: '36', purpose: '' });
+  const [msg, setMsg] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const RATES = { personal: 15.99, sme: 6.99, otop: 4.50, housing: 3.75, vehicle: 5.99, education: 3.00 };
+
+  const load = () => {
+    apiFetch('/api/bank/loans').then(r => r.json()).then(r => { if (r.success) setLoans(r.loans); });
+    apiFetch('/api/bank/accounts').then(r => r.json()).then(r => { if (r.success) setAccounts(r.accounts); });
+  };
+  useEffect(load, []);
+
+  const apply = async () => {
+    setError(null); setMsg(null); setLoading(true);
+    const r = await apiFetch('/api/bank/loans/apply', { method: 'POST', body: JSON.stringify(form) });
+    const d = await r.json();
+    setLoading(false);
+    if (d.success) { setMsg(`ยื่นขอสินเชื่อสำเร็จ — ผ่อน ฿${fmt(d.monthly_payment)}/เดือน`); load(); }
+    else setError(d.error?.message || 'ยื่นขอสินเชื่อไม่สำเร็จ');
+  };
+
+  const rate = RATES[form.loan_type] || 6.99;
+  const monthly = form.amount && form.term_months
+    ? (() => { const r = rate / 100 / 12; const n = parseInt(form.term_months);
+        const p = parseFloat(form.amount);
+        return r === 0 ? p / n : p * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1); })()
+    : 0;
+
+  return (
+    <div>
+      <Alert msg={msg} type="success" />
+      <Alert msg={error} type="error" />
+      <div style={styles.sectionTitle}>🏛️ ยื่นขอสินเชื่อ</div>
+      <div style={styles.card}>
+        <div style={styles.grid2}>
+          <div>
+            <label style={styles.label}>ประเภทสินเชื่อ</label>
+            <select style={styles.input} value={form.loan_type}
+              onChange={e => setForm(f => ({ ...f, loan_type: e.target.value }))}>
+              <option value="personal">สินเชื่อส่วนบุคคล (15.99%)</option>
+              <option value="sme">สินเชื่อ SME (6.99%)</option>
+              <option value="otop">สินเชื่อ OTOP (4.50%)</option>
+              <option value="housing">สินเชื่อบ้าน (3.75%)</option>
+              <option value="vehicle">สินเชื่อรถยนต์ (5.99%)</option>
+              <option value="education">สินเชื่อการศึกษา (3.00%)</option>
+            </select>
+          </div>
+          <div>
+            <label style={styles.label}>วงเงิน (บาท)</label>
+            <input style={styles.input} type="number" placeholder="500000"
+              onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+          </div>
+          <div>
+            <label style={styles.label}>ระยะเวลา (เดือน)</label>
+            <select style={styles.input} value={form.term_months}
+              onChange={e => setForm(f => ({ ...f, term_months: e.target.value }))}>
+              <option value="12">12 เดือน</option>
+              <option value="24">24 เดือน</option>
+              <option value="36">36 เดือน</option>
+              <option value="60">60 เดือน</option>
+              <option value="120">120 เดือน</option>
+              <option value="240">240 เดือน</option>
+            </select>
+          </div>
+          <div>
+            <label style={styles.label}>บัญชีรับเงิน</label>
+            <select style={styles.input} onChange={e => setForm(f => ({ ...f, account_id: e.target.value }))}>
+              <option value="">เลือกบัญชี</option>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.account_number}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <label style={styles.label}>วัตถุประสงค์การกู้</label>
+          <input style={styles.input} placeholder="เช่น ขยายกิจการ OTOP, ซื้อเครื่องจักร"
+            onChange={e => setForm(f => ({ ...f, purpose: e.target.value }))} />
+        </div>
+        {monthly > 0 && (
+          <div style={{ marginTop: 12, padding: '10px 14px', background: C.surface,
+            borderRadius: 8, border: `1px solid ${C.border}` }}>
+            <span style={{ color: C.muted, fontSize: 12 }}>ผ่อนชำระประมาณ: </span>
+            <span style={{ color: C.cyan, fontWeight: 700 }}>฿{fmt(monthly)} / เดือน</span>
+            <span style={{ color: C.muted, fontSize: 12 }}> · ดอกเบี้ย {rate}% ต่อปี</span>
+          </div>
+        )}
+        <button style={{ ...styles.btn('primary'), marginTop: 14 }} onClick={apply} disabled={loading}>
+          {loading ? 'กำลังส่ง…' : 'ยื่นคำขอสินเชื่อ'}
+        </button>
+      </div>
+      <div style={styles.sectionTitle}>📋 สินเชื่อของฉัน ({loans.length})</div>
+      {loans.length === 0
+        ? <div style={{ color: C.muted, fontSize: 13 }}>ไม่มีสินเชื่อ</div>
+        : loans.map(l => (
+          <div key={l.id} style={{ ...styles.card, marginBottom: 10 }}>
+            <div style={styles.row}>
+              <span style={styles.statusDot(l.status)} />
+              <div>
+                <div style={{ fontWeight: 700 }}>{l.loan_type.toUpperCase()} · ฿{fmt(l.amount)}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>
+                  คงค้าง ฿{fmt(l.balance_owing)} · {l.interest_rate}% · {l.term_months} เดือน
+                </div>
+              </div>
+              <span style={{ marginLeft: 'auto', fontSize: 12, color: l.status === 'active' ? C.green : C.gold }}>
+                {l.status}
+              </span>
+            </div>
+          </div>
+        ))}
+    </div>
+  );
+}
+
+// ─── Insurance Tab ────────────────────────────────────────────────────────────
+
+function InsuranceTab() {
+  const [policies, setPolicies] = useState([]);
+  const [plans, setPlans] = useState({});
+  const [form, setForm] = useState({ plan_code: 'HEALTH_OTOP' });
+  const [msg, setMsg] = useState(null);
+  const [error, setError] = useState(null);
+
+  const load = () => {
+    apiFetch('/api/bank/insurance').then(r => r.json()).then(r => {
+      if (r.success) { setPolicies(r.policies); setPlans(r.plans || {}); }
+    });
+  };
+  useEffect(load, []);
+
+  const apply = async () => {
+    setError(null); setMsg(null);
+    const r = await apiFetch('/api/bank/insurance/apply', { method: 'POST', body: JSON.stringify(form) });
+    const d = await r.json();
+    if (d.success) { setMsg(`กรมธรรม์ ${d.insurance.policy_number} เปิดใช้งานแล้ว`); load(); }
+    else setError(d.error?.message || 'สมัครประกันไม่สำเร็จ');
+  };
+
+  const PLAN_CODES = Object.keys(plans);
+  const selectedPlan = plans[form.plan_code];
+
+  return (
+    <div>
+      <Alert msg={msg} type="success" />
+      <Alert msg={error} type="error" />
+      <div style={styles.sectionTitle}>🛡️ เลือกแผนประกัน</div>
+      <div style={styles.card}>
+        <label style={styles.label}>แผนประกัน</label>
+        <select style={styles.input} value={form.plan_code}
+          onChange={e => setForm(f => ({ ...f, plan_code: e.target.value }))}>
+          {PLAN_CODES.map(code => (
+            <option key={code} value={code}>{plans[code]?.name_th} — ฿{fmt(plans[code]?.premium)}/เดือน</option>
+          ))}
+        </select>
+        {selectedPlan && (
+          <div style={{ marginTop: 12, padding: '10px 14px', background: C.surface,
+            borderRadius: 8, border: `1px solid ${C.border}` }}>
+            <div style={{ fontSize: 12, color: C.muted }}>วงเงินคุ้มครอง</div>
+            <div style={{ fontWeight: 700, color: C.green, fontSize: 18 }}>฿{fmt(selectedPlan.coverage)}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+              เบี้ย ฿{fmt(selectedPlan.premium)}/เดือน · ประเภท: {selectedPlan.type}
+            </div>
+          </div>
+        )}
+        <div style={{ marginTop: 12 }}>
+          <label style={styles.label}>ผู้รับประโยชน์ (ถ้ามี)</label>
+          <input style={styles.input} placeholder="ชื่อผู้รับประโยชน์"
+            onChange={e => setForm(f => ({ ...f, beneficiary: e.target.value }))} />
+        </div>
+        <button style={{ ...styles.btn('primary'), marginTop: 14 }} onClick={apply}>สมัครประกัน</button>
+      </div>
+      <div style={styles.sectionTitle}>📜 กรมธรรม์ของฉัน ({policies.length})</div>
+      {policies.length === 0
+        ? <div style={{ color: C.muted, fontSize: 13 }}>ยังไม่มีกรมธรรม์</div>
+        : policies.map(p => (
+          <div key={p.id} style={{ ...styles.card, marginBottom: 10 }}>
+            <div style={styles.row}>
+              <span style={styles.statusDot(p.status)} />
+              <div>
+                <div style={{ fontWeight: 700 }}>{p.plan_name_th}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>
+                  {p.policy_number} · คุ้มครอง ฿{fmt(p.coverage_amount)}
+                </div>
+              </div>
+              <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                <div style={{ color: C.gold, fontWeight: 700 }}>฿{fmt(p.premium_monthly)}/เดือน</div>
+                <div style={{ fontSize: 11, color: p.status === 'active' ? C.green : C.red }}>{p.status}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+    </div>
+  );
+}
+
+// ─── Investment Tab ───────────────────────────────────────────────────────────
+
+function InvestTab() {
+  const [products, setProducts] = useState([]);
+  const [portfolio, setPortfolio] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [form, setForm] = useState({ direction: 'buy', amount: '', nav_price: '10' });
+  const [msg, setMsg] = useState(null);
+  const [error, setError] = useState(null);
+  const [cat, setCat] = useState('');
+
+  const load = () => {
+    const url = cat ? `/api/bank/investments/products?category=${cat}` : '/api/bank/investments/products';
+    apiFetch(url).then(r => r.json()).then(r => { if (r.success) setProducts(r.products); });
+    apiFetch('/api/bank/investments').then(r => r.json()).then(r => { if (r.success) setPortfolio(r.portfolio); });
+    apiFetch('/api/bank/accounts').then(r => r.json()).then(r => { if (r.success) setAccounts(r.accounts); });
+  };
+  useEffect(load, [cat]);
+
+  const order = async () => {
+    setError(null); setMsg(null);
+    if (!form.product_code || !form.account_id || !form.amount) return setError('กรุณากรอกข้อมูลให้ครบ');
+    const r = await apiFetch('/api/bank/investments/order', { method: 'POST', body: JSON.stringify(form) });
+    const d = await r.json();
+    if (d.success) { setMsg(`${form.direction === 'buy' ? 'ซื้อ' : 'ขาย'} ${d.units} units สำเร็จ`); load(); }
+    else setError(d.error?.message || 'คำสั่งซื้อขายไม่สำเร็จ');
+  };
+
+  const CATS = [
+    { v: '', l: 'ทั้งหมด' }, { v: 'government_bond', l: 'พันธบัตรรัฐ' },
+    { v: 'mutual_fund', l: 'กองทุนรวม' }, { v: 'corporate_bond', l: 'หุ้นกู้' },
+    { v: 'gold', l: 'ทอง' }, { v: 'otai_token', l: 'OTAI' },
+  ];
+
+  const RISK_COLOR = { low: C.green, medium: C.gold, high: C.red, very_high: '#c026d3' };
+
+  return (
+    <div>
+      <Alert msg={msg} type="success" />
+      <Alert msg={error} type="error" />
+      <div style={styles.sectionTitle}>📈 ผลิตภัณฑ์การลงทุน</div>
+      <div style={{ ...styles.row, marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
+        {CATS.map(c => (
+          <button key={c.v} style={{ ...styles.btn(cat === c.v ? 'primary' : 'ghost'), padding: '6px 12px', fontSize: 12 }}
+            onClick={() => setCat(c.v)}>{c.l}</button>
+        ))}
+      </div>
+      <div style={styles.grid2}>
+        {products.map(p => (
+          <div key={p.code} style={{ ...styles.card, cursor: 'pointer',
+            border: form.product_code === p.code ? `2px solid ${C.cyan}` : `1px solid ${C.border}` }}
+            onClick={() => setForm(f => ({ ...f, product_code: p.code }))}>
+            <div style={{ fontWeight: 700 }}>{p.name_th}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{p.name_en}</div>
+            <div style={{ ...styles.row, marginTop: 8 }}>
+              <span style={{ color: C.green, fontWeight: 700 }}>{p.expected_return}% ต่อปี</span>
+              <span style={{ fontSize: 11, color: RISK_COLOR[p.risk_level] || C.muted, marginLeft: 'auto' }}>
+                {p.risk_level}
+              </span>
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
+              ขั้นต่ำ ฿{fmt(p.min_investment)}
+            </div>
+          </div>
+        ))}
+      </div>
+      {form.product_code && (
+        <div style={{ ...styles.card, marginTop: 16 }}>
+          <div style={styles.sectionTitle}>📋 คำสั่งซื้อขาย — {form.product_code}</div>
+          <div style={styles.grid2}>
+            <div>
+              <label style={styles.label}>บัญชี</label>
+              <select style={styles.input} onChange={e => setForm(f => ({ ...f, account_id: e.target.value }))}>
+                <option value="">เลือกบัญชี</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.account_number} — ฿{fmt(a.balance)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={styles.label}>คำสั่ง</label>
+              <select style={styles.input} value={form.direction}
+                onChange={e => setForm(f => ({ ...f, direction: e.target.value }))}>
+                <option value="buy">ซื้อ (Buy)</option>
+                <option value="sell">ขาย (Sell)</option>
+              </select>
+            </div>
+            <div>
+              <label style={styles.label}>จำนวนเงิน (บาท)</label>
+              <input style={styles.input} type="number" placeholder="10000"
+                onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+            </div>
+            <div>
+              <label style={styles.label}>ราคา NAV</label>
+              <input style={styles.input} type="number" value={form.nav_price}
+                onChange={e => setForm(f => ({ ...f, nav_price: e.target.value }))} />
+            </div>
+          </div>
+          <button style={{ ...styles.btn(form.direction === 'buy' ? 'primary' : 'danger'), marginTop: 12 }}
+            onClick={order}>{form.direction === 'buy' ? 'ซื้อกองทุน' : 'ขายกองทุน'}</button>
+        </div>
+      )}
+      {portfolio.length > 0 && (
+        <>
+          <div style={styles.sectionTitle}>💼 พอร์ตของฉัน</div>
+          {portfolio.map(p => (
+            <div key={p.code} style={{ ...styles.card, marginBottom: 10 }}>
+              <div style={styles.row}>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{p.name_th || p.code}</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>{p.units.toFixed(4)} units · {p.orders} คำสั่ง</div>
+                </div>
+                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                  <div style={{ fontWeight: 700, color: p.invested >= 0 ? C.green : C.red }}>
+                    ฿{fmt(Math.abs(p.invested))}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.muted }}>{p.category}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Bills Tab ────────────────────────────────────────────────────────────────
+
+function BillsTab() {
+  const [billers, setBillers] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [form, setForm] = useState({ ref1: '', amount: '' });
+  const [msg, setMsg] = useState(null);
+  const [error, setError] = useState(null);
+  const [cat, setCat] = useState('');
+
+  const load = () => {
+    const url = cat ? `/api/bank/bills/billers?category=${cat}` : '/api/bank/bills/billers';
+    apiFetch(url).then(r => r.json()).then(r => { if (r.success) setBillers(r.billers); });
+    apiFetch('/api/bank/bills/history').then(r => r.json()).then(r => { if (r.success) setHistory(r.payments); });
+    apiFetch('/api/bank/accounts').then(r => r.json()).then(r => { if (r.success) setAccounts(r.accounts); });
+  };
+  useEffect(load, [cat]);
+
+  const pay = async () => {
+    setError(null); setMsg(null);
+    if (!form.biller_code || !form.account_id || !form.amount || !form.ref1)
+      return setError('กรุณากรอกข้อมูลให้ครบ');
+    const r = await apiFetch('/api/bank/bills/pay', { method: 'POST', body: JSON.stringify(form) });
+    const d = await r.json();
+    if (d.success) { setMsg(`ชำระบิล ${d.biller.name_th} ฿${fmt(d.total)} สำเร็จ`); load(); }
+    else setError(d.error?.message || 'ชำระบิลไม่สำเร็จ');
+  };
+
+  const BILL_CATS = [
+    { v: '', l: 'ทั้งหมด' }, { v: 'utility', l: 'ค่าสาธารณูปโภค' },
+    { v: 'telecom', l: 'โทรศัพท์/Internet' }, { v: 'tax', l: 'ภาษี' },
+    { v: 'government', l: 'ราชการ' }, { v: 'loan', l: 'สินเชื่อ' },
+    { v: 'education', l: 'การศึกษา' }, { v: 'hospital', l: 'โรงพยาบาล' },
+  ];
+
+  return (
+    <div>
+      <Alert msg={msg} type="success" />
+      <Alert msg={error} type="error" />
+      <div style={styles.sectionTitle}>📄 ชำระบิล</div>
+      <div style={{ ...styles.row, marginBottom: 12, flexWrap: 'wrap', gap: 6 }}>
+        {BILL_CATS.map(c => (
+          <button key={c.v} style={{ ...styles.btn(cat === c.v ? 'primary' : 'ghost'), padding: '6px 12px', fontSize: 12 }}
+            onClick={() => { setCat(c.v); setForm(f => ({ ...f, biller_code: '' })); }}>{c.l}</button>
+        ))}
+      </div>
+      <div style={{ ...styles.grid2, marginBottom: 16 }}>
+        {billers.map(b => (
+          <div key={b.code} style={{ ...styles.card, cursor: 'pointer', padding: '12px 16px',
+            border: form.biller_code === b.code ? `2px solid ${C.cyan}` : `1px solid ${C.border}` }}
+            onClick={() => setForm(f => ({ ...f, biller_code: b.code }))}>
+            <div style={{ fontWeight: 600, fontSize: 13 }}>{b.name_th}</div>
+            <div style={{ fontSize: 11, color: C.muted }}>{b.category}</div>
+          </div>
+        ))}
+      </div>
+      {form.biller_code && (
+        <div style={styles.card}>
+          <div style={{ fontWeight: 700, marginBottom: 12, color: C.cyan }}>
+            ชำระ: {billers.find(b => b.code === form.biller_code)?.name_th}
+          </div>
+          <div style={styles.grid2}>
+            <div>
+              <label style={styles.label}>บัญชีตัดเงิน</label>
+              <select style={styles.input} onChange={e => setForm(f => ({ ...f, account_id: e.target.value }))}>
+                <option value="">เลือกบัญชี</option>
+                {accounts.map(a => <option key={a.id} value={a.id}>{a.account_number} — ฿{fmt(a.balance)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={styles.label}>จำนวนเงิน (บาท)</label>
+              <input style={styles.input} type="number" placeholder="500"
+                onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+            </div>
+            <div>
+              <label style={styles.label}>เลขอ้างอิง 1</label>
+              <input style={styles.input} placeholder="เลขผู้ใช้ / เลขบัญชี"
+                onChange={e => setForm(f => ({ ...f, ref1: e.target.value }))} />
+            </div>
+            <div>
+              <label style={styles.label}>เลขอ้างอิง 2 (ถ้ามี)</label>
+              <input style={styles.input} placeholder="รหัสพื้นที่ / เพิ่มเติม"
+                onChange={e => setForm(f => ({ ...f, ref2: e.target.value }))} />
+            </div>
+          </div>
+          <button style={{ ...styles.btn('primary'), marginTop: 12 }} onClick={pay}>ยืนยันการชำระ</button>
+        </div>
+      )}
+      {history.length > 0 && (
+        <>
+          <div style={styles.sectionTitle}>📋 ประวัติการชำระ</div>
+          <table style={styles.table}>
+            <thead><tr>
+              <th style={styles.th}>ผู้รับ</th><th style={styles.th}>จำนวน</th>
+              <th style={styles.th}>อ้างอิง</th><th style={styles.th}>วันที่</th>
+            </tr></thead>
+            <tbody>
+              {history.map(p => (
+                <tr key={p.id}>
+                  <td style={styles.td}>{p.bank_bill_billers?.name_th || p.biller_code}</td>
+                  <td style={styles.td}>฿{fmt(p.amount)}</td>
+                  <td style={styles.td}>{p.ref1}</td>
+                  <td style={styles.td}>{new Date(p.created_at).toLocaleDateString('th-TH')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Trade Finance Tab ────────────────────────────────────────────────────────
+
+function TradeTab() {
+  const [trades, setTrades] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [form, setForm] = useState({ instrument: 'tt', currency: 'USD', amount: '', counterparty: '', purpose: '' });
+  const [msg, setMsg] = useState(null);
+  const [error, setError] = useState(null);
+
+  const load = () => {
+    apiFetch('/api/bank/trade').then(r => r.json()).then(r => { if (r.success) setTrades(r.trade_finance); });
+    apiFetch('/api/bank/accounts').then(r => r.json()).then(r => { if (r.success) setAccounts(r.accounts); });
+  };
+  useEffect(load, []);
+
+  const apply = async () => {
+    setError(null); setMsg(null);
+    const r = await apiFetch('/api/bank/trade/apply', { method: 'POST', body: JSON.stringify(form) });
+    const d = await r.json();
+    if (d.success) { setMsg(`ยื่นขอ ${form.instrument.toUpperCase()} สำเร็จ`); load(); }
+    else setError(d.error?.message || 'ไม่สำเร็จ');
+  };
+
+  const INSTRUMENTS = [
+    { v: 'tt',              l: 'Telegraphic Transfer (TT)' },
+    { v: 'lc_import',      l: 'Letter of Credit — นำเข้า (LC Import)' },
+    { v: 'lc_export',      l: 'Letter of Credit — ส่งออก (LC Export)' },
+    { v: 'invoice_finance', l: 'Invoice Finance' },
+    { v: 'trust_receipt',  l: 'Trust Receipt (TR)' },
+    { v: 'bank_guarantee', l: 'Bank Guarantee' },
+  ];
+
+  return (
+    <div>
+      <Alert msg={msg} type="success" />
+      <Alert msg={error} type="error" />
+      <div style={styles.sectionTitle}>🚢 Trade Finance ไทย–ASEAN–สากล</div>
+      <div style={styles.card}>
+        <div style={styles.grid2}>
+          <div>
+            <label style={styles.label}>เครื่องมือทางการค้า</label>
+            <select style={styles.input} value={form.instrument}
+              onChange={e => setForm(f => ({ ...f, instrument: e.target.value }))}>
+              {INSTRUMENTS.map(i => <option key={i.v} value={i.v}>{i.l}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={styles.label}>บัญชีที่ใช้</label>
+            <select style={styles.input} onChange={e => setForm(f => ({ ...f, account_id: e.target.value }))}>
+              <option value="">เลือกบัญชี</option>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.account_number}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={styles.label}>คู่ค้า (Counterparty)</label>
+            <input style={styles.input} placeholder="ชื่อบริษัทหรือธนาคารคู่ค้า"
+              onChange={e => setForm(f => ({ ...f, counterparty: e.target.value }))} />
+          </div>
+          <div>
+            <label style={styles.label}>ประเทศคู่ค้า</label>
+            <input style={styles.input} placeholder="CN / SG / JP / US…"
+              onChange={e => setForm(f => ({ ...f, counterparty_country: e.target.value }))} />
+          </div>
+          <div>
+            <label style={styles.label}>มูลค่า</label>
+            <input style={styles.input} type="number" placeholder="100000"
+              onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
+          </div>
+          <div>
+            <label style={styles.label}>สกุลเงิน</label>
+            <select style={styles.input} value={form.currency}
+              onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}>
+              <option value="USD">USD</option><option value="EUR">EUR</option>
+              <option value="CNY">CNY</option><option value="SGD">SGD</option>
+              <option value="JPY">JPY</option><option value="GBP">GBP</option>
+              <option value="THB">THB</option>
+            </select>
+          </div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <label style={styles.label}>วัตถุประสงค์</label>
+          <input style={styles.input} placeholder="เช่น นำเข้าวัตถุดิบ, ส่งออกสินค้า OTOP"
+            onChange={e => setForm(f => ({ ...f, purpose: e.target.value }))} />
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <label style={styles.label}>SWIFT Reference (ถ้ามี)</label>
+          <input style={styles.input} placeholder="SWIFT BIC / Reference"
+            onChange={e => setForm(f => ({ ...f, swift_ref: e.target.value }))} />
+        </div>
+        <button style={{ ...styles.btn('primary'), marginTop: 14 }} onClick={apply}>ยื่นขอ Trade Finance</button>
+      </div>
+      {trades.length > 0 && (
+        <>
+          <div style={styles.sectionTitle}>📋 รายการ Trade Finance</div>
+          {trades.map(t => (
+            <div key={t.id} style={{ ...styles.card, marginBottom: 10 }}>
+              <div style={styles.row}>
+                <span style={styles.statusDot(t.status)} />
+                <div>
+                  <div style={{ fontWeight: 700 }}>{t.instrument.toUpperCase()} — {t.counterparty}</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>
+                    {t.currency} {fmt(t.amount)} · {t.counterparty_country || '—'}
+                  </div>
+                </div>
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: C.gold }}>{t.status}</span>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Payroll Tab ──────────────────────────────────────────────────────────────
+
+function PayrollTab() {
+  const [employees, setEmployees] = useState([]);
+  const [runs, setRuns] = useState([]);
+  const [accounts, setAccounts] = useState([]);
+  const [empForm, setEmpForm] = useState({ full_name: '', base_salary: '', position: '', department: '' });
+  const [runForm, setRunForm] = useState({ period_month: new Date().getMonth() + 1, period_year: new Date().getFullYear() });
+  const [msg, setMsg] = useState(null);
+  const [error, setError] = useState(null);
+
+  const load = () => {
+    apiFetch('/api/bank/payroll/employees').then(r => r.json()).then(r => { if (r.success) setEmployees(r.employees); });
+    apiFetch('/api/bank/payroll/history').then(r => r.json()).then(r => { if (r.success) setRuns(r.runs); });
+    apiFetch('/api/bank/accounts').then(r => r.json()).then(r => { if (r.success) setAccounts(r.accounts); });
+  };
+  useEffect(load, []);
+
+  const addEmployee = async () => {
+    setError(null); setMsg(null);
+    const r = await apiFetch('/api/bank/payroll/employees', { method: 'POST', body: JSON.stringify(empForm) });
+    const d = await r.json();
+    if (d.success) { setMsg(`เพิ่มพนักงาน ${d.employee.full_name} สำเร็จ`); load(); }
+    else setError(d.error?.message || 'ไม่สำเร็จ');
+  };
+
+  const runPayroll = async () => {
+    setError(null); setMsg(null);
+    if (!runForm.account_id) return setError('กรุณาเลือกบัญชี');
+    const r = await apiFetch('/api/bank/payroll/run', { method: 'POST', body: JSON.stringify(runForm) });
+    const d = await r.json();
+    if (d.success) {
+      setMsg(`จ่ายเงินเดือน ${d.summary.employees} คน รวม ฿${fmt(d.summary.total_net)} สำเร็จ`);
+      load();
+    } else setError(d.error?.message || 'จ่ายเงินเดือนไม่สำเร็จ');
+  };
+
+  const totalSalary = employees.reduce((s, e) => s + parseFloat(e.base_salary ?? 0), 0);
+
+  return (
+    <div>
+      <Alert msg={msg} type="success" />
+      <Alert msg={error} type="error" />
+      <div style={styles.sectionTitle}>👥 พนักงาน ({employees.length} คน · เงินเดือนรวม ฿{fmt(totalSalary)})</div>
+      <div style={styles.card}>
+        <div style={styles.grid2}>
+          <div>
+            <label style={styles.label}>ชื่อพนักงาน</label>
+            <input style={styles.input} placeholder="ชื่อ-นามสกุล"
+              onChange={e => setEmpForm(f => ({ ...f, full_name: e.target.value }))} />
+          </div>
+          <div>
+            <label style={styles.label}>เงินเดือนพื้นฐาน (บาท)</label>
+            <input style={styles.input} type="number" placeholder="25000"
+              onChange={e => setEmpForm(f => ({ ...f, base_salary: e.target.value }))} />
+          </div>
+          <div>
+            <label style={styles.label}>ตำแหน่ง</label>
+            <input style={styles.input} placeholder="Sales Manager"
+              onChange={e => setEmpForm(f => ({ ...f, position: e.target.value }))} />
+          </div>
+          <div>
+            <label style={styles.label}>แผนก</label>
+            <input style={styles.input} placeholder="Operations"
+              onChange={e => setEmpForm(f => ({ ...f, department: e.target.value }))} />
+          </div>
+        </div>
+        <button style={{ ...styles.btn('primary'), marginTop: 12 }} onClick={addEmployee}>เพิ่มพนักงาน</button>
+      </div>
+      {employees.length > 0 && (
+        <table style={{ ...styles.table, marginTop: 12 }}>
+          <thead><tr>
+            <th style={styles.th}>ชื่อ</th><th style={styles.th}>ตำแหน่ง</th>
+            <th style={styles.th}>แผนก</th><th style={styles.th}>เงินเดือน</th>
+          </tr></thead>
+          <tbody>
+            {employees.map(e => (
+              <tr key={e.id}>
+                <td style={styles.td}>{e.full_name}</td>
+                <td style={styles.td}>{e.position || '—'}</td>
+                <td style={styles.td}>{e.department || '—'}</td>
+                <td style={styles.td}>฿{fmt(e.base_salary)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <div style={{ ...styles.sectionTitle, marginTop: 24 }}>🏧 จ่ายเงินเดือน</div>
+      <div style={styles.card}>
+        <div style={styles.grid2}>
+          <div>
+            <label style={styles.label}>บัญชีตัดเงิน</label>
+            <select style={styles.input} onChange={e => setRunForm(f => ({ ...f, account_id: e.target.value }))}>
+              <option value="">เลือกบัญชี</option>
+              {accounts.map(a => <option key={a.id} value={a.id}>{a.account_number} — ฿{fmt(a.balance)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={styles.label}>งวดเดือน</label>
+            <select style={styles.input} value={runForm.period_month}
+              onChange={e => setRunForm(f => ({ ...f, period_month: e.target.value }))}>
+              {[...Array(12)].map((_, i) => <option key={i+1} value={i+1}>{i+1}</option>)}
+            </select>
+          </div>
+        </div>
+        <button style={{ ...styles.btn('primary'), marginTop: 12 }} onClick={runPayroll}>
+          จ่ายเงินเดือน — ฿{fmt(totalSalary)} (ก่อนหัก)
+        </button>
+      </div>
+      {runs.length > 0 && (
+        <>
+          <div style={styles.sectionTitle}>📋 ประวัติการจ่ายเงินเดือน</div>
+          {runs.map(r => (
+            <div key={r.id} style={{ ...styles.card, marginBottom: 8 }}>
+              <div style={styles.row}>
+                <div>
+                  <div style={{ fontWeight: 700 }}>{r.period_year}-{String(r.period_month).padStart(2,'0')}</div>
+                  <div style={{ fontSize: 12, color: C.muted }}>{r.employee_count} คน</div>
+                </div>
+                <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                  <div style={{ fontWeight: 700, color: C.cyan }}>฿{fmt(r.total_net)}</div>
+                  <div style={{ fontSize: 11, color: r.status === 'completed' ? C.green : C.gold }}>{r.status}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function DigitalBankPage() {
@@ -910,6 +1600,12 @@ export default function DigitalBankPage() {
     accounts:  <AccountsTab />,
     transfer:  <TransferTab />,
     products:  <ProductsTab />,
+    loans:     <LoansTab />,
+    insurance: <InsuranceTab />,
+    invest:    <InvestTab />,
+    bills:     <BillsTab />,
+    trade:     <TradeTab />,
+    payroll:   <PayrollTab />,
     staking:   <StakingTab />,
     cards:     <CardsTab />,
     fx:        <FXTab />,
@@ -928,21 +1624,15 @@ export default function DigitalBankPage() {
           OpenThaiAi Digital Bank of Thailand · OTOP / SME / สินค้าอื่นๆ · ไทย–ASEAN–สากล
         </p>
         <div style={styles.heroBadges}>
-          <span style={{ ...styles.badge, color: C.cyan, borderColor: C.cyan }}>
-            🤖 AI-Powered
-          </span>
-          <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>
-            🌏 mBridge Ready
-          </span>
-          <span style={{ ...styles.badge, color: C.gold, borderColor: C.gold }}>
-            🔒 OTAI Staking
-          </span>
-          <span style={{ ...styles.badge, color: C.thai, borderColor: C.thai }}>
-            PromptPay ✅
-          </span>
-          <span style={{ ...styles.badge, color: C.purple, borderColor: C.purple }}>
-            e-CNY Corridor
-          </span>
+          <span style={{ ...styles.badge, color: C.cyan, borderColor: C.cyan }}>🤖 AI-Powered</span>
+          <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>🌏 mBridge</span>
+          <span style={{ ...styles.badge, color: C.gold, borderColor: C.gold }}>🔒 OTAI Staking</span>
+          <span style={{ ...styles.badge, color: C.thai, borderColor: C.thai }}>PromptPay ✅</span>
+          <span style={{ ...styles.badge, color: C.purple, borderColor: C.purple }}>e-CNY</span>
+          <span style={{ ...styles.badge, color: C.blue, borderColor: C.blue }}>🏛️ สินเชื่อ</span>
+          <span style={{ ...styles.badge, color: '#ec4899', borderColor: '#ec4899' }}>🛡️ ประกัน</span>
+          <span style={{ ...styles.badge, color: C.green, borderColor: C.green }}>📈 ลงทุน</span>
+          <span style={{ ...styles.badge, color: C.muted, borderColor: C.muted }}>🚢 Trade</span>
         </div>
       </div>
 
