@@ -18,8 +18,21 @@ import { audit } from './audit.js';
 import { log } from './logger.js';
 
 const router = Router();
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let _supabase = null;
+let _anthropic = null;
+function getDb() {
+  if (!_supabase) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_KEY;
+    if (!url || !key) throw new ApiError(503, 'SUPABASE_NOT_CONFIGURED', 'Supabase ยังไม่ได้ตั้งค่า');
+    _supabase = createClient(url, key);
+  }
+  return _supabase;
+}
+function getAI() {
+  if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _anthropic;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -30,7 +43,7 @@ function genAccountNumber() {
 }
 
 async function getAccount(accountId, userId) {
-  const { data, error } = await supabase
+  const { data, error } = await getDb()
     .from('bank_accounts')
     .select('*')
     .eq('id', accountId)
@@ -42,7 +55,7 @@ async function getAccount(accountId, userId) {
 }
 
 async function recordTx(accountId, type, amount, currency, description, metadata = {}) {
-  const { data: acc } = await supabase
+  const { data: acc } = await getDb()
     .from('bank_accounts')
     .select('balance')
     .eq('id', accountId)
@@ -53,14 +66,14 @@ async function recordTx(accountId, type, amount, currency, description, metadata
   const after = before + delta;
   if (after < 0) throw ApiError.badRequest('Insufficient balance');
 
-  const { error: txErr } = await supabase.from('bank_transactions').insert({
+  const { error: txErr } = await getDb().from('bank_transactions').insert({
     account_id: accountId, type, amount: Math.abs(amount), currency,
     balance_before: before, balance_after: after, description,
     status: 'completed', metadata,
   });
   if (txErr) throw new ApiError(500, 'TX_WRITE_FAILED', txErr.message);
 
-  const { error: balErr } = await supabase
+  const { error: balErr } = await getDb()
     .from('bank_accounts')
     .update({ balance: after, last_activity_at: new Date().toISOString() })
     .eq('id', accountId);
@@ -83,7 +96,7 @@ router.post('/kyc/apply', requireAuth, asyncHandler(async (req, res) => {
   const uid = req.user.id;
   if (!req.body.pdpa_consent) throw ApiError.badRequest('PDPA consent is required');
 
-  const { data: existing } = await supabase
+  const { data: existing } = await getDb()
     .from('bank_kyc_applications')
     .select('id,status')
     .eq('user_id', uid)
@@ -93,7 +106,7 @@ router.post('/kyc/apply', requireAuth, asyncHandler(async (req, res) => {
   if (existing?.status === 'pending' || existing?.status === 'under_review')
     throw ApiError.conflict('KYC application already in progress');
 
-  const { data, error } = await supabase.from('bank_kyc_applications').insert({
+  const { data, error } = await getDb().from('bank_kyc_applications').insert({
     user_id: uid,
     full_name_th:  req.body.full_name_th,
     full_name_en:  req.body.full_name_en,
@@ -118,7 +131,7 @@ router.post('/kyc/apply', requireAuth, asyncHandler(async (req, res) => {
 
 // Get own KYC status
 router.get('/kyc/status', requireAuth, asyncHandler(async (req, res) => {
-  const { data } = await supabase
+  const { data } = await getDb()
     .from('bank_kyc_applications')
     .select('id,status,kyc_level,submitted_at,reviewed_at,reviewer_notes')
     .eq('user_id', req.user.id)
@@ -134,7 +147,7 @@ router.patch('/kyc/:id/review', requireAuth, asyncHandler(async (req, res) => {
   const validStatus = ['approved','rejected','requires_info'];
   if (!validStatus.includes(req.body.status)) throw ApiError.badRequest('Invalid status');
 
-  const { data, error } = await supabase
+  const { data, error } = await getDb()
     .from('bank_kyc_applications')
     .update({
       status:         req.body.status,
@@ -159,7 +172,7 @@ router.post('/accounts/open', requireAuth, asyncHandler(async (req, res) => {
   const uid = req.user.id;
 
   // KYC must be approved
-  const { data: kyc } = await supabase
+  const { data: kyc } = await getDb()
     .from('bank_kyc_applications')
     .select('id,status')
     .eq('user_id', uid)
@@ -171,13 +184,13 @@ router.post('/accounts/open', requireAuth, asyncHandler(async (req, res) => {
   let tries = 0;
   do {
     accountNumber = genAccountNumber();
-    const { data: dup } = await supabase
+    const { data: dup } = await getDb()
       .from('bank_accounts').select('id').eq('account_number', accountNumber).maybeSingle();
     if (!dup) break;
     tries++;
   } while (tries < 5);
 
-  const { data, error } = await supabase.from('bank_accounts').insert({
+  const { data, error } = await getDb().from('bank_accounts').insert({
     user_id:        uid,
     kyc_id:         kyc.id,
     account_number: accountNumber,
@@ -196,7 +209,7 @@ router.post('/accounts/open', requireAuth, asyncHandler(async (req, res) => {
 
 // List user accounts
 router.get('/accounts', requireAuth, asyncHandler(async (req, res) => {
-  const { data, error } = await supabase
+  const { data, error } = await getDb()
     .from('bank_accounts')
     .select('*')
     .eq('user_id', req.user.id)
@@ -209,7 +222,7 @@ router.get('/accounts', requireAuth, asyncHandler(async (req, res) => {
 // Get account details + recent transactions
 router.get('/accounts/:id', requireAuth, asyncHandler(async (req, res) => {
   const account = await getAccount(req.params.id, req.user.id);
-  const { data: txns } = await supabase
+  const { data: txns } = await getDb()
     .from('bank_transactions')
     .select('*')
     .eq('account_id', account.id)
@@ -250,7 +263,7 @@ router.post('/transfer', requireAuth, asyncHandler(async (req, res) => {
   const fromAcc = await getAccount(req.body.from_account_id, uid);
 
   // Destination can belong to anyone (external transfer) or self
-  const { data: toAcc } = await supabase
+  const { data: toAcc } = await getDb()
     .from('bank_accounts')
     .select('*')
     .eq('id', req.body.to_account_id)
@@ -295,7 +308,7 @@ router.get('/accounts/:id/transactions', requireAuth, asyncHandler(async (req, r
   const limit = Math.min(parseInt(req.query.limit ?? '20'), 100);
   const from  = (page - 1) * limit;
 
-  let q = supabase.from('bank_transactions').select('*', { count: 'exact' })
+  let q = getDb().from('bank_transactions').select('*', { count: 'exact' })
     .eq('account_id', account.id).order('created_at', { ascending: false })
     .range(from, from + limit - 1);
   if (req.query.type) q = q.eq('type', req.query.type);
@@ -315,7 +328,7 @@ router.get('/fx/rates', asyncHandler(async (req, res) => {
   ];
   const rates = [];
   for (const [base, quote] of pairs) {
-    const { data } = await supabase.from('bank_fx_rates')
+    const { data } = await getDb().from('bank_fx_rates')
       .select('*').eq('base_currency', base).eq('quote_currency', quote)
       .order('valid_at', { ascending: false }).limit(1).maybeSingle();
     if (data) rates.push(data);
@@ -331,7 +344,7 @@ router.post('/fx/rates', requireAuth, asyncHandler(async (req, res) => {
     buy_rate:       'required',
     sell_rate:      'required',
   });
-  const { data, error } = await supabase.from('bank_fx_rates').insert({
+  const { data, error } = await getDb().from('bank_fx_rates').insert({
     base_currency:  req.body.base_currency.toUpperCase(),
     quote_currency: req.body.quote_currency.toUpperCase(),
     buy_rate:       req.body.buy_rate,
@@ -346,7 +359,7 @@ router.post('/fx/rates', requireAuth, asyncHandler(async (req, res) => {
 // ─── Products ────────────────────────────────────────────────────────────────
 
 router.get('/products', asyncHandler(async (req, res) => {
-  let q = supabase.from('bank_products').select('*').eq('is_active', true).order('sort_order');
+  let q = getDb().from('bank_products').select('*').eq('is_active', true).order('sort_order');
   if (req.query.category) q = q.eq('category', req.query.category);
   const { data, error } = await q;
   if (error) throw new ApiError(500, 'FETCH_FAILED', error.message);
@@ -359,7 +372,7 @@ router.post('/cards/request', requireAuth, asyncHandler(async (req, res) => {
   validate(req.body, { account_id: 'required', card_type: 'required', name_on_card: 'required' });
   const account = await getAccount(req.body.account_id, req.user.id);
 
-  const { data, error } = await supabase.from('bank_cards').insert({
+  const { data, error } = await getDb().from('bank_cards').insert({
     account_id:   account.id,
     user_id:      req.user.id,
     card_type:    req.body.card_type,
@@ -374,7 +387,7 @@ router.post('/cards/request', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 router.get('/cards', requireAuth, asyncHandler(async (req, res) => {
-  const { data, error } = await supabase.from('bank_cards')
+  const { data, error } = await getDb().from('bank_cards')
     .select('*').eq('user_id', req.user.id).neq('status', 'cancelled')
     .order('created_at', { ascending: false });
   if (error) throw new ApiError(500, 'FETCH_FAILED', error.message);
@@ -386,7 +399,7 @@ router.patch('/cards/:id/status', requireAuth, asyncHandler(async (req, res) => 
   const allowed = ['active','frozen','cancelled'];
   if (!allowed.includes(req.body.status)) throw ApiError.badRequest('Invalid card status');
 
-  const { data, error } = await supabase.from('bank_cards')
+  const { data, error } = await getDb().from('bank_cards')
     .update({ status: req.body.status })
     .eq('id', req.params.id).eq('user_id', req.user.id)
     .select().single();
@@ -400,7 +413,7 @@ router.patch('/cards/:id/status', requireAuth, asyncHandler(async (req, res) => 
 
 router.post('/beneficiaries', requireAuth, asyncHandler(async (req, res) => {
   validate(req.body, { nickname: 'required' });
-  const { data, error } = await supabase.from('bank_beneficiaries').insert({
+  const { data, error } = await getDb().from('bank_beneficiaries').insert({
     user_id:        req.user.id,
     nickname:       req.body.nickname,
     bank_name:      req.body.bank_name,
@@ -414,7 +427,7 @@ router.post('/beneficiaries', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 router.get('/beneficiaries', requireAuth, asyncHandler(async (req, res) => {
-  const { data } = await supabase.from('bank_beneficiaries')
+  const { data } = await getDb().from('bank_beneficiaries')
     .select('*').eq('user_id', req.user.id).order('is_favourite', { ascending: false });
   res.json({ success: true, beneficiaries: data || [] });
 }));
@@ -428,7 +441,7 @@ router.post('/staking/stake', requireAuth, asyncHandler(async (req, res) => {
   const termDays = parseInt(req.body.term_days);
   if (amount <= 0) throw ApiError.badRequest('Invalid staking amount');
 
-  const { data: product } = await supabase.from('bank_products')
+  const { data: product } = await getDb().from('bank_products')
     .select('*').eq('code', req.body.product_code).eq('is_active', true).maybeSingle();
   if (!product) throw ApiError.notFound('Staking product not found');
 
@@ -437,7 +450,7 @@ router.post('/staking/stake', requireAuth, asyncHandler(async (req, res) => {
   await recordTx(account.id, 'staking_in', amount, account.currency,
     `Staking: ${product.name_en} (${termDays}d)`);
 
-  const { data, error } = await supabase.from('bank_staking').insert({
+  const { data, error } = await getDb().from('bank_staking').insert({
     user_id:      req.user.id,
     account_id:   account.id,
     product_code: product.code,
@@ -454,7 +467,7 @@ router.post('/staking/stake', requireAuth, asyncHandler(async (req, res) => {
 }));
 
 router.get('/staking', requireAuth, asyncHandler(async (req, res) => {
-  const { data } = await supabase.from('bank_staking')
+  const { data } = await getDb().from('bank_staking')
     .select('*').eq('user_id', req.user.id).order('created_at', { ascending: false });
   res.json({ success: true, staking: data || [] });
 }));
@@ -475,7 +488,7 @@ router.post('/mbridge/transfer', requireAuth, asyncHandler(async (req, res) => {
   if (amount <= 0) throw ApiError.badRequest('Invalid send amount');
 
   // NOTE: mBridge requires BOT API integration (not yet live in production)
-  const { data, error } = await supabase.from('bank_mbridge_transfers').insert({
+  const { data, error } = await getDb().from('bank_mbridge_transfers').insert({
     user_id:          req.user.id,
     from_account_id:  account.id,
     send_amount:      amount,
@@ -500,7 +513,7 @@ router.post('/advisor/ask', requireAuth, asyncHandler(async (req, res) => {
   validate(req.body, { question: 'required|minlen:5' });
 
   // Load user's account summary for context
-  const { data: accounts } = await supabase
+  const { data: accounts } = await getDb()
     .from('bank_accounts').select('account_type,currency,balance,tier')
     .eq('user_id', req.user.id).neq('status','closed');
 
@@ -511,7 +524,7 @@ router.post('/advisor/ask', requireAuth, asyncHandler(async (req, res) => {
 
   let reply;
   try {
-    const msg = await anthropic.messages.create({
+    const msg = await getAI().messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 600,
       system: systemPrompt,
@@ -531,12 +544,12 @@ router.get('/dashboard', requireAuth, asyncHandler(async (req, res) => {
   const uid = req.user.id;
   const [{ data: accounts }, { data: kyc }, { data: staking }, { data: cards }] =
     await Promise.all([
-      supabase.from('bank_accounts').select('*').eq('user_id', uid).neq('status','closed'),
-      supabase.from('bank_kyc_applications').select('status,kyc_level')
+      getDb().from('bank_accounts').select('*').eq('user_id', uid).neq('status','closed'),
+      getDb().from('bank_kyc_applications').select('status,kyc_level')
         .eq('user_id', uid).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-      supabase.from('bank_staking').select('staked_amount,apy,matures_at,status')
+      getDb().from('bank_staking').select('staked_amount,apy,matures_at,status')
         .eq('user_id', uid).eq('status','active'),
-      supabase.from('bank_cards').select('card_type,network,status').eq('user_id', uid),
+      getDb().from('bank_cards').select('card_type,network,status').eq('user_id', uid),
     ]);
 
   const totalBalance = (accounts || []).reduce((s, a) => s + parseFloat(a.balance ?? 0), 0);
