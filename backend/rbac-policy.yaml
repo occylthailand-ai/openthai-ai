@@ -23,7 +23,7 @@ roles:
       - "ledger:read"
 
   platform_operator:
-    description: "ทีม OpenThai.ai"
+    description: "ทีม OpenThaiAi"
     inherits: [member]
     permissions:
       - "analytics:read"

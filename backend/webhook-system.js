@@ -57,8 +57,8 @@ async function deliverOnce(url, payload, sig, timeoutMs = 8000) {
       signal:  ctrl.signal,
       headers: {
         'Content-Type':          'application/json',
-        'X-OpenThai-Signature':  sig,
-        'X-OpenThai-Event':      JSON.parse(payload).event,
+        'X-OpenThaiAi-Signature':  sig,
+        'X-OpenThaiAi-Event':      JSON.parse(payload).event,
         'User-Agent':            'Openthai.ai-Webhook/2.0',
       },
       body: payload,

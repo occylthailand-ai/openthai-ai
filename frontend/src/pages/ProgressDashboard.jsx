@@ -193,7 +193,7 @@ export default function ProgressDashboard() {
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{ fontSize: 13, color: '#6366f1', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>OpenThai.ai</div>
+          <div style={{ fontSize: 13, color: '#6366f1', letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>OpenThaiAi</div>
           <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0, background: 'linear-gradient(135deg,#6366f1,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             360° Progress Dashboard
           </h1>
@@ -269,7 +269,7 @@ export default function ProgressDashboard() {
 
         {/* Footer */}
         <div style={{ textAlign: 'center', marginTop: 48, color: '#334155', fontSize: 12 }}>
-          รายงานส่งอัตโนมัติทุกวัน 23:30 น. → #all-openthai-ai · OpenThai.ai AI Monitoring Agent
+          รายงานส่งอัตโนมัติทุกวัน 23:30 น. → #all-openthiai · OpenThaiAi AI Monitoring Agent
         </div>
       </div>
     </div>

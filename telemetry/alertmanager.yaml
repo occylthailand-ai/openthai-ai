@@ -35,7 +35,7 @@ receivers:
     line_configs:
       - token: "${LINE_NOTIFY_TOKEN}"
         message: |
-          🔔 [OpenThai AI] {{ .GroupLabels.alertname }}
+          🔔 [OpenThaiAi] {{ .GroupLabels.alertname }}
           {{ range .Alerts }}• {{ .Annotations.summary }}{{ end }}
 
   - name: 'critical-channel'

@@ -9,7 +9,7 @@ const SLIDES = [
       <div style={{ textAlign: 'center' }}>
         <div style={{ fontSize: 72, marginBottom: 20 }}>🇹🇭</div>
         <h1 style={{ fontSize: 'clamp(32px,6vw,56px)', fontWeight: 900, margin: 0, background: 'linear-gradient(135deg,#6366f1,#10b981,#f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', lineHeight: 1.1 }}>
-          OpenThai AI
+          OpenThaiAi
         </h1>
         <p style={{ fontSize: 'clamp(16px,3vw,24px)', color: '#cbd5e1', margin: '16px 0 8px', fontWeight: 600 }}>
           Thai Export Intelligence Platform
@@ -334,7 +334,7 @@ export default function PitchDeckPage() {
             <span style={{ fontSize: 20 }}>🎯</span>
             <div>
               <div style={{ fontWeight: 800, fontSize: 15, background: 'linear-gradient(135deg,#6366f1,#10b981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Investor & Partner Pitch Deck</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>OpenThai AI · {SLIDES.length} slides · กด ← → เลื่อน · พิมพ์/PDF: Ctrl+P</div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>OpenThaiAi · {SLIDES.length} slides · กด ← → เลื่อน · พิมพ์/PDF: Ctrl+P</div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>

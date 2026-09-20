@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 const LANG = {
   th: {
-    title: 'ประตูสู่ OpenThai.ai',
+    title: 'ประตูสู่ OpenThaiAi',
     sub: 'เลือกประเภทของท่านเพื่อเข้าร่วมเป็นส่วนหนึ่งของระบบนิเวศ AI ไทย',
     portals: [
       { id: 'producer',    icon: '🏭', color: '#6366f1', title: 'ผู้ผลิต',                  sub: 'Producer (Global)',              desc: 'นำสินค้า/บริการเข้าสู่แพลตฟอร์ม AI ไทย ไม่จำกัดประเทศ',         path: '/portals/producer' },
@@ -19,7 +19,7 @@ const LANG = {
     join: 'เข้าร่วม →',
   },
   en: {
-    title: 'Gateway to OpenThai.ai',
+    title: 'Gateway to OpenThaiAi',
     sub: 'Choose your role to join the Thai AI ecosystem',
     portals: [
       { id: 'producer',    icon: '🏭', color: '#6366f1', title: 'Producer',                  sub: 'Global',    desc: 'Bring your products/services into the Thai AI platform',         path: '/portals/producer' },
@@ -35,7 +35,7 @@ const LANG = {
     join: 'Join →',
   },
   zh: {
-    title: '进入 OpenThai.ai',
+    title: '进入 OpenThaiAi',
     sub: '选择您的角色，加入泰国AI生态系统',
     portals: [
       { id: 'producer',    icon: '🏭', color: '#6366f1', title: '生产商',        sub: '全球',    desc: '将您的产品/服务带入泰国AI平台',   path: '/portals/producer' },
@@ -110,7 +110,7 @@ export default function PortalHubPage() {
 
       {/* Footer */}
       <div style={{ textAlign: 'center', padding: '32px', borderTop: '1px solid #1e1e2e', color: '#555', fontSize: 13 }}>
-        OpenThai.ai — Unified AI Ecosystem · {new Date().getFullYear()}
+        OpenThaiAi — Unified AI Ecosystem · {new Date().getFullYear()}
       </div>
     </div>
   );

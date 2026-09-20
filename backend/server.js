@@ -37,6 +37,7 @@ import { createProgressTracker } from './progress-tracker.js';
 import { createIntegrations } from './integrations.js';
 import { createMatching } from './matching.js';
 import { registerBlueprintRoutes } from './content-blueprint.js';
+import digitalBankRouter from './digital-bank.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -2550,14 +2551,14 @@ app.post('/api/pr/global-content', generateLimiter, async (req, res) => {
       },
       sme: {
         headline: `💼 SME ไทย — ไม่ต้องจ้าง Agency แพง! AI ทำให้คุณได้เลย`,
-        body: `"${p}" คือตัวอย่างของ SME ไทยที่ใช้ AI แทนทีม Marketing ได้จริง OpenThai AI ช่วยสร้างแบรนด์ออนไลน์ครบวงจร คอนเทนต์ขายสินค้า 3 ภาษา วิเคราะห์คู่แข่งเรียลไทม์ และวางแผน PR รายเดือน ${u} ลดต้นทุน Marketing ได้ทันที เริ่มต้นได้วันนี้`,
+        body: `"${p}" คือตัวอย่างของ SME ไทยที่ใช้ AI แทนทีม Marketing ได้จริง OpenThaiAi ช่วยสร้างแบรนด์ออนไลน์ครบวงจร คอนเทนต์ขายสินค้า 3 ภาษา วิเคราะห์คู่แข่งเรียลไทม์ และวางแผน PR รายเดือน ${u} ลดต้นทุน Marketing ได้ทันที เริ่มต้นได้วันนี้`,
         cta: 'ทดลองใช้ฟรี 14 วัน — ไม่ต้องใช้บัตรเครดิต',
         hashtags: ['#SMEไทย', '#ThaiSME', '#AIMarketing', '#ธุรกิจไทย', '#ลดต้นทุน'],
         key_message: `SME ไทยมี AI Marketing เป็นของตัวเองได้ — เริ่มต้นง่าย ราคาที่เข้าถึงได้`,
       },
       agri: {
         headline: `🌾 เกษตรกรไทย — ขายตรงถึงผู้บริโภคทั่วโลก ด้วย AI ที่เข้าใจเรื่องเกษตร`,
-        body: `"${p}" ผลิตภัณฑ์เกษตรไทยคุณภาพสูง ${u} OpenThai AI ช่วยเล่าเรื่อง Farm-to-Table ใน 3 ภาษา สร้างเนื้อหาสำหรับตลาด EU/USA/Japan ที่ต้องการ Organic และ GI สร้าง Video Script ให้ลูกค้าเห็นไร่นาจริง รองรับใบรับรอง Organic · GAP · GI ช่วยสร้างเอกสารประกอบ`,
+        body: `"${p}" ผลิตภัณฑ์เกษตรไทยคุณภาพสูง ${u} OpenThaiAi ช่วยเล่าเรื่อง Farm-to-Table ใน 3 ภาษา สร้างเนื้อหาสำหรับตลาด EU/USA/Japan ที่ต้องการ Organic และ GI สร้าง Video Script ให้ลูกค้าเห็นไร่นาจริง รองรับใบรับรอง Organic · GAP · GI ช่วยสร้างเอกสารประกอบ`,
         cta: 'เริ่มส่งออกสินค้าเกษตรไทยวันนี้ → openthai-ai.com',
         hashtags: ['#เกษตรกรไทย', '#ThaiAgriculture', '#FarmToTable', '#OrganicThai', '#GAPCertified', '#สินค้าเกษตรไทย'],
         key_message: `เกษตรกรไทยส่งออกได้ — ด้วย AI ที่เข้าใจเรื่องเกษตรและตลาดโลก`,
@@ -2601,14 +2602,14 @@ app.post('/api/pr/global-content', generateLimiter, async (req, res) => {
       },
       sme: {
         headline: `💼 Thai SMEs — No Expensive Agency Needed. Let AI Do It For You.`,
-        body: `"${p}" proves that Thai SMEs can compete at a global level with AI-powered marketing. OpenThai AI is your complete marketing department — tri-lingual content for all major platforms, real-time competitor analysis, and monthly PR plans. ${u}. Reduce marketing costs dramatically and start growing today.`,
+        body: `"${p}" proves that Thai SMEs can compete at a global level with AI-powered marketing. OpenThaiAi is your complete marketing department — tri-lingual content for all major platforms, real-time competitor analysis, and monthly PR plans. ${u}. Reduce marketing costs dramatically and start growing today.`,
         cta: 'Start Your 14-Day Free Trial — No Credit Card Required',
         hashtags: ['#ThaiSME', '#SMEThailand', '#AIMarketing', '#SmallBusiness', '#GrowWithAI'],
         key_message: `Thai SMEs can now own their AI Marketing — affordable, powerful, built for Thailand`,
       },
       agri: {
         headline: `🌾 Thai Farmers & Agri-Brands — Sell Direct to the World with AI`,
-        body: `"${p}" is a world-class Thai agricultural product that deserves a global audience. ${u}. OpenThai AI creates compelling Farm-to-Table stories in Thai, English, and Chinese — tailored for EU, USA, and Japanese markets that demand Organic, GAP, and GI certification. Includes video scripts showcasing your real farm and documentation support for export certifications.`,
+        body: `"${p}" is a world-class Thai agricultural product that deserves a global audience. ${u}. OpenThaiAi creates compelling Farm-to-Table stories in Thai, English, and Chinese — tailored for EU, USA, and Japanese markets that demand Organic, GAP, and GI certification. Includes video scripts showcasing your real farm and documentation support for export certifications.`,
         cta: 'Start Exporting Thai Agriculture Today → openthai-ai.com',
         hashtags: ['#ThaiAgriculture', '#FarmToTable', '#OrganicThai', '#GAPCertified', '#ThaiExport', '#AgriTech'],
         key_message: `Thai agricultural products deserve global recognition — AI-powered storytelling makes it happen`,
@@ -2652,14 +2653,14 @@ app.post('/api/pr/global-content', generateLimiter, async (req, res) => {
       },
       sme: {
         headline: `💼 泰国中小企业 — 无需昂贵代理公司，AI为您打理一切`,
-        body: `"${p}"证明了泰国中小企业可以借助AI营销在全球竞争。OpenThai AI是您完整的营销部门——三语内容覆盖所有主要平台、实时竞品分析和月度PR计划。${u}。大幅降低营销成本，立即开始增长。`,
+        body: `"${p}"证明了泰国中小企业可以借助AI营销在全球竞争。OpenThaiAi是您完整的营销部门——三语内容覆盖所有主要平台、实时竞品分析和月度PR计划。${u}。大幅降低营销成本，立即开始增长。`,
         cta: '开始14天免费试用 — 无需信用卡',
         hashtags: ['#泰国中小企业', '#AI营销', '#小微企业', '#泰国创业', '#用AI增长'],
         key_message: `泰国中小企业现在也能拥有自己的AI营销——实惠、强大、专为泰国打造`,
       },
       agri: {
         headline: `🌾 泰国农业品牌 — 用AI直达全球消费者`,
-        body: `"${p}"是世界级的泰国农产品，理应走向全球。${u}。OpenThai AI用泰语、英语和中文创作引人入胜的农场直供故事，专为需要有机、GAP和地理标志认证的欧盟、美国和日本市场量身定制。包含展示真实农场的视频脚本和出口认证文件支持。`,
+        body: `"${p}"是世界级的泰国农产品，理应走向全球。${u}。OpenThaiAi用泰语、英语和中文创作引人入胜的农场直供故事，专为需要有机、GAP和地理标志认证的欧盟、美国和日本市场量身定制。包含展示真实农场的视频脚本和出口认证文件支持。`,
         cta: '立即开始出口泰国农产品 → openthai-ai.com',
         hashtags: ['#泰国农业', '#农场直供', '#有机泰国', '#GAP认证', '#泰国出口', '#农业科技'],
         key_message: `泰国农产品值得全球认可——AI驱动的故事讲述让梦想成真`,
@@ -4859,6 +4860,14 @@ app.get('/api/skills', (req, res) => {
     ts: new Date().toISOString(),
   });
 });
+
+// ── Digital Bank of Thailand — ธนาคารดิจิทัลไทย · OTOP/SME/สินค้าอื่นๆ · ไทย–ASEAN–สากล ──
+const bankLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { success: false, error: 'ธนาคารดิจิทัล: คำขอมากเกินไป กรุณารอสักครู่' },
+});
+app.use('/api/bank', bankLimiter, digitalBankRouter);
 
 // ── Content Blueprint (S36-S38) — พิมพ์เขียวเนื้อหา 8 หมวด · ดู backend/content-blueprint.js ──
 registerBlueprintRoutes(app, {

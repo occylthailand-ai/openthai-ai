@@ -539,7 +539,7 @@ const ReflowTab = () => {
 
       {sub === "preview" && (
         <div className="card" style={{ background:"rgba(0,0,0,0.5)" }}>
-          <div style={{ fontSize:12, fontWeight:600, marginBottom:14, color:G.muted }}>👁 Live Component Preview — OpenThai.ai Design System</div>
+          <div style={{ fontSize:12, fontWeight:600, marginBottom:14, color:G.muted }}>👁 Live Component Preview — OpenThaiAi Design System</div>
           <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
             <button className="btn">btn — Gold</button>
             <button className="btn-cyan">btn — Cyan</button>
@@ -583,7 +583,7 @@ const NAV_MAIN = [
 const Overview = ({ setTab }) => (
   <div className="fade" style={{ display:"flex", flexDirection:"column", gap:14 }}>
     <div className="card" style={{ background:"linear-gradient(135deg,rgba(212,160,23,.12),rgba(0,229,255,.06))", border:"1px solid rgba(212,160,23,.3)" }}>
-      <div style={{ fontSize:10, color:G.muted, marginBottom:4 }}>🛠️ Dev Hub — OpenThai.ai Development Command Center</div>
+      <div style={{ fontSize:10, color:G.muted, marginBottom:4 }}>🛠️ Dev Hub — OpenThaiAi Development Command Center</div>
       <div style={{ fontSize:28, fontWeight:700, color:G.gold, fontFamily:"'IBM Plex Mono',monospace" }}>5 Repositories · 3 Pipelines · 3 Workflows</div>
       <div style={{ fontSize:12, color:G.green, marginTop:4 }}>↑ 96.2% Pipeline Success · 1 Running Now</div>
     </div>
@@ -654,7 +654,7 @@ export default function DevHub() {
         {/* SIDEBAR */}
         <div style={{ width:200, background:"rgba(255,255,255,0.02)", borderRight:`1px solid ${G.border}`, display:"flex", flexDirection:"column", flexShrink:0 }}>
           <div style={{ padding:"16px", borderBottom:`1px solid ${G.border}` }}>
-            <div style={{ fontSize:15, fontWeight:700, color:G.gold }}>◈ OpenThai.ai</div>
+            <div style={{ fontSize:15, fontWeight:700, color:G.gold }}>◈ OpenThaiAi</div>
             <div style={{ fontSize:10, color:G.muted, marginTop:1, fontFamily:"'IBM Plex Mono',monospace" }}>Dev Hub</div>
           </div>
           <nav style={{ flex:1, padding:"10px 8px" }}>
