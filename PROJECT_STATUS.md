@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-20T10:02:17.059Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (9 commit(s) ahead of main)
+Generated: 2026-09-20T10:06:51.865Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (11 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 230 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 232 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, @supabase/supabase-js, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -673,14 +673,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_vault_ledger.sql, 009_digital_bank.sql
 
 ## Recent commits
-- ae73fe4 chore: regenerate PROJECT_STATUS.md (28 seconds ago)
-- 11bccc0 chore: sync PROJECT_STATUS.md [skip ci] (57 seconds ago)
-- d4c2468 fix: add @supabase/supabase-js to backend dependencies (2 minutes ago)
-- d68ceb0 chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
-- 5885523 chore: regenerate PROJECT_STATUS.md (6 minutes ago)
-- bc5f382 chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
-- 723e733 feat: add Digital Bank of Thailand + complete OpenThaiAi naming cleanup (7 minutes ago)
-- afaff3a chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
+- 3778596 fix(digital-bank): lazy-init Supabase + Anthropic clients to fix CI smoke test (28 seconds ago)
+- 5383e8e chore: sync PROJECT_STATUS.md [skip ci] (5 minutes ago)
+- ae73fe4 chore: regenerate PROJECT_STATUS.md (5 minutes ago)
+- 11bccc0 chore: sync PROJECT_STATUS.md [skip ci] (6 minutes ago)
+- d4c2468 fix: add @supabase/supabase-js to backend dependencies (6 minutes ago)
+- d68ceb0 chore: sync PROJECT_STATUS.md [skip ci] (9 minutes ago)
+- 5885523 chore: regenerate PROJECT_STATUS.md (10 minutes ago)
+- bc5f382 chore: sync PROJECT_STATUS.md [skip ci] (11 minutes ago)
 
 ## Production health (✅ reachable)
 ```json
@@ -702,8 +702,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
   "watchdog": "idle",
   "last_watchdog": null,
   "system_logs": 2,
-  "uptime_sec": 387,
-  "memory_mb": "19.9",
+  "uptime_sec": 661,
+  "memory_mb": "20.1",
   "services": {
     "news_rag": "✅ Active",
     "news_rag_refresh": "✅ Auto cache clear every 4h",
@@ -862,7 +862,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `content-blueprint.js` | 282 | Content Blueprint — พิมพ์เขียวโครงสร้างเนื้อหา 8 หมวด (Maslow + มิติดิจิทัล + 7 กลุ่มอุตสาหกรรม) |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 202 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
-| `digital-bank.js` | 558 | Helpers |
+| `digital-bank.js` | 571 | Helpers |
 | `disputes.js` | 279 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
