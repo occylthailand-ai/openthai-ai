@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-20T09:55:50.929Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (3 commit(s) ahead of main)
+Generated: 2026-09-20T09:47:47.699Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (1 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 224 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 84 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -667,60 +667,22 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 38 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 84 route components resolved
+- ✅ **Route components exist on disk** — all 83 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
-- ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_vault_ledger.sql, 009_digital_bank.sql
+- ℹ️ **9 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_vault_ledger.sql
 
 ## Recent commits
-- 723e733 feat: add Digital Bank of Thailand + complete OpenThaiAi naming cleanup (42 seconds ago)
-- afaff3a chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
 - 55841e7 chore: regenerate PROJECT_STATUS.md for branch claude/digital-yuan-openthaiai-compare-qt5dhn (8 hours ago)
 - 392c8db feat(blueprint): Content Blueprint — เครื่องมือพัฒนาต่อยอดจากโครงสร้างเนื้อหา 8 หมวด (#94) (13 days ago)
 - 61475aa feat: หมวด 2-6, 10, 12 — โค้ดครบ 7 หมวดที่ขาด (4 weeks ago)
 - e37f988 feat(enterprise): request-ID tracing, structured logging, error handler, audit trail (#90) (7 weeks ago)
 - 6657b77 feat: structured logger, migration tracker, auth tests (#89) (7 weeks ago)
 - 88926ec feat(claude): OpenHands microagents + scaffold tool + improved checks (#88) (7 weeks ago)
+- 352f694 feat(claude): OpenHands-style microagents + tool scripts (#87) (7 weeks ago)
+- a545554 feat(responsive): dashboard bottom tab bar + responsive grids for all screen sizes (#85) (7 weeks ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "20.3",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (38 total, 36 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -764,7 +726,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S37 | Blueprint Coverage Radar | `GET /api/blueprint/coverage` | active |
 | S38 | Blueprint Development Brief | `POST /api/blueprint/develop` | active |
 
-## Route map (84 routes)
+## Route map (83 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -812,7 +774,6 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /trending | TrendingPage | public |
 | /calendar | ContentCalendarPage | public |
 | /blueprint | ContentBlueprintPage | public |
-| /bank | DigitalBankPage | auth |
 | /brand | BrandMemoryPage | public |
 | /voice | VoiceCommandPage | public |
 | /video | VideoGeneratorPage | auth |
@@ -852,7 +813,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/foundation | FoundationPortalPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 33 files)
+## Backend modules (backend/*.js — 32 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `agent-orchestrator.js` | 66 | — |
@@ -862,7 +823,6 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `content-blueprint.js` | 282 | Content Blueprint — พิมพ์เขียวโครงสร้างเนื้อหา 8 หมวด (Maslow + มิติดิจิทัล + 7 กลุ่มอุตสาหกรรม) |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 202 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
-| `digital-bank.js` | 558 | Helpers |
 | `disputes.js` | 279 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
@@ -879,7 +839,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThaiAi |
 | `rag-pipeline.js` | 133 | --- Embedding --- |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7990 | Vercel serverless detection |
+| `server.js` | 7981 | Vercel serverless detection |
 | `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
 | `vault.js` | 90 | — |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
@@ -938,7 +898,6 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 006_order_disputes.sql
 - 007_portal_leads.sql
 - 008_vault_ledger.sql
-- 009_digital_bank.sql
 - FULL-MIGRATION.sql
 - credits-schema.sql
 - orders-schema.sql
