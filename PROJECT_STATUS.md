@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-21T11:27:16.539Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (22 commit(s) ahead of main)
+Generated: 2026-09-21T12:25:08.486Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (23 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 105 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 106 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, @supabase/supabase-js, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -673,14 +673,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **11 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- 6541698 chore: sync PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- ed880af chore: regenerate PROJECT_STATUS.md (4 minutes ago)
-- 6c3d631 chore: sync PROJECT_STATUS.md [skip ci] (25 hours ago)
-- b9ecfc1 chore: regenerate PROJECT_STATUS.md (25 hours ago)
-- d2a11d8 chore: sync PROJECT_STATUS.md [skip ci] (25 hours ago)
-- 281ba82 feat(bank): Phase 2 — สินเชื่อ ประกัน ลงทุน ชำระบิล Trade Finance เงินเดือน (25 hours ago)
-- adc468f chore: sync PROJECT_STATUS.md [skip ci] (25 hours ago)
-- 44aae96 chore: regenerate PROJECT_STATUS.md (25 hours ago)
+- 65e9da3 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- 6541698 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- ed880af chore: regenerate PROJECT_STATUS.md (62 minutes ago)
+- 6c3d631 chore: sync PROJECT_STATUS.md [skip ci] (26 hours ago)
+- b9ecfc1 chore: regenerate PROJECT_STATUS.md (26 hours ago)
+- d2a11d8 chore: sync PROJECT_STATUS.md [skip ci] (26 hours ago)
+- 281ba82 feat(bank): Phase 2 — สินเชื่อ ประกัน ลงทุน ชำระบิล Trade Finance เงินเดือน (26 hours ago)
+- adc468f chore: sync PROJECT_STATUS.md [skip ci] (26 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
