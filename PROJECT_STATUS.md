@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-22T09:06:17.061Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (47 commit(s) ahead of main)
+Generated: 2026-09-22T09:08:30.306Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (48 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 130 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 131 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, @supabase/supabase-js, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -673,14 +673,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **11 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- 2e0b9a8 chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- c0101ad chore: sync PROJECT_STATUS.md [skip ci] (2 minutes ago)
+- 2e0b9a8 chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
 - a9f5c50 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 8c524e6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - b66fe9a chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - ae1c7b3 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 51d5e13 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 - 80eae99 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- a093bf5 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
