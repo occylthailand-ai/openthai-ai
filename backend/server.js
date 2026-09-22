@@ -3,6 +3,7 @@ import { log } from './logger.js';
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import { RATE, AI, BODY, TIMEOUT } from './config/limits.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from '@anthropic-ai/sdk';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
@@ -61,7 +62,7 @@ const DOMAIN_URL = (process.env.DOMAIN_URL || process.env.FRONTEND_URL || 'https
 const STORE_EMAIL = process.env.STORE_PRODUCER_EMAIL || 'store@openthai-ai.com';
 
 // adminLimiter — กันการ brute-force admin key (แยกจาก paymentLimiter)
-const adminLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { success: false, message: 'Too many requests' } });
+const adminLimiter = rateLimit({ ...RATE.admin, message: { success: false, message: 'Too many requests' } });
 
 // บน Vercel: ไฟล์ static อ่านได้จาก repo, ไฟล์ writable ต้องใช้ /tmp
 // Local: ทุกอย่างอยู่ใน backend/data/
@@ -130,7 +131,7 @@ app.use((req, res, next) => {
 // (LINE + Omise payment) ไม่งั้น express.json จะกิน body ก่อน → ตรวจลายเซ็นไม่ผ่านตลอด
 app.use((req, res, next) => {
   if (req.path === '/api/line/webhook' || req.path === '/api/payment/webhook') return next();
-  express.json({ limit: '50kb' })(req, res, next);
+  express.json({ limit: BODY.json })(req, res, next);
 });
 // image endpoint uses its own larger limit (see /api/analyze-image)
 
@@ -149,11 +150,10 @@ app.use(inventory.router);
 // Matching engine — /api/match/*
 app.use(matching.router);
 
-// ─── Rate Limiters ────────────────────────────────────────────────────────────
+// ─── Rate Limiters — values from backend/config/limits.js ────────────────────
 // DISABLE_RATE_LIMIT=1 ปิด generate limiter เฉพาะตอนรัน smoke test (ไม่มีผลกับ production)
 const _generateLimiter = rateLimit({
-  windowMs: 60 * 1000,        // 1 นาที
-  max: 10,                    // สูงสุด 10 req/min ต่อ IP
+  ...RATE.generate,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'ส่งคำขอบ่อยเกินไป กรุณารอ 1 นาทีแล้วลองใหม่' },
@@ -161,14 +161,12 @@ const _generateLimiter = rateLimit({
 const generateLimiter = process.env.DISABLE_RATE_LIMIT === '1' ? (req, res, next) => next() : _generateLimiter;
 
 const affiliateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 นาที
-  max: 5,                     // สมัคร affiliate 5 ครั้ง/15 นาที ต่อ IP
+  ...RATE.affiliate,
   message: { error: 'ส่งคำขอสมัครบ่อยเกินไป กรุณารอแล้วลองใหม่' },
 });
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 นาที
-  max: 20,                    // login 20 ครั้ง/15 นาที ต่อ IP
+  ...RATE.auth,
   message: { error: 'พยายาม login บ่อยเกินไป กรุณารอ 15 นาที' },
 });
 
@@ -218,7 +216,7 @@ const gemini = process.env.GEMINI_API_KEY
 async function generateWithClaude(form) {
   const msg = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: AI.generate,
     messages: [{ role: 'user', content: buildPrompt(form) }],
   });
   const text = msg.content[0]?.text?.trim() || '';
@@ -529,7 +527,7 @@ app.get('/api/inventory/admin/sales', async (req, res) => { if (!invAuth(req, re
 app.get('/api/inventory/admin/sales-report', async (req, res) => { if (!invAuth(req, res)) return; try { res.json({ success: true, ...(await inventory.salesReport()) }); } catch (e) { res.status(500).json({ success: false, error: e.message }); } });
 
 // POST /api/shop/checkout — ซื้อสินค้าร้านเรา + รับชำระเงิน (Omise) + ตัดสต๊อก + สร้างออเดอร์ติดตามได้
-const shopLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 12, message: { success: false, error: 'สั่งซื้อบ่อยเกินไป' } });
+const shopLimiter = rateLimit({ ...RATE.shop, message: { success: false, error: 'สั่งซื้อบ่อยเกินไป' } });
 app.post('/api/shop/checkout', shopLimiter, async (req, res) => {
   try {
     const { product_id, qty: rawQty, customer_name, contact, address, method = 'card', token, ref, platform } = req.body || {};
@@ -608,7 +606,7 @@ app.get('/api/leads/admin/search', async (req, res) => {
 });
 
 // POST /api/leads/admin/broadcast — ส่งอีเมล newsletter หาลีดทั้งหมด (Admin Key)
-const broadcastLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 6, message: { success: false, error: 'ส่ง broadcast บ่อยเกินไป' } });
+const broadcastLimiter = rateLimit({ ...RATE.broadcast, message: { success: false, error: 'ส่ง broadcast บ่อยเกินไป' } });
 app.post('/api/leads/admin/broadcast', broadcastLimiter, async (req, res) => {
   const key = req.headers['x-admin-key'] || req.query.key;
   if (!checkAdminKey(key)) return res.status(401).json({ success: false, message: adminDenyMessage() });
@@ -1113,7 +1111,7 @@ app.get('/api/affiliate/stats/:ref_code', (req, res) => {
 });
 
 // ─── POST /api/affiliate/click — นับคลิกลิงก์ ref (สำหรับ conversion rate) ────
-const affClickLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { success: false } });
+const affClickLimiter = rateLimit({ ...RATE.affClick, message: { success: false } });
 // ช่องทางที่รองรับสำหรับ attribution
 const TRACK_SOURCES = ['tiktok', 'facebook', 'instagram', 'line', 'youtube', 'x', 'shopee', 'lazada', 'direct'];
 const cleanSource = (s) => { const v = String(s || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 20); return TRACK_SOURCES.includes(v) ? v : (v ? 'other' : 'direct'); };
@@ -1183,7 +1181,7 @@ app.get('/api/affiliate/leaderboard', (req, res) => {
 });
 
 // ─── POST /api/affiliate/withdraw — พันธมิตรขอถอนค่าคอมเข้าพร้อมเพย์ ───────────
-const withdrawLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { success: false, error: 'ขอถอนบ่อยเกินไป กรุณารอ' } });
+const withdrawLimiter = rateLimit({ ...RATE.withdraw, message: { success: false, error: 'ขอถอนบ่อยเกินไป กรุณารอ' } });
 app.post('/api/affiliate/withdraw', withdrawLimiter, (req, res) => {
   const ref = (req.body?.ref_code || '').toString().replace(/[^A-Z0-9a-z_-]/g, '').slice(0, 40);
   const promptpay = (req.body?.promptpay || '').toString().replace(/[^0-9]/g, '').slice(0, 13);
@@ -1265,7 +1263,7 @@ app.get('/api/affiliate/list', (req, res) => {
 
 // ─── POST /api/contact — ติดต่อทีมงาน ───────────────────────────────────────
 const contactLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, max: 5,
+  ...RATE.contact,
   message: { success: false, message: 'ส่งข้อความบ่อยเกินไป กรุณารอ 1 ชั่วโมง' },
 });
 
@@ -1325,8 +1323,7 @@ function saveWaitlist(data) {
 const waitlist = loadWaitlist();
 
 const waitlistLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 ชั่วโมง
-  max: 3,                    // กรอกอีเมล 3 ครั้ง/ชั่วโมง ต่อ IP
+  ...RATE.waitlist,
   message: { success: false, message: 'ส่งคำขอบ่อยเกินไป กรุณารอแล้วลองใหม่' },
 });
 
@@ -1370,7 +1367,7 @@ app.post('/api/waitlist', waitlistLimiter, (req, res) => {
 });
 
 // ─── POST /api/analyze-image — Gemini/Claude Vision วิเคราะห์รูปสินค้า ─────────
-app.post('/api/analyze-image', express.json({ limit: '5mb' }), generateLimiter, async (req, res) => {
+app.post('/api/analyze-image', express.json({ limit: BODY.image }), generateLimiter, async (req, res) => {
   const { base64, mimeType } = req.body || {};
   if (!base64) return res.status(400).json({ success: false, error: 'ต้องส่งข้อมูลรูปภาพ (base64)' });
 
@@ -5128,7 +5125,7 @@ const NEWS_TTL  = 60 * 60 * 1000; // 1 hour
 
 function fetchRss(url) {
   return new Promise((resolve) => {
-    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 5000 }, (res) => {
+    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: TIMEOUT.rssFetch }, (res) => {
       let xml = '';
       res.on('data', d => { xml += d; });
       res.on('end', () => resolve(xml));
@@ -5242,7 +5239,7 @@ app.get('/api/line/status', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 //  ELEVENLABS TTS
 // ═══════════════════════════════════════════════════════════════════════════════
-app.post('/api/tts', express.json({ limit: '10kb' }), async (req, res) => {
+app.post('/api/tts', express.json({ limit: BODY.tts }), async (req, res) => {
   const { text, voiceId } = req.body || {};
   if (!text) return res.status(400).json({ error: 'ต้องการ text' });
 
@@ -5756,7 +5753,7 @@ app.post('/api/privacy/consent', (req, res) => {
 });
 
 // GAP-002: สิทธิ์ขอลบข้อมูล (Right to Erasure — PDPA มาตรา 33)
-app.post('/api/privacy/erasure', rateLimit({ windowMs: 3600000, max: 5 }), (req, res) => {
+app.post('/api/privacy/erasure', rateLimit(RATE.privacyErasure), (req, res) => {
   const { email } = req.body || {};
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ success: false, message: 'อีเมลไม่ถูกต้อง' });
@@ -5863,7 +5860,7 @@ app.get('/api-docs', (req, res) => {
 // Implements JSON-RPC 2.0 + MCP spec (2024-11-05).
 //   node sdk:  new Client({ name:'x', version:'1' })  →  transport POST /mcp
 //   methods:   initialize | tools/list | tools/call
-const mcpLimiter = rateLimit({ windowMs: 60000, max: 60, message: { error: 'MCP rate limit exceeded' } });
+const mcpLimiter = rateLimit({ ...RATE.mcp, message: { error: 'MCP rate limit exceeded' } });
 
 app.post('/mcp', mcpLimiter, handleMcp);
 
@@ -6303,7 +6300,7 @@ app.get('/api/sync', requireAuth, async (req, res) => {
 });
 
 // PUT /api/sync — บันทึก (merge เพื่อกันอุปกรณ์หนึ่งเขียนทับของอีกอุปกรณ์)
-app.put('/api/sync', requireAuth, express.json({ limit: '1mb' }), async (req, res) => {
+app.put('/api/sync', requireAuth, express.json({ limit: BODY.sync }), async (req, res) => {
   try {
     const incoming = (req.body && typeof req.body.data === 'object' && req.body.data) || {};
     const key = syncUserKey(req);
@@ -6958,7 +6955,7 @@ app.get('/api/payment/config', (req, res) => {
 // POST /api/quickpay/create — สร้าง PromptPay QR สำหรับขายแพ็กเกจ/สินค้าชิ้นเดียว
 // ยอดกำหนดเองได้ (default ฿1,000). ใช้สำหรับปิดการขายไว ๆ — สแกนจ่าย → เงินเข้า Omise/พร้อมเพย์
 // เช็คสถานะด้วย GET /api/payment/status/:chargeId (generic — ใช้ร่วมกับ flow plan ได้)
-const quickpayLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 20, message: { success: false, error: 'สร้าง QR บ่อยเกินไป กรุณารอสักครู่' } });
+const quickpayLimiter = rateLimit({ ...RATE.quickpay, message: { success: false, error: 'สร้าง QR บ่อยเกินไป กรุณารอสักครู่' } });
 app.post('/api/quickpay/create', quickpayLimiter, async (req, res) => {
   const amount = Math.max(1, Math.min(100000, Math.round(Number(req.body?.amount_thb) || 1000)));
   const label = (req.body?.label || 'แพ็กเกจ Openthai.ai').toString().trim().slice(0, 80) || 'แพ็กเกจ Openthai.ai';

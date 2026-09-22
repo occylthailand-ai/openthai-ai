@@ -7,6 +7,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { RATE } from './config/limits.js';
 
 const DISPUTE_STATUS = ['open', 'ai_reviewed', 'resolved_supplier', 'resolved_buyer', 'refunded'];
 const DECISIONS = ['favor_supplier', 'favor_buyer', 'refund', 'split'];
@@ -248,8 +249,8 @@ export function createDisputes(dataDir, opts = {}) {
     };
   }
 
-  const openLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, message: { success: false, error: 'เปิดข้อพิพาทบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
-  const trackLimiter = rateLimit({ windowMs: 60 * 1000, max: 30 });
+  const openLimiter  = rateLimit({ ...RATE.disputeOpen,  message: { success: false, error: 'เปิดข้อพิพาทบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
+  const trackLimiter = rateLimit({ ...RATE.disputeTrack });
   const router = express.Router();
   const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error('[disputes route]', e.message); res.status(500).json({ success: false, error: 'dispute error' }); });
 
