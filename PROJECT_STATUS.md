@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-22T15:39:07.245Z · branch `claude/limits-fix-tool-d5b119` (1 commit(s) ahead of main)
+Generated: 2026-09-22T16:39:32.491Z · branch `merge/backup-into-main` (0 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 222 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 224 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,33 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-09-14 — Added a fail-closed Continuous Development Engine, not a self-deploying agent
+Asked to make repository improvement work continuous and automated, with an
+explicit boundary against unapproved self-modification or deployment. The real
+repo had Node.js scripts and CI quality checks, but no durable proposal state
+machine, canonical source binding, approval tiers, or tamper-evident local audit
+control plane. The existing `backend/agent-orchestrator.js` prepares AI prompts,
+and `backend/audit.js` is a best-effort HTTP audit sink; neither is safe to reuse
+as an execution authority.
+
+Decision: add a zero-dependency local CLI under
+`scripts/continuous-development/` with content-addressed proposal IDs,
+deterministic people-impact scoring, persisted/resumable state, distinct
+worker/critic actors, read-only quality gates, explicit R2/R3 human approval,
+compensation hooks, scheduler locks/backoff, structured logs, and a JSONL
+SHA-256 audit chain. Canonical references are accepted only when a Layer-C
+ledger entry is `BOUND` and its path, version, owner, SHA-256, and human
+approval all match the current source.
+
+Safety boundary: execution defaults to dry-run and is disabled for live actions;
+subprocesses use fixed argv with `shell:false`, a minimal non-secret environment,
+workspace/executable allowlists, time/output limits, and hard blocks on shell,
+remote/deployment tools, mutating Git commands, dynamic Node evaluation, and npm
+install/publish/deploy operations. There is no push, merge, deploy, credential,
+or self-update path. Mutating actions require a configured compensation command;
+uncertain outcomes stop for human recovery rather than retrying. CI now runs the
+targeted CDE guardrail suite.
 
 ### 2026-09-07 — Content Blueprint: pasted 8-part content structure encoded as a real tool, not prose
 A large re-categorized content taxonomy was pasted into the session (Maslow
@@ -667,60 +694,22 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 38 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 83 route components resolved
+- ✅ **Route components exist on disk** — all 98 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
-- ℹ️ **9 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_vault_ledger.sql
+- ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql
 
 ## Recent commits
-- 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (11 minutes ago)
+- 3851578 Merge pull request #97 from occylthailand-ai/claude/limits-fix-tool-d5b119 (59 minutes ago)
+- 9cba54c chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
+- 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (72 minutes ago)
 - 392c8db feat(blueprint): Content Blueprint — เครื่องมือพัฒนาต่อยอดจากโครงสร้างเนื้อหา 8 หมวด (#94) (2 weeks ago)
 - 61475aa feat: หมวด 2-6, 10, 12 — โค้ดครบ 7 หมวดที่ขาด (5 weeks ago)
 - e37f988 feat(enterprise): request-ID tracing, structured logging, error handler, audit trail (#90) (8 weeks ago)
 - 6657b77 feat: structured logger, migration tracker, auth tests (#89) (8 weeks ago)
 - 88926ec feat(claude): OpenHands microagents + scaffold tool + improved checks (#88) (8 weeks ago)
-- 352f694 feat(claude): OpenHands-style microagents + tool scripts (#87) (8 weeks ago)
-- a545554 feat(responsive): dashboard bottom tab bar + responsive grids for all screen sizes (#85) (8 weeks ago)
 
-## Production health (✅ reachable)
-```json
-{
-  "status": "ok",
-  "version": "2.1.0",
-  "charter_version": 2,
-  "charter_title": "นโยบายระบบถาวร — Openthai.ai Operations Charter",
-  "ai_primary": "✅ Claude Haiku",
-  "ai_fallback": "✅ Gemini Flash Latest",
-  "ai_active": "claude-haiku-4-5-20251001",
-  "google_oauth": true,
-  "affiliates": 0,
-  "waitlist": 0,
-  "agents": 0,
-  "active_agents": 0,
-  "line_oa": true,
-  "elevenlabs": false,
-  "watchdog": "idle",
-  "last_watchdog": null,
-  "system_logs": 2,
-  "uptime_sec": 0,
-  "memory_mb": "20.1",
-  "services": {
-    "news_rag": "✅ Active",
-    "news_rag_refresh": "✅ Auto cache clear every 4h",
-    "competitor_analysis": "✅ Active",
-    "tts": "⚠️ No API Key",
-    "line_oa": "✅ Active",
-    "auto_heal": "✅ Active (every 30 min)",
-    "agent_cron": "✅ Active (every hour)",
-    "watchdog": "✅ Active",
-    "diagnostics": "✅ Active",
-    "persistence": "✅ system_log + agents.json + agent_checkpoint",
-    "vector_memory": "✅ Active (semantic long-term memory)",
-    "webhook_system": "✅ Active (0 registered)",
-    "multi_tenant": "✅ Active (0 tenants)"
-  }
-}
-```
+## Production health (⚠️ HTTP 500)
 
 ## Skills registry (38 total, 36 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -764,7 +753,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S37 | Blueprint Coverage Radar | `GET /api/blueprint/coverage` | active |
 | S38 | Blueprint Development Brief | `POST /api/blueprint/develop` | active |
 
-## Route map (83 routes)
+## Route map (98 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -849,15 +838,31 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/gov-intl | GovIntlPortalPage | public |
 | /portals/intl-org | IntlOrgPortalPage | public |
 | /portals/foundation | FoundationPortalPage | public |
+| /creative-guild | CreativeGuildPage | public |
+| /consumer | ConsumerPortalPublicPage | public |
+| /intermediary | IntermediaryPortalPage | public |
+| /professional | ProfessionalPortalPage | public |
+| /producer | ProducerOnboardingPage | public |
+| /producer/admin | ProducerAdminPage | auth |
+| /error-hunter | ErrorHunterPage | auth |
+| /workflow | WorkflowMonitorPage | auth |
+| /trend-hunter | TrendProductHunterPage | public |
+| /customer-finder | CustomerFinderPage | public |
+| /hope | HopePage | public |
+| /affiliate-everyone | AffiliateEveryonePage | public |
+| /investor-guide | InvestorGuidePage | public |
+| /global-connect | GlobalConnectPage | public |
+| /tax-calculator | TaxCalculatorPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 32 files)
+## Backend modules (backend/*.js — 33 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `agent-orchestrator.js` | 66 | — |
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `audit.js` | 60 | @ts-check |
 | `auth.js` | 190 | JWT |
+| `consent.js` | 197 | เวอร์ชัน Privacy Notice — เพิ่มทุกครั้งที่แก้ไขนโยบาย |
 | `content-blueprint.js` | 282 | Content Blueprint — พิมพ์เขียวโครงสร้างเนื้อหา 8 หมวด (Maslow + มิติดิจิทัล + 7 กลุ่มอุตสาหกรรม) |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 203 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
@@ -877,11 +882,11 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `rag-pipeline.js` | 133 | --- Embedding --- |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7978 | Vercel serverless detection |
+| `server.js` | 7981 | Vercel serverless detection |
 | `tenant-manager.js` | 250 | Each tenant (store/business) gets: |
 | `vault.js` | 90 | — |
-| `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
+| `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `video-generator.js` | 206 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
 | `voice-commander.js` | 261 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
 | `webhook-system.js` | 225 | Push events to registered subscriber endpoints instead of polling. |
@@ -912,14 +917,12 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
 
-## Environment variables (63 referenced in backend code, 58 documented in .env.example)
+## Environment variables (63 referenced in backend code, 108 documented in .env.example)
 ⚠️ Referenced in code but missing from `backend/.env.example`:
 - DEPLOY_REGION
 - EMBED_MODEL
 - LOG_LEVEL
-- OPENAI_API_KEY
 - SUPABASE_SERVICE_ROLE_KEY
-- VAULT_MASTER_KEY
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.
@@ -935,6 +938,7 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 005_user_sync.sql
 - 006_order_disputes.sql
 - 007_portal_leads.sql
+- 008_pdpa_consents.sql
 - 008_vault_ledger.sql
 - FULL-MIGRATION.sql
 - credits-schema.sql

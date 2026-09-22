@@ -1,796 +1,2628 @@
 ﻿<!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Openthai.ai — สร้างคอนเทนต์ TikTok ด้วย AI</title>
-    <meta name="description" content="เครื่องมือ AI สร้างสคริปต์ TikTok, แคปชั่น, แฮชแท็ก สำหรับสินค้าไทย OTOP และสินค้าทั่วโลก">
-    
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇹🇭</text></svg>">
-    
-    <style>
-        :root {
-            --primary: #FF6B35;
-            --primary-dark: #E55A2B;
-            --secondary: #4ECDC4;
-            --dark: #1A1A2E;
-            --light: #F7F7F7;
-            --gradient: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
-            --gradient-secondary: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Noto Sans Thai', sans-serif;
-            background: var(--light);
-            color: var(--dark);
-            line-height: 1.6;
-        }
-        
-        /* Navigation */
-        nav {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
-            z-index: 1000;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
-        }
-        
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        
-        .nav-links a {
-            margin-left: 2rem;
-            text-decoration: none;
-            color: var(--dark);
-            font-weight: 500;
-            transition: color 0.3s;
-        }
-        
-        .nav-links a:hover {
-            color: var(--primary);
-        }
-        
-        /* Hero Section */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--gradient);
-            padding: 6rem 2rem 4rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        }
-        
-        .hero-content {
-            max-width: 800px;
-            text-align: center;
-            color: white;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .hero h1 {
-            font-size: clamp(2rem, 5vw, 3.5rem);
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-        
-        .hero p {
-            font-size: 1.25rem;
-            margin-bottom: 2rem;
-            opacity: 0.95;
-        }
-        
-        .hero-stats {
-            display: flex;
-            justify-content: center;
-            gap: 3rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-        
-        .stat {
-            text-align: center;
-        }
-        
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-        
-        /* CTA Button */
-        .cta-button {
-            display: inline-block;
-            background: white;
-            color: var(--primary);
-            padding: 1rem 2.5rem;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            text-decoration: none;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-        
-        .cta-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 25px rgba(0,0,0,0.3);
-        }
-        
-        /* Features Section */
-        .features {
-            padding: 5rem 2rem;
-            background: white;
-        }
-        
-        .section-title {
-            text-align: center;
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 3rem;
-            color: var(--dark);
-        }
-        
-        .features-grid {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 2rem;
-        }
-        
-        .feature-card {
-            background: var(--light);
-            padding: 2rem;
-            border-radius: 20px;
-            text-align: center;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-        }
-        
-        .feature-card h3 {
-            font-size: 1.25rem;
-            margin-bottom: 0.5rem;
-            color: var(--dark);
-        }
-        
-        .feature-card p {
-            color: #666;
-            font-size: 0.95rem;
-        }
-        
-        /* How It Works */
-        .how-it-works {
-            padding: 5rem 2rem;
-            background: var(--dark);
-            color: white;
-        }
-        
-        .steps {
-            max-width: 900px;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 2rem;
-        }
-        
-        .step {
-            display: flex;
-            align-items: center;
-            gap: 2rem;
-        }
-        
-        .step-number {
-            width: 60px;
-            height: 60px;
-            background: var(--gradient);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-        
-        .step-content h3 {
-            font-size: 1.25rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .step-content p {
-            opacity: 0.8;
-        }
-        
-        /* Pricing */
-        .pricing {
-            padding: 5rem 2rem;
-            background: white;
-        }
-        
-        .pricing-grid {
-            max-width: 900px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-        }
-        
-        .pricing-card {
-            background: var(--light);
-            padding: 2rem;
-            border-radius: 20px;
-            text-align: center;
-            border: 2px solid transparent;
-            transition: all 0.3s;
-        }
-        
-        .pricing-card.popular {
-            border-color: var(--primary);
-            transform: scale(1.05);
-        }
-        
-        .pricing-card h3 {
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .price {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-        
-        .price span {
-            font-size: 1rem;
-            color: #666;
-        }
-        
-        .pricing-features {
-            list-style: none;
-            margin: 1.5rem 0;
-            text-align: left;
-        }
-        
-        .pricing-features li {
-            padding: 0.5rem 0;
-            padding-left: 1.5rem;
-            position: relative;
-        }
-        
-        .pricing-features li::before {
-            content: '✓';
-            position: absolute;
-            left: 0;
-            color: var(--secondary);
-            font-weight: bold;
-        }
-        
-        /* Waitlist Form */
-        .waitlist {
-            padding: 5rem 2rem;
-            background: var(--gradient-secondary);
-            color: white;
-        }
-        
-        .waitlist-container {
-            max-width: 600px;
-            margin: 0 auto;
-            text-align: center;
-        }
-        
-        .waitlist h2 {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-        
-        .waitlist p {
-            margin-bottom: 2rem;
-            opacity: 0.9;
-        }
-        
-        .waitlist-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-        
-        .form-row {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-        
-        .form-row input {
-            flex: 1;
-            min-width: 200px;
-        }
-        
-        .waitlist-form input,
-        .waitlist-form select {
-            padding: 1rem;
-            border: none;
-            border-radius: 10px;
-            font-size: 1rem;
-            font-family: inherit;
-        }
-        
-        .waitlist-form input:focus,
-        .waitlist-form select:focus {
-            outline: 3px solid var(--primary);
-        }
-        
-        /* PDPA Consent */
-        .pdpa-consent {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            text-align: left;
-            margin: 1rem 0;
-            background: rgba(255,255,255,0.1);
-            padding: 1rem;
-            border-radius: 10px;
-        }
-        
-        .pdpa-consent input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            margin-top: 3px;
-            flex-shrink: 0;
-        }
-        
-        .pdpa-consent label {
-            font-size: 0.9rem;
-            line-height: 1.5;
-        }
-        
-        .pdpa-consent a {
-            color: white;
-            text-decoration: underline;
-        }
-        
-        .submit-btn {
-            background: white;
-            color: var(--secondary);
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        .submit-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 25px rgba(0,0,0,0.2);
-        }
-        
-        .submit-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        /* Success Message */
-        .success-message {
-            display: none;
-            background: white;
-            color: var(--dark);
-            padding: 2rem;
-            border-radius: 20px;
-            text-align: center;
-        }
-        
-        .success-message.show {
-            display: block;
-        }
-        
-        .success-message h3 {
-            color: var(--secondary);
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        /* Footer */
-        footer {
-            background: var(--dark);
-            color: white;
-            padding: 3rem 2rem;
-            text-align: center;
-        }
-        
-        .footer-links {
-            margin-bottom: 1rem;
-        }
-        
-        .footer-links a {
-            color: white;
-            margin: 0 1rem;
-            text-decoration: none;
-            opacity: 0.8;
-            transition: opacity 0.3s;
-        }
-        
-        .footer-links a:hover {
-            opacity: 1;
-        }
-        
-        .copyright {
-            opacity: 0.6;
-            font-size: 0.9rem;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .nav-links {
-                display: none;
-            }
-            
-            .hero-stats {
-                gap: 1.5rem;
-            }
-            
-            .step {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .pricing-card.popular {
-                transform: none;
-            }
-            
-            .form-row {
-                flex-direction: column;
-            }
-        }
-        
-        /* Loading Animation */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenThai AI — สร้างคอนเทนต์ TikTok ด้วย AI สัญชาติไทย</title>
+<meta name="description" content="เครื่องมือ AI สร้างสคริปต์ TikTok แคปชั่น แฮชแท็ก สำหรับสินค้าไทย OTOP และสินค้าทั่วโลก ใน 30 วินาที">
+<meta property="og:title" content="OpenThai AI — สร้างคอนเทนต์ TikTok ด้วย AI สัญชาติไทย">
+<meta property="og:description" content="สคริปต์ แคปชั่น แฮชแท็ก สำหรับสินค้าไทย OTOP ใน 30 วินาที ฟรี ไม่ต้องสมัคร">
+<meta property="og:url" content="https://www.openthai-ai.com/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="th_TH">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenThai AI — TikTok Content Generator">
+<meta name="twitter:description" content="AI-powered TikTok content for Thai products. Free, instant, no signup.">
+<link rel="canonical" href="https://www.openthai-ai.com/">
+<link rel="preconnect" href="https://api.openthai-ai.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style>
+:root {
+  --primary:#FF6B35; --primary-dark:#E55A2B; --secondary:#4ECDC4;
+  --dark:#1A1A2E; --darker:#0D1117; --panel:#16213E;
+  --light:#F7F7F7; --border:rgba(255,255,255,0.08);
+  --text:#E0E0E0; --muted:#888; --success:#27AE60;
+  --card-bg:#1e2a45; --input-bg:#0F1826; --gold:#F39C12;
+  --gradient:linear-gradient(135deg,#FF6B35 0%,#FF8E53 100%);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Noto Sans Thai',sans-serif;background:var(--darker);color:var(--text);line-height:1.6;}
+
+/* ===== NAV ===== */
+nav{position:fixed;top:0;width:100%;background:rgba(26,26,46,0.97);backdrop-filter:blur(12px);padding:0.9rem 2rem;z-index:1000;border-bottom:1px solid var(--border);}
+.nav-container{max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;}
+.logo{font-size:1.3rem;font-weight:700;color:var(--primary);text-decoration:none;}
+.nav-links a{margin-left:1.75rem;text-decoration:none;color:rgba(255,255,255,0.75);font-weight:500;font-size:0.92rem;transition:color 0.2s;}
+.nav-links a:hover{color:white;}
+.nav-cta{background:var(--primary)!important;color:white!important;padding:0.4rem 1.1rem;border-radius:20px;font-weight:600!important;}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:0.4rem;background:none;border:none;}
+.hamburger span{display:block;width:24px;height:2px;background:white;transition:all 0.3s;}
+.hamburger.open span:nth-child(1){transform:rotate(45deg) translate(5px,5px);}
+.hamburger.open span:nth-child(2){opacity:0;}
+.hamburger.open span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px);}
+.mobile-menu{display:none;position:fixed;top:60px;left:0;width:100%;background:var(--dark);border-bottom:1px solid var(--border);z-index:999;flex-direction:column;padding:0.5rem 0;}
+.mobile-menu.open{display:flex;}
+.mobile-menu a{padding:0.85rem 2rem;text-decoration:none;color:rgba(255,255,255,0.8);font-size:0.95rem;border-bottom:1px solid var(--border);}
+.mobile-menu a:last-child{color:var(--primary);font-weight:700;border:none;}
+
+/* ===== HERO ===== */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1A1A2E 0%,#16213E 50%,#0F3460 100%);padding:6rem 2rem 4rem;text-align:center;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-30%;right:-20%;width:60%;height:120%;background:radial-gradient(ellipse,rgba(255,107,53,0.12) 0%,transparent 70%);}
+.hero-content{max-width:820px;position:relative;z-index:1;}
+.hero-badge{display:inline-block;background:rgba(255,107,53,0.15);border:1px solid rgba(255,107,53,0.4);color:var(--primary);padding:0.3rem 1rem;border-radius:20px;font-size:0.82rem;font-weight:600;margin-bottom:1.5rem;}
+.hero h1{font-size:clamp(2rem,5vw,3.5rem);font-weight:700;color:white;margin-bottom:1.25rem;line-height:1.25;}
+.hero h1 span{color:var(--primary);}
+.hero p{font-size:1.1rem;color:rgba(255,255,255,0.8);margin-bottom:2.5rem;line-height:1.8;}
+.hero-stats{display:flex;justify-content:center;gap:3rem;margin-bottom:2.5rem;flex-wrap:wrap;}
+.stat-num{font-size:2.2rem;font-weight:700;color:white;}
+.stat-lbl{font-size:0.82rem;color:rgba(255,255,255,0.6);}
+.hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;}
+.btn-primary{display:inline-block;background:var(--gradient);color:white;padding:1rem 2.5rem;border-radius:50px;font-size:1rem;font-weight:700;text-decoration:none;transition:all 0.3s;box-shadow:0 4px 20px rgba(255,107,53,0.4);border:none;cursor:pointer;font-family:inherit;}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(255,107,53,0.5);}
+.btn-outline{display:inline-block;background:rgba(255,255,255,0.08);color:white;padding:1rem 2.5rem;border-radius:50px;font-size:1rem;font-weight:600;text-decoration:none;transition:all 0.3s;border:1.5px solid rgba(255,255,255,0.25);cursor:pointer;font-family:inherit;}
+.btn-outline:hover{background:rgba(255,255,255,0.15);}
+
+/* ===== SECTION BASE ===== */
+.section{padding:5rem 2rem;}
+.section-dark{background:var(--dark);}
+.section-darker{background:var(--darker);}
+.section-light{background:var(--panel);}
+.container{max-width:1100px;margin:0 auto;}
+.section-title{font-size:2rem;font-weight:700;text-align:center;margin-bottom:0.75rem;color:white;}
+.section-sub{text-align:center;color:var(--muted);margin-bottom:3rem;font-size:1rem;}
+
+/* ===== APP GENERATOR ===== */
+#app{background:var(--darker);padding:5rem 0 0;}
+.app-header{text-align:center;padding:0 2rem 2.5rem;}
+.app-layout{display:grid;grid-template-columns:360px 1fr;max-width:1200px;margin:0 auto;border:1px solid var(--border);border-radius:20px 20px 0 0;overflow:hidden;}
+.input-panel{background:var(--panel);border-right:1px solid var(--border);padding:1.75rem;overflow-y:auto;}
+.panel-title{font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:1.25rem;}
+.form-group{margin-bottom:1.1rem;}
+.form-group label{display:block;font-size:0.85rem;font-weight:600;margin-bottom:0.45rem;color:#ccc;}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.7rem 0.9rem;color:var(--text);font-family:inherit;font-size:0.9rem;transition:border-color 0.2s;resize:none;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--primary);}
+.form-group select option{background:#1A1A2E;}
+.form-group input::placeholder,.form-group textarea::placeholder{color:#444;}
+.hook-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;}
+.hook-btn{background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:0.55rem 0.3rem;text-align:center;cursor:pointer;transition:all 0.2s;font-size:0.75rem;color:var(--muted);font-family:inherit;}
+.hook-btn:hover{border-color:var(--primary);color:var(--text);}
+.hook-btn.selected{border-color:var(--primary);background:rgba(255,107,53,0.12);color:var(--primary);font-weight:600;}
+.hook-btn .icon{font-size:1.1rem;display:block;margin-bottom:0.15rem;}
+.generate-btn{width:100%;background:var(--gradient);color:white;border:none;border-radius:12px;padding:1rem;font-size:0.95rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all 0.3s;margin-top:1.25rem;display:flex;align-items:center;justify-content:center;gap:0.5rem;}
+.generate-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 25px rgba(255,107,53,0.4);}
+.generate-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+.spinner{width:16px;height:16px;border:2.5px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.8s linear infinite;display:none;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.free-notice{background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.25);border-radius:8px;padding:0.55rem;font-size:0.78rem;color:var(--secondary);margin-top:0.75rem;text-align:center;}
+.upgrade-banner{background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);border-radius:10px;padding:0.85rem 1rem;display:none;align-items:center;justify-content:space-between;margin-top:0.75rem;gap:0.75rem;}
+.upgrade-banner p{font-size:0.8rem;color:#FFB085;line-height:1.5;}
+.upgrade-banner button{background:var(--primary);color:white;border:none;padding:0.4rem 0.9rem;border-radius:8px;font-size:0.78rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;}
+.history-section{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);}
+.history-label{font-size:0.7rem;text-transform:uppercase;color:var(--muted);letter-spacing:1px;margin-bottom:0.5rem;}
+.history-pill{display:inline-flex;align-items:center;gap:0.4rem;background:var(--input-bg);border:1px solid var(--border);border-radius:20px;padding:0.25rem 0.65rem;font-size:0.75rem;color:var(--muted);cursor:pointer;margin:0.2rem;transition:all 0.2s;}
+.history-pill:hover{border-color:var(--primary);color:var(--text);}
+.error-box{background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:10px;padding:1rem;color:#E74C3C;display:none;font-size:0.85rem;margin-top:0.75rem;}
+.error-box.show{display:block;}
+
+.output-panel{background:var(--darker);padding:1.75rem 2rem;overflow-y:auto;min-height:500px;}
+.empty-state{height:100%;min-height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--muted);gap:0.75rem;}
+.empty-icon{font-size:3.5rem;opacity:0.4;}
+.empty-state h3{font-size:1.1rem;color:rgba(255,255,255,0.5);}
+.empty-state p{font-size:0.85rem;max-width:360px;line-height:1.7;}
+.quick-chips{display:flex;flex-wrap:wrap;gap:0.4rem;justify-content:center;margin-top:0.5rem;}
+.quick-chip{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#aaa;padding:0.2rem 0.65rem;border-radius:20px;font-size:0.75rem;cursor:pointer;font-family:inherit;transition:all 0.2s;}
+.quick-chip:hover{border-color:var(--primary);color:var(--primary);}
+.result{display:none;}
+.result.show{display:block;}
+.result-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.5rem;}
+.result-header h2{font-size:1rem;font-weight:700;}
+.score-badge{background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:var(--success);padding:0.25rem 0.8rem;border-radius:20px;font-size:0.82rem;font-weight:700;}
+.content-block{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.25rem;margin-bottom:0.85rem;position:relative;}
+.block-label{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--primary);margin-bottom:0.65rem;display:flex;align-items:center;gap:0.5rem;}
+.copy-btn{position:absolute;top:0.85rem;right:0.85rem;background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--muted);padding:0.25rem 0.65rem;border-radius:7px;font-size:0.72rem;cursor:pointer;font-family:inherit;transition:all 0.2s;}
+.copy-btn:hover{background:rgba(255,255,255,0.1);color:var(--text);}
+.copy-btn.copied{background:rgba(39,174,96,0.15);color:var(--success);border-color:rgba(39,174,96,0.3);}
+.script-parts{display:flex;flex-direction:column;gap:0.6rem;}
+.script-part{background:rgba(255,255,255,0.04);border-radius:8px;padding:0.75rem 0.9rem;border-left:3px solid var(--primary);}
+.script-part.story{border-left-color:var(--secondary);}
+.script-part.cta{border-left-color:var(--gold);}
+.part-label{font-size:0.68rem;font-weight:700;text-transform:uppercase;color:var(--primary);margin-bottom:0.3rem;letter-spacing:0.5px;}
+.script-part.story .part-label{color:var(--secondary);}
+.script-part.cta .part-label{color:var(--gold);}
+.part-text{font-size:0.88rem;line-height:1.7;color:#D0D0D0;}
+.caption-text{font-size:0.9rem;line-height:1.8;color:#D0D0D0;white-space:pre-wrap;}
+.hashtags-wrap{display:flex;flex-wrap:wrap;gap:0.4rem;}
+.hashtag{background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.2);color:var(--secondary);padding:0.25rem 0.7rem;border-radius:20px;font-size:0.78rem;cursor:pointer;transition:all 0.2s;}
+.hashtag:hover{background:rgba(78,205,196,0.18);}
+.learning-block{background:rgba(78,205,196,0.05);border:1px solid rgba(78,205,196,0.18);border-radius:14px;padding:1.1rem 1.25rem;margin-bottom:0.85rem;}
+.learning-label{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--secondary);margin-bottom:0.45rem;}
+.learning-text{font-size:0.85rem;line-height:1.7;color:#B0D0CF;}
+.next-try{margin-top:0.5rem;font-size:0.8rem;color:var(--muted);}
+.next-try strong{color:var(--gold);}
+.action-row{display:flex;gap:0.6rem;margin-top:1.25rem;flex-wrap:wrap;}
+.action-btn{flex:1;min-width:100px;padding:0.7rem;border-radius:10px;border:1.5px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);font-family:inherit;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;text-align:center;text-decoration:none;display:inline-block;}
+.action-btn:hover{background:rgba(255,255,255,0.08);}
+.action-btn.primary{background:var(--gradient);border-color:var(--primary);color:white;}
+.action-btn.primary:hover{box-shadow:0 4px 15px rgba(255,107,53,0.35);}
+
+/* ===== FEATURES ===== */
+.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;}
+.feature-card{background:var(--card-bg);border:1px solid var(--border);padding:1.75rem;border-radius:18px;transition:transform 0.3s,border-color 0.3s;}
+.feature-card:hover{transform:translateY(-4px);border-color:rgba(255,107,53,0.3);}
+.feature-icon{font-size:2.2rem;margin-bottom:0.85rem;}
+.feature-card h3{font-size:1rem;font-weight:700;margin-bottom:0.4rem;color:white;}
+.feature-card p{color:var(--muted);font-size:0.88rem;line-height:1.6;}
+.feature-new{position:relative;}
+.feature-new::after{content:'ใหม่';position:absolute;top:-10px;right:12px;background:var(--secondary);color:var(--dark);font-size:0.65rem;font-weight:700;padding:0.15rem 0.6rem;border-radius:10px;}
+
+/* ===== HOW IT WORKS ===== */
+.steps{display:flex;flex-direction:column;gap:2rem;max-width:800px;margin:0 auto;}
+.step{display:flex;align-items:flex-start;gap:1.5rem;}
+.step-num{width:52px;height:52px;background:var(--gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.25rem;font-weight:700;flex-shrink:0;}
+.step-content h3{font-size:1.05rem;font-weight:700;margin-bottom:0.3rem;color:white;}
+.step-content p{color:var(--muted);font-size:0.9rem;}
+
+/* ===== AFFILIATE ===== */
+.affiliate-hero{background:linear-gradient(135deg,#1A1A2E,#16213E,#0F3460);border-radius:20px;padding:3rem 2rem;text-align:center;margin-bottom:3rem;}
+.commission-badge{display:inline-block;background:linear-gradient(135deg,var(--gold),#E67E22);color:white;padding:0.4rem 1.25rem;border-radius:30px;font-size:0.9rem;font-weight:600;margin-bottom:1rem;}
+.tiers-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.5rem;}
+.tier-card{background:var(--card-bg);border:2px solid var(--border);border-radius:18px;padding:1.75rem;text-align:center;transition:all 0.3s;}
+.tier-card.bronze{border-color:#CD7F32;}
+.tier-card.silver{border-color:#C0C0C0;}
+.tier-card.gold-tier{border-color:var(--gold);transform:scale(1.04);}
+.tier-card.platinum{border-color:#9B59B6;}
+.tier-icon{font-size:2.5rem;margin-bottom:0.75rem;}
+.tier-name{font-size:1.1rem;font-weight:700;color:white;margin-bottom:0.25rem;}
+.tier-commission{font-size:2rem;font-weight:700;color:var(--gold);}
+.tier-commission span{font-size:0.9rem;color:var(--muted);}
+.tier-sales{font-size:0.8rem;color:var(--muted);margin:0.5rem 0;}
+.aff-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;margin-top:2rem;}
+.aff-step{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.5rem;text-align:center;}
+.aff-step-num{width:44px;height:44px;background:var(--gradient);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:700;margin:0 auto 0.75rem;}
+.aff-step h4{font-size:0.92rem;font-weight:700;color:white;margin-bottom:0.35rem;}
+.aff-step p{font-size:0.82rem;color:var(--muted);}
+
+/* ===== PRICING ===== */
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.75rem;max-width:900px;margin:0 auto;}
+.pricing-card{background:var(--card-bg);border:2px solid var(--border);padding:2rem;border-radius:20px;text-align:center;transition:all 0.3s;position:relative;}
+.pricing-card:hover{border-color:rgba(255,107,53,0.3);}
+.pricing-card.popular{border-color:var(--primary);}
+.popular-badge{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--gradient);color:white;font-size:0.72rem;font-weight:700;padding:0.25rem 1rem;border-radius:20px;white-space:nowrap;}
+.pricing-card h3{font-size:1.3rem;font-weight:700;color:white;margin-bottom:0.75rem;}
+.price{font-size:2.5rem;font-weight:700;color:var(--primary);}
+.price span{font-size:0.9rem;color:var(--muted);}
+.pricing-features{list-style:none;margin:1.25rem 0;text-align:left;}
+.pricing-features li{padding:0.4rem 0;padding-left:1.4rem;position:relative;color:rgba(255,255,255,0.8);font-size:0.88rem;}
+.pricing-features li::before{content:'✓';position:absolute;left:0;color:var(--secondary);font-weight:700;}
+.pricing-features li.no::before{content:'✗';color:#555;}
+.pricing-features li.no{color:var(--muted);}
+.pricing-btn{width:100%;padding:0.85rem;border-radius:40px;font-size:0.95rem;font-weight:700;cursor:pointer;transition:all 0.3s;font-family:inherit;text-decoration:none;display:block;text-align:center;margin-top:1.25rem;border:none;}
+.pricing-btn-primary{background:var(--gradient);color:white;}
+.pricing-btn-outline{background:transparent;border:2px solid var(--border)!important;color:var(--text);}
+.pricing-btn-dark{background:rgba(255,255,255,0.08);color:var(--text);}
+
+/* ===== WAITLIST ===== */
+.waitlist-box{background:linear-gradient(135deg,#16213E,#1A1A2E);border:1px solid var(--border);border-radius:24px;padding:3rem 2rem;max-width:640px;margin:0 auto;text-align:center;}
+.waitlist-box h2{font-size:1.8rem;font-weight:700;color:white;margin-bottom:0.75rem;}
+.waitlist-box p{color:var(--muted);margin-bottom:2rem;}
+.wl-form{display:flex;flex-direction:column;gap:0.85rem;}
+.wl-row{display:flex;gap:0.85rem;flex-wrap:wrap;}
+.wl-row input{flex:1;min-width:180px;}
+.wl-form input,.wl-form select{padding:0.85rem 1rem;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;color:white;font-family:inherit;font-size:0.92rem;}
+.wl-form input:focus,.wl-form select:focus{outline:none;border-color:var(--primary);}
+.wl-form input::placeholder{color:#444;}
+.wl-form select option{background:var(--dark);}
+.pdpa-row{display:flex;align-items:flex-start;gap:0.6rem;text-align:left;background:rgba(255,255,255,0.04);padding:0.85rem;border-radius:10px;font-size:0.8rem;color:rgba(255,255,255,0.7);}
+.pdpa-row input[type=checkbox]{width:18px;height:18px;flex-shrink:0;margin-top:2px;}
+.pdpa-row a{color:var(--secondary);}
+.success-msg{display:none;text-align:center;padding:1.5rem;background:rgba(39,174,96,0.1);border:1px solid rgba(39,174,96,0.3);border-radius:14px;}
+.success-msg h3{color:var(--success);font-size:1.25rem;margin-bottom:0.5rem;}
+
+/* ===== FOOTER ===== */
+footer{background:var(--dark);border-top:1px solid var(--border);padding:3rem 2rem;text-align:center;}
+.footer-links{margin-bottom:1rem;display:flex;justify-content:center;flex-wrap:wrap;gap:0.25rem 1.5rem;}
+.footer-links a{color:rgba(255,255,255,0.55);text-decoration:none;font-size:0.85rem;transition:color 0.2s;}
+.footer-links a:hover{color:white;}
+.copyright{color:rgba(255,255,255,0.3);font-size:0.82rem;}
+.powered-by{margin-top:0.75rem;font-size:0.75rem;color:rgba(255,255,255,0.2);line-height:1.8;}
+.powered-by span{color:rgba(255,255,255,0.35);}
+
+/* ===== LANGUAGE SWITCHER ===== */
+.lang-switcher{display:flex;align-items:center;gap:0.35rem;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:20px;padding:0.2rem 0.4rem;cursor:pointer;}
+.lang-btn{background:none;border:none;color:rgba(255,255,255,0.5);font-size:0.78rem;font-weight:600;cursor:pointer;padding:0.2rem 0.5rem;border-radius:14px;font-family:inherit;transition:all 0.2s;}
+.lang-btn.active{background:var(--primary);color:white;}
+[lang-hide]{display:none!important;}
+
+/* ===== MODAL ===== */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;align-items:center;justify-content:center;padding:1rem;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:2rem;max-width:480px;width:100%;}
+.modal h3{font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;}
+.modal p{font-size:0.85rem;color:var(--muted);margin-bottom:1rem;line-height:1.7;}
+.modal input{width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem 1rem;color:var(--text);font-family:inherit;font-size:0.9rem;margin-bottom:0.75rem;}
+.modal input:focus{outline:none;border-color:var(--primary);}
+.modal-actions{display:flex;gap:0.6rem;}
+.checkout-plans{display:flex;flex-direction:column;gap:0.75rem;}
+.checkout-plan{padding:1rem 1.25rem;background:var(--input-bg);border:2px solid var(--border);border-radius:14px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:space-between;}
+.checkout-plan:hover{border-color:var(--primary);}
+.checkout-plan.selected{border-color:var(--primary);background:rgba(255,107,53,0.08);}
+.checkout-plan-name{font-weight:700;color:white;}
+.checkout-plan-desc{font-size:0.78rem;color:var(--muted);}
+.checkout-plan-price{font-size:1.1rem;font-weight:700;color:var(--primary);}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:900px){.app-layout{grid-template-columns:1fr;}.input-panel{border-right:none;border-bottom:1px solid var(--border);}}
+@media(max-width:768px){
+  .nav-links{display:none;}.hamburger{display:flex;}
+  .hero h1{font-size:2rem;}.hero-stats{gap:1.5rem;}
+  .step{flex-direction:column;}.pricing-grid{grid-template-columns:1fr;}
+  .wl-row{flex-direction:column;}.action-row{flex-direction:column;}
+  .tier-card.gold-tier{transform:none;}
+}
+@media(max-width:480px){.hero-btns{flex-direction:column;align-items:center;}}
+
+/* ===== AUTH ===== */
+.user-badge{display:flex;align-items:center;gap:0.5rem;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.3);border-radius:20px;padding:0.3rem 0.75rem;font-size:0.8rem;cursor:pointer;transition:all 0.2s;}
+.user-badge:hover{background:rgba(255,107,53,0.2);}
+.user-badge .plan-chip{background:var(--primary);color:white;border-radius:10px;padding:0.1rem 0.45rem;font-size:0.7rem;font-weight:700;text-transform:uppercase;}
+.auth-tabs{display:flex;gap:0.5rem;margin-bottom:1.5rem;background:var(--input-bg);border-radius:10px;padding:0.25rem;}
+.auth-tab{flex:1;padding:0.55rem;text-align:center;border-radius:8px;cursor:pointer;font-size:0.88rem;font-weight:600;color:var(--muted);border:none;background:none;font-family:inherit;transition:all 0.2s;}
+.auth-tab.active{background:var(--primary);color:white;}
+.auth-panel{display:none;}.auth-panel.active{display:block;}
+.api-key-display{background:var(--input-bg);border:1.5px solid var(--success);border-radius:10px;padding:0.9rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--success);word-break:break-all;margin:1rem 0;cursor:pointer;position:relative;}
+.api-key-display::after{content:'คลิกเพื่อคัดลอก';position:absolute;top:-8px;right:10px;background:var(--success);color:white;font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:6px;font-family:'Noto Sans Thai',sans-serif;}
+/* ===== SETUP WIZARD ===== */
+.setup-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:0.85rem;}
+.setup-card{background:var(--card-bg);border:1.5px solid var(--border);border-radius:14px;padding:1.1rem 1.25rem;display:flex;flex-direction:column;gap:0.5rem;transition:border-color 0.2s;}
+.setup-card.s-ok{border-color:rgba(39,174,96,0.5);}
+.setup-card.s-missing{border-color:rgba(231,76,60,0.4);}
+.setup-card.s-warn{border-color:rgba(241,196,15,0.4);}
+.setup-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.dot-ok{background:#27AE60;box-shadow:0 0 6px #27AE60;}
+.dot-miss{background:#e74c3c;}
+.dot-warn{background:#F39C12;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.setup-label{font-size:0.88rem;font-weight:700;color:white;}
+.setup-detail{font-size:0.76rem;color:var(--muted);line-height:1.5;}
+.setup-action-btn{margin-top:0.4rem;background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.3);color:var(--primary);border-radius:8px;padding:0.35rem 0.75rem;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:none;display:inline-block;width:fit-content;}
+.setup-action-btn:hover{background:rgba(255,107,53,0.2);}
+.setup-score-bar{height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin-bottom:1.5rem;}
+.setup-score-fill{height:100%;border-radius:4px;background:var(--gradient);transition:width 0.8s ease;}
+/* ===== TASK DASHBOARD ===== */
+.dept-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.25rem;display:flex;flex-direction:column;gap:0.75rem;}
+.dept-header{display:flex;align-items:center;gap:0.75rem;}
+.dept-emoji{font-size:1.6rem;}
+.dept-name{font-weight:700;color:white;font-size:0.95rem;}
+.dept-stats{display:flex;gap:0.5rem;flex-wrap:wrap;}
+.stat-chip{padding:0.25rem 0.6rem;border-radius:20px;font-size:0.72rem;font-weight:700;}
+.stat-open{background:rgba(255,107,53,0.15);color:var(--primary);border:1px solid rgba(255,107,53,0.3);}
+.stat-progress{background:rgba(78,205,196,0.12);color:var(--secondary);border:1px solid rgba(78,205,196,0.25);}
+.stat-done{background:rgba(39,174,96,0.12);color:var(--success);border:1px solid rgba(39,174,96,0.25);}
+.task-item{background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;display:flex;flex-direction:column;gap:0.35rem;}
+.task-meta{display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;}
+.task-source-chip{font-size:0.68rem;padding:0.1rem 0.45rem;border-radius:10px;font-weight:700;background:rgba(255,255,255,0.07);color:var(--muted);}
+.task-prio-urgent{color:#e74c3c;font-weight:700;font-size:0.72rem;}
+.task-prio-high{color:#e67e22;font-weight:700;font-size:0.72rem;}
+.task-prio-normal{color:var(--muted);font-size:0.72rem;}
+.task-title{font-size:0.85rem;color:var(--text);line-height:1.45;}
+.task-action{font-size:0.78rem;color:var(--secondary);}
+.task-time{font-size:0.68rem;color:#555;}
+.test-task-box{background:rgba(255,107,53,0.06);border:1px solid rgba(255,107,53,0.2);border-radius:12px;padding:1.25rem;margin-top:1.5rem;}
+/* ===== NEWS ===== */
+.news-card{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:1.1rem 1.25rem;transition:all 0.2s;display:flex;flex-direction:column;gap:0.5rem;}
+.news-card:hover{border-color:rgba(255,107,53,0.4);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,0.2);}
+.news-source-badge{display:inline-flex;align-items:center;gap:0.35rem;font-size:0.72rem;font-weight:700;padding:0.15rem 0.6rem;border-radius:20px;border:1px solid;width:fit-content;}
+.news-p3{background:rgba(255,107,53,0.1);border-color:rgba(255,107,53,0.4);color:var(--primary);}
+.news-p2{background:rgba(78,205,196,0.08);border-color:rgba(78,205,196,0.3);color:var(--secondary);}
+.news-p1{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);color:var(--muted);}
+.news-title{font-size:0.9rem;font-weight:600;color:white;line-height:1.45;text-decoration:none;display:block;}
+.news-title:hover{color:var(--primary);}
+.news-summary{font-size:0.78rem;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.news-time{font-size:0.72rem;color:#555;}
+.news-filter-btn{background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:0.3rem 0.8rem;font-size:0.78rem;cursor:pointer;font-family:inherit;transition:all 0.2s;}
+.news-filter-btn.active{background:rgba(255,107,53,0.15);border-color:rgba(255,107,53,0.5);color:var(--primary);font-weight:700;}
+.news-empty{text-align:center;padding:3rem;color:var(--muted);grid-column:1/-1;}
+/* ===== QR PAYMENT ===== */
+.qr-container{text-align:center;padding:1rem 0;}
+.qr-container canvas{border-radius:12px;border:4px solid white;max-width:200px;}
+.promptpay-id{font-family:'JetBrains Mono',monospace;font-size:1rem;color:var(--primary);font-weight:700;margin-top:0.5rem;}
+/* ===== AFFILIATE LINK ===== */
+.aff-link-box{background:var(--input-bg);border:2px solid rgba(255,107,53,0.3);border-radius:14px;padding:1.5rem;margin-top:2rem;}
+.aff-link-box h4{color:white;font-size:1rem;margin-bottom:0.75rem;}
+.aff-link-display{background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.3);border-radius:10px;padding:0.75rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.82rem;color:var(--secondary);word-break:break-all;margin:0.75rem 0;}
+</style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav>
-        <div class="nav-container">
-            <div class="logo">🇹🇭 Openthai.ai</div>
-            <div class="nav-links">
-                <a href="#features">ฟีเจอร์</a>
-                <a href="#how-it-works">วิธีใช้งาน</a>
-                <a href="#pricing">ราคา</a>
-                <a href="#waitlist">ลงทะเบียน</a>
-            </div>
+
+<!-- ===== NAV ===== -->
+<nav id="mainNav">
+  <div class="nav-container">
+    <a href="#home" class="logo">🇹🇭 OpenThai AI</a>
+    <div class="nav-links">
+      <a href="#app" data-th="ใช้งาน" data-en="App">ใช้งาน</a>
+      <a href="#features" data-th="ฟีเจอร์" data-en="Features">ฟีเจอร์</a>
+      <a href="#affiliate" data-th="ตัวแทน" data-en="Affiliate">ตัวแทน</a>
+      <a href="#setup" data-th="ตั้งค่า" data-en="Setup">ตั้งค่า</a>
+      <a href="#tasks" data-th="ทีมงาน" data-en="Tasks">ทีมงาน</a>
+      <a href="#ai-news" data-th="ข่าว AI" data-en="AI News">ข่าว AI</a>
+      <a href="#mythos" data-th="👑 Mythos" data-en="👑 Command">👑 Mythos</a>
+      <a href="#pricing" data-th="ราคา" data-en="Pricing">ราคา</a>
+      <a href="#waitlist" class="nav-cta" data-th="ลงทะเบียน" data-en="Register">ลงทะเบียน</a>
+    </div>
+    <div class="lang-switcher" title="เปลี่ยนภาษา / Change Language">
+      <button class="lang-btn active" id="langTH" onclick="setLang('th')">🇹🇭 TH</button>
+      <button class="lang-btn" id="langEN" onclick="setLang('en')">🇺🇸 EN</button>
+    </div>
+    <div id="userBadge" onclick="openAuth()" style="display:none;" class="user-badge">
+      <span id="userBadgeName">User</span>
+      <span class="plan-chip" id="userBadgePlan">FREE</span>
+    </div>
+    <button id="loginNavBtn" onclick="openAuth()" style="background:none;border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.8);padding:0.35rem 0.9rem;border-radius:20px;font-size:0.82rem;cursor:pointer;font-family:inherit;margin-left:0.5rem;">เข้าสู่ระบบ</button>
+    <button class="hamburger" id="hamburger" onclick="toggleMenu()"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#app" onclick="toggleMenu()">⚡ ใช้งานเลย</a>
+  <a href="#features" onclick="toggleMenu()">✨ ฟีเจอร์</a>
+  <a href="#affiliate" onclick="toggleMenu()">🤝 ตัวแทน</a>
+  <a href="#tasks" onclick="toggleMenu()">⚡ ทีมงาน</a>
+  <a href="#ai-news" onclick="toggleMenu()">📡 ข่าว AI</a>
+  <a href="#mythos" onclick="toggleMenu()">👑 Mythos</a>
+  <a href="#pricing" onclick="toggleMenu()">💰 ราคา</a>
+  <a href="#waitlist" onclick="toggleMenu()">🎉 ลงทะเบียน</a>
+</div>
+
+<!-- ===== HERO ===== -->
+<section class="hero" id="home">
+  <div class="hero-content">
+    <div class="hero-badge" id="hero-badge">🚀 เปิดให้ใช้งาน Early Access แล้ว!</div>
+    <h1 id="hero-h1">สร้างคอนเทนต์ <span>TikTok</span><br>ด้วย AI สัญชาติไทย</h1>
+    <p id="hero-p">สคริปต์ + แคปชั่น + แฮชแท็ก สำหรับสินค้าไทย OTOP และสินค้าทั่วโลก<br>พร้อมใช้งานใน 30 วินาที — ไม่ต้องสมัคร ไม่ต้องรอ</p>
+    <div class="hero-stats">
+      <div><div class="stat-num">300+</div><div class="stat-lbl" id="stat1">สินค้าใน Database</div></div>
+      <div><div class="stat-num">5</div><div class="stat-lbl" id="stat2">รูปแบบ Hook</div></div>
+      <div><div class="stat-num">35</div><div class="stat-lbl" id="stat3">ประเทศครอบคลุม</div></div>
+      <div><div class="stat-num">30%</div><div class="stat-lbl" id="stat4">ค่าคอมตัวแทน</div></div>
+    </div>
+    <div class="hero-btns">
+      <a href="#app" class="btn-primary" id="hero-btn1">⚡ ลองสร้างเลย — ฟรี</a>
+      <a href="#pricing" class="btn-outline" id="hero-btn2">ดูแพ็กเกจ →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== APP SECTION ===== -->
+<section id="app" style="background:var(--darker);padding:5rem 1.5rem;">
+  <div style="text-align:center;margin-bottom:2rem;">
+    <h2 class="section-title" id="app-title">🎯 สร้างคอนเทนต์ TikTok ได้เลย</h2>
+    <p class="section-sub" id="app-sub">ฟรี 3 ครั้ง/วัน · ไม่ต้องสมัคร · ผลลัพธ์ใน 30 วินาที</p>
+  </div>
+  <div class="app-layout">
+    <!-- INPUT -->
+    <aside class="input-panel">
+      <p class="panel-title">ข้อมูลสินค้า</p>
+      <div class="form-group">
+        <label>ชื่อสินค้า *</label>
+        <input type="text" id="productName" placeholder="เช่น ผ้าไหมมัดหมี่ อุบลราชธานี" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label>หมวดหมู่ *</label>
+        <select id="productCategory">
+          <option value="otop">สินค้า OTOP</option>
+          <option value="food">อาหาร & เครื่องดื่ม</option>
+          <option value="herb">สมุนไพร & ความงาม</option>
+          <option value="textile">ผ้า & สิ่งทอ</option>
+          <option value="craft">หัตถกรรม</option>
+          <option value="thai">สินค้าไทยทั่วไป</option>
+          <option value="china">สินค้าจีน</option>
+          <option value="global">สินค้านำเข้า</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>รายละเอียด <span style="color:var(--muted);font-weight:400">(ไม่บังคับ)</span></label>
+        <textarea id="productDesc" rows="2" placeholder="เช่น ทอมือ ราคา 1,500 บาท"></textarea>
+      </div>
+      <div class="form-group">
+        <label>กลุ่มเป้าหมาย</label>
+        <select id="targetAudience">
+          <option value="คนไทยทั่วไป">คนไทยทั่วไป</option>
+          <option value="คนรุ่นใหม่ Gen Z">Gen Z (18-27 ปี)</option>
+          <option value="ผู้หญิงวัยทำงาน">ผู้หญิงวัยทำงาน</option>
+          <option value="แม่บ้าน">แม่บ้าน</option>
+          <option value="นักท่องเที่ยว">นักท่องเที่ยว</option>
+          <option value="ผู้สนใจสุขภาพ">ผู้สนใจสุขภาพ</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>รูปแบบ Hook</label>
+        <div class="hook-grid">
+          <button class="hook-btn selected" data-hook="auto" onclick="selectHook(this)"><span class="icon">🤖</span>Auto</button>
+          <button class="hook-btn" data-hook="story" onclick="selectHook(this)"><span class="icon">📖</span>Story</button>
+          <button class="hook-btn" data-hook="process" onclick="selectHook(this)"><span class="icon">🎬</span>Process</button>
+          <button class="hook-btn" data-hook="contrast" onclick="selectHook(this)"><span class="icon">⚡</span>Contrast</button>
+          <button class="hook-btn" data-hook="question" onclick="selectHook(this)"><span class="icon">❓</span>Question</button>
+          <button class="hook-btn" data-hook="transformation" onclick="selectHook(this)"><span class="icon">✨</span>Transform</button>
         </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-content">
-            <h1>🚀 สร้างคอนเทนต์ TikTok<br>ด้วย AI สัญชาติไทย</h1>
-            <p>เครื่องมือ AI ช่วยสร้างสคริปต์ แคปชั่น แฮชแท็ก<br>สำหรับสินค้า OTOP และสินค้าทั่วโลก — ใน 30 วินาที!</p>
-            
-            <div class="hero-stats">
-                <div class="stat">
-                    <div class="stat-number">300+</div>
-                    <div class="stat-label">สินค้าใน Database</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number">5</div>
-                    <div class="stat-label">รูปแบบ Hook</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number">35</div>
-                    <div class="stat-label">ประเทศครอบคลุม</div>
-                </div>
-            </div>
-            
-            <a href="#waitlist" class="cta-button">ลงทะเบียน Early Access ฟรี →</a>
+      </div>
+      <button class="generate-btn" id="generateBtn" onclick="generateContent()">
+        <span class="spinner" id="spinner"></span>
+        <span id="btnText">⚡ สร้างคอนเทนต์</span>
+      </button>
+      <div class="error-box" id="errorBox"></div>
+      <div class="free-notice" id="freeNotice">เหลือการสร้างฟรี <strong id="freeCount">3</strong> ครั้งวันนี้</div>
+      <div class="upgrade-banner" id="upgradeBanner">
+        <p>ครบโควตาฟรีแล้ว! อัปเกรดเพื่อสร้างไม่จำกัด</p>
+        <button onclick="openCheckout('pro')">อัปเกรด ฿149</button>
+      </div>
+      <div class="history-section" id="historySection" style="display:none">
+        <p class="history-label">ล่าสุด</p>
+        <div id="historyList"></div>
+      </div>
+    </aside>
+    <!-- OUTPUT -->
+    <main class="output-panel">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🎬</div>
+        <h3>พร้อมสร้างคอนเทนต์</h3>
+        <p>กรอกชื่อสินค้าและกด "สร้างคอนเทนต์" รับสคริปต์ + แคปชั่น + แฮชแท็กทันที</p>
+        <div class="quick-chips">
+          <button class="quick-chip" onclick="quickFill('ผ้าไหมมัดหมี่','textile')">ผ้าไหมมัดหมี่</button>
+          <button class="quick-chip" onclick="quickFill('สบู่ขมิ้นชัน','herb')">สบู่ขมิ้นชัน</button>
+          <button class="quick-chip" onclick="quickFill('กาแฟดอยช้าง','food')">กาแฟดอยช้าง</button>
+          <button class="quick-chip" onclick="quickFill('น้ำพริกปลาทู','otop')">น้ำพริกปลาทู</button>
         </div>
-    </section>
-
-    <!-- Features Section -->
-    <section class="features" id="features">
-        <h2 class="section-title">✨ ฟีเจอร์เด่น</h2>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🎬</div>
-                <h3>สคริปต์ 30 วินาที</h3>
-                <p>Hook 3 วิ + Story 20 วิ + CTA 7 วิ พร้อมใช้งานทันที</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📝</div>
-                <h3>แคปชั่น + แฮชแท็ก</h3>
-                <p>แคปชั่นดึงดูด + 10 แฮชแท็กที่เหมาะกับสินค้า</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🏆</div>
-                <h3>5 รูปแบบ Hook</h3>
-                <p>Story / Process / Contrast / Question / Transformation</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🌏</div>
-                <h3>รองรับสินค้าทั่วโลก</h3>
-                <p>OTOP + สินค้าไทย + จีน + Global 35 ประเทศ</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🧠</div>
-                <h3>AI Critic ให้คะแนน</h3>
-                <p>ระบบ AI ตรวจสอบคุณภาพอัตโนมัติ ≥ 7/10</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📚</div>
-                <h3>อธิบายเหตุผล</h3>
-                <p>บอกว่าทำไม Hook นี้ถึงเวิร์ค เรียนรู้ได้ทุกครั้ง</p>
-            </div>
+      </div>
+      <div class="result" id="resultBox">
+        <div class="result-header">
+          <h2 id="resultTitle">📱 คอนเทนต์ TikTok</h2>
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <span class="score-badge" id="scoreBadge">—</span>
+          </div>
         </div>
-    </section>
-
-    <!-- How It Works -->
-    <section class="how-it-works" id="how-it-works">
-        <h2 class="section-title" style="color: white;">🔧 วิธีใช้งาน</h2>
-        <div class="steps">
-            <div class="step">
-                <div class="step-number">1</div>
-                <div class="step-content">
-                    <h3>เลือกสินค้า</h3>
-                    <p>พิมพ์ชื่อสินค้าหรือเลือกจาก Database 300+ รายการ</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-number">2</div>
-                <div class="step-content">
-                    <h3>เลือกรูปแบบ Hook</h3>
-                    <p>Story / Process / Contrast / Question / Transformation</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <div class="step-content">
-                    <h3>AI สร้างคอนเทนต์</h3>
-                    <p>รอ 10-30 วินาที ได้สคริปต์ + แคปชั่น + แฮชแท็ก</p>
-                </div>
-            </div>
-            <div class="step">
-                <div class="step-number">4</div>
-                <div class="step-content">
-                    <h3>Copy ไปใช้งาน</h3>
-                    <p>นำไปถ่าย TikTok ได้เลย พร้อมเรียนรู้จากคำอธิบาย</p>
-                </div>
-            </div>
+        <div class="content-block">
+          <div class="block-label">🎬 สคริปต์ 30 วินาที
+            <button class="copy-btn" onclick="copyScript(this)">คัดลอก</button>
+          </div>
+          <div class="script-parts">
+            <div class="script-part"><div class="part-label">⚡ Hook — 3 วินาที</div><div class="part-text" id="hookText"></div></div>
+            <div class="script-part story"><div class="part-label">📖 Story — 20 วินาที</div><div class="part-text" id="storyText"></div></div>
+            <div class="script-part cta"><div class="part-label">📣 CTA — 7 วินาที</div><div class="part-text" id="ctaText"></div></div>
+          </div>
         </div>
-    </section>
-
-    <!-- Pricing -->
-    <section class="pricing" id="pricing">
-        <h2 class="section-title">💰 แพ็กเกจราคา</h2>
-        <div class="pricing-grid">
-            <div class="pricing-card">
-                <h3>Free</h3>
-                <div class="price">฿0 <span>/เดือน</span></div>
-                <ul class="pricing-features">
-                    <li>3 คอนเทนต์ / วัน</li>
-                    <li>สินค้า OTOP เท่านั้น</li>
-                    <li>Hook แบบ Random</li>
-                    <li>ไม่มี AI Critic Score</li>
-                </ul>
-                <a href="#waitlist" class="cta-button" style="background: var(--light); color: var(--dark);">เริ่มใช้ฟรี</a>
-            </div>
-            <div class="pricing-card popular">
-                <h3>⭐ Pro</h3>
-                <div class="price">฿149 <span>/เดือน</span></div>
-                <ul class="pricing-features">
-                    <li>ไม่จำกัดคอนเทนต์</li>
-                    <li>สินค้าทุกประเภท</li>
-                    <li>เลือก Hook ได้เอง</li>
-                    <li>AI Critic Score</li>
-                    <li>อธิบายเหตุผล</li>
-                </ul>
-                <a href="#waitlist" class="cta-button">ลงทะเบียน</a>
-            </div>
-            <div class="pricing-card">
-                <h3>Business</h3>
-                <div class="price">฿299 <span>/เดือน</span></div>
-                <ul class="pricing-features">
-                    <li>ทุกอย่างใน Pro</li>
-                    <li>API Access</li>
-                    <li>Team 5 คน</li>
-                    <li>Priority Support</li>
-                    <li>Custom Training</li>
-                </ul>
-                <a href="#waitlist" class="cta-button" style="background: var(--dark); color: white;">ติดต่อเรา</a>
-            </div>
+        <div class="content-block">
+          <div class="block-label">📝 แคปชั่น<button class="copy-btn" onclick="copyEl('captionText',this)">คัดลอก</button></div>
+          <div class="caption-text" id="captionText"></div>
         </div>
-    </section>
+        <div class="content-block">
+          <div class="block-label"># แฮชแท็ก<button class="copy-btn" onclick="copyHashtags(this)">คัดลอกทั้งหมด</button></div>
+          <div class="hashtags-wrap" id="hashtagsWrap"></div>
+        </div>
+        <div class="learning-block">
+          <div class="learning-label">🧠 เหตุผลที่ Hook นี้ได้ผล</div>
+          <div class="learning-text" id="whyText"></div>
+          <div class="next-try" id="nextTryText"></div>
+        </div>
+        <div class="action-row">
+          <button class="action-btn" onclick="copyAll()">📋 Copy ทั้งหมด</button>
+          <button class="action-btn" onclick="openLineModal()" style="border-color:rgba(6,199,85,0.35);color:#06C755;">📲 ส่ง LINE</button>
+          <button class="action-btn primary" onclick="generateContent()">⚡ สร้างใหม่</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
 
-    <!-- Waitlist Form -->
-    <section class="waitlist" id="waitlist">
-        <div class="waitlist-container">
-            <h2>🎉 ลงทะเบียน Early Access</h2>
-            <p>รับสิทธิ์ใช้งานฟรี 30 วัน + ส่วนลด 50% สำหรับ 100 คนแรก!</p>
-            
-            <form class="waitlist-form" id="waitlistForm">
-                <div class="form-row">
-                    <input type="text" name="name" placeholder="ชื่อ-นามสกุล" required>
-                    <input type="email" name="email" placeholder="อีเมล" required>
-                </div>
-                <div class="form-row">
-                    <input type="tel" name="phone" placeholder="เบอร์โทร (LINE)" required>
-                    <select name="role" required>
-                        <option value="">— คุณคือ —</option>
-                        <option value="creator">TikTok Creator</option>
-                        <option value="otop">ผู้ผลิต OTOP</option>
-                        <option value="reseller">Reseller / Agent</option>
-                        <option value="crossborder">Cross-border Seller</option>
-                        <option value="agency">Agency / NGO</option>
-                        <option value="other">อื่นๆ</option>
-                    </select>
-                </div>
-                
-                <!-- PDPA Consent -->
-                <div class="pdpa-consent">
-                    <input type="checkbox" id="pdpaConsent" name="pdpa" required>
-                    <label for="pdpaConsent">
-                        ข้าพเจ้ายินยอมให้ Openthai.ai เก็บรวบรวม ใช้ และเปิดเผยข้อมูลส่วนบุคคล
-                        ตาม <a href="privacy.html" target="_blank">นโยบายความเป็นส่วนตัว</a> 
-                        เพื่อการให้บริการ การติดต่อสื่อสาร และการปรับปรุงผลิตภัณฑ์ 
-                        ตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)
-                    </label>
-                </div>
-                
-                <button type="submit" class="submit-btn" id="submitBtn">
-                    ลงทะเบียนรับสิทธิ์ →
-                </button>
-            </form>
-            
-            <div class="success-message" id="successMessage">
-                <h3>✅ ลงทะเบียนสำเร็จ!</h3>
-                <p>ขอบคุณที่สนใจ Openthai.ai<br>เราจะติดต่อกลับภายใน 24 ชั่วโมง</p>
+<!-- ===== FEATURES ===== -->
+<section class="section section-dark" id="features">
+  <div class="container">
+    <h2 class="section-title" id="feat-title">✨ ฟีเจอร์เด่น</h2>
+    <p class="section-sub" id="feat-sub">ทุกอย่างที่ TikTok Creator ต้องการ</p>
+    <div class="features-grid">
+      <div class="feature-card"><div class="feature-icon">🎬</div><h3>สคริปต์ 30 วินาที</h3><p>Hook 3 วิ + Story 20 วิ + CTA 7 วิ ครบสูตร พร้อมถ่ายทันที</p></div>
+      <div class="feature-card"><div class="feature-icon">📝</div><h3>แคปชั่น + แฮชแท็ก</h3><p>แคปชั่นดึงดูดพร้อม 10 แฮชแท็กเหมาะกับสินค้า คัดลอกได้ในคลิกเดียว</p></div>
+      <div class="feature-card"><div class="feature-icon">🏆</div><h3>5 รูปแบบ Hook</h3><p>Story / Process / Contrast / Question / Transformation เลือกได้ตามสไตล์</p></div>
+      <div class="feature-card"><div class="feature-icon">🌏</div><h3>สินค้าทั่วโลก</h3><p>OTOP + ไทย + จีน + Global 35 ประเทศ รองรับทุกหมวดหมู่</p></div>
+      <div class="feature-card"><div class="feature-icon">🧠</div><h3>AI Critic Score</h3><p>ระบบตรวจสอบคุณภาพอัตโนมัติ พร้อมอธิบายว่าทำไม Hook นี้ถึงได้ผล</p></div>
+      <div class="feature-card feature-new"><div class="feature-icon">⚡</div><h3>Bulk Generator</h3><p>สร้าง 5 Hook พร้อมกันในครั้งเดียว เหมาะสำหรับร้านที่มีหลายสินค้า</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section class="section section-darker">
+  <div class="container">
+    <h2 class="section-title" id="how-title">🔧 วิธีใช้งาน</h2>
+    <p class="section-sub" id="how-sub">4 ขั้นตอน ใช้งานได้ทันที</p>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-content"><h3>พิมพ์ชื่อสินค้า</h3><p>ใส่ชื่อสินค้าและเลือกหมวดหมู่ — ยิ่งละเอียดยิ่งได้ผลดี</p></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-content"><h3>เลือกรูปแบบ Hook</h3><p>Auto ให้ AI เลือกให้ หรือเลือกเอง 5 สไตล์</p></div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-content"><h3>AI สร้างในไม่กี่วินาที</h3><p>ได้สคริปต์ 30 วิ + แคปชั่น + แฮชแท็ก พร้อม AI Score</p></div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-content"><h3>Copy ไปถ่าย TikTok</h3><p>คัดลอกทั้งหมดในคลิกเดียว หรือส่งตรงไป LINE</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== AFFILIATE ===== -->
+<section class="section section-dark" id="affiliate">
+  <div class="container">
+    <div class="affiliate-hero">
+      <div class="commission-badge">💰 ค่าคอมมิชชั่นสูงสุด 40%</div>
+      <h2 class="section-title" style="margin-bottom:0.5rem;">โปรแกรมตัวแทน OpenThai AI</h2>
+      <p style="color:rgba(255,255,255,0.7);font-size:1rem;margin-bottom:1.5rem;">แนะนำเพื่อน รับรายได้ทุกครั้งที่เขาจ่ายเงิน ไม่มีหมดอายุ</p>
+      <button class="btn-primary" onclick="document.getElementById('waitlist').scrollIntoView({behavior:'smooth'})">สมัครเป็นตัวแทน →</button>
+    </div>
+    <h3 style="text-align:center;color:white;margin-bottom:1.5rem;font-size:1.2rem;">ระดับตัวแทนและค่าคอม</h3>
+    <div class="tiers-grid">
+      <div class="tier-card bronze"><div class="tier-icon">🥉</div><div class="tier-name">Bronze</div><div class="tier-commission">30%<span>/ยอดขาย</span></div><div class="tier-sales">0–10 คน/เดือน</div><p style="font-size:0.8rem;color:var(--muted);">เริ่มต้นง่าย ไม่มีขั้นต่ำ</p></div>
+      <div class="tier-card silver"><div class="tier-icon">🥈</div><div class="tier-name">Silver</div><div class="tier-commission">35%<span>/ยอดขาย</span></div><div class="tier-sales">11–30 คน/เดือน</div><p style="font-size:0.8rem;color:var(--muted);">+ bonus รายเดือน</p></div>
+      <div class="tier-card gold-tier"><div class="tier-icon">🥇</div><div class="tier-name">Gold</div><div class="tier-commission">40%<span>/ยอดขาย</span></div><div class="tier-sales">31+ คน/เดือน</div><p style="font-size:0.8rem;color:var(--muted);">+ priority support + training</p></div>
+    </div>
+    <div class="aff-steps">
+      <div class="aff-step"><div class="aff-step-num">1</div><h4>สมัครฟรี</h4><p>กรอกชื่อด้านล่าง รับลิ้งก์ Affiliate ทันที</p></div>
+      <div class="aff-step"><div class="aff-step-num">2</div><h4>แชร์ลิ้งก์</h4><p>โพสต์ใน TikTok / LINE / Facebook ได้เลย</p></div>
+      <div class="aff-step"><div class="aff-step-num">3</div><h4>รับค่าคอม</h4><p>โอนทุกวันที่ 1 ผ่านพร้อมเพย์ ไม่มีค่าธรรมเนียม</p></div>
+    </div>
+
+    <!-- Affiliate link generator -->
+    <div class="aff-link-box" id="affLinkBox">
+      <h4>🔗 รับลิ้งก์ Affiliate ของคุณ</h4>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:1rem;">ใส่ชื่อย่อหรือชื่อของคุณ (ภาษาอังกฤษ ไม่มีช่องว่าง)</p>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <input type="text" id="affCodeInput" placeholder="เช่น somchai หรือ shop99" maxlength="20"
+          style="flex:1;min-width:180px;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.7rem 1rem;color:white;font-family:'JetBrains Mono',monospace;font-size:0.9rem;">
+        <button onclick="generateAffLink()" class="btn-primary" style="border:none;cursor:pointer;padding:0.7rem 1.5rem;font-size:0.9rem;">สร้างลิ้งก์</button>
+      </div>
+      <div id="affLinkResult" style="display:none;">
+        <p style="font-size:0.8rem;color:var(--success);margin:0.75rem 0 0.3rem;">✅ ลิ้งก์ Affiliate ของคุณ:</p>
+        <div class="aff-link-display" id="affLinkDisplay" onclick="copyAffLink()" style="cursor:pointer;" title="คลิกเพื่อคัดลอก"></div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;">
+          <button onclick="copyAffLink()" style="background:rgba(78,205,196,0.15);border:1px solid rgba(78,205,196,0.4);color:var(--secondary);border-radius:8px;padding:0.5rem 1rem;cursor:pointer;font-family:inherit;font-size:0.82rem;font-weight:600;">📋 คัดลอก</button>
+          <button onclick="shareAffLink('line')" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);color:#27AE60;border-radius:8px;padding:0.5rem 1rem;cursor:pointer;font-family:inherit;font-size:0.82rem;font-weight:600;">💬 แชร์ LINE</button>
+          <button onclick="shareAffLink('tiktok')" style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);color:var(--primary);border-radius:8px;padding:0.5rem 1rem;cursor:pointer;font-family:inherit;font-size:0.82rem;font-weight:600;">🎵 คัดลอกสำหรับ TikTok</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== PRICING ===== -->
+<section class="section section-darker" id="pricing">
+  <div class="container">
+    <h2 class="section-title" id="price-title">💰 แพ็กเกจราคา</h2>
+    <p class="section-sub" id="price-sub">เริ่มต้นฟรี ไม่ต้องใส่บัตรเครดิต</p>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <h3>Free</h3>
+        <div class="price">฿0 <span>/เดือน</span></div>
+        <ul class="pricing-features">
+          <li>3 คอนเทนต์ / วัน</li>
+          <li>สินค้า OTOP & ไทย</li>
+          <li>Hook แบบ Auto</li>
+          <li class="no">AI Critic Score</li>
+          <li class="no">Bulk Generator</li>
+        </ul>
+        <a href="#app" class="pricing-btn pricing-btn-outline">เริ่มใช้ฟรีเลย</a>
+      </div>
+      <div class="pricing-card popular">
+        <div class="popular-badge">⭐ แนะนำ</div>
+        <h3>Pro</h3>
+        <div class="price">฿149 <span>/เดือน</span></div>
+        <ul class="pricing-features">
+          <li>ไม่จำกัดคอนเทนต์</li>
+          <li>สินค้าทุกประเภท</li>
+          <li>เลือก Hook ได้เอง</li>
+          <li>AI Critic Score</li>
+          <li>Bulk Generator</li>
+        </ul>
+        <button onclick="openCheckout('pro')" class="pricing-btn pricing-btn-primary">เริ่มใช้ Pro</button>
+      </div>
+      <div class="pricing-card">
+        <h3>Business</h3>
+        <div class="price">฿299 <span>/เดือน</span></div>
+        <ul class="pricing-features">
+          <li>ทุกอย่างใน Pro</li>
+          <li>API Access</li>
+          <li>Team 5 คน</li>
+          <li>Priority Support</li>
+          <li>Custom Training</li>
+        </ul>
+        <button onclick="openCheckout('business')" class="pricing-btn pricing-btn-dark">เลือก Business</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== WAITLIST ===== -->
+<section class="section section-dark" id="waitlist">
+  <div class="waitlist-box">
+    <h2 id="wl-title">🎉 ลงทะเบียน Early Access</h2>
+    <p id="wl-sub">รับสิทธิ์ใช้งานฟรี 30 วัน + ส่วนลด 50% สำหรับ 100 คนแรก!</p>
+    <form class="wl-form" id="waitlistForm">
+      <div class="wl-row">
+        <input type="text" name="name" placeholder="ชื่อ-นามสกุล" required>
+        <input type="email" name="email" placeholder="อีเมล" required>
+      </div>
+      <div class="wl-row">
+        <input type="tel" name="phone" placeholder="เบอร์โทร (LINE)">
+        <select name="role">
+          <option value="">— คุณคือ —</option>
+          <option value="creator">TikTok Creator</option>
+          <option value="otop">ผู้ผลิต OTOP</option>
+          <option value="reseller">Reseller / Agent</option>
+          <option value="crossborder">Cross-border Seller</option>
+          <option value="agency">Agency</option>
+          <option value="other">อื่นๆ</option>
+        </select>
+      </div>
+      <div class="pdpa-row">
+        <input type="checkbox" id="pdpa" required>
+        <label for="pdpa">ยินยอมให้ OpenThai AI เก็บและใช้ข้อมูลส่วนบุคคล ตาม <a href="privacy.html" target="_blank">นโยบายความเป็นส่วนตัว</a> (PDPA)</label>
+      </div>
+      <button type="submit" class="btn-primary" id="wlBtn" style="border:none;cursor:pointer;">ลงทะเบียนรับสิทธิ์ →</button>
+    </form>
+    <div class="success-msg" id="successMsg">
+      <h3>✅ ลงทะเบียนสำเร็จ!</h3>
+      <p>ขอบคุณที่สนใจ OpenThai AI เราจะติดต่อกลับภายใน 24 ชั่วโมง</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SETUP WIZARD ===== -->
+<section class="section section-light" id="setup" style="padding:3.5rem 2rem;">
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h2 class="section-title" style="margin-bottom:0.25rem;text-align:left;">🛠️ Setup Wizard</h2>
+        <p style="color:var(--muted);font-size:0.85rem;">สถานะ integration ทั้งหมด — คลิก "ทดสอบ" เพื่อยืนยันการเชื่อมต่อ</p>
+      </div>
+      <div style="text-align:right;">
+        <div id="setupScore" style="font-size:2rem;font-weight:700;color:white;">—%</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Setup Complete</div>
+      </div>
+    </div>
+    <div class="setup-score-bar"><div class="setup-score-fill" id="setupScoreFill" style="width:0%"></div></div>
+
+    <div class="setup-grid" id="setupGrid">
+      <!-- Step 1: Anthropic -->
+      <div class="setup-card" id="sc-anthropic">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-anthropic"></div>
+          <div style="flex:1;">
+            <div class="setup-label">1. 🤖 Anthropic API Key</div>
+            <div class="setup-detail" id="detail-anthropic">ตรวจสอบอยู่...</div>
+            <a href="https://console.anthropic.com/settings/keys" target="_blank" class="setup-action-btn">รับ API Key →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: LINE Notify x4 -->
+      <div class="setup-card" id="sc-line-dev">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-line-dev"></div>
+          <div style="flex:1;">
+            <div class="setup-label">2a. 🔧 LINE Notify — Dev</div>
+            <div class="setup-detail" id="detail-line-dev">ตรวจสอบอยู่...</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;">
+              <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn">รับ Token →</a>
+              <button onclick="testLineNotify('dev')" class="setup-action-btn" id="test-line-dev">ทดสอบ</button>
             </div>
+            <div id="test-line-dev-result" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
+          </div>
         </div>
-    </section>
-
-    <!-- Footer -->
-    <footer>
-        <div class="footer-links">
-            <a href="privacy.html">นโยบายความเป็นส่วนตัว</a>
-            <a href="terms.html">ข้อกำหนดการใช้งาน</a>
-            <a href="mailto:contact@openthai.ai">ติดต่อเรา</a>
+      </div>
+      <div class="setup-card" id="sc-line-sales">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-line-sales"></div>
+          <div style="flex:1;">
+            <div class="setup-label">2b. 💼 LINE Notify — Sales</div>
+            <div class="setup-detail" id="detail-line-sales">ตรวจสอบอยู่...</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;">
+              <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn">รับ Token →</a>
+              <button onclick="testLineNotify('sales')" class="setup-action-btn" id="test-line-sales">ทดสอบ</button>
+            </div>
+            <div id="test-line-sales-result" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
+          </div>
         </div>
-        <p class="copyright">© 2026 Openthai.ai — Made with ❤️ in Thailand</p>
-    </footer>
+      </div>
+      <div class="setup-card" id="sc-line-support">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-line-support"></div>
+          <div style="flex:1;">
+            <div class="setup-label">2c. 🎧 LINE Notify — Support</div>
+            <div class="setup-detail" id="detail-line-support">ตรวจสอบอยู่...</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;">
+              <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn">รับ Token →</a>
+              <button onclick="testLineNotify('support')" class="setup-action-btn" id="test-line-support">ทดสอบ</button>
+            </div>
+            <div id="test-line-support-result" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-line-finance">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-line-finance"></div>
+          <div style="flex:1;">
+            <div class="setup-label">2d. 💰 LINE Notify — Finance</div>
+            <div class="setup-detail" id="detail-line-finance">ตรวจสอบอยู่...</div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.4rem;">
+              <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn">รับ Token →</a>
+              <button onclick="testLineNotify('finance')" class="setup-action-btn" id="test-line-finance">ทดสอบ</button>
+            </div>
+            <div id="test-line-finance-result" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
+          </div>
+        </div>
+      </div>
 
-    <!-- JavaScript -->
-    <script>
-        // Smooth scroll for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-        });
+      <!-- Step 3: LINE OA + GitHub -->
+      <div class="setup-card" id="sc-line-oa">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-line-oa"></div>
+          <div style="flex:1;">
+            <div class="setup-label">3. 💬 LINE OA Webhook</div>
+            <div class="setup-detail" id="detail-line-oa">ตรวจสอบอยู่...</div>
+            <div class="setup-detail" id="webhook-line-url" style="font-family:monospace;color:var(--secondary);word-break:break-all;margin-top:0.3rem;"></div>
+            <a href="https://developers.line.biz/console/" target="_blank" class="setup-action-btn" style="margin-top:0.4rem;">LINE Developers →</a>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-github">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-github"></div>
+          <div style="flex:1;">
+            <div class="setup-label">3b. 🐙 GitHub Webhook</div>
+            <div class="setup-detail" id="detail-github">ตรวจสอบอยู่...</div>
+            <div class="setup-detail" id="webhook-github-url" style="font-family:monospace;color:var(--secondary);word-break:break-all;margin-top:0.3rem;"></div>
+            <button onclick="autoRegisterGithub()" class="setup-action-btn" style="margin-top:0.4rem;" id="btn-github-register">⚡ Auto Register</button>
+            <div id="github-register-result" style="font-size:0.72rem;margin-top:0.3rem;display:none;"></div>
+          </div>
+        </div>
+      </div>
 
-        // Form submission
-        const form = document.getElementById('waitlistForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const successMessage = document.getElementById('successMessage');
+      <!-- Step 4: Mythos Command System -->
+      <div class="setup-card" id="sc-mythos-ceo">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-mythos-ceo"></div>
+          <div style="flex:1;">
+            <div class="setup-label">4a. 👑 LINE Mythos — CEO (Daily Brief)</div>
+            <div class="setup-detail" id="detail-mythos-ceo">ตรวจสอบอยู่...</div>
+            <div class="setup-detail" style="margin-top:0.3rem;">ตั้งค่า <code style="color:var(--primary);">LINE_MYTHOS_CEO</code> ใน Railway</div>
+            <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn" style="margin-top:0.4rem;">รับ Token →</a>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-mythos-csuite">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-mythos-csuite"></div>
+          <div style="flex:1;">
+            <div class="setup-label">4b. 🏛️ LINE Mythos — C-Suite (CFO/CTO/COO)</div>
+            <div class="setup-detail" id="detail-mythos-csuite">ตรวจสอบอยู่...</div>
+            <div class="setup-detail" style="margin-top:0.3rem;">ตั้งค่า <code style="color:var(--primary);">LINE_MYTHOS_CTO · LINE_MYTHOS_CFO · LINE_MYTHOS_COO</code></div>
+            <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn" style="margin-top:0.4rem;">รับ Token →</a>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-mythos-regional">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-mythos-regional"></div>
+          <div style="flex:1;">
+            <div class="setup-label">4c. 🌏 LINE Mythos — Regional (TH/SEA/Global)</div>
+            <div class="setup-detail" id="detail-mythos-regional">ตรวจสอบอยู่...</div>
+            <div class="setup-detail" style="margin-top:0.3rem;">ตั้งค่า <code style="color:var(--primary);">LINE_MYTHOS_TH · LINE_MYTHOS_SEA · LINE_MYTHOS_GLOBAL</code></div>
+            <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn" style="margin-top:0.4rem;">รับ Token →</a>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-mythos-dept">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-mythos-dept"></div>
+          <div style="flex:1;">
+            <div class="setup-label">4d. 🔧 LINE Mythos — Departments (Dev/Sales/Ops)</div>
+            <div class="setup-detail" id="detail-mythos-dept">ตรวจสอบอยู่...</div>
+            <div class="setup-detail" style="margin-top:0.3rem;">ตั้งค่า <code style="color:var(--primary);">LINE_MYTHOS_DEV · LINE_MYTHOS_SALES · LINE_MYTHOS_OPS</code></div>
+            <a href="https://notify-bot.line.me/my/" target="_blank" class="setup-action-btn" style="margin-top:0.4rem;">รับ Token →</a>
+          </div>
+        </div>
+      </div>
 
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            // Check PDPA consent
-            const pdpaChecked = document.getElementById('pdpaConsent').checked;
-            if (!pdpaChecked) {
-                alert('กรุณายอมรับนโยบายความเป็นส่วนตัวก่อนลงทะเบียน');
-                return;
-            }
-            
-            // Disable button and show loading
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="loading"></span> กำลังส่ง...';
-            
-            // Collect form data
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-            data.timestamp = new Date().toISOString();
-            data.source = 'landing_page';
-            
-            try {
-                // Send to Google Apps Script
-                const response = await fetch('https://script.google.com/macros/s/AKfycbxxUkC-hJcDANcyL6md7x_AjodJJihHrbKvIQgaQWyRxrWQm_awjtGLLt0RJvg7KIhPSQ/exec', {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                // Show success message
-                form.style.display = 'none';
-                successMessage.classList.add('show');
-                
-            } catch (error) {
-                console.error('Error:', error);
-                alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'ลงทะเบียนรับสิทธิ์ →';
-            }
-        });
+      <!-- Step 5: Email + PromptPay -->
+      <div class="setup-card" id="sc-smtp">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-smtp"></div>
+          <div style="flex:1;">
+            <div class="setup-label">4a. 📧 Email (SMTP)</div>
+            <div class="setup-detail" id="detail-smtp">ตรวจสอบอยู่...</div>
+            <a href="https://myaccount.google.com/apppasswords" target="_blank" class="setup-action-btn" style="margin-top:0.4rem;">Gmail App Password →</a>
+          </div>
+        </div>
+      </div>
+      <div class="setup-card" id="sc-promptpay">
+        <div style="display:flex;gap:0.75rem;">
+          <div class="setup-status-dot dot-warn" id="dot-promptpay"></div>
+          <div style="flex:1;">
+            <div class="setup-label">4b. 💳 PromptPay QR</div>
+            <div class="setup-detail" id="detail-promptpay">ตรวจสอบอยู่...</div>
+            <div class="setup-detail" style="margin-top:0.3rem;">ตั้งค่า <code style="color:var(--primary);">PROMPTPAY_ID</code> ใน Railway</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // Navbar scroll effect
-        window.addEventListener('scroll', function() {
-            const nav = document.querySelector('nav');
-            if (window.scrollY > 100) {
-                nav.style.boxShadow = '0 4px 30px rgba(0,0,0,0.15)';
-            } else {
-                nav.style.boxShadow = '0 2px 20px rgba(0,0,0,0.1)';
-            }
-        });
-    </script>
+    <!-- Railway copy-paste env block -->
+    <div style="margin-top:2rem;background:var(--input-bg);border:1px solid var(--border);border-radius:14px;padding:1.25rem;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+        <p style="font-size:0.85rem;font-weight:700;color:white;">📋 Railway Environment Variables (copy-paste)</p>
+        <button onclick="copyEnvBlock()" style="background:rgba(78,205,196,0.12);border:1px solid rgba(78,205,196,0.3);color:var(--secondary);border-radius:8px;padding:0.3rem 0.8rem;font-size:0.75rem;cursor:pointer;font-family:inherit;font-weight:600;">📋 Copy ทั้งหมด</button>
+      </div>
+      <pre id="envBlock" style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#aaa;white-space:pre-wrap;line-height:1.8;margin:0;">ANTHROPIC_API_KEY=sk-ant-xxx
+ENVIRONMENT=production
+FRONTEND_URL=https://www.openthai-ai.com
+PROMPTPAY_ID=0812345678
+LINE_NOTIFY_DEV=xxx
+LINE_NOTIFY_SALES=xxx
+LINE_NOTIFY_SUPPORT=xxx
+LINE_NOTIFY_FINANCE=xxx
+LINE_OA_CHANNEL_SECRET=xxx
+LINE_OA_CHANNEL_TOKEN=xxx
+GITHUB_WEBHOOK_SECRET=openthai-secret-2026
+GITHUB_TOKEN=ghp_xxx
+GITHUB_REPO=occylthailand-ai/openthai-ai
+API_URL=https://api.openthai-ai.com
+NEWS_DIGEST_EMAIL=your@email.com
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your@gmail.com
+SMTP_PASS=xxxx-xxxx-xxxx-xxxx
+ADMIN_API_KEY=change-this-secret
+# ── Mythos Command System ──────────────────────
+LINE_MYTHOS_CEO=xxx
+LINE_MYTHOS_CFO=xxx
+LINE_MYTHOS_CTO=xxx
+LINE_MYTHOS_COO=xxx
+LINE_MYTHOS_CMO=xxx
+LINE_MYTHOS_CLO=xxx
+LINE_MYTHOS_TH=xxx
+LINE_MYTHOS_SEA=xxx
+LINE_MYTHOS_GLOBAL=xxx
+LINE_MYTHOS_DEV=xxx
+LINE_MYTHOS_SALES=xxx
+LINE_MYTHOS_FINANCE=xxx
+LINE_MYTHOS_LEGAL=xxx
+LINE_MYTHOS_HR=xxx
+LINE_MYTHOS_OPS=xxx
+EMAIL_MYTHOS=mythos@openthai-ai.com</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ===== TASK DASHBOARD ===== -->
+<section class="section section-dark" id="tasks" style="padding:4rem 2rem;">
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h2 class="section-title" style="margin-bottom:0.25rem;text-align:left;">⚡ Task Board — ทีมงาน</h2>
+        <p style="color:var(--muted);font-size:0.85rem;">งานที่สร้างอัตโนมัติจาก LINE / Email / Form / GitHub</p>
+      </div>
+      <button onclick="refreshTasks()" style="background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.3);color:var(--primary);border-radius:8px;padding:0.4rem 0.9rem;font-size:0.82rem;cursor:pointer;font-family:inherit;font-weight:600;">🔄 รีเฟรช</button>
+    </div>
+
+    <!-- Department summary cards -->
+    <div id="deptGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem;margin-bottom:2rem;">
+      <div class="dept-card" id="dept-dev"><div class="dept-header"><span class="dept-emoji">🔧</span><span class="dept-name">Dev / Tech</span></div><div class="dept-stats"><span class="stat-chip stat-open" id="dept-dev-open">0 open</span><span class="stat-chip stat-progress" id="dept-dev-prog">0 in progress</span><span class="stat-chip stat-done" id="dept-dev-done">0 done</span></div></div>
+      <div class="dept-card" id="dept-sales"><div class="dept-header"><span class="dept-emoji">💼</span><span class="dept-name">Sales / Marketing</span></div><div class="dept-stats"><span class="stat-chip stat-open" id="dept-sales-open">0 open</span><span class="stat-chip stat-progress" id="dept-sales-prog">0 in progress</span><span class="stat-chip stat-done" id="dept-sales-done">0 done</span></div></div>
+      <div class="dept-card" id="dept-support"><div class="dept-header"><span class="dept-emoji">🎧</span><span class="dept-name">Support / CS</span></div><div class="dept-stats"><span class="stat-chip stat-open" id="dept-support-open">0 open</span><span class="stat-chip stat-progress" id="dept-support-prog">0 in progress</span><span class="stat-chip stat-done" id="dept-support-done">0 done</span></div></div>
+      <div class="dept-card" id="dept-finance"><div class="dept-header"><span class="dept-emoji">💰</span><span class="dept-name">Finance / Payment</span></div><div class="dept-stats"><span class="stat-chip stat-open" id="dept-finance-open">0 open</span><span class="stat-chip stat-progress" id="dept-finance-prog">0 in progress</span><span class="stat-chip stat-done" id="dept-finance-done">0 done</span></div></div>
+    </div>
+
+    <!-- Filter row -->
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+      <button class="news-filter-btn active" onclick="filterTasks(this,'')">ทั้งหมด</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'dev')">🔧 Dev</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'sales')">💼 Sales</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'support')">🎧 Support</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'finance')">💰 Finance</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'','open')">🔴 Open</button>
+      <button class="news-filter-btn" onclick="filterTasks(this,'','urgent')">🚨 Urgent</button>
+    </div>
+
+    <div id="taskList" style="display:flex;flex-direction:column;gap:0.65rem;">
+      <div style="text-align:center;padding:2rem;color:var(--muted);">⏳ กำลังโหลด task...</div>
+    </div>
+
+    <!-- Test task input (for testing the router) -->
+    <div class="test-task-box" style="margin-top:2rem;">
+      <p style="font-size:0.85rem;font-weight:700;color:var(--primary);margin-bottom:0.75rem;">🧪 ทดสอบ AI Task Router</p>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:0.75rem;">พิมพ์ข้อความ — AI จะวิเคราะห์และส่งไปทีมที่เหมาะสมทันที</p>
+      <textarea id="testTaskInput" rows="3" placeholder="เช่น: ลูกค้าแจ้งว่าระบบ login ไม่ทำงาน มา 2 ชั่วโมงแล้ว&#10;หรือ: สนใจสมัคร affiliate อยากทราบ commission&#10;หรือ: โอนเงินแล้ว 149 บาท แต่ยังไม่ได้รับ API key"
+        style="width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:var(--text);font-family:inherit;font-size:0.88rem;resize:vertical;"></textarea>
+      <div style="display:flex;gap:0.75rem;margin-top:0.75rem;flex-wrap:wrap;">
+        <select id="testTaskSource" style="background:var(--input-bg);border:1.5px solid var(--border);border-radius:8px;padding:0.5rem 0.75rem;color:var(--text);font-family:inherit;font-size:0.85rem;">
+          <option value="manual">✍️ Manual</option>
+          <option value="line">💬 LINE</option>
+          <option value="email">📧 Email</option>
+          <option value="form">📝 Form</option>
+          <option value="github">🐙 GitHub</option>
+        </select>
+        <button onclick="submitTestTask()" class="btn-primary" style="border:none;cursor:pointer;padding:0.5rem 1.5rem;font-size:0.9rem;" id="testTaskBtn">⚡ ส่ง Task</button>
+      </div>
+      <div id="testTaskResult" style="display:none;margin-top:0.75rem;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:10px;padding:0.85rem;font-size:0.82rem;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== AI NEWS SECTION ===== -->
+<section class="section section-darker" id="ai-news" style="padding:4rem 2rem;">
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h2 class="section-title" style="margin-bottom:0.25rem;text-align:left;">📡 AI News Live</h2>
+        <p style="color:var(--muted);font-size:0.85rem;">อัปเดตอัตโนมัติทุก 30 นาที จาก 12 แหล่งทั่วโลก</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+        <span id="newsLastUpdate" style="font-size:0.78rem;color:var(--muted);"></span>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;" id="newsFilterBtns">
+          <button class="news-filter-btn active" data-priority="" onclick="filterNews(this,'')">ทั้งหมด</button>
+          <button class="news-filter-btn" data-source="anthropic" onclick="filterNews(this,'anthropic')">🤖 Anthropic</button>
+          <button class="news-filter-btn" data-source="openai" onclick="filterNews(this,'openai')">⚡ OpenAI</button>
+          <button class="news-filter-btn" data-source="blognone" onclick="filterNews(this,'blognone')">🇹🇭 ไทย</button>
+        </div>
+        <button onclick="refreshNews()" id="newsRefreshBtn" style="background:rgba(255,107,53,0.12);border:1px solid rgba(255,107,53,0.3);color:var(--primary);border-radius:8px;padding:0.4rem 0.9rem;font-size:0.82rem;cursor:pointer;font-family:inherit;font-weight:600;">🔄 รีเฟรช</button>
+      </div>
+    </div>
+
+    <!-- News ticker bar -->
+    <div id="newsTicker" style="display:none;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:10px;padding:0.5rem 1rem;margin-bottom:1.25rem;overflow:hidden;white-space:nowrap;">
+      <span style="color:var(--primary);font-weight:700;margin-right:0.75rem;">🔴 LIVE</span>
+      <span id="newsTickerText" style="color:var(--text);font-size:0.85rem;"></span>
+    </div>
+
+    <div id="newsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1rem;">
+      <div style="text-align:center;padding:3rem;color:var(--muted);grid-column:1/-1;" id="newsLoading">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">📡</div>
+        <p>กำลังโหลดข่าว...</p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:1.5rem;" id="newsLoadMore" style="display:none;">
+      <button onclick="loadMoreNews()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:0.65rem 2rem;cursor:pointer;font-family:inherit;font-size:0.88rem;">โหลดเพิ่ม →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MYTHOS COMMAND CENTER ===== -->
+<section class="section section-dark" id="mythos" style="padding:4rem 2rem;">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:2.5rem;">
+      <span style="font-size:2.6rem;">👑</span>
+      <h2 style="font-size:1.9rem;font-weight:800;margin:0.5rem 0 0.25rem;">Mythos Command Center</h2>
+      <p style="color:var(--text-muted);font-size:0.97rem;">ระบบสั่งงานอัตโนมัติ 24/7 · C-Suite · 3 ภูมิภาค · 6 แผนก</p>
+    </div>
+
+    <!-- Issue Directive Box -->
+    <div style="background:linear-gradient(135deg,rgba(255,107,53,0.12),rgba(78,205,196,0.08));border:1px solid rgba(255,107,53,0.35);border-radius:16px;padding:1.75rem;margin-bottom:2rem;">
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;">
+        <span style="font-size:1.3rem;">⚡</span>
+        <h3 style="margin:0;font-size:1.05rem;font-weight:700;">ออก Directive</h3>
+        <span style="font-size:0.78rem;color:var(--text-muted);margin-left:auto;">AI จะแตกงานและมอบหมายให้ทีมงานอัตโนมัติ</span>
+      </div>
+      <textarea id="mythosDirective" placeholder="พิมพ์คำสั่งของท่าน Mythos เช่น: ขยายตลาด SEA ภายใน Q3 โดยเพิ่มพาร์ทเนอร์ 5 ราย, ลดต้นทุน ops 20%, เปิดตัว API v2..." style="width:100%;min-height:90px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:0.9rem;font-size:0.92rem;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+      <div style="margin-top:0.75rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center;">
+        <input id="mythosContext" placeholder="Context เพิ่มเติม (optional)" style="flex:1;min-width:200px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.6rem 0.85rem;font-size:0.88rem;font-family:inherit;">
+        <button onclick="issueDirective()" id="mythosIssueBtn" style="background:var(--primary);color:white;border:none;border-radius:10px;padding:0.7rem 1.6rem;font-size:0.92rem;font-weight:700;cursor:pointer;white-space:nowrap;">👑 ออก Directive</button>
+      </div>
+      <div id="mythosResult" style="display:none;margin-top:1rem;background:rgba(0,0,0,0.3);border-radius:10px;padding:1rem;font-size:0.87rem;"></div>
+    </div>
+
+    <!-- Org Chart + Stats -->
+    <div id="mythosOrg" style="margin-bottom:2rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <h3 style="margin:0;font-size:1rem;font-weight:700;">🏢 โครงสร้างองค์กร</h3>
+        <button onclick="loadMythosDashboard()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:0.4rem 1rem;font-size:0.82rem;cursor:pointer;font-family:inherit;">🔄 รีเฟรช</button>
+      </div>
+
+      <!-- CEO -->
+      <div style="text-align:center;margin-bottom:1.25rem;">
+        <div style="display:inline-flex;flex-direction:column;align-items:center;background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,107,53,0.1));border:1px solid rgba(255,215,0,0.4);border-radius:14px;padding:1rem 2rem;gap:0.25rem;">
+          <span style="font-size:1.8rem;">👑</span>
+          <strong style="font-size:1rem;">Mythos</strong>
+          <span style="font-size:0.78rem;color:var(--text-muted);">Chairman & CEO</span>
+          <span style="font-size:0.72rem;color:rgba(255,215,0,0.8);">OpenThai AI Group</span>
+        </div>
+      </div>
+
+      <!-- C-Suite -->
+      <div style="margin-bottom:1rem;">
+        <p style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 0.6rem;text-align:center;">C-Suite</p>
+        <div id="orgCSuite" style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;"></div>
+      </div>
+
+      <!-- Regional -->
+      <div style="margin-bottom:1rem;">
+        <p style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 0.6rem;text-align:center;">Regional Directors</p>
+        <div id="orgRegional" style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;"></div>
+      </div>
+
+      <!-- Departments -->
+      <div>
+        <p style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin:0 0 0.6rem;text-align:center;">Department Heads</p>
+        <div id="orgDept" style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;"></div>
+      </div>
+    </div>
+
+    <!-- Active Directives -->
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+        <h3 style="margin:0;font-size:1rem;font-weight:700;">📋 Active Directives</h3>
+        <span id="mythosOverdueChip" style="display:none;background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.4);color:#ff6b6b;border-radius:20px;padding:0.2rem 0.7rem;font-size:0.78rem;"></span>
+      </div>
+      <div id="mythosDirectiveList" style="display:flex;flex-direction:column;gap:0.75rem;">
+        <div style="text-align:center;color:var(--text-muted);padding:2rem;font-size:0.9rem;">กำลังโหลด...</div>
+      </div>
+    </div>
+
+    <!-- ── GOAL TRACKER ─────────────────────────────────────────── -->
+    <div style="border-top:1px solid var(--border);margin-top:2.5rem;padding-top:2.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+        <div>
+          <h3 style="margin:0 0 0.2rem;font-size:1.1rem;font-weight:800;">🎯 Goal Tracker — OKR 24/7</h3>
+          <p style="margin:0;font-size:0.83rem;color:var(--text-muted);">ติดตามเป้าหมายอัตโนมัติ · AI วิเคราะห์ทุก 4 ชม. · Weekly Report วันจันทร์ 08:05</p>
+        </div>
+        <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+          <button onclick="loadGoals()" style="background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:0.4rem 0.9rem;font-size:0.82rem;cursor:pointer;font-family:inherit;">🔄 รีเฟรช</button>
+          <button onclick="openGoalModal()" style="background:var(--primary);color:white;border:none;border-radius:8px;padding:0.4rem 1rem;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">＋ เพิ่มเป้าหมาย</button>
+        </div>
+      </div>
+
+      <!-- Health summary bar -->
+      <div id="goalSummaryBar" style="display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+        <div style="flex:1;min-width:100px;background:rgba(39,174,96,0.12);border:1px solid rgba(39,174,96,0.3);border-radius:10px;padding:0.75rem;text-align:center;">
+          <div id="gs-ontrack" style="font-size:1.5rem;font-weight:700;color:#27AE60;">—</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">🟢 On Track</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:rgba(243,156,18,0.12);border:1px solid rgba(243,156,18,0.3);border-radius:10px;padding:0.75rem;text-align:center;">
+          <div id="gs-atrisk" style="font-size:1.5rem;font-weight:700;color:#F39C12;">—</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">🟡 At Risk</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);border-radius:10px;padding:0.75rem;text-align:center;">
+          <div id="gs-offtrack" style="font-size:1.5rem;font-weight:700;color:#e74c3c;">—</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">🔴 Off Track</div>
+        </div>
+        <div style="flex:1;min-width:100px;background:rgba(255,215,0,0.12);border:1px solid rgba(255,215,0,0.3);border-radius:10px;padding:0.75rem;text-align:center;">
+          <div id="gs-achieved" style="font-size:1.5rem;font-weight:700;color:#FFD700;">—</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">🏆 Achieved</div>
+        </div>
+      </div>
+
+      <!-- Goal cards -->
+      <div id="goalList" style="display:flex;flex-direction:column;gap:1rem;">
+        <div style="text-align:center;color:var(--text-muted);padding:2rem;">กำลังโหลด...</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===== GOAL CREATE MODAL ===== -->
+<div id="goalModalBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:3000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1a1a2e;border:1px solid var(--border);border-radius:18px;padding:2rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h3 style="margin:0;font-size:1.1rem;font-weight:800;">🎯 เพิ่ม Objective ใหม่</h3>
+      <button onclick="closeGoalModal()" style="background:none;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.9rem;">
+      <div>
+        <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">เป้าหมาย (Objective) *</label>
+        <textarea id="gm-objective" placeholder="เช่น: ขยายฐานผู้ใช้ในตลาด SEA ให้ถึง 10,000 ราย ภายใน Q2 2026" style="width:100%;min-height:70px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:0.75rem;font-family:inherit;font-size:0.9rem;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Owner *</label>
+          <select id="gm-owner" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.65rem;font-family:inherit;font-size:0.88rem;">
+            <optgroup label="C-Suite"><option value="cfo">💰 CFO</option><option value="cto">⚙️ CTO</option><option value="coo">🔄 COO</option><option value="cmo">📣 CMO</option><option value="clo">⚖️ CLO</option></optgroup>
+            <optgroup label="Regional"><option value="th_director">🇹🇭 TH Director</option><option value="sea_director">🌏 SEA Director</option><option value="global_director">🌍 Global Director</option></optgroup>
+            <optgroup label="Department"><option value="dev">🔧 Dev</option><option value="sales">💼 Sales</option><option value="finance">📊 Finance</option><option value="legal">📜 Legal</option><option value="hr">👥 HR</option><option value="ops">🏭 Ops</option></optgroup>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Quarter</label>
+          <select id="gm-period" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.65rem;font-family:inherit;font-size:0.88rem;">
+            <option value="2026-Q2">2026-Q2 (current)</option>
+            <option value="2026-Q3">2026-Q3</option>
+            <option value="2026-Q4">2026-Q4</option>
+            <option value="2026-H1">2026-H1</option>
+            <option value="2026">2026 Annual</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Category</label>
+          <select id="gm-category" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.65rem;font-family:inherit;font-size:0.88rem;">
+            <option value="growth">📈 Growth</option><option value="product">🚀 Product</option>
+            <option value="ops">⚙️ Operations</option><option value="people">👥 People</option>
+            <option value="financial">💰 Financial</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.8rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Priority</label>
+          <select id="gm-priority" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0.65rem;font-family:inherit;font-size:0.88rem;">
+            <option value="critical">🚨 Critical</option><option value="high" selected>🔴 High</option><option value="medium">🟡 Medium</option>
+          </select>
+        </div>
+      </div>
+      <!-- Key Results builder -->
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+          <label style="font-size:0.8rem;color:var(--text-muted);">Key Results (1-5 ข้อ)</label>
+          <button onclick="addKRRow()" style="background:rgba(78,205,196,0.12);border:1px solid rgba(78,205,196,0.3);color:var(--secondary);border-radius:6px;padding:0.2rem 0.7rem;font-size:0.78rem;cursor:pointer;font-family:inherit;">＋ เพิ่ม KR</button>
+        </div>
+        <div id="krRows" style="display:flex;flex-direction:column;gap:0.5rem;">
+          <!-- injected by addKRRow() -->
+        </div>
+      </div>
+      <button onclick="submitGoal()" id="goalSubmitBtn" style="background:var(--primary);color:white;border:none;border-radius:10px;padding:0.85rem;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:0.5rem;">🎯 สร้างเป้าหมาย</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CHECK-IN MODAL ===== -->
+<div id="checkinModalBg" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:3000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:#1a1a2e;border:1px solid var(--border);border-radius:18px;padding:2rem;width:100%;max-width:460px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+      <h3 style="margin:0;font-size:1rem;font-weight:800;" id="checkinTitle">📊 อัปเดตความคืบหน้า</h3>
+      <button onclick="closeCheckin()" style="background:none;border:none;color:var(--text-muted);font-size:1.3rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="checkinKRList" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+    <button onclick="submitCheckin()" id="checkinSubmitBtn" style="background:var(--primary);color:white;border:none;border-radius:10px;padding:0.8rem;font-size:0.92rem;font-weight:700;cursor:pointer;font-family:inherit;width:100%;margin-top:1rem;">💾 บันทึก Check-in</button>
+  </div>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="footer-links">
+    <a href="#app">ใช้งาน</a>
+    <a href="#features">ฟีเจอร์</a>
+    <a href="#affiliate">ตัวแทน</a>
+    <a href="#pricing">ราคา</a>
+    <a href="privacy.html">นโยบายความเป็นส่วนตัว</a>
+    <a href="mailto:contact@openthai-ai.com">ติดต่อเรา</a>
+  </div>
+  <p class="copyright">© 2026 OpenThai AI — Made with ❤️ in Thailand</p>
+  <p class="powered-by">
+    🇹🇭 <span>Made in Thailand</span> &nbsp;·&nbsp;
+    Powered by <span>1. Gemini AI</span> (ช่วงแรก) &nbsp;+&nbsp;
+    <span>2. Grok</span> (ช่วงที่ 2) &nbsp;+&nbsp;
+    <span>3. Claude AI</span> (ช่วงท้ายและต่อเนื่อง)
+  </p>
+</footer>
+
+<!-- ===== LINE MODAL ===== -->
+<div class="modal-bg" id="lineModalBg">
+  <div class="modal">
+    <h3>📲 ส่งคอนเทนต์ไป LINE</h3>
+    <p>ใช้ LINE Notify รับข้อความในห้องแชท LINE ของคุณ<br>รับ Token ฟรีที่ <strong style="color:#06C755;">notify-bot.line.me</strong></p>
+    <input type="text" id="lineToken" placeholder="วาง LINE Notify Token ที่นี่...">
+    <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.8rem;color:var(--muted);margin-bottom:1rem;cursor:pointer;">
+      <input type="checkbox" id="saveToken" checked style="width:auto;"> บันทึก Token ในเครื่องนี้
+    </label>
+    <div class="modal-actions">
+      <button class="action-btn" onclick="closeLineModal()">ยกเลิก</button>
+      <button class="action-btn primary" onclick="sendToLine()">📲 ส่งเลย</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AUTH MODAL ===== -->
+<div class="modal-bg" id="authModal">
+  <div class="modal" style="max-width:440px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h3 id="authModalTitle">🔑 เข้าสู่ระบบ / สมัคร</h3>
+      <button onclick="closeAuth()" style="background:none;border:none;color:var(--muted);font-size:1.5rem;cursor:pointer;">×</button>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('register')">สมัครใช้งาน</button>
+      <button class="auth-tab" onclick="switchAuthTab('login')">มี API Key แล้ว</button>
+    </div>
+
+    <!-- Register Panel -->
+    <div class="auth-panel active" id="authRegister">
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">สมัครฟรี รับ API Key — ใช้งานได้ไม่จำกัดวัน</p>
+      <input type="text" id="regName" placeholder="ชื่อ-นามสกุล" style="width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:inherit;font-size:0.9rem;margin-bottom:0.75rem;">
+      <input type="email" id="regEmail" placeholder="อีเมล" style="width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:inherit;font-size:0.9rem;margin-bottom:1rem;">
+      <button class="btn-primary" onclick="doRegister()" style="width:100%;border:none;cursor:pointer;font-size:0.95rem;" id="regBtn">สมัครและรับ API Key →</button>
+      <div id="regResult" style="display:none;margin-top:1rem;">
+        <p style="font-size:0.82rem;color:var(--success);margin-bottom:0.5rem;">✅ สมัครสำเร็จ! บันทึก API Key ไว้ด้วย</p>
+        <div class="api-key-display" id="regKeyDisplay" onclick="copyApiKey()"></div>
+        <button class="btn-primary" onclick="closeAuth()" style="width:100%;border:none;cursor:pointer;margin-top:0.5rem;font-size:0.9rem;">เริ่มใช้งาน →</button>
+      </div>
+    </div>
+
+    <!-- Login Panel -->
+    <div class="auth-panel" id="authLogin">
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">วาง API Key ที่เคยได้รับเพื่อเข้าสู่ระบบ</p>
+      <input type="text" id="loginKey" placeholder="otai_xxxxxxxxxxxxxxxx" style="width:100%;background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:'JetBrains Mono',monospace;font-size:0.85rem;margin-bottom:1rem;">
+      <button class="btn-primary" onclick="doLogin()" style="width:100%;border:none;cursor:pointer;font-size:0.95rem;">เข้าสู่ระบบ →</button>
+      <button onclick="doLogout()" style="width:100%;background:none;border:1px solid rgba(255,255,255,0.15);color:var(--muted);border-radius:10px;padding:0.6rem;cursor:pointer;font-family:inherit;font-size:0.85rem;margin-top:0.5rem;">ออกจากระบบ</button>
+    </div>
+
+    <div id="authUserInfo" style="display:none;margin-top:1rem;padding:1rem;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:12px;">
+      <p style="font-size:0.88rem;color:var(--success);font-weight:600;" id="authUserName"></p>
+      <p style="font-size:0.8rem;color:var(--muted);">แผน: <span id="authUserPlan" style="color:var(--primary);font-weight:700;"></span> · ใช้วันนี้: <span id="authUserUsage"></span></p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CHECKOUT MODAL ===== -->
+<div class="modal-bg" id="checkoutModal">
+  <div class="modal" style="max-width:520px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+      <h3>💳 เลือกแพ็กเกจ</h3>
+      <button onclick="closeCheckout()" style="background:none;border:none;color:var(--muted);font-size:1.5rem;cursor:pointer;">×</button>
+    </div>
+    <div class="checkout-plans">
+      <div class="checkout-plan selected" id="plan-pro" onclick="selectPlan('pro')">
+        <div><div class="checkout-plan-name">⭐ Pro</div><div class="checkout-plan-desc">ไม่จำกัด · AI Score · Bulk</div></div>
+        <div class="checkout-plan-price">฿149<span style="font-size:0.75rem;color:var(--muted);">/เดือน</span></div>
+      </div>
+      <div class="checkout-plan" id="plan-business" onclick="selectPlan('business')">
+        <div><div class="checkout-plan-name">🏢 Business</div><div class="checkout-plan-desc">Pro + API + Team 5 คน</div></div>
+        <div class="checkout-plan-price">฿299<span style="font-size:0.75rem;color:var(--muted);">/เดือน</span></div>
+      </div>
+    </div>
+    <div style="margin-top:1.5rem;">
+      <div class="form-group"><label style="color:#ccc;">ชื่อ-นามสกุล</label><input type="text" id="co-name" placeholder="ชื่อ-นามสกุล" style="background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:inherit;width:100%;font-size:0.9rem;"></div>
+      <div class="form-group"><label style="color:#ccc;">อีเมล</label><input type="email" id="co-email" placeholder="อีเมล" style="background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:inherit;width:100%;font-size:0.9rem;"></div>
+      <div class="form-group"><label style="color:#ccc;">เบอร์โทร (LINE)</label><input type="tel" id="co-phone" placeholder="0812345678" style="background:var(--input-bg);border:1.5px solid var(--border);border-radius:10px;padding:0.75rem;color:white;font-family:inherit;width:100%;font-size:0.9rem;"></div>
+    </div>
+    <div style="background:rgba(78,205,196,0.08);border:1px solid rgba(78,205,196,0.2);border-radius:12px;padding:1rem;margin:1rem 0;text-align:center;">
+      <div class="qr-container" id="qrContainer" style="display:none;">
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:0.5rem;">สแกน QR ด้วยแอปธนาคารไทยทุกแห่ง</p>
+        <canvas id="promptpayQR"></canvas>
+        <div class="promptpay-id" id="promptpayIdDisplay"></div>
+        <p style="font-size:0.75rem;color:var(--muted);margin-top:0.4rem;">ยอดชำระ: <strong id="qrAmount" style="color:var(--primary);"></strong></p>
+      </div>
+      <div id="qrPlaceholder" style="font-size:0.85rem;color:var(--secondary);">
+        💳 ชำระผ่าน PromptPay / QR Code<br>
+        <span style="color:var(--muted);font-size:0.78rem;">กด "ดู QR Code" เพื่อสแกนชำระได้เลย</span>
+      </div>
+      <button onclick="showPaymentQR()" id="showQRBtn" style="margin-top:0.75rem;background:rgba(78,205,196,0.15);border:1px solid rgba(78,205,196,0.4);color:var(--secondary);border-radius:10px;padding:0.5rem 1.25rem;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600;">📱 ดู QR Code PromptPay</button>
+    </div>
+    <button class="btn-primary" onclick="submitCheckout()" style="width:100%;border:none;cursor:pointer;font-size:1rem;" id="coBtn">ยืนยันและแจ้งชำระเงิน →</button>
+    <div id="coSuccess" style="display:none;text-align:center;padding:1rem;color:var(--success);">✅ ส่งข้อมูลแล้ว! เราจะติดต่อกลับเร็วๆ นี้</div>
+  </div>
+</div>
+
+<script>
+// ===== CONFIG =====
+const API_URL = (() => {
+  if (window.__OPENTHAI_API_URL__) return window.__OPENTHAI_API_URL__;
+  const h = location.hostname;
+  if (h === 'www.openthai-ai.com' || h === 'openthai-ai.com') return 'https://api.openthai-ai.com';
+  return 'http://localhost:8000';
+})();
+let selectedHook = 'auto';
+let currentResult = null;
+let freeUsed = parseInt(localStorage.getItem('otai_free_used') || '0');
+const FREE_LIMIT = 3;
+const historyData = JSON.parse(localStorage.getItem('otai_history') || '[]');
+let selectedPlan = 'pro';
+
+// ===== INIT =====
+window.addEventListener('load', () => {
+  updateFreeCounter();
+  renderHistory();
+  const ref = new URLSearchParams(location.search).get('ref');
+  if (ref) {
+    localStorage.setItem('otai_ref', ref);
+    const b = document.createElement('div');
+    b.style.cssText = 'position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);background:#27AE60;color:white;padding:0.6rem 1.5rem;border-radius:30px;font-size:0.88rem;font-weight:600;z-index:9999;box-shadow:0 4px 15px rgba(0,0,0,0.2);';
+    b.textContent = '🤝 แนะนำโดยตัวแทน — คุณได้รับสิทธิ์พิเศษ Early Access!';
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 5000);
+  }
+});
+
+// ===== MOBILE MENU =====
+function toggleMenu() {
+  document.getElementById('mobileMenu').classList.toggle('open');
+  document.getElementById('hamburger').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  const m = document.getElementById('mobileMenu'), h = document.getElementById('hamburger');
+  if (!m.contains(e.target) && !h.contains(e.target)) { m.classList.remove('open'); h.classList.remove('open'); }
+});
+
+// ===== HOOK SELECT =====
+function selectHook(el) {
+  document.querySelectorAll('.hook-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedHook = el.dataset.hook;
+}
+
+// ===== QUICK FILL =====
+function quickFill(name, cat) {
+  document.getElementById('productName').value = name;
+  document.getElementById('productCategory').value = cat;
+  document.getElementById('productName').focus();
+}
+
+// ===== FREE COUNTER =====
+function updateFreeCounter() {
+  const userLoggedIn = currentUser && currentUser.api_key;
+  const isPro = userLoggedIn && (currentUser.plan === 'pro' || currentUser.plan === 'business');
+  if (isPro) {
+    document.getElementById('freeNotice').style.display = 'none';
+    document.getElementById('upgradeBanner').style.display = 'none';
+    document.getElementById('generateBtn').disabled = false;
+    document.getElementById('freeCount').textContent = '∞';
+    return;
+  }
+  const r = Math.max(0, FREE_LIMIT - freeUsed);
+  document.getElementById('freeCount').textContent = r;
+  if (r <= 0) {
+    document.getElementById('freeNotice').style.display = 'none';
+    document.getElementById('upgradeBanner').style.display = 'flex';
+    document.getElementById('generateBtn').disabled = true;
+    document.getElementById('btnText').textContent = 'ครบโควตาฟรีแล้ว';
+  }
+}
+
+// ===== MOCK DATA =====
+function getMock(name, cat) {
+  const hooks = {
+    otop:`หยุดก่อน! "${name}" จากชุมชนไทย มีเรื่องราวที่คุณไม่รู้ 🇹🇭`,
+    food:`ถ้ายังไม่เคยลอง "${name}" คุณพลาดอะไรมากมาย! 🍽️`,
+    herb:`สมุนไพรโบราณ "${name}" — บรรพบุรุษใช้มา 100 ปี วิทยาศาสตร์พิสูจน์แล้ว 🌿`,
+    textile:`ผ้าชิ้นนี้ใช้เวลาทอ 30 วัน — นี่คือเรื่องของ "${name}" 🧵`,
+    craft:`ชิ้นเดียวในโลก! ช่างฝีมือไทยใช้ 2 สัปดาห์ทำ "${name}" 🎨`,
+    global:`คนทั่วโลกตื่นตาใจกับ "${name}" — ไทยเพิ่งรู้จัก! 🌍`
+  };
+  const stories = {
+    otop:`"${name}" ผลิตโดยกลุ่มแม่บ้านชุมชน ทำด้วยมือทุกขั้นตอน วัตถุดิบธรรมชาติ 100% ไม่มีสารเคมี รับรอง OTOP 5 ดาว`,
+    food:`"${name}" สูตรดั้งเดิม ไม่ใส่ผงชูรส ไม่มีสารกันบูด คัดวัตถุดิบสดทุกวัน`,
+    herb:`"${name}" สกัดจากสมุนไพรแท้ ไม่ผสมสารเคมี ผ่านการทดสอบความปลอดภัย`,
+    textile:`"${name}" ทอมือโดยช่างในจังหวัด ใช้ด้ายธรรมชาติ สีจากพืช ทนทานหลายปี`,
+    craft:`"${name}" ทุกชิ้นไม่เหมือนกัน วัสดุคัดสรรพิเศษ กว่า 20 ขั้นตอนการผลิต`,
+    global:`"${name}" นำเข้าตรงจากแหล่งผลิต ของแท้ 100% มีใบรับรองคุณภาพ`
+  };
+  const ctas = ['สั่งได้เลยที่ลิ้งก์ใน Bio! 🔥','DM มาได้เลย หรือกดลิ้งก์ด้านล่าง 📲','Line: @openthai พิมพ์ชื่อสินค้าได้เลย ✨','สต็อกมีจำกัด — สั่งก่อนได้ก่อน! 💨'];
+  const tags = {
+    otop:['#OTOP','#สินค้าชุมชน','#ของดีไทย','#TikTokShop','#สินค้าไทย','#ของฝาก','#ไทยแท้','#HandMade'],
+    food:['#อาหารไทย','#HomeMade','#TikTokFood','#กินอะไรดี','#สูตรเด็ด','#อร่อยมาก','#ฟู้ดทิ้กตอก','#ของอร่อย'],
+    herb:['#สมุนไพรไทย','#Organic','#ผิวสวย','#ThaiHerb','#HealthyLife','#สกินแคร์','#ธรรมชาติ','#ออแกนิค'],
+    textile:['#ผ้าไทย','#ThaiTextile','#แฟชั่นไทย','#ผ้าทอมือ','#ThaiCraft','#ผ้าพื้นเมือง','#Handmade','#สิ่งทอไทย'],
+    craft:['#งานฝีมือ','#Handcraft','#ThaiArt','#ของที่ระลึก','#Unique','#งานศิลป์','#ช่างไทย','#ของสะสม'],
+    global:['#นำเข้า','#ของแท้','#TikTokShop','#สินค้านำเข้า','#คุณภาพ','#GlobalProduct','#ของดี','#ของหายาก']
+  };
+  const c = cat || 'otop';
+  return {
+    script:{hook:hooks[c]||hooks.otop, story:stories[c]||stories.otop, cta:ctas[Math.floor(Math.random()*ctas.length)]},
+    caption:`✨ ${name} — ${(stories[c]||stories.otop).substring(0,60)}...\n\n📦 สั่งซื้อได้ที่ลิ้งก์ใน Bio\n📲 DM สอบถามได้เลย`,
+    hashtags:tags[c]||tags.otop,
+    quality:{critic_score:Math.floor(Math.random()*2)+7},
+    learning:{why_it_works:'Hook นี้ใช้ความเฉพาะตัวของสินค้าไทยเป็นจุดขาย ทำให้ผู้ชมอยากรู้จักมากขึ้น',next_try:'ลองเพิ่มตัวเลขที่เป็นข้อเท็จจริง เช่น "ทอมือ 30 วัน" เพื่อเพิ่มความน่าเชื่อถือ'}
+  };
+}
+
+// ===== GENERATE =====
+async function generateContent() {
+  const name = document.getElementById('productName').value.trim();
+  if (!name) { document.getElementById('productName').focus(); showError('กรุณาใส่ชื่อสินค้า'); return; }
+  const userLoggedIn = currentUser && currentUser.api_key;
+  const isPro = userLoggedIn && (currentUser.plan === 'pro' || currentUser.plan === 'business');
+  if (!isPro && freeUsed >= FREE_LIMIT) { document.getElementById('upgradeBanner').style.display='flex'; return; }
+
+  const cat = document.getElementById('productCategory').value;
+  setLoading(true); hideError();
+
+  const headers = {'Content-Type':'application/json'};
+  if (userLoggedIn) headers['X-API-Key'] = currentUser.api_key;
+
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    const res = await fetch(API_URL+'/generate', {
+      method:'POST', headers,
+      body:JSON.stringify({product_name:name,product_category:cat,product_description:document.getElementById('productDesc').value.trim(),target_audience:document.getElementById('targetAudience').value,hook_type:selectedHook}),
+      signal:ctrl.signal
+    });
+    clearTimeout(t);
+    if (!res.ok) throw new Error(res.status);
+    currentResult = {...await res.json(), product_name:name};
+  } catch {
+    await new Promise(r=>setTimeout(r,1400));
+    currentResult = {...getMock(name,cat), product_name:name};
+  }
+
+  renderResult(currentResult, name);
+  if (!isPro) { freeUsed++; localStorage.setItem('otai_free_used', freeUsed); updateFreeCounter(); }
+  saveHistory(name, cat);
+  setLoading(false);
+}
+
+// ===== RENDER =====
+function renderResult(d, name) {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultBox').classList.add('show');
+  document.getElementById('resultTitle').textContent = '📱 ' + name;
+  const s = d.quality?.critic_score;
+  const sb = document.getElementById('scoreBadge');
+  sb.textContent = s ? `⭐ ${s}/10` : '—';
+  sb.style.color = s>=8?'var(--success)':'var(--gold)';
+  document.getElementById('hookText').textContent = d.script?.hook||'';
+  document.getElementById('storyText').textContent = d.script?.story||'';
+  document.getElementById('ctaText').textContent = d.script?.cta||'';
+  document.getElementById('captionText').textContent = d.caption||'';
+  const hw = document.getElementById('hashtagsWrap'); hw.innerHTML='';
+  (d.hashtags||[]).forEach(t=>{const el=document.createElement('span');el.className='hashtag';el.textContent=t;el.onclick=()=>copyStr(t,el);hw.appendChild(el);});
+  document.getElementById('whyText').textContent = d.learning?.why_it_works||'';
+  const nx = d.learning?.next_try;
+  document.getElementById('nextTryText').innerHTML = nx?`<strong>ลองครั้งหน้า:</strong> ${nx}`:'';
+}
+
+// ===== COPY =====
+function copyScript(btn){const t=`⚡ Hook:\n${document.getElementById('hookText').textContent}\n\n📖 Story:\n${document.getElementById('storyText').textContent}\n\n📣 CTA:\n${document.getElementById('ctaText').textContent}`;navigator.clipboard.writeText(t).then(()=>flash(btn));}
+function copyEl(id,btn){navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>flash(btn));}
+function copyHashtags(btn){const t=Array.from(document.querySelectorAll('.hashtag')).map(e=>e.textContent).join(' ');navigator.clipboard.writeText(t).then(()=>flash(btn));}
+function copyStr(text,el){navigator.clipboard.writeText(text).then(()=>{el.style.background='rgba(39,174,96,0.2)';setTimeout(()=>el.style.background='',1200);});}
+function copyAll(){if(!currentResult)return;const d=currentResult;navigator.clipboard.writeText([`📱 ${d.product_name}`,'','━━ สคริปต์ ━━',`⚡ Hook: ${d.script?.hook}`,`📖 Story: ${d.script?.story}`,`📣 CTA: ${d.script?.cta}`,'','━━ แคปชั่น ━━',d.caption||'','','━━ แฮชแท็ก ━━',(d.hashtags||[]).join(' ')].join('\n')).then(()=>{const b=event.target;b.textContent='✅ คัดลอกแล้ว!';setTimeout(()=>b.textContent='📋 Copy ทั้งหมด',1500);});}
+function flash(btn){const o=btn.textContent;btn.textContent='✅ คัดลอก!';btn.classList.add('copied');setTimeout(()=>{btn.textContent=o;btn.classList.remove('copied');},1500);}
+
+// ===== UI =====
+function setLoading(on){const btn=document.getElementById('generateBtn'),sp=document.getElementById('spinner'),tx=document.getElementById('btnText');btn.disabled=on;sp.style.display=on?'block':'none';tx.textContent=on?'กำลังสร้าง...':'⚡ สร้างคอนเทนต์';}
+function showError(m){const b=document.getElementById('errorBox');b.textContent=m;b.classList.add('show');}
+function hideError(){document.getElementById('errorBox').classList.remove('show');}
+
+// ===== HISTORY =====
+function saveHistory(name,cat){historyData.unshift({name,cat,time:Date.now()});if(historyData.length>8)historyData.pop();localStorage.setItem('otai_history',JSON.stringify(historyData));renderHistory();}
+function renderHistory(){if(!historyData.length)return;document.getElementById('historySection').style.display='block';document.getElementById('historyList').innerHTML=historyData.slice(0,5).map(h=>`<span class="history-pill" onclick="quickFill('${h.name.replace(/'/g,"\\'")}','${h.cat}')">🕐 ${h.name}</span>`).join('');}
+
+// ===== LINE MODAL =====
+function openLineModal(){if(!currentResult)return;document.getElementById('lineModalBg').classList.add('open');const s=localStorage.getItem('otai_line_token')||'';document.getElementById('lineToken').value=s;document.getElementById('lineToken').focus();}
+function closeLineModal(){document.getElementById('lineModalBg').classList.remove('open');}
+async function sendToLine(){
+  const token=document.getElementById('lineToken').value.trim();
+  if(!token){alert('กรุณาใส่ LINE Notify Token');return;}
+  if(document.getElementById('saveToken').checked)localStorage.setItem('otai_line_token',token);
+  const d=currentResult;
+  const msg=[`\n🇹🇭 OpenThai AI — ${d.product_name}`,`\n⚡ Hook: ${d.script?.hook}`,`\n📖 Story: ${d.script?.story}`,`\n📣 CTA: ${d.script?.cta}`,`\n${d.caption||''}`,`\n${(d.hashtags||[]).join(' ')}`].join('');
+  try{await fetch(API_URL+'/notify/line',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,message:msg})});closeLineModal();}
+  catch{alert('ส่งไม่สำเร็จ กรุณาตรวจสอบ Token');}
+}
+document.getElementById('lineModalBg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeLineModal();});
+
+// ===== CHECKOUT =====
+function openCheckout(plan){
+  selectedPlan=plan||'pro';
+  document.querySelectorAll('.checkout-plan').forEach(p=>p.classList.remove('selected'));
+  document.getElementById('plan-'+selectedPlan)?.classList.add('selected');
+  document.getElementById('coSuccess').style.display='none';
+  // Reset QR state
+  document.getElementById('qrContainer').style.display='none';
+  document.getElementById('qrPlaceholder').style.display='block';
+  document.getElementById('showQRBtn').style.display='';
+  // Pre-fill name/email from user session
+  if(currentUser){
+    if(currentUser.name&&!document.getElementById('co-name').value) document.getElementById('co-name').value=currentUser.name;
+    if(currentUser.email&&!document.getElementById('co-email').value) document.getElementById('co-email').value=currentUser.email;
+  }
+  document.getElementById('checkoutModal').classList.add('open');
+}
+function closeCheckout(){document.getElementById('checkoutModal').classList.remove('open');}
+function selectPlan(p){selectedPlan=p;document.querySelectorAll('.checkout-plan').forEach(el=>el.classList.remove('selected'));document.getElementById('plan-'+p)?.classList.add('selected');}
+document.getElementById('checkoutModal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeCheckout();});
+async function submitCheckout(){
+  const name=document.getElementById('co-name').value.trim(),email=document.getElementById('co-email').value.trim();
+  if(!name||!email){alert('กรุณาใส่ชื่อและอีเมล');return;}
+  const btn=document.getElementById('coBtn');btn.textContent='⏳ กำลังส่ง...';btn.disabled=true;
+  const data={name,email,phone:document.getElementById('co-phone').value.trim(),plan:selectedPlan,timestamp:new Date().toISOString(),ref:localStorage.getItem('otai_ref')||''};
+  try{await fetch('https://script.google.com/macros/s/AKfycbxxUkC-hJcDANcyL6md7x_AjodJJihHrbKvIQgaQWyRxrWQm_awjtGLLt0RJvg7KIhPSQ/exec',{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,type:'checkout'})});}catch{}
+  // Auto-route checkout to Finance team
+  try{await fetch(API_URL+'/webhook/form',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,type:'checkout'})});}catch{}
+  document.getElementById('coSuccess').style.display='block';btn.style.display='none';
+}
+
+// ===== WAITLIST FORM =====
+document.getElementById('waitlistForm').addEventListener('submit',async function(e){
+  e.preventDefault();
+  const btn=document.getElementById('wlBtn');
+  btn.textContent='⏳ กำลังส่ง...';btn.disabled=true;
+  const fd=new FormData(this);const data=Object.fromEntries(fd.entries());
+  data.timestamp=new Date().toISOString();data.source='landing';data.ref=localStorage.getItem('otai_ref')||'';
+  try{await fetch('https://script.google.com/macros/s/AKfycbxxUkC-hJcDANcyL6md7x_AjodJJihHrbKvIQgaQWyRxrWQm_awjtGLLt0RJvg7KIhPSQ/exec',{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});}catch{}
+  // Auto-route waitlist to Sales team
+  try{await fetch(API_URL+'/webhook/form',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...data,type:'waitlist'})});}catch{}
+  this.style.display='none';document.getElementById('successMsg').style.display='block';
+});
+
+// ===== LANGUAGE =====
+const TRANSLATIONS = {
+  th: {
+    'hero-badge': '🚀 เปิดให้ใช้งาน Early Access แล้ว!',
+    'hero-h1': 'สร้างคอนเทนต์ <span>TikTok</span><br>ด้วย AI สัญชาติไทย',
+    'hero-p': 'สคริปต์ + แคปชั่น + แฮชแท็ก สำหรับสินค้าไทย OTOP และสินค้าทั่วโลก<br>พร้อมใช้งานใน 30 วินาที — ไม่ต้องสมัคร ไม่ต้องรอ',
+    'hero-btn1': '⚡ ลองสร้างเลย — ฟรี',
+    'hero-btn2': 'ดูแพ็กเกจ →',
+    'stat1': 'สินค้าใน Database', 'stat2': 'รูปแบบ Hook', 'stat3': 'ประเทศครอบคลุม', 'stat4': 'ค่าคอมตัวแทน',
+    'app-title': '🎯 สร้างคอนเทนต์ TikTok ได้เลย',
+    'app-sub': 'ฟรี 3 ครั้ง/วัน · ไม่ต้องสมัคร · ผลลัพธ์ใน 30 วินาที',
+    'feat-title': '✨ ฟีเจอร์เด่น', 'feat-sub': 'ทุกอย่างที่ TikTok Creator ต้องการ',
+    'how-title': '🔧 วิธีใช้งาน', 'how-sub': '4 ขั้นตอน ใช้งานได้ทันที',
+    'aff-title': '🤝 โปรแกรมตัวแทน', 'price-title': '💰 แพ็กเกจราคา',
+    'price-sub': 'เริ่มต้นฟรี ไม่ต้องใส่บัตรเครดิต',
+    'wl-title': '🎉 ลงทะเบียน Early Access',
+    'wl-sub': 'รับสิทธิ์ใช้งานฟรี 30 วัน + ส่วนลด 50% สำหรับ 100 คนแรก!',
+    'gen-btn': '⚡ สร้างคอนเทนต์',
+  },
+  en: {
+    'hero-badge': '🚀 Early Access is Now Open!',
+    'hero-h1': 'Create <span>TikTok</span> Content<br>with Thai-Made AI',
+    'hero-p': 'Script + Caption + Hashtags for Thai OTOP & global products<br>Ready in 30 seconds — No signup required',
+    'hero-btn1': '⚡ Try Free Now',
+    'hero-btn2': 'View Pricing →',
+    'stat1': 'Products in Database', 'stat2': 'Hook Styles', 'stat3': 'Countries Covered', 'stat4': 'Affiliate Commission',
+    'app-title': '🎯 Generate TikTok Content Now',
+    'app-sub': 'Free 3x/day · No signup · Results in 30 seconds',
+    'feat-title': '✨ Key Features', 'feat-sub': 'Everything a TikTok Creator needs',
+    'how-title': '🔧 How It Works', 'how-sub': '4 simple steps — start immediately',
+    'aff-title': '🤝 Affiliate Program', 'price-title': '💰 Pricing',
+    'price-sub': 'Start free — no credit card required',
+    'wl-title': '🎉 Register for Early Access',
+    'wl-sub': 'Get 30 days free + 50% off for the first 100 users!',
+    'gen-btn': '⚡ Generate Content',
+  }
+};
+
+function setLang(lang) {
+  const t = TRANSLATIONS[lang];
+  document.getElementById('langTH').classList.toggle('active', lang==='th');
+  document.getElementById('langEN').classList.toggle('active', lang==='en');
+  localStorage.setItem('otai_lang', lang);
+
+  // Nav links
+  document.querySelectorAll('[data-th]').forEach(el => {
+    el.textContent = lang==='th' ? el.dataset.th : el.dataset.en;
+  });
+
+  // Hero
+  safeHTML('hero-badge', t['hero-badge']);
+  safeHTML('hero-h1', t['hero-h1']);
+  safeHTML('hero-p', t['hero-p']);
+  safeText('hero-btn1', t['hero-btn1']);
+  safeText('hero-btn2', t['hero-btn2']);
+  safeText('stat1', t['stat1']); safeText('stat2', t['stat2']);
+  safeText('stat3', t['stat3']); safeText('stat4', t['stat4']);
+
+  // Sections
+  safeHTML('app-title', t['app-title']); safeText('app-sub', t['app-sub']);
+  safeHTML('feat-title', t['feat-title']); safeText('feat-sub', t['feat-sub']);
+  safeHTML('how-title', t['how-title']); safeText('how-sub', t['how-sub']);
+  safeHTML('price-title', t['price-title']); safeText('price-sub', t['price-sub']);
+  safeHTML('wl-title', t['wl-title']); safeText('wl-sub', t['wl-sub']);
+  safeText('btnText', t['gen-btn']);
+}
+
+function safeText(id, v){ const el=document.getElementById(id); if(el&&v) el.textContent=v; }
+function safeHTML(id, v){ const el=document.getElementById(id); if(el&&v) el.innerHTML=v; }
+
+// Apply saved language on load
+(function(){ const l=localStorage.getItem('otai_lang')||'th'; if(l==='en') setLang('en'); })();
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter')generateContent();
+  if(e.key==='Escape'){closeLineModal();closeCheckout();closeAuth();}
+});
+
+// ===== SETUP WIZARD =====
+const SETUP_MAP = {
+  anthropic:          { dot:'dot-anthropic',  card:'sc-anthropic',  detail:'detail-anthropic' },
+  line_notify_dev:    { dot:'dot-line-dev',   card:'sc-line-dev',   detail:'detail-line-dev' },
+  line_notify_sales:  { dot:'dot-line-sales', card:'sc-line-sales', detail:'detail-line-sales' },
+  line_notify_support:{ dot:'dot-line-support',card:'sc-line-support',detail:'detail-line-support' },
+  line_notify_finance:{ dot:'dot-line-finance',card:'sc-line-finance',detail:'detail-line-finance' },
+  line_oa:            { dot:'dot-line-oa',    card:'sc-line-oa',    detail:'detail-line-oa' },
+  github_webhook:     { dot:'dot-github',     card:'sc-github',     detail:'detail-github' },
+  smtp:               { dot:'dot-smtp',         card:'sc-smtp',           detail:'detail-smtp' },
+  promptpay:          { dot:'dot-promptpay',    card:'sc-promptpay',      detail:'detail-promptpay' },
+  mythos_ceo:         { dot:'dot-mythos-ceo',   card:'sc-mythos-ceo',     detail:'detail-mythos-ceo' },
+  mythos_csuite:      { dot:'dot-mythos-csuite',card:'sc-mythos-csuite',  detail:'detail-mythos-csuite' },
+  mythos_regional:    { dot:'dot-mythos-regional',card:'sc-mythos-regional',detail:'detail-mythos-regional' },
+  mythos_dept:        { dot:'dot-mythos-dept',  card:'sc-mythos-dept',    detail:'detail-mythos-dept' },
+  mythos_email:       { dot:'dot-mythos-email', card:'sc-mythos-email',   detail:'detail-mythos-email' },
+  news_digest:        { dot:'dot-news',         card:'sc-news',           detail:'detail-news' },
+};
+
+function applySetupCard(key, check) {
+  const m = SETUP_MAP[key]; if (!m) return;
+  const dot  = document.getElementById(m.dot);
+  const card = document.getElementById(m.card);
+  const det  = document.getElementById(m.detail);
+  if (!dot || !card) return;
+
+  dot.className = 'setup-status-dot ' + (
+    check.status === 'ok'              ? 'dot-ok'   :
+    check.status === 'missing_required'? 'dot-miss'  : 'dot-warn'
+  );
+  card.className = 'setup-card ' + (
+    check.status === 'ok'              ? 's-ok'    :
+    check.status === 'missing_required'? 's-missing': 's-warn'
+  );
+  if (det) {
+    const envLines = Object.entries(check.envs||{}).map(([e,v])=>`${v} ${e}`).join('\n');
+    det.textContent = check.status === 'ok'
+      ? (check.live === false ? '⚠️ Token ตั้งแล้วแต่ ping ไม่ผ่าน' : '✅ พร้อมใช้งาน')
+      : check.status === 'not_configured'
+        ? `ยังไม่ตั้งค่า\n${envLines}` : `❌ ขาด env vars:\n${envLines}`;
+  }
+}
+
+async function loadSetupStatus() {
+  try {
+    const r = await fetch(API_URL+'/admin/setup', {signal:AbortSignal.timeout(10000)});
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+
+    // Score bar
+    const s = data.score || 0;
+    document.getElementById('setupScore').textContent = s + '%';
+    document.getElementById('setupScoreFill').style.width = s + '%';
+    document.getElementById('setupScore').style.color = s >= 80 ? '#27AE60' : s >= 50 ? '#F39C12' : '#e74c3c';
+
+    // Apply each check
+    for (const [key, check] of Object.entries(data.checks || {})) {
+      applySetupCard(key, check);
+    }
+
+    // Show webhook URLs
+    const base = API_URL;
+    const lineEl = document.getElementById('webhook-line-url');
+    const ghEl   = document.getElementById('webhook-github-url');
+    if (lineEl) lineEl.textContent = 'Webhook URL: ' + base + '/webhook/line';
+    if (ghEl)   ghEl.textContent   = 'Webhook URL: ' + base + '/webhook/github';
+
+  } catch {
+    // Backend not deployed — show static instructions
+    document.getElementById('setupScore').textContent = '—';
+    for (const key of Object.keys(SETUP_MAP)) {
+      const det = document.getElementById(SETUP_MAP[key]?.detail);
+      if (det && det.textContent === 'ตรวจสอบอยู่...')
+        det.textContent = 'Deploy backend ก่อนเพื่อตรวจสอบ';
+    }
+    const base = 'https://api.openthai-ai.com';
+    const lineEl = document.getElementById('webhook-line-url');
+    const ghEl   = document.getElementById('webhook-github-url');
+    if (lineEl) lineEl.textContent = 'Webhook URL: ' + base + '/webhook/line';
+    if (ghEl)   ghEl.textContent   = 'Webhook URL: ' + base + '/webhook/github';
+  }
+}
+
+async function testLineNotify(dept) {
+  const btn = document.getElementById('test-line-'+dept);
+  const res = document.getElementById('test-line-'+dept+'-result');
+  btn.textContent = '⏳'; btn.disabled = true;
+  try {
+    const r = await fetch(API_URL+'/admin/test-line/'+dept, {method:'POST', signal:AbortSignal.timeout(10000)});
+    const d = await r.json();
+    res.style.display = 'block';
+    if (d.status === 'ok') {
+      res.style.color = '#27AE60';
+      res.textContent = '✅ ส่ง LINE แล้ว! ตรวจสอบในกลุ่ม';
+    } else if (d.status === 'not_configured') {
+      res.style.color = '#F39C12';
+      res.textContent = '⚠️ ยังไม่ตั้งค่า ' + d.env;
+    } else {
+      res.style.color = '#e74c3c';
+      res.textContent = '❌ Token ไม่ถูกต้อง';
+    }
+  } catch {
+    res.style.display = 'block';
+    res.style.color = '#e74c3c';
+    res.textContent = '❌ Backend ยังไม่ deploy';
+  }
+  btn.textContent = 'ทดสอบ'; btn.disabled = false;
+}
+
+async function autoRegisterGithub() {
+  const btn = document.getElementById('btn-github-register');
+  const res = document.getElementById('github-register-result');
+  btn.textContent = '⏳ กำลัง register...'; btn.disabled = true;
+  try {
+    const r = await fetch(API_URL+'/admin/register-github-webhook', {method:'POST', signal:AbortSignal.timeout(15000)});
+    const d = await r.json();
+    res.style.display = 'block';
+    if (d.status === 'ok') {
+      res.style.color = '#27AE60';
+      res.textContent = '✅ GitHub webhook ลงทะเบียนแล้ว!\nEvents: issues, PR, comments';
+      document.getElementById('dot-github').className = 'setup-status-dot dot-ok';
+      document.getElementById('sc-github').className = 'setup-card s-ok';
+    } else if (d.status === 'missing_config') {
+      res.style.color = '#F39C12';
+      res.textContent = '⚠️ ต้องตั้งค่า GITHUB_TOKEN และ GITHUB_REPO ใน Railway';
+    } else {
+      res.style.color = '#e74c3c';
+      res.textContent = '❌ Error: ' + (d.detail || d.github_response);
+    }
+  } catch {
+    res.style.display = 'block';
+    res.style.color = '#e74c3c';
+    res.textContent = '❌ Backend ยังไม่ deploy';
+  }
+  btn.textContent = '⚡ Auto Register'; btn.disabled = false;
+}
+
+function copyEnvBlock() {
+  const text = document.getElementById('envBlock').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✅ คัดลอกแล้ว!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+window.addEventListener('load', () => { loadSetupStatus(); });
+
+// ===== TASK DASHBOARD =====
+const DEPT_LABELS = {
+  dev:     {emoji:'🔧', label:'Dev/Tech'},
+  sales:   {emoji:'💼', label:'Sales'},
+  support: {emoji:'🎧', label:'Support'},
+  finance: {emoji:'💰', label:'Finance'},
+};
+const PRIO_ICONS = {urgent:'🔴',high:'🟠',normal:'🟡',low:'🟢'};
+const SOURCE_ICONS = {line:'💬',email:'📧',form:'📝',github:'🐙',manual:'✍️'};
+
+let taskDeptFilter = '';
+let taskStatusFilter = '';
+
+async function loadDeptSummary() {
+  try {
+    const r = await fetch(API_URL+'/tasks/departments', {signal: AbortSignal.timeout(6000)});
+    if (!r.ok) return;
+    const data = await r.json();
+    for (const [dept, info] of Object.entries(data)) {
+      const el = id => document.getElementById(`dept-${dept}-${id}`);
+      if (el('open'))  el('open').textContent  = `${info.open||0} open`;
+      if (el('prog'))  el('prog').textContent  = `${info.in_progress||0} in progress`;
+      if (el('done'))  el('done').textContent  = `${info.done||0} done`;
+      // Highlight dept card if has open tasks
+      const card = document.getElementById(`dept-${dept}`);
+      if (card && (info.open||0) > 0) card.style.borderColor = 'rgba(255,107,53,0.5)';
+    }
+  } catch {}
+}
+
+async function loadTasks(dept='', statusOrPrio='') {
+  const list = document.getElementById('taskList');
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">⏳ กำลังโหลด...</div>';
+  try {
+    let url = API_URL + '/tasks?limit=20';
+    if (dept) url += `&department=${dept}`;
+    if (statusOrPrio === 'open')   url += `&status=open`;
+    if (statusOrPrio === 'urgent') url += `&priority=urgent`;
+    const r = await fetch(url, {signal: AbortSignal.timeout(6000)});
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    if (!data.tasks.length) {
+      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);"><div style="font-size:1.5rem;">📭</div><p style="margin-top:0.5rem;">ยังไม่มี task — ลองส่ง test task ด้านล่าง</p></div>';
+      return;
+    }
+    list.innerHTML = data.tasks.map(t => `
+      <div class="task-item" id="task-${t.task_id}">
+        <div class="task-meta">
+          <span class="task-source-chip">${SOURCE_ICONS[t.source]||'📌'} ${t.source}</span>
+          <span style="font-size:0.68rem;padding:0.1rem 0.45rem;border-radius:10px;font-weight:700;background:rgba(255,255,255,0.05);color:var(--muted);">${DEPT_LABELS[t.department]?.emoji||''} ${DEPT_LABELS[t.department]?.label||t.department}</span>
+          <span class="task-prio-${t.priority}">${PRIO_ICONS[t.priority]||''} ${t.priority.toUpperCase()}</span>
+          <span class="task-time">${timeAgo(t.created_at)}</span>
+          <span style="margin-left:auto;">
+            <select onchange="updateTaskStatus('${t.task_id}',this.value)" style="background:var(--input-bg);border:1px solid var(--border);border-radius:6px;padding:0.2rem 0.4rem;color:var(--text);font-size:0.72rem;cursor:pointer;">
+              <option value="open" ${t.status==='open'?'selected':''}>🔴 Open</option>
+              <option value="in_progress" ${t.status==='in_progress'?'selected':''}>🟡 In Progress</option>
+              <option value="done" ${t.status==='done'?'selected':''}>✅ Done</option>
+            </select>
+          </span>
+        </div>
+        <div class="task-title">${t.summary}</div>
+        ${t.action ? `<div class="task-action">→ ${t.action}</div>` : ''}
+        ${t.sender ? `<div class="task-time">👤 ${t.sender}</div>` : ''}
+      </div>
+    `).join('');
+  } catch {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);"><div style="font-size:1.5rem;">🔌</div><p style="margin-top:0.5rem;">ต้อง deploy backend เพื่อดู tasks จริง</p><p style="font-size:0.78rem;margin-top:0.3rem;">ลองใช้ปุ่ม "ส่ง Task" ด้านล่างเพื่อทดสอบ</p></div>';
+  }
+}
+
+function filterTasks(btn, dept, statusOrPrio='') {
+  document.querySelectorAll('#tasks .news-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  taskDeptFilter = dept;
+  taskStatusFilter = statusOrPrio;
+  loadTasks(dept, statusOrPrio);
+}
+
+async function updateTaskStatus(taskId, status) {
+  try {
+    await fetch(API_URL+`/tasks/${taskId}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({status})
+    });
+    loadDeptSummary();
+  } catch {}
+}
+
+async function submitTestTask() {
+  const content = document.getElementById('testTaskInput').value.trim();
+  if (!content) { alert('กรุณาพิมพ์ข้อความก่อน'); return; }
+  const source = document.getElementById('testTaskSource').value;
+  const btn = document.getElementById('testTaskBtn');
+  btn.textContent = '⏳ กำลังวิเคราะห์...'; btn.disabled = true;
+  const res = document.getElementById('testTaskResult');
+  res.style.display = 'none';
+  try {
+    const r = await fetch(API_URL+'/tasks/manual', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({content, source})
+    });
+    const data = await r.json();
+    const dept = DEPT_LABELS[data.department] || {emoji:'📌', label: data.department};
+    res.style.display = 'block';
+    res.innerHTML = `
+      <p style="color:var(--success);font-weight:700;margin-bottom:0.5rem;">✅ Task สร้างแล้ว — ${data.task_id}</p>
+      <p>🏢 ทีม: <strong>${dept.emoji} ${dept.label}</strong></p>
+      <p>${PRIO_ICONS[data.priority]} ความเร่งด่วน: <strong>${data.priority?.toUpperCase()}</strong></p>
+      <p>📋 ${data.summary}</p>
+      <p style="color:var(--secondary);">→ ${data.action}</p>
+      <p style="color:var(--muted);font-size:0.75rem;margin-top:0.3rem;">${data.notified_line ? '📱 ส่ง LINE แล้ว' : '📱 LINE (ต้องตั้ง token)'}</p>
+    `;
+    document.getElementById('testTaskInput').value = '';
+    setTimeout(() => { loadTasks(taskDeptFilter, taskStatusFilter); loadDeptSummary(); }, 800);
+  } catch {
+    res.style.display = 'block';
+    res.innerHTML = '<p style="color:#e74c3c;">❌ ต้อง deploy backend ก่อน — หรือลอง manual mode</p>';
+  }
+  btn.textContent = '⚡ ส่ง Task'; btn.disabled = false;
+}
+
+function refreshTasks() { loadTasks(taskDeptFilter, taskStatusFilter); loadDeptSummary(); }
+
+// Load tasks on page load
+window.addEventListener('load', () => {
+  loadDeptSummary();
+  loadTasks();
+  setInterval(refreshTasks, 2 * 60 * 1000); // auto-refresh every 2 min
+});
+
+// ===== AI NEWS =====
+let newsPage = 1;
+let newsSourceFilter = '';
+let newsAllArticles = [];
+let newsAutoRefresh = null;
+
+function timeAgo(isoStr) {
+  const diff = (Date.now() - new Date(isoStr + 'Z').getTime()) / 1000;
+  if (diff < 60) return 'เมื่อกี้';
+  if (diff < 3600) return `${Math.floor(diff/60)} นาทีที่แล้ว`;
+  if (diff < 86400) return `${Math.floor(diff/3600)} ชั่วโมงที่แล้ว`;
+  return `${Math.floor(diff/86400)} วันที่แล้ว`;
+}
+
+function priorityClass(p) { return p>=3?'news-p3':p===2?'news-p2':'news-p1'; }
+
+function renderNewsCard(a) {
+  return `<div class="news-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;">
+      <span class="news-source-badge ${priorityClass(a.priority)}">${a.emoji} ${a.label}</span>
+      <span class="news-time">${timeAgo(a.published_at)}</span>
+    </div>
+    <a href="${a.url}" target="_blank" rel="noopener" class="news-title">${a.title}</a>
+    ${a.summary ? `<p class="news-summary">${a.summary}</p>` : ''}
+  </div>`;
+}
+
+function renderNewsGrid(articles) {
+  const grid = document.getElementById('newsGrid');
+  if (!articles.length) {
+    grid.innerHTML = '<div class="news-empty"><div style="font-size:2rem;">📭</div><p>ยังไม่มีข่าว — รอระบบดึงข้อมูล</p><p style="font-size:0.78rem;margin-top:0.4rem;">Backend ต้อง deploy บน Railway ก่อน</p></div>';
+    return;
+  }
+  grid.innerHTML = articles.map(renderNewsCard).join('');
+  // Show load more if >= 30
+  document.getElementById('newsLoadMore').style.display = articles.length >= 30 ? 'block' : 'none';
+}
+
+function updateTicker(articles) {
+  const ticker = document.getElementById('newsTicker');
+  if (!articles.length) return;
+  const top = articles.slice(0, 5).map(a => `${a.emoji} ${a.title}`).join('  ·  ');
+  document.getElementById('newsTickerText').textContent = top;
+  ticker.style.display = 'block';
+}
+
+async function fetchNews(source = '', page = 1) {
+  const btn = document.getElementById('newsRefreshBtn');
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  try {
+    let url = API_URL + `/news?limit=30&page=${page}`;
+    if (source) url += `&source=${source}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    document.getElementById('newsLoading').style.display = 'none';
+    if (page === 1) {
+      newsAllArticles = data.articles;
+    } else {
+      newsAllArticles = [...newsAllArticles, ...data.articles];
+    }
+    renderNewsGrid(newsAllArticles);
+    if (page === 1) updateTicker(data.articles);
+    document.getElementById('newsLastUpdate').textContent = 'อัปเดต: ' + new Date().toLocaleTimeString('th-TH');
+  } catch (e) {
+    document.getElementById('newsLoading').style.display = 'none';
+    // Show mock news cards when backend not available
+    renderMockNews();
+  }
+  btn.textContent = '🔄 รีเฟรช';
+  btn.disabled = false;
+}
+
+function renderMockNews() {
+  const mock = [
+    {emoji:'🤖',label:'Anthropic Blog',priority:3,title:'Claude 4 — ความสามารถใหม่ด้าน Reasoning และ Safety',url:'https://www.anthropic.com/news',summary:'Anthropic เปิดตัว Claude 4 พร้อม Constitutional AI รุ่นใหม่',published_at:new Date(Date.now()-3600000).toISOString()},
+    {emoji:'⚡',label:'OpenAI Blog',priority:2,title:'GPT-5 Turbo: Faster and More Capable',url:'https://openai.com/blog',summary:'OpenAI releases GPT-5 Turbo with improved speed and accuracy',published_at:new Date(Date.now()-7200000).toISOString()},
+    {emoji:'🇹🇭',label:'Blognone (ไทย)',priority:2,title:'รัฐบาลไทยเตรียมกฎระเบียบ AI ฉบับแรก',url:'https://www.blognone.com',summary:'กระทรวงดิจิทัลเตรียมออกกฎหมาย AI เพื่อคุ้มครองผู้บริโภค',published_at:new Date(Date.now()-10800000).toISOString()},
+    {emoji:'🎵',label:'TikTok Newsroom',priority:2,title:'TikTok LIVE Shopping ขยายตัวในไทย 300%',url:'https://newsroom.tiktok.com',summary:'TikTok รายงานยอดขายผ่าน LIVE shopping ในไทยเพิ่มขึ้น 3 เท่า',published_at:new Date(Date.now()-14400000).toISOString()},
+    {emoji:'🤗',label:'Hugging Face Blog',priority:2,title:'New Open-Source LLM Beats GPT-4 on Thai NLP',url:'https://huggingface.co/blog',summary:'Community releases Thai-optimized model with state-of-the-art performance',published_at:new Date(Date.now()-18000000).toISOString()},
+    {emoji:'📡',label:'TechCrunch AI',priority:1,title:'AI Startups Raised $50B in Q1 2026',url:'https://techcrunch.com',summary:'Venture capital continues flooding into AI sector despite market uncertainty',published_at:new Date(Date.now()-21600000).toISOString()},
+  ];
+  newsAllArticles = mock;
+  renderNewsGrid(mock);
+  updateTicker(mock);
+  document.getElementById('newsLastUpdate').textContent = '(ตัวอย่าง — deploy backend เพื่อดูข่าวจริง)';
+}
+
+function filterNews(btn, source) {
+  document.querySelectorAll('.news-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  newsSourceFilter = source;
+  newsPage = 1;
+  document.getElementById('newsGrid').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);grid-column:1/-1;">⏳ กำลังโหลด...</div>';
+  fetchNews(source, 1);
+}
+
+function refreshNews() { newsPage = 1; fetchNews(newsSourceFilter, 1); }
+
+function loadMoreNews() { newsPage++; fetchNews(newsSourceFilter, newsPage); }
+
+// ===== MYTHOS COMMAND CENTER =====
+const URGENCY_ICON = { critical:'🚨', urgent:'🔴', high:'🟠', normal:'🟡' };
+const TIER_COLOR = { c_suite:'rgba(255,215,0,0.12)', regional:'rgba(78,205,196,0.1)', department:'rgba(255,255,255,0.05)' };
+const TIER_BORDER = { c_suite:'rgba(255,215,0,0.35)', regional:'rgba(78,205,196,0.3)', department:'var(--border)' };
+
+async function issueDirective() {
+  const directive = document.getElementById('mythosDirective').value.trim();
+  const context = document.getElementById('mythosContext').value.trim();
+  if (!directive) { alert('กรุณาพิมพ์คำสั่งของท่าน Mythos'); return; }
+  const btn = document.getElementById('mythosIssueBtn');
+  const resultEl = document.getElementById('mythosResult');
+  btn.disabled = true;
+  btn.textContent = '⏳ AI กำลังแตกงาน...';
+  resultEl.style.display = 'none';
+  try {
+    const res = await fetch(API_URL + '/mythos/command', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ directive, context })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Error');
+    const icon = URGENCY_ICON[data.urgency] || '🟡';
+    const tasksHtml = (data.tasks || []).map(t =>
+      `<div style="display:flex;gap:0.5rem;align-items:flex-start;padding:0.4rem 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+        <span>${t.exec_emoji||'📌'}</span>
+        <div><strong style="font-size:0.85rem;">${t.exec_title}</strong>
+        <span style="color:var(--text-muted);font-size:0.82rem;"> — ${t.title}</span>
+        <div style="font-size:0.78rem;color:var(--text-muted);">⏰ ${t.deadline_days} วัน · 📦 ${t.deliverable||''}</div></div>
+      </div>`).join('');
+    resultEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+        ${icon} <strong style="font-size:0.92rem;">✅ ${data.directive_id}</strong>
+        <span style="font-size:0.8rem;color:var(--text-muted);">· ${data.urgency}</span>
+      </div>
+      <p style="margin:0 0 0.5rem;font-size:0.88rem;"><strong>เป้าหมาย:</strong> ${data.strategic_intent||''}</p>
+      <div style="margin-top:0.5rem;">${tasksHtml}</div>
+      <p style="margin:0.75rem 0 0;font-size:0.8rem;color:rgba(78,205,196,0.9);">✅ แจ้ง LINE ผู้บริหารทุกท่านแล้ว · Daily Brief 08:00 น.</p>`;
+    resultEl.style.display = 'block';
+    document.getElementById('mythosDirective').value = '';
+    setTimeout(loadMythosDashboard, 800);
+  } catch (e) {
+    resultEl.innerHTML = `<span style="color:#ff6b6b;">❌ ${e.message}</span>`;
+    resultEl.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = '👑 ออก Directive';
+}
+
+function renderOrgCard(execId, info) {
+  const total = info.tasks_total || 0;
+  const done = info.tasks_done || 0;
+  const pct = info.completion_pct || 0;
+  const tier = info.tier || 'department';
+  return `<div style="background:${TIER_COLOR[tier]||'rgba(255,255,255,0.04)'};border:1px solid ${TIER_BORDER[tier]||'var(--border)'};border-radius:12px;padding:0.85rem 1rem;min-width:140px;text-align:center;">
+    <div style="font-size:1.5rem;">${info.emoji||'📌'}</div>
+    <div style="font-size:0.82rem;font-weight:700;margin-top:0.25rem;">${info.title}</div>
+    <div style="font-size:0.72rem;color:var(--text-muted);margin:0.1rem 0 0.5rem;">${info.name_th||''}</div>
+    ${total > 0 ? `<div style="background:rgba(0,0,0,0.3);border-radius:4px;height:4px;overflow:hidden;">
+      <div style="width:${pct}%;height:100%;background:var(--accent);transition:width 0.5s;"></div>
+    </div><div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">${done}/${total} งาน</div>` : '<div style="font-size:0.7rem;color:var(--text-muted);">ไม่มีงาน</div>'}
+  </div>`;
+}
+
+async function loadMythosDashboard() {
+  try {
+    const res = await fetch(API_URL + '/mythos/dashboard');
+    const data = await res.json();
+    const org = data.org || {};
+    const tiers = { c_suite: [], regional: [], department: [] };
+    for (const [id, info] of Object.entries(org)) {
+      const tier = info.tier || 'department';
+      if (tiers[tier]) tiers[tier].push(renderOrgCard(id, info));
+    }
+    const el = (id) => document.getElementById(id);
+    if (el('orgCSuite')) el('orgCSuite').innerHTML = tiers.c_suite.join('') || '<span style="color:var(--text-muted);font-size:0.85rem;">ไม่มีข้อมูล</span>';
+    if (el('orgRegional')) el('orgRegional').innerHTML = tiers.regional.join('') || '';
+    if (el('orgDept')) el('orgDept').innerHTML = tiers.department.join('') || '';
+    // Overdue chip
+    const chip = el('mythosOverdueChip');
+    if (chip && data.overdue_tasks > 0) { chip.textContent = `⚠️ ${data.overdue_tasks} งานเกิน deadline`; chip.style.display='inline'; }
+    else if (chip) chip.style.display='none';
+    // Load directives separately
+    loadMythosDirectives();
+  } catch (e) {
+    console.warn('Mythos dashboard:', e);
+    loadMythosDirectives();
+  }
+}
+
+async function loadMythosDirectives() {
+  const el = document.getElementById('mythosDirectiveList');
+  if (!el) return;
+  try {
+    const res = await fetch(API_URL + '/mythos/directives?limit=10&status=active');
+    const data = await res.json();
+    const dirs = data.directives || [];
+    if (!dirs.length) {
+      el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:2rem;font-size:0.9rem;">ยังไม่มี directive · พิมพ์คำสั่งด้านบนเพื่อเริ่มต้น</div>';
+      return;
+    }
+    el.innerHTML = dirs.map(d => {
+      const icon = URGENCY_ICON[d.urgency]||'🟡';
+      const tasks = (d.tasks||[]).slice(0,4);
+      const taskChips = tasks.map(t=>`<span style="background:rgba(255,255,255,0.07);border-radius:6px;padding:0.2rem 0.55rem;font-size:0.75rem;">${t.assignee_title||t.assignee} · ${t.status}</span>`).join('');
+      return `<div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;">
+        <div style="display:flex;align-items:flex-start;gap:0.6rem;margin-bottom:0.4rem;">
+          <span>${icon}</span>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+              <strong style="font-size:0.85rem;">${d.directive_id}</strong>
+              <span style="font-size:0.78rem;color:var(--text-muted);">${new Date(d.created_at).toLocaleDateString('th-TH')}</span>
+              <span style="background:rgba(255,107,53,0.15);border-radius:6px;padding:0.1rem 0.5rem;font-size:0.75rem;color:var(--primary);">${d.urgency}</span>
+            </div>
+            <p style="margin:0.3rem 0 0.5rem;font-size:0.88rem;">${d.summary}</p>
+            <p style="margin:0;font-size:0.8rem;color:var(--text-muted);">${d.strategic_intent||''}</p>
+          </div>
+        </div>
+        ${taskChips ? `<div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.6rem;">${taskChips}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:1.5rem;font-size:0.85rem;">ไม่สามารถโหลดข้อมูลได้ · ตรวจสอบ API</div>';
+  }
+}
+
+// ===== GOAL TRACKER =====
+const HEALTH_COLOR = { on_track:'#27AE60', at_risk:'#F39C12', off_track:'#e74c3c', achieved:'#FFD700', not_started:'#888' };
+const HEALTH_ICON2 = { on_track:'🟢', at_risk:'🟡', off_track:'🔴', achieved:'🏆', not_started:'⚪' };
+const CAT_ICON = { growth:'📈', product:'🚀', ops:'⚙️', people:'👥', financial:'💰' };
+
+let _activeGoalId = null;
+let _activeGoalKRs = [];
+let _krRowCount = 0;
+
+function openGoalModal() {
+  document.getElementById('goalModalBg').style.display = 'flex';
+  document.getElementById('krRows').innerHTML = '';
+  _krRowCount = 0;
+  addKRRow(); addKRRow(); // default 2 KRs
+}
+function closeGoalModal() { document.getElementById('goalModalBg').style.display = 'none'; }
+function closeCheckin() {
+  document.getElementById('checkinModalBg').style.display = 'none';
+  _activeGoalId = null; _activeGoalKRs = [];
+}
+
+function addKRRow() {
+  if (_krRowCount >= 5) return;
+  const i = _krRowCount++;
+  const row = document.createElement('div');
+  row.id = 'kr-row-' + i;
+  row.style.cssText = 'background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:0.65rem;display:flex;flex-direction:column;gap:0.4rem;';
+  row.innerHTML = `
+    <div style="display:flex;gap:0.4rem;align-items:center;">
+      <input placeholder="Key Result เช่น: ยอดผู้ใช้ใหม่ SEA" style="flex:1;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.5rem 0.65rem;font-size:0.85rem;font-family:inherit;" id="kr-title-${i}">
+      <button onclick="document.getElementById('kr-row-${i}').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;">
+      <input type="number" placeholder="เป้าหมาย" id="kr-target-${i}" style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.45rem;font-size:0.83rem;font-family:inherit;">
+      <input placeholder="หน่วย เช่น ราย,%" id="kr-unit-${i}" style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.45rem;font-size:0.83rem;font-family:inherit;">
+      <select id="kr-type-${i}" style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.45rem;font-size:0.83rem;font-family:inherit;">
+        <option value="number">ตัวเลข</option><option value="percentage">%</option>
+        <option value="currency">บาท</option><option value="boolean">ทำ/ไม่ทำ</option>
+      </select>
+    </div>`;
+  document.getElementById('krRows').appendChild(row);
+}
+
+async function submitGoal() {
+  const obj = document.getElementById('gm-objective').value.trim();
+  const owner = document.getElementById('gm-owner').value;
+  if (!obj) { alert('กรุณาระบุเป้าหมาย'); return; }
+
+  // Collect KRs
+  const krs = [];
+  for (let i = 0; i < _krRowCount; i++) {
+    const titleEl = document.getElementById('kr-title-' + i);
+    if (!titleEl) continue;
+    const title = titleEl.value.trim();
+    const target = parseFloat(document.getElementById('kr-target-' + i)?.value) || 0;
+    if (!title || !target) continue;
+    krs.push({
+      title, target_value: target,
+      unit: document.getElementById('kr-unit-' + i)?.value || '',
+      metric_type: document.getElementById('kr-type-' + i)?.value || 'number',
+    });
+  }
+  if (!krs.length) { alert('กรุณาเพิ่มอย่างน้อย 1 Key Result'); return; }
+
+  const btn = document.getElementById('goalSubmitBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังสร้าง...';
+  try {
+    const r = await fetch(API_URL + '/mythos/goals', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        objective: obj, owner,
+        period: document.getElementById('gm-period').value,
+        category: document.getElementById('gm-category').value,
+        priority: document.getElementById('gm-priority').value,
+      })
+    });
+    const goal = await r.json();
+    if (!r.ok) throw new Error(goal.detail || 'Error');
+
+    // Add KRs sequentially
+    for (const kr of krs) {
+      await fetch(API_URL + '/mythos/goals/' + goal.id + '/kr', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(kr)
+      });
+    }
+    closeGoalModal();
+    await loadGoals();
+  } catch(e) {
+    alert('❌ ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '🎯 สร้างเป้าหมาย';
+}
+
+async function loadGoals() {
+  const el = document.getElementById('goalList');
+  if (!el) return;
+  try {
+    const r = await fetch(API_URL + '/mythos/goals?status=active');
+    const data = await r.json();
+    const goals = data.goals || [];
+
+    // Update summary bar
+    const counts = { on_track:0, at_risk:0, off_track:0, achieved:0 };
+    goals.forEach(g => { if (counts[g.health] !== undefined) counts[g.health]++; });
+    ['ontrack','atrisk','offtrack','achieved'].forEach((k,i) => {
+      const key = ['on_track','at_risk','off_track','achieved'][i];
+      const el2 = document.getElementById('gs-'+k);
+      if (el2) el2.textContent = counts[key];
+    });
+
+    if (!goals.length) {
+      el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:3rem;border:1px dashed var(--border);border-radius:14px;">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">🎯</div>
+        <p>ยังไม่มีเป้าหมาย · คลิก "เพิ่มเป้าหมาย" เพื่อเริ่มต้น</p>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = goals.map(g => renderGoalCard(g)).join('');
+  } catch(e) {
+    el.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:2rem;font-size:0.85rem;">ไม่สามารถโหลดได้ · ตรวจสอบ API</div>`;
+  }
+}
+
+function renderGoalCard(g) {
+  const hc = HEALTH_COLOR[g.health] || '#888';
+  const hi = HEALTH_ICON2[g.health] || '⚪';
+  const ci = CAT_ICON[g.category] || '🎯';
+  const krs = (g.key_results || []).map(kr => {
+    const pct = Math.min(100, kr.progress_pct);
+    const bar_color = pct >= 80 ? '#27AE60' : pct >= 50 ? '#F39C12' : '#e74c3c';
+    return `<div style="display:flex;flex-direction:column;gap:0.2rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:0.82rem;">${kr.title}</span>
+        <span style="font-size:0.78rem;color:var(--text-muted);">${kr.current_value}/${kr.target_value} ${kr.unit}</span>
+      </div>
+      <div style="background:rgba(255,255,255,0.07);border-radius:3px;height:5px;overflow:hidden;">
+        <div style="width:${pct}%;height:100%;background:${bar_color};transition:width 0.5s;border-radius:3px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-size:0.72rem;color:var(--text-muted);">${pct.toFixed(0)}%</span>
+        <button onclick="openCheckin(${g.id},'${encodeURIComponent(g.objective)}')" style="background:none;border:none;color:rgba(78,205,196,0.8);font-size:0.72rem;cursor:pointer;padding:0;font-family:inherit;">✏️ อัปเดต</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const overallPct = Math.min(100, g.progress_pct);
+  return `<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-left:3px solid ${hc};border-radius:14px;padding:1.25rem;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.3rem;">
+          <span style="font-size:1rem;">${hi}</span>
+          <strong style="font-size:0.92rem;">${g.objective}</strong>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <span style="background:rgba(255,255,255,0.06);border-radius:6px;padding:0.15rem 0.5rem;font-size:0.73rem;">${ci} ${g.category}</span>
+          <span style="background:rgba(255,255,255,0.06);border-radius:6px;padding:0.15rem 0.5rem;font-size:0.73rem;">📅 ${g.period}</span>
+          <span style="background:rgba(255,255,255,0.06);border-radius:6px;padding:0.15rem 0.5rem;font-size:0.73rem;">👤 ${g.owner_title}</span>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:1.4rem;font-weight:800;color:${hc};">${overallPct.toFixed(0)}%</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">${g.health.replace('_',' ')}</div>
+      </div>
+    </div>
+    <div style="background:rgba(0,0,0,0.3);border-radius:4px;height:6px;margin-bottom:0.75rem;overflow:hidden;">
+      <div style="width:${overallPct}%;height:100%;background:${hc};border-radius:4px;transition:width 0.6s;"></div>
+    </div>
+    ${g.health_reason ? `<p style="font-size:0.78rem;color:var(--text-muted);margin:0 0 0.6rem;">${g.health_reason}</p>` : ''}
+    <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:0.5rem;">${krs}</div>
+    <div style="display:flex;gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap;">
+      <button onclick="analyzeGoal(${g.id})" style="background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.3);color:var(--secondary);border-radius:7px;padding:0.3rem 0.8rem;font-size:0.78rem;cursor:pointer;font-family:inherit;">🤖 AI วิเคราะห์</button>
+      <button onclick="openCheckin(${g.id},'${encodeURIComponent(g.objective)}')" style="background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.3);color:var(--primary);border-radius:7px;padding:0.3rem 0.8rem;font-size:0.78rem;cursor:pointer;font-family:inherit;">📊 Check-in</button>
+      <button onclick="deleteGoal(${g.id})" style="background:none;border:1px solid rgba(255,255,255,0.1);color:var(--text-muted);border-radius:7px;padding:0.3rem 0.8rem;font-size:0.78rem;cursor:pointer;font-family:inherit;">✕ ยกเลิก</button>
+    </div>
+    <div id="analysis-${g.id}" style="display:none;margin-top:0.75rem;background:rgba(0,0,0,0.3);border-radius:10px;padding:0.9rem;font-size:0.82rem;"></div>
+  </div>`;
+}
+
+async function analyzeGoal(goalId) {
+  const el = document.getElementById('analysis-' + goalId);
+  if (!el) return;
+  el.style.display = 'block';
+  el.innerHTML = '<span style="color:var(--text-muted);">🤖 AI กำลังวิเคราะห์...</span>';
+  try {
+    const r = await fetch(API_URL + '/mythos/goals/' + goalId + '/analysis');
+    const d = await r.json();
+    const a = d.analysis || {};
+    const blockers = (a.blockers||[]).map(b=>`<li>${b}</li>`).join('');
+    const actions = (a.next_actions||[]).map(x=>`<li>${x}</li>`).join('');
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+        <strong>${HEALTH_ICON2[a.health]||'🟡'} ${(a.health||'').replace('_',' ').toUpperCase()}</strong>
+        <span style="color:var(--text-muted);font-size:0.75rem;">· Confidence ${((a.confidence||0)*100).toFixed(0)}%</span>
+        <span style="color:var(--text-muted);font-size:0.75rem;">· Pace ${d.pace_pct}% ผ่านไป</span>
+      </div>
+      <p style="margin:0 0 0.4rem;">${a.recommendation||''}</p>
+      ${blockers ? `<strong style="font-size:0.78rem;">⛔ Blockers:</strong><ul style="margin:0.2rem 0 0.4rem;padding-left:1.2rem;font-size:0.78rem;">${blockers}</ul>` : ''}
+      ${actions ? `<strong style="font-size:0.78rem;">▶ Next Actions:</strong><ul style="margin:0.2rem 0 0;padding-left:1.2rem;font-size:0.78rem;">${actions}</ul>` : ''}`;
+  } catch(e) {
+    el.innerHTML = '<span style="color:#e74c3c;">❌ ไม่สามารถวิเคราะห์ได้</span>';
+  }
+}
+
+async function openCheckin(goalId, encodedTitle) {
+  _activeGoalId = goalId;
+  document.getElementById('checkinTitle').textContent = '📊 Check-in: ' + decodeURIComponent(encodedTitle).slice(0,40);
+  const listEl = document.getElementById('checkinKRList');
+  listEl.innerHTML = '<span style="color:var(--text-muted);font-size:0.85rem;">กำลังโหลด KR...</span>';
+  document.getElementById('checkinModalBg').style.display = 'flex';
+  try {
+    const r = await fetch(API_URL + '/mythos/goals?status=active');
+    const data = await r.json();
+    const goal = (data.goals||[]).find(g => g.id === goalId);
+    _activeGoalKRs = goal?.key_results || [];
+    listEl.innerHTML = _activeGoalKRs.map((kr,i) => `
+      <div style="background:rgba(255,255,255,0.04);border-radius:10px;padding:0.75rem;">
+        <div style="font-size:0.85rem;font-weight:600;margin-bottom:0.4rem;">${kr.title}</div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <input type="number" id="ci-val-${kr.id}" value="${kr.current_value}" style="width:100px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:0.4rem 0.6rem;font-family:inherit;font-size:0.85rem;">
+          <span style="color:var(--text-muted);font-size:0.82rem;">/ ${kr.target_value} ${kr.unit}</span>
+          <span style="font-size:0.78rem;color:var(--text-muted);">(${kr.progress_pct}%)</span>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    listEl.innerHTML = '<span style="color:#e74c3c;">❌ โหลดไม่ได้</span>';
+  }
+}
+
+async function submitCheckin() {
+  const btn = document.getElementById('checkinSubmitBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+  try {
+    for (const kr of _activeGoalKRs) {
+      const valEl = document.getElementById('ci-val-' + kr.id);
+      if (!valEl) continue;
+      const val = parseFloat(valEl.value);
+      if (isNaN(val)) continue;
+      await fetch(API_URL + '/mythos/goals/' + _activeGoalId + '/kr/' + kr.id + '/checkin', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ value: val, checked_by: 'Mythos' })
+      });
+    }
+    closeCheckin();
+    await loadGoals();
+  } catch(e) {
+    alert('❌ ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '💾 บันทึก Check-in';
+}
+
+async function deleteGoal(goalId) {
+  if (!confirm('ยืนยันยกเลิกเป้าหมาย?')) return;
+  await fetch(API_URL + '/mythos/goals/' + goalId, { method: 'DELETE' });
+  await loadGoals();
+}
+
+// Auto-load Mythos dashboard when section is visible
+const _mythosObserver = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting) { loadMythosDashboard(); loadGoals(); _mythosObserver.disconnect(); }
+}, { threshold: 0.1 });
+const _mythosSection = document.getElementById('mythos');
+if (_mythosSection) _mythosObserver.observe(_mythosSection);
+
+
+// Auto-refresh every 5 minutes
+function startNewsAutoRefresh() {
+  if (newsAutoRefresh) clearInterval(newsAutoRefresh);
+  newsAutoRefresh = setInterval(() => fetchNews(newsSourceFilter, 1), 5 * 60 * 1000);
+}
+
+// Load news on page load
+window.addEventListener('load', () => {
+  fetchNews();
+  startNewsAutoRefresh();
+});
+
+// ===== AUTH =====
+let currentUser = JSON.parse(localStorage.getItem('otai_user') || 'null');
+
+function initUserState() {
+  if (currentUser) {
+    document.getElementById('userBadge').style.display = 'flex';
+    document.getElementById('loginNavBtn').style.display = 'none';
+    document.getElementById('userBadgeName').textContent = currentUser.name.split(' ')[0];
+    document.getElementById('userBadgePlan').textContent = (currentUser.plan || 'free').toUpperCase();
+    if (currentUser.plan === 'pro' || currentUser.plan === 'business') {
+      document.getElementById('generateBtn').disabled = false;
+      document.getElementById('upgradeBanner').style.display = 'none';
+    }
+  } else {
+    document.getElementById('userBadge').style.display = 'none';
+    document.getElementById('loginNavBtn').style.display = '';
+  }
+}
+
+function openAuth() {
+  document.getElementById('authModal').classList.add('open');
+  if (currentUser) {
+    document.getElementById('authUserInfo').style.display = 'block';
+    document.getElementById('authUserName').textContent = '👤 ' + currentUser.name + ' (' + currentUser.email + ')';
+    document.getElementById('authUserPlan').textContent = (currentUser.plan || 'free').toUpperCase();
+    document.getElementById('authUserUsage').textContent = currentUser.used_today || 0;
+    document.getElementById('loginKey').value = currentUser.api_key || '';
+  }
+}
+function closeAuth() { document.getElementById('authModal').classList.remove('open'); }
+document.getElementById('authModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeAuth(); });
+
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => t.classList.toggle('active', (tab==='register'&&i===0)||(tab==='login'&&i===1)));
+  document.getElementById('authRegister').classList.toggle('active', tab==='register');
+  document.getElementById('authLogin').classList.toggle('active', tab==='login');
+}
+
+async function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  if (!name || !email) { alert('กรุณาใส่ชื่อและอีเมล'); return; }
+  const btn = document.getElementById('regBtn');
+  btn.textContent = '⏳ กำลังสมัคร...'; btn.disabled = true;
+  try {
+    const res = await fetch(API_URL + '/auth/register', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name, email})
+    });
+    const data = await res.json();
+    currentUser = data;
+    localStorage.setItem('otai_user', JSON.stringify(data));
+    document.getElementById('regKeyDisplay').textContent = data.api_key;
+    document.getElementById('regResult').style.display = 'block';
+    initUserState();
+  } catch {
+    // offline fallback: generate local key
+    const key = 'otai_' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    currentUser = {name, email, api_key: key, plan: 'free'};
+    localStorage.setItem('otai_user', JSON.stringify(currentUser));
+    document.getElementById('regKeyDisplay').textContent = key;
+    document.getElementById('regResult').style.display = 'block';
+    initUserState();
+  }
+  btn.textContent = 'สมัครและรับ API Key →'; btn.disabled = false;
+}
+
+async function doLogin() {
+  const key = document.getElementById('loginKey').value.trim();
+  if (!key) { alert('กรุณาใส่ API Key'); return; }
+  try {
+    const res = await fetch(API_URL + '/auth/me', { headers: {'X-API-Key': key} });
+    if (res.ok) {
+      const data = await res.json();
+      currentUser = {...data, api_key: key};
+      localStorage.setItem('otai_user', JSON.stringify(currentUser));
+      document.getElementById('authUserInfo').style.display = 'block';
+      document.getElementById('authUserName').textContent = '👤 ' + data.name;
+      document.getElementById('authUserPlan').textContent = (data.plan||'free').toUpperCase();
+      document.getElementById('authUserUsage').textContent = data.used_today + '/' + data.daily_limit;
+      initUserState();
+      setTimeout(closeAuth, 1200);
+    } else {
+      // store key locally even without validation
+      currentUser = {api_key: key, name: 'User', email: '', plan: 'free'};
+      localStorage.setItem('otai_user', JSON.stringify(currentUser));
+      initUserState();
+      setTimeout(closeAuth, 800);
+    }
+  } catch {
+    currentUser = {api_key: key, name: 'User', email: '', plan: 'free'};
+    localStorage.setItem('otai_user', JSON.stringify(currentUser));
+    initUserState();
+    setTimeout(closeAuth, 800);
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  localStorage.removeItem('otai_user');
+  closeAuth();
+  initUserState();
+}
+
+function copyApiKey() {
+  const k = document.getElementById('regKeyDisplay').textContent;
+  navigator.clipboard.writeText(k).then(() => {
+    const el = document.getElementById('regKeyDisplay');
+    const orig = el.textContent;
+    el.textContent = '✅ คัดลอกแล้ว!';
+    setTimeout(() => el.textContent = orig, 1500);
+  });
+}
+
+// ===== PROMPTPAY QR (EMVCo standard, client-side) =====
+const PROMPTPAY_MERCHANT_ID = ''; // filled by backend or set manually
+
+function crc16ccitt(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) & 0xFFFF : (crc << 1) & 0xFFFF;
+    }
+  }
+  return crc;
+}
+
+function emvField(tag, value) {
+  return `${tag}${value.length.toString().padStart(2,'0')}${value}`;
+}
+
+function buildPromptPayPayload(promptpayId, amount) {
+  if (!promptpayId) return '';
+  let pid = promptpayId.replace(/[-\s]/g, '');
+  if (pid.length === 10 && pid.startsWith('0')) pid = '0066' + pid.slice(1);
+  const merchantInfo = emvField('00','A000000677010111') + emvField('01', pid);
+  let payload = emvField('00','01') + emvField('01', amount ? '12' : '11') + emvField('29', merchantInfo) + '5303764' + '5802TH';
+  if (amount) payload += emvField('54', parseFloat(amount).toFixed(2));
+  payload += '6304';
+  const crc = crc16ccitt(payload);
+  return payload + crc.toString(16).toUpperCase().padStart(4,'0');
+}
+
+async function showPaymentQR() {
+  const prices = {pro: 149, business: 299};
+  const amount = prices[selectedPlan] || 149;
+  // Try to get PROMPTPAY_ID from backend
+  let promptpayId = '';
+  try {
+    const r = await fetch(API_URL + '/payment/methods', {signal: AbortSignal.timeout(4000)});
+    if (r.ok) {
+      const d = await r.json();
+      promptpayId = d?.promptpay?.id || '';
+    }
+  } catch {}
+
+  if (!promptpayId) {
+    // fallback instruction
+    document.getElementById('qrPlaceholder').innerHTML = '💳 ชำระผ่าน PromptPay<br><span style="color:var(--muted);font-size:0.78rem;">ทีมงานจะส่ง QR ทางอีเมลภายใน 15 นาที</span>';
+    document.getElementById('showQRBtn').style.display = 'none';
+    return;
+  }
+
+  const payload = buildPromptPayPayload(promptpayId, amount);
+  if (!payload) return;
+
+  document.getElementById('qrContainer').style.display = 'block';
+  document.getElementById('qrPlaceholder').style.display = 'none';
+  document.getElementById('showQRBtn').style.display = 'none';
+  document.getElementById('promptpayIdDisplay').textContent = promptpayId;
+  document.getElementById('qrAmount').textContent = '฿' + amount;
+
+  if (typeof QRCode !== 'undefined') {
+    QRCode.toCanvas(document.getElementById('promptpayQR'), payload, {
+      width: 200, margin: 2,
+      color: {dark: '#1A1A2E', light: '#FFFFFF'}
+    });
+  }
+}
+
+// ===== AFFILIATE LINK GENERATOR =====
+let currentAffLink = '';
+
+function generateAffLink() {
+  let code = document.getElementById('affCodeInput').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!code) { alert('กรุณาใส่ชื่อย่อ (ภาษาอังกฤษ)'); return; }
+  if (code.length < 3) { alert('ชื่อย่อต้องมีอย่างน้อย 3 ตัวอักษร'); return; }
+  currentAffLink = `https://www.openthai-ai.com/?ref=${code}`;
+  document.getElementById('affLinkDisplay').textContent = currentAffLink;
+  document.getElementById('affLinkResult').style.display = 'block';
+  // save ref code locally
+  localStorage.setItem('otai_aff_code', code);
+}
+
+function copyAffLink() {
+  navigator.clipboard.writeText(currentAffLink).then(() => {
+    const el = document.getElementById('affLinkDisplay');
+    const orig = el.textContent;
+    el.textContent = '✅ คัดลอกแล้ว!';
+    setTimeout(() => el.textContent = orig, 1500);
+  });
+}
+
+function shareAffLink(platform) {
+  if (platform === 'line') {
+    window.open('https://social-plugins.line.me/lineit/share?url=' + encodeURIComponent(currentAffLink), '_blank');
+  } else if (platform === 'tiktok') {
+    const text = `🇹🇭 OpenThai AI — AI สร้างคอนเทนต์ TikTok ภาษาไทย ใน 30 วินาที!\n${currentAffLink}\n#OpenThaiAI #TikTokCreator #AIคอนเทนต์`;
+    navigator.clipboard.writeText(text).then(() => alert('✅ คัดลอก Caption + ลิ้งก์ สำหรับ TikTok แล้ว!'));
+  }
+}
+
+// Restore saved aff code
+(function() {
+  const saved = localStorage.getItem('otai_aff_code');
+  if (saved) document.getElementById('affCodeInput').value = saved;
+})();
+
+// ===== SEND API KEY IN GENERATE REQUESTS =====
+// Patch generateContent to include X-API-Key header when user is logged in
+const _origFetch = window.fetch;
+
+// Init user state on load
+initUserState();
+</script>
 </body>
 </html>

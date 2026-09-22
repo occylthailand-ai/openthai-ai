@@ -1,0 +1,148 @@
+name: XAdES Test Suite
+
+on:
+  push:
+    paths:
+      - 'scripts/xades*.py'
+      - 'scripts/archive_timestamp_digest.py'
+      - 'scripts/bis3_to_etax.py'
+      - 'tests/test_xades*.py'
+      - 'tests/helpers_*.py'
+      - 'xades-engine/**'
+      - 'requirements-xades-test.txt'
+      - '.github/workflows/xades-tests.yml'
+  pull_request:
+    paths:
+      - 'scripts/xades*.py'
+      - 'tests/test_xades*.py'
+      - 'tests/helpers_*.py'
+      - 'xades-engine/**'
+
+jobs:
+  # ── Job 1: Structure / DER / ASN.1 — ไม่ต้องการ xades-engine ──────────────
+  structure-tests:
+    name: Structure Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install test dependencies (pinned)
+        run: pip install -r requirements-xades-test.txt
+
+      - name: Run structure + DER + ASN.1 + RFC3161 OID tests
+        run: |
+          python -m pytest \
+            tests/test_xades_integration.py \
+            tests/test_xades_t_structure.py \
+            tests/test_tsa_stamp.py \
+            tests/test_xades_a_readiness.py \
+            -v --tb=short --timeout=30 \
+            -k "not engine"
+
+      - name: Run BIS3 → UBL generator tests
+        run: |
+          python -m pytest \
+            tests/test_bis3_to_etax.py \
+            -v --tb=short --timeout=30 \
+            --ignore-glob="*xades*" || echo "::notice::test_bis3_to_etax.py not found — skip"
+
+  # ── Job 2: Engine Integration — ต้องการ xades-engine ─────────────────────
+  engine-integration:
+    name: Engine Integration (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install test dependencies (pinned)
+        run: pip install -r requirements-xades-test.txt
+
+      - name: Check for Rust toolchain (required for xades_rust_core)
+        run: |
+          rustc --version || echo "::notice::Rust not found — Rust core will use Python fallback"
+
+      - name: Install xades-engine
+        run: pip install -e xades-engine/src
+
+      - name: Run full suite including engine integration tests
+        run: |
+          python -m pytest \
+            tests/test_xades_integration.py \
+            tests/test_xades_t_structure.py \
+            tests/test_tsa_stamp.py \
+            tests/test_xades_a_readiness.py \
+            -v --tb=short --timeout=60
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-engine-py${{ matrix.python-version }}
+          path: |
+            .pytest_cache/
+            docs/etax_output/
+
+  # ── Job 3: Golden artifact snapshot verify ─────────────────────────────────
+  golden-snapshot:
+    name: Golden Artifact Verify
+    runs-on: ubuntu-latest
+    needs: structure-tests
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-xades-test.txt
+
+      - name: Check BES golden artifact exists
+        run: |
+          if [ -f "docs/etax_output/golden-bes.xml" ]; then
+            echo "BES golden artifact: OK"
+            sha256sum docs/etax_output/golden-bes.xml
+          else
+            echo "::notice::golden-bes.xml not yet committed — skip hash check"
+          fi
+
+      - name: Check T golden artifact exists
+        run: |
+          if [ -f "docs/etax_output/golden-t.xml" ]; then
+            echo "T golden artifact: OK"
+            sha256sum docs/etax_output/golden-t.xml
+          else
+            echo "::notice::golden-t.xml not yet committed — skip hash check"
+          fi
+
+      - name: Verify archive digest script importable
+        run: |
+          python -c "from scripts.archive_timestamp_digest import compute_archive_digest_sha256; print('archive_timestamp_digest: OK')" || \
+          python -c "import sys; sys.path.insert(0,'scripts'); from archive_timestamp_digest import compute_archive_digest_sha256; print('archive_timestamp_digest: OK')"

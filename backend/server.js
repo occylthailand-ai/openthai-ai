@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import { log } from './logger.js';
 import express from 'express';
 import cors from 'cors';
@@ -38,6 +38,7 @@ import { createProgressTracker } from './progress-tracker.js';
 import { createIntegrations } from './integrations.js';
 import { createMatching } from './matching.js';
 import { registerBlueprintRoutes } from './content-blueprint.js';
+import { createConsentRouter } from './consent.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -5668,6 +5669,8 @@ app.get('/api/system/readiness', (req, res) => {
   const ready = required.every((k) => checks[k].ok);
   res.json({ success: true, ready, ledger_mode: ledger, checks, ts: new Date().toISOString() });
 });
+// ─── PDPA Consent Management — พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 ────────
+app.use('/api/consent', createConsentRouter(WRITE_DATA_DIR));
 
 // ─── Health check (v2) ────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {

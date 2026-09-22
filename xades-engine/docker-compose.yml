@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  xades-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: openthai-xades-api
+    ports:
+      - "8080:8080"
+    environment:
+      LOG_LEVEL: INFO
+    volumes:
+      - rust-wheels:/wheels:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  xades-dashboard:
+    image: nginx:alpine
+    container_name: openthai-xades-dashboard
+    ports:
+      - "8090:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+    depends_on:
+      - xades-api
+    restart: unless-stopped
+
+volumes:
+  rust-wheels:

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenThai eTax XAdES Engine — Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d2e;
+      --border: #2d3154;
+      --accent: #5b7ef5;
+      --accent2: #34d399;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --font: 'Segoe UI', 'Sarabun', system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    header .badge {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--danger); margin-left: auto; }
+    .status-dot.ok { background: var(--accent2); }
+    .status-label { font-size: 0.8rem; color: var(--muted); }
+
+    main { padding: 2rem; display: grid; gap: 1.5rem; }
+
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .5rem; }
+    .card .value { font-size: 2rem; font-weight: 700; }
+    .card .sub { font-size: 0.8rem; color: var(--muted); margin-top: .25rem; }
+    .card.accent { border-color: var(--accent); }
+    .card.success { border-color: var(--accent2); }
+    .card.warn { border-color: var(--warn); }
+
+    .section-title {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: .75rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: .5rem;
+    }
+
+    /* Verify Form */
+    .verify-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 700px) { .form-grid { grid-template-columns: 1fr; } }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: .3rem; }
+    textarea, input[type="text"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: .6rem .8rem;
+      font-size: 0.85rem;
+      font-family: 'Cascadia Code', 'Consolas', monospace;
+      resize: vertical;
+      outline: none;
+      transition: border-color .2s;
+    }
+    textarea:focus, input:focus { border-color: var(--accent); }
+    textarea { min-height: 120px; }
+
+    .form-footer { display: flex; gap: .75rem; margin-top: 1rem; align-items: center; }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: .6rem 1.4rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: .85; }
+    button.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .checkbox-row { display: flex; align-items: center; gap: .5rem; font-size: 0.85rem; color: var(--muted); }
+    input[type="checkbox"] { accent-color: var(--accent); }
+
+    /* Result panel */
+    #result-panel {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+    #result-panel.visible { display: block; }
+    .result-header { display: flex; gap: .75rem; align-items: center; margin-bottom: 1rem; }
+    .pill {
+      border-radius: 999px;
+      padding: 3px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+    .pill.ok { background: rgba(52,211,153,.15); color: var(--accent2); border: 1px solid var(--accent2); }
+    .pill.fail { background: rgba(239,68,68,.12); color: var(--danger); border: 1px solid var(--danger); }
+    .pill.warn { background: rgba(245,158,11,.12); color: var(--warn); border: 1px solid var(--warn); }
+
+    .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .75rem; margin-bottom: 1rem; }
+    .result-item .k { font-size: 0.72rem; color: var(--muted); }
+    .result-item .v { font-size: 0.9rem; font-weight: 600; }
+
+    pre.result-raw {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 0.78rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    /* History table */
+    .history-table {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--bg); font-size: 0.72rem; color: var(--muted); text-align: left; padding: .6rem 1rem; border-bottom: 1px solid var(--border); text-transform: uppercase; }
+    td { padding: .6rem 1rem; font-size: 0.82rem; border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+    .empty-row td { text-align: center; color: var(--muted); padding: 2rem; }
+
+    /* Health info */
+    #engine-info { font-size: 0.75rem; color: var(--muted); font-family: 'Cascadia Code', monospace; }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⚡ OpenThai eTax — XAdES Verification Engine</h1>
+    <div id="engine-info">กำลังโหลด…</div>
+  </div>
+  <span class="badge" id="version-badge">v1.5.0-dev</span>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:2px;margin-left:auto;">
+    <div class="status-dot" id="dot"></div>
+    <span class="status-label" id="dot-label">ตรวจสอบ…</span>
+  </div>
+</header>
+
+<main>
+  <!-- Stat Cards -->
+  <div class="cards">
+    <div class="card accent">
+      <div class="label">คำขอทั้งหมด (session)</div>
+      <div class="value" id="stat-total">0</div>
+      <div class="sub">นับแต่เปิดหน้าต่าง</div>
+    </div>
+    <div class="card success">
+      <div class="label">ผ่านการตรวจ</div>
+      <div class="value" id="stat-pass">0</div>
+      <div class="sub">VALID</div>
+    </div>
+    <div class="card warn">
+      <div class="label">ไม่ผ่าน</div>
+      <div class="value" id="stat-fail">0</div>
+      <div class="sub">VERIFICATION_FAILED</div>
+    </div>
+    <div class="card">
+      <div class="label">เวลาตอบสนองล่าสุด</div>
+      <div class="value" id="stat-ms">—</div>
+      <div class="sub">มิลลิวินาที</div>
+    </div>
+  </div>
+
+  <!-- Verify Form -->
+  <div class="verify-panel">
+    <div class="section-title">ตรวจสอบ XAdES XML</div>
+    <div class="form-grid">
+      <div>
+        <label for="f-doc-id">Document ID</label>
+        <input type="text" id="f-doc-id" placeholder="INV-2025-001234" value="INV-TEST-001">
+      </div>
+      <div>
+        <label for="f-tsa">TSA Token (DER, Base64) — ไม่บังคับ</label>
+        <input type="text" id="f-tsa" placeholder="ข้ามได้สำหรับ XAdES-BES">
+      </div>
+      <div style="grid-column:1/-1">
+        <label for="f-xml">XML Base64</label>
+        <textarea id="f-xml" placeholder="วาง Base64 ของ XML ใบกำกับภาษีที่นี่…"></textarea>
+      </div>
+    </div>
+    <div class="form-footer">
+      <button onclick="doVerify()">ตรวจสอบ</button>
+      <button class="secondary" onclick="loadSample()">โหลดตัวอย่าง</button>
+      <div class="checkbox-row">
+        <input type="checkbox" id="f-require-ts">
+        <label for="f-require-ts" style="margin:0">require_timestamp (XAdES-T)</label>
+      </div>
+      <span id="verify-spinner" style="display:none"><span class="spinner"></span> กำลังตรวจ…</span>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="result-panel">
+    <div class="section-title">ผลการตรวจสอบ</div>
+    <div class="result-header">
+      <span class="pill" id="res-status-pill">—</span>
+      <span id="res-doc-id" style="font-weight:600"></span>
+      <span id="res-profile" style="font-size:.8rem;color:var(--muted)"></span>
+      <span id="res-ms" style="margin-left:auto;font-size:.78rem;color:var(--muted)"></span>
+    </div>
+    <div class="result-grid">
+      <div class="result-item"><div class="k">Signature</div><div class="v" id="rv-sig">—</div></div>
+      <div class="result-item"><div class="k">References</div><div class="v" id="rv-refs">—</div></div>
+      <div class="result-item"><div class="k">EPES Policy</div><div class="v" id="rv-epes">—</div></div>
+      <div class="result-item"><div class="k">TSA Timestamp</div><div class="v" id="rv-tsa">—</div></div>
+      <div class="result-item"><div class="k">Archival</div><div class="v" id="rv-arch">—</div></div>
+      <div class="result-item"><div class="k">Algorithm</div><div class="v" id="rv-algo">—</div></div>
+    </div>
+    <pre class="result-raw" id="res-raw"></pre>
+  </div>
+
+  <!-- History -->
+  <div class="history-table">
+    <div class="section-title" style="padding:1rem 1rem .5rem">ประวัติการตรวจสอบ</div>
+    <table>
+      <thead>
+        <tr>
+          <th>เวลา</th>
+          <th>Document ID</th>
+          <th>สถานะ</th>
+          <th>Profile</th>
+          <th>ms</th>
+          <th>ข้อผิดพลาด</th>
+        </tr>
+      </thead>
+      <tbody id="history-body">
+        <tr class="empty-row"><td colspan="6">ยังไม่มีประวัติ</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const API_BASE = 'http://localhost:8080';
+let stats = { total: 0, pass: 0, fail: 0 };
+let history = [];
+
+// Health check
+async function checkHealth() {
+  try {
+    const r = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(3000) });
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    document.getElementById('dot').className = 'status-dot ok';
+    document.getElementById('dot-label').textContent = 'API ออนไลน์';
+    document.getElementById('version-badge').textContent = d.engine_version || 'v1.5.0-dev';
+    const rustLabel = d.rust_c14n_active ? '⚡ Rust C14N' : '🐍 lxml C14N';
+    const profiles = (d.supported_profiles || []).join(', ');
+    document.getElementById('engine-info').textContent = `${rustLabel} | Profiles: ${profiles}`;
+  } catch {
+    document.getElementById('dot').className = 'status-dot';
+    document.getElementById('dot-label').textContent = 'API ออฟไลน์';
+    document.getElementById('engine-info').textContent = 'เชื่อมต่อ API ที่ localhost:8080 ไม่ได้';
+  }
+}
+
+async function doVerify() {
+  const docId  = document.getElementById('f-doc-id').value.trim() || 'INV-TEST-001';
+  const xmlB64 = document.getElementById('f-xml').value.trim();
+  const tsaDer = document.getElementById('f-tsa').value.trim();
+  const requireTs = document.getElementById('f-require-ts').checked;
+
+  if (!xmlB64) { alert('กรุณาใส่ XML Base64 ก่อน'); return; }
+
+  const spinner = document.getElementById('verify-spinner');
+  spinner.style.display = 'inline';
+  const t0 = performance.now();
+
+  const body = { document_id: docId, xml_base64: xmlB64, require_timestamp: requireTs };
+  if (tsaDer) { body.tsa_der_base64 = tsaDer; }
+
+  let data;
+  try {
+    const r = await fetch(`${API_BASE}/api/v1/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(15000),
+    });
+    data = await r.json();
+  } catch (e) {
+    data = { status: 'INTERNAL_ERROR', error_message: String(e) };
+  }
+  spinner.style.display = 'none';
+
+  const elapsed = Math.round(performance.now() - t0);
+  renderResult(data, docId, elapsed);
+  addHistory(data, docId, elapsed);
+}
+
+function renderResult(d, docId, elapsed) {
+  const panel = document.getElementById('result-panel');
+  panel.className = 'result-panel visible';
+
+  const pill = document.getElementById('res-status-pill');
+  const ok = d.status === 'VALID';
+  const warn = d.status === 'VERIFICATION_FAILED';
+  pill.className = 'pill ' + (ok ? 'ok' : warn ? 'fail' : 'warn');
+  pill.textContent = d.status || 'UNKNOWN';
+
+  document.getElementById('res-doc-id').textContent = docId;
+  document.getElementById('res-profile').textContent = d.xades_profile ? `[${d.xades_profile}]` : '';
+  document.getElementById('res-ms').textContent = `${elapsed} ms`;
+
+  const dd = d.details || {};
+  const tv = (v) => v === undefined ? '—' : (v === true ? '✅' : v === false ? '❌' : String(v));
+  document.getElementById('rv-sig').textContent = tv(dd.signature_valid);
+  const refTotal = dd.reference_count ?? '—';
+  const refOk = dd.references_valid_count ?? '—';
+  document.getElementById('rv-refs').textContent = `${refOk}/${refTotal}`;
+  document.getElementById('rv-epes').textContent = tv(dd.policy_valid);
+  document.getElementById('rv-tsa').textContent = tv(dd.timestamp_valid);
+  document.getElementById('rv-arch').textContent = tv(dd.archival_ready);
+  document.getElementById('rv-algo').textContent = dd.digest_algorithm ? dd.digest_algorithm.split('#').pop() : '—';
+
+  document.getElementById('res-raw').textContent = JSON.stringify(d, null, 2);
+
+  stats.total++;
+  ok ? stats.pass++ : stats.fail++;
+  document.getElementById('stat-total').textContent = stats.total;
+  document.getElementById('stat-pass').textContent = stats.pass;
+  document.getElementById('stat-fail').textContent = stats.fail;
+  document.getElementById('stat-ms').textContent = elapsed;
+}
+
+function addHistory(d, docId, elapsed) {
+  history.unshift({ time: new Date().toLocaleTimeString('th-TH'), docId, status: d.status, profile: d.xades_profile || '—', ms: elapsed, error: d.error_message || '' });
+  if (history.length > 50) history.pop();
+
+  const tbody = document.getElementById('history-body');
+  tbody.innerHTML = history.map(h => {
+    const sc = h.status === 'VALID' ? 'var(--accent2)' : 'var(--danger)';
+    return `<tr>
+      <td style="color:var(--muted)">${h.time}</td>
+      <td>${h.docId}</td>
+      <td style="color:${sc};font-weight:600">${h.status}</td>
+      <td>${h.profile}</td>
+      <td>${h.ms}</td>
+      <td style="color:var(--muted);font-size:.75rem;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.error}</td>
+    </tr>`;
+  }).join('');
+}
+
+function loadSample() {
+  // Minimal XAdES-BES XML (unsigned, for UI testing only — real verification will fail)
+  const sample = `<?xml version="1.0"?><Invoice xmlns="urn:etda:etax:1.0" ID="INV-DEMO-001"><Seller>บริษัท เดโม่ จำกัด</Seller></Invoice>`;
+  document.getElementById('f-xml').value = btoa(unescape(encodeURIComponent(sample)));
+  document.getElementById('f-doc-id').value = 'INV-DEMO-001';
+}
+
+checkHealth();
+setInterval(checkHealth, 10000);
+</script>
+</body>
+</html>

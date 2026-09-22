@@ -1,20 +1,49 @@
 {
+  "id": "/",
   "name": "Openthai.ai",
   "short_name": "OpenThai",
   "description": "AI ไทยแท้ สร้างคอนเทนต์ TikTok ใน 10 วินาที",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "background_color": "#080812",
   "theme_color": "#fe2c55",
-  "orientation": "portrait",
+  "orientation": "any",
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "screenshots": [
     { "src": "/og-image.png", "sizes": "1200x630", "type": "image/png", "form_factor": "wide" }
   ],
+  "shortcuts": [
+    {
+      "name": "สร้างคอนเทนต์",
+      "short_name": "สร้าง",
+      "description": "เปิด AI Generator สร้างคอนเทนต์ TikTok ทันที",
+      "url": "/ai-generator",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "ตรวจสิทธิ์สวัสดิการ",
+      "short_name": "สิทธิ์",
+      "description": "ตรวจสอบสิทธิ์สวัสดิการรัฐ",
+      "url": "/consumer",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Portal ผู้ผลิต",
+      "short_name": "ผู้ผลิต",
+      "description": "เครื่องมือสำหรับเกษตรกรและผู้ประกอบการ",
+      "url": "/producer",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "categories": ["productivity", "business"],
   "lang": "th",
-  "dir": "ltr"
+  "dir": "ltr",
+  "prefer_related_applications": false
 }

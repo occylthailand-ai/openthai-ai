@@ -48,6 +48,8 @@ jobs:
       - name: Install deps
         working-directory: backend
         run: npm ci
+      - name: Continuous development engine tests
+        run: npm run test:cde
       - name: Syntax check
         working-directory: backend
         run: node --check server.js
@@ -77,7 +79,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check for hardcoded secrets
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check for hardcoded secrets (grep)
         run: |
           if grep -rEn "(api_key|apikey|secret_key|password)\s*[:=]\s*['\"][a-zA-Z0-9_-]{20,}['\"]" \
                frontend/src backend \
@@ -87,3 +92,5 @@ jobs:
             exit 1
           fi
           echo "✅ ไม่พบ hardcoded secret"
+      - name: Check for hardcoded secrets (script)
+        run: npm run test:secrets

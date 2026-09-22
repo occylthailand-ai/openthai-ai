@@ -1,0 +1,103 @@
+{
+  "name": "Openthai.ai — Waitlist Notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "openthai-waitlist-notify",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "🌐 Waitlist Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "openthai-waitlist-notify"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\nconst data = body.data ?? body;\n\nconst ts = new Date(data.timestamp || Date.now())\n  .toLocaleString('th-TH', { timeZone:'Asia/Bangkok', hour12:false });\n\nconst lineMsg = [\n  '',\n  '🎉 Openthai.ai — New Signup!',\n  `👤 ${data.name}`,\n  `📧 ${data.email}`,\n  `📱 ${data.phone || '-'}`,\n  `💼 ${data.role || 'ไม่ระบุ'}`,\n  `🔗 ${data.source || 'direct'}`,\n  `🕐 ${ts}`,\n].join('\\n');\n\nconst emailHtml = `\n<div style=\"font-family:sans-serif;max-width:480px;background:#0E0E18;color:#E8E8F2;border-radius:12px;overflow:hidden\">\n  <div style=\"background:linear-gradient(135deg,#C9A84C,#9A7230);padding:16px 20px\">\n    <h2 style=\"margin:0;color:#000;font-size:16px\">✦ Openthai.ai — New Signup</h2>\n  </div>\n  <div style=\"padding:20px\">\n    <p><strong>ชื่อ:</strong> ${data.name}</p>\n    <p><strong>Email:</strong> ${data.email}</p>\n    <p><strong>Phone:</strong> ${data.phone || '-'}</p>\n    <p><strong>Role:</strong> ${data.role || '-'}</p>\n    <p><strong>Source:</strong> ${data.source || 'direct'}</p>\n    <p><strong>เวลา:</strong> ${ts}</p>\n  </div>\n</div>`;\n\nreturn [{ json: { ...data, lineMsg, emailHtml, ts } }];"
+      },
+      "id": "prepare-messages",
+      "name": "📝 Prepare Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://notify-api.line.me/api/notify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.LINE_NOTIFY_TOKEN }}" },
+            { "name": "Content-Type",  "value": "application/x-www-form-urlencoded" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "message", "value": "={{ $json.lineMsg }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "line-notify",
+      "name": "📱 LINE Notify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.RESEND_API_KEY }}" },
+            { "name": "Content-Type",  "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from: $env.EMAIL_FROM || 'Openthai.ai <noreply@openthai.ai>', to: $env.ADMIN_EMAIL, subject: '🎉 New Signup: ' + $('📝 Prepare Messages').item.json.name, html: $('📝 Prepare Messages').item.json.emailHtml }) }}",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "📧 Send Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [680, 380]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"received\": true, \"name\": \"{{ $('📝 Prepare Messages').item.json.name }}\" }"
+      },
+      "id": "respond",
+      "name": "✅ Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "🌐 Waitlist Webhook": {
+      "main": [[{ "node": "📝 Prepare Messages", "type": "main", "index": 0 }]]
+    },
+    "📝 Prepare Messages": {
+      "main": [[
+        { "node": "📱 LINE Notify", "type": "main", "index": 0 },
+        { "node": "📧 Send Email",  "type": "main", "index": 0 }
+      ]]
+    },
+    "📱 LINE Notify": { "main": [[{ "node": "✅ Respond", "type": "main", "index": 0 }]] },
+    "📧 Send Email":  { "main": [[{ "node": "✅ Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "tags": ["openthai", "notifications", "line", "email"]
+}

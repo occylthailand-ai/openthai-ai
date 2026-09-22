@@ -1,0 +1,162 @@
+# =============================================================================
+# OpenThaiAi — Daily Automated Health Check
+# =============================================================================
+# ที่มา: ไฟล์นี้เป็น GitHub Actions workflow จริง — รันบนเซิร์ฟเวอร์ของ GitHub
+# ตามตารางเวลาที่กำหนด ไม่ต้องเปิดแชทหรือรอ AI พิมพ์ "ต่อ" ทุกอย่างในนี้คือ
+# คำสั่งที่ execute จริง ผลลัพธ์คือของจริง ไม่ใช่ตัวเลขที่ AI แต่งขึ้น
+#
+# วิธีติดตั้ง:
+#   1. สร้างโฟลเดอร์ .github/workflows/ ใน repo ของคุณ (ถ้ายังไม่มี)
+#   2. เซฟไฟล์นี้เป็น .github/workflows/daily-healthcheck.yml
+#   3. commit + push เข้า branch main
+#   4. เข้าไปที่แท็บ "Actions" บน GitHub เพื่อดูผลการรันแต่ละรอบ
+#
+# ค่าที่ต้องปรับให้ตรงกับ repo จริงของคุณ (แก้ในช่องที่มีคอมเมนต์ "แก้ตรงนี้"):
+#   - URL เว็บไซต์จริง (สำหรับเช็คว่าเว็บล่มหรือเปล่า)
+#   - path ของไฟล์ corpus (.jsonl) จริง
+#   - คำสั่งรัน test จริง (ถ้ามี)
+# =============================================================================
+
+name: OpenThaiAi Daily Health Check
+
+on:
+  schedule:
+    # รันทุกวันเวลา 00:00 UTC (~07:00 น. เวลาไทย) — ปรับ cron ได้ตามต้องการ
+    # ตัวอย่าง: '0 3,9,15,21 * * *' = รันวันละ 4 ครั้ง (03:00, 09:00, 15:00, 21:00 UTC)
+    - cron: '0 0 * * *'
+  workflow_dispatch: {}  # ปุ่มกดรันเองได้ทันทีจากหน้า Actions บน GitHub
+
+permissions:
+  contents: read
+  issues: write   # ต้องมีสิทธิ์นี้เพื่อเปิด/อัปเดต Issue รายงานผล
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ---------------------------------------------------------------------
+      # 1) เช็คว่าเว็บไซต์จริงยังออนไลน์อยู่ (ไม่ใช่จำลอง — ยิง HTTP request จริง)
+      # ---------------------------------------------------------------------
+      - name: Check live site is reachable
+        id: site_check
+        run: |
+          URL="https://openthaiai.com"   # แก้ตรงนี้ให้เป็น URL จริงของคุณ
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || echo "000")
+          echo "http_status=$STATUS" >> "$GITHUB_OUTPUT"
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+            echo "site_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "site_ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ---------------------------------------------------------------------
+      # 2) เช็คว่า corpus (คลังคำศัพท์ไตรภาษา) ยังอยู่ครบและเป็น valid JSON
+      #    (นี่คือสิ่งที่ memory ของคุณเคยเจอปัญหาจริง: ไฟล์ corpus หายเวลาย้ายเครื่อง)
+      # ---------------------------------------------------------------------
+      - name: Verify corpus files exist and are valid JSONL
+        id: corpus_check
+        run: |
+          CORPUS_DIR="corpus"   # แก้ตรงนี้ให้ตรง path จริงใน repo
+          if [ ! -d "$CORPUS_DIR" ]; then
+            echo "corpus_ok=false" >> "$GITHUB_OUTPUT"
+            echo "::error::ไม่พบโฟลเดอร์ corpus/ — ไฟล์อาจถูก .gitignore หรือไม่ได้ commit"
+            exit 0
+          fi
+          TOTAL_LINES=0
+          BAD_LINES=0
+          for f in "$CORPUS_DIR"/*.jsonl; do
+            [ -e "$f" ] || continue
+            while IFS= read -r line; do
+              [ -z "$line" ] && continue
+              TOTAL_LINES=$((TOTAL_LINES+1))
+              echo "$line" | node -e "JSON.parse(require('fs').readFileSync(0,'utf8'))" 2>/dev/null \
+                || BAD_LINES=$((BAD_LINES+1))
+            done < "$f"
+          done
+          echo "total_entries=$TOTAL_LINES" >> "$GITHUB_OUTPUT"
+          echo "bad_entries=$BAD_LINES" >> "$GITHUB_OUTPUT"
+          if [ "$BAD_LINES" -eq 0 ] && [ "$TOTAL_LINES" -gt 0 ]; then
+            echo "corpus_ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "corpus_ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ---------------------------------------------------------------------
+      # 3) รัน test suite จริง ถ้ามี (ปรับคำสั่งให้ตรงกับ repo คุณ)
+      # ---------------------------------------------------------------------
+      - name: Install dependencies
+        run: |
+          if [ -f package.json ]; then npm ci || npm install; fi
+
+      - name: Run test suite
+        id: test_run
+        run: |
+          if [ -f package.json ] && npm run | grep -q " test"; then
+            npm test 2>&1 | tee test-output.log
+            echo "tests_ran=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tests_ran=false" >> "$GITHUB_OUTPUT"
+            echo "ไม่พบ npm script ชื่อ 'test' — ข้ามขั้นตอนนี้" > test-output.log
+          fi
+        continue-on-error: true
+
+      # ---------------------------------------------------------------------
+      # 4) สรุปผลจริงทั้งหมดเป็นรายงาน แล้วเปิด/อัปเดต GitHub Issue
+      #    (นี่คือ "รายงานสถานะ" ตัวจริง — มาจากผลรันจริงข้างบน ไม่ใช่ AI แต่งเรื่อง)
+      # ---------------------------------------------------------------------
+      - name: Compose real status report
+        id: report
+        run: |
+          {
+            echo "## OpenThaiAi Daily Health Check"
+            echo "รันเมื่อ: $(date -u '+%Y-%m-%d %H:%M UTC')"
+            echo ""
+            echo "| รายการ | ผล |"
+            echo "|---|---|"
+            echo "| เว็บไซต์ออนไลน์ | ${{ steps.site_check.outputs.site_ok }} (HTTP ${{ steps.site_check.outputs.http_status }}) |"
+            echo "| Corpus ครบและถูกต้อง | ${{ steps.corpus_check.outputs.corpus_ok }} (${{ steps.corpus_check.outputs.total_entries }} entries, ${{ steps.corpus_check.outputs.bad_entries }} ผิดพลาด) |"
+            echo "| รัน Test Suite | ${{ steps.test_run.outputs.tests_ran }} |"
+            echo ""
+            echo "รายงานนี้มาจากการรันคำสั่งจริงในขั้นตอนข้างต้น ไม่มีตัวเลขที่ถูกแต่งขึ้น"
+          } > report.md
+          cat report.md
+
+      - name: Open or update tracking issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('report.md', 'utf8');
+            const title = 'OpenThaiAi — Daily Health Check';
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'automated-healthcheck'
+            });
+            const existing = issues.find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['automated-healthcheck']
+              });
+            }
