@@ -11,6 +11,43 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-09-23 — รวมสายงาน local master (78 commits) เข้า main เรียบร้อย; ลบ master + backup branch แล้ว
+หลังจาก PR #97 (limits centralization) เข้า main เรียบร้อย โปรเจกต์อีกระยะหนึ่งยังมี
+`master` เก่าในเครื่องที่มี commits ไม่เคย push ขึ้น remote (78 commits ตั้งแต่ wave7–10,
+XAdES, CDE, Mythos) — สองสายแยกกันนาน (merge-base `2e726246`; `main..master` = 78
+commits, `master..main` = 157 commits)
+
+Decision: merge เต็มรูปแบบทั้ง 78 commits เข้า main (ผู้สั่ง: project owner — มอบอำนาจ
+เต็ม 100%) ทำใน clean worktree (`merge/backup-into-main`) เพื่อเลี่ยง abort จาก
+untracked ไฟล์ ~1204 ไฟล์ใน repo หลัก
+
+ผล merge: commit `53b0559` — "Merge branch 'backup/master-20260922' into main"
+push ขึ้น origin/main แล้ว (ตรงกับ HEAD ของ local main)
+
+หลักการ resolve conflicts 15 ไฟล์: **HEAD เป็นฐาน + ดูดงาน backup เข้ามาทั้งหมด**
+- `backend/server.js` — imports รวม + mount `/api/consent` ของ backup
+- `frontend/src/App.jsx` — 70 lazy pages ของ HEAD + 15 pages ของ backup (lazy ต่อท้าย) + `<ConsentBanner />`
+- `package.json` / `backend/package.json` — scripts union (cde + limits + tests)
+- `backend/.env.example` — HEAD 49 ตัว + backup 50 ตัว (258 บรรทัด)
+- `vercel.json` — สอง entrypoint + security headers ของ HEAD
+- `run-tests.sh` / `generate-project-status.mjs` — รวมทั้งสองฝั่ง (git() helper แบบ array args ปลอดภัย shell injection)
+- `CLAUDE.md` / `DECISIONS_LOG.md` / `core-philosophy.json` — เก็บทั้งสองเวอร์ชัน
+- `PROJECT_STATUS.md` — regenerate จากสคริปต์
+- `.github/workflows/deploy.yml` — **คงการลบตาม HEAD** (backup มี deploy-backend/deploy-staging แทน)
+
+ตรวจสอบก่อน push (ผ่านหมด): `node --check` backend+scripts 0 fail, `bash -n run-tests.sh`
+ผ่าน, **limits-tool validate 25/25 + audit 30 match / 0 drift** (limits จาก PR #97
+ไม่ถูก merge ทับ), `npm run build` ผ่านจริง, consistency checks ของ generator ผ่าน
+
+Cleanup หลัง merge: ลบ branch `backup/master-20260922` (commits ยัง reachable จาก
+main — ปลอดภัย), ลบ local branch + worktree `merge/backup-into-main` (deregister แล้ว,
+เหลือแค่ directory เปล่าที่ process อื่นถืออยู่ — ปิดโปรแกรมแล้วลบได้เอง), repo หลัก
+sync ถึง `53b0559` (reset --hard; ตรวจแล้ว 0 collision กับ untracked ไฟล์,
+`frontend/node_modules` ไม่ถูกแตะ)
+
+สิ่งที่ยังไม่ได้ทำ (จงใจ): untracked junk ~1200 ไฟล์ใน repo หลักไม่ได้แตะ (ไม่เกี่ยวข้อง
+กับ merge); `PROJECT_STATUS.md` จะ re-generate เองใน CI ถัดไป
+
 ### 2026-09-14 — Added a fail-closed Continuous Development Engine, not a self-deploying agent
 Asked to make repository improvement work continuous and automated, with an
 explicit boundary against unapproved self-modification or deployment. The real
