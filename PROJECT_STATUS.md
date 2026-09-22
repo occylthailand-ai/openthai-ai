@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-22T21:06:50.313Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (68 commit(s) ahead of main)
+Generated: 2026-09-22T22:05:46.829Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (69 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 300 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 301 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, @supabase/supabase-js, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -700,14 +700,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- a3217b6 chore: sync PROJECT_STATUS.md [skip ci] (2 minutes ago)
-- d8f4203 chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
-- 449d043 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- bfed5f1 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- c54f91a fix: remove api/index.py — Python relic causing Vercel auto-detection failure (2 hours ago)
-- a08b6e7 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- d137659 fix: add missing RATE import in credits.js + restore working vercel.json (2 hours ago)
-- 49ee934 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- c9767e9 chore: sync PROJECT_STATUS.md [skip ci] (58 minutes ago)
+- a3217b6 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- d8f4203 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 449d043 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- bfed5f1 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- c54f91a fix: remove api/index.py — Python relic causing Vercel auto-detection failure (3 hours ago)
+- a08b6e7 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- d137659 fix: add missing RATE import in credits.js + restore working vercel.json (3 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
