@@ -10,6 +10,10 @@
     "test:types":    "cd backend && npm run test:types",
     "test:e2e":      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npx --prefix frontend playwright test",
     "test:smoke":    "cd backend && npm run test:smoke",
-    "test:all":      "npm run test && npm run test:smoke"
+    "test:all":      "npm run test && npm run test:smoke",
+    "limits":        "node scripts/limits-tool.mjs",
+    "limits:report": "node scripts/limits-tool.mjs report",
+    "limits:audit":  "node scripts/limits-tool.mjs audit",
+    "limits:validate": "node scripts/limits-tool.mjs validate"
   }
 }

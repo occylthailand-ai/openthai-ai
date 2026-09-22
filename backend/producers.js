@@ -4,6 +4,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { RATE } from './config/limits.js';
 
 // เดิมไม่มี 'อาหารสัตว์เลี้ยง'/'สินค้าดิจิทัล' ทั้งที่เพิ่มเข้า CATEGORIES ฝั่งผู้บริโภคแล้ว
 // (ConsumerPortalPage.jsx) — ทำให้ผู้ผลิตสินค้ากลุ่มนี้ที่สมัครผ่าน /join ไม่มีหมวดให้เลือกตรง
@@ -109,7 +110,7 @@ export function createProducers(dataDir) {
   }
 
   // ── Routes ──────────────────────────────────────────────────────────────────
-  const applyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 5, message: { success: false, error: 'สมัครบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
+  const applyLimiter = rateLimit({ ...RATE.producerApply, message: { success: false, error: 'สมัครบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
   const router = express.Router();
   const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error('[producers route]', e.message); res.status(500).json({ success: false, error: 'producer error' }); });
 

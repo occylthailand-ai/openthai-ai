@@ -3,6 +3,8 @@
 //
 // Flow: สร้าง Script+Storyboard ด้วย AI → ส่งไปยัง Video API → คืน job_id + preview
 
+import { AI as _AI } from './config/limits.js';
+
 const VIDEO_PROVIDERS = {
   runway:  { name: 'RunwayML Gen-3',        url: 'https://api.dev.runwayml.com/v1/image_to_video', authHeader: 'Authorization' },
   pika:    { name: 'Pika Labs 2.2',         url: 'https://api.pika.art/v1/generate',               authHeader: 'X-Pika-API-Key' },
@@ -58,7 +60,7 @@ export async function generateVideoScript(form, { anthropic, gemini }) {
     try {
       const msg = await anthropic.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2048,
+        max_tokens: _AI.video,
         messages: [{ role: 'user', content: prompt }],
       });
       text = msg.content[0]?.text?.trim() || '';

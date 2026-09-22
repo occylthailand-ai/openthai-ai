@@ -8,6 +8,7 @@ import jwt from 'jsonwebtoken'
 import yaml from 'js-yaml'
 import fs from 'fs'
 import path from 'path'
+import { AFFILIATE as _AFFILIATE } from './config/limits.js'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -125,7 +126,7 @@ export function requireDataResidency(req, res, next) {
 // ===== Affiliate Depth Guard (Non-MLM) =====
 
 export async function checkAffiliateDepth(affiliateId, db) {
-  const maxDepth = policy.constraints?.affiliate_depth_max || 2
+  const maxDepth = policy.constraints?.affiliate_depth_max || _AFFILIATE.chainDepthMax
   const { rows } = await db.query(
     `WITH RECURSIVE chain AS (
        SELECT id, referrer_id, 1 AS depth FROM affiliates WHERE id = $1

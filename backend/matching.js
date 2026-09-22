@@ -5,6 +5,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { RATE, MATCHING as _MATCHING } from './config/limits.js';
 
 const clip = (s, n = 200) => (typeof s === 'string' ? s.replace(/<[^>]*>/g, '').trim().slice(0, n) : '');
 
@@ -279,8 +280,8 @@ export function createMatching(dataDir, { getProducers, getLeads, requireAuth })
     return Object.values(requests).sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
   }
 
-  const matchLimiter   = rateLimit({ windowMs: 60_000, max: 30, message: { success: false, error: 'ร้องขอบ่อยเกินไป' } });
-  const requestLimiter = rateLimit({ windowMs: 60_000, max: 5,  message: { success: false, error: 'ส่งคำขอบ่อยเกินไป' } });
+  const matchLimiter   = rateLimit({ ...RATE.match,        message: { success: false, error: 'ร้องขอบ่อยเกินไป' } });
+  const requestLimiter = rateLimit({ ...RATE.matchRequest, message: { success: false, error: 'ส่งคำขอบ่อยเกินไป' } });
   const router = express.Router();
   const wrap = (fn) => (req, res) => fn(req, res).catch(e => { console.error('[matching]', e.message); res.status(500).json({ success: false, error: 'matching error' }); });
 
@@ -298,7 +299,7 @@ export function createMatching(dataDir, { getProducers, getLeads, requireAuth })
   // GET /api/match/suggestions?type=B2B|B2C|B2G|B2B2C|C2B|G2G|G2B|all&limit=20
   router.get('/api/match/suggestions', auth, matchLimiter, wrap(async (req, res) => {
     const type  = ALL_VALID_TYPES.includes(req.query.type) ? req.query.type : 'all';
-    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const limit = Math.min(parseInt(req.query.limit) || _MATCHING.defaultLimit, _MATCHING.maxLimit);
     const matches = await topMatches(type, limit);
     res.json({ success: true, type, matches });
   }));
@@ -308,7 +309,7 @@ export function createMatching(dataDir, { getProducers, getLeads, requireAuth })
     const email = (req.query.email || '').toLowerCase().trim();
     if (!email) return res.status(400).json({ success: false, error: 'ระบุ email ด้วย' });
     const type  = ALL_VALID_TYPES.includes(req.query.type) ? req.query.type : 'all';
-    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const limit = Math.min(parseInt(req.query.limit) || _MATCHING.suggestDefault, _MATCHING.suggestMax);
     const result = await suggestForProducer(email, type, limit);
     if (!result.ok) return res.status(404).json({ success: false, error: result.error });
     res.json({ success: true, ...result });
