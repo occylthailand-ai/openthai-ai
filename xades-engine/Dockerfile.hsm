@@ -1,0 +1,26 @@
+# หมวด 5 — Firmware/PKI: SoftHSM2 Container
+# ใช้จัดเก็บ Private Key และ KEK อย่างปลอดภัย (แทน Hardware HSM จริงในสภาพแวดล้อม dev/staging)
+# Production: เปลี่ยนเป็น Hardware HSM จริง (Luna, Thales, AWS CloudHSM)
+FROM debian:bookworm-slim
+
+# ติดตั้ง SoftHSM2 + PKCS#11 tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    softhsm2 \
+    opensc \
+    gnutls-bin \
+    libengine-pkcs11-openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+# ตำแหน่งเก็บ token (mount เป็น volume ใน docker-compose)
+ENV SOFTHSM2_CONF=/etc/softhsm2.conf
+
+RUN mkdir -p /var/lib/softhsm/tokens && \
+    echo "directories.tokendir = /var/lib/softhsm/tokens" > /etc/softhsm2.conf && \
+    echo "objectstore.backend = file" >> /etc/softhsm2.conf && \
+    echo "log.level = INFO" >> /etc/softhsm2.conf
+
+VOLUME ["/var/lib/softhsm/tokens"]
+
+# entrypoint จาก init-hsm.sh ที่ mount เข้ามาใน docker-compose
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD []

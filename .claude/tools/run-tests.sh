@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # รัน test suite
 # ใช้: bash .claude/tools/run-tests.sh [suite]
-# suite: unit | middleware | types | smoke | affiliate | revenue | blueprint | e2e | all (default: unit)
+# suite: unit | middleware | cde | types | smoke | affiliate | revenue | blueprint | e2e | all (default: unit)
 
 set -euo pipefail
 
@@ -21,6 +21,10 @@ case "$SUITE" in
   middleware)
     cd "$ROOT"
     node --test backend/middleware/__tests__/*.mjs
+    ;;
+  cde)
+    cd "$ROOT"
+    npm run test:cde
     ;;
   types)
     cd "$BACKEND_DIR"
@@ -56,6 +60,9 @@ case "$SUITE" in
     echo "--- types (tsc --noEmit) ---"
     cd "$BACKEND_DIR" && npm run test:types && cd "$ROOT"
     echo ""
+    echo "--- continuous development engine ---"
+    npm run test:cde
+    echo ""
     echo "--- smoke ---"
     cd "$BACKEND_DIR" && npm run test:smoke && cd "$ROOT"
     echo ""
@@ -70,7 +77,7 @@ case "$SUITE" in
     ;;
   *)
     echo "❌ Unknown suite: $SUITE"
-    echo "   Valid: unit | middleware | types | smoke | affiliate | revenue | blueprint | e2e | all"
+    echo "   Valid: unit | middleware | cde | types | smoke | affiliate | revenue | blueprint | e2e | all"
     exit 1
     ;;
 esac

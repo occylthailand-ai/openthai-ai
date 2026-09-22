@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 import 'dotenv/config';
 import { createTransport } from 'nodemailer';
+import { TIMEOUT as _TIMEOUT } from './config/limits.js';
 
 const OK    = '✅';
 const FAIL  = '❌';
@@ -41,7 +42,7 @@ function checkEnv(name, { required = true, hint = '' } = {}) {
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
 async function httpGet(url, headers = {}) {
-  const r = await fetch(url, { headers, signal: AbortSignal.timeout(8000) });
+  const r = await fetch(url, { headers, signal: AbortSignal.timeout(_TIMEOUT.preflight) });
   const body = await r.json().catch(() => null);
   return { ok: r.ok, status: r.status, body };
 }
@@ -49,7 +50,7 @@ async function httpGet(url, headers = {}) {
 async function httpPost(url, body, headers = {}) {
   const r = await fetch(url, {
     method: 'POST', headers: { 'Content-Type': 'application/json', ...headers },
-    body: JSON.stringify(body), signal: AbortSignal.timeout(8000),
+    body: JSON.stringify(body), signal: AbortSignal.timeout(_TIMEOUT.preflight),
   });
   const data = await r.json().catch(() => null);
   return { ok: r.ok, status: r.status, body: data };

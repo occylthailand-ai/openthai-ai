@@ -8,6 +8,8 @@
 //   system.error         — Error logged (level=error)
 //   tenant.created       — New tenant registered
 //   affiliate.joined     — New affiliate signed up
+
+import { TIMEOUT as _TIMEOUT, QUERY as _QUERY } from './config/limits.js';
 //
 // Security: each webhook has an HMAC-SHA256 secret.
 // Delivery: up to 3 retries (0s → 5s → 30s backoff). Non-blocking.
@@ -48,7 +50,7 @@ function sign(secret, payload) {
 
 // ── HTTP delivery with retry ──────────────────────────────────────────────────
 
-async function deliverOnce(url, payload, sig, timeoutMs = 8000) {
+async function deliverOnce(url, payload, sig, timeoutMs = _TIMEOUT.webhookDelivery) {
   const ctrl = new AbortController();
   const tid  = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
@@ -213,7 +215,7 @@ export function createWebhookSystem(writeDir) {
     },
 
     // Delivery log (admin)
-    logs({ limit = 50 } = {}) {
+    logs({ limit = _QUERY.webhookLogs } = {}) {
       return deliveries.slice(0, limit);
     },
 

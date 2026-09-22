@@ -6,14 +6,15 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { CREDITS as _CREDITS } from './config/limits.js';
 
 const today = () => new Date().toISOString().slice(0, 10);
 const yesterday = () => new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
-const MAX_BALANCE = 200;        // กันบวมเกินเหตุ
-const STREAK_MAX_BONUS = 5;     // โบนัส streak สูงสุด/วัน
-const MAX_CLAIM = 50;           // กันยิงเครดิตทีละมากๆ
+const MAX_BALANCE    = _CREDITS.maxBalance;
+const STREAK_MAX_BONUS = _CREDITS.streakMaxBonus;
+const MAX_CLAIM      = _CREDITS.maxClaim;
 
 // รางวัลวงล้อ — server เป็นคนสุ่ม (กันโกง). index ต้องตรงกับฝั่ง frontend
 const SPIN_PRIZES = [
@@ -155,7 +156,7 @@ export function createCredits(dataDir) {
   }
 
   // ── Routes ──────────────────────────────────────────────────────────────────
-  const limiter = rateLimit({ windowMs: 60000, max: 40, message: { success: false, error: 'rate limit' } });
+  const limiter = rateLimit({ ...RATE.credits, message: { success: false, error: 'rate limit' } });
   const router = express.Router();
   const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error('[credits route]', e.message); res.status(500).json({ success: false, error: 'credit error' }); });
 

@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "title": "Verify repository changes before continuation",
+  "summary": "Create an explainable, auditable dry-run that inspects the current diff without changing source, release state, or external systems.",
+  "owner": "platform-maintainer",
+  "riskTier": "R1",
+  "metrics": {
+    "publicImpact": 4,
+    "risk": 1,
+    "effort": 1,
+    "opportunityCost": 1,
+    "evidenceQuality": 5
+  },
+  "evidence": [
+    {
+      "source": "docs/ai-memory/core-philosophy.json",
+      "claim": "Repository evidence must take precedence over narrative confidence."
+    }
+  ],
+  "acceptanceCriteria": [
+    "The workflow reaches completed in dry-run mode.",
+    "The quality gates run through the critic role and pass.",
+    "The audit hash chain verifies after completion.",
+    "No source, release, deployment, or remote Git state changes."
+  ],
+  "dependencies": [],
+  "canonicalRefs": [
+    "core-philosophy-v1"
+  ],
+  "action": "inspect-changes",
+  "qualityGates": [
+    "syntax-check-engine",
+    "repository-diff-check",
+    "hardcoded-secret-scan"
+  ],
+  "metadata": {
+    "requestedBy": "continuous-development-engine-sample"
+  }
+}

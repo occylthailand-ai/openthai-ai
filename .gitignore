@@ -15,10 +15,36 @@ recovery-codes.txt
 *.key
 ANTHROPIC_API_KEY.txt
 *_API_KEY.txt
+*API KEY*.txt
+*api key*.txt
+*API_KEY*.txt
+# Fail-safe: ครอบคลุม .env* ทุก subdirectory (ต้องอยู่ก่อน exception ด้านล่าง)
+**/.env*
 backend/.env.*
+.env.*
+.env.staging
+.env.production
+.env.development
+# Exception อยู่สุดท้ายเสมอ เพื่อ override ทุก pattern ข้างบน
+!**/.env.example
+# Passwords & credentials — ห้าม commit เด็ดขาด
+Google\ Passwords*.csv
+*Passwords*.csv
+*passwords*.csv
+*credentials*.json
+*credentials*.csv
+
+# Google Drive temp upload files
+.tmp.driveupload/
 backend/data/moltbook-credentials.json
 *.n8nexport*
 sync-all.ps1
+
+# Database files — ห้าม commit ข้อมูลผู้ใช้
+*.db
+*.sqlite
+*.sqlite3
+backend/openthai.db
 
 # Runtime data — ป้องกัน commit ข้อมูลผู้ใช้/log โดยไม่ตั้งใจ
 backend/data/affiliates.json
@@ -86,6 +112,7 @@ oracleJdk-25/
 
 # Output/generated folders
 outputs/
+.openthai-cde/
 
 # Misc non-source files
 *.skill

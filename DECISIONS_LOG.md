@@ -11,6 +11,33 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-09-14 — Added a fail-closed Continuous Development Engine, not a self-deploying agent
+Asked to make repository improvement work continuous and automated, with an
+explicit boundary against unapproved self-modification or deployment. The real
+repo had Node.js scripts and CI quality checks, but no durable proposal state
+machine, canonical source binding, approval tiers, or tamper-evident local audit
+control plane. The existing `backend/agent-orchestrator.js` prepares AI prompts,
+and `backend/audit.js` is a best-effort HTTP audit sink; neither is safe to reuse
+as an execution authority.
+
+Decision: add a zero-dependency local CLI under
+`scripts/continuous-development/` with content-addressed proposal IDs,
+deterministic people-impact scoring, persisted/resumable state, distinct
+worker/critic actors, read-only quality gates, explicit R2/R3 human approval,
+compensation hooks, scheduler locks/backoff, structured logs, and a JSONL
+SHA-256 audit chain. Canonical references are accepted only when a Layer-C
+ledger entry is `BOUND` and its path, version, owner, SHA-256, and human
+approval all match the current source.
+
+Safety boundary: execution defaults to dry-run and is disabled for live actions;
+subprocesses use fixed argv with `shell:false`, a minimal non-secret environment,
+workspace/executable allowlists, time/output limits, and hard blocks on shell,
+remote/deployment tools, mutating Git commands, dynamic Node evaluation, and npm
+install/publish/deploy operations. There is no push, merge, deploy, credential,
+or self-update path. Mutating actions require a configured compensation command;
+uncertain outcomes stop for human recovery rather than retrying. CI now runs the
+targeted CDE guardrail suite.
+
 ### 2026-09-07 — Content Blueprint: pasted 8-part content structure encoded as a real tool, not prose
 A large re-categorized content taxonomy was pasted into the session (Maslow
 hierarchy + digital needs, food/AgTech, IoT & sensors, ITS/mobility,

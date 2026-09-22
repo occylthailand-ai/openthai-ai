@@ -13,19 +13,30 @@
 //      three assistants start a conversation from the same real facts.
 //   3. .github/workflows/project-status.yml — runs on every PR, fails the check
 //      if a consistency check fails, and commits a refreshed PROJECT_STATUS.md.
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const sh = (cmd) => { try { return execSync(cmd, { cwd: ROOT, encoding: 'utf8' }).trim(); } catch { return ''; } };
+const git = (args) => {
+  try {
+    return execFileSync('git', args, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+};
 const readSafe = (p) => { try { return readFileSync(join(ROOT, p), 'utf8'); } catch { return ''; } };
 
 // ── Git state ──────────────────────────────────────────────────────────────
-const branch = sh('git rev-parse --abbrev-ref HEAD') || 'unknown';
-const ahead = sh('git log --oneline origin/main..HEAD 2>/dev/null').split('\n').filter(Boolean).length;
-const recentCommits = sh('git log -8 --format="%h %s (%ar)"').split('\n').filter(Boolean);
+const branch = git(['rev-parse', '--abbrev-ref', 'HEAD']) || 'unknown';
+const ahead = git(['log', '--oneline', 'origin/main..HEAD']).split('\n').filter(Boolean).length;
+const recentCommits = git(['log', '-8', '--format=%h %s (%ar)']).split('\n').filter(Boolean);
 
 // ── Skills registry — parsed straight from backend/server.js ────────────────
 function parseSkills() {
@@ -73,7 +84,11 @@ function parseImports(src) {
 
 // ── Migration files present in repo ──────────────────────────────────────────
 function listMigrations() {
-  return sh(`ls backend/migrations/*.sql 2>/dev/null`).split('\n').filter(Boolean).map((p) => p.split('/').pop());
+  try {
+    return readdirSync(join(ROOT, 'backend', 'migrations')).filter((name) => name.endsWith('.sql')).sort();
+  } catch {
+    return [];
+  }
 }
 
 // ── Backend modules — one-line description from each file's header comment ──
@@ -204,8 +219,8 @@ function runChecks({ skills, routes, migrations, backendSrcAll, appJsxSrc }) {
 // ── Project identity — real facts, to correct scope-drift from pasted content ─
 function projectIdentity() {
   const readmeTagline = (readSafe('README.md').match(/^\*\*(.+)\*\*/m) || [])[1] || '';
-  const firstCommit = sh(`git log --reverse --format="%ad" --date=short | head -1`);
-  const totalCommits = sh(`git log --oneline`).split('\n').filter(Boolean).length;
+  const firstCommit = git(['log', '--reverse', '--format=%ad', '--date=short']).split('\n').filter(Boolean)[0] || '';
+  const totalCommits = git(['log', '--oneline']).split('\n').filter(Boolean).length;
   const backendDeps = Object.keys(JSON.parse(readSafe('backend/package.json') || '{}').dependencies || {});
   return { readmeTagline, firstCommit, totalCommits, backendDeps };
 }

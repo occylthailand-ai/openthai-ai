@@ -1,0 +1,131 @@
+version: "3.8"
+
+# Staging environment — OpenThai eTax XAdES Engine
+# ใช้: docker compose -f docker-compose.staging.yml up -d
+# ต่างจาก production: debug log, hot-reload, ไม่จำกัด resource, mock HSM
+
+services:
+  xades-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: openthai/xades-api:staging
+    container_name: openthai-xades-api-staging
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      LOG_LEVEL: DEBUG
+      PYTHONPATH: /app/src
+      ENVIRONMENT: staging
+      ETDA_OCSP_URL: ${ETDA_OCSP_URL:-}
+      ETDA_CRL_URL: ${ETDA_CRL_URL:-}
+    volumes:
+      - ./src:/app/src:ro          # hot-reload source code
+      - api-logs-staging:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    networks:
+      - xades-staging
+
+  xades-dashboard:
+    image: nginx:1.27-alpine
+    container_name: openthai-xades-dashboard-staging
+    restart: unless-stopped
+    ports:
+      - "8090:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - xades-api
+    networks:
+      - xades-staging
+
+  # หมวด 6 — Peppol Gateway (staging / test network)
+  peppol-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.peppol
+    image: openthai/peppol-gateway:staging
+    container_name: openthai-peppol-staging
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      PEPPOL_ENV: test                    # ใช้ Peppol test network
+      PEPPOL_SENDER_ID: ${PEPPOL_SENDER_ID:-0315:0000000000000}
+      RD_TAXPAYER_ID: ${RD_TAXPAYER_ID:-0000000000000}
+      LOG_LEVEL: DEBUG
+    networks:
+      - xades-staging
+
+  # หมวด 5 — SoftHSM2 (staging — ใช้ software HSM)
+  softhsm2:
+    build:
+      context: .
+      dockerfile: Dockerfile.hsm
+    image: openthai/softhsm2:staging
+    container_name: openthai-softhsm2-staging
+    restart: unless-stopped
+    environment:
+      HSM_TOKEN_LABEL: ${HSM_TOKEN_LABEL:-openthai-staging}
+      HSM_SO_PIN: ${HSM_SO_PIN:-staging-so-pin}
+      HSM_USER_PIN: ${HSM_USER_PIN:-staging-user-pin}
+    volumes:
+      - hsm-tokens-staging:/var/lib/softhsm/tokens
+      - ./hsm/init-hsm.sh:/docker-entrypoint.sh:ro
+    networks:
+      - xades-staging
+
+  # หมวด 10 — Prometheus (staging)
+  prometheus:
+    image: prom/prometheus:v2.55.0
+    container_name: openthai-prometheus-staging
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../openthai-ai/telemetry/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+      - ../openthai-ai/telemetry/alerts.yaml:/etc/prometheus/alerts.yaml:ro
+      - prometheus-data-staging:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=7d'    # staging เก็บแค่ 7 วัน
+      - '--web.enable-lifecycle'
+    networks:
+      - xades-staging
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: openthai-grafana-staging
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-staging-password}
+      GF_SERVER_DOMAIN: localhost
+      GF_USERS_ALLOW_SIGN_UP: "true"           # staging เปิดให้ sign up ได้
+    volumes:
+      - grafana-data-staging:/var/lib/grafana
+      - ../openthai-ai/telemetry/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../openthai-ai/telemetry/grafana/provisioning:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - xades-staging
+
+volumes:
+  api-logs-staging:
+  hsm-tokens-staging:
+  prometheus-data-staging:
+  grafana-data-staging:
+
+networks:
+  xades-staging:
+    driver: bridge

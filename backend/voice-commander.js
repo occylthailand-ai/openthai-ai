@@ -5,6 +5,8 @@
 //   body: { transcript, lang?, tenantId? }
 //   returns: { action, params, result, speak_text, confidence }
 
+import { AI as _AI } from './config/limits.js';
+
 // ── Intent definitions ────────────────────────────────────────────────────────
 const INTENT_PROMPT = (transcript, lang) => `คุณเป็น AI ผู้ช่วยของ Openthai.ai ระบบสร้างคอนเทนต์ไทย รองรับ 3 ภาษา: ไทย, จีน, อังกฤษ
 
@@ -69,7 +71,7 @@ export async function processVoiceCommand({ transcript, lang = 'th-TH', tenantId
     if (anthropic) {
       const msg = await anthropic.messages.create({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 512,
+        max_tokens: _AI.voice,
         messages: [{ role: 'user', content: parsePrompt }],
       });
       text = msg.content[0]?.text?.trim() || '';

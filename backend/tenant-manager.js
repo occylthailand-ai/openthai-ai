@@ -20,16 +20,12 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { randomBytes, createHash } from 'crypto';
 import jwt from 'jsonwebtoken';
+import { PLANS as _PLANS } from './config/limits.js';
 
 const TENANT_FILE = (writeDir) => join(writeDir, 'tenants.json');
 
-// ── Plan definitions ──────────────────────────────────────────────────────────
-export const PLANS = {
-  free:       { agents: 1,  generates_per_day: 10,  memory_slots: 100,  webhooks: 1,  price_thb: 0    },
-  starter:    { agents: 3,  generates_per_day: 100, memory_slots: 500,  webhooks: 3,  price_thb: 299  },
-  pro:        { agents: 10, generates_per_day: 500, memory_slots: 2000, webhooks: 10, price_thb: 799  },
-  enterprise: { agents: 99, generates_per_day: 9999,memory_slots: 9999, webhooks: 50, price_thb: 2499 },
-};
+// ── Plan definitions — sourced from backend/config/limits.js ─────────────────
+export const PLANS = _PLANS;
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 

@@ -4,12 +4,20 @@
   "type": "module",
   "description": "Openthai.ai — AI platform for Thai SMEs (content, commerce, matching)",
   "scripts": {
+    "cde":           "node scripts/continuous-development-cli.mjs",
+    "cde:sample":    "node scripts/continuous-development-cli.mjs sample",
+    "test:cde":      "node --test scripts/continuous-development/__tests__/engine.test.mjs",
+    "test:secrets":  "node scripts/scan-hardcoded-secrets.mjs",
     "test":          "npm run test:unit && npm run test:backend && npm run test:types",
     "test:unit":     "cd frontend && npm test",
     "test:backend":  "node --test backend/middleware/__tests__/*.mjs",
     "test:types":    "cd backend && npm run test:types",
     "test:e2e":      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npx --prefix frontend playwright test",
     "test:smoke":    "cd backend && npm run test:smoke",
-    "test:all":      "npm run test && npm run test:smoke"
+    "test:all":      "npm run test && npm run test:smoke",
+    "limits":        "node scripts/limits-tool.mjs",
+    "limits:report": "node scripts/limits-tool.mjs report",
+    "limits:audit":  "node scripts/limits-tool.mjs audit",
+    "limits:validate": "node scripts/limits-tool.mjs validate"
   }
 }

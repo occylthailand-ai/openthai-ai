@@ -1,0 +1,227 @@
+{
+  "name": "Openthai.ai — Hermes Script Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-script",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "🌐 Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "webhookId": "openthai-generate-script"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.product_name }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "validate-input",
+      "name": "✅ Validate Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8001/api/generate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{ $env.BRIDGE_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={{ JSON.stringify({ product_name: $json.product_name, product_type: $json.product_type || 'ทั่วไป', price: $json.price || '', target_audience: $json.target_audience || 'คนไทยทั่วไป', user_id: $json.user_id || 'n8n-anonymous' }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "call-hermes-bridge",
+      "name": "🤖 Call Hermes Bridge",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [640, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const script = $input.first().json;\n\n// Format script as readable text\nconst formatted = `🎬 TikTok Script\n━━━━━━━━━━━━━━━━━━━━\n⚡ Hook (3 วิ)\\n${script.hook}\\n\\n📖 เนื้อหา (20 วิ)\\n${script.content}\\n\\n📣 CTA (7 วิ)\\n${script.cta}\\n\\n#️⃣ Hashtag\\n${script.hashtags.join(' ')}\\n\\n📊 คะแนน: ${script.score}/100\\n💡 ${script.tips}\\n━━━━━━━━━━━━━━━━━━━━`;\n\nreturn [{\n  json: {\n    ...script,\n    formatted_text: formatted,\n    success: true,\n    source: 'hermes-agent'\n  }\n}];"
+      },
+      "id": "format-output",
+      "name": "📝 Format Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 240]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": "={{ $env.GOOGLE_SHEET_ID }}",
+        "sheetName": "Scripts",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "timestamp": "={{ $now.format('DD/MM/YYYY HH:mm') }}",
+            "product_name": "={{ $('🌐 Webhook Trigger').item.json.product_name }}",
+            "hook": "={{ $json.hook }}",
+            "content": "={{ $json.content }}",
+            "cta": "={{ $json.cta }}",
+            "hashtags": "={{ $json.hashtags.join(', ') }}",
+            "score": "={{ $json.score }}",
+            "user_id": "={{ $('🌐 Webhook Trigger').item.json.user_id || 'anonymous' }}"
+          }
+        }
+      },
+      "id": "save-to-sheets",
+      "name": "📊 Save to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [1080, 180],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-creds",
+          "name": "Google Sheets"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('📝 Format Output').item.json) }}"
+      },
+      "id": "respond-success",
+      "name": "✅ Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1080, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 400,
+        "responseBody": "{\"error\": \"กรุณาระบุชื่อสินค้า (product_name)\", \"success\": false}"
+      },
+      "id": "respond-error",
+      "name": "❌ Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-webhook",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "telegram-webhook",
+      "name": "📱 Telegram Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 520],
+      "webhookId": "openthai-telegram"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json;\nconst message = body.message || {};\nconst text = message.text || '';\nconst chatId = message.chat?.id;\nconst userId = String(message.from?.id || 'tg-user');\n\n// Parse /script command\nif (text.startsWith('/script ')) {\n  const productName = text.replace('/script ', '').trim();\n  return [{ json: { chat_id: chatId, product_name: productName, user_id: userId, is_valid: true } }];\n}\n\nreturn [{ json: { chat_id: chatId, is_valid: false, raw_text: text } }];"
+      },
+      "id": "parse-telegram",
+      "name": "🔍 Parse Telegram Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 520]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8001/api/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-API-Key", "value": "={{ $env.BRIDGE_API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={{ JSON.stringify({ product_name: $json.product_name, user_id: $json.user_id }) }}"
+      },
+      "id": "call-hermes-telegram",
+      "name": "🤖 Hermes (Telegram)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [640, 520]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('🔍 Parse Telegram Command').item.json.chat_id }}",
+        "text": "={{ $json.formatted_text || 'ขออภัย เกิดข้อผิดพลาดครับ' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "send-telegram",
+      "name": "📤 Send Telegram Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1080, 520],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot-creds",
+          "name": "OpenThai Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "🌐 Webhook Trigger": {
+      "main": [[ { "node": "✅ Validate Input", "type": "main", "index": 0 } ]]
+    },
+    "✅ Validate Input": {
+      "main": [
+        [ { "node": "🤖 Call Hermes Bridge", "type": "main", "index": 0 } ],
+        [ { "node": "❌ Respond Error", "type": "main", "index": 0 } ]
+      ]
+    },
+    "🤖 Call Hermes Bridge": {
+      "main": [[ { "node": "📝 Format Output", "type": "main", "index": 0 } ]]
+    },
+    "📝 Format Output": {
+      "main": [
+        [ { "node": "📊 Save to Google Sheets", "type": "main", "index": 0 } ],
+        [ { "node": "✅ Respond Success", "type": "main", "index": 0 } ]
+      ]
+    },
+    "📱 Telegram Webhook": {
+      "main": [[ { "node": "🔍 Parse Telegram Command", "type": "main", "index": 0 } ]]
+    },
+    "🔍 Parse Telegram Command": {
+      "main": [[ { "node": "🤖 Hermes (Telegram)", "type": "main", "index": 0 } ]]
+    },
+    "🤖 Hermes (Telegram)": {
+      "main": [[ { "node": "📤 Send Telegram Reply", "type": "main", "index": 0 } ]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": ["openthai-ai", "hermes-agent", "tiktok-script"]
+}

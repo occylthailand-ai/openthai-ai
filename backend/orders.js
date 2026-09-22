@@ -4,6 +4,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import { RATE } from './config/limits.js';
 
 // new → confirmed → packed → shipped → out_for_delivery → delivered (/ cancelled)
 const ORDER_STATUS = ['new', 'confirmed', 'packed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
@@ -161,8 +162,8 @@ export function createOrders(dataDir, opts = {}) {
     return { mode: useSB ? 'supabase' : 'file', total: list.length, byStatus, revenue, recent: list.slice(0, 20) };
   }
 
-  const orderLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 10, message: { success: false, error: 'สั่งซื้อบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
-  const trackLimiter = rateLimit({ windowMs: 60 * 1000, max: 30 });
+  const orderLimiter = rateLimit({ ...RATE.order,      message: { success: false, error: 'สั่งซื้อบ่อยเกินไป กรุณารอแล้วลองใหม่' } });
+  const trackLimiter = rateLimit({ ...RATE.orderTrack });
   const router = express.Router();
   const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error('[orders route]', e.message); res.status(500).json({ success: false, error: 'order error' }); });
 

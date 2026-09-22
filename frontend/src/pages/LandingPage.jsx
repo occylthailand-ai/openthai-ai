@@ -89,18 +89,24 @@ export default function LandingPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#080812', color: '#f8fafc', fontFamily: "'Inter','Sarabun',sans-serif", overflowX: 'hidden' }}>
+      <style>{`
+        @media (max-width: 480px) {
+          .landing-nav-ghost { display: none !important; }
+          .landing-demo-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
 
       {/* Growth hooks: spin wheel · exit-intent · streak · live social proof */}
       <GrowthHooks />
 
       {/* ── NAV ─────────────────────────────────────────────────────────── */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(8,8,18,0.85)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '14px 5%', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
           <LogoEmblem size={32} />
-          <span style={{ fontWeight: 900, fontSize: 18, background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Openthai.ai</span>
-          <span style={{ fontSize: 11, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 20, padding: '2px 8px', color: '#a5b4fc' }}>v10.0 · 18 Skills</span>
+          <span style={{ fontWeight: 900, fontSize: 18, background: 'linear-gradient(90deg,#fe2c55,#6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', whiteSpace: 'nowrap' }}>Openthai.ai</span>
+          <span style={{ fontSize: 11, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.4)', borderRadius: 20, padding: '2px 8px', color: '#a5b4fc', whiteSpace: 'nowrap' }}>v10.0 · 18 Skills</span>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', flexShrink: 0 }}>
           <LanguageSwitcher />
           <button onClick={() => navigate('/earn')} style={{ ...ghostBtn, color: '#6ee7b7', borderColor: 'rgba(16,185,129,0.4)' }}>💸 หารายได้</button>
           <button onClick={() => navigate('/affiliate')} style={ghostBtn}>{t('nav.affiliate')}</button>
@@ -170,7 +176,7 @@ export default function LandingPage() {
             <span style={{ fontSize: 12, color: '#475569', marginLeft: 8 }}>{t('demo.title')}</span>
           </div>
           <div style={{ padding: 24 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div className="landing-demo-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
               <div style={demoBox}>
                 <div style={demoLabel}>{t('demo.hook.label')}</div>
                 <div style={demoText}>{t('demo.hook.text')}</div>

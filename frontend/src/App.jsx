@@ -10,6 +10,7 @@ import ScrollToTop from './components/ScrollToTop';
 import { apiUrl } from './apiBase';
 import { hydrateSync } from './cloudSync';
 import VoiceCommander from './components/VoiceCommander';
+import ConsentBanner from './components/ConsentBanner';
 
 // หน้าอื่นๆ — lazy load (code-split ต่อ route · โหลดเฉพาะตอนเปิด ลดขนาด bundle แรก)
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
@@ -87,6 +88,23 @@ const SkillsCatalogPage = lazy(() => import('./pages/SkillsCatalogPage'));
 const StarterKitPage = lazy(() => import('./pages/StarterKitPage'));
 const AssistantPage = lazy(() => import('./pages/AssistantPage'));
 
+// ── Pages จาก master line (wave7-10) — merged เข้า architecture lazy load ─────
+const ProducerOnboardingPage = lazy(() => import('./pages/ProducerOnboardingPage'));
+const IntermediaryPortalPage = lazy(() => import('./pages/IntermediaryPortalPage'));
+const CreativeGuildPage = lazy(() => import('./pages/CreativeGuildPage'));
+const WorkflowMonitorPage = lazy(() => import('./pages/WorkflowMonitorPage'));
+const TrendProductHunterPage = lazy(() => import('./pages/TrendProductHunterPage'));
+const CustomerFinderPage = lazy(() => import('./pages/CustomerFinderPage'));
+const HopePage = lazy(() => import('./pages/HopePage'));
+const AffiliateEveryonePage = lazy(() => import('./pages/AffiliateEveryonePage'));
+const InvestorGuidePage = lazy(() => import('./pages/InvestorGuidePage'));
+const GlobalConnectPage = lazy(() => import('./pages/GlobalConnectPage'));
+const TaxCalculatorPage = lazy(() => import('./pages/TaxCalculatorPage'));
+const ProfessionalPortalPage = lazy(() => import('./pages/ProfessionalPortalPage'));
+const ProducerAdminPage = lazy(() => import('./pages/ProducerAdminPage'));
+const ErrorHunterPage = lazy(() => import('./pages/ErrorHunterPage'));
+const ConsumerPortalPublicPage = lazy(() => import('./pages/ConsumerPortalPage'));
+
 // Fallback ระหว่างโหลดหน้า (lazy chunk)
 function PageLoader() {
   return (
@@ -97,7 +115,6 @@ function PageLoader() {
     </div>
   );
 }
-
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
@@ -133,6 +150,7 @@ function App() {
       <ToastProvider>
         <Router>
           <ScrollToTop />
+          <ConsentBanner />
           <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route
@@ -234,6 +252,29 @@ function App() {
             <Route path="/portals/gov-intl" element={<GovIntlPortalPage />} />
             <Route path="/portals/intl-org" element={<IntlOrgPortalPage />} />
             <Route path="/portals/foundation" element={<FoundationPortalPage />} />
+            {/* Pages จาก master line (wave7-10) */}
+            {/* Creative Guild — Public */}
+            <Route path="/creative-guild" element={<CreativeGuildPage />} />
+            {/* Consumer Portal — Public (กลุ่ม 4: ผู้บริโภค) */}
+            <Route path="/consumer" element={<ConsumerPortalPublicPage />} />
+            {/* Intermediary Portal — Public (กลุ่ม 2: คนกลาง) */}
+            <Route path="/intermediary" element={<IntermediaryPortalPage />} />
+            {/* Professional Portal — Public (กลุ่ม 6: วิชาชีพ) */}
+            <Route path="/professional" element={<ProfessionalPortalPage />} />
+            {/* Producer Onboarding — Public */}
+            <Route path="/producer" element={<ProducerOnboardingPage />} />
+            {/* Producer Admin — Login required */}
+            <Route path="/producer/admin" element={isAuthenticated ? <ProducerAdminPage /> : <Navigate to="/login" />} />
+            {/* Error Hunter — Login required */}
+            <Route path="/error-hunter" element={isAuthenticated ? <ErrorHunterPage /> : <Navigate to="/login" />} />
+            <Route path="/workflow" element={isAuthenticated ? <WorkflowMonitorPage /> : <Navigate to="/login" />} />
+            <Route path="/trend-hunter" element={<TrendProductHunterPage />} />
+            <Route path="/customer-finder" element={<CustomerFinderPage />} />
+            <Route path="/hope" element={<HopePage />} />
+            <Route path="/affiliate-everyone" element={<AffiliateEveryonePage />} />
+            <Route path="/investor-guide" element={<InvestorGuidePage />} />
+            <Route path="/global-connect" element={<GlobalConnectPage />} />
+            <Route path="/tax-calculator" element={<TaxCalculatorPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           </Suspense>

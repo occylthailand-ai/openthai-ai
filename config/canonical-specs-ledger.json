@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "name": "OpenThaiAi Canonical Specs Ledger - Layer C",
+  "defaultStatus": "READY_FOR_SOURCE_BINDING",
+  "entries": [
+    {
+      "id": "core-philosophy-v1",
+      "title": "Ground truth, derived state, and fair human decisions",
+      "status": "BOUND",
+      "sourcePath": "docs/ai-memory/core-philosophy.json",
+      "sourceVersion": "1.0.0",
+      "owner": "OpenThaiAi repository maintainers",
+      "sha256": "e16866652c300d31df1983275e32727df776134e6c4dfb8d7abfaf55f4237800",
+      "approval": {
+        "status": "approved",
+        "actor": "human:repository-owner",
+        "approvedAt": "2026-09-08T23:25:29.555+07:00",
+        "reason": "Explicit request to implement this engine under the existing core philosophy and human-approval boundaries."
+      }
+    }
+  ]
+}

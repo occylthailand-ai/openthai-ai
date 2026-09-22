@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-22T18:30:17.328Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (58 commit(s) ahead of main)
+Generated: 2026-09-22T18:33:11.511Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (59 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 141 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 142 commits, earliest 2026-06-23 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, @supabase/supabase-js, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,33 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-09-14 — Added a fail-closed Continuous Development Engine, not a self-deploying agent
+Asked to make repository improvement work continuous and automated, with an
+explicit boundary against unapproved self-modification or deployment. The real
+repo had Node.js scripts and CI quality checks, but no durable proposal state
+machine, canonical source binding, approval tiers, or tamper-evident local audit
+control plane. The existing `backend/agent-orchestrator.js` prepares AI prompts,
+and `backend/audit.js` is a best-effort HTTP audit sink; neither is safe to reuse
+as an execution authority.
+
+Decision: add a zero-dependency local CLI under
+`scripts/continuous-development/` with content-addressed proposal IDs,
+deterministic people-impact scoring, persisted/resumable state, distinct
+worker/critic actors, read-only quality gates, explicit R2/R3 human approval,
+compensation hooks, scheduler locks/backoff, structured logs, and a JSONL
+SHA-256 audit chain. Canonical references are accepted only when a Layer-C
+ledger entry is `BOUND` and its path, version, owner, SHA-256, and human
+approval all match the current source.
+
+Safety boundary: execution defaults to dry-run and is disabled for live actions;
+subprocesses use fixed argv with `shell:false`, a minimal non-secret environment,
+workspace/executable allowlists, time/output limits, and hard blocks on shell,
+remote/deployment tools, mutating Git commands, dynamic Node evaluation, and npm
+install/publish/deploy operations. There is no push, merge, deploy, credential,
+or self-update path. Mutating actions require a configured compensation command;
+uncertain outcomes stop for human recovery rather than retrying. CI now runs the
+targeted CDE guardrail suite.
 
 ### 2026-09-07 — Content Blueprint: pasted 8-part content structure encoded as a real tool, not prose
 A large re-categorized content taxonomy was pasted into the session (Maslow
@@ -667,20 +694,20 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 38 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 84 route components resolved
+- ✅ **Route components exist on disk** — all 99 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
-- ℹ️ **11 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
+- ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- 3505c55 chore: sync PROJECT_STATUS.md [skip ci] (61 minutes ago)
+- 914b300 chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
+- 3505c55 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
 - ec66790 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - 7ed3fe6 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - e798e72 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
 - 8d88c79 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
 - 4a31dc9 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
 - a972c19 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- b75e24f chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
@@ -726,7 +753,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S37 | Blueprint Coverage Radar | `GET /api/blueprint/coverage` | active |
 | S38 | Blueprint Development Brief | `POST /api/blueprint/develop` | active |
 
-## Route map (84 routes)
+## Route map (99 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -812,9 +839,24 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /portals/gov-intl | GovIntlPortalPage | public |
 | /portals/intl-org | IntlOrgPortalPage | public |
 | /portals/foundation | FoundationPortalPage | public |
+| /creative-guild | CreativeGuildPage | public |
+| /consumer | ConsumerPortalPublicPage | public |
+| /intermediary | IntermediaryPortalPage | public |
+| /professional | ProfessionalPortalPage | public |
+| /producer | ProducerOnboardingPage | public |
+| /producer/admin | ProducerAdminPage | auth |
+| /error-hunter | ErrorHunterPage | auth |
+| /workflow | WorkflowMonitorPage | auth |
+| /trend-hunter | TrendProductHunterPage | public |
+| /customer-finder | CustomerFinderPage | public |
+| /hope | HopePage | public |
+| /affiliate-everyone | AffiliateEveryonePage | public |
+| /investor-guide | InvestorGuidePage | public |
+| /global-connect | GlobalConnectPage | public |
+| /tax-calculator | TaxCalculatorPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 34 files)
+## Backend modules (backend/*.js — 35 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `agent-orchestrator.js` | 66 | — |
@@ -822,35 +864,36 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `audit.js` | 60 | @ts-check |
 | `auth.js` | 190 | JWT |
 | `bank-phase2.js` | 641 | Loans |
+| `consent.js` | 197 | เวอร์ชัน Privacy Notice — เพิ่มทุกครั้งที่แก้ไขนโยบาย |
 | `content-blueprint.js` | 282 | Content Blueprint — พิมพ์เขียวโครงสร้างเนื้อหา 8 หมวด (Maslow + มิติดิจิทัล + 7 กลุ่มอุตสาหกรรม) |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
-| `credits.js` | 202 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
+| `credits.js` | 203 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
 | `digital-bank.js` | 571 | Helpers |
-| `disputes.js` | 279 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
+| `disputes.js` | 280 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
 | `logger.js` | 96 | @ts-check |
-| `matching.js` | 336 | Matching Engine — จับคู่ B2B / B2C / B2G / B2B2C / C2B / G2G / G2B |
+| `matching.js` | 337 | Matching Engine — จับคู่ B2B / B2C / B2G / B2B2C / C2B / G2G / G2B |
 | `mcp-handler.js` | 249 | Implements Model Context Protocol (MCP) so Claude and other AI agents |
 | `omise-payment.js` | 170 | PromptPay QR · Credit Card · Subscription Billing |
 | `openapi.js` | 702 | Auto-served at GET /api/openapi.json | Interactive docs at GET /api-docs |
-| `orders.js` | 184 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
+| `orders.js` | 185 | Orders — สั่งซื้อ + ติดตามสถานะจัดส่ง (สต๊อก→แพ็ค→ส่ง→ถึงปลายทาง→เซ็นรับ) |
 | `portal-leads.js` | 98 | Portal Leads — captures submissions from the /portals/* landing pages |
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
-| `preflight.js` | 230 | ═══════════════════════════════════════════════════════════════════════════════ |
-| `producers.js` | 160 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
+| `preflight.js` | 231 | ═══════════════════════════════════════════════════════════════════════════════ |
+| `producers.js` | 161 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThaiAi |
 | `rag-pipeline.js` | 133 | --- Embedding --- |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
 | `server.js` | 7992 | Vercel serverless detection |
-| `tenant-manager.js` | 254 | Each tenant (store/business) gets: |
+| `tenant-manager.js` | 250 | Each tenant (store/business) gets: |
 | `vault.js` | 90 | — |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
-| `video-generator.js` | 204 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
-| `voice-commander.js` | 259 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
-| `webhook-system.js` | 223 | Push events to registered subscriber endpoints instead of polling. |
-| `zero-trust.js` | 142 | ===== JWT Verification ===== |
+| `video-generator.js` | 206 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
+| `voice-commander.js` | 261 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
+| `webhook-system.js` | 225 | Push events to registered subscriber endpoints instead of polling. |
+| `zero-trust.js` | 143 | ===== JWT Verification ===== |
 
 ## Admin panel tabs (frontend/src/i18n/admin.js)
 - 📊 ภาพรวม
@@ -877,14 +920,12 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
 
-## Environment variables (63 referenced in backend code, 58 documented in .env.example)
+## Environment variables (63 referenced in backend code, 108 documented in .env.example)
 ⚠️ Referenced in code but missing from `backend/.env.example`:
 - DEPLOY_REGION
 - EMBED_MODEL
 - LOG_LEVEL
-- OPENAI_API_KEY
 - SUPABASE_SERVICE_ROLE_KEY
-- VAULT_MASTER_KEY
 
 ## Migration files present (backend/migrations/)
 Presence here means the SQL exists in the repo — it does **not** mean it has been run against the live Supabase project. Verify in the Supabase SQL Editor.
@@ -900,6 +941,7 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 005_user_sync.sql
 - 006_order_disputes.sql
 - 007_portal_leads.sql
+- 008_pdpa_consents.sql
 - 008_vault_ledger.sql
 - 009_digital_bank.sql
 - 010_bank_phase2.sql
