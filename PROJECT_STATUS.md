@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-23T22:34:24.290Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (101 commit(s) ahead of main)
+Generated: 2026-09-23T23:35:53.316Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (103 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 333 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 335 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, @supabase/supabase-js, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -325,7 +325,7 @@ Asked to "keep going." Re-ran the same two systematic checks used earlier this
 session (diff frontend `apiUrl()` calls against registered backend routes; audit
 every `DELETE`/admin mutation route for `checkAdminKey`) — found **nothing new**
 in either. All 9 real money/state-changing admin endpoints already gated, no
-orthaned frontend calls, env-var docs still 100%. Not manufacturing busywork to
+orphaned frontend calls, env-var docs still 100%. Not manufacturing busywork to
 pad this out — a clean scan is a legitimate result.
 
 Found one small real gap left over from the producer/affiliate funnel fix itself:
@@ -700,14 +700,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- fc6ca52 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 27 (2026-09-23T22:24:00Z) (2 minutes ago)
-- c4ec426 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 26 (2026-09-23T21:09:00Z) (77 minutes ago)
-- 815917e chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 25 (2026-09-23T21:09:00Z) (2 hours ago)
-- 5362f57 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 24 (2026-09-23T20:00:21Z) (2 hours ago)
-- 3fc7984 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 23 (2026-09-23T18:46:23Z) (4 hours ago)
-- 35e84b2 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 22 (2026-09-23T17:38:10Z) (5 hours ago)
-- 890e23c chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 21 (2026-09-23T16:26:27Z) (6 hours ago)
-- 5201918 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 20 (2026-09-23T15:16:26Z) (7 hours ago)
+- 86ee88a chore: regenerate PROJECT_STATUS.md [skip ci] (0 minutes ago)
+- f9a3774 chore: regenerate PROJECT_STATUS.md [skip ci] (4 minutes ago)
+- 54795b6 chore: regenerate PROJECT_STATUS.md [skip ci] (56 minutes ago)
+- fc6ca52 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 27 (2026-09-23T22:24:00Z) (66 minutes ago)
+- c4ec426 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 26 (2026-09-23T21:09:00Z) (2 hours ago)
+- 815917e chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 25 (2026-09-23T21:09:00Z) (3 hours ago)
+- 5362f57 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 24 (2026-09-23T20:00:21Z) (3 hours ago)
+- 3fc7984 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 23 (2026-09-23T18:46:23Z) (5 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
