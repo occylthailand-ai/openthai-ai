@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-23T05:03:06.691Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (79 commit(s) ahead of main)
+Generated: 2026-09-23T05:14:42.507Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (80 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 311 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 312 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, @supabase/supabase-js, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -164,7 +164,7 @@ there — proving it's genuinely persisted server-side, not just local
 component state.
 
 ### 2026-07-03 — Rejected: fabricated "Creator Discovery Agent" + fake production telemetry; built the real cost/quality tracking it was dressed around instead
-Pasted content (same pattern as the earlier "Grok"/"Loop" messages, now in
+Pasted content (same pattern as the earlier "Grok""Loop" messages, now in
 TypeScript with a "🌌 Core Layer Rules 1-25 Activated" banner) claimed a
 "Consumer & Creator Discovery Agent v1.0" (zod-validated TypeScript class
 that scrapes/profiles real TikTok/IG/YouTube creators and generates
@@ -700,10 +700,10 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- c1d1a67 chore: sync PROJECT_STATUS.md [skip ci] (1 minute ago)
-- 4de8af1 chore: sync PROJECT_STATUS.md [skip ci] (17 minutes ago)
-- 92b517a chore: sync PROJECT_STATUS.md [skip ci] (22 minutes ago)
-- a00def7 chore: sync PROJECT_STATUS.md [skip ci] (32 minutes ago)
+- a2fa4d7 chore: sync PROJECT_STATUS.md [skip ci] (3 minutes ago)
+- 0f3d818 chore: sync PROJECT_STATUS.md [skip ci] (13 minutes ago)
+- 92b517a chore: sync PROJECT_STATUS.md [skip ci] (29 minutes ago)
+- a00def7 chore: sync PROJECT_STATUS.md [skip ci] (39 minutes ago)
 - f670cd4 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
 - b488847 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
 - 4f47125 chore: sync PROJECT_STATUS.md [skip ci] (4 hours ago)
