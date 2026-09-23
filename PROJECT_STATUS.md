@@ -713,7 +713,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Skills registry (38 total, 36 active, 2 need setup)
 | ID | Name | Endpoint | Status |
-|---|---|---|---------|
+|---|---|---|---|
 | S1 | RCCF Prompt | `POST /api/generate` | active |
 | S2 | Taste Check | `POST /api/generate` | active |
 | S3 | Master Prompt | `POST /api/generate` | active |
