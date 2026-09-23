@@ -4,10 +4,6 @@
     "api/index.js": {
       "includeFiles": "backend/**",
       "maxDuration": 60
-    },
-    "api/index.py": {
-      "runtime": "python3.11",
-      "maxDuration": 30
     }
   },
   "rewrites": [

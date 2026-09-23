@@ -11,6 +11,38 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-09-23 — แก้ Vercel deploy พัง 3 โปรเจกต์ (root cause: `api/index.py` เป็นเศษที่หลงมาจาก merge 78 commits)
+PR #99 (AI Worker) ขึ้น CI แดงทันทีที่ push — 3 Vercel deployment (`openthai-ai`,
+`openthai-ai-backend`, `openthai-ai-npxn`) fail พร้อมกัน ตรวจสอบก่อนว่าเป็นความผิดของ
+PR นี้หรือไม่ ด้วยการเช็ค commit status ของ `main` HEAD (`8b297c4`, ฐานของ PR นี้) ผ่าน
+GitHub public API โดยตรง (`GET /repos/.../commits/8b297c4.../status`) — **พบว่า main
+พังแบบเดียวกันอยู่แล้วตั้งแต่ 2026-09-22T23:33Z** ก่อนที่ PR นี้จะมีอยู่ด้วยซ้ำ ยืนยันว่า
+ไม่ใช่ความผิดของ diff ใน PR #99
+
+Root cause ที่เจอ: `vercel.json` (root) ประกาศ `functions."api/index.py"` (runtime
+python3.11) ซึ่งชี้ไปที่ `api/index.py` → `from backend.main import app` — แต่
+`backend/` ไม่มี `__init__.py` (ไม่ใช่ Python package ที่ import แบบนี้ได้) และไฟล์นี้ก็
+ไม่ตรงกับสัญญาที่ `api/CLAUDE.md` เขียนไว้เองว่า "This directory contains only one
+file: index.js" ตรวจสอบเพิ่มพบว่า backend Python (FastAPI, `backend/main.py`) มี
+deploy target ของตัวเองอยู่แล้ว (`backend/Procfile`, `backend/railway.toml`,
+`backend/nixpacks.toml`, `backend/Dockerfile` — รันด้วย `uvicorn main:app` จากใน
+`backend/` โดยตรง ไม่เคยเป็น `backend.main`) นั่นคือ Render/Railway/Docker ไม่ใช่
+Vercel — สรุปได้ว่า `api/index.py` เป็นเศษที่หลุดมาตอน merge `backup/master-20260922`
+(commit `53b0559`, "vercel.json ... merged" ตามข้อความ merge commit) ที่ดึง config
+เก่าจากอีกสายมาทับ โดยไม่มีใครตั้งใจให้ Vercel build Python function ตัวนี้จริง
+
+Fix: ลบ `functions."api/index.py"` ออกจาก `vercel.json` และลบไฟล์ `api/index.py` ทิ้ง
+(ไม่แตะ `backend/main.py` หรือ config ของ Render/Railway/Docker — Python backend นั้น
+ยังอยู่ครบ แค่เอาออกจาก Vercel ที่มันไม่เคยควรอยู่ตั้งแต่แรก) คืนสภาพให้ตรงกับสัญญาที่
+`api/CLAUDE.md` เขียนไว้เดิม
+
+ยังไม่ยืนยัน 100%: ไม่มีสิทธิ์เข้าถึง Vercel dashboard/log จริงในแซนด์บ็อกซ์นี้
+(`vercel.com`/`api.vercel.com` ถูก network policy บล็อก) จึงพิสูจน์เชิงสาเหตุจาก
+หลักฐานทางอ้อม (สัญญาที่ขัดแย้งกันเอง + package ที่ import ไม่ได้จริง) ไม่ใช่จาก build
+log ตรง ๆ — ถ้า push นี้แล้ว Vercel ยังแดงอยู่ ต้องดู log จริงต่อ
+
+---
+
 ### 2026-09-23 — เพิ่ม AI Worker: งาน AI อัตโนมัติต่อเนื่อง + fallback จริงข้าม provider + ผูกแผน subscription
 รับคำสั่งให้สร้างเครื่องมือที่ "ทำงานต่อเนื่องอัตโนมัติ มีรายได้/ระบบคิดเงินชัดเจน
 ติดตั้งบนมือถือได้ ทำงาน 24 ชม. และสลับช่องทางอัตโนมัติถ้าช่องทางหลักมีปัญหา"

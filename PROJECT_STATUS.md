@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-23T15:07:22.813Z · branch `claude/wizardly-mccarthy-5ispv7` (2 commit(s) ahead of main)
+Generated: 2026-09-23T15:15:23.904Z · branch `claude/wizardly-mccarthy-5ispv7` (3 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 134 commits, earliest 2026-06-18 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 135 commits, earliest 2026-06-18 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,38 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-09-23 — แก้ Vercel deploy พัง 3 โปรเจกต์ (root cause: `api/index.py` เป็นเศษที่หลงมาจาก merge 78 commits)
+PR #99 (AI Worker) ขึ้น CI แดงทันทีที่ push — 3 Vercel deployment (`openthai-ai`,
+`openthai-ai-backend`, `openthai-ai-npxn`) fail พร้อมกัน ตรวจสอบก่อนว่าเป็นความผิดของ
+PR นี้หรือไม่ ด้วยการเช็ค commit status ของ `main` HEAD (`8b297c4`, ฐานของ PR นี้) ผ่าน
+GitHub public API โดยตรง (`GET /repos/.../commits/8b297c4.../status`) — **พบว่า main
+พังแบบเดียวกันอยู่แล้วตั้งแต่ 2026-09-22T23:33Z** ก่อนที่ PR นี้จะมีอยู่ด้วยซ้ำ ยืนยันว่า
+ไม่ใช่ความผิดของ diff ใน PR #99
+
+Root cause ที่เจอ: `vercel.json` (root) ประกาศ `functions."api/index.py"` (runtime
+python3.11) ซึ่งชี้ไปที่ `api/index.py` → `from backend.main import app` — แต่
+`backend/` ไม่มี `__init__.py` (ไม่ใช่ Python package ที่ import แบบนี้ได้) และไฟล์นี้ก็
+ไม่ตรงกับสัญญาที่ `api/CLAUDE.md` เขียนไว้เองว่า "This directory contains only one
+file: index.js" ตรวจสอบเพิ่มพบว่า backend Python (FastAPI, `backend/main.py`) มี
+deploy target ของตัวเองอยู่แล้ว (`backend/Procfile`, `backend/railway.toml`,
+`backend/nixpacks.toml`, `backend/Dockerfile` — รันด้วย `uvicorn main:app` จากใน
+`backend/` โดยตรง ไม่เคยเป็น `backend.main`) นั่นคือ Render/Railway/Docker ไม่ใช่
+Vercel — สรุปได้ว่า `api/index.py` เป็นเศษที่หลุดมาตอน merge `backup/master-20260922`
+(commit `53b0559`, "vercel.json ... merged" ตามข้อความ merge commit) ที่ดึง config
+เก่าจากอีกสายมาทับ โดยไม่มีใครตั้งใจให้ Vercel build Python function ตัวนี้จริง
+
+Fix: ลบ `functions."api/index.py"` ออกจาก `vercel.json` และลบไฟล์ `api/index.py` ทิ้ง
+(ไม่แตะ `backend/main.py` หรือ config ของ Render/Railway/Docker — Python backend นั้น
+ยังอยู่ครบ แค่เอาออกจาก Vercel ที่มันไม่เคยควรอยู่ตั้งแต่แรก) คืนสภาพให้ตรงกับสัญญาที่
+`api/CLAUDE.md` เขียนไว้เดิม
+
+ยังไม่ยืนยัน 100%: ไม่มีสิทธิ์เข้าถึง Vercel dashboard/log จริงในแซนด์บ็อกซ์นี้
+(`vercel.com`/`api.vercel.com` ถูก network policy บล็อก) จึงพิสูจน์เชิงสาเหตุจาก
+หลักฐานทางอ้อม (สัญญาที่ขัดแย้งกันเอง + package ที่ import ไม่ได้จริง) ไม่ใช่จาก build
+log ตรง ๆ — ถ้า push นี้แล้ว Vercel ยังแดงอยู่ ต้องดู log จริงต่อ
 
 ---
 
@@ -792,14 +824,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **11 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_ai_worker.sql
 
 ## Recent commits
-- ca2b6a5 feat: add AI Worker — recurring automated AI tasks with real provider fallback + plan-gated credits (39 minutes ago)
+- 886a0c8 chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
+- ca2b6a5 feat: add AI Worker — recurring automated AI tasks with real provider fallback + plan-gated credits (47 minutes ago)
 - 8b297c4 docs: record merge of backup/master-20260922 (78 commits) into main [skip ci] (16 hours ago)
 - 53b0559 Merge branch 'backup/master-20260922' into main (22 hours ago)
-- 3851578 Merge pull request #97 from occylthailand-ai/claude/limits-fix-tool-d5b119 (23 hours ago)
-- 9cba54c chore: sync PROJECT_STATUS.md [skip ci] (23 hours ago)
+- 3851578 Merge pull request #97 from occylthailand-ai/claude/limits-fix-tool-d5b119 (24 hours ago)
+- 9cba54c chore: sync PROJECT_STATUS.md [skip ci] (24 hours ago)
 - 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (24 hours ago)
 - a95a884 feat(wave10): mobile responsive + PWA improvements + AR HUD spec (9 days ago)
-- 9f248d6 feat(eval-9.5): commit thai_eval_runner.py + add --dry-run + tests (9 days ago)
 
 ## Production health (⚠️ HTTP 403)
 
