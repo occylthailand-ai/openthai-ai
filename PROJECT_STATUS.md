@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-23T14:26:15.193Z · branch `claude/wizardly-mccarthy-5ispv7` (1 commit(s) ahead of main)
+Generated: 2026-09-23T15:07:22.813Z · branch `claude/wizardly-mccarthy-5ispv7` (2 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 133 commits, earliest 2026-06-18 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 134 commits, earliest 2026-06-18 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -23,6 +23,61 @@ whichever assistant last generated a confident-sounding paragraph.
 Add a new dated entry at the top when a real decision is made or a scope-creep
 proposal is rejected. Do not delete old entries — a wrong idea that was already
 rejected once is worth remembering so it doesn't get silently re-proposed.
+
+---
+
+### 2026-09-23 — เพิ่ม AI Worker: งาน AI อัตโนมัติต่อเนื่อง + fallback จริงข้าม provider + ผูกแผน subscription
+รับคำสั่งให้สร้างเครื่องมือที่ "ทำงานต่อเนื่องอัตโนมัติ มีรายได้/ระบบคิดเงินชัดเจน
+ติดตั้งบนมือถือได้ ทำงาน 24 ชม. และสลับช่องทางอัตโนมัติถ้าช่องทางหลักมีปัญหา"
+คำขอเดิมพ่วงมากับเนื้อหาที่ขอให้เขียนสคริปต์สมัครบัญชี/โพสต์อัตโนมัติข้าม Facebook,
+Instagram, X, LINE, TikTok พร้อมผูกพร้อมเพย์ — **ส่วนนั้นไม่ทำ** เพราะขัดกับนโยบายที่
+ระบบมีอยู่แล้วเอง (ดู `/api/scheduler/process` ใน server.js: "ToS-compliant: ไม่โพสต์
+แทนในช่องที่ไม่ได้เป็นเจ้าของ") — บอทสมัคร/โพสต์แทนบัญชีคนอื่นผิด ToS ของแทบทุกแพลตฟอร์ม
+และเป็นความเสี่ยงด้านความปลอดภัย/สแปมที่ไม่ควรสร้างเพิ่ม
+
+สิ่งที่สร้างจริงแทน — `backend/ai-worker.js` (mount เป็น `/api/ai-worker/*` ใน server.js):
+- ผู้ใช้ตั้ง "งาน AI" (prompt + ความถี่) ครั้งเดียว ระบบรันให้อัตโนมัติต่อเนื่อง แล้ว
+  **สร้างข้อความ** (ไอเดียคอนเทนต์/สรุป/ร่างข้อความ) เก็บไว้ให้ผู้ใช้มาอ่าน/คัดลอกไปใช้เอง
+  — ไม่ใช่บอทโพสต์แทน จึงไม่ชนนโยบายเดิมของโปรเจกต์
+- **Fallback ข้าม AI provider จริงตอน runtime** (ไม่ใช่แค่เช็คว่ามี key ไหน เหมือนโค้ดเดิม
+  ใน server.js บรรทัด ~174–214): ลอง Anthropic ตรง → OpenRouter → Gemini ตามลำดับ, catch
+  error จริงแล้วลองตัวถัดไป — ทดสอบแล้วด้วย fake key ทั้ง 3 ตัว ยืนยันว่า code เดินไปครบ
+  ทั้ง 3 ช่องทางจริง (ดู attempts log ใน run record)
+- **ระบบคิดเงิน 2 ชั้น ใช้ของจริงที่มีอยู่แล้ว ไม่ประดิษฐ์ payment ใหม่**:
+  1) หัก 1 เครดิตจาก credit ledger เดิม (`credits.js`) ทุกครั้งที่รันสำเร็จ
+  2) จำนวนงานสูงสุด/ความถี่ต่ำสุดผูกกับ `SUBSCRIPTION_PLANS` จริงใน `omise-payment.js`
+     (free/pro ฿20/premier ฿30 ต่อเดือน ผ่าน Omise) ผ่าน config ใหม่ `AI_WORKER` ใน
+     `config/limits.js` — free = 1 งาน/วันละครั้ง, pro = 5 งาน/ชั่วโมงละครั้ง,
+     premier = 20 งาน/ทุก 15 นาที
+- **ทำงาน 24/7 จริงตามที่ deploy target รองรับ** (ไม่โอเวอร์เคลม): บน Railway/Docker
+  (backend มี Dockerfile/railway.toml อยู่แล้ว) ใช้ node-cron รันทุกนาที = ต่อเนื่องจริง;
+  บน Vercel serverless (production deploy จริงของโปรเจกต์นี้) ไม่มี long-running process
+  จึงใช้ Vercel Cron ยิง `GET /api/ai-worker/process` — เพิ่มไว้ใน vercel.json ที่ความถี่
+  วันละครั้ง (`0 7 * * *`) เพราะ crons อื่นทั้งหมดในไฟล์เดิมก็เป็นวันละครั้งเช่นกัน
+  (สอดคล้องกับข้อจำกัด cron frequency ของ Vercel Hobby plan) — ถ้าต้องการรันถี่กว่านี้จริง
+  บน Vercel ต้องอัปเกรด Vercel plan หรือย้ายไปรันแบบ persistent process
+- PWA: เพิ่ม route `/ai-worker` + การ์ดใน `AIToolsHub` + shortcut ใน `manifest.json`
+  (ของเดิมมี PWA ครบอยู่แล้ว — manifest/service worker/icons — ไม่ต้องสร้างใหม่)
+
+เสิร์ฟกลุ่มไหน (มาตรา 2): กลุ่ม 1 ผู้ผลิต และกลุ่ม 2 คนกลาง (auto-draft ไอเดียคอนเทนต์/
+ข้อความติดตามลูกค้าเป็นงานประจำที่กินเวลา) และกลุ่ม 3 แพลตฟอร์ม/Affiliate Creator
+(เครื่องมือ live ใหม่ใน AIToolsHub ที่ดึงคนกลับมาใช้แอปสม่ำเสมอ = ยิ่งใช้ยิ่งได้เครดิต
+จาก streak/spin เดิม)
+
+บั๊กที่เจอระหว่างทดสอบและแก้ไปด้วย (ไม่เกี่ยวกับฟีเจอร์นี้โดยตรง แต่บล็อกการทดสอบ):
+`backend/credits.js` เรียกใช้ `RATE.credits` แต่ไม่เคย `import { RATE }` จาก
+`config/limits.js` — ทำให้ `node server.js` crash ทันทีตอน boot (ก่อน PR นี้ก็เป็นแบบนี้
+อยู่แล้ว ไม่เกี่ยวกับ merge ล่าสุด) แก้แล้วด้วยการเพิ่ม import บรรทัดเดียว
+
+ยังไม่ได้ทำ / ข้อจำกัดที่รู้แล้ว:
+- ยังไม่ได้ run migration `009_ai_worker.sql` กับ Supabase จริง (ต้องรันเองผ่าน SQL Editor
+  ตาม convention ของโปรเจกต์ — ไม่มี auto-migration runner)
+- ยังไม่ได้ทดสอบกับ ANTHROPIC_API_KEY/GEMINI_API_KEY จริง (มีแต่ทดสอบด้วย fake key เพื่อ
+  ยืนยัน logic fallback — พฤติกรรมตอนคีย์ใช้งานได้จริงยังไม่ได้ยืนยันด้วยการรันจริง)
+- ยังไม่ได้เขียน automated test ในชุด `test:*` ของ backend (ทดสอบด้วยมือผ่าน curl ระหว่าง
+  พัฒนาเท่านั้น)
+- เพดานงานต่อคน/ความถี่ขั้นต่ำเป็นตัวเลขที่ตั้งเผื่อกันต้นทุน AI บาน ยังไม่มีข้อมูลจริงมา
+  ปรับ — ควรทบทวนหลังมีผู้ใช้จริง
 
 ---
 
@@ -737,14 +792,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **11 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_ai_worker.sql
 
 ## Recent commits
-- 8b297c4 docs: record merge of backup/master-20260922 (78 commits) into main [skip ci] (15 hours ago)
+- ca2b6a5 feat: add AI Worker — recurring automated AI tasks with real provider fallback + plan-gated credits (39 minutes ago)
+- 8b297c4 docs: record merge of backup/master-20260922 (78 commits) into main [skip ci] (16 hours ago)
 - 53b0559 Merge branch 'backup/master-20260922' into main (22 hours ago)
 - 3851578 Merge pull request #97 from occylthailand-ai/claude/limits-fix-tool-d5b119 (23 hours ago)
 - 9cba54c chore: sync PROJECT_STATUS.md [skip ci] (23 hours ago)
-- 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (23 hours ago)
+- 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (24 hours ago)
 - a95a884 feat(wave10): mobile responsive + PWA improvements + AR HUD spec (9 days ago)
 - 9f248d6 feat(eval-9.5): commit thai_eval_runner.py + add --dry-run + tests (9 days ago)
-- 5338223 security: harden .gitignore — fail-safe **/.env* + !**/.env.example exception (9 days ago)
 
 ## Production health (⚠️ HTTP 403)
 
