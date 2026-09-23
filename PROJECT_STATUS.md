@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-23T17:38:10.620Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (96 commit(s) ahead of main)
+Generated: 2026-09-23T18:46:23.220Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (96 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -700,14 +700,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- 97e48bb chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 22 (2026-09-23T17:36:30Z) (78 seconds ago)
-- 890e23c chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 21 (2026-09-23T16:26:27Z) (63 minutes ago)
-- 5201918 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 20 (2026-09-23T15:16:26Z) (2 hours ago)
-- 5ad63fa chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 4c90b07 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- e613950 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- bf13fc0 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 02b9c1d chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 35e84b2 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 22 (2026-09-23T17:38:10Z) (61 minutes ago)
+- 890e23c chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 21 (2026-09-23T16:26:27Z) (2 hours ago)
+- 5201918 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 20 (2026-09-23T15:16:26Z) (3 hours ago)
+- 5ad63fa chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 4c90b07 chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- e613950 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- bf13fc0 chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 02b9c1d chore: sync PROJECT_STATUS.md [skip ci] (8 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
