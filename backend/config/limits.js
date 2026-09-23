@@ -83,6 +83,12 @@ export const RATE = {
 
   // Order status polling (per IP)
   orderTrack: { windowMs: 60_000, max: 30 },
+
+  // AI Worker job CRUD (per IP)
+  aiWorker: { windowMs: 60_000, max: 30 },
+
+  // AI Worker manual "run now" (per IP) — separate/tighter, this triggers a real AI call
+  aiWorkerRun: { windowMs: 60_000, max: 6 },
 };
 
 // ── Plan entitlements ─────────────────────────────────────────────────────────
@@ -112,6 +118,17 @@ export const AI = {
 
   // MCP agent tool calls (mcp-handler.js)
   mcp: 4096,
+
+  // AI Worker scheduled/manual run (ai-worker.js) — kept small: these run unattended
+  worker: 800,
+};
+
+// ── AI Worker — recurring automated task limits, gated by SUBSCRIPTION_PLANS ───
+// (plan keys must match omise-payment.js SUBSCRIPTION_PLANS: free/pro/premier)
+export const AI_WORKER = {
+  free:    { maxJobs: 1,  minIntervalMinutes: 1440 }, // 1 งาน, รันได้ถี่สุดวันละครั้ง (ใช้เครดิตฟรีที่มี)
+  pro:     { maxJobs: 5,  minIntervalMinutes: 60   }, // 5 งาน, รันได้ถี่สุดทุกชั่วโมง
+  premier: { maxJobs: 20, minIntervalMinutes: 15   }, // 20 งาน, รันได้ถี่สุดทุก 15 นาที
 };
 
 // ── Credit / gamification caps ────────────────────────────────────────────────

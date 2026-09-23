@@ -86,6 +86,7 @@ const MatchingPage = lazy(() => import('./pages/MatchingPage'));
 const SkillsCatalogPage = lazy(() => import('./pages/SkillsCatalogPage'));
 const StarterKitPage = lazy(() => import('./pages/StarterKitPage'));
 const AssistantPage = lazy(() => import('./pages/AssistantPage'));
+const AIWorkerPage = lazy(() => import('./pages/AIWorkerPage'));
 
 // ── Pages จาก master line (wave7-10) — merged เข้า architecture lazy load ─────
 const ProducerOnboardingPage = lazy(() => import('./pages/ProducerOnboardingPage'));
@@ -170,6 +171,7 @@ function App() {
             />
             <Route path="/ai-generator" element={isAuthenticated ? <AIGeneratorPage /> : <Navigate to="/login" />} />
             <Route path="/ai-tools" element={isAuthenticated ? <AIToolsHub /> : <Navigate to="/login" />} />
+            <Route path="/ai-worker" element={<AIWorkerPage />} />
             <Route path="/agent" element={isAuthenticated ? <AgentPage /> : <Navigate to="/login" />} />
             <Route path="/skills" element={isAuthenticated ? <AISkillsPage /> : <Navigate to="/login" />} />
             <Route path="/skills-catalog" element={isAuthenticated ? <SkillsCatalogPage /> : <Navigate to="/login" />} />

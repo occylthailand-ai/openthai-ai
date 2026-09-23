@@ -4,10 +4,6 @@
     "api/index.js": {
       "includeFiles": "backend/**",
       "maxDuration": 60
-    },
-    "api/index.py": {
-      "runtime": "python3.11",
-      "maxDuration": 30
     }
   },
   "rewrites": [
@@ -32,6 +28,7 @@
     { "path": "/api/system/news-rag-clear",   "schedule": "0 4 * * *"  },
     { "path": "/api/autopost/process",        "schedule": "0 12 * * *" },
     { "path": "/api/progress/daily-report",   "schedule": "30 16 * * *" },
-    { "path": "/api/scheduler/process",       "schedule": "0 9 * * *" }
+    { "path": "/api/scheduler/process",       "schedule": "0 9 * * *" },
+    { "path": "/api/ai-worker/process",       "schedule": "0 7 * * *" }
   ]
 }

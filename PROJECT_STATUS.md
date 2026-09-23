@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-22T16:39:32.491Z · branch `merge/backup-into-main` (0 commit(s) ahead of main)
+Generated: 2026-09-23T15:16:00.059Z · branch `claude/wizardly-mccarthy-5ispv7` (3 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 224 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 307 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,130 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-09-23 — แก้ Vercel deploy พัง 3 โปรเจกต์ (root cause: `api/index.py` เป็นเศษที่หลงมาจาก merge 78 commits)
+PR #99 (AI Worker) ขึ้น CI แดงทันทีที่ push — 3 Vercel deployment (`openthai-ai`,
+`openthai-ai-backend`, `openthai-ai-npxn`) fail พร้อมกัน ตรวจสอบก่อนว่าเป็นความผิดของ
+PR นี้หรือไม่ ด้วยการเช็ค commit status ของ `main` HEAD (`8b297c4`, ฐานของ PR นี้) ผ่าน
+GitHub public API โดยตรง (`GET /repos/.../commits/8b297c4.../status`) — **พบว่า main
+พังแบบเดียวกันอยู่แล้วตั้งแต่ 2026-09-22T23:33Z** ก่อนที่ PR นี้จะมีอยู่ด้วยซ้ำ ยืนยันว่า
+ไม่ใช่ความผิดของ diff ใน PR #99
+
+Root cause ที่เจอ: `vercel.json` (root) ประกาศ `functions."api/index.py"` (runtime
+python3.11) ซึ่งชี้ไปที่ `api/index.py` → `from backend.main import app` — แต่
+`backend/` ไม่มี `__init__.py` (ไม่ใช่ Python package ที่ import แบบนี้ได้) และไฟล์นี้ก็
+ไม่ตรงกับสัญญาที่ `api/CLAUDE.md` เขียนไว้เองว่า "This directory contains only one
+file: index.js" ตรวจสอบเพิ่มพบว่า backend Python (FastAPI, `backend/main.py`) มี
+deploy target ของตัวเองอยู่แล้ว (`backend/Procfile`, `backend/railway.toml`,
+`backend/nixpacks.toml`, `backend/Dockerfile` — รันด้วย `uvicorn main:app` จากใน
+`backend/` โดยตรง ไม่เคยเป็น `backend.main`) นั่นคือ Render/Railway/Docker ไม่ใช่
+Vercel — สรุปได้ว่า `api/index.py` เป็นเศษที่หลุดมาตอน merge `backup/master-20260922`
+(commit `53b0559`, "vercel.json ... merged" ตามข้อความ merge commit) ที่ดึง config
+เก่าจากอีกสายมาทับ โดยไม่มีใครตั้งใจให้ Vercel build Python function ตัวนี้จริง
+
+Fix: ลบ `functions."api/index.py"` ออกจาก `vercel.json` และลบไฟล์ `api/index.py` ทิ้ง
+(ไม่แตะ `backend/main.py` หรือ config ของ Render/Railway/Docker — Python backend นั้น
+ยังอยู่ครบ แค่เอาออกจาก Vercel ที่มันไม่เคยควรอยู่ตั้งแต่แรก) คืนสภาพให้ตรงกับสัญญาที่
+`api/CLAUDE.md` เขียนไว้เดิม
+
+ยังไม่ยืนยัน 100%: ไม่มีสิทธิ์เข้าถึง Vercel dashboard/log จริงในแซนด์บ็อกซ์นี้
+(`vercel.com`/`api.vercel.com` ถูก network policy บล็อก) จึงพิสูจน์เชิงสาเหตุจาก
+หลักฐานทางอ้อม (สัญญาที่ขัดแย้งกันเอง + package ที่ import ไม่ได้จริง) ไม่ใช่จาก build
+log ตรง ๆ — ถ้า push นี้แล้ว Vercel ยังแดงอยู่ ต้องดู log จริงต่อ
+
+---
+
+### 2026-09-23 — เพิ่ม AI Worker: งาน AI อัตโนมัติต่อเนื่อง + fallback จริงข้าม provider + ผูกแผน subscription
+รับคำสั่งให้สร้างเครื่องมือที่ "ทำงานต่อเนื่องอัตโนมัติ มีรายได้/ระบบคิดเงินชัดเจน
+ติดตั้งบนมือถือได้ ทำงาน 24 ชม. และสลับช่องทางอัตโนมัติถ้าช่องทางหลักมีปัญหา"
+คำขอเดิมพ่วงมากับเนื้อหาที่ขอให้เขียนสคริปต์สมัครบัญชี/โพสต์อัตโนมัติข้าม Facebook,
+Instagram, X, LINE, TikTok พร้อมผูกพร้อมเพย์ — **ส่วนนั้นไม่ทำ** เพราะขัดกับนโยบายที่
+ระบบมีอยู่แล้วเอง (ดู `/api/scheduler/process` ใน server.js: "ToS-compliant: ไม่โพสต์
+แทนในช่องที่ไม่ได้เป็นเจ้าของ") — บอทสมัคร/โพสต์แทนบัญชีคนอื่นผิด ToS ของแทบทุกแพลตฟอร์ม
+และเป็นความเสี่ยงด้านความปลอดภัย/สแปมที่ไม่ควรสร้างเพิ่ม
+
+สิ่งที่สร้างจริงแทน — `backend/ai-worker.js` (mount เป็น `/api/ai-worker/*` ใน server.js):
+- ผู้ใช้ตั้ง "งาน AI" (prompt + ความถี่) ครั้งเดียว ระบบรันให้อัตโนมัติต่อเนื่อง แล้ว
+  **สร้างข้อความ** (ไอเดียคอนเทนต์/สรุป/ร่างข้อความ) เก็บไว้ให้ผู้ใช้มาอ่าน/คัดลอกไปใช้เอง
+  — ไม่ใช่บอทโพสต์แทน จึงไม่ชนนโยบายเดิมของโปรเจกต์
+- **Fallback ข้าม AI provider จริงตอน runtime** (ไม่ใช่แค่เช็คว่ามี key ไหน เหมือนโค้ดเดิม
+  ใน server.js บรรทัด ~174–214): ลอง Anthropic ตรง → OpenRouter → Gemini ตามลำดับ, catch
+  error จริงแล้วลองตัวถัดไป — ทดสอบแล้วด้วย fake key ทั้ง 3 ตัว ยืนยันว่า code เดินไปครบ
+  ทั้ง 3 ช่องทางจริง (ดู attempts log ใน run record)
+- **ระบบคิดเงิน 2 ชั้น ใช้ของจริงที่มีอยู่แล้ว ไม่ประดิษฐ์ payment ใหม่**:
+  1) หัก 1 เครดิตจาก credit ledger เดิม (`credits.js`) ทุกครั้งที่รันสำเร็จ
+  2) จำนวนงานสูงสุด/ความถี่ต่ำสุดผูกกับ `SUBSCRIPTION_PLANS` จริงใน `omise-payment.js`
+     (free/pro ฿20/premier ฿30 ต่อเดือน ผ่าน Omise) ผ่าน config ใหม่ `AI_WORKER` ใน
+     `config/limits.js` — free = 1 งาน/วันละครั้ง, pro = 5 งาน/ชั่วโมงละครั้ง,
+     premier = 20 งาน/ทุก 15 นาที
+- **ทำงาน 24/7 จริงตามที่ deploy target รองรับ** (ไม่โอเวอร์เคลม): บน Railway/Docker
+  (backend มี Dockerfile/railway.toml อยู่แล้ว) ใช้ node-cron รันทุกนาที = ต่อเนื่องจริง;
+  บน Vercel serverless (production deploy จริงของโปรเจกต์นี้) ไม่มี long-running process
+  จึงใช้ Vercel Cron ยิง `GET /api/ai-worker/process` — เพิ่มไว้ใน vercel.json ที่ความถี่
+  วันละครั้ง (`0 7 * * *`) เพราะ crons อื่นทั้งหมดในไฟล์เดิมก็เป็นวันละครั้งเช่นกัน
+  (สอดคล้องกับข้อจำกัด cron frequency ของ Vercel Hobby plan) — ถ้าต้องการรันถี่กว่านี้จริง
+  บน Vercel ต้องอัปเกรด Vercel plan หรือย้ายไปรันแบบ persistent process
+- PWA: เพิ่ม route `/ai-worker` + การ์ดใน `AIToolsHub` + shortcut ใน `manifest.json`
+  (ของเดิมมี PWA ครบอยู่แล้ว — manifest/service worker/icons — ไม่ต้องสร้างใหม่)
+
+เสิร์ฟกลุ่มไหน (มาตรา 2): กลุ่ม 1 ผู้ผลิต และกลุ่ม 2 คนกลาง (auto-draft ไอเดียคอนเทนต์/
+ข้อความติดตามลูกค้าเป็นงานประจำที่กินเวลา) และกลุ่ม 3 แพลตฟอร์ม/Affiliate Creator
+(เครื่องมือ live ใหม่ใน AIToolsHub ที่ดึงคนกลับมาใช้แอปสม่ำเสมอ = ยิ่งใช้ยิ่งได้เครดิต
+จาก streak/spin เดิม)
+
+บั๊กที่เจอระหว่างทดสอบและแก้ไปด้วย (ไม่เกี่ยวกับฟีเจอร์นี้โดยตรง แต่บล็อกการทดสอบ):
+`backend/credits.js` เรียกใช้ `RATE.credits` แต่ไม่เคย `import { RATE }` จาก
+`config/limits.js` — ทำให้ `node server.js` crash ทันทีตอน boot (ก่อน PR นี้ก็เป็นแบบนี้
+อยู่แล้ว ไม่เกี่ยวกับ merge ล่าสุด) แก้แล้วด้วยการเพิ่ม import บรรทัดเดียว
+
+ยังไม่ได้ทำ / ข้อจำกัดที่รู้แล้ว:
+- ยังไม่ได้ run migration `009_ai_worker.sql` กับ Supabase จริง (ต้องรันเองผ่าน SQL Editor
+  ตาม convention ของโปรเจกต์ — ไม่มี auto-migration runner)
+- ยังไม่ได้ทดสอบกับ ANTHROPIC_API_KEY/GEMINI_API_KEY จริง (มีแต่ทดสอบด้วย fake key เพื่อ
+  ยืนยัน logic fallback — พฤติกรรมตอนคีย์ใช้งานได้จริงยังไม่ได้ยืนยันด้วยการรันจริง)
+- ยังไม่ได้เขียน automated test ในชุด `test:*` ของ backend (ทดสอบด้วยมือผ่าน curl ระหว่าง
+  พัฒนาเท่านั้น)
+- เพดานงานต่อคน/ความถี่ขั้นต่ำเป็นตัวเลขที่ตั้งเผื่อกันต้นทุน AI บาน ยังไม่มีข้อมูลจริงมา
+  ปรับ — ควรทบทวนหลังมีผู้ใช้จริง
+
+---
+
+### 2026-09-23 — รวมสายงาน local master (78 commits) เข้า main เรียบร้อย; ลบ master + backup branch แล้ว
+หลังจาก PR #97 (limits centralization) เข้า main เรียบร้อย โปรเจกต์อีกระยะหนึ่งยังมี
+`master` เก่าในเครื่องที่มี commits ไม่เคย push ขึ้น remote (78 commits ตั้งแต่ wave7–10,
+XAdES, CDE, Mythos) — สองสายแยกกันนาน (merge-base `2e726246`; `main..master` = 78
+commits, `master..main` = 157 commits)
+
+Decision: merge เต็มรูปแบบทั้ง 78 commits เข้า main (ผู้สั่ง: project owner — มอบอำนาจ
+เต็ม 100%) ทำใน clean worktree (`merge/backup-into-main`) เพื่อเลี่ยง abort จาก
+untracked ไฟล์ ~1204 ไฟล์ใน repo หลัก
+
+ผล merge: commit `53b0559` — "Merge branch 'backup/master-20260922' into main"
+push ขึ้น origin/main แล้ว (ตรงกับ HEAD ของ local main)
+
+หลักการ resolve conflicts 15 ไฟล์: **HEAD เป็นฐาน + ดูดงาน backup เข้ามาทั้งหมด**
+- `backend/server.js` — imports รวม + mount `/api/consent` ของ backup
+- `frontend/src/App.jsx` — 70 lazy pages ของ HEAD + 15 pages ของ backup (lazy ต่อท้าย) + `<ConsentBanner />`
+- `package.json` / `backend/package.json` — scripts union (cde + limits + tests)
+- `backend/.env.example` — HEAD 49 ตัว + backup 50 ตัว (258 บรรทัด)
+- `vercel.json` — สอง entrypoint + security headers ของ HEAD
+- `run-tests.sh` / `generate-project-status.mjs` — รวมทั้งสองฝั่ง (git() helper แบบ array args ปลอดภัย shell injection)
+- `CLAUDE.md` / `DECISIONS_LOG.md` / `core-philosophy.json` — เก็บทั้งสองเวอร์ชัน
+- `PROJECT_STATUS.md` — regenerate จากสคริปต์
+- `.github/workflows/deploy.yml` — **คงการลบตาม HEAD** (backup มี deploy-backend/deploy-staging แทน)
+
+ตรวจสอบก่อน push (ผ่านหมด): `node --check` backend+scripts 0 fail, `bash -n run-tests.sh`
+ผ่าน, **limits-tool validate 25/25 + audit 30 match / 0 drift** (limits จาก PR #97
+ไม่ถูก merge ทับ), `npm run build` ผ่านจริง, consistency checks ของ generator ผ่าน
+
+Cleanup หลัง merge: ลบ branch `backup/master-20260922` (commits ยัง reachable จาก
+main — ปลอดภัย), ลบ local branch + worktree `merge/backup-into-main` (deregister แล้ว,
+เหลือแค่ directory เปล่าที่ process อื่นถืออยู่ — ปิดโปรแกรมแล้วลบได้เอง), repo หลัก
+sync ถึง `53b0559` (reset --hard; ตรวจแล้ว 0 collision กับ untracked ไฟล์,
+`frontend/node_modules` ไม่ถูกแตะ)
+
+สิ่งที่ยังไม่ได้ทำ (จงใจ): untracked junk ~1200 ไฟล์ใน repo หลักไม่ได้แตะ (ไม่เกี่ยวข้อง
+กับ merge); `PROJECT_STATUS.md` จะ re-generate เองใน CI ถัดไป
 
 ### 2026-09-14 — Added a fail-closed Continuous Development Engine, not a self-deploying agent
 Asked to make repository improvement work continuous and automated, with an
@@ -694,20 +818,20 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 38 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 98 route components resolved
+- ✅ **Route components exist on disk** — all 99 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
-- ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql
+- ℹ️ **11 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_ai_worker.sql
 
 ## Recent commits
-- 3851578 Merge pull request #97 from occylthailand-ai/claude/limits-fix-tool-d5b119 (59 minutes ago)
-- 9cba54c chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (72 minutes ago)
-- 392c8db feat(blueprint): Content Blueprint — เครื่องมือพัฒนาต่อยอดจากโครงสร้างเนื้อหา 8 หมวด (#94) (2 weeks ago)
-- 61475aa feat: หมวด 2-6, 10, 12 — โค้ดครบ 7 หมวดที่ขาด (5 weeks ago)
-- e37f988 feat(enterprise): request-ID tracing, structured logging, error handler, audit trail (#90) (8 weeks ago)
-- 6657b77 feat: structured logger, migration tracker, auth tests (#89) (8 weeks ago)
-- 88926ec feat(claude): OpenHands microagents + scaffold tool + improved checks (#88) (8 weeks ago)
+- 634f4f7 fix(deploy): remove stray api/index.py breaking all Vercel deployments (21 seconds ago)
+- 886a0c8 chore: sync PROJECT_STATUS.md [skip ci] (8 minutes ago)
+- ca2b6a5 feat: add AI Worker — recurring automated AI tasks with real provider fallback + plan-gated credits (48 minutes ago)
+- 8b297c4 docs: record merge of backup/master-20260922 (78 commits) into main [skip ci] (16 hours ago)
+- 53b0559 Merge branch 'backup/master-20260922' into main (22 hours ago)
+- 3851578 Merge pull request #97 from occylthailand-ai/claude/limits-fix-tool-d5b119 (24 hours ago)
+- 9cba54c chore: sync PROJECT_STATUS.md [skip ci] (24 hours ago)
+- 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (24 hours ago)
 
 ## Production health (⚠️ HTTP 500)
 
@@ -753,7 +877,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S37 | Blueprint Coverage Radar | `GET /api/blueprint/coverage` | active |
 | S38 | Blueprint Development Brief | `POST /api/blueprint/develop` | active |
 
-## Route map (98 routes)
+## Route map (99 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -762,6 +886,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /facebook | FacebookFeedPage | auth |
 | /ai-generator | AIGeneratorPage | auth |
 | /ai-tools | AIToolsHub | auth |
+| /ai-worker | AIWorkerPage | public |
 | /agent | AgentPage | auth |
 | /skills | AISkillsPage | auth |
 | /skills-catalog | SkillsCatalogPage | auth |
@@ -855,11 +980,12 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /tax-calculator | TaxCalculatorPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 33 files)
+## Backend modules (backend/*.js — 34 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `agent-orchestrator.js` | 66 | — |
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
+| `ai-worker.js` | 436 | AI Worker — งานอัตโนมัติที่ทำงานต่อเนื่อง 24/7 พร้อมระบบคิดเงินชัดเจน |
 | `audit.js` | 60 | @ts-check |
 | `auth.js` | 190 | JWT |
 | `consent.js` | 197 | เวอร์ชัน Privacy Notice — เพิ่มทุกครั้งที่แก้ไขนโยบาย |
@@ -882,11 +1008,11 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
 | `rag-pipeline.js` | 133 | --- Embedding --- |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7981 | Vercel serverless detection |
+| `server.js` | 7994 | Vercel serverless detection |
 | `tenant-manager.js` | 250 | Each tenant (store/business) gets: |
 | `vault.js` | 90 | — |
-| `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
+| `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
 | `video-generator.js` | 206 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
 | `voice-commander.js` | 261 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
 | `webhook-system.js` | 225 | Push events to registered subscriber endpoints instead of polling. |
@@ -916,6 +1042,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - `0 12 * * *` → /api/autopost/process
 - `30 16 * * *` → /api/progress/daily-report
 - `0 9 * * *` → /api/scheduler/process
+- `0 7 * * *` → /api/ai-worker/process
 
 ## Environment variables (63 referenced in backend code, 108 documented in .env.example)
 ⚠️ Referenced in code but missing from `backend/.env.example`:
@@ -940,6 +1067,7 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 007_portal_leads.sql
 - 008_pdpa_consents.sql
 - 008_vault_ledger.sql
+- 009_ai_worker.sql
 - FULL-MIGRATION.sql
 - credits-schema.sql
 - orders-schema.sql
