@@ -40,6 +40,13 @@
       "description": "เครื่องมือสำหรับเกษตรกรและผู้ประกอบการ",
       "url": "/producer",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "AI Worker",
+      "short_name": "AI Worker",
+      "description": "ตั้งงาน AI อัตโนมัติทำงานต่อเนื่อง 24/7",
+      "url": "/ai-worker",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "categories": ["productivity", "business"],

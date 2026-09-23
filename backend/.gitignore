@@ -12,3 +12,5 @@ data/products.json
 data/stock_movements.json
 data/memory_*.json
 data/portal_leads.json
+data/ai_worker_jobs.json
+data/ai_worker_runs.json

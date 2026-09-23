@@ -59,6 +59,17 @@ const TOOLS = [
     badge: 'BETA',
   },
   {
+    id: 'ai-worker',
+    icon: '🤖',
+    name: 'AI Worker',
+    desc: 'ตั้งงาน AI ครั้งเดียว ให้ทำงานสร้างไอเดีย/สรุป/ร่างข้อความอัตโนมัติต่อเนื่องตามรอบเวลา สลับผู้ให้บริการ AI ให้เองถ้าตัวหลักมีปัญหา',
+    tags: ['อัตโนมัติ', '24/7', 'Credits'],
+    color: '#22c55e',
+    status: 'live',
+    route: '/ai-worker',
+    badge: 'NEW',
+  },
+  {
     id: 'affiliate',
     icon: '🔗',
     name: 'Affiliate Link Generator',

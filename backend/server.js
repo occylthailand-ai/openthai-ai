@@ -28,6 +28,7 @@ import {
 import { createCorporateSystem, DEPARTMENTS } from './corporate-system.js';
 import { createPRSystem } from './pr-communications.js';
 import { createCredits } from './credits.js';
+import { createAIWorker } from './ai-worker.js';
 import { createProducers } from './producers.js';
 import { createOrders } from './orders.js';
 import { createDisputes } from './disputes.js';
@@ -93,6 +94,9 @@ const tenants   = createTenantManager(WRITE_DATA_DIR);
 const corporate = createCorporateSystem(WRITE_DATA_DIR);
 const pr        = createPRSystem(WRITE_DATA_DIR);
 const credits   = createCredits(WRITE_DATA_DIR);
+// getEntitlement is a hoisted `function` declared further below (plan lookup for Omise subscriptions) —
+// safe to reference here since function declarations are hoisted with their body in the same module scope.
+const aiWorker  = createAIWorker(WRITE_DATA_DIR, { credits, getEntitlement });
 const producers = createProducers(WRITE_DATA_DIR);
 const orders    = createOrders(WRITE_DATA_DIR, { onNewOrder: async (order) => { sendOrderNotification(order); try { await producers.decrementStock(order.producer_email, order.qty); } catch (_) { /* ignore */ } } });
 const disputes  = createDisputes(WRITE_DATA_DIR, {
@@ -138,6 +142,8 @@ app.use((req, res, next) => {
 
 // Credit ledger routes — /api/credits, /credits/checkin, /credits/spin, /credits/claim
 app.use(credits.router);
+// AI Worker — recurring automated AI task routes — /api/ai-worker/*
+app.use(aiWorker.router);
 // Producer onboarding routes — /api/producers/apply, /producers/categories, /api/catalog
 app.use(producers.router);
 // Order routes — /api/orders
@@ -5031,6 +5037,13 @@ async function lineBroadcast(text) {
   if (!res.ok) throw new Error(`LINE broadcast error ${res.status}`);
   return res.json().catch(() => ({}));
 }
+
+// ── node-cron: AI Worker — รันงานที่ถึงกำหนดทุกนาที (persistent server เท่านั้น —
+// Railway/Docker ใช้อันนี้ให้ทำงานต่อเนื่อง 24/7 จริง; Vercel serverless ไม่รัน setInterval/cron
+// ค้างได้ ใช้ Vercel Cron ยิง GET /api/ai-worker/process แทน ดู vercel.json → crons) ─────────
+if (!IS_VERCEL) cron.schedule('* * * * *', async () => {
+  try { await aiWorker.runDueJobs(); } catch (e) { console.error('[ai-worker cron]', e.message); }
+});
 
 // ── node-cron: ทุกชั่วโมงที่นาที :05 (local only — Vercel ใช้ Vercel Cron แทน) ─
 if (!IS_VERCEL) cron.schedule('5 * * * *', async () => {
