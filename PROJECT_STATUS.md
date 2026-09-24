@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-24T15:04:55.245Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (117 commit(s) ahead of main)
+Generated: 2026-09-24T16:15:36.402Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (117 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -700,14 +700,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- 22f3af4 chore: sync PROJECT_STATUS.md [skip ci] (2 minutes ago)
-- c6c93db chore: sync PROJECT_STATUS.md [skip ci] (65 minutes ago)
-- 759718a chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- c81a78a chore: regenerate PROJECT_STATUS.md [skip ci] (3 hours ago)
-- c2cc551 chore: regenerate PROJECT_STATUS.md [skip ci] (5 hours ago)
-- a18f520 chore: regenerate PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 4e3ded4 chore: regenerate PROJECT_STATUS.md [skip ci] (7 hours ago)
-- 18d51ff chore: regenerate PROJECT_STATUS.md [skip ci] (8 hours ago)
+- 7f958d4 chore: sync PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- c6c93db chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 759718a chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- c81a78a chore: regenerate PROJECT_STATUS.md [skip ci] (5 hours ago)
+- c2cc551 chore: regenerate PROJECT_STATUS.md [skip ci] (6 hours ago)
+- a18f520 chore: regenerate PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 4e3ded4 chore: regenerate PROJECT_STATUS.md [skip ci] (8 hours ago)
+- 18d51ff chore: regenerate PROJECT_STATUS.md [skip ci] (9 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
@@ -890,7 +890,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `vault.js` | 90 | — |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
 | `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
-| `video-generator.js` | 206 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
+| `video-generator.js` | 206 | รองรัป: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
 | `voice-commander.js` | 261 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
 | `webhook-system.js` | 225 | Push events to registered subscriber endpoints instead of polling. |
 | `zero-trust.js` | 143 | ===== JWT Verification ===== |
