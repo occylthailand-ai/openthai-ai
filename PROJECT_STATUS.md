@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-24T01:57:32.513Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (105 commit(s) ahead of main)
+Generated: 2026-09-24T03:08:36.729Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (106 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 337 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 338 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, @supabase/supabase-js, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -164,7 +164,7 @@ there — proving it's genuinely persisted server-side, not just local
 component state.
 
 ### 2026-07-03 — Rejected: fabricated "Creator Discovery Agent" + fake production telemetry; built the real cost/quality tracking it was dressed around instead
-Pasted content (same pattern as the earlier "Grok" messages, now in
+Pasted content (same pattern as the earlier "Grok"/"Loop" messages, now in
 TypeScript with a "🌌 Core Layer Rules 1-25 Activated" banner) claimed a
 "Consumer & Creator Discovery Agent v1.0" (zod-validated TypeScript class
 that scrapes/profiles real TikTok/IG/YouTube creators and generates
@@ -700,14 +700,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- 40743d0 chore: regenerate PROJECT_STATUS.md [skip ci] (73 seconds ago)
-- 76d5dac chore: regenerate PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 3132d68 chore: regenerate PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 54795b6 chore: regenerate PROJECT_STATUS.md [skip ci] (3 hours ago)
-- fc6ca52 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 27 (2026-09-23T22:24:00Z) (3 hours ago)
-- c4ec426 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 26 (2026-09-23T21:09:00Z) (5 hours ago)
-- 815917e chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 25 (2026-09-23T21:09:00Z) (6 hours ago)
-- 5362f57 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 24 (2026-09-23T20:00:21Z) (6 hours ago)
+- f49ae9f chore: regenerate PROJECT_STATUS.md [skip ci] (2 minutes ago)
+- 071f5be chore: regenerate PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- 76d5dac chore: regenerate PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 3132d68 chore: regenerate PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 54795b6 chore: regenerate PROJECT_STATUS.md [skip ci] (4 hours ago)
+- fc6ca52 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 27 (2026-09-23T22:24:00Z) (5 hours ago)
+- c4ec426 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 26 (2026-09-23T21:09:00Z) (6 hours ago)
+- 815917e chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 25 (2026-09-23T21:09:00Z) (7 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
