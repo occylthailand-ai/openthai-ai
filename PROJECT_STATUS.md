@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-24T09:04:32.275Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (112 commit(s) ahead of main)
+Generated: 2026-09-24T10:14:52.310Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (112 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -700,14 +700,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- d7613a3 chore: regenerate PROJECT_STATUS.md [skip ci] (83 seconds ago)
-- 4e3ded4 chore: regenerate PROJECT_STATUS.md [skip ci] (63 minutes ago)
-- 18d51ff chore: regenerate PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 9459bf9 chore: regenerate PROJECT_STATUS.md [skip ci] (2 hours ago)
-- a71c4ae chore: regenerate PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 263e1aa chore: regenerate PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 461563c chore: regenerate PROJECT_STATUS.md [skip ci] (6 hours ago)
-- 071f5be chore: regenerate PROJECT_STATUS.md [skip ci] (7 hours ago)
+- a18f520 chore: regenerate PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- 4e3ded4 chore: regenerate PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 18d51ff chore: regenerate PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 9459bf9 chore: regenerate PROJECT_STATUS.md [skip ci] (3 hours ago)
+- a71c4ae chore: regenerate PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 263e1aa chore: regenerate PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 461563c chore: regenerate PROJECT_STATUS.md [skip ci] (7 hours ago)
+- 071f5be chore: regenerate PROJECT_STATUS.md [skip ci] (8 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
