@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-24T18:38:37.146Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (119 commit(s) ahead of main)
+Generated: 2026-09-24T19:50:32.566Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (121 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 351 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 353 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, @supabase/supabase-js, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -636,8 +636,7 @@ Pasted content (same style as the earlier "Grok" messages) described OpenThaiAi 
 having its own Thai tokenizer, Hugging Face-compatible model weights, vLLM
 high-throughput serving, and an RLHF/RLAIF training pipeline. **None of this
 exists.** Verified: `backend/package.json` depends on `@anthropic-ai/sdk` and
-`@google/generative-ai`; `backend/server.js` calls `anthropic.messages.create({
-model: 'claude-haiku-4-5-20251001', ... })` and `GoogleGenerativeAI(...)` —
+`@google/generative-ai`; `backend/server.js` calls `anthropic.messages.create({\nmodel: 'claude-haiku-4-5-20251001', ... })` and `GoogleGenerativeAI(...)` —
 hosted API calls to Claude and Gemini, not a self-hosted/trained model. A
 repo-wide grep for "tokenizer", "vLLM", "huggingface", "RLHF", "fine-tun" found
 zero real hits (one unrelated match inside the `nodemailer` dependency). This
@@ -700,14 +699,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- ec94d4e chore: sync PROJECT_STATUS.md [skip ci] (62 minutes ago)
-- 0232c24 chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 7f958d4 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
-- c6c93db chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 759718a chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
-- c81a78a chore: regenerate PROJECT_STATUS.md [skip ci] (7 hours ago)
-- c2cc551 chore: regenerate PROJECT_STATUS.md [skip ci] (8 hours ago)
-- a18f520 chore: regenerate PROJECT_STATUS.md [skip ci] (9 hours ago)
+- b1301df chore: sync PROJECT_STATUS.md [skip ci] (2 minutes ago)
+- 5a10091 chore: sync PROJECT_STATUS.md [skip ci] (64 minutes ago)
+- ec94d4e chore: sync PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 0232c24 chore: sync PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 7f958d4 chore: sync PROJECT_STATUS.md [skip ci] (5 hours ago)
+- c6c93db chore: sync PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 759718a chore: sync PROJECT_STATUS.md [skip ci] (7 hours ago)
+- c81a78a chore: regenerate PROJECT_STATUS.md [skip ci] (8 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
