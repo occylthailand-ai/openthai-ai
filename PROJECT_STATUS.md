@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-22T16:39:32.491Z · branch `merge/backup-into-main` (0 commit(s) ahead of main)
+Generated: 2026-09-24T15:09:46.837Z · branch `claude/focused-volta-g56zq5` (1 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 224 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 305 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -25,6 +25,43 @@ proposal is rejected. Do not delete old entries — a wrong idea that was alread
 rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
+
+### 2026-09-23 — รวมสายงาน local master (78 commits) เข้า main เรียบร้อย; ลบ master + backup branch แล้ว
+หลังจาก PR #97 (limits centralization) เข้า main เรียบร้อย โปรเจกต์อีกระยะหนึ่งยังมี
+`master` เก่าในเครื่องที่มี commits ไม่เคย push ขึ้น remote (78 commits ตั้งแต่ wave7–10,
+XAdES, CDE, Mythos) — สองสายแยกกันนาน (merge-base `2e726246`; `main..master` = 78
+commits, `master..main` = 157 commits)
+
+Decision: merge เต็มรูปแบบทั้ง 78 commits เข้า main (ผู้สั่ง: project owner — มอบอำนาจ
+เต็ม 100%) ทำใน clean worktree (`merge/backup-into-main`) เพื่อเลี่ยง abort จาก
+untracked ไฟล์ ~1204 ไฟล์ใน repo หลัก
+
+ผล merge: commit `53b0559` — "Merge branch 'backup/master-20260922' into main"
+push ขึ้น origin/main แล้ว (ตรงกับ HEAD ของ local main)
+
+หลักการ resolve conflicts 15 ไฟล์: **HEAD เป็นฐาน + ดูดงาน backup เข้ามาทั้งหมด**
+- `backend/server.js` — imports รวม + mount `/api/consent` ของ backup
+- `frontend/src/App.jsx` — 70 lazy pages ของ HEAD + 15 pages ของ backup (lazy ต่อท้าย) + `<ConsentBanner />`
+- `package.json` / `backend/package.json` — scripts union (cde + limits + tests)
+- `backend/.env.example` — HEAD 49 ตัว + backup 50 ตัว (258 บรรทัด)
+- `vercel.json` — สอง entrypoint + security headers ของ HEAD
+- `run-tests.sh` / `generate-project-status.mjs` — รวมทั้งสองฝั่ง (git() helper แบบ array args ปลอดภัย shell injection)
+- `CLAUDE.md` / `DECISIONS_LOG.md` / `core-philosophy.json` — เก็บทั้งสองเวอร์ชัน
+- `PROJECT_STATUS.md` — regenerate จากสคริปต์
+- `.github/workflows/deploy.yml` — **คงการลบตาม HEAD** (backup มี deploy-backend/deploy-staging แทน)
+
+ตรวจสอบก่อน push (ผ่านหมด): `node --check` backend+scripts 0 fail, `bash -n run-tests.sh`
+ผ่าน, **limits-tool validate 25/25 + audit 30 match / 0 drift** (limits จาก PR #97
+ไม่ถูก merge ทับ), `npm run build` ผ่านจริง, consistency checks ของ generator ผ่าน
+
+Cleanup หลัง merge: ลบ branch `backup/master-20260922` (commits ยัง reachable จาก
+main — ปลอดภัย), ลบ local branch + worktree `merge/backup-into-main` (deregister แล้ว,
+เหลือแค่ directory เปล่าที่ process อื่นถืออยู่ — ปิดโปรแกรมแล้วลบได้เอง), repo หลัก
+sync ถึง `53b0559` (reset --hard; ตรวจแล้ว 0 collision กับ untracked ไฟล์,
+`frontend/node_modules` ไม่ถูกแตะ)
+
+สิ่งที่ยังไม่ได้ทำ (จงใจ): untracked junk ~1200 ไฟล์ใน repo หลักไม่ได้แตะ (ไม่เกี่ยวข้อง
+กับ merge); `PROJECT_STATUS.md` จะ re-generate เองใน CI ถัดไป
 
 ### 2026-09-14 — Added a fail-closed Continuous Development Engine, not a self-deploying agent
 Asked to make repository improvement work continuous and automated, with an
@@ -700,14 +737,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql
 
 ## Recent commits
-- 3851578 Merge pull request #97 from occylthailand-ai/claude/limits-fix-tool-d5b119 (59 minutes ago)
-- 9cba54c chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (72 minutes ago)
-- 392c8db feat(blueprint): Content Blueprint — เครื่องมือพัฒนาต่อยอดจากโครงสร้างเนื้อหา 8 หมวด (#94) (2 weeks ago)
-- 61475aa feat: หมวด 2-6, 10, 12 — โค้ดครบ 7 หมวดที่ขาด (5 weeks ago)
-- e37f988 feat(enterprise): request-ID tracing, structured logging, error handler, audit trail (#90) (8 weeks ago)
-- 6657b77 feat: structured logger, migration tracker, auth tests (#89) (8 weeks ago)
-- 88926ec feat(claude): OpenHands microagents + scaffold tool + improved checks (#88) (8 weeks ago)
+- f110096 Regenerate PROJECT_STATUS.md (48 seconds ago)
+- 8b297c4 docs: record merge of backup/master-20260922 (78 commits) into main [skip ci] (2 days ago)
+- 53b0559 Merge branch 'backup/master-20260922' into main (2 days ago)
+- 3851578 Merge pull request #97 from occylthailand-ai/claude/limits-fix-tool-d5b119 (2 days ago)
+- 9cba54c chore: sync PROJECT_STATUS.md [skip ci] (2 days ago)
+- 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (2 days ago)
+- a95a884 feat(wave10): mobile responsive + PWA improvements + AR HUD spec (10 days ago)
+- 9f248d6 feat(eval-9.5): commit thai_eval_runner.py + add --dry-run + tests (10 days ago)
 
 ## Production health (⚠️ HTTP 500)
 
@@ -885,8 +922,8 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `server.js` | 7981 | Vercel serverless detection |
 | `tenant-manager.js` | 250 | Each tenant (store/business) gets: |
 | `vault.js` | 90 | — |
-| `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
+| `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
 | `video-generator.js` | 206 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
 | `voice-commander.js` | 261 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
 | `webhook-system.js` | 225 | Push events to registered subscriber endpoints instead of polling. |
