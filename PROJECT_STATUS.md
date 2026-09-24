@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-23T23:35:53.316Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (103 commit(s) ahead of main)
+Generated: 2026-09-24T00:46:29.145Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (103 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -636,7 +636,7 @@ Pasted content (same style as the earlier "Grok" messages) described OpenThaiAi 
 having its own Thai tokenizer, Hugging Face-compatible model weights, vLLM
 high-throughput serving, and an RLHF/RLAIF training pipeline. **None of this
 exists.** Verified: `backend/package.json` depends on `@anthropic-ai/sdk` and
-`@google/generative-ai`; `backend/server.js` calls `anthropic.messages.create({
+`@google/generative-ai`; `backend/server.js` calls `anthropic.messages.create({'
 model: 'claude-haiku-4-5-20251001', ... })` and `GoogleGenerativeAI(...)` —
 hosted API calls to Claude and Gemini, not a self-hosted/trained model. A
 repo-wide grep for "tokenizer", "vLLM", "huggingface", "RLHF", "fine-tun" found
@@ -700,14 +700,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- 86ee88a chore: regenerate PROJECT_STATUS.md [skip ci] (0 minutes ago)
-- f9a3774 chore: regenerate PROJECT_STATUS.md [skip ci] (4 minutes ago)
-- 54795b6 chore: regenerate PROJECT_STATUS.md [skip ci] (56 minutes ago)
-- fc6ca52 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 27 (2026-09-23T22:24:00Z) (66 minutes ago)
-- c4ec426 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 26 (2026-09-23T21:09:00Z) (2 hours ago)
-- 815917e chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 25 (2026-09-23T21:09:00Z) (3 hours ago)
-- 5362f57 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 24 (2026-09-23T20:00:21Z) (3 hours ago)
-- 3fc7984 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 23 (2026-09-23T18:46:23Z) (5 hours ago)
+- 3132d68 chore: regenerate PROJECT_STATUS.md [skip ci] (63 minutes ago)
+- 54795b6 chore: regenerate PROJECT_STATUS.md [skip ci] (2 hours ago)
+- fc6ca52 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 27 (2026-09-23T22:24:00Z) (2 hours ago)
+- c4ec426 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 26 (2026-09-23T21:09:00Z) (3 hours ago)
+- 815917e chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 25 (2026-09-23T21:09:00Z) (4 hours ago)
+- 5362f57 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 24 (2026-09-23T20:00:21Z) (5 hours ago)
+- 3fc7984 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 23 (2026-09-23T18:46:23Z) (6 hours ago)
+- 35e84b2 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 22 (2026-09-23T17:38:10Z) (7 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
