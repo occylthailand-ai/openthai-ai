@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-24T04:20:16.911Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (107 commit(s) ahead of main)
+Generated: 2026-09-24T05:29:56.957Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (107 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -700,14 +700,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- 724854d chore: regenerate PROJECT_STATUS.md [skip ci] (0 minutes ago)
-- ea65cf0 chore: regenerate PROJECT_STATUS.md [skip ci] (2 minutes ago)
-- 461563c chore: regenerate PROJECT_STATUS.md [skip ci] (64 minutes ago)
-- 071f5be chore: regenerate PROJECT_STATUS.md [skip ci] (2 hours ago)
-- 76d5dac chore: regenerate PROJECT_STATUS.md [skip ci] (3 hours ago)
-- 3132d68 chore: regenerate PROJECT_STATUS.md [skip ci] (5 hours ago)
-- 54795b6 chore: regenerate PROJECT_STATUS.md [skip ci] (6 hours ago)
-- fc6ca52 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 27 (2026-09-23T22:24:00Z) (6 hours ago)
+- 263e1aa chore: regenerate PROJECT_STATUS.md [skip ci] (62 minutes ago)
+- 461563c chore: regenerate PROJECT_STATUS.md [skip ci] (2 hours ago)
+- 071f5be chore: regenerate PROJECT_STATUS.md [skip ci] (3 hours ago)
+- 76d5dac chore: regenerate PROJECT_STATUS.md [skip ci] (5 hours ago)
+- 3132d68 chore: regenerate PROJECT_STATUS.md [skip ci] (6 hours ago)
+- 54795b6 chore: regenerate PROJECT_STATUS.md [skip ci] (7 hours ago)
+- fc6ca52 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 27 (2026-09-23T22:24:00Z) (7 hours ago)
+- c4ec426 chore: regenerate PROJECT_STATUS.md [skip ci] — Cycle 26 (2026-09-23T21:09:00Z) (8 hours ago)
 
 ## Production health (⚠️ HTTP 403)
 
