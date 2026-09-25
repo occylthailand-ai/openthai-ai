@@ -130,7 +130,7 @@ const canvaAdapter = {
       const r = await fetch('https://api.canva.com/rest/v1/designs', {
         method: 'POST',
         headers: { Authorization: `Bearer ${this.env()}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ design_type: { type: 'preset', name: 'instagram_post' }, title: catalog?.product_name || 'OpenThai AI Catalog' }),
+        body: JSON.stringify({ design_type: { type: 'preset', name: 'instagram_post' }, title: catalog?.product_name || 'OpenThaiAi Catalog' }),
       });
       const d = await r.json().catch(() => ({}));
       return r.ok && d.design ? { ok: true, status: 'created', edit_url: d.design.urls?.edit_url, design_id: d.design.id } : { ok: false, status: 'error', reason: d.message || `http_${r.status}` };

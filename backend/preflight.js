@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ═══════════════════════════════════════════════════════════════════════════════
-//  OpenThai.ai — Pre-launch Preflight Check
+//  OpenThaiAi — Pre-launch Preflight Check
 //  รัน (จาก backend/): node preflight.js
 //  ตรวจสอบว่า env vars, Supabase, Omise, AI API, SMTP พร้อมใช้งานก่อน go-live
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -58,7 +58,7 @@ async function httpPost(url, body, headers = {}) {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 console.log('\n' + '═'.repeat(60));
-console.log('  OpenThai.ai — Pre-launch Preflight Check');
+console.log('  OpenThaiAi — Pre-launch Preflight Check');
 console.log('  ' + new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }));
 console.log('═'.repeat(60));
 

@@ -8,7 +8,7 @@ import { buildContext, saveAgentMemory, recallAgentMemory } from './rag-pipeline
 const AGENT_REGISTRY = {
   'producer-agent':       { namespace: 'producer',      description: 'เกษตรกร โรงงาน OTOP' },
   'intermediary-agent':   { namespace: 'intermediary',  description: 'เทรดเดอร์ นายหน้า โลจิสติกส์' },
-  'platform-agent':       { namespace: 'platform',      description: 'แพลตฟอร์ม OpenThai.ai' },
+  'platform-agent':       { namespace: 'platform',      description: 'แพลตฟอร์ม OpenThaiAi' },
   'consumer-agent':       { namespace: 'consumer',      description: 'ผู้บริโภค สิทธิสวัสดิการ' },
   'ecosystem-agent':      { namespace: 'ecosystem',     description: 'นักพัฒนา หน่วยงานรัฐ' },
   'professional-agent':   { namespace: 'professional',  description: 'แพทย์ ทนาย นักบัญชี' },

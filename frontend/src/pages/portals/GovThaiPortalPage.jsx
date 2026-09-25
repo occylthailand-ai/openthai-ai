@@ -46,7 +46,7 @@ export default function GovThaiPortalPage() {
             {t.services.map((s,i) => <div key={i} style={{ display:'flex', gap:12, marginBottom:14, background:'#111', padding:'14px 18px', borderRadius:10 }}><span style={{ color:'#10b981' }}>▸</span><span style={{ color:'#ddd' }}>{s}</span></div>)}
             <div style={{ background:'#10b98111', border:'1px solid #10b98133', borderRadius:12, padding:20, marginTop:24 }}>
               <p style={{ color:'#10b981', fontWeight:700, margin:'0 0 8px' }}>MOU / บันทึกความเข้าใจ</p>
-              <p style={{ color:'#aaa', fontSize:13, margin:0 }}>OpenThai.ai พร้อมลงนาม MOU กับหน่วยงานรัฐทุกระดับ</p>
+              <p style={{ color:'#aaa', fontSize:13, margin:0 }}>OpenThaiAi พร้อมลงนาม MOU กับหน่วยงานรัฐทุกระดับ</p>
             </div>
           </div>
           <div style={{ background:'#111', borderRadius:16, padding:28, border:'1px solid #10b98133' }}>

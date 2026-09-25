@@ -185,7 +185,7 @@ export default function StrategyCenterPage() {
                 </h1>
               </div>
               <p style={{ color: '#64748b', margin: 0, fontSize: 14 }}>
-                OpenThai AI vs 8 Global Giants · 15 มิติ · GAP Analysis · Roadmap · Vision 2028
+                OpenThaiAi vs 8 Global Giants · 15 มิติ · GAP Analysis · Roadmap · Vision 2028
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
@@ -220,7 +220,7 @@ export default function StrategyCenterPage() {
                   <tr style={{ borderBottom: '2px solid rgba(99,102,241,0.4)' }}>
                     <th style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontWeight: 600, fontSize: 11, minWidth: 180 }}>มิติ / Dimension</th>
                     <th style={{ padding: '10px 14px', textAlign: 'center', color: '#10b981', fontWeight: 800, background: 'rgba(16,185,129,0.08)', minWidth: 100 }}>
-                      🇹🇭 OpenThai AI
+                      🇹🇭 OpenThaiAi
                     </th>
                     {COMPETITORS.map(c => (
                       <th key={c.id} onClick={() => setFocusCols(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : [...prev, c.id])}
@@ -539,10 +539,10 @@ export default function StrategyCenterPage() {
               <h3 style={s.h3}>🔗 Comparison SEO Pages — ใช้ Gap ของคู่แข่งเป็น Growth</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 10 }}>
                 {[
-                  { slug: '/vs/canva', title: 'OpenThai AI vs Canva', keyword: '"canva alternative thailand"', volume: '~2,400/mo' },
-                  { slug: '/vs/jasper', title: 'OpenThai AI vs Jasper AI', keyword: '"jasper ai thai language"', volume: '~890/mo' },
-                  { slug: '/vs/chatgpt', title: 'OpenThai AI vs ChatGPT', keyword: '"AI marketing tool Thai"', volume: '~12,000/mo' },
-                  { slug: '/vs/hubspot', title: 'OpenThai AI vs HubSpot', keyword: '"hubspot alternative SME Thailand"', volume: '~1,800/mo' },
+                  { slug: '/vs/canva', title: 'OpenThaiAi vs Canva', keyword: '"canva alternative thailand"', volume: '~2,400/mo' },
+                  { slug: '/vs/jasper', title: 'OpenThaiAi vs Jasper AI', keyword: '"jasper ai thai language"', volume: '~890/mo' },
+                  { slug: '/vs/chatgpt', title: 'OpenThaiAi vs ChatGPT', keyword: '"AI marketing tool Thai"', volume: '~12,000/mo' },
+                  { slug: '/vs/hubspot', title: 'OpenThaiAi vs HubSpot', keyword: '"hubspot alternative SME Thailand"', volume: '~1,800/mo' },
                 ].map((p, i) => (
                   <div key={i} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '12px 14px' }}>
                     <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 13, marginBottom: 4 }}>{p.title}</div>

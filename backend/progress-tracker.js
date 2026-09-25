@@ -1,4 +1,4 @@
-// ── 360° Progress Tracker — OpenThai.ai ─────────────────────────────────────
+// ── 360° Progress Tracker — OpenThaiAi ─────────────────────────────────────
 // ติดตามความคืบหน้าทุกมิติ (10 Guild + Business KPIs) แบบ real-time
 // ส่งรายงานประจำวันเข้า Slack #all-openthai-ai เวลา 23:30 น. ไทย
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
@@ -232,7 +232,7 @@ export function createProgressTracker(dataDir, deps = {}) {
       return `${k.icon} ${k.label}: *${display}* / ${k.id === 'revenue_thb' ? '฿100,000' : k.target}  ${bar(b.pct, 6)} ${b.pct}%`;
     }).filter(Boolean).join('\n');
 
-    return `📊 *รายงาน 360° ประจำวัน — OpenThai.ai*
+    return `📊 *รายงาน 360° ประจำวัน — OpenThaiAi*
 📅 ${thaiDate}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━

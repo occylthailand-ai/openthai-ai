@@ -1,14 +1,14 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-22T16:39:32.491Z · branch `merge/backup-into-main` (0 commit(s) ahead of main)
+Generated: 2026-09-25T18:02:41.576Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (152 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 224 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 384 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
-- Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
+- Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, @supabase/supabase-js, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
 - If something you're reading (from any AI assistant, including this one) describes Neo4j, Stripe, USD/cross-border escrow, PCI DSS scope, or vessel/shipment tracking as part of this project — it is wrong. See DECISIONS_LOG.md below: those exact proposals were made and explicitly rejected on 2026-07-01.
 
@@ -694,22 +694,22 @@ endpoints, missing route components, duplicate IDs) and fails CI
 
 ## Consistency checks (✅ all passing)
 - ✅ **Skill endpoints resolve to real routes** — all 38 skill endpoints found in backend source
-- ✅ **Route components exist on disk** — all 98 route components resolved
+- ✅ **Route components exist on disk** — all 99 route components resolved
 - ✅ **No duplicate skill IDs** — all skill IDs unique
 - ✅ **No duplicate route paths** — all route paths unique
-- ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql
+- ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- 3851578 Merge pull request #97 from occylthailand-ai/claude/limits-fix-tool-d5b119 (59 minutes ago)
-- 9cba54c chore: sync PROJECT_STATUS.md [skip ci] (60 minutes ago)
-- 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (72 minutes ago)
-- 392c8db feat(blueprint): Content Blueprint — เครื่องมือพัฒนาต่อยอดจากโครงสร้างเนื้อหา 8 หมวด (#94) (2 weeks ago)
-- 61475aa feat: หมวด 2-6, 10, 12 — โค้ดครบ 7 หมวดที่ขาด (5 weeks ago)
-- e37f988 feat(enterprise): request-ID tracing, structured logging, error handler, audit trail (#90) (8 weeks ago)
-- 6657b77 feat: structured logger, migration tracker, auth tests (#89) (8 weeks ago)
-- 88926ec feat(claude): OpenHands microagents + scaffold tool + improved checks (#88) (8 weeks ago)
+- 6e166b5 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 75 (2 minutes ago)
+- 57f8111 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 74b (63 minutes ago)
+- cdf1681 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 73b (2 hours ago)
+- 66184ea chore: sync PROJECT_STATUS.md [skip ci] · Cycle 72b (3 hours ago)
+- d2acfa3 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 71 (5 hours ago)
+- f9f32e0 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 70 (6 hours ago)
+- f2a6931 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 69 (7 hours ago)
+- 29dc0f8 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 68 (7 hours ago)
 
-## Production health (⚠️ HTTP 500)
+## Production health (⚠️ HTTP 403)
 
 ## Skills registry (38 total, 36 active, 2 need setup)
 | ID | Name | Endpoint | Status |
@@ -753,7 +753,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | S37 | Blueprint Coverage Radar | `GET /api/blueprint/coverage` | active |
 | S38 | Blueprint Development Brief | `POST /api/blueprint/develop` | active |
 
-## Route map (98 routes)
+## Route map (99 routes)
 | Path | Component | Access |
 |---|---|---|
 | /login | LoginPage | auth |
@@ -801,6 +801,7 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /trending | TrendingPage | public |
 | /calendar | ContentCalendarPage | public |
 | /blueprint | ContentBlueprintPage | public |
+| /bank | DigitalBankPage | auth |
 | /brand | BrandMemoryPage | public |
 | /voice | VoiceCommandPage | public |
 | /video | VideoGeneratorPage | auth |
@@ -855,17 +856,19 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | /tax-calculator | TaxCalculatorPage | public |
 | * | NotFoundPage | public |
 
-## Backend modules (backend/*.js — 33 files)
+## Backend modules (backend/*.js — 35 files)
 | File | Lines | Purpose (from header comment) |
 |---|---|---|
 | `agent-orchestrator.js` | 66 | — |
 | `agent-tools.js` | 92 | Agent Tools — Thai Function Calling schema, wired to real backend functions |
 | `audit.js` | 60 | @ts-check |
 | `auth.js` | 190 | JWT |
+| `bank-phase2.js` | 641 | Loans |
 | `consent.js` | 197 | เวอร์ชัน Privacy Notice — เพิ่มทุกครั้งที่แก้ไขนโยบาย |
 | `content-blueprint.js` | 282 | Content Blueprint — พิมพ์เขียวโครงสร้างเนื้อหา 8 หมวด (Maslow + มิติดิจิทัล + 7 กลุ่มอุตสาหกรรม) |
 | `corporate-system.js` | 196 | Global Standard: SET/MAI · SEC Thailand · IFRS · ESG · Governance |
 | `credits.js` | 203 | Credit ledger — เครดิตจริงจากรางวัล (spin / streak) ใช้ generate เกินโควต้าฟรีได้ |
+| `digital-bank.js` | 571 | Helpers |
 | `disputes.js` | 280 | Order Disputes — เปิดข้อพิพาท + AI-assist arbitration + ปล่อย/คืนเงินประกัน (escrow) |
 | `integrations.js` | 249 | ══════════════════════════════════════════════════════════════════════════════ |
 | `inventory.js` | 163 | Inventory — คลังสินค้า first-party ครบทุกมิติ (สินค้า + บัญชีเคลื่อนไหวสต๊อก) |
@@ -879,14 +882,14 @@ endpoints, missing route components, duplicate IDs) and fails CI
 | `pr-communications.js` | 166 | Press Room · Media Center · Crisis Comms · KOL · Newsletter · Global Campaigns |
 | `preflight.js` | 231 | ═══════════════════════════════════════════════════════════════════════════════ |
 | `producers.js` | 161 | Producer / Supplier onboarding — รับสมัครผู้ผลิตมาสังกัดแพลตฟอร์ม |
-| `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThai.ai |
+| `progress-tracker.js` | 322 | 360° Progress Tracker — OpenThaiAi |
 | `rag-pipeline.js` | 133 | --- Embedding --- |
 | `sdk-gen.js` | 201 | Openthai.ai — SDK Generator (Stainless-style) |
-| `server.js` | 7981 | Vercel serverless detection |
+| `server.js` | 7992 | Vercel serverless detection |
 | `tenant-manager.js` | 250 | Each tenant (store/business) gets: |
 | `vault.js` | 90 | — |
-| `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
 | `vector-memory-supabase.js` | 194 | Drop-in replacement สำหรับ vector-memory.js เมื่อ Supabase พร้อม |
+| `vector-memory.js` | 212 | Long-term semantic memory for AI agents. |
 | `video-generator.js` | 206 | รองรับ: RunwayML Gen-3 · Pika Labs · Kling AI · Luma Dream Machine · Mock (script-only) |
 | `voice-commander.js` | 261 | รับ transcript จาก Web Speech API → AI แปล intent → รัน command → คืน speak_text |
 | `webhook-system.js` | 225 | Push events to registered subscriber endpoints instead of polling. |
@@ -940,8 +943,9 @@ Presence here means the SQL exists in the repo — it does **not** mean it has b
 - 007_portal_leads.sql
 - 008_pdpa_consents.sql
 - 008_vault_ledger.sql
+- 009_digital_bank.sql
+- 010_bank_phase2.sql
 - FULL-MIGRATION.sql
 - credits-schema.sql
 - orders-schema.sql
 - producers-schema.sql
-
