@@ -664,7 +664,7 @@ OpenThaiAi is a Thai SME marketing/AI-content platform. Payments are Omise
 integration, and no vessel/shipment domain anywhere in this codebase.
 
 ### 2026-07-01 — Added: order dispute + escrow ledger system
-Real feature, built and merged into PR #67: `backend/disputes.js` (dual-mode
+Real feature, built and merged into PR #96: `backend/disputes.js` (dual-mode
 Supabase/file, same pattern as `orders.js`/`producers.js`). Buyers/producers
 open a contact-verified dispute on an order; the non-opening party can submit
 counter-evidence; an admin makes the final call (AI only suggests, never
