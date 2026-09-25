@@ -1,6 +1,6 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-09-25T10:15:49.986Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (144 commit(s) ahead of main)
+Generated: 2026-09-25T10:38:01.087Z · branch `claude/digital-yuan-openthaiai-compare-qt5dhn` (144 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
@@ -700,13 +700,13 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **12 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql, 009_digital_bank.sql, 010_bank_phase2.sql
 
 ## Recent commits
-- 8047bf9 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 67 (85 seconds ago)
-- f23864e chore: sync PROJECT_STATUS.md [skip ci] · Cycle 66 (40 minutes ago)
-- ebd4eaa chore: sync PROJECT_STATUS.md [skip ci] · Cycle 65 (66 minutes ago)
+- b3ae54e chore: sync PROJECT_STATUS.md [skip ci] · Cycle 67b (15 minutes ago)
+- f23864e chore: sync PROJECT_STATUS.md [skip ci] · Cycle 66 (62 minutes ago)
+- ebd4eaa chore: sync PROJECT_STATUS.md [skip ci] · Cycle 65 (89 minutes ago)
 - 3cce863 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 64 (2 hours ago)
 - f9f3ada chore: sync PROJECT_STATUS.md [skip ci] · Cycle 63 (2 hours ago)
-- c88c1ed chore: sync PROJECT_STATUS.md [skip ci] · Cycle 62b (2 hours ago)
-- 0896430 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 62 (2 hours ago)
+- c88c1ed chore: sync PROJECT_STATUS.md [skip ci] · Cycle 62b (3 hours ago)
+- 0896430 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 62 (3 hours ago)
 - f9cfa90 chore: sync PROJECT_STATUS.md [skip ci] · Cycle 60 (3 hours ago)
 
 ## Production health (⚠️ HTTP 403)
