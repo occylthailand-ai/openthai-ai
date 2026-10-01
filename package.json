@@ -18,6 +18,7 @@
     "limits":        "node scripts/limits-tool.mjs",
     "limits:report": "node scripts/limits-tool.mjs report",
     "limits:audit":  "node scripts/limits-tool.mjs audit",
-    "limits:validate": "node scripts/limits-tool.mjs validate"
+    "limits:validate": "node scripts/limits-tool.mjs validate",
+    "claude:limit": "node scripts/claude-limit-resume.mjs"
   }
 }
