@@ -20,6 +20,18 @@ if [ -z "$STATUS_MD" ]; then
 Branch: $BRANCH"
 fi
 
+# Token saver: the full PROJECT_STATUS.md is ~64 KB (mostly the embedded decisions
+# log + route map). Inject only the decision-relevant sections and keep the other
+# section headings (with their counts) as pointers. The full file is still written to
+# PROJECT_STATUS.md — read it on demand. Set OPENTHAI_BRIEFING_FULL=1 for the old behaviour.
+if [ "${OPENTHAI_BRIEFING_FULL:-0}" != "1" ]; then
+  STATUS_MD=$(printf '%s\n' "$STATUS_MD" | awk '
+    /^## / { keep = ($0 ~ /What this project actually is|Consistency checks|Recent commits|Production health/); print; if (!keep) print "(ย่อ — ดูเนื้อหาเต็มใน PROJECT_STATUS.md / DECISIONS_LOG.md)"; next }
+    /^# / || /^Generated:/ { print; next }
+    keep { print }
+  ')
+fi
+
 CONTEXT="$STATUS_MD
 
 ── ACTION ITEMS (static — cannot be verified from this sandbox) ──
