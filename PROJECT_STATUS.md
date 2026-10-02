@@ -1,12 +1,12 @@
 # OpenThaiAi — PROJECT STATUS (single source of truth)
 
-Generated: 2026-10-02T12:27:15.631Z · branch `claude/sleepy-galileo-7a2olx` (0 commit(s) ahead of main)
+Generated: 2026-10-02T12:29:02.743Z · branch `claude/sleepy-galileo-7a2olx` (2 commit(s) ahead of main)
 
 > Paste this whole file at the start of a Claude / Gemini / Grok conversation about this project
 > so all three start from the same facts, pulled directly from the repo — not from memory.
 
 ## What this project actually is (read this before anything else)
-- Git history: 133 commits, earliest 2026-06-18 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
+- Git history: 306 commits, earliest 2026-04-02 — this is the entire real history, there is no earlier "locked" architecture beyond what's in this repo.
 - README.md tagline (may be stale — see "Known stale documentation" below): "(none found)"
 - Verified real backend stack (from backend/package.json): @anthropic-ai/sdk, @google/generative-ai, bcryptjs, cors, dotenv, express, express-rate-limit, jsonwebtoken, node-cron, node-fetch, nodemailer
 - Payments: Omise (PromptPay + card), THB only. Database: Supabase Postgres only (no graph DB). Deploy: Vercel serverless, auto-deploy on push to `main` via Vercel's GitHub integration.
@@ -737,16 +737,16 @@ endpoints, missing route components, duplicate IDs) and fails CI
 - ℹ️ **10 numbered migration file(s) present** — 001_pgvector.sql, 001_users_auth.sql, 002_subscriptions_payments.sql, 003_ai_usage_log.sql, 004_affiliate_tracking.sql, 005_user_sync.sql, 006_order_disputes.sql, 007_portal_leads.sql, 008_pdpa_consents.sql, 008_vault_ledger.sql
 
 ## Recent commits
+- 26e8e09 chore: regenerate PROJECT_STATUS.md (77 seconds ago)
+- 9808e1e perf(hook): trim SessionStart context from ~64KB to ~6KB (2 minutes ago)
 - 8b297c4 docs: record merge of backup/master-20260922 (78 commits) into main [skip ci] (10 days ago)
 - 53b0559 Merge branch 'backup/master-20260922' into main (10 days ago)
 - 3851578 Merge pull request #97 from occylthailand-ai/claude/limits-fix-tool-d5b119 (10 days ago)
 - 9cba54c chore: sync PROJECT_STATUS.md [skip ci] (10 days ago)
 - 72abf73 feat(limits): centralize every limit into backend/config/limits.js + CLI tool (10 days ago)
 - a95a884 feat(wave10): mobile responsive + PWA improvements + AR HUD spec (3 weeks ago)
-- 9f248d6 feat(eval-9.5): commit thai_eval_runner.py + add --dry-run + tests (3 weeks ago)
-- 5338223 security: harden .gitignore — fail-safe **/.env* + !**/.env.example exception (3 weeks ago)
 
-## Production health (⚠️ HTTP 403)
+## Production health (⚠️ HTTP 500)
 
 ## Skills registry (38 total, 36 active, 2 need setup)
 | ID | Name | Endpoint | Status |
