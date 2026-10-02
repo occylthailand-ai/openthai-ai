@@ -14,7 +14,14 @@ cd "$REPO" 2>/dev/null || true
 
 BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 
-STATUS_MD=$(node scripts/generate-project-status.mjs 2>/dev/null)
+# Full output is written to PROJECT_STATUS.md by the generator. Only inject a
+# compact version into context (the long sections cost ~25k tokens/session):
+# skip the Decisions log, Skills registry, Route map and Backend modules bodies
+# and leave a one-line pointer to the full file instead.
+STATUS_MD=$(node scripts/generate-project-status.mjs 2>/dev/null | awk '
+  /^## / { skip = ($0 ~ /^## (Decisions log|Skills registry|Route map|Backend modules)/)
+           if (skip) { print $0 " — omitted here, see PROJECT_STATUS.md / DECISIONS_LOG.md"; next } }
+  !skip { print }')
 if [ -z "$STATUS_MD" ]; then
   STATUS_MD="⚠️ generate-project-status.mjs failed to run — falling back to git state only.
 Branch: $BRANCH"
