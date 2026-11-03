@@ -11,6 +11,17 @@ rejected once is worth remembering so it doesn't get silently re-proposed.
 
 ---
 
+### 2026-11-03 — P3 revenue model: Gemini draft partly rejected, grounded draft added
+Pasted Gemini proposal for revenue/cost/cross-subsidy (and a later claim that a
+P3 file had been delivered elsewhere; no such file exists in this repo).
+Rejected as unverified: Success-fee/gain-sharing, NPL/credit scoring, ZK/Secure
+Enclave, immutable ledger, SLA 99.99%/<200ms, multi-model routing, the
+40/25/20/15% cost split, MRR 5M target, "Human Quality of Life Index" (no
+definition). Kept as structure only: hybrid revenue, cross-subsidy, phase gates,
+circuit breakers. Real baseline: Omise THB, Pro 20 / Premier 30 THB per month,
+credits, Non-MLM affiliate. See docs/OpenThaiAi_Blueprint_P3.md (DRAFT).
+
+
 ### 2026-09-23 — รวมสายงาน local master (78 commits) เข้า main เรียบร้อย; ลบ master + backup branch แล้ว
 หลังจาก PR #97 (limits centralization) เข้า main เรียบร้อย โปรเจกต์อีกระยะหนึ่งยังมี
 `master` เก่าในเครื่องที่มี commits ไม่เคย push ขึ้น remote (78 commits ตั้งแต่ wave7–10,
