@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import { RATE, AI, BODY, TIMEOUT } from './config/limits.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Anthropic from '@anthropic-ai/sdk';
+import { logAiUsage } from './ai-usage-log.js';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import nodemailer from 'nodemailer';
 import { join, dirname } from 'path';
@@ -1698,6 +1699,7 @@ async function routeAI(taskType, prompt, { maxTokens = 700 } = {}) {
       const bp = routerState.byProvider[p] || { calls: 0, usd: 0, tokens: 0 };
       bp.calls++; bp.usd = +(bp.usd + usd).toFixed(6); bp.tokens += tokens;
       routerState.byProvider[p] = bp; routerState.failCount[p] = 0;
+      logAiUsage({ provider: p, model: prov.label, endpoint: 'router/' + taskType, tokens, costUsd: usd, latencyMs: Date.now() - t0, tried }).catch(() => {});
       return { ok: true, provider: p, model: prov.label, tier, eco, text, tokens, cost_usd: usd, latency_ms: Date.now() - t0, tried };
     }
     tried.push(`${p}:unavailable`);
